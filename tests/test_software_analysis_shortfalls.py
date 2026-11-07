@@ -12,6 +12,9 @@ Held to software-analysis DEC-001 point 1 and DEC-003 point 8:
   record is one of the use case's record anchors, and accepted;
 - **the overview** — a section of its reference, "Not built yet", before the diagrams,
   lists each entry of a use case in force, and the fingerprint reads them.
+
+The check and the overview run in the test's own process, their `pkit` calls answered
+there too (`tests/in_process.py`, #2324).
 """
 
 from __future__ import annotations
@@ -35,7 +38,7 @@ from tests.analysis_repo import (
     installed,
     load_lib,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -158,7 +161,8 @@ def _use_case(
 
 
 def _validate(repo: AdopterRepo) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's findings document, run in the test's own process (`run_in_process`)."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode in (0, 1), completed.stderr
     return json.loads(completed.stdout)
 
@@ -533,7 +537,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
     a changed entry leaves the overview stale until it is rewritten (DEC-003 point 8)."""
     project.write({SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"})
     project.write({EXPORT: _use_case()})
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
     assert "## Reference" in text.split("\n")
     assert re.findall(r"^### .*$", text, re.M)[-2:] == [
@@ -559,7 +563,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
     )
     stale = [f for f in _validate(project)["findings"] if f["location"] == OVERVIEW_FILE]
     assert [f["severity"] for f in stale] == ["error"]
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
     assert _section(text, "### Not built yet").endswith(
         "tracked in <https://example.com/issues/13>"
@@ -567,5 +571,5 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
 
     plain = _use_case(main_path="1. The analyst chooses `Export`.", variants="None.", entries=None)
     project.write({EXPORT: plain})
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert "### Not built yet" not in (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")

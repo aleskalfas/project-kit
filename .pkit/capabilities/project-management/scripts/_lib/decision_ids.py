@@ -39,7 +39,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from _lib import body_rules, provenance
+from _lib import backbone, body_rules, provenance
 
 #: The rule's id in `body-format.yaml`, the label a cited id that no record holds
 #: is reported under; and the label of the notice that the ids were not checked,
@@ -124,7 +124,7 @@ def _without_comments(text: str) -> str:
 # --- asking the backbone -------------------------------------------------------------
 
 
-def lookup(ids: Sequence[str], run: Runner = subprocess.run) -> Reading:
+def lookup(ids: Sequence[str], run: Runner = backbone.run) -> Reading:
     """Whether a record holds each of `ids`, through `pkit refs lookup --json`, which
     exits 0 whether an id resolves or not. No document at all, as from a `pkit`
     that is absent, a backbone that predates the command, a crash or no answer in

@@ -152,7 +152,15 @@ def test_derived_state_strips_no_label(ri, monkeypatch) -> None:
 
 
 def test_board_state_is_left_with_a_note(ri, monkeypatch, capsys) -> None:
-    rec = _run(ri, monkeypatch, ["42", "--yes"], _issue(), config={"has_projects_v2_board": True})
+    on_board = ri.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    rec = _run(
+        ri,
+        monkeypatch,
+        ["42", "--yes"],
+        _issue(),
+        config={"has_projects_v2_board": True},
+        substrate_map=on_board,
+    )
     assert rec.rc == 0
     assert not any(c[:3] == ["gh", "issue", "edit"] for c in rec.calls)
     assert "Projects-v2 board" in capsys.readouterr().out

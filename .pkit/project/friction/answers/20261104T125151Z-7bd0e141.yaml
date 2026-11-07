@@ -1,0 +1,180 @@
+answers:
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T121552Z-b67de55f.yaml
+    revalidated:
+      at: 2026-11-04T12:51:51Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the decisions README sends the reader to the page on backbone files for a rule-set file's front matter, which CONTRIBUTING does not summarise. Here the aggregator runs the same checks in the same order with the same verdicts, and each result line adds its time, which the guide neither describes nor contradicts. The short check still runs, of the suite, only the tests marked answers.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023222Z-8e258fcb.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T015639Z-08c9720c.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+    revalidated:
+      at: 2026-11-04T12:51:53Z
+      outcome: unchanged
+      unchanged-because: "Checking before a push runs the same checks in the same order with the same verdicts: a check that fails is still marked FAILED, and the run still ends with all checks passed or checks FAILED. Each result line only adds its time, which no step describes."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+    revalidated:
+      at: 2026-11-04T12:51:55Z
+      outcome: unchanged
+      unchanged-because: The migration check runs and fails as before; the aggregator only adds each result line's time, which touches no step of migrating a backbone change.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-011-migrate-component-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+    revalidated:
+      at: 2026-11-04T12:51:57Z
+      outcome: unchanged
+      unchanged-because: A component change's migration is checked as before; the aggregator only adds each result line's time, which touches no step of this use case.

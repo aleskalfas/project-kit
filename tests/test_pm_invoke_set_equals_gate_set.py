@@ -321,6 +321,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
     )
     monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/99-x",))
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
+    monkeypatch.setattr(rpr, "_head_standing", lambda *a: rpr.head_programs.Standing("head"))
 
     invoked: list[str] = []
 
@@ -335,6 +336,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         head="HEAD",
         sha="",
         say=None,
+        confined=False,
     ):
         invoked.append(name)
         return "APPROVED", "body"
@@ -590,6 +592,7 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
     )
     monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/99-x",))
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
+    monkeypatch.setattr(rpr, "_head_standing", lambda *a: rpr.head_programs.Standing("head"))
     invoked: list[str] = []
 
     def fake_invoke(name, pr, config, timeout=None, effort=None, **_brief):

@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:d8dd94e6bf0d48b9879e1bfb4dc922e72223c9b4c1bbe8fb62b67b5d6856b209 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:397a2904fc42d5f05a7831e373c89e8332a49dcd1bbe3e1670be605792e4a4c7 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -29,6 +29,8 @@ Define the Milestones and workstreams a project's work falls into, and plan each
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md) ([not built yet](#not-built-yet): step 8)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md) ([not built yet](#not-built-yet): step 4, step 9, variant 11a)
 
+**Its journeys:** none.
+
 ### 020-file-and-move
 
 File each Task under its parent, and move each issue through its lifecycle, each filing and each move checked.
@@ -50,6 +52,10 @@ File each Task under its parent, and move each issue through its lifecycle, each
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md) ([not built yet](#not-built-yet): step 6, step 8, variant 6c, variant 6e)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md) ([not built yet](#not-built-yet): step 4, step 7, variant 1a, variant 7a)
 
+**Its journeys:**
+
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
+
 ### 030-review-and-land
 
 Have each pull request reviewed by the reviewers its change requires, and land it once the merge authoriser authorises its head.
@@ -61,12 +67,17 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 - [010 — Issues and their hierarchy](../domain-model/010-issues-and-their-hierarchy.md)
 - [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
 - [040 — Reviews and the merge](../domain-model/040-reviews-and-the-merge.md)
+- [060 — Parallel work](../domain-model/060-parallel-work.md)
 
 **Its requirements:** none.
 
 **Its use cases:**
 
-- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md) ([not built yet](#not-built-yet): variant 1b, step 9)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md) ([not built yet](#not-built-yet): variant 1b, step 8, step 9, step 13)
+
+**Its journeys:**
+
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 
 ### 040-work-in-parallel
 
@@ -90,16 +101,21 @@ Run several AI agents on one project at once, each on its own scope and never on
 **Its use cases:**
 
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md) ([not built yet](#not-built-yet): step 4, step 5, variant 4a)
-- [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) ([not built yet](#not-built-yet): step 10, variant 1a)
-- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md) ([not built yet](#not-built-yet): step 1, step 5, step 6, step 9, variant 2a, variant 2b, variant 3a, variant 9a)
-- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md) ([not built yet](#not-built-yet): step 2, step 3, variant 1a, variant 2a, variant 3a, variant 3b, variant 3c)
-- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md) ([not built yet](#not-built-yet): step 2, variant 1a, variant 2a, variant 2b, variant 2c)
+- [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) ([not built yet](#not-built-yet): step 10)
+- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md) ([not built yet](#not-built-yet): step 1, step 9, step 7, variant 2a, variant 2b, variant 3a, variant 9a)
+- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md) ([not built yet](#not-built-yet): variant 3b, variant 3c)
+- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md) ([not built yet](#not-built-yet): step 2, variant 2a, variant 2b, variant 2c)
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a)
-- [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md) ([not built yet](#not-built-yet): step 1)
-- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
+- [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) ([not built yet](#not-built-yet): variant 4a, variant 5b, variant 6a)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md) ([not built yet](#not-built-yet): variant 3b)
+
+**Its journeys:**
+
+- [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
 
 ## Reference
 
@@ -162,6 +178,41 @@ flowchart LR
   step_2 --> step_3
 ```
 
+#### [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-012 — Take up my Task, and land its change
+  accDescr: The flow of JRN-012: core:ACT-developer takes 2 steps in order, UC-061, UC-062. It relies on 2 use cases outside the journey, drawn apart with no arrow.
+  core_ACT_developer["core:ACT-developer"]
+  step_1(["1. UC-061 — Move my issue through its lifecycle, each move checked"])
+  step_2(["2. UC-062 — Have the reviewers my change requires review my pull request, and land it"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_060(["UC-060 — File a Task under its parent, its title and body checked as it is filed"])
+    UC_063(["UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan"])
+  end
+  core_ACT_developer --> step_1
+  step_1 --> step_2
+```
+
+#### [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-013 — Build my next Task, and land it while other agents land theirs
+  accDescr: The flow of JRN-013: ACT-worker-agent takes 2 steps in order, UC-084, UC-089. It relies on 3 use cases outside the journey, drawn apart with no arrow.
+  ACT_worker_agent["ACT-worker-agent — Worker agent"]
+  step_1(["1. UC-084 — Take my next ready Task, and build it up to its merge"])
+  step_2(["2. UC-089 — Land my Task while other agents land theirs"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_060(["UC-060 — File a Task under its parent, its title and body checked as it is filed"])
+    UC_083(["UC-083 — Plan an intent into Tasks that one agent can each finish"])
+    UC_092(["UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent"])
+  end
+  ACT_worker_agent --> step_1
+  step_1 --> step_2
+```
+
 ### Not built yet
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
@@ -175,7 +226,9 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md): variant 1a, decided by `COR-004`, tracked in `#1938`
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md): variant 7a, decided by `project-management:DEC-007`, tracked in `#1215`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md): variant 1b, decided by `COR-004`, tracked in `#1938`
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md): step 8, decided by `COR-066#3`, tracked in `#2666`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md): step 9, decided by `COR-064#2`, tracked in `#2122`
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md): step 13, decided by `COR-066#2`, tracked in `#2666`
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md): step 8, decided by `project-management:DEC-014`, tracked in `#1761`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md): step 4, decided by `project-management:DEC-016`, tracked in `#1939`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md): step 9, decided by `project-management:DEC-016`, tracked in `#1939`
@@ -184,33 +237,25 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 5, decided by `project-management:DEC-059#7`, tracked in `#2136`
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 4a, decided by `project-management:DEC-045#6`, tracked in `#512`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 10, decided by `project-management:DEC-059#7`, tracked in `#2136`
-- [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): variant 1a, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
-- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 5, decided by `project-management:DEC-035#3`, tracked in `#519`
-- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 5, decided by `project-management:DEC-059#9`, tracked in `#519`
-- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 6, decided by `project-management:DEC-035#6`, tracked in `#519`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 9, decided by `project-management:DEC-059#9`, tracked in `#2136`
+- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 7, decided by `project-management:DEC-063#1`, tracked in `#2287`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): variant 2a, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): variant 2b, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): variant 3a, decided by `project-management:DEC-045#5`, tracked in `#2136`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): variant 9a, decided by `project-management:DEC-059#9`, tracked in `#2136`
-- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): step 2, decided by `project-management:DEC-035#6`, tracked in `#520`
-- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): step 3, decided by `project-management:DEC-035#6`, tracked in `#520`
-- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): variant 1a, decided by `project-management:DEC-035#6`, tracked in `#520`
-- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): variant 2a, decided by `project-management:DEC-035#6`, tracked in `#519`
-- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): variant 3a, decided by `project-management:DEC-035#6`, tracked in `#520`
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): variant 3b, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): variant 3c, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): step 2, decided by `project-management:DEC-035#7`, tracked in `#521`
-- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 1a, decided by `project-management:DEC-059#9`, tracked in `#519`
-- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2a, decided by `project-management:DEC-035#6`, tracked in `#520`
+- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2a, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2b, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2c, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
-- [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md): step 1, decided by `project-management:DEC-035#3`, tracked in `#519`
+- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#4`, tracked in `#521`
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md): variant 4a, decided by `project-management:DEC-063#1`, tracked in `#2287`
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md): variant 5b, decided by `project-management:DEC-063#1`, tracked in `#2287`
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md): variant 6a, decided by `project-management:DEC-063#1`, tracked in `#2287`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
-- [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-059#6`, tracked in `#521`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 3b, decided by `project-management:DEC-059#8`, tracked in `#2136`
 
 ### Diagrams

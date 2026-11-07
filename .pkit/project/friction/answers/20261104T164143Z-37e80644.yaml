@@ -1,0 +1,1068 @@
+answers:
+  - artefact: .pkit/release/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261104T112427Z-df4c9349.yaml
+    revalidated:
+      at: 2026-11-04T16:41:43Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main after #2610, which anchored this page on release.py and shipped.py. This change alters each only in how it calls the routine that writes a value into the list of libraries or a library.yaml as text, now one routine that pkit visual add shares. What the release of a shipped library reads of the release step, the capability's CHANGELOG.md entry, the change that wrote it and the version in its package.yaml, is as the page states, so the page holds."
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T112546Z-de307aa8.yaml
+      - 20261103T115937Z-1398e55e.yaml
+      - 20261103T122207Z-c664330a.yaml
+      - 20261103T132159Z-91120813.yaml
+      - 20261103T133301Z-5ca09a42.yaml
+      - 20261103T140341Z-39137a8a.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T141550Z-8bd2f51f.yaml
+      - 20261103T143842Z-9cda4b19.yaml
+      - 20261103T152310Z-ce4873a0.yaml
+      - 20261103T153053Z-9eeb3ed6.yaml
+      - 20261103T162251Z-b80e24ed.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T165717Z-19006b2e.yaml
+      - 20261103T170216Z-3608d608.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T171743Z-79b2225f.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T173916Z-c81c1694.yaml
+      - 20261103T174004Z-3da41454.yaml
+      - 20261103T174332Z-a75c6931.yaml
+      - 20261103T174657Z-757f64e4.yaml
+      - 20261103T174755Z-75774114.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261103T175530Z-1ac45c1f.yaml
+      - 20261103T182420Z-adda5873.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:41:49Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T011639Z-18e1793b.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T020650Z-937df1c9.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T112546Z-de307aa8.yaml
+      - 20261103T115937Z-1398e55e.yaml
+      - 20261103T122207Z-c664330a.yaml
+      - 20261103T132159Z-91120813.yaml
+      - 20261103T133301Z-5ca09a42.yaml
+      - 20261103T140341Z-39137a8a.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T141550Z-8bd2f51f.yaml
+      - 20261103T143842Z-9cda4b19.yaml
+      - 20261103T152310Z-ce4873a0.yaml
+      - 20261103T153053Z-9eeb3ed6.yaml
+      - 20261103T162251Z-b80e24ed.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T165717Z-19006b2e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T171743Z-79b2225f.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T173916Z-c81c1694.yaml
+      - 20261103T174332Z-a75c6931.yaml
+      - 20261103T174657Z-757f64e4.yaml
+      - 20261103T174755Z-75774114.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261103T175530Z-1ac45c1f.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:41:54Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T000900Z-bed893e8.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T112546Z-de307aa8.yaml
+      - 20261103T115937Z-1398e55e.yaml
+      - 20261103T122207Z-c664330a.yaml
+      - 20261103T132159Z-91120813.yaml
+      - 20261103T133301Z-5ca09a42.yaml
+      - 20261103T140341Z-39137a8a.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T141550Z-8bd2f51f.yaml
+      - 20261103T143842Z-9cda4b19.yaml
+      - 20261103T152310Z-ce4873a0.yaml
+      - 20261103T153053Z-9eeb3ed6.yaml
+      - 20261103T162251Z-b80e24ed.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T165717Z-19006b2e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T173916Z-c81c1694.yaml
+      - 20261103T174004Z-3da41454.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261103T175530Z-1ac45c1f.yaml
+      - 20261103T182420Z-adda5873.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:42:03Z
+      outcome: unchanged
+      unchanged-because: "Judged on files.md as merged, both changes together. #2610 adds how pkit visual release lists a version released, that its release writes the release a version needs, how a shipped version is released, and that a release runs the comparison and refuses a break that keeps the major. This change has the location, the list and the foundations' paragraph say how pkit visual add copies, replaces or restores shipped versions, lists a released one with its hash, and takes the foundations' version being built. components.md links files.md for where a file lies, names, content files, the foundations' layouts and families, and what a release compares; each passage it links still says what the page rests on, so every statement holds."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T112546Z-de307aa8.yaml
+      - 20261103T115937Z-1398e55e.yaml
+      - 20261103T122207Z-c664330a.yaml
+      - 20261103T132159Z-91120813.yaml
+      - 20261103T133301Z-5ca09a42.yaml
+      - 20261103T140341Z-39137a8a.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T143842Z-9cda4b19.yaml
+      - 20261103T152310Z-ce4873a0.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:42:10Z
+      outcome: unchanged
+      unchanged-because: "Judged on package.yaml and code.py as merged, both changes together. package.yaml carries this change's help for add beside the help #2610 gave release, and code.py's refusal of an out in the library folder now names pkit visual add as the command that writes copies there. outputs.md lists the library folder among the places out may not lie, and states renderers, exports, produced pictures and written code. Neither add nor release draws, exports, produces or writes code, so every statement holds."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T011639Z-18e1793b.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T020650Z-937df1c9.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T112546Z-de307aa8.yaml
+      - 20261103T115937Z-1398e55e.yaml
+      - 20261103T122207Z-c664330a.yaml
+      - 20261103T132159Z-91120813.yaml
+      - 20261103T133301Z-5ca09a42.yaml
+      - 20261103T140341Z-39137a8a.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T141550Z-8bd2f51f.yaml
+      - 20261103T143842Z-9cda4b19.yaml
+      - 20261103T152310Z-ce4873a0.yaml
+      - 20261103T153053Z-9eeb3ed6.yaml
+      - 20261103T162251Z-b80e24ed.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T165717Z-19006b2e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T171743Z-79b2225f.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T173916Z-c81c1694.yaml
+      - 20261103T174004Z-3da41454.yaml
+      - 20261103T174332Z-a75c6931.yaml
+      - 20261103T174657Z-757f64e4.yaml
+      - 20261103T174755Z-75774114.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261103T175530Z-1ac45c1f.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:42:19Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged, both changes together. #2610 adds what a release reads in full and the finding schema-refused. This change alters release.py only in its call to the routine that lists a version released, so what a release reads and reports is as #2610 states it. This change has pkit visual add replace a copy not yet released, and restore a released copy whose files no longer match its hash. It reads and changes no finding or level, and library-changed still tells the project to restore the folder as released. The findings on the library folder, its list and the fingerprint hold against both."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:42:55Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors tokens.py and the roles schema, which neither change touches. A release compares a brand's axes and modes and changes none, and add copies only shipped libraries, none a brand, so an axis is still a brand's switch along which its modes lie."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:03Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors tokens.py and the library schema, whose account of needs-release #2610 rewrote and this change leaves alone. A project may release its own brand, its values kept as written, and add copies no brand, so a brand still holds the values pieces are drawn in."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:11Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors the content schema, which neither change touches. add reads only a piece's lock, pinned and state, and release reads library versions alone, so content is still data kept apart from a piece's look."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:14Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors layout.py and the component schema, which neither change touches. A release compares a top's slots and changes none, and add copies a library whole, so a slot is still a named place a piece fills."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:18Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. This change moves the copying out of libraries.py into copies.py, and leaves its search for a lock as it was. A draft's lock still moves at each render. add replaces a copy not yet released only where every lock naming it is an unpinned draft's, and release moves no lock, so the term holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:21Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors the component schema and comparison.py, which neither change touches. A release's comparison names only a new experimental component, as an addition, and add copies components unchanged, so an experimental component may still change in any later version."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:24Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors exports.py and the exports schema, which neither change touches. Neither command makes or overwrites an export, so an export is still a file numbered by the run that made it."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:28Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors DEC-003 point 8 alone, which neither change alters. add writes no lock and leaves a copy under any lock but an unpinned draft's, and release writes no piece, so a final piece's lock never moving still holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:31Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors DEC-001 point 8 and DEC-006 point 1, which neither change alters. Neither command runs a project's program, so the term holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:34Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors layout.py and the component schema, which neither change touches. A release compares a top's layouts and changes none, and add copies a library whole, so a layout is still a page's named arrangement that a kind of piece declares."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:38Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. This change moves the copying out of libraries.py into copies.py, and #2610 rewrote the library schema's account of needs-release. A library is still a shared set of one of three kinds: release fixes one version of it, and add copies a shipped one whole."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:41Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors layout.py and the component schema, which neither change touches. A release reads every component of a version in full, and add copies them unchanged, so a library component is still a reusable part shared by pieces."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:43Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors DEC-001 point 5 and DEC-003 point 7, which neither change alters. A project releases the library it owns, the capability's maintainer a shipped one with --shipped, and add copies what that owner released, so the term holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-version
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:46Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. This change moves the copying out of libraries.py into copies.py, and neither touches the list's schema. A release writes the release a version needs before it works out the hash, then keeps the version whole. add never replaces a released copy, only restores it to its hash, so a version stays unchanged once released."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:49Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors pipeline.py and the component schema, which neither change touches. Neither command reads or writes a piece's own components, so a local component is still made inside one piece and used by it alone."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-lock
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:52Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. This change moves the copying out of libraries.py into copies.py, and leaves its search for a lock as it was. add reads locks to decide which copies it may replace and writes none, and release writes no piece, so a lock still names one version of each library a piece uses."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:55Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors tokens.py and the roles schema, which neither change touches. A release compares a brand's modes and changes none, and add copies no brand, so a mode is still one setting on one axis of a brand."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:43:58Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors DEC-001 point 3 and DEC-006 point 1, which neither change alters. Neither command reads or writes a model, so the term holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-notation
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:00Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors notations.py and the notation schema, which neither change touches. A release compares a notation by its kind and bases alone, and add copies no notation, since none ships, so the term holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:03Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors layout.py and the component schema, which neither change touches. A release counts an option removed from a stable component as a break, and add copies options unchanged, so an option is still a choice a library component declares."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:06Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors the piece schema and pipeline.py, which neither change touches. add reads only a piece's lock, pinned and state, and release reads no piece, so a piece still keeps its content as data and takes its look from libraries."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:09Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. This change moves the copying out of libraries.py into copies.py, and leaves its search for a lock as it was. add leaves a copy not yet released as it is under a pinned draft's lock, and release moves no lock, so a pinned lock still moves only when a person moves it."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:12Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors DEC-003 point 8 alone, which neither change alters. Format 1 takes the draft state alone, and neither command writes a lock, so a published piece's lock moving only through a reviewed change still holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-renderer
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:14Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors the plugins' seam, which neither change touches. Neither command draws a piece, so a renderer is still the part that draws a piece in one medium."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+      - 20261103T175113Z-f8559495.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:16Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors the component schema and comparison.py, which neither change touches. A release refuses a break of a stable component in a version that keeps the previous release's major, and add changes no status, so only a new major may break a stable component."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-starter-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T170759Z-7c62d6a6.yaml
+      - 20261103T173816Z-74803cc5.yaml
+      - 20261104T104433Z-6ce306d5.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T112427Z-df4c9349.yaml
+      - 20261104T150257Z-d0eeaecd.yaml
+      - 20261104T150346Z-3a03586c.yaml
+    revalidated:
+      at: 2026-11-04T16:44:19Z
+      outcome: unchanged
+      unchanged-because: "Judged as merged with main, where each term now anchors what embodies it rather than the README. #2610 adds pkit visual release, which releases a project's own library version, or with --shipped a shipped one, writing the release it needs and listing it released with its hash. This change has pkit visual add take a shipped library's newest released version, or the version being built where none is released, and bring each copy up to date under the locks that name it. The term anchors DEC-007 point 1, which neither change alters. The starter has no released version, so add takes its version being built, and only --shipped where the capability is authored may release it. It stays the shared parts given every project, so the term holds."

@@ -1,0 +1,78 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  What rests on what: levels stacked one on another, the top first, each as wide as the
+  stack, drawn by the card. To the right of the stack, notes may stand that hold across
+  the levels, sharing the stack's height. Ties join a note or a level to another, each
+  drawn by the connector.
+
+fields:
+  type: object
+  required: [levels]
+  properties:
+    levels:
+      type: array
+      minItems: 1
+      description: The levels, the top first, each with the fields of the component that draws it.
+      items: {type: object}
+    level:
+      type: object
+      description: >-
+        The component that draws each level that names none, with words for its options:
+        the card unless the content names another.
+    notes:
+      type: array
+      description: >-
+        What holds across the levels, to the right of the stack, each with the fields of
+        the component that draws it.
+      items: {type: object}
+    note:
+      type: object
+      description: >-
+        The component that draws each note that names none, with words for its options:
+        the card unless the content names another.
+    ties:
+      type: array
+      description: >-
+        The ties between the levels and the notes, each from one item to another, both
+        named by their key paths.
+      items: {type: object}
+    tie:
+      type: object
+      description: >-
+        The component that draws each tie that names none, with words for its options:
+        the connector unless the content names another.
+
+lists:
+  levels: {component: level}
+  notes: {component: note}
+  ties: {component: tie, ends: [from, to]}
+
+values:
+  # How wide the notes stand: a third of the width, less the gap beside them.
+  aside: "=(:width - @starter.gap) / 3"
+
+parts:
+  # Without notes the stack takes the whole width: a part not drawn has no width.
+  notes:
+    when: notes
+    repeat: notes
+    draw: starter/card
+    x: "=:width - aside"
+    width: "=aside"
+    height: "=levels.height"
+    column: {gap: "=@starter.gap", sizes: equal, align-items: stretch}
+  levels:
+    repeat: levels
+    draw: starter/card
+    width: "=:width - notes.width - min(notes.width, @starter.gap)"
+    column: {gap: "=@starter.gap", align-items: stretch}
+  # Drawn last, over the levels and the notes.
+  ties:
+    repeat: ties
+    draw: starter/connector
+
+preferred:
+  height: "=levels.bottom"

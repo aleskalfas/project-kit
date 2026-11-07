@@ -21,6 +21,17 @@ posting order — earlier rounds a later verdict superseded included (#905).
 A verdict the merge gate would not count is marked stale, with the reason,
 by the gate's own freshness rule (`_lib.verdict_freshness`, #1179); to
 judge it the view resolves the PR's required reviewers as the gate does.
+`--field answers` derives the answers at the PR's head against its base and
+prints what `land-work` tells the person who authorises the merge
+(`_lib.answers_told.at_head`, DEC-065 point 2): the one route to it for anyone
+not at `land-work`. It changes no branch, and fetches the base, and the head
+where this clone lacks it. Answers it cannot derive print why, and nothing else.
+Away from a checkout at the PR's head it starts no program the head holds, since
+anyone may run it on a head they have not read: where an anchor needs its
+resolver, the change check refuses. `land-work` and `review-work` make a temporary
+checkout of the head there, and this view makes none (`from_checkout=False`). It
+says that a checkout at the head can read those answers, and that such a run
+starts the head's own programs under the reader's account.
 
 The PR is named by its number, or by its head branch, as `gh pr view` takes
 it: an open PR from the branch first. A worker knows its Tasks' branches, and
@@ -40,7 +51,8 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  shown
   1  membership refusal
-  2  usage error (PR not found, or a reference that is no number or branch)
+  2  usage error (PR not found, or a reference that is no number or branch), or
+     `--field answers` could not derive the answers at the PR's head
 """
 
 from __future__ import annotations
@@ -56,13 +68,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, friction_answers
+from _lib import answers_told, bootstrap_gate, fixers, friction_answers
 from _lib.agent_verdicts import (
     all_verdicts,
     latest_verdicts_per_reviewer,
     reduce_latest_per_reviewer,
 )
 from _lib.author_delta import author_delta, base_kept
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -82,14 +95,16 @@ from _lib.verdict_freshness import FreshnessRule
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Show the methodology-relevant view of a GitHub PR: title, "
             "Conventional Commits parse, state, branches, closing issues, "
             "reviewers, doc-impact presence, the latest reviewer verdicts "
-            "(--field review) and every verdict posted, in posting order "
-            "(--field review-history)."
+            "(--field review), every verdict posted, in posting order "
+            "(--field review-history), and what land-work tells the person who "
+            "authorises the merge (--field answers)."
         ),
     )
     parser.add_argument(
@@ -176,6 +191,12 @@ def main() -> int:
         else None
     )
     summary = _summarise(pr, freshness)
+    # Only the view that shows them pays for a run of the change check.
+    if args.field == "answers":
+        told = _told_at_head(pr, number, capability_root)
+        if told is None:
+            return 2
+        summary["answers"] = told
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
             print(line)
@@ -205,6 +226,48 @@ def _pr_number(ref: str, pr: dict) -> int | None:
     return int(ref) if ref.isdigit() else None
 
 
+def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | None:
+    """What `land-work` tells the person who authorises the merge, derived at the
+    PR's head against its base (DEC-065 point 2), or None after saying why it could
+    not be: nothing is told on a guess. No temporary checkout of the head answers a
+    refusal to run an anchor's resolver: that would start the head's own program."""
+    head, base = str(pr.get("headRefOid") or ""), str(pr.get("baseRefName") or "")
+    if not head or not base:
+        print(f"error: GitHub named no head or no base for PR #{number}.", file=sys.stderr)
+        return None
+    source = friction_answers.pull_request_source(
+        str(pr.get("headRefName") or ""),
+        number,
+        cross_repository=bool(pr.get("isCrossRepository")),
+        base=base,
+    )
+    fed = answers_told.at_head(
+        head,
+        base,
+        capability_root,
+        lambda: str(pr.get("body") or ""),
+        source=source,
+        from_checkout=False,
+    )
+    derived = fed.derived
+    if derived.document is None:
+        print(
+            f"error: the answers at PR #{number}'s head could not be derived: {derived.problem}.",
+            file=sys.stderr,
+        )
+        if derived.needs_checkout:
+            short = head[: friction_answers.SHORT]
+            print(HEAD_PROGRAMS_MESSAGE.format(head=short), file=sys.stderr)
+        return None
+    if isinstance(fed.grants, fixers.ChangeUnread):
+        print(
+            f"error: the fixers' grant list could not be read: {fed.grants.why}.",
+            file=sys.stderr,
+        )
+        return None
+    return list(fed.told)
+
+
 def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     """The PR's methodology view. `freshness` judges each verdict; by default
     it is the rule for this PR with no floor-only reviewer, under which every
@@ -230,7 +293,7 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     ]
 
     conv = _parse_conventional_commits(title)
-    # The friction answers' section is the artefacts' words, never input (DEC-055).
+    # A list of the answers an earlier run left is never input (DEC-065 point 1).
     authored = friction_answers.strip(body)
     closing_issues = _extract_closing_issues(authored)
     has_doc_impact = "## Doc impact" in authored
@@ -351,6 +414,7 @@ PR_FIELD_NAMES = (
     "reviewers",
     "review",
     "review-history",
+    "answers",
     "doc-impact",
     "body",
     "url",
@@ -359,6 +423,19 @@ PR_FIELD_NAMES = (
 # Shown by `--field review` when no reviewer has posted a DEC-028 verdict
 # comment. A clear message, not an empty result / traceback (issue #544).
 NO_VERDICT_MESSAGE = "no reviewer verdict posted"
+
+# Shown by `--field answers` when land-work would tell the person nothing: no silent
+# empty field, which would read as a run that failed.
+NOTHING_TOLD_MESSAGE = "nothing to tell the person who authorises the merge"
+
+# Said by `--field answers` where an anchor at the head needs its resolver: why this
+# view stops there, where the answers can be read, and what reading them there runs.
+HEAD_PROGRAMS_MESSAGE = (
+    "An anchor at this head needs its resolver, a program the head holds, and this view "
+    "starts none. Running this command from a checkout at {head}, with nothing "
+    "uncommitted, reads the answers. There the command is the head's own, and it starts "
+    "the head's programs under your account, so make such a run only on a head you trust."
+)
 
 # Appended to a shown verdict the freshness rule holds stale (#1179), naming
 # why — the merge gate will not count such a verdict, so the read surface flags
@@ -492,6 +569,7 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
         "reviewers": list(s.get("reviewers") or []),
         "review": _review_lines(s.get("review") or []),
         "review-history": _review_history_lines(s.get("review_history") or []),
+        "answers": list(s.get("answers") or [NOTHING_TOLD_MESSAGE]),
         "doc-impact": _bool(s.get("has_doc_impact_section")),
         "body": _scalar(s.get("body")),
         "url": _scalar(s.get("url")),
@@ -585,6 +663,7 @@ def _gh_get_pr(ref: str, config: dict) -> dict | None:
                         "mergeable",
                         "headRefName",
                         "baseRefName",
+                        "isCrossRepository",
                         "mergedAt",
                         "isDraft",
                         "url",

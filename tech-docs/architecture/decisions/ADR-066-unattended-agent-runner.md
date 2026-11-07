@@ -290,6 +290,7 @@ Before the confined form is built, a probe of the harness confirms the facts bel
 - On each platform, whether the sandbox ends a process that left the harness's tree when the run ends.
 - In a review command's run, the hook judges a subject the probe names.
 - A harness release that makes bare mode the default for `-p`, as announced, falls outside the tested range. Bare mode signs in with an API key only.
+- Whether a confined run holds the clone's `CLAUDE.md` and the files it imports, every layer's loaded rules among them, and whether the start report names the instruction files the run loaded (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 7). By the harness's documentation it holds neither, since the run leaves out the project's setting source; #2352 takes that up.
 
 A fact the probe or the trial disproves refines or supersedes this record, as the change to the decision requires.
 

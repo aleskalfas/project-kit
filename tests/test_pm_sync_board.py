@@ -259,12 +259,49 @@ def test_where_the_board_carries_the_state_it_refuses_and_writes_nothing(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    _configure(sb, monkeypatch, BOARD_CONFIG, None)
+    _configure(sb, monkeypatch, BOARD_CONFIG, {"state": {"board": True}})
 
     assert _sync(sb, "--yes") == 2
 
     assert board.calls == []
-    assert "the Status is the state's source" in capsys.readouterr().err
+    assert "the board's Status is the state's source" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("axes", [{}, {"state": {"unsupported": True}}])
+def test_where_the_state_degrades_it_refuses_and_says_why(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    axes: dict,
+) -> None:
+    """A present map that leaves the state out degrades it, and the capability
+    writes no Status for it: the board's Status stays with the people who move
+    it, so there is nothing to bring level (DEC-062 point 5)."""
+    _configure(sb, monkeypatch, BOARD_CONFIG, axes)
+
+    assert _sync(sb, "--yes") == 2
+
+    assert board.calls == []
+    err = capsys.readouterr().err
+    assert "leaves `state` out or marks it `unsupported`" in err
+    assert "stays with the people who move it" in err
+
+
+def test_with_no_map_the_status_is_kept_and_synced(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The board flag carries no axis (DEC-062 point 1): with no map, the kit's
+    labels carry the state, and the board's Status is their projection."""
+    _configure(sb, monkeypatch, BOARD_CONFIG, None)
+    number = _issue(board, "state:backlog")
+    board.card(number, "Todo")
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.status(number) == "Backlog"
 
 
 def test_a_non_member_is_refused(

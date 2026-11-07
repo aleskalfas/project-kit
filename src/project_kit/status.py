@@ -244,6 +244,37 @@ def _report_claude_adapter(target_root: Path) -> None:
         remedy="pkit deploy-agents" if ships_agents else None,
     ):
         click.echo(line)
+    for line in _rules_index_lines(target_root):
+        click.echo(line)
+
+
+def _rules_index_lines(target_root: Path) -> list[str]:
+    """The capabilities' rules index, beside the deployed skills and agents: where it is,
+    and the capabilities whose loaded files it includes (ADR-076 point 2). Whether it is in
+    step is `pkit validate`'s; this reads the file as it is."""
+    from project_kit import loaded_rules
+
+    path = target_root / loaded_rules.INDEX_FILE
+    shown = str(loaded_rules.INDEX_FILE)
+    if not path.is_file():
+        return [f"    {'rules index':<18} {shown} not present (run 'pkit sync')"]
+    try:
+        text = path.read_text(encoding="utf-8")
+        deliveries = loaded_rules.delivery_forms(target_root)
+    except (OSError, UnicodeDecodeError):
+        return [f"    {'rules index':<18} {shown} cannot be read"]
+    form = deliveries.forms[0] if deliveries.forms and not deliveries.differing else None
+    included: list[str] = []
+    for entry in text.splitlines()[1:]:
+        named = form.file_of(entry.strip()) if form is not None else None
+        if named is not None:
+            included.append(named.split("/")[-2])
+    if not included:
+        return [f"    {'rules index':<18} {shown}, including no capability's rules"]
+    return [
+        f"    {'rules index':<18} {shown}, including {len(included)} capability file(s):",
+        *(f"{_LIST_INDENT}{name}" for name in included),
+    ]
 
 
 @dataclass

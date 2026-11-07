@@ -3,8 +3,9 @@ id: REQ-020
 title: A dead anchor is an error, never silence
 status: active
 statement: An anchor that resolves to nothing is reported as an error, and never read as an anchor on something that did not change.
-measure: "A path that matches no file, or only excluded or answer files, is a `dead-anchor`. So is an identifier that does not resolve, and a value its resolver names no file for. The whole-repository check reports every one. The change check fails in enforcing mode on each the change made."
-applies-to: Every anchor of every artefact in the declared places, one under an excluded path included, wherever either friction check or validation reads it.
+measure: "A path that matches no file, or only excluded or answer files, is a `dead-anchor`. So is an identifier that does not resolve, and a value for which the query command that resolves it names no file. The whole-repository check reports every one. Where the friction mode is `enforcing`, the change check fails on each that is the change's own, as COR-050 point 12 assigns them."
+applies-to: Every anchor of every artefact in the declared places, one under an excluded path included. It holds wherever the change check, the whole-repository check or validation reads the anchor.
+obligation: v1:sha256:ab46773f56798ebe9c6b4fa7433a041b5bdde16a23e4fa132ea220483364c686
 actors:
   - ACT-developer
 refines: []
@@ -12,18 +13,22 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/friction_check.py
+        - src/project_kit/friction_repository.py
+        - src/project_kit/friction_validate.py
         - tests/test_friction_check.py
         - tests/test_friction_repository.py
         - tests/test_friction_validate.py
       record:
         - COR-050#7
         - COR-050#12
+        - COR-062#2
       artefact:
         - ACT-developer
 ---
 
 # REQ-020 · Functional · A dead anchor is an error, never silence
 
-**Verified by:** Tests of the [change check](../../../glossary.md#term-change-check--change-check) find an [anchor](../../../glossary.md#term-anchor--anchor) the [change](../../../glossary.md#term-change--change) added dead, or turned dead by removing its target, reported as `dead-anchor`. They find an anchor dead before the change left to the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check). Tests of the whole-repository check find every dead anchor reported, the [artefact](../../../glossary.md#term-artefact--artefact) judged on its other anchors. Tests of [validation](../../../glossary.md#term-validation--validation) find a dead anchor on a record's [point](../../../glossary.md#term-point--point), or on a document's section, failed.
+**Verified by:** Tests of the [change check](../../../glossary.md#term-change-check--change-check) find an [anchor](../../../glossary.md#term-anchor--anchor) the [change](../../../glossary.md#term-change--change) added dead, or turned dead by removing its target, reported as `dead-anchor`. They find an anchor dead before the change left to the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check). Tests of the whole-repository check find every [dead anchor](../../../glossary.md#term-dead-anchor--dead-anchor) reported, the [artefact](../../../glossary.md#term-artefact--artefact) judged on its other anchors. Tests of [validation](../../../glossary.md#term-validation--validation) find a dead anchor on a record's [point](../../../glossary.md#term-point--point), or on a document's section, failed.
 
-**Rationale:** An [anchor](../../../glossary.md#term-anchor--anchor) says what to ask the [artefact](../../../glossary.md#term-artefact--artefact) about. A mistyped one that read as standing on nothing changed would tell its reader that the artefact holds, whatever happened to what it rests on. So [COR-050 point 7](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors) makes a dead anchor an error, and [point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding) gives each check the dead anchors it reports or fails on.
+**Rationale:** An [anchor](../../../glossary.md#term-anchor--anchor) says what to ask the [artefact](../../../glossary.md#term-artefact--artefact) about. A mistyped one that read as standing on nothing changed would tell its reader that the artefact holds, whatever happened to what it rests on. So [COR-050 point 7](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors) makes a [dead anchor](../../../glossary.md#term-dead-anchor--dead-anchor) an error, and [point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding) gives each check the dead anchors it reports or fails on.

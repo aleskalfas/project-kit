@@ -67,6 +67,18 @@ everything about them:
   `friction_history` supplies the walk.
 - **The first commit holding two answers made apart** (`AnswerHistory.
   first_holding`), where their debt originates (COR-050 point 9, COR-062 point 7).
+- **What one commit wrote for an artefact** (`AnswerHistory.revalidated_in`),
+  against its first parent, for the warning on an over-broad anchor (ADR-080
+  point 1): whether it wrote a revalidation, a value of `at` in the artefact's
+  block or in an answer file it added or rewrote that the artefact's answers, in
+  either home, never carried at its first parent or before
+  (`AnswerHistory.carried_by`). A file rewritten counts, since a change may rewrite
+  one it added, as a fix round does, and its commits may land one by one. So an
+  answer moved out of the block, an answer file renamed or put back, and a value
+  written back, as a revert writes it, write none (COR-050 point 3, COR-062 point
+  3). It reads what the commit wrote, never which answers are live after it, as
+  the change check reads a change's head against its base's values: that would
+  take a state's answers at every commit.
 - **What a prune removes** (`StateAnswers.prune`): each answer file in which no
   answer is live (`StateAnswers.not_live`), unless removing it would change one that
   is. A file is kept where it cannot be read, where removing it brings back an
@@ -97,6 +109,7 @@ from typing import Any, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import (
     ANSWER_FILE_SCHEMA_KIND,
     BackboneSchemaInvalid,
@@ -159,7 +172,8 @@ DEFERRED_KEY = "deferred"
 BLOCK_HOME = "block"
 FILES_HOME = "files"
 
-_yaml: Any = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 # --- the folder ---------------------------------------------------------------------
@@ -418,7 +432,7 @@ def read_answer_file(name: str, raw: bytes | None) -> AnswerFile:
     except UnicodeDecodeError:
         return AnswerFile(name, None, (), "is not UTF-8 text")
     try:
-        loaded = _yaml.load(text)
+        loaded = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError as exc:
         reason = " ".join(str(getattr(exc, "problem", None) or exc).split())
         return AnswerFile(name, None, (), f"does not parse as YAML ({reason})")
@@ -572,11 +586,21 @@ def commit_files(tree: CommitTree) -> dict[str, AnswerFile]:
 class HistoryNames:
     """Whether a name in `read` is one history agrees with (COR-062 point 5), from a
     history read from the state's commit: the named file was added in a commit that
-    first carried the name, or in an ancestor of one."""
+    first carried the name, or in an ancestor of one.
 
-    def __init__(self, history: History, blobs: BlobReader) -> None:
+    `read` reads one version of an answer file, its tree entry and its name, as
+    `read_answer_file` does. A caller that reads the same versions passes its own,
+    so each is parsed once for both (`AnswerHistory`)."""
+
+    def __init__(
+        self,
+        history: History,
+        blobs: BlobReader,
+        read: Callable[[TreeEntry, str], AnswerFile] | None = None,
+    ) -> None:
         self.history = history
         self._blobs = blobs
+        self._read = self._read_version if read is None else read
         self._reads: dict[str, frozenset[str]] = {}
         self._adds: dict[str, tuple[int, ...]] = {}
         self._carried: dict[tuple[str, str], tuple[int, ...]] = {}
@@ -617,11 +641,13 @@ class HistoryNames:
                 entry = self.history.entry(index, path)
                 if entry is None or entry.status == "D" or entry.after is None:
                     continue
-                if named not in self.reads(entry.after):
+                if named not in self.reads(entry.after, reader):
                     continue
                 added = entry.status == "A" or entry.status == "R"
                 parents = () if added else entry.before
-                if not any(state is not None and named in self.reads(state) for state in parents):
+                if not any(
+                    state is not None and named in self.reads(state, reader) for state in parents
+                ):
                     writes.append(index)
             found = tuple(
                 w
@@ -631,15 +657,18 @@ class HistoryNames:
             self._carried[key] = found
         return found
 
-    def reads(self, state: TreeEntry) -> frozenset[str]:
-        """Every name the version `state` of an answer file reads, any entry's."""
+    def reads(self, state: TreeEntry, name: str = "") -> frozenset[str]:
+        """Every name the version `state` of the answer file `name` reads, any entry's."""
         found = self._reads.get(state[1])
         if found is None:
-            raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
-            parsed = read_answer_file("", raw)
-            found = frozenset(name for entry in parsed.entries for name in entry.read)
+            parsed = self._read(state, name)
+            found = frozenset(read for entry in parsed.entries for read in entry.read)
             self._reads[state[1]] = found
         return found
+
+    def _read_version(self, state: TreeEntry, name: str) -> AnswerFile:
+        raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
+        return read_answer_file(name, raw)
 
 
 class Starts:
@@ -1542,7 +1571,8 @@ class AnswerPoints:
 
 class AnswerHistory:
     """The answer files through one history, beside each artefact's block (COR-062
-    point 6): every version of every answer file read once, by its object.
+    point 6): every version of every answer file read once, by its object — for the
+    names history agrees with too (`HistoryNames`).
 
     `dormant` — no answer file in the history — leaves every reading to the
     artefact's block, exactly as before.
@@ -1553,13 +1583,16 @@ class AnswerHistory:
         self.walker = walker
         self.blobs = blobs
         self.trees = TreeReader(blobs)
-        self.names = HistoryNames(history, blobs)
+        self._parsed: dict[str, AnswerFile] = {}
+        self.names = HistoryNames(history, blobs, self.parsed)
         self.starts = Starts(self.names, walker)
         self.paths = tuple(p for p in history.paths if is_answer_file(p))
-        self._parsed: dict[str, AnswerFile] = {}
+        self._entries: Mapping[str, tuple[tuple[int, Entry], ...]] | None = None
         self._naming: dict[str, bool] = {}
         self._at: dict[str, Mapping[str, TreeEntry]] = {}
         self._locations: dict[str, frozenset[str]] = {}
+        self._written: dict[int, Mapping[str, tuple[Entry, ...]]] = {}  # by commit
+        self._value_writes: dict[tuple[str, Any], tuple[int, ...] | None] = {}
 
     @property
     def dormant(self) -> bool:
@@ -1630,17 +1663,26 @@ class AnswerHistory:
             found = self._locations[like.location] = frozenset(head_locations(self.history)(like))
         return found
 
+    def _by_location(self) -> Mapping[str, tuple[tuple[int, Entry], ...]]:
+        """Every entry of every version of every answer file in the history, by the
+        location it names, each with the log index of its version: read once, so asking
+        about an artefact walks its own entries, never every file's."""
+        if self._entries is None:
+            found: dict[str, list[tuple[int, Entry]]] = {}
+            for path in self.paths:
+                name = name_of(path)
+                for index, state in self.versions(path):
+                    for entry in self.parsed(state, name).entries:
+                        found.setdefault(entry.location, []).append((index, entry))
+            self._entries = {location: tuple(each) for location, each in found.items()}
+        return self._entries
+
     def ever_named(self, like: Artefact) -> bool:
         """Whether any answer file in the history names `like`."""
         found = self._naming.get(like.location)
         if found is None:
-            locations = self._names_artefact(like)
-            found = any(
-                entry.location in locations
-                for path in self.paths
-                for _index, state in self.versions(path)
-                for entry in self.parsed(state, name_of(path)).entries
-            )
+            named = self._by_location()
+            found = any(location in named for location in self._names_artefact(like))
             self._naming[like.location] = found
         return found
 
@@ -1707,15 +1749,12 @@ class AnswerHistory:
         return None if start is None else self.history.descendants(start)
 
     def _file_candidates(self, like: Artefact, in_entry: Callable[[Entry], bool]) -> set[int]:
-        locations = self._names_artefact(like)
+        named = self._by_location()
         return {
             index
-            for path in self.paths
-            for index, state in self.versions(path)
-            if any(
-                entry.location in locations and in_entry(entry)
-                for entry in self.parsed(state, name_of(path)).entries
-            )
+            for location in self._names_artefact(like)
+            for index, entry in named.get(location, ())
+            if in_entry(entry)
         }
 
     # --- a revalidation's value ----------------------------------------------------
@@ -1739,6 +1778,102 @@ class AnswerHistory:
         if unreachable:
             return Carried((), unreachable=True, cut=True)
         return self.walker.first_carried(like, writes, cut=block.cut)
+
+    # --- what one commit wrote -----------------------------------------------------
+
+    def revalidated_in(
+        self,
+        like: Artefact,
+        index: int,
+        diff: Iterable[DiffEntry],
+        before: Artefact | None,
+        after: Artefact | None,
+    ) -> bool:
+        """Whether the commit at log `index` wrote a revalidation of `like` against its
+        first parent, `diff` being what it changed against that parent (ADR-080 point 1).
+
+        It wrote one where it wrote a value of `at` that the artefact's answers, in
+        either home, carried at no commit its first parent is or descends from
+        (`carried_by`; COR-050 point 3). The values it wrote are its block's `at`
+        where `after`, the artefact after the commit, carries one that `before`, the
+        artefact at the first parent, did not, and the `at` of each entry naming the
+        artefact in an answer file the diff adds or rewrites (`changed_files`). A
+        change may rewrite an answer file it added itself, as a fix round does, and
+        where its commits land one by one the rewrite is a commit of its own (COR-062
+        point 3). A value the file carried before is refused as any is. So an answer
+        moved out of the block, an answer file renamed or put back, and a value written
+        back, as a revert writes it, write none. A merge on the line wrote what its other
+        parents brought in. Which answers are live after the commit is not read."""
+        values: list[Any] = []
+        if after is not None:
+            value = parsed_at(after)
+            if value is not None and (before is None or parsed_at(before) != value):
+                values.append(value)
+        written = self._written_in(index, diff)
+        for location in self._names_artefact(like):
+            for entry in written.get(location, ()):
+                if entry.revalidation is not None and entry.revalidation.at is not None:
+                    values.append(entry.revalidation.at)
+        if not values:
+            return False
+        parents = self.history.parent_positions[index]
+        first = parents[0] if parents else None
+        if first is None:  # no parent in this clone to have carried it
+            return True
+        return any(not self.carried_by(like, value, first) for value in dict.fromkeys(values))
+
+    def carried_by(self, like: Artefact, value: Any, index: int) -> bool:
+        """Whether the artefact's answers, in either home, carried `value`, a parsed `at`,
+        at the commit at log `index` or at one it descends from, within the artefact's own
+        history (`_since_added`; COR-050 point 3, COR-062 point 6). A value a shallow
+        clone's cut carries is taken as carried there, before every commit of the clone."""
+        writes = self._writes_of(like, value)
+        if writes is None:
+            return True
+        older = [write for write in writes if write >= index]  # the log lists parents later
+        return bool(older) and any(write in self.history.ancestors(index) for write in older)
+
+    def _writes_of(self, like: Artefact, value: Any) -> tuple[int, ...] | None:
+        """The commits that wrote a version of one of the artefact's homes carrying `value`:
+        its block's writes (`Walker.block_writes`), and each version of an answer file in
+        which an entry naming the artefact carries it; read once for each value. `None`
+        where a shallow clone's cut carries it."""
+        key = (like.location, value)
+        if key in self._value_writes:
+            return self._value_writes[key]
+        block = self.walker.block_writes(like, value)
+        found: tuple[int, ...] | None = None
+        if not block.unreachable:
+
+            def in_entry(entry: Entry) -> bool:
+                return entry.revalidation is not None and entry.revalidation.at == value
+
+            writes = set(block.points)
+            if not self.dormant:
+                writes |= self._file_candidates(like, in_entry)
+            since = self._since_added(like)
+            found = tuple(sorted(writes if since is None else writes & since))
+        self._value_writes[key] = found
+        return found
+
+    def _written_in(self, index: int, diff: Iterable[DiffEntry]) -> Mapping[str, tuple[Entry, ...]]:
+        """The entries of the answer files a commit's `diff` adds or rewrites
+        (`changed_files`), as the commit left them, by the location each names; read once
+        for the commit at log `index`, each file by its object (`parsed`)."""
+        found = self._written.get(index)
+        if found is None:
+            listed = list(diff)
+            by_path = {entry.path: entry for entry in listed}
+            changed = changed_files(listed)
+            entries: dict[str, list[Entry]] = {}
+            for name in (*changed.added, *changed.rewritten):
+                state = by_path[path_of(name)].after
+                if state is None:
+                    continue
+                for entry in self.parsed(state, name).entries:
+                    entries.setdefault(entry.location, []).append(entry)
+            found = self._written[index] = {loc: tuple(each) for loc, each in entries.items()}
+        return found
 
     # --- a deferral's point --------------------------------------------------------
 

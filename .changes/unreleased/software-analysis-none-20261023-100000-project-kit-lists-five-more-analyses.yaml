@@ -1,8 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Internal. project-kit's own settings for the capability list five more
-  analyses, those of project-management, evidence, demo-recording,
-  software-analysis and living-docs, and software-engineering's builds on
-  project-management's (#1890). Only the project-owned settings file
-  changes, and nothing the capability ships changes.

@@ -458,6 +458,48 @@ def _write_region(target_root: Path, fp: list[str]) -> None:
     path.write_text(new, encoding="utf-8")
 
 
+def _region_lines(text: str) -> list[str] | None:
+    """The patterns pkit's region holds, or None where the text holds no region."""
+    if _BEGIN not in text:
+        return None
+    held: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.strip() == _BEGIN:
+            inside = True
+            continue
+        if inside and line.strip() == _END:
+            return held
+        if inside:
+            held.append(line)
+    return held
+
+
+def refresh_private_region(target_root: Path, *, dry_run: bool = False) -> str | None:
+    """Re-render pkit's region of `.git/info/exclude` from the footprint, where the region
+    is present, for install and sync: a component installed since `pkit visibility
+    private` ran may declare footprint the region does not hold, which would then reach
+    the shared tree (ADR-009 point 3). Returns the status line, or None where there was
+    nothing to do: no git repository, no region, or a region that holds the footprint."""
+    try:
+        path = _info_exclude_path(target_root)
+    except click.ClickException:
+        return None
+    if not path.is_file():
+        return None
+    held = _region_lines(path.read_text(encoding="utf-8"))
+    if held is None:
+        return None
+    fp = footprint(target_root)
+    if held == fp:
+        return None
+    what = f".git/info/exclude (pkit's private region, {len(fp)} path(s))"
+    if dry_run:
+        return f"  {'would render':<12} {what}"
+    _write_region(target_root, fp)
+    return f"  {'rendered':<12} {what}"
+
+
 def _remove_region(target_root: Path) -> bool:
     path = _info_exclude_path(target_root)
     if not path.is_file():

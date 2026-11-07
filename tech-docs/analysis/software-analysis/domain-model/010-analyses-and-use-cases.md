@@ -10,6 +10,7 @@ pkit:
   friction:
     anchors:
       record:
+        - software-analysis:DEC-001
         - software-analysis:DEC-001#1
         - software-analysis:DEC-001#2
         - software-analysis:DEC-001#3
@@ -22,14 +23,14 @@ pkit:
 
 # VIEW-analyses-and-use-cases — Analyses, use cases and their ids
 
-A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). An [analysis](../glossary.md#term-analysis--analysis) is that account for one [component](../../core/glossary.md#term-component--component), kept true by what it rests on. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
+A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). An [analysis](../glossary.md#term-analysis--analysis) is that account, kept true by what it rests on, for one unit of the software, developed and versioned on its own. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
 
 ```mermaid
 classDiagram
   accTitle: Analyses, use cases and their ids
-  accDescr: An analysis describes one component, builds on the analyses of the components it depends on, and holds its use cases. A freed id was the id of removed use cases, journeys or requirements, and names the commit that removed them.
+  accDescr: An analysis describes one unit of a project's software, builds on the analyses of the units that unit depends on, and holds its use cases. A freed id was the id of removed use cases, journeys or requirements, and names the commit that removed them.
   class Analysis
-  Analysis : component
+  Analysis : unit it describes
   Analysis : folder
   class UseCase["Use case"]
   UseCase : id
@@ -63,27 +64,27 @@ Defined in [TERM-analysis](../glossary.md#term-analysis--analysis).
 - the account stays as it was
 - nobody notices until a reader is misled
 
-A [component](../../core/glossary.md#term-component--component) owns what describes it, so its account changes with it and at its pace ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+A separately developed and versioned unit of the software owns what describes it, so its account changes with it and at its pace ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-An analysis says what one component must do, and for whom: its actors, its [use cases](../glossary.md#term-use-case--use-case), its journeys, its terms and its requirements. It lies in the internal documentation of the repository where its component is developed. Where a [project](../../core/glossary.md#term-project--project) keeps several, each lies in a folder named after its component.
+An analysis says what the unit of the software it describes must do, and for whom: its actors, [use cases](../glossary.md#term-use-case--use-case), journeys, terms and requirements. It lies in the internal documentation of the repository where that unit is developed. Where a [project](../../core/glossary.md#term-project--project) keeps several, each lies in a folder named after the unit it describes.
 
 **Attributes:**
 
-- the component it describes, and the folder it lies in ([DEC-001 point 2](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them))
-- the analyses it builds on, those of the components its component depends on (DEC-001 point 2)
+- the unit of the software it describes, and the folder it lies in ([DEC-001 point 2](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them))
+- the analyses it builds on, those of the units that the unit it describes depends on (DEC-001 point 2)
 - its own [artefacts](../../core/glossary.md#term-artefact--artefact), each with an id unique across the repository (DEC-001 points 2 and [3](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers))
 
 **Relations:**
 
-- It describes one component, such as the methodology's core or one of its [capabilities](../../core/glossary.md#term-capability--capability) (DEC-001 point 2).
-- It builds on the analyses of the components its component depends on, required or optional, and names no other (DEC-001 point 2).
+- It describes one unit of its project's software, developed and versioned on its own, such as the [backbone](../../core/glossary.md#term-backbone--backbone) or a [capability](../../core/glossary.md#term-capability--capability) (DEC-001 point 2).
+- It builds on the analyses of the units that the unit it describes depends on, required or optional, and names no other (DEC-001 point 2).
 - It holds its use cases (DEC-001 point 2).
 
 **States:** None.
 
 **Always true:**
 
-- An analysis never ships with its component, so whoever receives the component receives no analysis (DEC-001 point 2).
+- An analysis never ships with the unit it describes, so whoever receives that unit receives no analysis (DEC-001 point 2).
 - It points at the solution by anchors, and nothing in the solution points back at it ([DEC-001 point 11](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#11-scope-boundary-and-how-the-analysis-meets-the-solution)).
 
 ## Use case
@@ -92,7 +93,7 @@ Defined in [TERM-use-case](../glossary.md#term-use-case--use-case).
 
 **Why:** A use case is true of the product for as long as the product supports it. Kept apart from any one design, it persists after that design ships, and the design's review of it stays with the design ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A use case states one actor's goal and how the [system](../../core/glossary.md#term-system--system) fulfils it, with the other actors who take part. Its main path of steps and the variants that branch from them say what the system must do, as the accepted [decision records](../../core/glossary.md#term-decision-record--decision-record) decide it.
+A use case states one actor's goal and how the [system](../../core/glossary.md#term-system--system) fulfils it, with the other actors who take part. Its main path of steps and the variants that branch from them say what the system does. Where an accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides a step or a variant, they say what the system must do.
 
 **Attributes:**
 
@@ -143,21 +144,21 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Analysis:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md)
-- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/UC-074-free-uncited-ids.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
+- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)
 
 **Use case:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md)
-- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/UC-074-free-uncited-ids.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
+- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)
 
 **Freed id:**
 
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
-- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/UC-074-free-uncited-ids.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
+- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)

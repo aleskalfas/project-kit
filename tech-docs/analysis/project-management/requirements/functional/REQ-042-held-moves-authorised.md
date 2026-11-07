@@ -5,6 +5,7 @@ status: active
 statement: "No command of project-management makes a move of the issue lifecycle that a person holds without that person's authorisation for that issue."
 measure: "With no terminal, no confirmation flag, and no reason where the move asks one, the command refuses the move and changes nothing."
 applies-to: "Every command of project-management that moves an issue through the issue lifecycle, or merges the pull request whose merge moves it. The moves of the cascade are outside this requirement, since they ask for no authorisation."
+obligation: v1:sha256:ccbe4c4aac712f9cac54d286c464b98ee9cd94fef520a3211245b83853e7f2e7
 actors:
   - core:ACT-developer
   - ACT-planner
@@ -22,6 +23,16 @@ pkit:
         - project-management:DEC-014
         - project-management:DEC-046#1
         - project-management:DEC-055#3
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
       artefact:
         - ACT-planner
 ---

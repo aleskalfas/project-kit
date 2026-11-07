@@ -19,17 +19,20 @@ Held to software-analysis DEC-001 points 2 to 4:
 
 The check is `test_software_analysis_check.py`'s, the schemas and templates
 `test_software_analysis_templates.py`'s.
+
+The stamp and the check run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2325). One test keeps a process: the
+stamp's end-to-end test, `pkit analysis new` as the dispatcher starts it.
 """
 
 from __future__ import annotations
 
 import ast
 import json
-import os
 import re
 import stat
 import subprocess
-import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +54,7 @@ from tests.analysis_repo import (
     FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
+    MAIN,
     NEW,
     QUALITY,
     RECORDED,
@@ -67,9 +71,11 @@ from tests.analysis_repo import (
     new,
     prepare,
     prepare_seeded,
+    run_in_process,
     run_script,
     stamped,
 )
+from tests.in_process import InProcessPkit, Runner
 
 # The living-docs guard's reading of a script's code: one list of what re-deriving
 # discovery would take, shared rather than copied.
@@ -328,13 +334,17 @@ def test_the_stamp_is_reached_under_the_capability_and_its_alias(
 # --- stamping (DEC-001 points 2 to 4) -------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the stamp's end-to-end test: `pkit analysis new` as the dispatcher starts it, the lines "
+    "a person reads, and the location recorded through the `pkit` it starts"
+)
 def test_the_first_stamp_records_the_location_and_a_root_change_moves_nothing(
     project: AdopterRepo,
 ) -> None:
     """Off a terminal, with no prompt: recording the capability's own location changes
     nothing in use, so the stamp is the consent (COR-049 point 5), and it passes on both
     lines of the notice — what was recorded, and which root it came from."""
-    completed = new(project, "actor", "tester")
+    completed = run_script(project, NEW, "actor", "tester", "--base", MAIN)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [
         f"recorded software-analysis analysis = {ANALYSIS}  ({RECORDED})",
@@ -346,7 +356,7 @@ def test_the_first_stamp_records_the_location_and_a_root_change_moves_nothing(
         "analysis": ANALYSIS
     }
     project.write({CONFIG: "docs:\n  internal: handbook\n"})
-    completed = new(project, "term", "sandbox")
+    completed = run_script(project, NEW, "term", "sandbox", "--base", MAIN)
     assert completed.stdout.splitlines() == [f"stamped TERM-sandbox at {GLOSSARY}#TERM-sandbox"]
 
 
@@ -472,7 +482,7 @@ def test_what_the_stamp_writes_holds_no_semicolon_and_no_long_sentence(
         "--step",
         "UC-003",
     )
-    record = run_script(
+    record = run_in_process(
         seeded,
         NEW,
         "revalidation",
@@ -638,38 +648,35 @@ def test_a_write_that_fails_records_no_location(project: AdopterRepo) -> None:
     assert not (project.root / RECORDED).exists()
 
 
-#: A `pkit` whose `docs record-location --yes` fails, and every other command — the
-#: question whether the location is recorded included — as the real one.
-_FAILING_RECORD = """#!{python}
-import subprocess, sys
-if sys.argv[1:3] == ["docs", "record-location"] and "--yes" in sys.argv:
-    sys.stderr.write("error: the recorded locations cannot be written\\n")
-    sys.exit(1)
-sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]]).returncode)
-"""
+def _failing_record() -> Runner:
+    """A `pkit` whose `docs record-location --yes` fails, and every other command — the
+    question whether the location is recorded included — as the in-process `pkit`."""
+    pkit = InProcessPkit()
+
+    def failing(args: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        argv = [str(word) for word in args]
+        if argv[1:3] == ["docs", "record-location"] and "--yes" in argv:
+            error = "error: the recorded locations cannot be written\n"
+            return subprocess.CompletedProcess(argv, 1, "", error)
+        return pkit(args, **options)
+
+    return failing
 
 
-# Slow by design: six stamps, each a script that starts several `pkit` processes.
-def test_a_recording_that_fails_leaves_nothing_written(
-    project: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_recording_that_fails_leaves_nothing_written(project: AdopterRepo) -> None:
     """The artefact written, the location cannot be recorded: the file is put back as it
     was — the glossary's bytes, or no file and no folder made for it."""
     stamped(project, "actor", "tester")
     stamped(project, "term", "suite")
     before = (project.root / GLOSSARY).read_bytes()
     (project.root / RECORDED).unlink()
-    failing = tmp_path / "failing-record"
-    failing.mkdir()
-    (failing / "pkit").write_text(_FAILING_RECORD.format(python=sys.executable), encoding="utf-8")
-    (failing / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{failing}{os.pathsep}{os.environ['PATH']}")
+    failing = _failing_record()
     for args, gone in (
         (("term", "session"), None),
         (("actor", "admin"), actor_at("ACT-admin")),
         (("use-case", "export", "--actor", "ACT-tester", "--area", "reports"), USE_CASES),
     ):
-        completed = new(project, *args)
+        completed = run_in_process(project, NEW, *args, "--base", MAIN, pkit=failing)
         assert completed.returncode == 1, completed.stdout
         assert "the analysis location could not be recorded: " in completed.stderr
         assert (project.root / GLOSSARY).read_bytes() == before
@@ -677,7 +684,7 @@ def test_a_recording_that_fails_leaves_nothing_written(
     assert not (project.root / RECORDED).exists()
     # Recorded already, the stamp needs no recording and never runs it: it cannot fail on one.
     project.write({RECORDED: "locations:\n  analysis: tech-docs/analysis\n"})
-    completed = new(project, "actor", "admin")
+    completed = run_in_process(project, NEW, "actor", "admin", "--base", MAIN, pkit=failing)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [f"stamped ACT-admin at {actor_at('ACT-admin')}"]
 
@@ -730,7 +737,6 @@ def test_entries_two_branches_add_merge_cleanly(project: AdopterRepo) -> None:
     assert re.findall(r"^## (\S+)", text, flags=re.MULTILINE) == ids
 
 
-# Slow by design: five stamps, each a script that starts several `pkit` processes.
 def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: AdopterRepo) -> None:
     stamped(project, "actor", "tester")
     stamped(project, "use-case", "one", "--actor", "ACT-tester")
@@ -747,7 +753,6 @@ def test_numbers_count_the_default_branch_and_withdrawn_use_cases(project: Adopt
     assert stamped(project, "use-case", "four", "--actor", "ACT-tester") == "UC-004"
 
 
-# Slow by design: six stamps, each a script that starts several `pkit` processes.
 def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     project: AdopterRepo,
 ) -> None:
@@ -788,7 +793,6 @@ def test_a_number_deleted_from_the_default_branch_is_never_used_again(
     assert stamped(project, "journey", "again", "--actor", "ACT-tester", *steps) == "JRN-002"
 
 
-# Slow by design: five stamps and the check, each a script that starts `pkit` processes.
 def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRepo) -> None:
     """A number the history gave is counted only when the backbone's reading at the commit
     that added the file held it as a file of the place — a Markdown file there, not left
@@ -811,7 +815,7 @@ def test_the_history_counts_the_files_the_tree_reading_counts(project: AdopterRe
     project.commit("UC-001, an excluded example and a diagram")
     # Present: the example is no part of the analysis, and the diagram no file of the place.
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-002"
-    checked = json.loads(run_script(project, VALIDATE, "--json").stdout)
+    checked = json.loads(run_in_process(project, VALIDATE, "--json").stdout)
     assert not [f for f in checked["findings"] if f["location"].startswith(examples)]
     project.commit(
         "UC-002; the example and the diagram removed",
@@ -846,7 +850,6 @@ def test_a_file_added_before_its_place_was_there_still_counts(project: AdopterRe
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-008"
 
 
-# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     project: AdopterRepo, tmp_path: Path
 ) -> None:
@@ -873,7 +876,6 @@ def test_a_shallow_clone_s_stamp_says_its_history_stops_early(
     assert completed.stdout.splitlines() == [f"stamped ACT-admin at {actor_at('ACT-admin')}"]
 
 
-# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
     project: AdopterRepo,
 ) -> None:
@@ -897,7 +899,6 @@ def test_a_number_a_file_s_name_carries_is_held_whatever_the_file_holds(
     assert stamped(project, "use-case", "two", "--actor", "ACT-tester") == "UC-007"
 
 
-# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_a_number_spelt_with_other_zeros_counts_as_held(project: AdopterRepo) -> None:
     """The stamp reads `UC-0007` as the number 7, as the check's duplicate count does, so
     it never gives a number a file already claims, whatever its spelling — and the ids
@@ -935,7 +936,7 @@ def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
     refuses with the backbone's reason and fix, and writes nothing (point 4)."""
     stamped(project, "actor", "tester")
     project.write({CONFIG: f"docs:\n  internal: tech-docs\n{declared}"})
-    completed = run_script(project, NEW, "use-case", "one", "--actor", "ACT-tester", *base)
+    completed = run_in_process(project, NEW, "use-case", "one", "--actor", "ACT-tester", *base)
     assert completed.returncode != 0
     assert refusal in completed.stderr
     assert not (project.root / USE_CASES).exists() or not list(
@@ -943,32 +944,23 @@ def test_without_what_is_settled_the_stamp_refuses_rather_than_guess(
     )
 
 
-def test_a_stamp_asks_the_backbone_what_is_settled_once(
-    project: AdopterRepo,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_a_stamp_asks_the_backbone_what_is_settled_once(project: AdopterRepo) -> None:
     """One reading names the default branch and the base named on the command line alike,
     so a stamp asks for it once: each `pkit` it starts is a whole backbone start-up
-    (#1221)."""
+    (#1221). The in-process `pkit` holds each argument list it was given, in order."""
     stamped(project, "actor", "tester")
-    bin_dir = tmp_path_factory.mktemp("counting-pkit")
-    started = bin_dir / "started"
-    started.touch()
-    fake = bin_dir / "pkit"
-    fake.write_text(
-        f'#!/bin/sh\necho "$*" >> "{started}"\nexec "{sys.executable}" -m project_kit "$@"\n',
-        encoding="utf-8",
+    pkit = InProcessPkit()
+    completed = run_in_process(
+        project, NEW, "use-case", "one", "--actor", "ACT-tester", "--base", MAIN, pkit=pkit
     )
-    fake.chmod(0o755)
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
-    assert stamped(project, "use-case", "one", "--actor", "ACT-tester") == "UC-001"
-    asked = started.read_text(encoding="utf-8").splitlines()
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip().splitlines()[-1].split()[1] == "UC-001"
+    asked = [" ".join(argv[1:]) for argv in pkit.calls]
     readings = [line for line in asked if line.startswith("repository base")]
     assert readings == ["repository base --json --base=main"], asked
 
 
-# Slow: three stamps, built once per session; the first test to ask pays it in its setup.
+# Three stamps, built once per session; the first test to ask pays them in its setup.
 def _ground(repo: AdopterRepo) -> None:
     """`prepare`, then the actor ACT-tester with a use case of its own, and the actor
     ACT-retired, withdrawn."""

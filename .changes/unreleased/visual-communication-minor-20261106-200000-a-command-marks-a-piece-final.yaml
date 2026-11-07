@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual mark-final <piece> <version>` marks a piece final and names the
+  version handed out (DEC-017 points 1, 2 and 8). It takes the version whatever
+  changed since: it puts back the lock that version was made under, read from
+  its fingerprint, says what else changed, and stops on none of it. Every file
+  of the version moves from the clone's local folder into the piece's
+  `handed-out/`, to be committed, and `exports.yaml` gains the line
+  `handed-out: <version>`, an addition at format 1. A piece is now final to
+  every command by its state or by that field, and where the record of exports
+  cannot be read. A render of a final piece draws its previews, prints what it
+  finds, moves no lock and writes no findings record.

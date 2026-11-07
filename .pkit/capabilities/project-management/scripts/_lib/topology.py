@@ -90,8 +90,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from _lib import default_branch, provenance, state_issues, workstreams
+    from _lib import backbone, default_branch, provenance, state_issues, workstreams
 except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the path
+    import backbone  # type: ignore[no-redef]
     import default_branch  # type: ignore[no-redef]
     import provenance  # type: ignore[no-redef]
     import state_issues  # type: ignore[no-redef]
@@ -601,7 +602,7 @@ class Settled:
     commit: str | None
 
 
-def settled(capability_root: Path, *, run: Callable[..., Any] = subprocess.run) -> Settled:
+def settled(capability_root: Path, *, run: Callable[..., Any] = backbone.run) -> Settled:
     """The default branch's commit, as the backbone resolves it (COR-054 point 5).
 
     ``commit`` is None where the branch has no commit yet. Raises
@@ -625,7 +626,7 @@ def settled(capability_root: Path, *, run: Callable[..., Any] = subprocess.run) 
 def read(
     capability_root: Path,
     *,
-    run: Callable[..., Any] = subprocess.run,
+    run: Callable[..., Any] = backbone.run,
     git: Git | None = None,
 ) -> Topology | None:
     """The topology the default branch holds: the one the commands that act as a
@@ -869,7 +870,7 @@ def snapshot(
     gh: state_issues.Gh,
     account: str | None,
     key: str | None,
-    run: Callable[..., Any] = subprocess.run,
+    run: Callable[..., Any] = backbone.run,
     git: Git | None = None,
     versions: Any = None,
 ) -> Snapshot | None:
@@ -1004,7 +1005,7 @@ def check_change(
     capability_root: Path,
     explicit_base: str | None = None,
     *,
-    run: Callable[..., Any] = subprocess.run,
+    run: Callable[..., Any] = backbone.run,
     git: Git | None = None,
 ) -> Report:
     """Check the working tree's topology against its base.

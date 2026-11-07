@@ -9,6 +9,7 @@ and `pkit validate` runs the "packages" pass."""
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -1271,6 +1272,17 @@ def _installed_package(adopter_root: Path, name: str) -> Path:
     return adopter_root / ".pkit" / "capabilities" / name / "package.yaml"
 
 
+def _with_component_version(text: str, value: str) -> str:
+    """`text` with its component's `version` set to `value`, whatever version it carried.
+
+    A release moves the version a package carries, so a test that breaks it rewrites
+    the line it finds, not the number the repository holds today (#2377).
+    """
+    rewritten, count = re.subn(r"^(  version: ).*$", rf"\g<1>{value}", text, count=1, flags=re.M)
+    assert count == 1, "the package names no component version"
+    return rewritten
+
+
 def test_pkit_validate_fails_on_an_unknown_key_naming_the_nearest_known_one(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
@@ -1310,8 +1322,7 @@ def test_pkit_validate_fails_on_a_package_error(make_adopter_repo: MakeAdopterRe
     adopter = make_adopter_repo(capabilities=("evidence",))
     package = _installed_package(adopter.root, "evidence")
     package.write_text(
-        package.read_text(encoding="utf-8").replace("version: 0.5.1", "version: 5"),
-        encoding="utf-8",
+        _with_component_version(package.read_text(encoding="utf-8"), "5"), encoding="utf-8"
     )
 
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
@@ -1762,8 +1773,7 @@ def test_packages_pass_without_a_schema_in_the_tree_runs_repository_checks_only(
     bs.backbone_schema_path(adopter.root, pv.SCHEMA_KIND).unlink()
     package = _installed_package(adopter.root, "evidence")
     package.write_text(
-        package.read_text(encoding="utf-8").replace("version: 0.5.1", "version: nope")
-        + "foootprint: [x]\n",
+        _with_component_version(package.read_text(encoding="utf-8"), "nope") + "foootprint: [x]\n",
         encoding="utf-8",
     )
     result = pv.validate_installed_packages(adopter.root)

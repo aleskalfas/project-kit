@@ -1,9 +1,10 @@
 """Tests for the friction change check, `pkit friction check` (Task #990, COR-050).
 
-Every test stands up a real adopter repository (`make_adopter_repo`), commits
-a base state on `main`, branches `feature` off it and makes real commits (or
-leaves uncommitted work) before running the check against `main`. The
-documents come from `tests.friction_documents`.
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`). It commits a base state on `main`, branches
+`feature` off it and makes real commits (or leaves uncommitted work) before
+running the check against `main`. The documents come from
+`tests.friction_documents`.
 """
 
 from __future__ import annotations
@@ -35,12 +36,15 @@ from tests.friction_documents import (
     T2,
     adr,
     answer_file_names,
+    commit_install,
     document,
     friction_config,
     guide,
     notes,
     pointed_record,
 )
+from tests.in_process import start_in_process
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -52,12 +56,13 @@ ANSWERED_ELSEWHERE = guide(at=None, outcome=None, because=None)
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], config: str | None = None) -> None:
-    """Commit the base state on `main` (the install included) and branch `feature` off it."""
+    """Commit the base state on `main`, on the install the template committed
+    (`commit_install`), and branch `feature` off it."""
     adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
@@ -686,7 +691,7 @@ def test_a_record_anchor_naming_no_record_is_dead(repo: AdopterRepo) -> None:
 
 
 def test_a_capability_decision_resolves_as_a_record(make_adopter_repo: MakeAdopterRepo) -> None:
-    adopter = make_adopter_repo(capabilities=("evidence",))
+    adopter = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     decisions = sorted((adopter.pkit / "capabilities" / "evidence" / "decisions").glob("DEC-*.md"))
     stem = decisions[0].stem
     number = "-".join(stem.split("-")[:2])
@@ -1333,7 +1338,7 @@ def test_a_capability_place_in_the_package_schema_shape_is_checked(
 ) -> None:
     """The place is read from each side's package metadata as
     `{path, location?, type?, revisits?, derived-links?, description?}`."""
-    repo = make_adopter_repo(capabilities=("evidence",))
+    repo = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     package = repo.root / ".pkit/capabilities/evidence/package.yaml"
     package.write_text(
         package.read_text(encoding="utf-8")
@@ -1431,6 +1436,7 @@ def test_the_base_comes_from_the_environment(repo: AdopterRepo) -> None:
 
 
 def test_dormant_without_places(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "enforcing"}}))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('d')\n"})
     result = _cli("--base", "main")
@@ -1455,6 +1461,7 @@ def test_dormant_demands_no_repository(tmp_path: Path) -> None:
 
 
 def test_dormant_when_nothing_carries_the_container(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(
         repo,
         {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"},
@@ -1467,6 +1474,7 @@ def test_dormant_when_nothing_carries_the_container(repo: AdopterRepo) -> None:
 
 
 def test_json_document_shape(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcing"))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('j')\n"})
     result = _cli("--base", "main", "--json")
@@ -2069,6 +2077,7 @@ def test_an_excluded_artefact_lists_what_it_wrote(repo: AdopterRepo) -> None:
 
 
 def test_a_dormant_document_carries_no_answers(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "warning"}}))
     repo.commit("reword", {"docs/guide.md": guide(because="reworded")})
     result = _cli("--base", "main", "--json")
@@ -2361,6 +2370,7 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
     only at the commit named: run from a checkout on `main`, the document is the one a
     clean checkout at that commit gives — the folders are that commit's, its manifest's
     capabilities and their registrations too, never the running checkout's."""
+    without_shipped_rule_sets(repo)  # so the backbone's folder exists only at that commit
     _start(repo, {"docs/guide.md": guide()})
     register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, contract=False)
     repo.write(
@@ -2395,17 +2405,23 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
     assert "does not declare the query contract" in unresolved["message"]
 
 
-# A resolver that answers a file no state holds, so its answer is no answer.
-NAMES_A_STRAY_FILE = ASKED + 'print(json.dumps({"paths": ["stray.md"]}))\n'
+# A resolver that answers a file no state holds, so its answer is no answer. Its body is
+# a `main`, so the runner's start runs it in this process (`start_in_process`).
+NAMES_A_STRAY_FILE = (
+    "def main():\n"
+    + textwrap.indent(ASKED + 'print(json.dumps({"paths": ["stray.md"]}))\n', "    ")
+    + '\n\nif __name__ == "__main__":\n    main()\n'
+)
 
 
 def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
-    repo: AdopterRepo,
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A resolver is a command run in the working tree, never read from a commit: from
     any other checkout `--head` refuses rather than read the disk as that commit; from a
     checkout at it, the resolver runs, and its answer is read against that commit's
     files, which a missing answer names."""
+    started = start_in_process(monkeypatch)
     _start(repo, {"docs/guide.md": guide()})
     register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, script_body=NAMES_A_STRAY_FILE)
     repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
@@ -2413,13 +2429,35 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     feature = repo.head()
 
     repo.checkout("main")
-    refused = _cli("--base", "main", "--head", "feature", "--json")
-    assert refused.exit_code == 1
+    refused = _cli("--base", "main", "--head", "feature", "--own-head", "feature", "--json")
+    assert refused.exit_code == 1 and started == []
     assert "--head feature: the anchor source 'alpha' is resolved by its capability's command" in (
         refused.output
     )
     assert f"HEAD is at {repo.head()[: fc.SHORT]}" in refused.output
     assert f"Run from a checkout at feature: HEAD at {feature[: fc.SHORT]}" in refused.output
+    # The refusal is a document too, told from any other failure by its kind, with no
+    # `answers` a reader could take for a check that ran.
+    told = json.loads(refused.stdout)
+    # Its keys are sorted, as every reading document's are: the bytes, which parsing hides.
+    assert refused.stdout == json.dumps(told, indent=2, sort_keys=True) + "\n"
+    assert (told["schema_version"], told["failed"]) == (fc.CHANGE_SCHEMA_VERSION, True)
+    assert "answers" not in told
+    assert told["refused"] == {
+        "kind": fc.RESOLVER_ELSEWHERE,
+        "head": feature,
+        "anchor": {"kind": "source", "value": "alpha"},
+        "working_tree": f"HEAD is at {repo.head()[: fc.SHORT]}",
+        "message": told["refused"]["message"],
+    }
+    assert "Run from a checkout at feature" in told["refused"]["message"]
+    # Without `--json` the run prints no document.
+    assert _cli("--base", "main", "--head", "feature", "--own-head", "feature").stdout == ""
+    # Nor without `--own-head`: a reader older than the flag takes any document for a check
+    # that ran, and knows this refusal by nothing on standard output and the sentence.
+    older = _cli("--base", "main", "--head", "feature", "--json")
+    assert older.exit_code == 1 and older.stdout == "" and started == []
+    assert "Run from a checkout at feature" in " ".join(older.stderr.split())
 
     repo.checkout("feature")
     at_head = _cli("--base", "main", "--head", "feature", "--json")
@@ -2439,10 +2477,31 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     assert "the working tree is not feature (1 uncommitted path)" in uncommitted.output
 
 
+def test_a_run_away_from_the_commit_named_starts_nothing_that_commit_holds(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A commit that registers a kind of its own, and anchors a page to it, starts nothing
+    from a working tree at another commit, though it names the command to run: the run
+    ends in the refusal (ADR-068 point 6)."""
+    started = start_in_process(monkeypatch)
+    _start(repo, {"docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"planted": "resolve"}, script_body=NAMES_A_STRAY_FILE)
+    repo.write({"docs/planted.md": document("planted", anchors={"planted": ["x"]}, at=T1)})
+    repo.commit("a kind and a page of the head's own", files=None)
+    repo.checkout("main")
+    refused = _cli("--base", "main", "--head", "feature", "--own-head", "feature", "--json")
+    assert refused.exit_code == 1 and started == []
+    assert json.loads(refused.stdout)["refused"]["anchor"] == {"kind": "planted", "value": "x"}
+
+
 def test_a_named_head_is_refused_with_all_and_when_it_names_no_commit(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     with_all = _cli("--all", "--head", "feature")
     assert with_all.exit_code == 2 and "--head and --all exclude each other" in with_all.output
+    own_alone = _cli("--base", "main", "--own-head", "feature")
+    assert own_alone.exit_code == 2 and "beside --head" in own_alone.output
+    own_with_all = _cli("--all", "--head", "feature", "--own-head", "feature")
+    assert own_with_all.exit_code == 2
     unknown = _cli("--base", "main", "--head", "no-such-rev")
     assert unknown.exit_code == 1
     assert "--head 'no-such-rev' names no commit of this repository." in unknown.output

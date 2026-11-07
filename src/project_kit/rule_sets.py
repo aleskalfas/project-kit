@@ -70,7 +70,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
 from pathlib import Path, PurePosixPath
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from jsonschema import Draft202012Validator
@@ -89,7 +89,18 @@ from project_kit import friction_discovery as fd
 from project_kit.decisions import resolve_adr_records_dir
 from project_kit.working_tree import FilesystemTree
 
-Severity = bs.Severity
+if TYPE_CHECKING:
+    from project_kit.loaded_rule_sets import RulesFile  # it reads this module's model
+
+
+class Severity(Enum):
+    """What a rule-set finding does to validation: only `error` fails it. The container's
+    findings, which carry two of these, are read here by their value."""
+
+    ERROR = "error"
+    WARNING = "warning"
+    REPORT = "report"
+
 
 # The kind under which the schema is read from the tree (`load_backbone_schema`).
 SCHEMA_KIND = "rule-set"
@@ -228,6 +239,23 @@ def parse_pin(text: Any) -> Pin | None:
 #: The front-matter key declaring the parts of the set's rules that checks enforce
 #: (COR-051 point 2): beside the rules, never among a rule's own fields.
 CHECKS_KEY = "checks"
+
+#: The front-matter key that makes a set a loaded one (COR-068 point 1; ADR-075 point
+#: 6): `loaded: true`. A loaded set's accepted rules bind on the work of the sessions
+#: that load the file generated from it, never on an artefact.
+LOADED_KEY = "loaded"
+
+#: The front-matter key giving a loaded set's loaded file its budget, the most words the
+#: file may hold (COR-069 point 2; ADR-077 point 1): `budget: <words>`, beside `loaded`.
+#: It is none of a rule's fields, so changing it changes no rule.
+BUDGET_KEY = "budget"
+
+
+def read_budget(value: Any) -> int | None:
+    """A budget as written, read forgivingly: a whole number of words of at least one,
+    else None, as if none were given. The schemas report a value of another shape."""
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 1 else None
+
 
 #: The owner a backbone check is named with (`backbone:<command>`).
 BACKBONE_OWNER = fd.BACKBONE_COMPONENT
@@ -400,6 +428,18 @@ class RuleSet:
     def version(self) -> str | None:
         version = self.front_matter.get("version")
         return version if isinstance(version, str) else None
+
+    @property
+    def loaded(self) -> bool:
+        """Whether the set is a loaded one: `loaded: true` (COR-068 point 1). A value of
+        another shape is the schema's to report, and reads as an ordinary set."""
+        return self.front_matter.get(LOADED_KEY) is True
+
+    @property
+    def budget(self) -> int | None:
+        """The budget of a loaded set's loaded file, in words (`budget`, COR-069 point 2),
+        or None: absent, or of another shape, which the schema reports."""
+        return read_budget(self.front_matter.get(BUDGET_KEY))
 
     @property
     def major(self) -> int | None:
@@ -836,6 +876,19 @@ class RuleSetFindingKind(Enum):
     UNKNOWN_CHECK = "unknown-check"  # a backbone check or registered command that is not there
     PIN_CONFLICT = "pin-conflict"  # routes to one artefact pinning one set at different majors
     FILL_CONFLICT = "fill-conflict"  # the most specific sets bring different fills for a point
+    # A loaded set (COR-068; ADR-075 points 5 and 6; ADR-076 point 1).
+    INHERITS_LOADED = "inherits-loaded"  # a set inheriting a loaded set, which none inherits
+    SECOND_LOADED = "second-loaded-set"  # a second loaded set of one component, or the project
+    LOADED_HEADING = "loaded-heading"  # an H1 in a loaded set's body
+    LOADED_FILE_STALE = "loaded-file-stale"  # the loaded file differs from its set, or is missing
+    LOADED_FILE_UNCHECKED = "loaded-file-unchecked"  # no ownership module: not compared
+    LOADED_PREFACE = "loaded-preface"  # a capability's loaded set whose preface names it not
+    LOADED_FILE_ORPHANED = "loaded-file-orphaned"  # a capability's rules.md with no loaded set
+    LOADED_IMPORT_TOKEN = "loaded-import-token"  # a harness's import token outside code
+    # A rules file's budget (COR-069; ADR-077 point 4).
+    RULES_FILE_OVER_BUDGET = "rules-file-over-budget"  # more words than its budget allows
+    LOADED_SET_WITHOUT_BUDGET = "loaded-set-without-budget"  # a component's, where authored
+    PLAIN_FILE_BUDGET_UNUSED = "plain-file-budget-unused"  # the key, with no plain file
 
 
 @dataclass(frozen=True)
@@ -855,14 +908,20 @@ class RuleSetFinding:
 
 @dataclass(frozen=True)
 class RuleSetValidation:
-    """Outcome of the pass: what was found, and the discovery it ran over."""
+    """Outcome of the pass: what was found, the discovery it ran over, and each rules file
+    a session loads with its count and its budget (COR-069 point 5)."""
 
     discovery: RuleSetDiscovery
     findings: tuple[RuleSetFinding, ...]
+    rules_files: tuple[RulesFile, ...] = ()
 
     @property
     def errors(self) -> tuple[RuleSetFinding, ...]:
         return tuple(f for f in self.findings if f.severity is Severity.ERROR)
+
+    @property
+    def warnings(self) -> tuple[RuleSetFinding, ...]:
+        return tuple(f for f in self.findings if f.severity is Severity.WARNING)
 
     @property
     def reports(self) -> tuple[RuleSetFinding, ...]:
@@ -935,7 +994,7 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_scope_findings(rule_set, scope_types))
         findings.extend(_set_name_findings(rule_set, discovery))
         findings.extend(_id_findings(rule_set, catalogue))
-        findings.extend(_join_findings(rule_set))
+        findings.extend(join_findings(rule_set))
         if container_schema is not None:
             findings.extend(_container_findings(rule_set, container_schema, wiring))
         findings.extend(_origin_findings(rule_set, catalogue))
@@ -943,9 +1002,21 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_inheritance_findings(rule_set, catalogue))
         findings.extend(_fill_findings(rule_set, catalogue))
         findings.extend(_check_part_findings(rule_set, catalogue))
+        findings.extend(_loaded_set_findings(rule_set, discovery))
     findings.extend(_cycle_findings(catalogue))
+    from project_kit import loaded_rule_sets  # it reads this module's model
+
+    findings.extend(loaded_rule_sets.staleness_findings(target_root, discovery))
+    findings.extend(loaded_rule_sets.capability_findings(target_root, discovery))
+    from project_kit import loaded_rules  # it reads this module's model
+
+    findings.extend(loaded_rules.import_token_findings(target_root, discovery))
+    budgets = loaded_rule_sets.check_budgets(target_root, discovery)
+    findings.extend(budgets.findings)
     findings.extend(_conflict_findings(reach(fd.shared_discovery(target_root), discovery)))
-    return RuleSetValidation(discovery=discovery, findings=tuple(findings))
+    return RuleSetValidation(
+        discovery=discovery, findings=tuple(findings), rules_files=budgets.files
+    )
 
 
 def _unfound_finding(unfound: UnfoundRuleSet, settings: fd.FrictionSettings) -> RuleSetFinding:
@@ -1046,7 +1117,21 @@ def _render_schema_error(rule_set: RuleSet, error: ValidationError) -> list[Rule
         ]
     # The status/successor coupling reads better said than as the schema's message.
     message = error.message
-    if "dependentSchemas" in schema_path:
+    if schema_path[:1] == ["then"] and schema_path[-1:] == ["not"]:  # what a loaded set refuses
+        key = path[-1] if path else ""
+        message = (
+            f"a loaded rule set takes no `{key}`: its rules bind on the work of the sessions "
+            f"that load it, not on artefacts, so it has no scope, no inheritance, no part a "
+            f"check enforces and no extension point (COR-068 point 1). Remove `{key}`."
+        )
+    elif schema_path[:1] == ["else"] and schema_path[-1:] == ["not"]:  # an ordinary set's refusal
+        message = (
+            f"an ordinary rule set takes no `{BUDGET_KEY}`: a budget bounds the file a session "
+            f"loads, and only a loaded set generates one (COR-069 point 2). Remove "
+            f"`{BUDGET_KEY}`, or mark the set `{LOADED_KEY}: true` if its rules bind on "
+            f"sessions' work."
+        )
+    elif "dependentSchemas" in schema_path:
         pointer = "/successor"
         message = (
             "only a superseded rule names a successor: set `status: superseded`, or remove "
@@ -1158,7 +1243,7 @@ def _id_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFi
 # --- per file: the join between data and prose --------------------------------
 
 
-def _join_findings(rule_set: RuleSet) -> Iterable[RuleSetFinding]:
+def join_findings(rule_set: RuleSet) -> Iterable[RuleSetFinding]:
     """Every rule has a section and every section has data (COR-051 point 2)."""
     counts: dict[str, int] = {}
     for section in rule_set.sections:
@@ -1213,11 +1298,11 @@ def _container_findings(
         if bs.CONTAINER_KEY not in rule.data:
             continue
         for finding in bs.validate_container(rule.data, schema, wiring=wiring).findings:
-            is_error = finding.severity is Severity.ERROR
+            is_error = finding.severity is bs.Severity.ERROR
             yield RuleSetFinding(
                 location=rule.location,
                 pointer=finding.location,
-                severity=finding.severity,
+                severity=Severity(finding.severity.value),
                 kind=(
                     RuleSetFindingKind.MALFORMED_CONTAINER
                     if is_error
@@ -1416,6 +1501,55 @@ def _successor_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[Ru
             )
 
 
+# --- per file: a loaded set ------------------------------------------------------
+
+
+def _loaded_set_findings(
+    rule_set: RuleSet, discovery: RuleSetDiscovery
+) -> Iterable[RuleSetFinding]:
+    """What a loaded set gets wrong beyond its file's shape (COR-068; ADR-075 point 6).
+
+    - a second loaded set of one component, or of the project, after the first by path:
+      one loaded set to an owner, so a citation by layer and number names one rule
+      (COR-068 point 1). A capability ships one too (COR-070 point 1)
+    - an H1 in its body: the host file of the loaded file owns it (core rule 13)
+
+    A set that inherits a loaded set is the inheritance check's (`_inheritance_findings`),
+    and what the file alone shows is the schema's. What needs the tree's ownership or its
+    adapters, a capability's preface and an import token in a statement, is the loaded
+    files' module's (`loaded_rule_sets.capability_findings`,
+    `loaded_rules.import_token_findings`).
+    """
+    if not rule_set.loaded:
+        return
+    component = rule_set.component
+    first = next(
+        (other for other in discovery.rule_sets if other.loaded and other.component == component),
+        rule_set,
+    )
+    if first is not rule_set:
+        yield _error(
+            rule_set.path,
+            f"/{LOADED_KEY}",
+            RuleSetFindingKind.SECOND_LOADED,
+            f"{rule_set.owner} has a loaded rule set already, {first.citation} in {first.path}; "
+            f"one loaded set to a component, and one to a project, so a citation by layer and "
+            f"number names one rule (COR-068 point 1). Move these rules into {first.citation}, "
+            f"or remove `{LOADED_KEY}` here.",
+        )
+    for heading in document_parts.body_headings(rule_set.body):
+        if heading.level == 1:
+            yield _error(
+                rule_set.path,
+                "",
+                RuleSetFindingKind.LOADED_HEADING,
+                f"the body of a loaded rule set holds the top-level heading {heading.title!r}; "
+                f"the file generated from it is included into a host that owns the H1, so the "
+                f"set opens with prose or a second-level heading (ADR-075 point 6; core rule "
+                f"13). Remove the heading, or make it a second-level one.",
+            )
+
+
 # --- per file: inheritance -----------------------------------------------------
 
 
@@ -1431,6 +1565,16 @@ def _inheritance_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[
         if problem is not None:
             yield _error(rule_set.path, pointer, RuleSetFindingKind.INHERITED_SET_MISSING, problem)
         if parent is None:
+            continue
+        if parent.loaded:
+            yield _error(
+                rule_set.path,
+                pointer,
+                RuleSetFindingKind.INHERITS_LOADED,
+                f"{rule_set.citation} inherits {parent.citation}, a loaded rule set; a loaded "
+                f"set binds on the work of the sessions that load it, not on artefacts, so no "
+                f"set inherits it (COR-068 point 1). Remove {pin} from `inherits`.",
+            )
             continue
         refusal = catalogue.inheritance_refusal(rule_set, parent)
         if refusal is not None:
@@ -2301,7 +2445,9 @@ class _Walk:
             found: list[_Edge] = []
             for index, pin in rule_set.pins:
                 inherited, _problem = resolve_pin(self.rule_sets, pin)
-                if inherited is not None:
+                # A loaded set is never a parent on a route (ADR-075 point 7): its rules
+                # bind on sessions' work, never on an artefact, whatever validation finds.
+                if inherited is not None and not inherited.loaded:
                     behind = PinCheck(rule_set, index, pin, inherited).behind
                     found.append(_Edge(rule_set, index, pin, inherited, behind))
             self._edges[rule_set.path] = tuple(found)
@@ -2365,8 +2511,12 @@ class _Routes:
     def __init__(self, walk: _Walk, selecting: frozenset[str]) -> None:
         self.walk = walk
         self.selecting = selecting
+        # A loaded set starts no route (ADR-075 point 7), even one that validation
+        # refuses for a scope: no loaded rule binds on an artefact (COR-068 point 2).
         self.starts = tuple(
-            s for s in walk.rule_sets.rule_sets if s.path in selecting and s.component is None
+            s
+            for s in walk.rule_sets.rule_sets
+            if s.path in selecting and s.component is None and not s.loaded
         )
         self._clean: dict[str, dict[str, RuleSet]] = {}
         self._decided: dict[tuple[int, str], _Decided | None] = {}
@@ -2792,8 +2942,14 @@ def _front_matter_status(path: Path) -> str | None:
 
 
 def summary_lines(result: RuleSetValidation) -> list[str]:
-    """The count line `pkit validate` prints under its `rule-sets` heading; the
-    findings follow as the member's findings."""
+    """The lines `pkit validate` prints under its `rule-sets` heading: the count line, then
+    one line for each rules file a session loads, with its count against its budget
+    (COR-069 point 5; ADR-077 point 4). The findings follow as the member's findings.
+
+    The count line names warnings only where there are some, so it reads as it did
+    before any finding of the pass was a warning."""
+    from project_kit import loaded_rule_sets  # it reads this module's model
+
     d = result.discovery
     if result.is_dormant and not result.findings:
         return ["no rule sets found."]
@@ -2804,22 +2960,28 @@ def summary_lines(result: RuleSetValidation) -> list[str]:
     statuses = ", ".join(f"{count} {status}" for status, count in by_status.items() if count)
     unreadable = f", {len(d.unreadable)} unreadable" if d.unreadable else ""
     breakdown = f" ({statuses})" if statuses else ""
+    warnings = f"{len(result.warnings)} warning(s), " if result.warnings else ""
     counts = (
         f"{len(d.rule_sets)} rule set(s){unreadable}, {len(rules)} rule(s){breakdown}; "
-        f"{len(result.errors)} error(s), {len(result.reports)} report(s)."
+        f"{len(result.errors)} error(s), {warnings}{len(result.reports)} report(s)."
     )
-    return [counts]
+    return [counts, *(loaded_rule_sets.summary_line(file) for file in result.rules_files)]
 
 
 UMBRELLA_SEVERITY = {
     Severity.ERROR: validators.Severity.ERROR,
+    Severity.WARNING: validators.Severity.WARNING,
     Severity.REPORT: validators.Severity.REPORT,
 }
 
 
 def outcome(target_root: Path) -> validators.Outcome:
-    """The `rule-sets` member of `pkit validate`: the counts, then every finding —
-    errors fail, reports print (COR-051)."""
+    """The `rule-sets` member of `pkit validate`: the counts, then the delivery's line,
+    then every finding — errors fail, warnings and reports print (COR-051). The delivery
+    of the loaded files is the loaded files' module's check (`loaded_rules.check_delivery`,
+    ADR-076 point 5): its findings follow the pass's."""
+    from project_kit import loaded_rules  # it reads this module's model
+
     result = validate_rule_sets(target_root)
     findings = tuple(
         validators.Finding(
@@ -2829,7 +2991,10 @@ def outcome(target_root: Path) -> validators.Outcome:
         )
         for f in result.findings
     )
-    return validators.Outcome(tuple(summary_lines(result)), findings)
+    delivery = loaded_rules.check_delivery(target_root)
+    return validators.Outcome(
+        (*summary_lines(result), *delivery.summary), (*findings, *delivery.findings)
+    )
 
 
 # --- helpers ---------------------------------------------------------------------

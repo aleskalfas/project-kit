@@ -24,14 +24,25 @@ Three layers:
 
 The filler's `uv run --script` shebang is pointed at this interpreter in the
 adopter copy, so no test reaches `uv` or the network.
+
+`check-doc-mapping`'s `main`, and living-docs' filler where a test runs it, run in
+the test's own process, from the adopter's copy of the capability. Every `pkit`
+they read through is answered by the backbone's CLI in this process too, and each
+command `pkit` starts for them, a filler or a resolver, is started here through the
+runner's one lookup (`tests/in_process.py`). living-docs' filler reads in threads,
+which the in-process `pkit` cannot serve, so its readings are called in turn
+(`InTurn`). Two tests keep a real process, each marked with why: the point
+resolving through its default filler, and the check reading it, end to end.
 """
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +63,7 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import register_kinds
 from tests.friction_documents import T2
 from tests.friction_documents import document as friction_document
+from tests.in_process import InProcessPkit, Runner, load, route_pkit, run_main, start_in_process
 from tests.test_answer_files import answer_path, answers, entry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -447,11 +459,19 @@ def _contribute(repo: AdopterRepo, obligations: list[dict[str, Any]], *, version
         write_backbone_manifest(repo.root, backbone)
 
 
-def _resolve(repo: AdopterRepo) -> dict[str, Any]:
+def _resolve(repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch | None = None) -> dict[str, Any]:
+    """`pkit connections resolve` of the point: its filler started as a process, or, given
+    `monkeypatch`, in this process through the runner's one lookup."""
+    if monkeypatch is not None:
+        start_in_process(monkeypatch)
     result = CliRunner().invoke(main, ["connections", "resolve", POINT, "--json"])
     return json.loads(result.output)
 
 
+@pytest.mark.process(
+    "the default filler's end-to-end test: pkit connections resolve starts fill-doc-check "
+    "as a query, under its contract"
+)
 def test_the_point_resolves_to_the_mapping_through_its_default_filler(project: AdopterRepo) -> None:
     document = _resolve(project)
     assert (document["resolved"], document["policy"], document["inert_policy"]) == (
@@ -501,18 +521,56 @@ def documented(project: AdopterRepo, pkit_on_path: Path) -> AdopterRepo:
     return project
 
 
+#: A command that gives no answer, exiting 1, with the `main` a start in this process runs.
+NO_ANSWER = (
+    "import sys\n\n\ndef main() -> None:\n    sys.exit(1)\n\n\n"
+    "if __name__ == '__main__':\n    main()\n"
+)
+
+
+class InTurn:
+    """`concurrent.futures.ThreadPoolExecutor` stood in: each task called in turn as it is
+    submitted. The in-process `pkit` serves one call at a time (`tests/in_process.py`), so
+    a script that reads in threads, as living-docs' filler does, has its readings called
+    one by one; what each reading answers is unchanged."""
+
+    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+        pass
+
+    def __enter__(self) -> InTurn:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+    def submit(self, task: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        future: concurrent.futures.Future[Any] = concurrent.futures.Future()
+        try:
+            future.set_result(task(*args, **kwargs))
+        except Exception as exc:
+            future.set_exception(exc)
+        return future
+
+
+@pytest.fixture
+def in_process(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Each command `pkit` starts in this test, a filler or a resolver, started in this
+    process through the runner's one lookup, a thread pool's tasks called in turn."""
+    start_in_process(monkeypatch)
+    monkeypatch.setattr(concurrent.futures, "ThreadPoolExecutor", InTurn)
+    yield
+
+
 def _fill_living_docs(
     repo: AdopterRepo, *, human: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    """`pkit living-docs fill-doc-check`, through the real `pkit` first on PATH: the
-    filler envelope, or with `human` the view for a person."""
-    return subprocess.run(
-        ["pkit", "living-docs", "fill-doc-check", *([] if human else ["--json"])],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    """`pkit living-docs fill-doc-check`: the script's `main` in this process from the
+    repository's root, every `pkit` it reads through answered here: the filler
+    envelope, or with `human` the view for a person."""
+    script, backbone = load(repo.root / LD_REL / "scripts", "fill-doc-check.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone)
+        return run_main(script, *([] if human else ["--json"]), cwd=repo.root)
 
 
 def _validate(*members: str) -> Any:
@@ -520,6 +578,7 @@ def _validate(*members: str) -> Any:
     return CliRunner().invoke(main, ["--color", "never", "validate", *only])
 
 
+@pytest.mark.usefixtures("in_process")
 def test_a_page_unjudged_only_on_a_kind_nothing_resolves_fails_no_check(
     documented: AdopterRepo,
 ) -> None:
@@ -547,6 +606,7 @@ def test_a_page_unjudged_only_on_a_kind_nothing_resolves_fails_no_check(
     assert "anchor kind 'sources' is unresolved" in friction.output
 
 
+@pytest.mark.usefixtures("in_process")
 def test_a_resolver_that_gives_no_answer_leaves_the_point_unresolved(
     documented: AdopterRepo,
 ) -> None:
@@ -556,7 +616,7 @@ def test_a_resolver_that_gives_no_answer_leaves_the_point_unresolved(
         documented.root,
         "sources-test",
         kinds={"sources": "resolve"},
-        script_body="import sys\nsys.exit(1)\n",
+        script_body=NO_ANSWER,
         shebang=f"#!{sys.executable}",
     )
     documented.commit("register the kind", files=None)
@@ -571,17 +631,19 @@ def test_a_resolver_that_gives_no_answer_leaves_the_point_unresolved(
     assert f"'living-docs' to {POINT!r} is inert" in connections.output
 
 
-def test_no_mapping_resolves_to_no_obligations(project: AdopterRepo) -> None:
+def test_no_mapping_resolves_to_no_obligations(
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _configure(project, "")
-    document = _resolve(project)
+    document = _resolve(project, monkeypatch)
     assert (document["resolved"], document["value"]) == (True, [])
 
 
 def test_a_documentation_capability_adds_to_the_mapping_and_removes_nothing(
-    project: AdopterRepo,
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _contribute(project, [STALE_GUIDE])
-    document = _resolve(project)
+    document = _resolve(project, monkeypatch)
     assert document["resolved"]
     assert [(e["id"], e["origin"]) for e in document["entries"]] == [
         (STALE_GUIDE["id"], DOCS_CAP),
@@ -603,23 +665,17 @@ def _pkit_on_path(tmp_path: Path) -> Path:
     return bin_dir
 
 
-def _pkit_refusing_the_change_check(tmp_path: Path) -> Path:
-    """A `pkit` that is the real CLI, but for the change check (`friction check --json`),
-    which gives no document: what a backbone that cannot read the change gives."""
-    bin_dir = tmp_path / "pkit-refusing-bin"
-    bin_dir.mkdir()
-    pkit = bin_dir / "pkit"
-    pkit.write_text(
-        "#!/bin/sh\n"
-        'if [ "$1 $2 $3" = "friction check --json" ]; then\n'
-        '  echo "Error: boom" >&2\n'
-        "  exit 2\n"
-        "fi\n"
-        f'exec "{sys.executable}" -m project_kit "$@"\n',
-        encoding="utf-8",
-    )
-    pkit.chmod(0o755)
-    return bin_dir
+def _pkit_refusing_the_change_check() -> Runner:
+    """The in-process `pkit`, but for the change check (`friction check --json`), which
+    gives no document: what a backbone that cannot read the change gives."""
+    pkit = InProcessPkit()
+
+    def run(argv: Any, **options: Any) -> subprocess.CompletedProcess[Any]:
+        if list(argv[1:4]) == ["friction", "check", "--json"]:
+            return subprocess.CompletedProcess(list(argv), 2, "", "Error: boom\n")
+        return pkit(argv, **options)
+
+    return run
 
 
 def _check(
@@ -628,25 +684,54 @@ def _check(
     changes: dict[str, str],
     body: str = "",
     *,
-    bin_dir: Path | None = None,
+    pkit: Runner | None = None,
+    process: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Commit the project as it stands as `base`, then `changes` as the head, and
-    run the check from the repository with the real `pkit` first on PATH."""
+    run the check from the repository (`_run`)."""
     repo.write({"README.md": "# R\n", "docs/guide.md": "# Guide\n", "docs/lib.md": "# Lib\n"})
     repo.commit("base")
     repo.git("branch", "base")
     repo.commit("head", changes)
-    return _run(repo, tmp_path, body, bin_dir=bin_dir)
+    if process:
+        return _run_as_a_process(repo, tmp_path, body)
+    return _run(repo, tmp_path, body, pkit=pkit)
 
 
 def _run(
-    repo: AdopterRepo, tmp_path: Path, body: str = "", *, bin_dir: Path | None = None
+    repo: AdopterRepo,
+    tmp_path: Path,
+    body: str = "",
+    *,
+    pkit: Runner | None = None,
+    path: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run the check against the branch `base` from the repository, with the real
-    `pkit` — or the one in `bin_dir` — first on PATH."""
+    """Run the check's `main` against the branch `base`, in this process from the
+    repository, with no offline marker of its own. Every `pkit` it reads through is
+    answered in this process, by `pkit` where given, and each command `pkit` starts
+    for it is started here (`in_process`). `path`, where given, goes first on PATH."""
     body_file = tmp_path / "body.md"
     body_file.write_text(body, encoding="utf-8")
-    first = _pkit_on_path(tmp_path) if bin_dir is None else bin_dir
+    env: dict[str, str | None] = {"PKIT_OFFLINE": None}
+    if path is not None:
+        env["PATH"] = f"{path}{os.pathsep}{os.environ.get('PATH', '')}"
+    script, backbone = load(repo.root / CHECK.parent, CHECK.name, "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone, pkit)
+        start_in_process(patched)
+        patched.setattr(concurrent.futures, "ThreadPoolExecutor", InTurn)
+        argv = ["--base", "refs/heads/base", "--pr-body-file", str(body_file)]
+        return run_main(script, *argv, cwd=repo.root, env=env)
+
+
+def _run_as_a_process(
+    repo: AdopterRepo, tmp_path: Path, body: str = ""
+) -> subprocess.CompletedProcess[str]:
+    """Run the check against the branch `base` as a process from the repository, with
+    the real `pkit` first on PATH."""
+    body_file = tmp_path / "body.md"
+    body_file.write_text(body, encoding="utf-8")
+    first = _pkit_on_path(tmp_path)
     env = {**os.environ, "PATH": f"{first}{os.pathsep}{os.environ.get('PATH', '')}"}
     env.pop("PKIT_OFFLINE", None)
     return subprocess.run(
@@ -666,10 +751,14 @@ def _run(
     )
 
 
+@pytest.mark.process(
+    "the check's end-to-end test on the mapping: check-doc-mapping reads the point through "
+    "pkit, which starts the default filler as a query, and git's diff"
+)
 def test_without_a_documentation_capability_only_the_mapping_is_checked(
     project: AdopterRepo, tmp_path: Path
 ) -> None:
-    run = _check(project, tmp_path, {"src/a.py": "a\n"})
+    run = _check(project, tmp_path, {"src/a.py": "a\n"}, process=True)
     assert (run.returncode, run.stdout) == (
         0,
         "check-doc-mapping: 2 rule(s), 1 changed file(s), mode=advisory\n"
@@ -714,8 +803,8 @@ def test_a_change_check_that_gives_no_list_leaves_a_page_met_only_by_its_change(
     why and reads no answer: a page is met only by its change in the diff, never by
     an answer it could not read."""
     _contribute(project, [STALE_GUIDE])
-    refusing = _pkit_refusing_the_change_check(tmp_path)
-    run = _check(project, tmp_path, {"docs/lib.md": "# Lib 2\n"}, bin_dir=refusing)
+    refusing = _pkit_refusing_the_change_check()
+    run = _check(project, tmp_path, {"docs/lib.md": "# Lib 2\n"}, pkit=refusing)
     assert run.stdout.splitlines()[-1] == (
         "  ✗ [friction] docs/guide.md → no answer in the diff (page-stale)"
     )
@@ -826,9 +915,10 @@ REWRITTEN = answer_path("y")
 
 
 def _with_gh(tmp_path: Path, script: str) -> Path:
-    """A bin folder holding the real `pkit` and a fake `gh` running `script`, which
-    logs each call: no test asks the host."""
-    bin_dir = _pkit_on_path(tmp_path)
+    """A bin folder holding a fake `gh` running `script`, which logs each call: no test
+    asks the host."""
+    bin_dir = tmp_path / "gh-bin"
+    bin_dir.mkdir()
     gh = bin_dir / "gh"
     gh.write_text(f'#!/bin/sh\necho "$*" >> "{tmp_path / "gh.log"}"\n{script}', encoding="utf-8")
     gh.chmod(0o755)
@@ -867,7 +957,7 @@ def test_a_deferral_the_change_rewrote_meets_the_page_while_its_follow_up_is_ope
     host cannot be asked, as in a check run with no token, the deferral counts on its
     words and the check says so: the reviewer checks the follow-up."""
     _rewrite_a_deferral(paged)
-    run = _run(paged, tmp_path, bin_dir=_with_gh(tmp_path, gh))
+    run = _run(paged, tmp_path, path=_with_gh(tmp_path, gh))
     lines = run.stdout.splitlines()
     if met:
         assert f"  ✓ [friction] {PAGE} → answered in the diff ({REWRITTEN})" in lines
@@ -983,11 +1073,11 @@ _UV_OFFLINE_MISS = (
     [
         # The likeliest real failure: its dependency not provisioned for the offline run.
         (
-            f"sys.stderr.buffer.write({_UV_OFFLINE_MISS.encode()!r})\nsys.exit(1)\n",
+            f"    sys.stderr.write({_UV_OFFLINE_MISS!r})\n    sys.exit(1)\n",
             "command 'fill-doc-check': environment not provisioned — run `pkit sync` (its "
             "dependencies are not in uv's cache, and a query runs offline)",
         ),
-        ("sys.exit(3)\n", "command 'fill-doc-check' exited 3"),
+        ("    sys.exit(3)\n", "command 'fill-doc-check' exited 3"),
     ],
 )
 def test_the_mapping_s_own_filler_giving_no_answer_fails_the_check(
@@ -998,7 +1088,9 @@ def test_the_mapping_s_own_filler_giving_no_answer_fails_the_check(
     environment not provisioned names `pkit sync` — and the fix names the
     filler's own verb."""
     _pm_file(project, "scripts/fill-doc-check.py").write_text(
-        f"#!{sys.executable}\nimport sys\n{body}", encoding="utf-8"
+        f"#!{sys.executable}\nimport sys\n\n\ndef main():\n{body}\n\n"
+        "if __name__ == '__main__':\n    main()\n",
+        encoding="utf-8",
     )
     run = _check(project, tmp_path, {"src/a.py": "a\n"})
     assert (run.returncode, run.stdout) == (1, "")

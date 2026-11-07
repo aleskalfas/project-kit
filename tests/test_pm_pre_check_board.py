@@ -225,7 +225,26 @@ def test_a_status_that_cannot_be_read_warns_with_what_gh_said(pc, board) -> None
 
 
 def test_where_the_board_carries_the_state_the_status_check_is_skipped(pc, board) -> None:
-    result = _status_check(pc, None)
+    result = _status_check(pc, {"state": {"board": True}})
 
     assert result.status == "skip"
+    assert "the state's source" in result.detail
     assert board.calls == []
+
+
+def test_where_the_state_degrades_the_status_check_is_skipped(pc, board) -> None:
+    """A present map leaving the state out writes no Status (DEC-062 point 5),
+    so its options are the project's people's to check."""
+    result = _status_check(pc, {})
+
+    assert result.status == "skip"
+    assert "leaves the state out" in result.detail
+    assert board.calls == []
+
+
+def test_with_no_map_the_status_check_runs(pc, board) -> None:
+    """The board flag carries no axis: with no map, the kit's labels carry the
+    state and its Status is their projection (DEC-062 point 1)."""
+    result = _status_check(pc, None)
+
+    assert result.status == "ok"

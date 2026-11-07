@@ -21,7 +21,8 @@ strikethrough (`formats.prose`):
   folder; a link from the page's folder, or from the root where it opens with
   `/`. A span that holds a placeholder (`<name>`), braces, a glob or an ellipsis
   names no path, and nor does a URL, a folder or an image. A link's fragment
-  names a section of the file.
+  names a section of the file, read as the slug an artefact anchor names the
+  section by (`formats.heading_slug`).
 - **A record**: a decision record's id, with the points written after it (`#5`,
   `point 5`, `points 2 and 5`). The ids are `COR-NNN`, `PRJ-NNN` and `ADR-NNN`, a
   capability's decision as `<capability>:DEC-NNN` with its slug or without, as
@@ -77,6 +78,35 @@ no file, an id nothing resolves or the page's own file. So does a mark that
 follows a mention the page's anchors cover, or that gives no reason. A mark never
 falls back to an earlier mention, so one left behind when what it named was
 renamed or removed is reported, never moved.
+
+**What validation warns of.** Two passages more often break a rule than a mention
+does, so each is a warning of its own, at its line, with the anchor to add. Neither
+fails, since a name needs no anchor (DEC-001 point 3), and neither settles a part
+of a rule, so the shared rule set declares no check for them:
+
+- **A link to a section of another page** that the page does not anchor at that
+  section, where the rule on one home binds on the page (`ONE_HOME_RULES`). A page
+  that sums up a fact whose home is another page links to the home and anchors the
+  home's section that states it, and an anchor on the whole home is not that
+  anchor. The link's fragment names the section whose heading has the fragment's
+  slug (`formats.heading_slug`, the slug an artefact anchor names a section by),
+  and only where one heading of the page has it. An anchor on that section, or on
+  a section that holds it, stands on it.
+- **A citation of a record** that the page's anchors do not stand on, as a record
+  mention is covered (above). A citation is a parenthesis, outside code spans,
+  that opens with a record's id, after `per` or `see` where one is written:
+  `(COR-050 point 5)`, `(DEC-002 point 7, DEC-003 point 9)`, `(per
+  [living-docs:DEC-001-living-docs-discipline] point 3)`. It cites the id it opens
+  with, and each id after a separator of its list (`,`, `;`, `+`, `/`, `and`,
+  `or`, `per`, `see`), up to its close, or to the line's end where it closes on a
+  later line. An id the running text names is no citation, and nor is one in a
+  block quote, whose words are another's, unless the quote is a callout, whose
+  words are the page's own: one whose first line is `[!NOTE]`, `[!TIP]`,
+  `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` (DEC-002 point 7).
+
+A mark after the link or the record passes it over, as it passes over a mention.
+Each page is warned once of each anchor it lacks, at the first passage that
+lacks it.
 """
 
 from __future__ import annotations
@@ -92,7 +122,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote
 
-from _lib import formats
+from _lib import backbone, formats
 from _lib.artefacts import Artefact
 from _lib.declarations import CAPABILITIES_DIR, load_yaml, mapping, normalise
 
@@ -100,6 +130,14 @@ from _lib.declarations import CAPABILITIES_DIR, load_yaml, mapping, normalise
 GROUNDING_RULE = "RS-LDOC-001"
 
 PATH, RECORD, RULE, COMMAND = "path", "record", "rule", "command"
+
+#: The shared method's rules on one home, each asking a page that sums up another
+#: page's fact to anchor the home's section: RS-LDOC-007 replaces RS-LDOC-002 at the
+#: major that accepts it (DEC-001 point 3; DEC-002 point 10).
+ONE_HOME_RULES = ("RS-LDOC-002", "RS-LDOC-007")
+
+#: What validation warns of: a link to another page's section, and a record's citation.
+SECTION_LINK, CITATION = "section-link", "citation"
 
 #: The backbone's reference of its commands.
 CLI_REFERENCE = ".pkit/cli/README.md"
@@ -137,6 +175,15 @@ _CODE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
 _LINK = re.compile(r"(!?)\[([^\]]*)\]\(\s*<?([^)\s>]*)>?(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)")
 _COMMENT = re.compile(r"<!--(.*?)-->")
 _MARK = re.compile(rf"^\s*{MARK_WORD}\b\s*(?::(?P<reason>.*))?$", re.DOTALL)
+#: What may stand between a citation's opening parenthesis and its first record's id.
+_CITATION_LEAD = re.compile(r"\([ \t]*(?:(?:per|see)[ \t]+)?\[?")
+#: What stands before each record's id a citation cites, read back from the id: the
+#: parenthesis, or a separator of its list.
+_CITED_AFTER = re.compile(r"(?:[(,;+/]|\b(?:and|or|per|see))[ \t]*\[?[ \t]*$")
+#: A line of a block quote, and the first line of a callout, a block quote whose first
+#: line is its type (DEC-002 point 7).
+_QUOTED_LINE = re.compile(r"^[ \t]*>")
+_CALLOUT = re.compile(r"^[ \t]*>[ \t]*\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*$")
 _STRUCK = re.compile(r"~~[^~\n]+~~")
 _NOT_A_PATH = re.compile(r"[<>{}*?\[\]\s]|\.\.\.|^[a-z][a-z0-9+.-]*://|^mailto:")
 _LINE_SUFFIX = re.compile(r":[0-9]+(?::[0-9]+)?$")
@@ -152,10 +199,12 @@ class Mention:
     """One passage of a page that mentions a thing: its kind, how the report names
     it, its line and where on the line it starts.
 
-    `file` is the file it resolves to; `section` a link's fragment; `record` the
-    record's or the rule's id as written for the backbone to resolve; `points` a
-    record's points; `words` a command's words after `pkit`. `mark` is the reason
-    a mark after it gives, `""` for a mark that gives none, `None` for no mark."""
+    `file` is the file it resolves to; `section` a link's fragment; `link` the
+    link's target as written, for a path a link names; `record` the record's or the
+    rule's id as written for the backbone to resolve; `points` a record's points;
+    `cited` whether a record is written in a citation; `words` a command's words
+    after `pkit`. `mark` is the reason a mark after it gives, `""` for a mark that
+    gives none, `None` for no mark."""
 
     kind: str
     name: str
@@ -163,8 +212,10 @@ class Mention:
     start: int = 0
     file: str | None = None
     section: str | None = None
+    link: str | None = None
     record: str | None = None
     points: tuple[str, ...] = ()
+    cited: bool = False
     words: tuple[str, ...] = ()
     mark: str | None = None
 
@@ -182,6 +233,25 @@ class Unanchored:
 
 
 @dataclass(frozen=True)
+class Gap:
+    """A passage validation warns of: the page, the line, what it is — a link to a
+    section of another page, or a record's citation — as written, and the anchor
+    values the page lacks for it, of the anchor kind `anchor` names."""
+
+    page: str
+    line: int
+    kind: str
+    written: str
+    values: tuple[str, ...]
+
+    @property
+    def anchor(self) -> str:
+        """The anchor to add, as a friction block writes it."""
+        kind = "artefact" if self.kind == SECTION_LINK else RECORD
+        return f"{kind}: [{', '.join(self.values)}]"
+
+
+@dataclass(frozen=True)
 class Idle:
     """A mark that passes nothing over: the page, its line and why."""
 
@@ -192,13 +262,18 @@ class Idle:
 
 @dataclass
 class Report:
-    """What the report found over the pages it read."""
+    """What the report found over the pages it read: the mentions, the links to a
+    section of another page read where the rule on one home binds, the citations,
+    and the passages warned of."""
 
     pages: int = 0
     mentions: int = 0
     unanchored: list[Unanchored] = field(default_factory=list)
     marked: int = 0
     idle: list[Idle] = field(default_factory=list)
+    links: int = 0
+    citations: int = 0
+    gaps: list[Gap] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -234,7 +309,7 @@ Lookup = Callable[[Sequence[str]], Mapping[str, str | None]]
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
-def look_up(root: Path, run: Runner = subprocess.run) -> Lookup:
+def look_up(root: Path, run: Runner = backbone.run) -> Lookup:
     """The backbone's resolver of records' ids, through `pkit refs lookup --json`:
     each id the file it resolves to, or `None`. Raises Unreadable when there is no
     answer to read."""
@@ -299,15 +374,19 @@ def read(
     documents: Documents,
     lookup: Lookup,
     every_page: Collection[str] = (),
+    one_home: Collection[str] = (),
 ) -> Report:
     """The report over `pages`, each with its artefact as the backbone reads it, or
     `None` where it lists none. `documents` are the document artefacts, `lookup`
     resolves records and rules, and `every_page` is each page of the spaces, whose
-    headings may document a command. A page that cannot be read is passed over.
+    headings may document a command and whose sections a link may lead to.
+    `one_home` is the pages of `pages` the rule on one home binds on, whose links to
+    another page's section are read. A page that cannot be read is passed over.
     Raises Unreadable when the records cannot be resolved."""
     report = Report()
     installed = commands(root)
     homes = _Homes(root, {*pages, *every_page}, installed)
+    targets = _Targets(root, frozenset(every_page))
     read_pages: dict[str, tuple[list[Mention], list[Idle]]] = {}
     ids: set[str] = set()
     for rel in sorted(pages):
@@ -330,6 +409,7 @@ def read(
         grounds = _grounds(pages[rel], resolved, documents)
         seen: set[tuple[Any, ...]] = set()
         named: set[str] = set()
+        warned: set[str] = set()
         kept, dropped = _resolved(rel, found, resolved, documents.rules)
         report.idle.extend(dropped)
         for mention in kept:
@@ -338,7 +418,14 @@ def read(
                 seen.add(key)
                 report.mentions += 1
             unanchored = _unanchored(rel, mention, grounds, documents, installed, homes)
-            if unanchored is None:
+            gap = None
+            if mention.kind == RECORD and mention.cited:
+                report.citations += 1
+                gap = _citation_gap(rel, mention, grounds)
+            elif rel in one_home and targets.leads_to_section(mention):
+                report.links += 1
+                gap = _section_gap(rel, mention, grounds, targets)
+            if unanchored is None and gap is None:
                 if mention.mark is not None:
                     report.idle.append(Idle(rel, mention.line, _COVERED))
                 continue
@@ -347,9 +434,13 @@ def read(
                 continue
             if mention.mark is not None:
                 report.idle.append(Idle(rel, mention.line, _NO_REASON))
-            if unanchored.name not in named:
+            if unanchored is not None and unanchored.name not in named:
                 named.add(unanchored.name)
                 report.unanchored.append(unanchored)
+            lacking = tuple(value for value in gap.values if value not in warned) if gap else ()
+            if gap is not None and lacking:
+                warned.update(lacking)
+                report.gaps.append(replace(gap, values=lacking))
     report.idle.sort(key=lambda idle: (idle.page, idle.line))
     return report
 
@@ -382,28 +473,30 @@ def _mentions(
     idle: list[Idle] = []
     capability = _capability_of(page)
     known = {c.capability for c in installed}
+    # Whether the block quote a line lies in is a callout; `None` outside one.
+    callout: bool | None = None
     for line, raw in formats.prose(text):
+        if _QUOTED_LINE.match(raw) is None:
+            callout = None
+        elif callout is None:
+            callout = _CALLOUT.match(raw) is not None
         comments = list(_COMMENT.finditer(raw))
         body = _blank(_STRUCK.sub(lambda m: " " * len(m.group(0)), raw), comments)
         spans = list(_CODE.finditer(body))
         outside = _blank(body, spans)
         readable = body.replace("`", " ")
+        # The line as a citation is read from: its code spans blank, its links their words.
+        citable = outside
         on_line: list[Mention] = []
         for link in _LINK.finditer(outside):
             image, target = link.group(1), link.group(3)
-            label = readable[link.start(2) : link.end(2)]
             if not image:
                 path = _link_path(root, page, target)
                 if path is not None:
-                    on_line.append(_path_mention(*path, line, link.start()))
+                    on_line.append(replace(_path_mention(*path, line, link.start()), link=target))
             # The link reads as its label, so a point written after it follows the id.
-            readable = (
-                readable[: link.start()]
-                + " "
-                + label
-                + " " * (link.end() - link.start() - len(label) - 1)
-                + readable[link.end() :]
-            )
+            readable = _as_label(readable, link)
+            citable = _as_label(citable, link)
         for span in spans:
             content = span.group(2).strip()
             command = _command(content, line, span.start())
@@ -413,7 +506,9 @@ def _mentions(
             path = _span_path(root, page, content)
             if path is not None:
                 on_line.append(_path_mention(*path, line, span.start()))
-        on_line.extend(_records(readable, line, capability, known))
+        # A quotation's words are another's, so what it names the page does not cite.
+        cited = _cited(citable) if callout is not False else frozenset()
+        on_line.extend(_records(readable, line, capability, known, cited))
         on_line.extend(_rules(readable, line))
         on_line.sort(key=lambda m: m.start)
         found.extend(_marked(page, line, on_line, comments, idle))
@@ -425,6 +520,53 @@ def _blank(text: str, matches: Iterable[re.Match[str]]) -> str:
     for match in matches:
         text = text[: match.start()] + " " * (match.end() - match.start()) + text[match.end() :]
     return text
+
+
+def _as_label(text: str, link: re.Match[str]) -> str:
+    """`text` with the link `link` matched written as its label, the label's text read
+    from `text` itself, and every offset after the link kept."""
+    label = text[link.start(2) : link.end(2)]
+    return (
+        text[: link.start()]
+        + " "
+        + label
+        + " " * (link.end() - link.start() - len(label) - 1)
+        + text[link.end() :]
+    )
+
+
+def _cited(text: str) -> frozenset[int]:
+    """Where on a line a record's id is cited: in a parenthesis that opens with a
+    record's id, after `per` or `see` where one is written, up to the parenthesis'
+    close, or to the line's end where it closes on a later line, each id that opens it
+    or follows a separator of its list: `,`, `;`, `+`, `/`, `and`, `or`, `per` or
+    `see`. `text` is the line with its code spans blank and its links written as their
+    labels."""
+    starts: set[int] = set()
+    for opening in re.finditer(r"\(", text):
+        lead = _CITATION_LEAD.match(text, opening.start())
+        if lead is None or _RECORD.match(text, lead.end()) is None:
+            continue
+        end = _closing(text, opening.start())
+        starts.update(
+            match.start()
+            for match in _RECORD.finditer(text, lead.end(), end)
+            if _CITED_AFTER.search(text, opening.start(), match.start())
+        )
+    return frozenset(starts)
+
+
+def _closing(text: str, opening: int) -> int:
+    """Where the parenthesis opened at `opening` closes, or the line's end."""
+    depth = 0
+    for index in range(opening, len(text)):
+        if text[index] == "(":
+            depth += 1
+        elif text[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+    return len(text)
 
 
 def _marked(
@@ -543,8 +685,15 @@ def _command(text: str, line: int, start: int) -> Mention | None:
     return Mention(COMMAND, " ".join(["pkit", *named]), line, start, words=named)
 
 
-def _records(text: str, line: int, capability: str | None, known: Collection[str]) -> list[Mention]:
-    """The records a line names, each with the points written after it."""
+def _records(
+    text: str,
+    line: int,
+    capability: str | None,
+    known: Collection[str],
+    cited: Collection[int] = frozenset(),
+) -> list[Mention]:
+    """The records a line names, each with the points written after it, and whether
+    it is cited: whether its id starts at one of the offsets `cited` holds."""
     found: list[Mention] = []
     for match in _RECORD.finditer(text):
         if match.group("qualified"):
@@ -563,7 +712,17 @@ def _records(text: str, line: int, capability: str | None, known: Collection[str
         else:
             continue
         points = _points(text[match.end() :])
-        found.append(Mention(RECORD, record, line, match.start(), record=record, points=points))
+        found.append(
+            Mention(
+                RECORD,
+                record,
+                line,
+                match.start(),
+                record=record,
+                points=points,
+                cited=match.start() in cited,
+            )
+        )
     return found
 
 
@@ -711,7 +870,8 @@ def _unanchored_path(
     page: str, mention: Mention, grounds: _Grounds, documents: Documents
 ) -> Unanchored | None:
     file = mention.file or mention.name
-    section = mention.section
+    # A fragment is read as the slug an artefact anchor names the section by.
+    section = formats.heading_slug(mention.section) if mention.section is not None else None
     if file in grounds.whole:
         return None
     if section is None and grounds.any_part(file):
@@ -725,20 +885,90 @@ def _unanchored_path(
 
 
 def _unanchored_record(page: str, mention: Mention, grounds: _Grounds) -> Unanchored | None:
+    missing = _record_lacks(mention, grounds)
+    if not missing:
+        return None
+    name = missing[0] if mention.points else (mention.record or mention.name)
+    return Unanchored(page, mention.line, RECORD, name, f"record: [{', '.join(missing)}]")
+
+
+def _record_lacks(mention: Mention, grounds: _Grounds) -> list[str]:
+    """The record anchors that would cover a record's mention, which the page's anchors
+    do not: the record, or each point it names that no anchor stands on; none where
+    they cover it."""
     file = mention.file or ""
     record = mention.record or mention.name
     if file in grounds.whole:
-        return None
+        return []
     if not mention.points:
-        if grounds.any_part(file):
-            return None
-        return Unanchored(page, mention.line, RECORD, record, f"record: [{record}]")
+        return [] if grounds.any_part(file) else [record]
     anchored = grounds.named.get(file, frozenset())
-    missing = [point for point in mention.points if point not in anchored]
+    return [f"{record}#{point}" for point in mention.points if point not in anchored]
+
+
+def _citation_gap(page: str, mention: Mention, grounds: _Grounds) -> Gap | None:
+    """A record's citation the page's anchors do not stand on, with the record anchors
+    that would; `None` where they stand on it."""
+    missing = _record_lacks(mention, grounds)
     if not missing:
         return None
-    values = ", ".join(f"{record}#{point}" for point in missing)
-    return Unanchored(page, mention.line, RECORD, f"{record}#{missing[0]}", f"record: [{values}]")
+    record, points = mention.record or mention.name, mention.points
+    if len(points) > 1:
+        written = f"{record} points {', '.join(points[:-1])} and {points[-1]}"
+    elif points:
+        written = f"{record} point {points[0]}"
+    else:
+        written = record
+    return Gap(page, mention.line, CITATION, written, tuple(missing))
+
+
+class _Targets:
+    """The pages a link may lead to a section of, each one's headings read once."""
+
+    def __init__(self, root: Path, pages: frozenset[str]) -> None:
+        self.root = root
+        self.pages = pages
+        self._headings: dict[str, tuple[formats.Heading, ...]] = {}
+
+    def leads_to_section(self, mention: Mention) -> bool:
+        """Whether a mention is a link to a section of one of the pages."""
+        return (
+            mention.kind == PATH
+            and mention.link is not None
+            and mention.section is not None
+            and mention.file in self.pages
+        )
+
+    def heading(self, path: str, section: str) -> formats.Heading | None:
+        """The heading of the page at `path` a link's fragment names: the one heading
+        whose slug is the fragment's; `None` where none has it, or more than one."""
+        slug = formats.heading_slug(section)
+        if not slug:
+            return None
+        if path not in self._headings:
+            text = _text(self.root, path)
+            self._headings[path] = () if text is None else tuple(formats.headings(text))
+        named = [h for h in self._headings[path] if formats.heading_slug(h.text) == slug]
+        return named[0] if len(named) == 1 else None
+
+
+def _section_gap(page: str, mention: Mention, grounds: _Grounds, targets: _Targets) -> Gap | None:
+    """A link to a section of another page that the page does not anchor at that
+    section, with the artefact anchor that would; `None` where an anchor on that
+    section, or on a section that holds it, stands on it, or where the fragment names
+    no one heading of that page. An anchor on the whole page is not that anchor."""
+    file, section = mention.file, mention.section
+    if file is None or section is None:
+        return None
+    heading = targets.heading(file, section)
+    if heading is None:
+        return None
+    slug = formats.heading_slug(heading.text)
+    if slug in grounds.named.get(file, frozenset()):
+        return None
+    if any(first <= heading.line <= last for first, last in grounds.spans.get(file, ())):
+        return None
+    return Gap(page, mention.line, SECTION_LINK, mention.link or file, (f"{file}#{slug}",))
 
 
 def _unanchored_rule(page: str, mention: Mention, grounds: _Grounds) -> Unanchored | None:

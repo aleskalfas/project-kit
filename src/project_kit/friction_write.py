@@ -296,8 +296,8 @@ def _friction_block(artefact: Artefact) -> Mapping[str, Any]:
     if not artefact.has_friction_block:
         raise FrictionWriteError(
             f"{artefact.location} carries no `{FRICTION_KEY}` block in its `{bs.CONTAINER_KEY}` "
-            f'container: declare its anchors there first (the schemas README, "The friction '
-            f'block"). Nothing was written.'
+            f"container: declare its anchors there first (the schemas reference, page "
+            f'backbone-files.md, "The friction block"). Nothing was written.'
         )
     if not isinstance(artefact.friction, Mapping):
         raise FrictionWriteError(

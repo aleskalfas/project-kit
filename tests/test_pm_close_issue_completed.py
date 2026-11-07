@@ -74,10 +74,12 @@ def _run(
     comments: list | None = None,
     parents: dict | None = None,
     move_issue_rc: int = 0,
+    card=None,
 ) -> SimpleNamespace:
     """Run main() with every gate passed; record each `gh` call, each move
     handed to the engine, and each move-issue run, which exits `move_issue_rc`
-    and prints a line saying it ran."""
+    and prints a line saying it ran. With ``card``, a `StatusRead`, the map binds
+    the state to the board and the open Task's card reads as ``card``."""
     monkeypatch.setattr(sys, "argv", ["close-issue", *argv])
     monkeypatch.setattr(ci, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(ci.bootstrap_gate, "enforce", lambda *a, **k: True)
@@ -88,7 +90,12 @@ def _run(
         ci, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
     )
     monkeypatch.setattr(ci, "check_membership", lambda *a: SimpleNamespace(allowed=True))
-    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: None)
+    on_board = (
+        ci.axis_labels.SubstrateMap(axes={"state": {"board": True}}) if card is not None else None
+    )
+    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: on_board)
+    if card is not None:
+        monkeypatch.setattr(ci.issue_position, "read_status", lambda *_a, **_k: card)
     monkeypatch.setattr(ci, "fire_hooks", lambda *a, **k: None)
     journaled: list[tuple] = []
     monkeypatch.setattr(ci, "journal_move", lambda *a, **k: journaled.append((*a, k)))
@@ -340,6 +347,72 @@ def test_a_task_in_review_is_refused(ci, monkeypatch, capsys) -> None:
     err = capsys.readouterr().err
     assert "[refused] #42 is in Review" in err
     assert "done-work 42" in err
+
+
+# --- a board-carried state (DEC-062 point 5, DEC-051 point 6) -------------------
+
+
+def test_where_the_board_carries_the_state_the_card_says_where_the_task_was(
+    ci, monkeypatch
+) -> None:
+    """The card's Status, not the label, is where the move to done comes from."""
+    card = ci.infer.StatusRead("placed", state="backlog")
+    rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(labels=("state:review",)), card=card)
+    assert rec.rc == 0
+    assert ["gh", "issue", "close", "42", "--reason", "completed"] in _writes(rec)
+    [move] = rec.journaled
+    assert move[:3] == (42, "backlog", "done")
+
+
+def test_a_card_in_review_is_refused(ci, monkeypatch, capsys) -> None:
+    card = ci.infer.StatusRead("placed", state="review")
+    rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(labels=()), card=card)
+    assert rec.rc == 1
+    assert _writes(rec) == []
+    assert "[refused] #42 is in Review" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("card", "rc", "finding"),
+    [
+        (("unreadable", None, "gh: timeout"), 3, "the board's Status of #42 could not be read"),
+        (("no-card", None, ""), 1, "#42 has no card on the board"),
+        (("unset", None, ""), 1, "#42's card on the board has no Status"),
+        (("not-open", None, "Done"), 1, "has the Status 'Done', which names no open state"),
+    ],
+)
+def test_a_card_that_places_the_task_nowhere_refuses_the_close(
+    ci, monkeypatch, capsys, card: tuple, rc: int, finding: str
+) -> None:
+    """Nothing can tell a Task in Review then, so nothing is guessed: no write,
+    no move journaled, no cascade (DEC-051 point 6)."""
+    outcome, state, said = card
+    read = ci.infer.StatusRead(outcome, state=state, said=said)
+    rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(labels=("state:in-progress",)), card=read)
+    assert rec.rc == rc
+    assert _writes(rec) == []
+    assert rec.journaled == []
+    assert rec.moved == []
+    err = capsys.readouterr().err
+    assert "[refused] close-issue #42: " in err
+    assert finding in err
+    assert "Nothing was changed (the Task is still open)" in err
+
+
+def test_a_won_t_do_close_of_a_task_its_card_places_nowhere_closes_and_warns(
+    ci, monkeypatch, capsys
+) -> None:
+    """A won't-do close needs no origin: it closes, and its move is not recorded
+    from a guessed one."""
+    card = ci.infer.StatusRead("unset")
+    argv = ["42", "--reason", "superseded", "--yes"]
+    rec = _run(ci, monkeypatch, argv, issue=_issue(labels=("state:todo",)), card=card)
+    assert rec.rc == 0
+    assert ["gh", "issue", "close", "42", "--reason", "not planned"] in _writes(rec)
+    assert rec.journaled == []
+    assert "this move was not recorded: #42's card on the board has no Status" in (
+        capsys.readouterr().err
+    )
 
 
 @pytest.mark.parametrize(

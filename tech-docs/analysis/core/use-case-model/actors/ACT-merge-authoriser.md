@@ -13,6 +13,9 @@ pkit:
     anchors:
       record:
         - COR-050#3
+        - COR-051#4
+        - COR-066#1
+        - COR-066#3
 ---
 
 # ACT-merge-authoriser — Merge authoriser
@@ -22,4 +25,4 @@ The person who authorises a change's merge into the default branch. Where work i
 - **Human role:** they authorise the merge after they are told what the [change](../../glossary.md#term-change--change) updated and what it leaves out of date. The same person's review turns a record or [rule](../../glossary.md#term-rule--rule) an agent drafted into a binding one.
 - **Occasions:** at the end of each [change](../../glossary.md#term-change--change), and whenever a drafted record or [rule](../../glossary.md#term-rule--rule) waits for acceptance.
 - **Context:** the authority to land the [change](../../glossary.md#term-change--change).
-- **Core:** two core rules make the merge authoriser, and neither needs a work tracker. [COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) covers being told what a [change](../../glossary.md#term-change--change) updated before its merge or direct commit. The [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) covers accepting a record or [rule](../../glossary.md#term-rule--rule).
+- **Core:** [RS-OPS-020](../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes) and [RS-OPS-002](../../../../../.pkit/rule-sets/ops.md#rs-ops-002--the-acceptance-gate) make the merge authoriser, and neither needs a work tracker. [COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) covers being told what a [change](../../glossary.md#term-change--change) updated before its merge or direct commit. The [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) covers accepting a record or [rule](../../glossary.md#term-rule--rule).

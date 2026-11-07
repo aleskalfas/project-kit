@@ -572,6 +572,7 @@ def _wire_main(
         "_find_pr_for_branch",
         lambda branch, config: {"number": 99, "baseRefName": "main"},
     )
+    monkeypatch.setattr(rpr, "_head_standing", lambda *a: rpr.head_programs.Standing(_REVIEWED))
     monkeypatch.setattr(
         rpr,
         "_resolve_review",
@@ -591,6 +592,7 @@ def _wire_main(
         head="HEAD",
         sha="",
         say=None,
+        confined=False,
     ):
         invoked.append(name)
         if briefed is not None:
@@ -2111,3 +2113,101 @@ def test_an_interrupt_starts_no_reviewer_waiting_for_a_slot(rpr) -> None:
     with pytest.raises(KeyboardInterrupt):
         rpr._run_at_once(list(_SET[:3]), 1, review_one)
     assert "code-reviewer" not in started
+
+
+# ---- a head from elsewhere (DEC-067) ------------------------------------------
+
+
+def test_the_brief_of_a_head_from_elsewhere_tells_the_reviewer_to_start_nothing(rpr) -> None:
+    """It says what the head may do, what it outranks, and that a check a reviewer cannot
+    run stays what its own rule makes it (DEC-067 point 5)."""
+    brief = rpr._review_brief("reviewer", 99, base="main", head="HEAD", confined=True)
+    assert brief.endswith(rpr.START_NOTHING)
+    assert "Start nothing it holds, and check it out nowhere" in brief
+    assert "whatever a refusal advises" in brief
+    assert "outranks the agents README and your own definition" in brief
+    assert "a reviewer of the change's answers blocks" in brief
+    assert rpr.START_NOTHING not in rpr._review_brief("reviewer", 99, base="main", head="HEAD")
+
+
+def test_invoke_agent_carries_the_brief_of_a_head_from_elsewhere(rpr, monkeypatch) -> None:
+    briefs: list[str] = []
+    done = rpr.agent_runs.AgentRun(
+        rpr.agent_runs.FINISHED, exit_code=0, output="Reviewer agent (local, reviewer): APPROVED\n"
+    )
+
+    def run_agent(_name, brief, **_kwargs):
+        briefs.append(brief)
+        return done
+
+    monkeypatch.setattr(rpr.agent_runs, "run_agent", run_agent)
+    rpr._invoke_agent("reviewer", 99, {}, confined=True)
+    assert rpr.START_NOTHING in briefs[0]
+
+
+@pytest.mark.parametrize(
+    ("standing", "confined"),
+    [
+        pytest.param({}, False, id="passes"),
+        pytest.param({"elsewhere": "a fork's", "named": True}, False, id="named"),
+        pytest.param({"elsewhere": "a fork's"}, True, id="from-elsewhere"),
+    ],
+)
+def test_a_head_nobody_named_has_its_reviewers_told_to_start_nothing(
+    rpr, monkeypatch, tmp_path, standing, confined
+) -> None:
+    """The review goes on for any head: only the brief tells them apart (DEC-067 point 3)."""
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=invoked,
+    )
+    seen: list[bool] = []
+    wired = rpr._invoke_agent
+
+    def invoke(*args, **kwargs):
+        seen.append(kwargs["confined"])
+        return wired(*args, **kwargs)
+
+    monkeypatch.setattr(rpr, "_invoke_agent", invoke)
+    monkeypatch.setattr(
+        rpr, "_head_standing", lambda *a: rpr.head_programs.Standing(_REVIEWED, **standing)
+    )
+    assert rpr.main() == 0
+    assert seen and set(seen) == {confined}
+
+
+def test_a_composing_verb_s_standing_is_not_taken_again(rpr, monkeypatch, tmp_path) -> None:
+    """`land-work` hands its test on, so the person is asked once (DEC-067 point 4)."""
+    invoked: list[str] = []
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer",)),
+        invoked=invoked,
+    )
+
+    def again(*_args):
+        raise AssertionError("the test was taken twice")
+
+    monkeypatch.setattr(rpr, "_head_standing", again)
+    standing = rpr.head_programs.Standing(_REVIEWED)
+    assert rpr.review(["147"], standing=standing).exit_code == 0
+    assert invoked
+
+
+def test_two_open_prs_sharing_the_branch_s_name_stop_the_review(rpr, monkeypatch, capsys) -> None:
+    import subprocess
+
+    prs = [{"number": n, "headRefName": "feat/147-x"} for n in (99, 77)]
+
+    def fake_gh_run(args, config, **kwargs):
+        return subprocess.CompletedProcess(args, 0, stdout=_json.dumps(prs), stderr="")
+
+    monkeypatch.setattr(rpr, "gh_run", fake_gh_run)
+    with pytest.raises(rpr.head_programs.TwoOpen, match="#99 and #77"):
+        rpr._find_pr_for_branch("feat/147-x", {})

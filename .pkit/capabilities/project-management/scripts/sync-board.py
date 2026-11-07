@@ -15,9 +15,13 @@ maintains. When the board and native primitives disagree, native wins."
 command brings a whole board level after a write that failed, a card a person
 dragged by hand, or a board set up after the issues were filed.
 
-It runs where a board is configured and the state is not carried on it
-(`_lib/board_status`). Where the board carries the state, its Status is the
-state's source, and the command refuses.
+It runs where a board is configured and the state is carried off it: with no
+substrate map, or where the map binds `state` to a substrate other than the
+board (`_lib/board_status`). Where the map binds `state` to the board, its
+Status is the state's source, and the command refuses. Where a present map
+leaves `state` out or marks it `unsupported`, the state degrades and the
+capability writes no Status for it, so the command refuses too, saying so
+([project-management:DEC-062-axes-chosen-in-the-map] point 5).
 
 What it does:
 
@@ -49,9 +53,9 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  written, nothing to write, a dry run, or declined at the prompt
   1  membership or foreign-repo refusal
-  2  usage: no board configured, the board carries the state, the board has
-     no single-select Status field, an un-bootstrapped project, or a run with
-     no terminal and no --yes
+  2  usage: no board configured, the board carries the state, the map leaves
+     the state out, the board has no single-select Status field, an
+     un-bootstrapped project, or a run with no terminal and no --yes
   3  gh failure: the repository, the issues or the board could not be read, or
      a Status or a card could not be written (the others are still written)
 """
@@ -71,7 +75,15 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, board_fields, board_status, bootstrap_gate, containment, session_guard
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    board_fields,
+    board_status,
+    bootstrap_gate,
+    containment,
+    session_guard,
+)
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
 from _lib.membership import (
@@ -143,9 +155,7 @@ def main() -> int:
         return 2
     if not board_status.maintained(config, substrate_map):
         print(
-            "error: the board carries the state here, so the Status is the state's source, "
-            "not a projection of it (DEC-006); sync-board writes only the projection. "
-            "Nothing was read or written.",
+            f"error: {_not_kept(config, substrate_map)} Nothing was read or written.",
             file=sys.stderr,
         )
         return 2
@@ -157,7 +167,9 @@ def main() -> int:
         print(f"error: this repository could not be read: {failure}", file=sys.stderr)
         return 3
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
-    status = board_status.Projector(config, workflow, repository_owner=repository.split("/", 1)[0])
+    status = board_status.StatusBoard(
+        config, workflow, repository_owner=repository.split("/", 1)[0]
+    )
     read = status.field()
     if read.field is None:
         print(f"error: the board's Status could not be read: {read.error}", file=sys.stderr)
@@ -213,6 +225,24 @@ def main() -> int:
         return stop
 
     return _apply(plan, status, config)
+
+
+def _not_kept(config: dict, substrate_map: axis_labels.SubstrateMap | None) -> str:
+    """Why the board's Status is no projection this command writes, where a board
+    is configured: the map binds the state to the board, or leaves it out
+    ([project-management:DEC-062-axes-chosen-in-the-map] point 5)."""
+    if axis_carriage.is_board_carried("state", config, substrate_map):
+        return (
+            "the substrate map binds `state` to the board here, so the board's Status is "
+            "the state's source, not a projection of it (DEC-062 point 5); sync-board "
+            "writes only the projection."
+        )
+    return (
+        "project/substrate-map.yaml leaves `state` out or marks it `unsupported`, so the "
+        "state degrades and the capability writes no Status for it: the board's Status "
+        "stays with the people who move it (DEC-062 point 5). Bind `state` in the map, "
+        "such as `kit-label: true`, to have its Status kept as the state's projection."
+    )
 
 
 # ---- the plan ----------------------------------------------------------
@@ -308,7 +338,7 @@ def _state_of(row: dict, substrate_map: axis_labels.SubstrateMap | None) -> str:
 # ---- the run -----------------------------------------------------------
 
 
-def _apply(plan: Plan, status: board_status.Projector, config: dict) -> int:
+def _apply(plan: Plan, status: board_status.StatusBoard, config: dict) -> int:
     """Write the plan: the cards that differ, then the cards to add. Each failure
     is one line, and the rest are still written."""
     print()

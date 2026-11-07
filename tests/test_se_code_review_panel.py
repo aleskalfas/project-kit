@@ -511,7 +511,9 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
     lead = "- **Each `updated` document needs its sentence, and the sentence must match.**"
     (item,) = [line for line in _answers_check() if line.startswith(lead)]
     for words in (
-        "Read that section as the commands that write the list read it",
+        "Read that section as the project-management commands read it",
+        "The description carries no list of the answers",
+        "read each sentence from that section alone",
         '"Where the sentences live" of `.pkit/capabilities/project-management/README.md`',
         "starts in the line's first column with the document in a code span",
         f"The form to write is ``{answers.SENTENCE_FORM}``.",
@@ -841,14 +843,12 @@ def test_the_verdict_names_the_three_tags(agent):
 
 
 def test_the_readme_and_the_agents_say_the_same_of_person():
-    """The README's block-threshold paragraph says what each body's clause says."""
+    """The README's item on the `[person]` tag says what each body's clause says."""
     readme = (_SE_DIR / "README.md").read_text(encoding="utf-8")
-    (paragraph,) = [
-        line for line in readme.splitlines() if line.startswith("**Block-threshold discipline.**")
-    ]
-    assert "`[person]` marks a finding on a passage the change owns." in paragraph
+    (item,) = [line for line in readme.splitlines() if line.startswith("- **`[person]`**")]
+    assert "- **`[person]`** marks a finding on a passage the change owns." in item
     for words in _PERSON_CONDITIONS:
-        assert words in paragraph, words
+        assert words in item, words
 
 
 @pytest.mark.parametrize("agent", _PANEL_AGENTS)

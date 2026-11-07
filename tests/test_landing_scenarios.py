@@ -699,6 +699,10 @@ _IN_USE_KEPT = (
     "kept, as ruled for #1255: deleting the branch would close #501, which uses it as its head; "
     "nothing but the readings is asked, and the local branch stays with it"
 )
+_TWO_OPEN_STOP = (
+    "two open pull requests on one branch's name stop the run before anything merges, naming "
+    "both, since one may be a fork's (project-management DEC-067 point 1)"
+)
 _BASE_UNCHECKED = (
     "accident: the branch #503 is based on is deleted, whatever the service then does to #503; "
     "the round of #1285 keeps it"
@@ -2034,14 +2038,7 @@ SCENARIOS: tuple[Scenario, ...] = (
                 deletion="kept open-pull-request",
                 note=f"{_IN_USE_KEPT}; {_PLANNED}",
             ),
-            LAND_WORK: merged(
-                "0 merge: merged",
-                "read×2 merge read branch based-on",
-                remote="none",
-                local="kept",
-                deletion="kept open-pull-request",
-                note=_IN_USE_KEPT,
-            ),
+            LAND_WORK: stopped("2 head: stopped", note=_TWO_OPEN_STOP),
         },
     ),
     Scenario(
@@ -2677,11 +2674,16 @@ def land(
         _stub_gates(monkeypatch, lw.done_work, cap)
         _stub_done_work(monkeypatch, lw.done_work, run)
         _the_change_wrote_no_answers(monkeypatch, lw.friction_answers)
+        # A fork's head is fetched from the base's remote, which the backbone
+        # resolves (#2637): `origin`, the remote the fake host stands for.
+        monkeypatch.setattr(lw.friction_answers, "base_remote", lambda base: "origin")
         # Nor does it alter an accepted decision record (#2161).
         accepted = lw.accepted_records
         monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())
+        # The project holds no seats, so no build's records are read (DEC-067 point 1).
+        monkeypatch.setattr(lw.head_programs.topology, "read", lambda *args, **kwargs: None)
         # The stub's change writes no answer and changes no grant list.
-        monkeypatch.setattr(lw, "_grants_between", lambda *args: ())
+        monkeypatch.setattr(lw.fixers, "change_between", lambda *args: ())
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
 
@@ -2718,21 +2720,27 @@ def land(
 
 
 def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: ModuleType) -> None:
-    """land-work's step that lists the answers (`documents this change affects:`),
+    """land-work's step that reads the answers (`documents this change affects:`),
     answered as for a change that wrote none: the landings these rows walk are the
     ones a change with no answers takes, which the step leaves as they were
-    (project-management DEC-055). The merge as it would land passes the change check
+    (project-management DEC-065). The merge as it would land passes the change check
     too: the head holds the base its own check read (DEC-055 point 6)."""
 
-    def derive(head: str, base: str | None) -> Any:
+    def derive(
+        head: str, base: str | None, *, source: Any = None, from_checkout: bool = True
+    ) -> Any:
         document = {"schema_version": 1, "base": {"commit": "", "outdated": False}}
         return answers.Derivation(head, document={**document, "answers": [], "unreadable": []})
 
-    def merged(head: str, base: str, *, checked: Any = None) -> Any:
+    def merged(head: str, base: str, *, checked: Any = None, from_checkout: bool = True) -> Any:
         return answers.Merged(head, merge=head, document={"failed": False, "findings": []})
+
+    def checked(head: str, base: str, *, source: Any = None, from_checkout: bool = True) -> Any:
+        return derive(head, base)
 
     monkeypatch.setattr(answers, "derive", derive)
     monkeypatch.setattr(answers, "merged", merged)
+    monkeypatch.setattr(answers, "checked", checked)
 
 
 def _release(args: list[str]) -> str:
@@ -2883,6 +2891,8 @@ def test_a_branch_kept_gone_or_refused_never_fails_the_landing(row: str) -> None
     """However the deletion ends, every caller's run ends as it does when the
     branch is deleted, with every step after the merge run."""
     for caller in CALLERS:
+        if (row, caller) == ("branch-used-by-another-open-pr", LAND_WORK):
+            continue  # Two open pull requests on a branch's name stop it first (DEC-067).
         cell, deleted = _BY_ID[row].expected(caller), _BY_ID["remote-tip-equals"].expected(caller)
         assert isinstance(cell, Cell) and isinstance(deleted, Cell)
         assert (cell.outcome, cell.after) == (deleted.outcome, True), (row, caller)

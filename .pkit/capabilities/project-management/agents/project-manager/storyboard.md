@@ -11,7 +11,7 @@ consumers:
 
 This storyboard covers the **autonomous batch-planning flow** the `project-manager` agent runs when a user supplies fuzzy intent + reference material and wants the work sliced into issues filed correctly. The flow is one variation of the agent's PM-direction mode per [project-management:DEC-029-project-manager-agent-shape]; the user does not name it explicitly, the agent infers it from the request shape.
 
-Scenarios 12 and 13 walk one round of each loop a seat's role runs, a planner's and a worker's, through the pm skill's `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). There the seat's role sets the direction, in place of inference from the request. Scenario 14 walks a worker's later round: a pull request that conflicts with the default branch, a fix round, and a pull request that a released seat left in Review.
+Scenarios 12 and 13 walk one round of each loop a seat's role runs, a planner's and a worker's, through the pm skill's `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). There the seat's role sets the direction, in place of inference from the request. Scenario 14 walks a worker's later round: a pull request that conflicts with the default branch, a fix round, and a pull request that a released seat left in Review. Scenario 15 walks a plan whose Tasks share a file, planned as one Task ([project-management:DEC-066-fold-tasks-that-share-a-file]).
 
 The flow operates on:
 
@@ -535,3 +535,42 @@ A new session starts in the clone of Scenario 13, which holds seat 2, `worker-a`
 - The fix round follows. `pkit pm show-pr feat/322-csv-headers --field review` gives the findings, and only the `[block]` one is fixed, on #322's branch. `pkit pm edit-pr 332 --body-file <file>` answers the `[advisory]` one in the body.
 - `pkit pm next-task --yes` exits 5. It never offers #325, which is in Review, outside the pool (DEC-059 point 7). A released seat's pull request in Review is the person's to land or hand over, so the worker waits for the person to tell it.
 - The person hands #325 over. `git fetch origin`, then `git checkout -B feat/325-csv-footer origin/feat/325-csv-footer`. From the next round on, step 1 of the loop reads PR #340 with the clone's own. `handoff-issue` does not move a claim between clones yet, so #325 keeps no owner.
+
+## Scenario 15: Tasks that share a file planned as one
+
+### Trigger
+
+User invokes `project-manager` to plan work whose Tasks would change the same file.
+
+### Preconditions
+
+- The use-case point is off, as in Scenario 1, and the project declares no topology.
+- An accepted record and the merged CSV writer settle every choice the work's Tasks would share, so the plan slices at once.
+- The handoff note names four pieces of work under Feature #400 "CSV export", in Milestone 3, which is open, at Medium priority. Quoting fields that hold a comma, a header row and a footer with totals each change the writing loop already in the CSV writer, `export/csv_writer.py`. The help text for the export command changes only `cli/help.py`.
+- #410 "Export writes dates in ISO form" is under #400, in Backlog under Milestone 3, at Medium priority. It has no branch. Its implementation notes name the CSV writer's writing loop as what it changes.
+
+### Walkthrough
+
+> **User:** Plan the CSV export work from the handoff note.
+>
+> **project-manager:** *Reading the handoff note…* *Naming the shared choices…* The export record and the merged writer settle each one, so I'll slice at once. Three of the four pieces change the CSV writer, and so does #410, which has not started. *Invoking critic on the proposed slicing…* Show me the full plan?
+>
+> **User:** Yes.
+>
+> **project-manager:** *Renders the slicing table.* #410 takes the quoting and the header row, retitled to name all three: one review can read them, and one build can finish them. The footer would not fit, so T1 holds it, after #410, and T2, the help text, goes at once. Approve, revise, or cancel?
+>
+> **User:** Approve.
+>
+> **project-manager:** Edited #410's body to hold the quoting and the header row, with a criterion each, and retitled it. Filed #415 (T1, after #410) and #416 (T2), both in Backlog under Milestone 3. Four changes to the writer became two.
+
+### Behind the scenes
+
+- Batch planning names the shared choices first. Each is settled, so the plan slices at once ([project-management:DEC-060-foundation-before-slices] point 1).
+- The quoting, the header row and the footer each change what is already in `export/csv_writer.py`, and so does #410. So the four share a file ([project-management:DEC-066-fold-tasks-that-share-a-file] point 1). The help text names only `cli/help.py`, and shares a file with none.
+- Built one at a time, the four would be four changes in a row, each paying the per-change cost. They are of one parent, #400, in Milestone 3 at Medium priority, so the plan folds them (DEC-066 point 2).
+- #410 is in Backlog with no branch, so it has not started, and takes the work (DEC-066 point 4). Its classification, Milestone and state are what the plan would give the work, so the gate shows no difference. The work depends on nothing, so #410 gains no dependency. Had it started, its body would stay, and the work would be a Task after it.
+- The footer would take #410 past what one review can read, so it is a Task of its own, T1. Its `## Dependencies` names #410, and says they share the CSV writer (DEC-066 point 3).
+- The plan counts four issues before the fold, so DEC-029's threshold calls the critic (DEC-066 point 2).
+- The gate shows the fold with the estimate: what #410 takes, its new title, and T1's place after it. The person may split the fold. No `gh` mutation happens before the approval.
+- On approval, `pkit pm detect-state 410` reads #410 still in Backlog, and `git ls-remote --heads origin "*/410-*"` finds no branch. `pkit pm edit-issue 410 --body-file <file> --title "<title>" --yes` writes its new body and title, with a criterion for each piece it takes. Had it started since the gate, nothing would be written to it, and the agent would ask the user where the work goes.
+- `create-issue` files T1 and T2, and `pkit pm promote-issue <N> --milestone 3 --reason "<the user's approval of the plan>"` schedules each.

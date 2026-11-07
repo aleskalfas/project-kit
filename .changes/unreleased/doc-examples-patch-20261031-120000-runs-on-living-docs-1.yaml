@@ -1,0 +1,10 @@
+component: doc-examples
+kind: patch
+custom:
+  category: Changed
+body: >
+  The capability runs on the living-docs this release writes, which ships the
+  `guide` page kind (#2060). It selects pages by living-docs' page type, never
+  by their kind, so a new kind changes nothing it reads.
+runs_on_capabilities:
+  living-docs: release

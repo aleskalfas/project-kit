@@ -5,6 +5,7 @@ status: active
 statement: A check of the backbone never reads a missing result, from a command it runs or from git, as one that found nothing.
 measure: No check passes on a command that gave no result, or on a default branch git could not resolve. Each such case fails the check or is reported, as *Verified by* lists.
 applies-to: Each check the backbone runs and each value the backbone resolves for one, whichever component's command fills the value.
+obligation: v1:sha256:8b4f6d4aba36add058beac83e2b1ba452a39b6bd8865166238397cbf73bdda0c
 actors:
   - ACT-ci-pipeline
   - ACT-adopter
@@ -14,6 +15,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/command_runner.py
+        - src/project_kit/default_branch.py
         - tests/test_command_runner.py
         - tests/test_friction_anchor_kinds.py
         - tests/test_validators.py
@@ -22,6 +24,7 @@ pkit:
       record:
         - COR-050#2
         - COR-050#12
+        - COR-055
         - COR-055#6
         - COR-052#6
         - COR-054#4

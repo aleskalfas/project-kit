@@ -788,6 +788,7 @@ class FakeRepo:
     def _row(self, issue: dict) -> dict:
         return {
             "number": issue["number"],
+            "id": f"I_{issue['number']}",
             "title": issue["title"],
             "state": issue["state"],
             "body": issue["body"],
@@ -1336,6 +1337,69 @@ def test_a_forced_close_reports_each_task_it_leaves_in_no_pool(cm, monkeypatch, 
     err = capsys.readouterr().err
     assert "these Tasks it leaves are in no pool" in err
     assert "#11 [task] [Task] in flight" in err
+
+
+#: The state on the board, the other axes on the kit's own labels (DEC-062).
+_STATE_ON_BOARD = {"type": {"kit-label": True}, "state": {"board": True}}
+
+
+def _state_on_board(cm, monkeypatch, statuses: dict[int, str | None] | None) -> list[list[str]]:
+    """Bind the state to the board, and stand in for the listing read of the
+    listed issues' cards: `statuses` maps an issue to its card's Status, an issue
+    it leaves out having no card, and None stands for a board that cannot be
+    read. Returns the node ids each read was asked for."""
+    substrate_map = cm.axis_labels.SubstrateMap(axes=_STATE_ON_BOARD)
+    monkeypatch.setattr(cm.axis_labels, "load_substrate_map", lambda *a, **k: substrate_map)
+    reads: list[list[str]] = []
+
+    def read(_config, workflow, issue_node_ids, **_kw):
+        asked = list(issue_node_ids)
+        reads.append(asked)
+        if statuses is None:
+            return None, "missing required scopes [read:project]"
+        options = {f"I_{n}": status for n, status in statuses.items() if f"I_{n}" in asked}
+        return cm.board_status.ListedStatuses("board #4", workflow, options, frozenset(asked)), ""
+
+    monkeypatch.setattr(cm.board_status, "read_listed", read)
+    return reads
+
+
+def _forced_close_in_a_pool(monkeypatch, cm) -> None:
+    repo, _moves = _pooled(monkeypatch, cm, "alpha", next_pool="alpha", later_pool="alpha")
+    repo.milestones[6]["description"] = "Close trigger: content-based\nPool: alpha"
+
+
+def test_where_the_board_carries_the_state_a_forced_close_reads_the_tasks_cards(
+    cm, monkeypatch, capsys
+) -> None:
+    """The labels say In Progress for #11 and nothing for #12, and are not read:
+    #11's card says Backlog, and #12's names no open state, so it is named as a
+    Task whose position cannot be told (DEC-051 point 6)."""
+    _forced_close_in_a_pool(monkeypatch, cm)
+    reads = _state_on_board(cm, monkeypatch, {11: "Backlog", 12: "Done"})
+
+    assert _close(monkeypatch, cm, "--force") == 0
+
+    assert len(reads) == 1 and sorted(reads[0]) == ["I_11", "I_12"]
+    err = capsys.readouterr().err
+    assert "these Tasks it leaves are in no pool" in err
+    assert "#11 [task] [Task] in flight" in err
+    assert "#12 [task] [Task] not started: where it stands cannot be told" in err
+    assert "has the Status 'Done', which names no open state" in err
+
+
+def test_where_the_board_cannot_be_read_a_forced_close_says_so_in_place_of_the_list(
+    cm, monkeypatch, capsys
+) -> None:
+    _forced_close_in_a_pool(monkeypatch, cm)
+    _state_on_board(cm, monkeypatch, None)
+
+    assert _close(monkeypatch, cm, "--force") == 0
+
+    err = capsys.readouterr().err
+    assert "The board's Status could not be read (missing required scopes" in err
+    assert "which Tasks it leaves in no pool cannot be named" in err
+    assert "#11 [task]" not in err
 
 
 def test_without_pools_a_forced_close_reports_no_pool(cm, monkeypatch, capsys) -> None:

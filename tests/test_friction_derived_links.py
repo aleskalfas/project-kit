@@ -2,8 +2,9 @@
 
 A fixture capability, `deriver`, declares on its place `notes` the form of the links
 a command of its own would write there: a link to a glossary entry. Each test stands
-up a real adopter repository, commits a base on `main`, branches `feature` off it and
-makes real commits before running a check. They cover:
+up a real adopter repository, its install committed once per session
+(`committed_adopter`), commits a base on `main`, branches `feature` off it and makes
+real commits before running a check. They cover:
 
 - **the reading** — `document_parts.links_set_aside` reads a link of the form in
   running text as its words alone, and leaves code, comments, headings, images and
@@ -195,10 +196,9 @@ LINKS_MOVED = {
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
-    declare_deriver(adopter.root)
-    return adopter
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    declare_deriver(committed_adopter.root)
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str] | None = None) -> None:
@@ -443,10 +443,9 @@ def test_an_updated_answer_file_on_links_alone_is_a_bump_too(repo: AdopterRepo) 
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    adopter = make_adopter_repo()
-    declare_deriver(adopter.root)
-    return Timeline(adopter)
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    declare_deriver(committed_adopter.root)
+    return Timeline(committed_adopter)
 
 
 def _states(result: fr.RepositoryCheck) -> dict[str, str]:
@@ -586,10 +585,10 @@ SIGNED = "signed as PRJ-001 point 1 asks"
 CITED = ".pkit/decisions/project/PRJ-001-exports.md"
 
 
-def _cited(repo: AdopterRepo) -> None:
-    """`_kinds`, a project record, and the first step of the use case to place an order
-    citing one of its points. Built once per session (`installed`)."""
-    _kinds(repo)
+def _cite(repo: AdopterRepo) -> None:
+    """A project record, and the first step of the use case to place an order citing one of
+    its points. Written on a copy of `_kinds`' template, which the term links' tests share,
+    so no template of its own stamps the analysis again."""
     text = (repo.root / PLACE).read_text(encoding="utf-8")
     step = "and the system opens an order."
     assert step in text
@@ -601,7 +600,8 @@ def cited(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AdopterRepo:
     """The analysis linked on `main`, its terms and its citation, and `feature` off it."""
-    repo = installed(make_adopter_repo, monkeypatch, then=_cited)
+    repo = installed(make_adopter_repo, monkeypatch, then=_kinds)
+    _cite(repo)
     link(repo)
     repo.commit("the analysis, linked")
     repo.checkout("feature", create=True)

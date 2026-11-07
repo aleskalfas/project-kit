@@ -1,3 +1,0 @@
-component: project-management
-kind: none
-body: DEC-060 decides that slices are planned only once the choices they share are settled, with pointers from DEC-029 and DEC-059. A design-ahead decision; batch planning carries it once #2143 builds it, so no adopter-facing behaviour changes here.

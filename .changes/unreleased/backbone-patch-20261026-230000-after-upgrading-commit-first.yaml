@@ -1,9 +1,0 @@
-component: backbone
-kind: patch
-custom:
-  category: Changed
-body: >
-  After you upgrade a project to this release, commit the upgrade before you
-  run `pkit validate`. Until it is committed, the friction check inside
-  validation reads the last commit, where your answers have not moved into
-  answer files yet.

@@ -26,6 +26,10 @@ awaiting-human side-fact NON-clear (the dead bug), the both-moves
 autonomous-escape rule (R2), awaiting-condition divergence (both directions),
 journaling blocked-enter at PARK time (G2), live-over-journal authority, prompt
 surfacing, and the behaviour-preserving block-less case.
+
+Each predicate the engine starts runs in the test's own process, its command
+still found through the runner's one lookup (`tests/in_process.py`,
+`start_in_process`).
 """
 
 from __future__ import annotations
@@ -33,6 +37,8 @@ from __future__ import annotations
 import json
 import re
 import stat
+import sys
+import textwrap
 from pathlib import Path
 from unittest.mock import patch
 
@@ -46,7 +52,18 @@ from project_kit.process import (
     render_status_json,
     render_status_narrative,
 )
+from tests.in_process import start_in_process
 from tests.process_journal_support import enable_journal_logging, set_journal_logging
+
+
+@pytest.fixture(autouse=True)
+def predicates_started(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process
+    (`start_in_process`). No bytecode is written, so a script a test rewrites is read
+    afresh."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    return start_in_process(monkeypatch)
+
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -103,8 +120,12 @@ process:
 
 
 def _write_script(path: Path, body: str) -> None:
+    """An executable predicate script whose `main` runs `body`, as a process and in this
+    process alike."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    code = "import sys\n\n\ndef main():\n" + textwrap.indent(body, "    ")
+    code += "\n\nif __name__ == '__main__':\n    sys.exit(main())\n"
+    path.write_text("#!/usr/bin/env python3\n" + code, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 

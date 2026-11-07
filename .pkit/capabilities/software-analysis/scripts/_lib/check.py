@@ -97,6 +97,12 @@ What is checked, each against the record's words:
   of the three kinds, never itself; one in force names none withdrawn. The
   rule is the model's (`Analysis.unfit`, `Analysis.unfit_requirement`), for
   the stamp of a requirement to read as well.
+- **A requirement's fingerprint** (DEC-006 point 6), whatever any rule's status,
+  a withdrawn requirement included: its `obligation` is the fingerprint of its
+  statement, its measure and where it holds, under the version of the form it
+  names. One missing, one that is no fingerprint and one that no longer matches
+  its texts fail, naming `pkit analysis obligation`, and so does one whose
+  version or hash this release does not read (`_lib/obligation.py`).
 - **A requirement's anchors match its fields** (DEC-002 point 6): its
   artefact anchors within the analysis — those that are the id of one of its
   kinds — are exactly its `actors` and its `refines`. A cycle through
@@ -337,6 +343,7 @@ from _lib import (
     evidence,
     links,
     markdown,
+    obligation,
     overview,
     project_structure,
     render,
@@ -459,6 +466,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis, listing)
     outcome.findings += _requirement_references(analysis, listing)
+    outcome.findings += obligation.findings(root, analysis)
     outcome.findings += _listed_requirements(analysis)
     outcome.findings += _built_on(root, analysis, listing)
     outcome.findings += _lists_apart(analysis)

@@ -53,8 +53,10 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 try:
+    from _lib import backbone
     from _lib.author_delta import local_commits
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
+    import backbone  # type: ignore[no-redef]
     from author_delta import local_commits  # type: ignore[no-redef]
 
 #: The backbone's command, as a capability's script runs it, and the
@@ -139,7 +141,7 @@ def ruled_altered(
     head: str,
     *,
     cwd: str | Path | None = None,
-    run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+    run: Callable[..., subprocess.CompletedProcess] | None = None,
 ) -> RuledAlteration:
     """The artefacts the change from `base` to `head` altered, each with
     whether an accepted rule binds on it at either state, then those it
@@ -147,17 +149,21 @@ def ruled_altered(
 
     `base` is compared as the backbone compares a base: the change is the one
     from where `head` left it. See the module docstring for what is read
-    locally, and for each reason the answer cannot be read.
+    locally, and for each reason the answer cannot be read. `run`, when given,
+    runs both `git` and `pkit`. By default `git` runs as a process and `pkit`
+    through `backbone.run`.
     """
     if not base or not head:
         return RuledAlteration(error="the base or the head to compare is unknown")
-    missing = local_commits(((head, "the head"), (base, "the base")), cwd=cwd, run=run)
+    missing = local_commits(
+        ((head, "the head"), (base, "the base")), cwd=cwd, run=run or subprocess.run
+    )
     if missing:
         return RuledAlteration(error=missing)
     argv = [*PKIT, *COMMAND, "--base", base, "--head", head]
     command = f"`pkit {' '.join(COMMAND)} --base {base[:7]} --head {head[:7]}`"
     try:
-        proc = run(
+        proc = (run or backbone.run)(
             argv,
             cwd=cwd,
             env={**os.environ, **UNROUTED},

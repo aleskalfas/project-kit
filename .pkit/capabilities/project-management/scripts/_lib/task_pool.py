@@ -60,6 +60,18 @@ Task's type falls back to its title's prefix, as ``start-work`` reads it. An axi
 that a board carries is not read here, so such a Task ranks after every Task whose
 priority is read, and a scope that names a part on that axis does not take it.
 
+Where the board carries the state
+---------------------------------
+Where the substrate map binds the state to the board, a Task's state is its
+card's Status ([project-management:DEC-062-axes-chosen-in-the-map] point 5).
+``next-task`` reads the cards of the open issues it listed, and no others, in one
+listing read (``board_status.read_listed``) keyed by the node ids
+:func:`node_ids` gives, and hands it over in :class:`Readers`. Each row is joined
+to its card by the issue's node id, which :data:`LIST_FIELDS` asks for. A Task
+whose card's Status does not place it is no candidate: :func:`unplaced` names
+each, with why, for ``next-task`` to skip with a warning
+([project-management:DEC-051-axis-carriage-activation] point 6).
+
 The pools
 ---------
 Where the topology declares pools of workers, a seat that builds chooses its
@@ -83,6 +95,7 @@ from typing import Any
 
 from _lib import (
     axis_labels,
+    board_status,
     classification_rules,
     instance_claims,
     issue_position,
@@ -90,11 +103,13 @@ from _lib import (
     topology,
 )
 from _lib import instance_ownership as ownership
+from _lib import lifecycle_inference as infer
 from _lib.body_rules import lines_outside_fences
 from _lib.structural_type import infer_structural_type
 
-#: The fields of the one listing the pool reads.
-LIST_FIELDS = "number,title,labels,assignees,milestone,state,body"
+#: The fields of the one listing the pool reads: `id`, the issue's node id, joins
+#: a row to its card where the board carries the state.
+LIST_FIELDS = "number,title,labels,assignees,milestone,state,body,id"
 
 BACKLOG = "backlog"
 IN_PROGRESS = "in-progress"
@@ -134,11 +149,30 @@ class Candidate:
 
 @dataclass(frozen=True)
 class Readers:
-    """The capability's schemas, as the pool reads a Task's type and axes."""
+    """The capability's schemas, as the pool reads a Task's type and axes, and,
+    where the board carries the state, the Status of each listed issue's card,
+    read once."""
 
     issue_types: Mapping[str, Any]
     classification: Mapping[str, Any]
     substrate_map: axis_labels.SubstrateMap | None = None
+    statuses: board_status.ListedStatuses | None = None
+
+    def state(self, row: Mapping[str, Any], labels: list[str]) -> tuple[str, str]:
+        """``row``'s state, and, where its card's Status leaves it undetermined,
+        why: the one reading of a listed row's state, joined to its card by the
+        issue's node id where the board carries the state."""
+        status = None
+        if self.statuses is not None and str(row.get("state") or "").lower() != "closed":
+            node_id = row.get("id")
+            status = self.statuses.read(node_id if isinstance(node_id, str) else None)
+        state = issue_position.current_state(dict(row), labels, self.substrate_map, status)
+        if state != infer.UNDETERMINED:
+            return state, ""
+        number = int(row.get("number") or 0)
+        if status is None:
+            return state, f"#{number}'s card's Status was not read"
+        return state, status.finding(number)
 
 
 @dataclass(frozen=True)
@@ -279,13 +313,44 @@ def candidates(
         if milestones is not None and native_milestone(row) not in milestones:
             continue
         candidate = _candidate(row, login, scope, takes_over, readers, order)
-        if candidate is None:
+        if not isinstance(candidate, Candidate):
             continue
         body = str(row.get("body") or "")
         if any(n in still_open for n in dependencies(body, own=candidate.number)):
             continue
         out.append(candidate)
     return sorted(out, key=lambda c: (c.rank, c.number))
+
+
+def unplaced(
+    rows: Iterable[Any],
+    *,
+    login: str | None,
+    scope: topology.Scope | None,
+    readers: Readers,
+    milestones: Collection[int] | None = None,
+) -> list[tuple[int, str]]:
+    """The open Tasks among ``rows`` the pool would weigh but cannot place, since
+    the board carries the state and their cards' Status does not give it, each
+    with why, by number (DEC-051 point 6). Empty where the board does not carry
+    the state. The same filters as :func:`candidates` apply, short of the state."""
+    order = _priorities(readers.classification)
+    out: list[tuple[int, str]] = []
+    for row in rows:
+        if milestones is not None and native_milestone(row) not in milestones:
+            continue
+        judged = _candidate(row, login, scope, True, readers, order)
+        if isinstance(judged, _Unplaced):
+            out.append((judged.number, judged.why))
+    return sorted(out)
+
+
+@dataclass(frozen=True)
+class _Unplaced:
+    """An open Task in the pool's reach whose card's Status does not place it."""
+
+    number: int
+    why: str
 
 
 def _candidate(
@@ -295,14 +360,15 @@ def _candidate(
     takes_over: bool,
     readers: Readers,
     order: Mapping[str, int],
-) -> Candidate | None:
-    """``row`` as a Candidate, or None where it is no Task the pool hands out."""
+) -> Candidate | _Unplaced | None:
+    """``row`` as a Candidate, an :class:`_Unplaced` Task where its card's Status
+    does not place it, or None where it is no Task the pool hands out."""
     if not isinstance(row, dict) or not isinstance(row.get("number"), int):
         return None
     if str(row.get("state") or "").lower() != "open":
         return None
     title = str(row.get("title") or "")
-    labels = _label_names(row)
+    labels = label_names(row)
     structural = infer_structural_type(
         title,
         dict(readers.issue_types),
@@ -310,9 +376,6 @@ def _candidate(
         labels=labels,
     )
     if structural != "task":
-        return None
-    state = issue_position.current_state(row, labels, readers.substrate_map)
-    if state not in (BACKLOG, IN_PROGRESS) or (state == IN_PROGRESS and not takes_over):
         return None
     assignees = _assignees(row)
     if assignees and login not in assignees:
@@ -322,6 +385,11 @@ def _candidate(
         kind = classification_rules.kind_from_title(title, dict(readers.classification))
     workstream = axis_labels.resolve_read("workstream", labels, readers.substrate_map)
     if not in_scope(kind, workstream, scope):
+        return None
+    state, why = readers.state(row, labels)
+    if state == infer.UNDETERMINED:
+        return _Unplaced(row["number"], why)
+    if state not in (BACKLOG, IN_PROGRESS) or (state == IN_PROGRESS and not takes_over):
         return None
     priority = axis_labels.resolve_read("priority", labels, readers.substrate_map)
     return Candidate(
@@ -349,7 +417,7 @@ def task_state(row: Any, readers: Readers) -> str | None:
     Task, else None: how a listing counts the Tasks in Backlog."""
     if not isinstance(row, dict) or not isinstance(row.get("number"), int):
         return None
-    labels = _label_names(row)
+    labels = label_names(row)
     structural = infer_structural_type(
         str(row.get("title") or ""),
         dict(readers.issue_types),
@@ -358,7 +426,7 @@ def task_state(row: Any, readers: Readers) -> str | None:
     )
     if structural != "task":
         return None
-    return issue_position.current_state(row, labels, readers.substrate_map)
+    return readers.state(row, labels)[0]
 
 
 def _priorities(classification: Mapping[str, Any]) -> dict[str, int]:
@@ -372,7 +440,21 @@ def _priorities(classification: Mapping[str, Any]) -> dict[str, int]:
     return {str(v): i for i, v in enumerate(values)}
 
 
-def _label_names(row: Mapping[str, Any]) -> list[str]:
+def node_ids(rows: Iterable[Any]) -> list[str]:
+    """The node ids of the open issues among ``rows``, as the listing returns
+    them: the cards a listing read reads where the board carries the state. A
+    closed issue is Done with no read of its card."""
+    return [
+        str(row["id"])
+        for row in rows
+        if isinstance(row, dict)
+        and row.get("id")
+        and str(row.get("state") or "").lower() != "closed"
+    ]
+
+
+def label_names(row: Mapping[str, Any]) -> list[str]:
+    """The names of the labels on ``row``, as a listing of issues gives it."""
     return [
         str(lbl.get("name", "")) if isinstance(lbl, dict) else str(lbl)
         for lbl in (row.get("labels") or [])

@@ -1,0 +1,13 @@
+component: visual-communication
+kind: minor
+body: >
+  The capability ships its first skill, `visual-author` (#2781). `pkit sync`
+  deploys it. Whoever draws a piece follows it, a person or an agent working for
+  one. `piece.md` starts a piece: it brings each library with `pkit visual add`,
+  whose first write records the location, and guides the choice of the top, the
+  brand, the notation, the languages, the modes and the exports. It also guides
+  writing `piece.yaml` and the content by hand, and the first render, which
+  writes the lock. `build-loop.md` works the piece until it can stop: render,
+  check, read the pages with `pkit visual look` and `pkit visual pages`, and
+  mend, with what to do for each finding by its label. It says when the loop
+  ends, and when to hand the images to `graphic-design-reviewer`.

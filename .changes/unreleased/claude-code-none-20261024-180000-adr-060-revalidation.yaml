@@ -1,7 +1,0 @@
-component: claude-code
-kind: none
-body: >
-  Only the friction block of the adapter README changes: it is revalidated,
-  unchanged, against ADR-060 point 4, which names any untrusted construct in
-  a shell write behind a leading `cd` where it named a quote. Its text does
-  not change, and nothing you run changes.

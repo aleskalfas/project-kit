@@ -1,0 +1,12 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# The foundations: the shared roles, the shared axes, the colour families and the pairs
+# that must contrast (roles.yaml), and the top components every piece starts from
+# (components/). They hold no value: a brand gives every shared role its value.
+# Not released yet, so it may still change.
+name: foundations
+version: 1.0.0
+kind: components
+needs-release: 0.1.0
+builds-on: []

@@ -667,6 +667,10 @@ def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
             return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
+    # The settled branch is the backbone's answer, read through pm's one start
+    # of a `pkit` call, which this global stub of `subprocess.run` would answer
+    # too; the clean-up's subject is git, so the branch is stood in here.
+    monkeypatch.setattr(mp.pr_merge.default_branch, "name", lambda config: "main")
     monkeypatch.setattr(mp.pr_merge.subprocess, "run", fake_run)
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
 

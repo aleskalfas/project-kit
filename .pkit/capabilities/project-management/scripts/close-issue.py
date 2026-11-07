@@ -86,9 +86,26 @@ milestone (Backlog, inferred), else — for an issue still open — Todo, read a
 it were open, so an issue GitHub closed when a pull request merged reads where
 the merge found it. An issue GitHub closed with neither a state label nor a
 milestone carries nothing of where it was, and its close is not recorded from a
-guessed Todo. An issue whose label already says done was moved there by whoever wrote
-the label — ``move-issue``, or an earlier run of this script — and is not
-recorded again, so a re-run adds nothing. Whether the move is recorded is the
+guessed Todo. An issue whose label already says done was moved there by whoever
+wrote the label — ``move-issue``, or an earlier run of this script — and is not
+recorded again, so a re-run adds nothing.
+
+Where the substrate map binds the state to the board, an open issue's card's
+Status says where it was (DEC-062 point 5, ``_lib.issue_position.read_status``).
+The card of an issue a merge closed says where the merge found it until the
+card is set to Done, so a pr-merge close reads it as the move's origin
+(``read_status_before_close``, ADR-074 point 4; #2307). The card cannot say
+whether that move is recorded already, so the journal does
+(``move_journal.owes_board_close``): the card is read only while the last move
+the journal records is not to Done, and not at all where no journal is kept.
+``move-issue``, which ``done-work`` runs first on its own issue, records that
+close as it sets the card to Done, and a re-run finds the move recorded. A
+Status that places the issue nowhere records no move, with a warning naming
+which of the four outcomes it is (DEC-051 point 6); a closed issue's card at
+Done is one, since it says nothing of where the work stood. On an open Task it
+refuses a completed close too, which could not tell a Task in Review.
+
+Whether the move is recorded is the
 engine's: it appends to the journal where the project keeps one and records
 nothing where it does not. A move the workflow does not declare for the issue's
 type — a container whose label was set to Review by hand, say — is not handed to
@@ -132,11 +149,12 @@ Exit codes:
   1  membership refusal / authorisation refusal / checkbox close-gate refusal /
      `--pr` names a PR that is not merged or does not relate to the issue /
      pr-merge mode without `--pr` on an open issue / completed mode on a Task
-     in Review
+     in Review, or on one whose card's Status places it nowhere where the
+     board carries the state
   2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
      pr-merge mode or on a non-leaf; `--result` outside completed mode, or
      missing in it; completed mode on anything but a Task)
-  3  gh failure
+  3  gh failure, a board that carries the state and cannot be read included
 """  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
@@ -162,6 +180,7 @@ from _lib import (
     engine_said,
     instance_claims,
     issue_branch,
+    issue_position,
     session_guard,
 )
 from _lib import lifecycle_inference as infer
@@ -172,6 +191,7 @@ from _lib import lifecycle_inference as infer
 from _lib.checkbox_gate import refusal_message as _checkbox_refusal
 from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
 from _lib.comment import post_audit_once
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.labels import reconcile_state_labels_to_done
@@ -192,7 +212,9 @@ from _lib.move_journal import (
     PR_MERGE_CLOSE,
     PROCESS_ADDRESS,
     journal_move,
+    owes_board_close,
     pr_merge_close_reason,
+    read_journal,
     report_unrecorded,
 )
 from _lib.pr_validation import extract_closing_issues
@@ -217,6 +239,7 @@ PR_MERGE_CLOSE_WRITER = "close-issue-pr-merge"
 COMPLETED_CLOSE_WRITER = "close-issue-completed"
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -393,16 +416,22 @@ def main() -> int:
         for lbl in (issue.get("labels") or [])
     ]
     structural_type = infer_structural_type(title, issue_types, classification=classification)
+    workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
     # The move to done each path below records once it has closed the issue
-    # (#1231), read before anything is written.
+    # (#1231), read before anything is written. Where the map binds the state to
+    # the board, the open issue's card's Status says where it was (DEC-062 point
+    # 5), and so does the card of an issue a merge closed (#2307), read here once.
     close_move = _CloseMove.read(
         args.issue_number,
         issue,
         labels,
         structural_type,
-        workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
+        workflow=workflow,
         substrate_map=substrate_map,
         actor=invoker.github_login,
+        status=_card_before_close(
+            args, issue, state, config=config, substrate_map=substrate_map, workflow=workflow
+        ),
     )
 
     # Instance ownership (DEC-035): None unless this clone set an instance id,
@@ -564,6 +593,9 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
+            # Where the map binds the state to the board, the card read above
+            # says where the merge found it, and the journal whether the move
+            # is recorded already (`_card_before_close`).
             close_move.record(
                 pr_merge_close_reason(args.pr, closed_by_merge=True)
                 if args.pr is not None
@@ -961,6 +993,19 @@ def _close_completed(
     if state == "closed":
         print("\n[noop] issue already closed.")
         return 0
+    # Where the board carries the state, a card that places the Task nowhere
+    # cannot tell a Task in Review from one that may close: nothing is guessed
+    # (DEC-051 point 6).
+    unplaced = close_move.unplaced()
+    if unplaced is not None:
+        print(
+            "\n"
+            + issue_position.unplaced_refusal(
+                "close-issue", issue_number, unplaced, untouched="the Task is still open"
+            ),
+            file=sys.stderr,
+        )
+        return 3 if unplaced.outcome == "unreadable" else 1
     if close_move.from_state == REVIEW_STATE:
         print(
             f"\n[refused] #{issue_number} is in Review: it has a pull request open, so "
@@ -1073,6 +1118,37 @@ def _bring_ancestors_level(args: argparse.Namespace) -> None:
 # ---- recording the close (#1231) ------------------------------------
 
 
+def _card_before_close(
+    args: argparse.Namespace,
+    issue: dict,
+    state: str,
+    *,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+) -> infer.StatusRead | None:
+    """Where the issue's card's Status says it stood before this close, where the
+    map binds the state to the board; None elsewhere.
+
+    An open issue's card says where it is (DEC-062 point 5). A closed issue's
+    card says where its work stood until it is set to Done ([pkit:ADR-074] point
+    4), and is read only for the move a pr-merge close records of a close a
+    merge made (#2307), while the journal still owes that move
+    (`move_journal.owes_board_close`). `done-work` runs move-issue on its own
+    issue first, which records the close as it sets the card to Done, so that
+    close is not recorded twice. A dry run records nothing, and reads no closed
+    issue's card."""
+    if state != "closed":
+        return issue_position.read_status(args.issue_number, issue, config, substrate_map, workflow)
+    if args.mode != "pr-merge" or args.dry_run or not infer.state_is_board_carried(substrate_map):
+        return None
+    if not owes_board_close(read_journal(args.issue_number), DONE_STATE):
+        return None
+    return issue_position.read_status_before_close(
+        args.issue_number, issue, config, substrate_map, workflow
+    )
+
+
 @dataclass(frozen=True)
 class _CloseMove:
     """The lifecycle move a close makes — to done, from where the issue was —
@@ -1081,13 +1157,18 @@ class _CloseMove:
 
     issue_number: int
     #: Where the issue was before the close (`state_before_close`), or None when
-    #: nothing records it (a `derive`-bound state, or an issue already closed
-    #: with neither a state label nor a milestone).
+    #: nothing records it (a `derive`-bound state, an issue already closed with
+    #: neither a state label nor a milestone, or a board-carried state whose card's
+    #: Status places the issue nowhere, or whose card was not read).
     from_state: str | None
     #: Why the move is not recorded although it is one: the workflow declares
     #: no `from_state → done` for the issue's type. Empty when it does.
     undeclared: str
     actor: str | None
+    #: The card's Status, where the map binds the state to the board
+    #: (`_card_before_close`): an open issue's, and a closed one's in a pr-merge
+    #: close the journal still owes; None elsewhere.
+    status: infer.StatusRead | None = None
 
     @classmethod
     def read(
@@ -1100,14 +1181,17 @@ class _CloseMove:
         workflow: dict,
         substrate_map: axis_labels.SubstrateMap | None,
         actor: str | None,
+        status: infer.StatusRead | None = None,
     ) -> _CloseMove:
         """The move closing ``issue`` makes, read from the issue as fetched —
-        before this run writes anything."""
+        before this run writes anything — and, where the board carries the
+        state, from ``status``."""
         from_state = infer.state_before_close(
             milestone=issue.get("milestone"),
             labels=labels,
             closed=str(issue.get("state", "")).lower() == "closed",
             substrate_map=substrate_map,
+            status=status,
         )
         undeclared = ""
         if from_state is not None and from_state != DONE_STATE:
@@ -1120,7 +1204,14 @@ class _CloseMove:
                     f"no transition {from_state!r} → {DONE_STATE!r} declared in "
                     f"workflow.yaml for {kind}"
                 )
-        return cls(issue_number, from_state, undeclared, actor)
+        return cls(issue_number, from_state, undeclared, actor, status)
+
+    def unplaced(self) -> infer.StatusRead | None:
+        """The card's Status, where the board carries the state and that Status
+        places the issue nowhere (DEC-051 point 6), so where it was is not known;
+        None otherwise. A closed issue's card at Done is one such: it says
+        nothing of where the work stood."""
+        return self.status if self.status is not None and self.from_state is None else None
 
     def record(self, reason: str) -> None:
         """Hand the move to the engine with ``reason`` — the close mode — on its
@@ -1131,8 +1222,17 @@ class _CloseMove:
         move, so a re-run adds nothing), or nothing says where it was. A move
         the workflow does not declare for the issue's type is not handed over
         and is warned about as a refused one is; a move the engine refuses is
-        warned about by the shared path. Neither fails the close.
+        warned about by the shared path. So is a board-carried state whose card
+        places the issue nowhere, never recorded from a guessed origin. None of
+        them fails the close.
         """
+        unplaced = self.unplaced()
+        if unplaced is not None:
+            report_unrecorded(
+                self.issue_number,
+                f"this move was not recorded: {unplaced.finding(self.issue_number)}",
+            )
+            return
         if self.from_state is None or self.from_state == DONE_STATE:
             return
         if self.undeclared:
@@ -1621,7 +1721,10 @@ def _find_open_children(parent_num: int, config: dict) -> _OpenChildren:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone,closedAt")
+    """The issue, with the fields its card is read by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,body,state,labels,milestone,closedAt,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _closed_at(issue_number: int, config: dict) -> str:

@@ -33,17 +33,23 @@ pkit:
         - src/project_kit/declared_rule_sets.py
         - src/project_kit/point_questions.py
         - src/project_kit/manifest.py
+        - src/project_kit/loaded_rules.py
       record:
         - COR-017
         - COR-030
         - COR-031
         - COR-041
         - COR-051#3
+        - COR-053#1
         - COR-053#6
         - COR-053#8
         - COR-061
+        - COR-070#2
+        - COR-070#3
         - ADR-059
         - ADR-034#1
+        - ADR-076#2
+        - ADR-076#6
       artefact:
         - ACT-adopter
         - ACT-operator
@@ -85,7 +91,9 @@ pkit:
 6. The system finds that the project is the methodology's [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code, where the capability's subtree is its source ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)). So it registers the capability in place, as [UC-014](../010-develop/UC-014-develop-methodology.md)'s variant 2d does.
 7. The system checks that none of the capability's [skills](../../../glossary.md#term-skill--skill) or [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) collides with other content the project holds.
 8. The system records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) with the [component origin](../../../glossary.md#term-component-origin--component-origin) `kit-shipped`, and copies nothing ([COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). It prints `Registered capability '<name>' v<version> in place at .pkit/capabilities/<name>/: it is authored in this repository, the methodology's source, so nothing was copied (ADR-059).`
-9. The capability may declare a project rule set. Where no rule set of the project's own inherits its method set, the system creates that set (COR-017). Running [install](../../../glossary.md#term-install--install) is the [consent](../../../glossary.md#term-consent--consent). It prints `created the project rule set <set> at <path>, inheriting <pin> (COR-017): it is the project's own, to edit or remove`.
+9. The capability may declare a project rule set. Where no rule set of the project's own inherits its [method rule set](../../../glossary.md#term-method-rule-set--method-rule-set), the system creates that set (COR-017). Running [install](../../../glossary.md#term-install--install) is the [consent](../../../glossary.md#term-consent--consent). It prints `created the project rule set <set> at <path>, inheriting <pin> (COR-017): it is the project's own, to edit or remove`.
+17. The capability may ship [operational rules](../../../glossary.md#term-operational-rule--operational-rule) of its own, as one [loaded rule set](../../../glossary.md#term-loaded-rule-set--loaded-rule-set). Running install is the consent to them too ([COR-070 point 3](../../../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#3-installing-a-capability-accepts-its-loaded-set)). The system prints `Loaded rules — what this step newly binds (COR-070 point 3):`, then the set and each [rule](../../../glossary.md#term-rule--rule) the install newly binds ([ADR-076 point 6](../../../../../architecture/decisions/ADR-076-capability-rules-index.md#6-the-lifecycle-says-which-rules-it-newly-binds)).
+18. The system renders the capabilities' [rules index](../../../glossary.md#term-rules-index--rules-index), `.pkit/rules/capabilities.md`, again. Where the capability ships operational rules, the index now lists the capability's [loaded file](../../../glossary.md#term-loaded-file--loaded-file), `.pkit/capabilities/<name>/rules.md`. The [harness](../../../glossary.md#term-harness--harness)'s [instruction file](../../../glossary.md#term-instruction-file--instruction-file) reaches that file through the index's include ([COR-070 point 2](../../../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules) and [ADR-076 point 2](../../../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)).
 10. The system runs each adapter's scripts, which deploy the capability's skills and agent definitions, and sets up each command the capability registers.
 11. Where a person can reply, the system runs in turn each question the capability's [data points](../../../glossary.md#term-data-point--data-point) declare ([COR-061](../../../../../../.pkit/decisions/core/COR-061-point-questions.md)). It prints `<n> question(s) the data points declare (COR-061):`, then a line for each.
 12. Later, the adopter runs `pkit capabilities uninstall <name>`.
@@ -94,9 +102,10 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit capabilities uninstall` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-14. The system checks that no installed capability requires the capability, and that no installed [process](../../../glossary.md#term-process--process) waits on it as mandatory. It also checks that nothing in the project refers to it (COR-017). A citation `[<name>:DEC-001]` refers to it, and so does a rule set that inherits its method set.
+14. The system checks that no installed capability requires the capability, and that no installed [process](../../../glossary.md#term-process--process) waits on it as mandatory. It also checks that nothing in the project refers to it (COR-017). A citation `[<name>:DEC-001]` refers to it, and so does a rule set that inherits its method rule set.
 15. The system says that the subtree is the capability's source, and asks `Unregister '<name>' and keep .pkit/capabilities/<name>/?` (ADR-059).
 16. On a yes, the system has each adapter take back what it deployed for the capability, and takes the capability out of the manifest. It deletes nothing, and prints `Unregistered capability '<name>'; nothing was deleted: its source stays at .pkit/capabilities/<name>/.`
+19. The system renders the capabilities' rules index again, without the capability's loaded file. So the instruction file reaches none of the capability's operational rules (COR-070 point 2).
 
 **Variants:**
 
@@ -114,35 +123,39 @@ pkit:
 
 - **4a.** The [backbone](../../../glossary.md#term-backbone--backbone) lies outside the capability's [range](../../../glossary.md#term-range--range), or a capability it requires is missing or outside its range. The system refuses, naming what to install or upgrade first, and writes nothing ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - **4b.** The capability's version lies outside a range an installed capability declares for it. The system warns, naming each such dependent and its range, and refuses unless the adopter passes `--force` ([COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
-- **4c.** A [process](../../../glossary.md#term-process--process) connection the capability marks mandatory has no installed upstream, or none at a compatible version. The system refuses with `capability '<name>' v<version> has <n> unmet mandatory process connection(s):`, and lists them. It ends with `Install or upgrade the upstream first, then retry (COR-053 point 6).`, and writes nothing.
+- **4c.** A [process](../../../glossary.md#term-process--process) [connection](../../../glossary.md#term-connection--connection) the capability marks mandatory has no installed upstream, or none at a compatible version. The system refuses with `capability '<name>' v<version> has <n> unmet mandatory process connection(s):`, and lists them. It ends with `Install or upgrade the upstream first, then retry (COR-053 point 6).`, and writes nothing.
 - **5a.** A [rule set](../../../glossary.md#term-rule-set--rule-set) of the capability takes a name a project rule set declares. The system refuses, naming the set and both files, and writes nothing ([COR-051 point 3](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
 - **6a.** The project is not the methodology's source repository. The system takes the capability from the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI, and copies it, as variants 7b and 8a say ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 - **7a.** In the source repository, a [skill](../../../glossary.md#term-skill--skill) or an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) of the capability collides with other content of the project. The system lists each, refuses with `rename the colliding artifact(s) in your capability tree, then retry.`, and writes nothing.
 - **7b.** The project is not the source repository (6a), and a skill or an agent definition of the capability collides with one the project holds. For each, the system prints `<kind> '<name>' collides with existing <path>`, and asks `[override / skip / inspect]` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)):
   - **override:** the capability's file replaces the project's once the copy is in place. Git holds the project's file, so the adopter can get it back.
-  - **skip:** the project's file stays, and the rest of the capability installs without that [artefact](../../../glossary.md#term-artefact--artefact).
+  - **skip:** the project's file stays, and the rest of the capability installs without that file.
   - **inspect:** the system shows how the two files differ, and asks again.
 - **7c.** The adopter chooses override for a file git does not hold as it stands. The system refuses the override, since git could not give the file back, and asks again.
 - **7d.** Nobody can reply to the question of variant 7b, since standard input is no terminal. The install stops before anything is copied, and writes nothing.
-- **8a.** The project is not the source repository (6a). The system copies the subtree into `.pkit/capabilities/<name>/`, and records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) as `kit-shipped`, with each artefact skipped. It prints `Installed capability '<name>' v<version> at .pkit/capabilities/<name>/`, and removes each file the adopter overrode. The path goes on at step 9.
-- **9a.** A rule set of the project's own inherits the capability's method set already. The system creates none, and names the set that inherits it.
+- **8a.** The project is not the source repository (6a). The system copies the subtree into `.pkit/capabilities/<name>/`, and records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) as `kit-shipped`, naming each skipped skill or agent definition. It prints `Installed capability '<name>' v<version> at .pkit/capabilities/<name>/`, and removes each file the adopter overrode. The path goes on at step 9.
+- **9a.** A rule set of the project's own inherits the capability's [method rule set](../../../glossary.md#term-method-rule-set--method-rule-set) already. The system creates none, and names the set that inherits it.
 - **9b.** The set's file exists, or another rule set declares its name. The system creates none, since install never writes over the project's content, and warns, saying why ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)). It names `pkit capabilities project-rule-set <name>`, which shows the set install declares.
 - **11a.** Nobody can reply, since standard input and standard output are not both terminals. The system runs no question, and records nothing. It prints each question's command, for a person to run later ([COR-061](../../../../../../.pkit/decisions/core/COR-061-point-questions.md)).
 - **12a.** The capability is one the adopter authored in the project, registered as `incubated-in-repo`. Its uninstall keeps the subtree, as UC-016 says.
-- **12b.** The adopter passes `--plan`. The system lists what the uninstall would leave without a provider, and each entry of the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) that still names the capability. It writes nothing ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+- **12b.** The adopter passes `--plan`. The system lists what the uninstall would leave without a [provider](../../../glossary.md#term-provider--provider), and each entry of the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) that still names the capability. It writes nothing ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 - **12c.** The adopter passes `--dry-run`. The system says what the uninstall would unregister or remove, and writes nothing (REQ-009).
 - **14a.** An installed capability requires the capability. The system refuses with `Refusing to uninstall '<name>': <n> installed capability(ies) declare a required dependency on it:`, names each, and writes nothing. `--force` overrides the refusal.
 - **14b.** An installed capability's mandatory process connection waits on the capability. The system warns, naming each connection the uninstall would leave unmet, and refuses unless the adopter passes `--force` ([COR-053 point 6](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection)).
 - **14c.** Something in the project refers to the capability. The system refuses with `Refusing to uninstall '<name>': <n> reference(s) found:`, and lists them. It ends with `Clean references first, or pass --force to override.`, and writes nothing ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
-- **15a.** The project is not the methodology's source repository. The system asks nothing, deletes the subtree, and takes the capability out of the manifest. It prints `Removed capability '<name>' from <path>`, and each adapter's scripts drop what they deployed for it.
+- **15a.** The project is not the methodology's source repository. The system asks nothing, deletes the subtree, and takes the capability out of the manifest. It then does three things:
+  - prints `Removed capability '<name>' from <path>`
+  - renders the capabilities' [rules index](../../../glossary.md#term-rules-index--rules-index), as step 19 says
+  - runs each adapter's scripts, which drop what they deployed for the capability
 - **15b.** In the source repository, the adopter passes `--purge`. The system refuses, since uninstall never deletes a capability's source, and names `git rm -r .pkit/capabilities/<name>` ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **15c.** The adopter declines. The system writes nothing, and the use case ends.
 
 **Postconditions:**
 
-- Once installed, the [manifest](../../../glossary.md#term-manifest--manifest) records the [capability](../../../glossary.md#term-capability--capability), and its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) are deployed where the [harness](../../../glossary.md#term-harness--harness) reads them. Where it declares a [project](../../../glossary.md#term-project--project) [rule set](../../../glossary.md#term-rule-set--rule-set) and none of the project's own inherits its method set, the project holds that set as its own.
-- In the [source repository](../../../glossary.md#term-source-repository--source-repository), the capability's subtree is its source, and nothing was copied. Elsewhere, the project holds a copy at the [version](../../../glossary.md#term-version--version) it records, and the manifest records each [artefact](../../../glossary.md#term-artefact--artefact) skipped.
-- Once uninstalled, the manifest no longer records the capability, and none of its skills or agent definitions is deployed. In the source repository its subtree stays.
+- Once installed, the [manifest](../../../glossary.md#term-manifest--manifest) records the [capability](../../../glossary.md#term-capability--capability), and its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) are deployed where the [harness](../../../glossary.md#term-harness--harness) reads them. Where it ships [operational rules](../../../glossary.md#term-operational-rule--operational-rule), the capabilities' [rules index](../../../glossary.md#term-rules-index--rules-index) lists the capability's [loaded file](../../../glossary.md#term-loaded-file--loaded-file). Where it declares a [project](../../../glossary.md#term-project--project) [rule set](../../../glossary.md#term-rule-set--rule-set), and none of the project's own inherits its [method rule set](../../../glossary.md#term-method-rule-set--method-rule-set), the project owns that set.
+- Once installed, another installed capability may also provide a [role](../../../glossary.md#term-role--role) the capability provides. Then two installed capabilities provide that role, and it has no [provider](../../../glossary.md#term-provider--provider) until the project selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
+- In the [source repository](../../../glossary.md#term-source-repository--source-repository), the capability's subtree is its source, and nothing was copied. Elsewhere, the project holds a copy at the [version](../../../glossary.md#term-version--version) it records. The manifest records each skill or agent definition skipped, by its kind and name.
+- Once uninstalled, the manifest no longer records the capability, and none of its skills or agent definitions is deployed. The index no longer lists its operational rules. In the source repository its subtree stays.
 
 **Minimal guarantees:**
 

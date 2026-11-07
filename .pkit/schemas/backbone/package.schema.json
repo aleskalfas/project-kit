@@ -86,6 +86,9 @@
     },
     "project_rule_set": {
       "$ref": "#/$defs/project-rule-set"
+    },
+    "loaded_rules": {
+      "$ref": "#/$defs/loaded-rules"
     }
   },
   "$defs": {
@@ -819,6 +822,33 @@
           "description": "One line, what the set is for: the created file's heading follows its name with it.",
           "type": "string",
           "pattern": "^[^\\n]*\\S[^\\n]*$"
+        }
+      }
+    },
+    "loaded-rules": {
+      "title": "How an adapter's harness reaches the installed capabilities' loaded files (COR-070 point 2; ADR-076 point 4)",
+      "description": "An adapter's delivery of each installed capability's loaded file, `.pkit/capabilities/<name>/rules.md`: the backbone renders one index of them at `.pkit/rules/capabilities.md` in the form `entry` gives, and the adapter's merge primitive keeps `line` present in `host`, so the harness's syntax reaches the backbone only as this data. An adapter without the key delivers no capability's rules, and validation warns of it. Validation fails while registered adapters' `entry` forms differ. A capability declares none.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry",
+        "host",
+        "line"
+      ],
+      "properties": {
+        "entry": {
+          "description": "The index's line for one capability's loaded file, `{file}` standing for its path read from the index's folder, such as `@{file}`. The part before `{file}` is the harness's import token, which a loaded set may not write outside code.",
+          "type": "string",
+          "pattern": "^[^\\n]*\\{file\\}[^\\n]*$"
+        },
+        "host": {
+          "description": "The file that reaches the index, relative to the project's root and inside it, such as `CLAUDE.md`.",
+          "$ref": "#/$defs/relative-path"
+        },
+        "line": {
+          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`.",
+          "type": "string",
+          "pattern": "^[^\\n]*\\{index\\}[^\\n]*$"
         }
       }
     },

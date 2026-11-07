@@ -13,7 +13,8 @@ a release that would leave a range excluding a dependency's version, generates
 the changelog, which states each raised floor and widened bound, deletes the consumed
 changesets, and (for a backbone bump) cuts the tag via the existing
 `tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
-which the changeset guard recognises a release diff by.
+which the changeset guard recognises a release diff by, beside the answer files
+a release PR adds for the answers its writes need.
 
 Cutover note (PRJ-002 D-implications): this module *adds* the release-
 authority path; it does not retire `pkit version bump`. Both broaden
@@ -41,7 +42,13 @@ import click
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
-from project_kit import command_runner, pull_request_landing, session_guard, versioning
+from project_kit import (
+    answer_files,
+    command_runner,
+    pull_request_landing,
+    session_guard,
+    versioning,
+)
 from project_kit.changesets import (
     BACKBONE,
     CAPABILITY_BOUND_FIELD,
@@ -127,7 +134,8 @@ _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
 #
 # `pkit release apply` writes the files `release_writes` names and nothing else,
 # and the changeset guard recognises a release diff as those files and nothing
-# else (`is_release_diff`). The list is made of what the writers write through:
+# else (`is_release_diff`), save the answer files a release PR adds for the
+# answers its writes need (#2381). The list is made of what the writers write through:
 # the version files `discover_components` finds, the self-host manifest, the
 # changelog and the changesets directory, and the pattern of each line rewritten
 # in place — the version and manifest lines below, and versioning.py's
@@ -183,6 +191,10 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
     - `CHANGELOG.md`, created or prepended;
     - the consumed changesets, deleted — in every release, but a diff deleting
       only changesets is none.
+
+    The answer files a release PR adds for the answers its writes need are not
+    among them: the release step writes no answer, and `is_release_diff` admits
+    those files beside the list.
     """
     repo_root = source_kit.parent
     package_lines = (
@@ -2064,8 +2076,13 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
 # and naming a branch `release/*` does not produce it. The signal is
 # intentionally strict: if *any* changed file or line falls outside the list
 # (e.g. a stray `src/` edit), the diff is NOT the release itself and the guard
-# runs normally — so the exemption can never smuggle real surface through. It
-# waives the surface check only, never the floor tie (`GuardResult.ok`).
+# runs normally — so the exemption can never smuggle real surface through. The
+# one file beside the list is an answer file the diff adds
+# (`answer_files.is_answer_file`): a release's version bumps edit files that
+# documents anchor to, so `pkit friction check` asks the release PR for answers,
+# and an answer file is no surface (#2381). It does not mark a release on its
+# own, and an answer file the diff edits or removes is outside the list. The
+# exemption waives the surface check only, never the floor tie (`GuardResult.ok`).
 
 
 def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
@@ -2124,22 +2141,27 @@ def _changes_only(
 
 
 def is_release_diff(source_kit: Path, base: str) -> bool:
-    """True when the diff vs `base` is only what `pkit release apply` writes.
+    """True when the diff vs `base` is only what `pkit release apply` writes,
+    and the answer files it adds for the answers those writes need.
 
     Every changed file must be one the release writes (`release_writes`), with a
     status that write leaves, and — for a file the release rewrites in place —
-    only the lines it rewrites (verified line-by-line); and the diff must write
-    more than the consumed changesets it deletes.
+    only the lines it rewrites (verified line-by-line), or an answer file the
+    diff adds (`answer_files.is_answer_file`, status `A`); and the diff must
+    write more than the consumed changesets it deletes and the answer files it
+    adds.
 
     Any other change (a `src/` edit, a doc, a new file under a component subtree,
-    a package.yaml line beside its version and floor) makes the answer False —
-    the diff is then treated as an ordinary PR and the surface guard runs. An
-    empty diff is not a release.
+    a package.yaml line beside its version and floor, an answer file edited or
+    removed) makes the answer False — the diff is then treated as an ordinary PR
+    and the surface guard runs. An empty diff is not a release.
     """
     repo_root = source_kit.parent
     writes = release_writes(source_kit)
     marked = False  # a write that shows a release, not only consumed changesets
     for status, path in _diff_name_status(repo_root, base):
+        if status == "A" and answer_files.is_answer_file(path):
+            continue  # the answers the release's writes need: no surface, no release
         write = next((w for w in writes if w.covers(status, path)), None)
         if write is None:
             return False  # anything else ⇒ not the release itself
@@ -4115,6 +4137,13 @@ def _load_yaml_mapping(text: str) -> dict | None:
 # which PRJ-004 explicitly foresaw ("release notes can land later as a
 # GitHub Releases overlay without changing the install path").
 
+# The most characters GitHub keeps in a Release's body: its API refuses a
+# longer one with "body is too long (maximum is 125000 characters)". GitHub's
+# REST reference states no figure; this is the one that refusal names, as the
+# release tools that met it report it (#2384). A pull request's body has a
+# lower limit of its own (65,536), which this is not.
+RELEASE_BODY_LIMIT = 125_000
+
 
 def extract_changelog_section(text: str, version: str) -> str:
     """Extract one version's section from `CHANGELOG.md` text.
@@ -4127,6 +4156,14 @@ def extract_changelog_section(text: str, version: str) -> str:
     Raises `click.ClickException` when no section matches `version`.
     """
     lines = text.splitlines()
+    start, end = _changelog_section_bounds(lines, version)
+    return "\n".join(lines[start:end]).rstrip() + "\n"
+
+
+def _changelog_section_bounds(lines: Sequence[str], version: str) -> tuple[int, int]:
+    """The index of `version`'s release heading in the changelog's `lines`, and
+    of the next release heading after it (or the end); raises
+    `click.ClickException` when no section matches `version`."""
     start = next(
         (i for i, raw in enumerate(lines) if _heading_version(raw.rstrip()) == version),
         None,
@@ -4141,7 +4178,76 @@ def extract_changelog_section(text: str, version: str) -> str:
         (j for j in range(start + 1, len(lines)) if lines[j].rstrip().startswith("## ")),
         len(lines),
     )
-    return "\n".join(lines[start:end]).rstrip() + "\n"
+    return start, end
+
+
+def changelog_section_releases(text: str, version: str) -> list[tuple[str, str | None, str]]:
+    """Each component the changelog's section for `version` records a release
+    of, as `(name, previous, new)`: the backbone at `version` first, then each
+    component an entry's `**<component> X.Y.Z**` tag names
+    (`render_changelog_entry`), in name order. `previous` is the version the
+    nearest older section records for it — a version heading for the backbone,
+    a tag for a component — or None where no older section records one. A
+    component whose release wrote no entry (a `none` changeset) is not listed.
+    Raises `click.ClickException` when no section matches `version`."""
+    lines = text.splitlines()
+    start, end = _changelog_section_bounds(lines, version)
+    released: dict[str, str] = {}
+    for line in lines[start + 1 : end]:
+        match = _CHANGELOG_COMPONENT_TAG_RE.match(line)
+        if match is not None:
+            released.setdefault(match.group(1), match.group(2))
+    previous: dict[str, str] = {}
+    for line in lines[end:]:
+        heading = _CHANGELOG_VERSION_HEADING_RE.match(line.rstrip())
+        if heading is not None:
+            previous.setdefault(BACKBONE, heading.group(1))
+        match = _CHANGELOG_COMPONENT_TAG_RE.match(line)
+        if match is not None:
+            previous.setdefault(match.group(1), match.group(2))
+    return [(BACKBONE, previous.get(BACKBONE), version)] + [
+        (name, previous.get(name), released[name]) for name in sorted(released)
+    ]
+
+
+def short_release_notes(text: str, version: str, *, changelog_url: str | None) -> str:
+    """Notes for `version` that fit where its whole changelog section does not.
+
+    They hold the section's heading, where the whole section is, and the
+    version each component moved to, from the one the changelog last recorded
+    for it where it records one (`changelog_section_releases`). `changelog_url`
+    is the address of `CHANGELOG.md` at the revision that holds the section —
+    the release's tag for a Release — and the notes link to the section's
+    heading there; without it they name the file and the section. Written for
+    any page that shows a release's notes and keeps fewer characters than its
+    section holds. Raises `click.ClickException` when no section matches
+    `version`.
+    """
+    lines = text.splitlines()
+    start, _ = _changelog_section_bounds(lines, version)
+    heading = lines[start].rstrip()
+    where = f"the {version} section of `{CHANGELOG_NAME}`"
+    if changelog_url:
+        where = f"[{where}]({changelog_url}#{_heading_anchor(heading)})"
+    out = [
+        heading,
+        "",
+        f"The notes of this release are too long to show here. They are in {where}.",
+        "",
+        "### Versions",
+    ]
+    for name, before, after in changelog_section_releases(text, version):
+        out.append(f"- {name} {before} → {after}" if before else f"- {name} {after}")
+    return "\n".join(out) + "\n"
+
+
+def _heading_anchor(heading: str) -> str:
+    """The anchor GitHub gives a Markdown heading when it renders the file:
+    the heading's text in lower case, with every character but a letter, a
+    digit, `_`, `-` or a space removed and each space made a `-` — so
+    `## 2.0.0 — 2026-10-30` is `200--2026-10-30`."""
+    text = heading.lstrip("#").strip().lower()
+    return re.sub(r"[^\w\- ]", "", text).replace(" ", "-")
 
 
 def _heading_version(line: str) -> str | None:
@@ -4172,8 +4278,16 @@ def publish_release_notes(
     `--generate-notes`): it is a notes overlay on the git-tag install path
     (PRJ-004), never an artifact channel. Repo is derived from the ambient
     `gh` context (no hardcoded owner/repo). `--dry-run` returns the notes it
-    would publish without calling `gh`. Raises `click.ClickException` when the
-    version has no changelog section or (via `--verify-tag`) the tag is missing.
+    would publish, and which form they take, without calling `gh`. Raises
+    `click.ClickException` when the version has no changelog section or (via
+    `--verify-tag`) the tag is missing.
+
+    A section longer than a Release keeps (`RELEASE_BODY_LIMIT`) is replaced by
+    `short_release_notes`: each component's bump, and a link to the section in
+    `CHANGELOG.md` at the tag, on the GitHub repository `origin` names
+    (`origin_repository_url`, as the changelog's own links are made). The
+    notes reach `gh` on its standard input, never as an argument, whose
+    length the system caps.
 
     `clearance` is the cross-repository guard's for `repo_root`, cleared at the
     entry (`session_guard.clear`), before `gh` is asked anything (ADR-061
@@ -4185,20 +4299,30 @@ def publish_release_notes(
         raise click.ClickException(
             f"no {CHANGELOG_NAME} at {changelog} — run `pkit release apply` first."
         )
-    notes = extract_changelog_section(changelog.read_text(encoding="utf-8"), version)
+    text = changelog.read_text(encoding="utf-8")
+    notes = extract_changelog_section(text, version)
     tag = f"v{version}"
+    form = "its whole changelog section"
+    if len(notes) > RELEASE_BODY_LIMIT:
+        form = (
+            f"short notes, as its changelog section is {len(notes):,} characters, past "
+            f"the {RELEASE_BODY_LIMIT:,} a GitHub Release keeps"
+        )
+        repository_url = origin_repository_url(repo_root)
+        changelog_url = f"{repository_url}/blob/{tag}/{CHANGELOG_NAME}" if repository_url else None
+        notes = short_release_notes(text, version, changelog_url=changelog_url)
 
     if dry_run:
         return (
             f"[dry-run] would publish notes-only GitHub Release {tag} "
-            f"(no artifact) with these notes:\n\n{notes}"
+            f"(no artifact) with {form}:\n\n{notes}"
         )
 
     if _gh_release_exists(tag, repo_root):
         _gh_release_edit_notes(tag, notes, repo_root)
-        return f"Updated notes-only GitHub Release {tag} (notes only — no artifact)."
+        return f"Updated notes-only GitHub Release {tag} with {form} (no artifact)."
     _gh_release_create_notes(tag, notes, repo_root)
-    return f"Published notes-only GitHub Release {tag} (notes only — no artifact)."
+    return f"Published notes-only GitHub Release {tag} with {form} (no artifact)."
 
 
 def _gh_release_exists(tag: str, repo_root: Path) -> bool:
@@ -4229,13 +4353,17 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
     `--verify-tag` makes `gh` refuse when the git tag does not exist (the clear
     missing-tag error). Deliberately no positional file argument and no
     `--generate-notes`: the Release is a pure notes overlay on the tag install
-    path (PRJ-004), never an artifact channel. Title is the tag.
+    path (PRJ-004), never an artifact channel. Title is the tag. The notes go
+    on standard input (`--notes-file -`), so no length of theirs meets the
+    cap the system puts on one argument.
     """
     try:
         result = subprocess.run(
-            ["gh", "release", "create", tag, "--title", tag, "--notes", notes, "--verify-tag"],
+            ["gh", "release", "create", tag, "--title", tag, "--notes-file", "-", "--verify-tag"],
+            input=notes,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             cwd=repo_root,
             check=False,
         )
@@ -4251,13 +4379,16 @@ def _gh_release_edit_notes(tag: str, notes: str, repo_root: Path) -> None:
     """Update an existing Release's notes for `tag` — notes only, NO artifact.
 
     Edits only the notes body (the idempotent re-run path); title and the
-    no-artifact posture are unchanged.
+    no-artifact posture are unchanged. The notes go on standard input, as for
+    `_gh_release_create_notes`.
     """
     try:
         result = subprocess.run(
-            ["gh", "release", "edit", tag, "--notes", notes],
+            ["gh", "release", "edit", tag, "--notes-file", "-"],
+            input=notes,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             cwd=repo_root,
             check=False,
         )

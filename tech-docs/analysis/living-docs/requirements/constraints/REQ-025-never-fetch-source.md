@@ -5,6 +5,7 @@ status: active
 statement: No command and no agent of living-docs fetches the text a captured source names, or compares it with the version the project recorded.
 measure: "The resolver of a `source` anchor and validation reach no network. For a page stale on a `source` anchor, the agent asks a person what changed in the text, and reads no part of it."
 applies-to: "Every command living-docs registers, and the living-docs agent in each of its intents, wherever a captured source is read or a page rests on one."
+obligation: v1:sha256:b30f95117aecc01dce9461f6f92cdee2d8a27f33657aec45da64915e2fe913ef
 actors:
   - core:ACT-developer
 refines: []
@@ -17,8 +18,19 @@ pkit:
         - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         - tests/test_living_docs_sources.py
       record:
+        - living-docs:DEC-001
         - living-docs:DEC-001#4
         - COR-050#2
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
 ---
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names

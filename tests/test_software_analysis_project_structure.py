@@ -18,7 +18,9 @@ A project changes each analysis kind's shipped structure in
 - the check and the stamp both read the file.
 
 The reading and placement are tested on their own first, then the check's gate
-with a reach given to it, then end to end in an adopter.
+with a reach given to it, then end to end in an adopter. There the stamp and the
+check run in the test's own process, their `pkit` calls answered there too
+(`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
@@ -35,18 +37,20 @@ from click.testing import CliRunner
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     NEW,
     RECORDS,
     STRUCTURES,
     VALIDATE,
-    accepting_san,
     actor_at,
     front,
     installed,
     load_lib,
-    run_script,
+    run_in_process,
     stamped,
 )
+from tests.in_process import route_pkit
 from tests.test_rule_sets import rule_set_text, rules
 
 _STRUCTURE, _OWN, _CHECK, _MODEL = load_lib("structure", "project_structure", "check", "model")
@@ -1066,7 +1070,7 @@ def test_the_stamp_leaves_out_an_orphaned_group_and_writes_a_record_s_relabels_o
     stamped(project, "actor", "tester")
     body = (project.root / actor_at("ACT-tester")).read_text(encoding="utf-8")
     assert "**The setup:**" not in body and "**Comes:**" in body
-    record = run_script(
+    record = run_in_process(
         project,
         NEW,
         "revalidation",
@@ -1092,7 +1096,7 @@ def test_the_stamp_refuses_while_the_project_s_file_does_not_read(
     project: AdopterRepo, pkit_on_path: Path
 ) -> None:
     project.write({FILE: "schema_version: 1\nkinds:\n  persona: {relabel: {goal: {label: A}}}\n"})
-    completed = run_script(project, NEW, "actor", "tester")
+    completed = run_in_process(project, NEW, "actor", "tester")
     assert completed.returncode == 1
     assert "the project's own structures cannot be read" in completed.stderr
     assert "`persona` is no kind the capability ships" in completed.stderr
@@ -1100,22 +1104,24 @@ def test_the_stamp_refuses_while_the_project_s_file_does_not_read(
 
 
 def _validate(repo: AdopterRepo, *args: str) -> tuple[int, Any]:
-    completed = run_script(repo, VALIDATE, "--json", *args)
+    completed = run_in_process(repo, VALIDATE, "--json", *args)
     return completed.returncode, json.loads(completed.stdout)
 
 
 def test_the_check_reads_where_the_rule_binds_through_the_backbone(
-    project: AdopterRepo, pkit_on_path: Path
+    project: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """End to end: the rule's status and where it binds come from the backbone's readings
-    (`pkit friction artefacts`, `pkit rule-sets reach`), the format rule flipped to
-    accepted in the adopter's copy as a fixture."""
+    (`pkit friction artefacts`, `pkit rule-sets reach`), the format rule accepted in the
+    adopter's copy, as it ships."""
     stamped(project, "actor", "tester", "--unanchored-because", "No code embodies it.")
     path = project.root / actor_at("ACT-tester")
     text = path.read_text(encoding="utf-8")
     filled = re.sub(r"<!-- pkit:hint .*? Example: (.*?) -->", r"\1", text)
     path.write_text(filled, encoding="utf-8")
-    project.write({FILE: NOTES_REQUIRED, LOC: _rule_set("accepted"), **accepting_san(project)})
+    project.write(
+        {FILE: NOTES_REQUIRED, LOC: _rule_set("accepted"), ANALYSIS_SET: ANALYSIS_SET_TEXT}
+    )
     code, document = _validate(project)
     said = [(f["severity"], f["location"], f["message"][:40]) for f in document["findings"]]
     assert said == [("error", actor_at("ACT-tester"), "`**Notes:**` is missing, and it comes af")]
@@ -1128,8 +1134,10 @@ def test_the_check_reads_where_the_rule_binds_through_the_backbone(
     # `pkit data validate` holds the project's file to its schema by its path.
     result = CliRunner().invoke(main, ["data", "validate", FILE])
     assert result.exit_code == 0, result.output
-    # The statuses come from the backbone's reading of every rule set, cited as each is.
+    # The statuses come from the backbone's reading of every rule set, cited as each is,
+    # its `pkit` calls answered in the test's own process.
     backbone = load_lib("backbone")[0]
+    route_pkit(monkeypatch, backbone)
     analysis = backbone.read_analysis(project.root)
     assert analysis.project_rules["RS-LOC-001"].status == "accepted"
     assert analysis.rule_statuses["software-analysis:RS-SAN-001"] == "accepted"
@@ -1145,7 +1153,9 @@ def test_the_preview_reads_where_a_proposed_rule_would_bind_through_the_backbone
     path = project.root / actor_at("ACT-tester")
     text = path.read_text(encoding="utf-8")
     path.write_text(re.sub(r"<!-- pkit:hint .*? Example: (.*?) -->", r"\1", text), "utf-8")
-    project.write({FILE: NOTES_REQUIRED, LOC: _rule_set("proposed"), **accepting_san(project)})
+    project.write(
+        {FILE: NOTES_REQUIRED, LOC: _rule_set("proposed"), ANALYSIS_SET: ANALYSIS_SET_TEXT}
+    )
     _code, document = _validate(project)
     assert document["findings"] == []
     _code, document = _validate(project, "--preview")

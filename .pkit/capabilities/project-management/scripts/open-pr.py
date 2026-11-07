@@ -28,28 +28,27 @@ Inputs:
   * PR body — `templates/PR.md` skeleton with a `Closes #N` line per
     closing issue; user-supplied `--body-file` overrides, and gains a
     `Closes #N` line for any closing issue it does not already name.
-  * `## Documentation this change affects` (DEC-055) — the change check's
-    list of the answers the change wrote, and the friction settings it
-    alters, in plain words, derived at the pushed head (the commit the
-    branch's remote-tracking reference names, not local HEAD) against the
-    PR's base, named to the check, and placed last before the provenance
-    footer. Each `updated` document carries the sentence on what changed in
-    it that the change's author wrote under the body's own `## What changed
-    in each updated document` section — one list item per document, the
-    document in a code span as the list names it — or says there is none,
-    with a warning naming it. Each item under that heading it cannot read —
-    the document in bold, say, or with no code span — draws a warning naming
-    its line and the form a sentence takes. A section the supplied body
-    carries — written by a command or typed by hand, under that heading or
-    the one an earlier run wrote — is dropped, with a warning. open-pr never
-    refuses to open over it: a list it cannot derive, a branch not pushed, a word or a
-    sentence that reads as a closing reference or holds an HTML comment's
-    delimiter, or a body it would make too long leaves the section out with
-    one warning line, and land-work writes it or says why it cannot.
+  * The answers the change wrote (DEC-065 point 3) — derived from the change
+    check at the pushed head (the commit the branch's remote-tracking reference
+    names, not local HEAD) against the PR's base, named to the check, and
+    written nowhere: the description carries no list of them (DEC-065 point 1).
+    Each `updated` document the body's own `## What changed in each updated
+    document` section gives no sentence for — one list item per document, the
+    document in a code span as the change check names it — draws a warning
+    naming it. Each sentence there on a document the check does not mark
+    `updated`, which no reviewer checks, draws a warning naming the edit that
+    removes it. Each item under that heading it cannot read — the document in
+    bold, say, or with no code span — draws a warning naming its line and the
+    form a sentence takes. open-pr never refuses over them: review-work refuses
+    a missing sentence. A check it cannot run, or a branch not pushed, draws
+    one warning line. The region an earlier run wrote, if the supplied body
+    carries one — both its markers and the heading directly above — is dropped,
+    with a warning. A start marker with no end marker draws a warning, and the
+    text stays as it is.
   * `--doc-impact-from-friction` (opt-in) — fill an unwritten `## Doc
     impact` (the template's placeholder, empty, or absent) with one line
-    counting the documents listed under `## Documentation this change
-    affects`. It names no path and no reason, so it meets no mapping
+    counting the documents the change's answers are on, pointing at the change
+    check. It names no path and no reason, so it meets no mapping
     obligation; an authored section is never touched. Rendering only
     (DEC-053 point 2): the section meets no documentation obligation; the
     pages do.
@@ -100,6 +99,7 @@ from _lib import (
     session_guard,
 )
 from _lib import lifecycle_inference as infer
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
@@ -111,6 +111,7 @@ from _lib.membership import (
 from _lib.placeholder_detection import PHASE_TRANSITION
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -189,8 +190,8 @@ def main() -> int:
         action="store_true",
         help=(
             "Fill an unwritten `## Doc impact` section (the template's placeholder, "
-            "empty, or absent) with one line counting the documents listed under "
-            "`## Documentation this change affects`; it names no path and no reason. "
+            "empty, or absent) with one line counting the documents the change check "
+            "lists as affected; it names no path and no reason. "
             "An authored section is left as it is. Rendering only: the section meets no "
             "documentation obligation (DEC-053)."
         ),
@@ -348,24 +349,23 @@ def main() -> int:
     )
     if body is None:
         return 2
-    # The change check's list of the answers the change wrote (DEC-055), last
-    # before the footer, and never one a supplied body carries — a section a
-    # command wrote or one typed by hand; open-pr never refuses over it.
-    if friction_answers.hand_written(body) or friction_answers.has_list(body):
+    # No list of the answers the change wrote is written (DEC-065 point 1), and
+    # the region a supplied body carries is dropped. The answers are derived for the
+    # warnings alone; open-pr never refuses over them.
+    if friction_answers.has_list(body):
         print(
-            f"warn: the body's `{friction_answers.HEADING}` section is dropped — only open-pr "
-            "and land-work write it, from the change check",
+            f"warn: the body's `{friction_answers.HEADING}` section is dropped — no command "
+            "writes it any longer: the answers are derived from the change check",
             file=sys.stderr,
         )
     body = friction_answers.strip(body)
+    if friction_answers.orphaned(body):
+        print(f"warn: {friction_answers.ORPHAN_WARNING}", file=sys.stderr)
     versions = provenance.read_versions(capability_root)
-    sentences = friction_answers.sentences(body)
-    answers = _fitting(body, _friction_answers(branch, base, sentences), versions)
+    answers = _answers(branch, base, friction_answers.sentences(body))
     doc_impact_note = None
     if args.doc_impact_from_friction:
         body, doc_impact_note = _prefill_doc_impact(body, answers)
-    if answers.section is not None:
-        body = friction_answers.stamp(body, answers.section)
     # Seam: stamp exactly one provenance footer onto the PR body (ADR-037).
     body = provenance.stamp(body, versions)
     # Each item no sentence is read from, by its line in the description opened.
@@ -570,10 +570,9 @@ def _strip_html_comments(text: str) -> str:
 
 @dataclass(frozen=True)
 class _Answers:
-    """The friction answers' section open-pr writes, and what the plan says of it."""
+    """The answers the change wrote, as open-pr read them, and what the plan says of
+    them."""
 
-    #: The section, or None when there is none to write.
-    section: str | None
     #: The plan's `documents this change affects:` line (`friction_answers.NAME`).
     note: str
     #: The change check's document, when it was read.
@@ -582,109 +581,49 @@ class _Answers:
     count: int = 0
 
 
-def _friction_answers(branch: str, base: str, sentences: Mapping[str, str]) -> _Answers:
-    """The change check's list of the answers the change wrote, and the friction
-    settings it alters, derived at the pushed head against the PR's base — named
-    always, so `$PKIT_CHECK_BASE` never changes it — each `updated` document
-    with its author's sentence from `sentences`. Never refuses: a list that
-    cannot be written is left out with one warning line, and land-work writes it
-    or says why it cannot (DEC-055)."""
+def _answers(branch: str, base: str, sentences: Mapping[str, str]) -> _Answers:
+    """The answers the change wrote, derived from the change check at the pushed head
+    against the PR's base — named always, so `$PKIT_CHECK_BASE` never changes it —
+    for the warnings on the author's `sentences` alone: each `updated` document with
+    none, and each sentence on a document the check does not mark `updated`, which
+    no reviewer checks. Never refuses: review-work refuses a missing sentence, and a
+    check that cannot be run draws one warning line (DEC-065 point 3). It takes no
+    temporary checkout, for any head, so a refusal to run an anchor's resolver is
+    such a warning, and nothing the head holds starts (DEC-067 point 2)."""
     head, why = _pushed_head(branch)
     if head is None:
-        return _left_out(why)
-    derived = friction_answers.derive(head, base)
+        return _not_derived(why)
+    derived = friction_answers.checked(head, base, from_checkout=False)
     if derived.document is None:
-        return _left_out(derived.problem or "the change check gave no document")
+        return _not_derived(derived.problem or "the change check gave no document")
+    for location in friction_answers.unlisted(derived.document, sentences):
+        print(f"warn: {friction_answers.unlisted_warning(location, head)}", file=sys.stderr)
     count = friction_answers.documents(derived.answers)
-    if not derived.listed:
-        return _Answers(None, "none", derived.document)
-    settings = derived.settings
-    for found, why in (
-        (
-            friction_answers.closing_reference(derived.document, settings),
-            "read as a closing reference ({words}), which would close an issue at merge",
-        ),
-        (
-            friction_answers.comment_delimiter(derived.document, settings),
-            "hold an HTML comment's delimiter ({words}), which could hide the list",
-        ),
-    ):
-        if found is not None:
-            location, words = found
-            left = _left_out(
-                f"the words on {location} {why.format(words=words)} — reword them there"
-            )
-            return _Answers(None, left.note, derived.document, count)
-    given = friction_answers.given(derived.document, sentences)
-    for found, why in (
-        (
-            friction_answers.sentence_closing_reference(given),
-            "reads as a closing reference ({words}), which would close an issue at merge",
-        ),
-        (
-            friction_answers.sentence_comment_delimiter(given),
-            "holds an HTML comment's delimiter ({words}), which could hide the list",
-        ),
-    ):
-        if found is not None:
-            location, words = found
-            left = _left_out(
-                f"the sentence on what changed in {location} {why.format(words=words)} — "
-                f"reword it under `{friction_answers.SENTENCES_HEADING}`"
-            )
-            return _Answers(None, left.note, derived.document, count)
-    unsaid = friction_answers.unsaid(derived.document, given)
+    unsaid = friction_answers.unsaid(derived.document, sentences)
     if unsaid:
         print(
             f"warn: {len(unsaid)} updated document(s) with no sentence on what changed under "
-            f"`{friction_answers.SENTENCES_HEADING}`: {', '.join(unsaid)} — the list says so; "
-            "add a list item there for each, naming the document in a code span, then the "
-            "sentence",
+            f"`{friction_answers.SENTENCES_HEADING}`: {', '.join(unsaid)} — review-work "
+            "refuses them; add a list item there for each, naming the document in a code "
+            "span, then the sentence",
             file=sys.stderr,
         )
-    section = friction_answers.render(derived.document, head, settings, given)
-    listed = friction_answers.affected(count, settings=bool(settings))
-    return _Answers(
-        section,
-        f"{listed}, listed under `{friction_answers.HEADING}` (at {head[:7]})",
-        derived.document,
-        count,
-    )
+    return _Answers(f"{count or 'none'} (at {head[:7]})", derived.document, count)
 
 
-def _left_out(why: str) -> _Answers:
+def _not_derived(why: str) -> _Answers:
     print(
-        f"warn: {friction_answers.NAME} not listed — {why}; `land-work` writes the list or "
-        "says why it cannot",
+        f"warn: the answers the change wrote were not read — {why}; review-work reads them "
+        "at the pull request's head",
         file=sys.stderr,
     )
-    return _Answers(None, "not listed (the warning above says why)")
-
-
-def _fitting(body: str, answers: _Answers, versions: provenance.Versions) -> _Answers:
-    """`answers`, its section left out with one warning line when the body with
-    it would not fit the host's limit."""
-    if answers.section is None:
-        return answers
-    whole = provenance.stamp(friction_answers.stamp(body, answers.section), versions)
-    if friction_answers.fits(whole):
-        return answers
-    left = _left_out(
-        f"the body with the list is {len(whole)} characters, past the host's "
-        f"{friction_answers.BODY_LIMIT} — split the change or narrow the anchor"
-    )
-    return _Answers(None, left.note, answers.document, answers.count)
+    return _Answers("not read (the warning above says why)")
 
 
 def _pushed_head(branch: str) -> tuple[str | None, str]:
     """The commit `branch`'s remote-tracking reference names — what the pull
     request opens at, not local HEAD, which may be ahead of it — or why none."""
-    remote = "origin"
-    for atom in ("push:remotename", "upstream:remotename"):
-        named = _git_out("for-each-ref", f"--format=%({atom})", f"refs/heads/{branch}")
-        if named and named != ".":
-            remote = named
-            break
+    remote = friction_answers.branch_remote(branch)
     oid = _git_out("rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/{branch}^{{commit}}")
     if not oid:
         return None, f"{remote}/{branch} names no commit — push the branch first"
@@ -701,10 +640,10 @@ def _git_out(*argv: str) -> str:
 
 def _prefill_doc_impact(body: str, answers: _Answers) -> tuple[str, str]:
     """`body` with its unwritten `## Doc impact` section holding one line that
-    counts the documents listed under `## Documentation this change affects`,
-    and one line saying what happened. The line names no path and no reason, so
-    it meets no mapping obligation. Never refuses: no list leaves the body as it
-    was."""
+    counts the documents the change's answers are on and points at the change
+    check, and one line saying what happened. The line names no path and no
+    reason, so it meets no mapping obligation. Never refuses: answers not read
+    leave the body as it was."""
     if answers.document is None:
         return body, "not pre-filled — `pkit friction check --json` gave no document"
     still = doc_impact.unanswered(answers.document)
@@ -716,11 +655,10 @@ def _prefill_doc_impact(body: str, answers: _Answers) -> tuple[str, str]:
         )
     if not answers.count:
         return body, "not pre-filled — the change check reports no answers"
-    if answers.section is None:
-        return body, "not pre-filled — the answers are not listed"
     noun = "document" if answers.count == 1 else "documents"
     line = (
-        f"{answers.count} {noun} this change affects — listed under `{friction_answers.HEADING}`."
+        f"{answers.count} {noun} this change affects — their answers are the change "
+        "check's (`pkit friction check`)."
     )
     body, filled = doc_impact.prefill(body, [line])
     if not filled:

@@ -1,0 +1,9 @@
+component: visual-communication
+kind: none
+body: >
+  The capability's folder gains a place for each released version of each
+  library it ships, `releases/<library>/<version>/`, and a record of them,
+  `releases/<library>/releases.yaml`, beside the version being built (#2605).
+  Its own tests now hold every version it ships, released or being built. No
+  version is released and no command changes, so nothing an adopter can
+  observe moves.

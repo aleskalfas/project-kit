@@ -367,7 +367,11 @@ class AdopterRepo(GitRepo):
 
     def install_capabilities(self, *names: str) -> None:
         """Install kit-shipped capabilities in the given order, refusing (as the
-        CLI does) when a declared dependency is not installed yet."""
+        CLI does) when a declared dependency is not installed yet, then render the
+        capabilities' rules index, as the CLI's install does after it registers one
+        (ADR-076 point 2)."""
+        if not names:
+            return
         for name in names:
             source = caps.find_capability_in_source(self.source_kit, name)
             if source is None:
@@ -382,6 +386,11 @@ class AdopterRepo(GitRepo):
                     f"list dependencies before dependents"
                 )
             caps.install_capability(self.root, source)
+        ctx = install_mod.InstallContext(
+            target_root=self.root, source_kit=self.source_kit, dry_run=False
+        )
+        with contextlib.redirect_stdout(io.StringIO()):
+            install_mod.render_rules_index(ctx)
 
     def script_history(self) -> ScriptedHistory:
         """Lay down the scripted history described on `ScriptedHistory`.
@@ -503,8 +512,8 @@ def copy_tree(source: Path, dest: Path) -> None:
     Every file is the copy's own — a test may write any of them and neither the
     source nor another copy sees it — so nothing is hard-linked. A clone where
     the platform has `clonefile(2)`, which costs a few calls whatever the size
-    of the tree; a file-by-file copy where it has not, or where the filesystem
-    refuses a clone."""
+    of the tree; a file-by-file copy, which leaves out `__pycache__`, where it
+    has not, or where the filesystem refuses a clone."""
     dest.mkdir(parents=True, exist_ok=True)
     for entry in sorted(source.iterdir()):
         target = dest / entry.name
@@ -514,7 +523,9 @@ def copy_tree(source: Path, dest: Path) -> None:
         ):
             continue
         if entry.is_dir() and not entry.is_symlink():
-            shutil.copytree(entry, target, symlinks=True)
+            shutil.copytree(
+                entry, target, symlinks=True, ignore=shutil.ignore_patterns("__pycache__")
+            )
         else:
             shutil.copy2(entry, target, follow_symlinks=False)
 
@@ -530,6 +541,16 @@ class _Template:
 
 
 _TemplateKey = tuple[tuple[str, ...], bool, str]
+
+#: How many template builds this process is inside (`building_template`).
+_building = 0
+
+
+def building_template() -> bool:
+    """Whether this process is building an adopter template: the processes the build
+    starts, its install's and its `prepare`'s, belong to no one test, since whichever
+    test asks first pays them (`tests/in_process.py`, the guard)."""
+    return _building > 0
 
 
 class AdopterTemplates:
@@ -595,14 +616,19 @@ class AdopterTemplates:
         """The template `key` names, built with `build` unless a process sharing the
         directory has built it. Built holding the key's lock, into a directory that
         takes the template's name once it is whole, its scripted history written
-        beside it first."""
+        beside it first. While it builds, `building_template` says so."""
+        global _building
         name = hashlib.sha256(json.dumps(key).encode()).hexdigest()[:16]
         root = self._directory / name
         record = self._directory / f"{name}.json"
         with _locked(self._directory / f"{name}.lock"):
             if not root.exists():
                 building = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=self._directory))
-                record.write_text(json.dumps(_shas(build(building))), encoding="utf-8")
+                _building += 1
+                try:
+                    record.write_text(json.dumps(_shas(build(building))), encoding="utf-8")
+                finally:
+                    _building -= 1
                 building.rename(root)
         return _Template(root, _history(json.loads(record.read_text(encoding="utf-8"))))
 

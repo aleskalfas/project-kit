@@ -93,8 +93,30 @@ esac
 # --- YAML parsing helpers ----------------------------------------------------
 
 yaml_get_scalar() {
+    # Print a top-level key's value as YAML reads it, or nothing when the
+    # key is absent or has no value.  Succeed either way, so a caller can
+    # assign the result under ``set -euo pipefail``.
+    #
+    # A comment after the value is not part of it.  A plain value ends at
+    # a `#` with a space before it, so `a#b` stays whole.  A quoted value
+    # ends at its closing quote, so a `#` inside it stays.  The quotes are
+    # not part of the value either; an escape inside them stays as written.
     local key="$1"
-    grep -E "^${key}:[[:space:]]+" "$CONFIG" 2>/dev/null | head -1 | sed -E "s/^${key}:[[:space:]]+//; s/[[:space:]]*\$//"
+    awk -v key="$key" -v single_quoted="^'([^']|'')*'" '
+        $0 ~ "^" key ":[[:space:]]" {
+            value = substr($0, length(key) + 2)
+            sub(/^[[:space:]]+/, "", value)
+            if (match(value, /^"([^"\\]|\\.)*"/) || match(value, single_quoted)) {
+                print substr(value, 2, RLENGTH - 2)
+            } else {
+                sub(/^#.*$/, "", value)
+                sub(/[[:space:]]+#.*$/, "", value)
+                sub(/[[:space:]]+$/, "", value)
+                print value
+            }
+            exit
+        }
+    ' "$CONFIG"
 }
 
 yaml_get_window_bounds() {
@@ -104,6 +126,7 @@ yaml_get_window_bounds() {
         /^[^[:space:]]/ { in_windows=0 }
         in_windows && $0 ~ "^[[:space:]]+" win ":" {
             sub(/^[[:space:]]+[^:]+:[[:space:]]*\[/, "")
+            sub(/[[:space:]]+#.*$/, "")
             sub(/\][[:space:]]*$/, "")
             gsub(/[[:space:]]/, "")
             print
@@ -442,12 +465,9 @@ do_start() {
     fi
 
     # Open the two windows.  Forward optional font knobs from record.yaml.
-    # ``|| true`` so a missing key (commented out / absent in the yaml)
-    # doesn't trip ``set -euo pipefail``: yaml_get_scalar's underlying
-    # grep returns 1 on no-match, which would otherwise kill the script.
     local font_size font_name
-    font_size=$(yaml_get_scalar font_size) || font_size=""
-    font_name=$(yaml_get_scalar font_name) || font_name=""
+    font_size=$(yaml_get_scalar font_size)
+    font_name=$(yaml_get_scalar font_name)
     DCR_CWD="$cwd" \
     DCR_FONT_SIZE="${font_size:-18}" \
     DCR_FONT_NAME="${font_name:-Menlo-Regular}" \

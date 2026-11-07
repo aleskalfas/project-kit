@@ -4,7 +4,7 @@ name: Adopter
 status: active
 summary: "The person who adopts the methodology for a project and keeps its setup."
 needs:
-  - Install the system with one command, committed for the team or kept out of the shared repository, and see its wiring into my project.
+  - Install the system with one command, committed for the team or kept out of the shared repository, and see it wired into my project.
   - Upgrade the system like a dependency, at a version the whole project pins, with its migrations run for me and my own files left alone.
   - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
   - Choose which installed capability provides a role.
@@ -23,6 +23,11 @@ pkit:
         - COR-010
         - COR-053#8
         - COR-059#3
+        - COR-048
+        - COR-050#12
+        - COR-051#7
+        - COR-053#7
+        - PRJ-008
 ---
 
 # ACT-adopter — Adopter

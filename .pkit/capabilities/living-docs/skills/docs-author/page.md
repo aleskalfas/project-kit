@@ -10,12 +10,13 @@ The space is the reader's audience. The user space serves people who use the sys
 
 - **`signpost`**: an index-like file that says what a folder holds and where to go, never a summary of what the files say (RS-LDOC-005).
 - **`reference`**: the page that describes one surface, such as an area, a capability or a command set, to the reader who uses it.
+- **`guide`**: the page that explains one subject to the reader who uses it: why it exists, what it solves for them and how they do its tasks (DEC-003). Detail the reader looks up stays on the page that describes the subject.
 
 The stamp takes a kind the capability declares. A kind the project adds has its own template, so write that page by hand from it.
 
 ## 3. Choose where the file goes
 
-Under the space's root, or in a place assigned to the space. Never in the definitions location, where a file is a template and never a page. A signpost usually goes into the folder it signposts, as its `README.md`. A reference page goes beside the surface it describes. The stamp refuses a file that the check does not read as a page of the space you named.
+Under the space's root, or in a place assigned to the space. Never in the definitions location, where a file is a template and never a page. A signpost usually goes into the folder it signposts, as its `README.md`. A reference page goes beside the surface it describes. A guide that leads a folder is its `README.md`, and lists the folder's further pages last. The stamp refuses a file that the check does not read as a page of the space you named.
 
 ## 4. Name the reader
 
@@ -47,6 +48,7 @@ Write in each placeholder's place what it asks for, and only what the reader nee
 
 - **One home per fact** (RS-LDOC-002). A fact a decision record decides needs no link where this page anchors the record, whole or in a part that stands on what decides it. Any other fact another page already states in full is stated here only as a summary that links to that page, however short. Then anchor the home's section: add `<page>#<section-slug>` to the front matter's `artefact` anchors.
 - **A statement nothing grounds** needs its anchor, or it goes.
+- **A guide keeps its parts in the template's order:** the lead, then why the subject exists, then the tasks, each after any task it needs (DEC-003 point 2). The validator checks only its title, so this order is yours to keep.
 
 ## 8. Check and commit
 

@@ -105,6 +105,7 @@ from project_kit.sync import (
     ORPHAN,
     UNVERSIONED,
     CapabilityPlan,
+    delivered_by_copy,
     fallback_remedies,
     plan_capabilities,
     propagate,
@@ -286,6 +287,11 @@ def run_upgrade(
     # or refuses.
     refuse_components_bundled_older(moves)
     refuse_area_name_clash(target_root, source_kit, command="upgrade")
+    # Beside the clash of area names, a file at the index's path that is no index
+    # (ADR-076 point 2).
+    from project_kit import loaded_rules
+
+    loaded_rules.refuse_index_clash(target_root, command="upgrade")
     _resolve_compatibility(components, target_root, source_kit, target_version)
     _check_capability_dep_conflicts_for_upgrade(target_root, plans, force=force)
     answers = _settle_new_collisions(target_root, plans, dry_run=dry_run)
@@ -305,6 +311,9 @@ def run_upgrade(
     # never the sync command, so sync's guard never stops an upgrade. Then an
     # adapter the target adds is registered, and `.pkit/.gitignore` is
     # rendered, so a migration reads the target's render.
+    # Each loaded set the step delivers is read before it copies the new version, and
+    # what the step newly binds is said after (ADR-076 point 6).
+    bound_before = loaded_rules.read_delivered(target_root)
     if dry_run:
         click.echo(
             f"  {'would record':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
@@ -329,6 +338,10 @@ def run_upgrade(
         reread = read_backbone_manifest(target_root)
         components = reread.components if reread is not None else []
         _render_runtime_ignore(target_root)
+    loaded_rules.echo_bound(
+        target_root,
+        loaded_rules.bound_by(bound_before, delivered_by_copy(source_kit, moving)),
+    )
 
     # Step 4: the backbone's migrations, from the last completion.
     _run_backbone_migrations(target_root, source_kit, completed, target_version, dry_run)

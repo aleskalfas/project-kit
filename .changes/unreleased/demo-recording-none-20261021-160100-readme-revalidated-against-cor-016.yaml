@@ -1,6 +1,0 @@
-component: demo-recording
-kind: none
-body: >
-  The capability README is revalidated, unchanged, against COR-016's
-  sibling-name storyboard declaration: only its friction block moves. Inert
-  in an adopting project: a synced tree is never a place (ADR-055).

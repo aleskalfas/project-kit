@@ -8,7 +8,6 @@ preserved across both contexts. The bundled path is the same `_kit/` tree
 separate version-only file that could disagree with the bundled tree.
 """
 
-from importlib.resources import files
 from pathlib import Path
 
 
@@ -20,7 +19,10 @@ def _read_version() -> str:
         return src_tree_version.read_text(encoding="utf-8").strip()
 
     # Installed-wheel path: the bundled methodology tree's VERSION file, per
-    # pyproject's `force-include` (`project_kit/_kit/VERSION`).
+    # pyproject's `force-include` (`project_kit/_kit/VERSION`). Imported only
+    # here: a start in a source checkout reads the file above and never needs it.
+    from importlib.resources import files
+
     bundled = files(__name__).joinpath("_kit", "VERSION")
     return bundled.read_text(encoding="utf-8").strip()
 

@@ -14,3 +14,4 @@ permissions/project/active-profile.yaml
 permissions/project/profile-realized-allows.yaml
 capabilities/*/project/process/**/*.journal.jsonl
 capabilities/project-management/project/instance/*.json
+capabilities/visual-communication/project/local/

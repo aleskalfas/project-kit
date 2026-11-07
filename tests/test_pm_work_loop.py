@@ -18,6 +18,13 @@ yet (DEC-060). Held here:
 - **a released seat's Tasks in Review:** the loop says that `seats` names each
 - **batch planning names the shared choices before it slices,** and a first plan
   files the foundation only (DEC-060)
+- **batch planning plans Tasks that share a file as one Task** (#2640): those of
+  one parent, Milestone and priority, within what one review can read and one
+  build can finish (DEC-066). The critic's count comes before the fold, the gate
+  shows each fold, the filing files what a filed Task now depends on and reads it
+  again before it widens it, and filing one Task asks the user first, showing what
+  the work would take. A reviewer's follow-up keeps its scoping. The storyboard
+  shows such a plan
 - **the storyboard walks one round of each role** the loop serves
 - **the worker mends its own pull requests first** (#2184): one that conflicts
   with the default branch, by merging that branch in, then a fix round, before
@@ -48,6 +55,7 @@ SKILL = CAPABILITY / "skills" / "pm"
 DISPATCHER = SKILL / "pm.md"
 LOOP = SKILL / "work-loop.md"
 BATCH_PLAN = SKILL / "batch-plan.md"
+CREATE_ISSUE = SKILL / "create-issue.md"
 AGENT_FOLDER = CAPABILITY / "agents" / "project-manager"
 AGENT = AGENT_FOLDER / "project-manager.md"
 STORYBOARD = AGENT_FOLDER / "storyboard.md"
@@ -331,6 +339,91 @@ def test_batch_planning_schedules_through_the_capability_s_audited_command() -> 
     filing = _section(_text(BATCH_PLAN), "### 6. File via primitives")
     assert "gh issue edit" not in filing
     assert '`pkit pm promote-issue <N> --reason "<the user\'s approval of the plan>"`' in filing
+
+
+# --- batch planning plans Tasks that share a file as one Task ---------------------------
+
+#: The record that plans Tasks that share a file as one Task.
+FOLD = "[project-management:DEC-066-fold-tasks-that-share-a-file]"
+
+
+def test_batch_planning_plans_tasks_that_share_a_file_as_one() -> None:
+    """The slicing step orders Tasks that share a file, then folds those of one
+    parent, Milestone and priority, within both bounds (DEC-066 points 1 to 4)."""
+    slicing = _section(_text(BATCH_PLAN), "### 3. Propose the slicing")
+    rule = slicing.index("**Tasks that share a file are built one at a time**")
+    assert rule < slicing.index("**Fold Tasks that share a file into one Task**")
+    flat = _flat(slicing)
+    assert f"{FOLD} point 1" in flat
+    assert "The one planned or widened later names the earlier" in flat
+    assert "of one parent, in the same Milestone or both in none, at the same priority" in flat
+    bounds = "one review can read the folded Task whole, and one build can finish it in one run"
+    assert bounds in flat
+    takes = "The work takes its classification, Milestone and state, and the Task takes the work's"
+    assert takes in flat
+    for case in (
+        "**Keep apart**",
+        "**A foundation's Tasks** stay one at a time",
+        "**An open Task not started**",
+        "**A Task started** keeps its body",
+    ):
+        assert case in slicing, case
+
+
+def test_the_critic_counts_the_issues_before_the_fold() -> None:
+    """A fold lowers the number of issues to file, so it never skips the critic."""
+    step = "### 4. Adversarial review (when threshold applies)"
+    review = _flat(_section(_text(BATCH_PLAN), step))
+    assert "Count the issues as they were before step 3's fold" in review
+
+
+def test_the_gate_shows_each_fold_and_the_filing_reads_its_task_again() -> None:
+    """The person sees each fold at the gate, with its estimate, and may split it.
+    The planned Tasks a filed Task now depends on are filed first. It is read again
+    just before it is widened, and one that started since the gate gets nothing
+    written to it."""
+    text = _text(BATCH_PLAN)
+    gate = _flat(_section(text, "### 5. Single approval gate"))
+    assert "your estimate that one review can read it and one build finish it" in gate
+    assert "The person may split it" in gate
+    assert "what it now depends on, and where its classification, Milestone or state" in gate
+    assert "**Tasks kept apart**" in gate
+    filing = _flat(_section(text, "### 6. File via primitives"))
+    widening = filing.split("**An open Task that takes in work**", 1)[1]
+    first = widening.index("first file each planned Task it now depends on")
+    assert first < widening.index("Just before you write to it, read its lifecycle state")
+    assert "Its `## Dependencies` section names all it now depends on" in widening
+    assert "`pkit pm detect-state <N>`" in filing
+    assert '`git ls-remote --heads origin "*/<N>-*"`' in filing
+    moved = "**Started since the gate,** or refused by the clash guard: write nothing to it"
+    assert moved in filing
+
+
+def test_filing_one_task_asks_the_user_before_it_folds() -> None:
+    """Filing one Task folds it into a filed one only on the user's approval, given
+    knowing what the work would take, and a reviewer's follow-up keeps the scoping
+    that leaves it out of the wave (#1180)."""
+    recognition = _flat(_section(_text(CREATE_ISSUE), "## Intent recognition before invocation"))
+    assert f"{FOLD} points 1 and 4" in recognition
+    assert "only on the user's approval" in recognition
+    assert "so show where those differ from what filing would give it" in recognition
+    assert "A worker may take a Task in Backlog at once" in recognition
+    judgment_5 = "5. **Scope a follow-up a reviewer produced.**"
+    scoping = recognition.split(judgment_5, 1)[1].split("6. **", 1)[0]
+    assert "it is not built in the wave whose review found it" in scoping
+    assert "DEC-066" not in scoping
+
+
+def test_the_storyboard_shows_tasks_that_share_a_file_planned_as_one() -> None:
+    heading = "## Scenario 15: Tasks that share a file planned as one"
+    scenario = _flat(_section(_text(STORYBOARD), heading))
+    walk = scenario.split("### Walkthrough", 1)[1].split("### Behind the scenes", 1)[0]
+    assert "*Invoking critic on the proposed slicing…*" in walk
+    assert "Four changes to the writer became two." in walk
+    assert f"{FOLD} point 1" in scenario
+    assert "Its classification, Milestone and state are what the plan would give" in scenario
+    # The agent names the scenario among those it follows.
+    assert "Tasks that share a file planned as one Task" in _flat(_text(AGENT))
 
 
 # --- the storyboard walks one round of each role ------------------------------------------

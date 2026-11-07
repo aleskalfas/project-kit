@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  project-kit's own software-analysis configuration gives the goals of the
+  areas its software-analysis, living-docs, software-engineering, evidence and
+  demo-recording analyses now have (#2105). Nothing software-analysis ships to
+  an adopter changes.

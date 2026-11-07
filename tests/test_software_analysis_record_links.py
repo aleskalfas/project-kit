@@ -20,6 +20,9 @@ Held to software-analysis DEC-001 point 13:
   and the command mends them;
 - **no folder walked** — the capability's scripts find no record or rule set
   themselves.
+
+The validator, the links and the stamp run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2326).
 """
 
 from __future__ import annotations
@@ -43,7 +46,7 @@ from tests.analysis_repo import (
     link,
     load_lib,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -398,7 +401,8 @@ def project(
 
 
 def _validate(repo: AdopterRepo) -> list[tuple[str, str, str]]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's findings on citations, `--json` alone, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     return [
         (f["severity"], f["location"], f["message"])

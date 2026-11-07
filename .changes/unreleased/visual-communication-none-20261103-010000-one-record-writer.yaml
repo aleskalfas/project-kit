@@ -1,0 +1,9 @@
+component: visual-communication
+kind: none
+body: >
+  Internal refactor (#2503): the commands read and write the records they
+  keep, the findings record, the record of exports, a produced output's
+  record, the record beside written code and a piece's lock, through one
+  module, `_lib/records.py`, and the foundations' name is defined once. Every
+  command writes the same bytes and prints the same output as before, so no
+  surface moves.
