@@ -1,0 +1,224 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:47:36Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers made apart on this page, 20261107T124642Z-7a8e773a.yaml and 20261107T124703Z-4b574535.yaml. DEC-022's edits add to DEC-007's summary and Decision sentence the parts of a web page, whose jobs and forms come from the components design systems share, and leave its point 1 as it was. They have DEC-015 draw a page or one band of a page, its module take the regions of what it draws (point 2), and a tall page drawn in bands, and leave its point 4 as it was. This page says the foundations hold the top components, `figure` and `deck`, and that `pkit visual look` writes its images, frames and report under `look/<piece>/`, with a temporary folder of the fonts it hands its tool, which the run removes. Each still holds of the code, which has no top `site` and draws no band yet. The first answer found its axes, modes, release comparison and lock search true against DEC-021's edits, since the foundations declare no size axis. The second found its keys of combinations, the names of files by key and the local folders true once a scene is computed for each key over the size axes. With no size axis declared, a piece names one key, so both hold beside this one, and none reaches another's passage. The Task of the web page, which DEC-022's Implications name under #2791, adds `site` to The foundations and builds bands in the viewing step."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:47:48Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers made apart on this page, 20261107T124642Z-7a8e773a.yaml and 20261107T124703Z-4b574535.yaml. DEC-022's edits add to DEC-007's summary and Decision sentence the parts of a web page, whose jobs and forms come from the components design systems share, and leave its point 1, which this page cites, as it was. This page says what a pattern, an item component, a block and a top component are, a block being a small component a pattern draws its items with or content places alone, and names the foundations' `figure` and `deck` as the tops. A web part is a pattern or a block, so those roles hold of it too, and the code has no top `site` yet. The first answer found this page true against DEC-021's edits, a switch and a `when` reading an option or a filled field, and named #2790 as the change of its sentence on the size key. The second is #2790's: it updated that passage, so a scene is computed for each language and each key over the size axes a piece names. DEC-022's edits reach neither passage, so the page holds whole. The Task of the web page, which DEC-022's Implications name under #2791, adds `site` and changes this page's layouts."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:47:50Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers made apart on this page, 20261107T124642Z-7a8e773a.yaml and 20261107T124703Z-4b574535.yaml. DEC-022's edits have DEC-015's Decision sentence draw images by page, band, language and key. Its point 1 draws one page or one band of a page, point 2's module takes the regions of what it draws, and point 5 draws in bands a page too tall for one image whose smallest text reads. Points 3, 4 and 6 are as they were. This page says what `pkit visual look` does today: one image of each page, 1568 pixels on its long edge or more where the smallest text would land under 10 pixels, its frames beside it, and a report of four lists. Each still holds of the code, which draws no band yet. The first answer found the renderers' and code writers' passages true against DEC-021's edits. The second found each output still one file for each page, language and key, the viewing step's images among them. Neither reaches the viewing step's size, bands or report, so the three hold together. The Task of the web page, which DEC-022's Implications name under #2791, builds bands on both routes and changes The viewing step and What a run writes."
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:45:36Z
+      outcome: unchanged
+      unchanged-because: "DEC-022's edits add to DEC-007 the parts of a web page, whose jobs and forms come from the components design systems share. Point 2 comes to organise the starter by the job a visual, or a part of a page, does, with its README holding the web parts apart by their jobs on a page. Point 3 adds a web part's drawing at each size the brand of the tests gives, and a test that holds its frames inside the page. This README lists the starter's patterns by the question each answers, and its blocks, and none of them is a web part, so what it says of each still holds. The Task of the web parts, which DEC-022's Implications name under #2791, adds the web parts and this README's section on them."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-starter-library
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+    revalidated:
+      at: 2026-11-07T13:45:39Z
+      outcome: unchanged
+      unchanged-because: DEC-022's edits add to DEC-007's summary and Decision sentence the parts of a web page, such as a header or a form, whose jobs and forms come from the components design systems share, and leave its point 1 as it was. The definition, a set of shared parts that arrange and draw content, which visual-communication gives every project for common jobs, holds of a web part too, and its examples of layers or a list still name what the starter holds. The example of a first presentation drawn with cards and layers, and the distinction from a brand, which gives the values, stay as they were.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:47:33Z
+      outcome: unchanged
+      unchanged-because: DEC-022's edits come to organise DEC-007 point 2's starter by the job a visual, or a part of a page, does, a web part's job being its job on a page, taken from public design systems. Step 3 and variant 3a rest on the starter holding a library component for each job a visual does, and a visual beyond them being a local component. Point 2 still sorts the starter's patterns by the question a visual answers, so both hold. The link to point 2 follows the point's new heading, as `pkit analysis link` wrote it, and cites what it cited.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md
+    read:
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:45:51Z
+      outcome: unchanged
+      unchanged-because: DEC-022's edits add to DEC-007's summary and Decision sentence the parts of a web page, whose jobs and forms come from the components design systems share, and leave its point 4 as it was. Variant 6a rests on a generic form being a library component of the starter library, which a brand styles, and a form one brand alone uses being that brand's own. A web part is such a generic form, styled with a brand's values (DEC-022 point 4), so the variant holds of it too.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:46:07Z
+      outcome: unchanged
+      unchanged-because: "DEC-007 point 3's edit adds, for a web part of the starter, its drawing at each size the brand of the tests gives, and a test of the capability's own that holds its frames inside the page under that brand and the neutral brand. It adds no check to validation (DEC-022 point 5), so step 2's drawing of each option's value and each run style holds of what the system draws for any library component. Steps 1 and 3 hold too, since a web part states its job and its form with their source, a design system, and is reviewed. The summary of the bar in Sources holds, since what the edit adds asks something only of a web part, and the bar binds only the starter, to which the Task of the web parts, named in DEC-022's Implications under #2791, adds them."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:48:05Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers made apart on this page, 20261106T013502Z-01dc9885.yaml, 20261107T124642Z-7a8e773a.yaml and 20261107T124703Z-4b574535.yaml. DEC-022's edits add to DEC-007 point 3 a web part's drawing at each size the brand of the tests gives, and a test that holds its frames inside the page. They have DEC-015 draw a page or one band of a page, its module take the regions of what it draws (point 2), a page too tall for one image whose smallest text reads drawn in bands (point 5), and the reviewer's report name the bands of each page it read (point 7). Point 4 is as it was. This README says the starter's patterns and blocks are each experimental, that `pkit visual look` draws each page as an image with its frames and a report in the clone's local folder, and that the reviewer's report opens with the pages, languages and modes it looked at. Each still holds of the code and of the agent's file, since no web part or band exists yet. The first answer found the reviewer's deployment through the adapter true, the second the starter's entry against DEC-021's edits, and the third the commands' lines once a scene is computed for each key over the size axes. Their passages and this answer's agree: each starter component is experimental, and `look` writes an image of each page for each key, so all four hold together. The Task of the web page, which DEC-022's Implications name under #2791, builds bands and changes the reviewer's agent file, and the Task of the web parts adds the web parts."
