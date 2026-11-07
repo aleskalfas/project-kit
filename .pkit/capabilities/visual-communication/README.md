@@ -37,6 +37,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
+        - .pkit/capabilities/visual-communication/rule-sets/vis.md
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
@@ -58,7 +59,10 @@ pkit:
         - visual-communication:DEC-019#10
         - visual-communication:DEC-020#5
         - visual-communication:DEC-020#8
+        - visual-communication:DEC-024#4
+        - visual-communication:DEC-024#6
         - COR-017
+        - COR-070#1
         - COR-031
         - COR-054#3
         - COR-054#5
@@ -115,6 +119,8 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
         - .pkit/capabilities/visual-communication/outputs.md#the-html-renderers-pages
         - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
+        - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
+        - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
         - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
@@ -144,6 +150,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
+- **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
 No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
@@ -320,6 +327,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
 - **Exits** 0 when it drew, whatever the report says. It exits 1 when it refused, with its renderer's folder left as it was, or when a write failed ([Commands](#commands)). It exits 2 on a usage error. It exits 3 when the browser stopped, leaving the page files and a report, and no image ([When the browser stops](outputs.md#when-the-browser-stops)).
+- **Names the ways on** where it stops, in this order: a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages.
 
 ### `pkit visual pages <piece>`
 
@@ -408,7 +416,9 @@ To use it:
 2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
 3. **Read its report.** It opens with the pages, languages and modes it looked at, and names what it did not see. What it did not see is not looked at, never clean.
 
-Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)).
+Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
+
+You may hand it a build pipeline's drawings instead, fetched into a folder of their own ([A pipeline's drawings](outputs.md#a-pipelines-drawings)). It names those images as drawn by the pipeline, at the commit it drew.
 
 Each finding names the page, and the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)). A finding is one of two kinds:
 
