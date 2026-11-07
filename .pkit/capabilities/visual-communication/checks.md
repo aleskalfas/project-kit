@@ -311,7 +311,7 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names the version its folder holds, `<version>/`, since the file cannot give it. So it asks for attention where the others do. | fails |
 | `brand-kind`, `brand-dtcg` | The library is not a brand, or names a DTCG version other than `2025.10`. Stops the brand. | fails |
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
-| `brand-axis` | A modifier is no shared axis, lacks a context for one of the axis's modes, or has another default than the axis. Stops the brand. | fails |
+| `brand-axis` | A modifier is no shared axis, gives a mode the axis lacks, gives no context for its default, or defaults to another mode. Stops the brand. | fails |
 | `tokens-unreadable`, `tokens-shape`, `token-name`, `token-type`, `token-value`, `token-shared-group` | A token file cannot be read, or holds a key, a name, a type or a value format 1 does not read, or a brand's own token in a group of the shared roles. Stops the brand. | fails |
 | `role-missing`, `role-type` | The brand gives a shared role no value, or a value of another type, in some combination. Stops the brand. | fails |
 | `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, to a role of a library the brand does not name or to one with no value under it, or lead to a token of another type. Stops the brand. | fails |
@@ -420,7 +420,7 @@ Written code, its declaration and its record are described in [What is made from
 | `code-name` | A declaration's file name is not a name. Rename the file. | fails | `<location>/code/<name>.yaml` |
 | `code-out` | `out` names no file the code may go to. Name a file of the project's tree. | fails | the declaration, `#out` |
 | `code-unchecked` | The code cannot be checked, as when the brand at the declaration's lock cannot be read. Mend the declaration, then write the code. | fails | the declaration |
-| `code-loss` | The writer has no form for a token, which it leaves out, and the declaration does not accept the loss. Accept it under `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or have the code read the value another way. | asks for attention | the declaration, `#<token path>` |
+| `code-loss` | The writer has no form for a token, which it leaves out, or writes a token a size changes at the size axis's default. The declaration does not accept the loss. Accept it under `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or have the code read the value another way. | asks for attention | the declaration, `#<token path>` |
 | `code-not-written` | Neither the code nor its record is present. | states a fact | the declaration |
 | `code-record-missing` | The code has no record beside it. | fails | the code's file |
 | `code-missing` | The record names code that is missing. | fails | `<out>.record.yaml` |
