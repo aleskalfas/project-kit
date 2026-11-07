@@ -6,7 +6,7 @@ date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** the capability ships a component library to start from, the *starter*, planned wide from the start. It holds a pattern for each common job a visual does, such as showing an order, chosen from published classifications. Each component enters as experimental, so its breadth promises nothing yet. The starter holds the generic forms, and a brand gives them its look.
+**In plain terms:** the capability ships a component library to start from, the *starter*, planned wide from the start. It holds a pattern for each common job a visual does, such as showing an order, chosen from published classifications. It also holds the parts of a web page, such as a header or a form, whose jobs and forms come from the components design systems share (refinement per [visual-communication:DEC-022-web-site-and-parts]). Each component enters as experimental, so its breadth promises nothing yet. The starter holds the generic forms, and a brand gives them its look.
 
 ## Context
 
@@ -23,7 +23,7 @@ The core supplies the test of what every project needs (COR-014). A library the 
 
 ## Decision
 
-**The starter is planned wide from the start, and built ahead of need. It holds a pattern for each common job a visual does, chosen from published classifications of visuals, and the blocks those patterns draw their items with. Each component enters as experimental, with no use needed first. The starter holds the generic form, and a brand gives it its values.**
+**The starter is planned wide from the start, and built ahead of need. It holds a pattern for each common job a visual does, chosen from published classifications of visuals, and the blocks those patterns draw their items with. It also holds the parts of a web page, whose jobs and forms come from the components design systems share (refinement per [visual-communication:DEC-022-web-site-and-parts]). Each component enters as experimental, with no use needed first. The starter holds the generic form, and a brand gives it its values.**
 
 ### 1. Planned wide, and built ahead of need
 
@@ -33,11 +33,12 @@ The starter is planned to cover the jobs visuals commonly do, not only those one
 - **Recurrence is a reason, not a condition.** A local component that recurs is a reason to add a component to the starter. Its owner judges, and no count decides.
 - **No privilege.** The engine knows none of the starter's components by name, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 4). So a project may ignore the starter, or publish a library of its own beside it.
 
-### 2. Organised by the job a visual does
+### 2. Organised by the job a visual, or a part of a page, does
 
 - **One job per pattern.** Each pattern answers one question a visual answers, such as "in what order does it happen?", "what rests on what?" or "which items belong together?". Two patterns never share a job, and one pattern never does two.
 - **The jobs come from published classifications.** Nancy Duarte's forms of abstract ideas, a practitioners' classification, name them. The classification of visual representations by Lohse, Biolsi, Walker and Rueter, and Yuri Engelhardt's principles that join a visual's parts, check them.
-- **The starter's README** lists the patterns by job. For each it gives its question, form, source, evidence and options. It also states the boundary with its neighbours, such as "a list has no order, steps follow one another, a timeline says when".
+- **A web part's job is its job on a page** (refinement per [visual-communication:DEC-022-web-site-and-parts]). A *web part* is a component made for a web page, such as a header or a form. Its job is what it does on a page, such as saying whose site a page belongs to, not a question a visual answers. Its job and its form come from the components public design systems share, and it cites the design systems they come from. Each web part does one job, and no two share one.
+- **The starter's README** lists the patterns by job. For each it gives its question, form, source, evidence and options. It also states the boundary with its neighbours, such as "a list has no order, steps follow one another, a timeline says when". It holds the web parts apart from its other patterns and blocks, each by its job on a page (refinement per [visual-communication:DEC-022-web-site-and-parts]).
 - **Options stay few.** A pattern's options choose only its arrangement, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 6). About four is the guide, not a limit. Past it, a pattern probably does two jobs, and is split.
 - **More than a pattern offers** is a local component, built from the starter's blocks and the engine's tools.
 - **Only what data can draw.** A job that needs a tool the engine lacks waits for that tool, such as items on a circle or the layout of a graph.
@@ -47,7 +48,8 @@ The starter is planned to cover the jobs visuals commonly do, not only those one
 A component enters the starter as experimental, the status that the record of change over time defines ([visual-communication:DEC-003-change-over-time] point 7), with no use needed first. It enters once it has:
 - its job, the established form it follows and that form's source
 - its fields and its options, each option a word from a declared list
-- its reference renders, each value of each option drawn once, and each word of each field's run styles drawn once (refinement per [visual-communication:DEC-012-text-runs]), with the combinations the evidence uses
+- its reference renders, each value of each option drawn once, each word of each field's run styles drawn once (refinement per [visual-communication:DEC-012-text-runs]), each mode of a size axis it names drawn once (refinement per [visual-communication:DEC-021-size-and-shape]), and for a web part its drawing at each size the brand of the tests gives (refinement per [visual-communication:DEC-022-web-site-and-parts]), with the combinations the evidence uses
+- for a web part, a test that holds each of its frames inside the page at each size, under the brand of the tests and under the neutral brand (refinement per [visual-communication:DEC-022-web-site-and-parts])
 - renders in languages that stress text, such as long compound words and diacritics, beyond the languages of its first project
 - a review
 

@@ -13,6 +13,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
+        - .pkit/capabilities/visual-communication/scripts/upgrade.py
+        - .pkit/capabilities/visual-communication/scripts/take-up.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
@@ -37,6 +39,9 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/taking_up.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/rendering.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
@@ -116,6 +121,13 @@ pkit:
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-019#1
+        - visual-communication:DEC-019#2
+        - visual-communication:DEC-019#3
+        - visual-communication:DEC-019#4
+        - visual-communication:DEC-019#6
+        - visual-communication:DEC-019#7
+        - visual-communication:DEC-021#2
 ---
 
 # The files of the visual work
@@ -169,7 +181,7 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
@@ -179,14 +191,15 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
-| `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
+| `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` and `pkit visual upgrade` rewrite its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
 | `pieces/<piece>/produced/<output>/record.yaml`, and a PNG for each variant | `produced-record` | `pkit visual produce` |
-| `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render`, of a piece that is not final |
-| `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export`; `pkit visual mark-final` adds the version handed out |
-| `pieces/<piece>/current-copy/<file>` | none: a copy of a file an export made | `pkit visual export`, of a published piece |
+| `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render`, of a piece that is not final; `pkit visual upgrade` |
+| `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export` and `pkit visual upgrade`; `pkit visual mark-final` adds the version handed out |
+| `pieces/<piece>/current-copy/<file>` | none: a copy of a file an export made | `pkit visual export`, of a published piece; `pkit visual upgrade` |
 | `pieces/<piece>/handed-out/<file>` | none: a file an export made | `pkit visual mark-final`, which moves it there from the clone's local folder |
+| `pieces/<piece>/`, a new piece's folder | each file's own | `pkit visual take-up`, which copies it from a final piece, but for that piece's past, and writes its `piece.yaml` |
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
@@ -197,7 +210,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 `.pkit/capabilities/visual-communication/project/local/` holds what a command makes that is never committed (DEC-002 point 1). The capability's `package.yaml` declares the folder local to each clone, so git ignores it. It holds:
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
-- `exports/<piece>/`: the files `pkit visual export` makes, but for the version `pkit visual mark-final` moved into the piece's folder;
+- `exports/<piece>/`: the files `pkit visual export` and `pkit visual upgrade` make, but for the version `pkit visual mark-final` moved into the piece's folder;
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
@@ -309,11 +322,11 @@ A library moves no lower than the version the lock names while versions at or ab
 
 **The search's bounds.** It tries at most 10 000 versions. Past that bound it refuses, naming the libraries it was choosing among. Name the line of each in the lock, or take the versions no piece needs out of the library folder, and render again. It also judges at most 50 combinations. Past that bound it keeps the lock, with the newest version that fits of each library the lock does not name yet. It states that, naming the libraries it was choosing among. Move the lock by hand, or take the versions no piece needs out of the library folder.
 
-**A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
+**A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it. A copy of a final piece starts as a pinned draft, and may hold words later than the version handed out (DEC-003 point 8).
 
 **A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes, or when marked final (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
 
-**Final to every command.** A piece is final where its `state` says so, or where its record of exports names a version handed out. Where that record cannot be read, as on a conflicted merge, every command takes the piece as final.
+**Final to every command.** A piece is final where its `state` says so, or where its record of exports names a version handed out. Where that record cannot be read, as on a conflicted merge, every command takes the piece as final. So setting `state` back from `final` holds only where no version is handed out, as for a piece set final by hand. No state leads out of final, and `pkit visual take-up` copies a final piece for new work (DEC-017 point 5).
 
 **Marking a piece final.** `pkit visual mark-final <piece> <version>` names the version handed out (DEC-017 points 1 and 2). No change since that version stops it.
 
@@ -329,6 +342,44 @@ A library moves no lower than the version the lock names while versions at or ab
 - **It refuses** a file of the version that is missing from the clone's local folder, or whose hash differs from the record's, naming each. So a version is marked in the clone that made it.
 - **It refuses** a version whose fingerprint is missing or no longer matches its own inputs, a piece that has a version handed out, and anything else that lies at `handed-out/`.
 - **A mark made in error** is undone by reverting its change, and moving its files back to the clone's local folder by hand.
+
+**Taking a final piece up again.** `pkit visual take-up <piece> <name>` copies a final piece as a new piece, a draft with its lock pinned, under a name no piece holds (DEC-017 point 8). So it draws as the piece it copies until a person moves its lock.
+
+- **What it copies.** The piece's folder whole, as git sees it, but for what only its past holds: `exports.yaml`, `findings.yaml`, `handed-out/` and `current-copy/`.
+- **The new `piece.yaml`.** It sets `state: draft` and `pinned: true`, and writes the lock of the version handed out, read from its fingerprint. It drops `copy-place`, since a draft writes no current copy. Every other byte stays, such as who the piece is for.
+- **Later words.** Only the lock comes back (DEC-017 point 1). Where the sources changed since that version, the copy holds them as they stand. The run names each change, and the copy's lock may need a move before it draws.
+- **The final piece** stays as it was.
+- **It refuses** a piece with no version handed out. A piece set final by hand is one: mark it final first. It refuses a name taken or not a piece's name.
+- **It refuses** a version whose lock cannot be read, and a file it copies or writes that is reached through a link.
+- **It writes as one change.** A write that fails leaves no part of the new piece.
+
+**Moving a published piece's lock.** `pkit visual upgrade <piece>` proposes the move (DEC-019). A *proposal* is what one run leaves in the working tree. The run commits nothing, makes no branch and opens nothing on a work tracker. Landing it is the review's yes. Discarding it is its no, and leaves only the version's numbered files in the clone's local folder.
+
+- **What it carries.** The lock, written as a render writes it, and the findings record of a render under it, with no preview. A new version in the record of exports, made under that lock. The current copy written from it (*The current copy* in *What is made from a piece*).
+- **A piece in another state** is refused. A draft's render moves a draft's lock, a hand moves a pinned one, and nothing moves a final piece's.
+- **The lock it starts from** is the one `piece.yaml` holds, whoever wrote it. So it serves a piece an export refused for a lock written by hand.
+- **The search** works as a draft's render does, among released versions alone. It stays within the lock's majors, and takes versions that fit. It states each newer version it did not take, with why.
+- **A version named.** Each `<library>@<version>` moves what it names, and only what that needs. It may lie below the lock. A new major comes only by a name, or by a lock written by hand.
+  - A name goes past a clash or a lost end, and each stands as a finding.
+  - A name goes past nothing else. A version the project does not hold, one not released and one the installed capability cannot read are refused. So are libraries that build on two majors of one library.
+- **No library version travels in it.** It moves only to versions the library folder holds. Bring one in first, or in the change that lands the proposal.
+- **Nothing to move.** It would propose the lock the piece holds, and the version that wrote the copy was made under that lock. It says so and writes nothing.
+- **An edit since the copy.** It compares the piece with the version that wrote its copy, reading "changed" as marking final does. It also leaves out the files of the lock's library versions, so a version gone from the project stops nothing. It stops, naming each input that changed.
+  - The plain way on is an export under the lock the copy holds. The run then finds no edit.
+  - Where the edit needs the move, `--edited <input>` names each input. A file goes by its path in the piece's folder, a font as the refusal writes it.
+  - An input nobody named still stops, and the run prints the line that names them all.
+- **A stale picture.** Under the moved lock a picture may read other values. The run stops, naming each output and what changed. It runs no program, since a program reads under the lock the piece holds.
+  - `--use-stale <output>` carries the picture as it is. The picture and the copy made over it ask for attention until they are made again.
+  - To make it again, run `pkit visual produce`, then an export, once the run has moved the lock. Land the change after the run or after that export. Between them the copy is stale, which fails.
+  - Or write the lock by hand, run the program, then run the command, naming the picture's `record.yaml` with `--edited`. No copy is then made over a stale picture.
+- **A fingerprint it cannot read** refuses, and names the record. Restore that record as version control last held it.
+- **No copy standing.** Where no file of the copy stands, or the record holds no copy of the piece's own, the run goes on. It writes the copy whole and says no file stood, so the change shows only an after.
+  - Where some files stand, each of those shows its two sides, and each missing one its after alone.
+  - A file at a place the piece came to name since reads as new too, and the run names what it leaves behind.
+  - An edit still stops the run where a version wrote the copy.
+- **A finding that fails.** A version fits by what a lock can hold, not by how a page draws. So a move may bring a finding that fails, such as text that overflows. The run names each and stops on none, and each holds the landing. Mend the content in the same change and run an export, or discard the proposal.
+- **The rest of an export's rules** hold the run. Only the refusal of a lock that differs does not (*What refuses an export* in *What is made from a piece*). Every stop comes before any write.
+- **After it,** the version that wrote the copy was made under the lock the piece holds. So the next export runs, and the check raises no finding for the move itself.
 
 A copy not yet released that a pinned or a published lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft, each published piece and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8). Under a final piece's lock it replaces such a copy with no piece named, since that changes none of the piece's exports.
 
@@ -559,8 +610,8 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
 - **A library's own roles.** A role promises what the components that read it promise (DEC-008 point 7). So only an own role a stable or deprecated component reads, directly or through a default, can break. It breaks where it is removed, changes type, or no longer ends its chain of defaults at a shared role, where it did. A new one such a component reads breaks where its chain ends at no shared role, and any other new own role is an addition.
 - **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
 - **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition.
-- **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does a new axis, or an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new mode, colour family or member is an addition.
-- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition.
+- **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new axis, mode, colour family or member is an addition.
+- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition. So a size a brand comes to give is an addition, and one it ceases to give breaks.
 
 Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made, and the release refuses. A brand's component tokens are not compared yet.
 
@@ -627,7 +678,7 @@ The Resolver document holds `version` (`2025.10`), `sets`, `modifiers` and `reso
 ```
 
 - **A set** holds `sources`, and may hold `description`. A source is `{"$ref": "<token file>"}`, a file of the brand's version folder.
-- **A modifier** is a shared axis. Its `contexts` hold one list of sources for each mode of the axis. Its `default` is the axis's default.
+- **A modifier** is a shared axis the brand varies. Its `contexts` hold one list of sources for each mode the brand gives, the axis's default among them. Its `default` is the axis's default. What a mode the brand leaves out takes is under [Axes and modes](#axes-and-modes).
 - **`resolutionOrder`** names each set and each modifier once, as `{"$ref": "#/sets/<name>"}` or `{"$ref": "#/modifiers/<name>"}`. A later source wins.
 
 For each combination of modes, the capability merges the brand's sources in resolution order, over the roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles, and each role of a library it names that it gives a value ([A library's roles](#a-librarys-roles)). Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
@@ -693,9 +744,11 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 
 An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Both are value axes. The foundations declare no size axis.
 
-- **A brand varies an axis** through a modifier of its Resolver document. It may leave out an axis it does not vary. It adds no axis of its own, and changes no default.
+- **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no axis of its own and no mode, and changes no default.
 - **A value axis** changes only colours. A mode of a value axis that changes another value fails.
-- **A piece** chooses the modes it is drawn in under its `modes`.
+- **Every brand has each value axis whole** (DEC-004 point 2). A mode it does not give takes its values at the axis's default. In a brand built on another, its base's values hold there.
+- **A size axis** may change any value. A brand has a shared size axis only where a modifier varies it, with the modes that modifier gives (DEC-021 point 2). A brand built on another has its base's sizes. So a brand that gives no size keeps its combinations and its written code.
+- **A piece** chooses the modes it is drawn in under its `modes`. A mode its brand does not have fails, a size it does not give among them.
 
 ### The neutral brand
 

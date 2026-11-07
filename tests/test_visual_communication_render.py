@@ -22,6 +22,8 @@ from tests.test_visual_communication_pipeline import (
     LONG,
     NET,
     PATTERNS,
+    PHONE,
+    PHONE_WIDE,
     PIECE,
     PIECE_FOLDER,
     ROW,
@@ -30,6 +32,7 @@ from tests.test_visual_communication_pipeline import (
     lab_lock,
     lab_project,
     list_drawing_libraries,
+    on_devices,
     stamped,
     write_content,
     write_picture,
@@ -165,6 +168,35 @@ def test_the_figure_grows_with_its_steps_texts_and_nothing_overflows(tmp_path: P
     for element in _texts(result.scene.to_dict()):
         assert not element.get("overflow"), element["id"]
         assert element["measured-height"] <= element["height"], element["id"]
+
+
+def test_a_piece_on_a_size_axis_has_a_preview_for_each_key_and_keeps_a_findings_size(
+    tmp_path: Path,
+) -> None:
+    modes = {"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    root = on_devices(tmp_path, head=PHONE_WIDE, modes=modes)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    drawn = previews(root)
+    dark = "colour-scheme.dark"
+    widths = {name: width(text) for name, text in drawn.items()}
+    assert widths == {
+        "flow.en.default.svg": 960.0,
+        f"flow.en.{dark}.svg": 960.0,
+        f"flow.en.{PHONE}.svg": 480.0,
+        f"flow.en.{dark}+{PHONE}.svg": 480.0,
+    }
+    head = "figure/body/steps[plan]/head"
+    [said] = [line for line in shown.stdout.splitlines() if line.startswith("fails: ")]
+    assert said.startswith(f"fails: {PIECE_FOLDER}/content.en.yaml#{head}: `{PHONE}`: {head}: ")
+    [kept] = [f for f in reading.read_yaml(root / FINDINGS)["findings"] if f["level"] == "fails"]
+    assert (kept["code"], kept["message"]) == ("text-overflow", said.split(f"#{head}: ", 1)[1])
+
+
+def width(svg_text: str) -> float:
+    found = re.match(r'<svg [^>]*width="([0-9.]+)"', svg_text)
+    assert found is not None
+    return float(found.group(1))
 
 
 def _texts(element: dict[str, Any]) -> Iterator[dict[str, Any]]:

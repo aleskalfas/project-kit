@@ -421,7 +421,7 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.friction_answers, "checked", checked)
         monkeypatch.setattr(rw.head_programs, "build_commits", lambda *a: frozenset())
         # The PR's base is fetched from `upstream`; the branch tracks no remote here.
-        monkeypatch.setattr(rw.friction_answers, "base_remote", lambda _base: "upstream")
+        monkeypatch.setattr(rw.pr_head, "base_remote", lambda _base: "upstream")
         if move is None:
             monkeypatch.setattr(rw.composed_move, "invoke_move_issue", move_issue)
         else:
@@ -893,7 +893,7 @@ def test_the_head_is_fetched_from_the_pr_s_branch_or_its_pull_ref(
         sources=sources,
         fork=fork,
     )
-    assert sources == [rw.friction_answers.Source(remote, ref)]
+    assert sources == [rw.pr_head.Source(remote, ref)]
 
 
 #: What review-work says of a change check it could not run at the PR's head.

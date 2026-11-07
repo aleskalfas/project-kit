@@ -27,11 +27,14 @@ from tests.adopter_repo import MakeAdopterRepo
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
     LOCK,
+    PHONE,
+    PHONE_WIDE,
     PIECE,
     PIECE_FOLDER,
     drawing_project,
     lay_out_drawing,
     list_drawing_libraries,
+    on_devices,
     write_content,
     write_picture,
 )
@@ -154,6 +157,18 @@ def test_a_record_that_no_longer_verifies_is_not_believed(tmp_path: Path) -> Non
     assert ("produced-record-missing", MISSING) in [
         (f["label"], f["location"]) for f in found["findings"]
     ]
+
+
+def test_a_finding_at_one_size_reads_the_same_from_the_record_as_computed(tmp_path: Path) -> None:
+    root = on_devices(tmp_path, head=PHONE_WIDE)
+    computed = [f for f in document(root)["findings"] if f["label"] == "text-overflow"]
+    assert run_main(render, PIECE, cwd=root).returncode == 0
+    found = document(root)
+    assert "the scenes of 1 read from their findings record" in found["summary"][0]
+    [overflow] = [f for f in found["findings"] if f["label"] == "text-overflow"]
+    assert [overflow] == computed
+    assert overflow["severity"] == "error"
+    assert overflow["message"].startswith(f"`{PHONE}`: figure/body/steps[plan]/head: ")
 
 
 def test_past_the_validations_bound_a_piece_without_a_record_fails_as_not_checked(
@@ -908,7 +923,8 @@ def test_a_version_handed_out_with_another_state_fails_and_setting_it_back_mends
             "location": f"{PIECE_FILE}#state",
             "message": (
                 f"{RECORD} hands out version 1, and the state of `flow` is {state} — set its "
-                "state back to final, and copy the piece for new work"
+                "state back to final, and for new work run `pkit visual take-up flow <name>`, "
+                "which takes it up again as a new draft"
             ),
             "label": "handed-out-state",
         }

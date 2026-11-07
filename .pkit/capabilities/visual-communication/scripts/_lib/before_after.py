@@ -221,12 +221,9 @@ def _why(before: Side, after: Side) -> str:
 
 def _stale(project: pl.Project, built: Path) -> dict[str, list[str]]:
     """Each produced picture the project's scenes read that is stale under its lock, with
-    what changed, and each that is missing, with why. A picture's inputs are read under the
-    lock of the piece's own file, so that file takes the side's first, in the location
-    `built`, which is the side's alone. Git ignores that location, so they are read
-    through the project's own `Held`, which lists its files as they lie."""
-    if project.env.records:
-        pl.write_lock(project.piece, project.lock)
+    what changed, and each that is missing, with why. Git ignores the location `built`, so a
+    picture's inputs are read through the project's own `Held`, which lists its files as
+    they lie."""
     stale = {
         output: [change.replace(f"{built}/", "") for change in changes]
         for output, changes in exports.stale_outputs(project, project.held).items()
@@ -236,12 +233,13 @@ def _stale(project: pl.Project, built: Path) -> dict[str, list[str]]:
 
 def _refuse_no_page(results: Sequence[tuple[str, SceneResult]]) -> None:
     """Raises Refused where a scene holds no page, which the engine reports as findings and
-    the renderer draws as no file: naming each such language, and what failed in it, each
-    reason once."""
+    the renderer draws as no file: naming each such language once, at any key over the size
+    axes, and what failed in it, each reason once."""
     blank = [(language, result) for language, result in results if not result.scene.pages]
     if not blank:
         return
-    languages = ", ".join(f"`{language}`" for language, _ in blank)
+    named = dict.fromkeys(language for language, _ in blank)
+    languages = ", ".join(f"`{language}`" for language in named)
     failed = [
         finding.message
         for _, result in blank

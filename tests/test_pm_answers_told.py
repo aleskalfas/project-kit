@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(SCRIPTS_DIR))
-from _lib import answers_told, fixers, friction_answers  # noqa: E402
+from _lib import answers_told, fixers, friction_answers, pr_head  # noqa: E402
 
 HEAD = "a" * 40
 LEFT_AT = "b" * 40
@@ -82,7 +82,7 @@ def test_what_is_told_is_fed_from_all_three_reads(monkeypatch) -> None:
 
 def test_the_answers_are_derived_at_the_head_against_the_base(monkeypatch) -> None:
     reads = _Reads(monkeypatch)
-    source = friction_answers.Source("origin", "refs/heads/feat/42-thing")
+    source = pr_head.Source("origin", "refs/heads/feat/42-thing")
     answers_told.at_head(HEAD, "integration", ROOT, reads.read_body, source=source)
     assert reads.derive_asked == [(HEAD, "integration", source)]
 

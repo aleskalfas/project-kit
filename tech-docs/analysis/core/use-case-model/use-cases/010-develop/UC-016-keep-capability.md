@@ -109,7 +109,7 @@ pkit:
 **Postconditions:**
 
 - While it is registered, the [manifest](../../../glossary.md#term-manifest--manifest) records the [capability](../../../glossary.md#term-capability--capability) as `incubated-in-repo`, and its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) are deployed. [Sync](../../../glossary.md#term-sync--sync) and a [version transition](../../../glossary.md#term-version-transition--version-transition) leave its subtree as the author wrote it.
-- While it is registered, another installed capability may also provide a [role](../../../glossary.md#term-role--role) the capability provides. Then two installed capabilities provide that role, and it has no provider until the [project](../../../glossary.md#term-project--project) selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
+- While it is registered, another installed capability may also provide a [role](../../../glossary.md#term-role--role) the capability provides. Then two installed capabilities provide that role, and it has no [provider](../../../glossary.md#term-provider--provider) until the [project](../../../glossary.md#term-project--project) selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
 - Once it is uninstalled, the manifest no longer records it, and none of its skills or agent definitions is deployed. Its subtree stays on disk as the author wrote it, and `pkit capabilities register` records it again.
 
 **Minimal guarantees:**

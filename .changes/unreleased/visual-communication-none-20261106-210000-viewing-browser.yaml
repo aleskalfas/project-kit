@@ -1,0 +1,6 @@
+component: visual-communication
+kind: none
+body: >
+  A module of the capability draws a page file through a browser, and says what
+  the browser dropped (#2784). No command calls it until #2785, so nothing a
+  project can reach moves.

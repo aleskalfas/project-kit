@@ -4,8 +4,8 @@ title: A dead anchor is an error, never silence
 status: active
 statement: An anchor that resolves to nothing is reported as an error, and never read as an anchor on something that did not change.
 measure: "A path that matches no file, or only excluded or answer files, is a `dead-anchor`. So is an identifier that does not resolve, and a value for which the query command that resolves it names no file. The whole-repository check reports every one. Where the friction mode is `enforcing`, the change check fails on each that is the change's own, as COR-050 point 12 assigns them."
-applies-to: Every anchor of every artefact in the declared places, one under an excluded path included, wherever either friction check or validation reads it.
-obligation: v1:sha256:7ffbafc4be3e1d660c1449b53da3de411dfc530dc6ec2582d4a0b29dc5e37e13
+applies-to: Every anchor of every artefact in the declared places, one under an excluded path included. It holds wherever the change check, the whole-repository check or validation reads the anchor.
+obligation: v1:sha256:ab46773f56798ebe9c6b4fa7433a041b5bdde16a23e4fa132ea220483364c686
 actors:
   - ACT-developer
 refines: []

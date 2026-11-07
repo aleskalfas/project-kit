@@ -39,7 +39,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from _lib import audit_log, comment_log, default_branch, friction_answers, topology
+from _lib import audit_log, comment_log, default_branch, friction_answers, pr_head, topology
 from _lib.audit import audit_key, render_audit_comment
 from _lib.comment import post_audit_once
 from _lib.gh import gh_run
@@ -112,7 +112,7 @@ def take_test(
     *,
     issue: int,
     base: str,
-    source: friction_answers.Source | None,
+    source: pr_head.Source | None,
     capability_root: Path,
     config: dict,
 ) -> Standing:
@@ -164,13 +164,13 @@ def build_commits(issue: int, capability_root: Path, config: dict) -> frozenset[
 
 
 def _held(
-    head: str, base: str, named: frozenset[str], source: friction_answers.Source | None
+    head: str, base: str, named: frozenset[str], source: pr_head.Source | None
 ) -> tuple[str, ...] | str:
     """Of the commits `named`, each `head` holds that the base's tip does not, or why
     that could not be read."""
     problem = friction_answers.refresh_base(base)
     if problem is None and source is not None:
-        problem = friction_answers.fetch_head(head, source)
+        problem = pr_head.fetch_head(head, source)
     if problem is not None:
         return problem
     try:

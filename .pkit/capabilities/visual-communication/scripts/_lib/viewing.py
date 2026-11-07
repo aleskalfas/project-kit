@@ -96,11 +96,14 @@ def opened(root: Path, name: str) -> pl.Project:
         raise pl.Refused(f"the brand of `{name}` cannot be read: {said}") from exc
 
 
-def scenes(project: pl.Project, languages: Sequence[str]) -> list[tuple[str, SceneResult]]:
-    """The scenes of `languages`, computed under the lock. Raises Refused where a font
+def scenes(
+    project: pl.Project, languages: Sequence[str], keys: Sequence[str] | None = None
+) -> list[tuple[str, SceneResult]]:
+    """The scenes of `languages`, computed under the lock: one for each key over the size
+    axes, or each that serves one of the combinations `keys`. Raises Refused where a font
     cannot measure the text."""
     try:
-        return project.scenes(languages)
+        return project.scenes(languages, keys)
     except MissingFont as exc:
         raise pl.Refused(f"`{project.piece.name}` cannot be drawn: {exc}") from exc
 
@@ -179,7 +182,10 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     temporary folder of the clone's local folder, which it removes (DEC-015 point 2). Raises
     Refused for a page the scene does not hold, or that the tool cannot draw."""
     shown = {
-        language: (scene := result.scene.to_dict(), _numbers(scene, wanted.pages))
+        (language, result.scene.size_key): (
+            scene := result.scene.to_dict(),
+            _numbers(scene, wanted.pages),
+        )
         for language, result in results
     }
     local = project.root / LOCAL
@@ -187,7 +193,7 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     made = _Made(project)
     with tempfile.TemporaryDirectory(prefix="faces-", dir=local) as faces:
         for language, key, drawn in pl.drawn(project, results, "svg", wanted.keys):
-            scene, numbers = shown[language]
+            scene, numbers = shown[language, project.size_key(key)]
             for number in numbers:
                 made.add(scene, language, key, number, drawn, Path(faces))
             made.lost(scene, language, key, numbers, drawn.losses)

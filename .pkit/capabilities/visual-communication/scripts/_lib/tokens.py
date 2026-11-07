@@ -42,12 +42,23 @@ format may add:
 - *The Resolver document* has `version`, `sets` and `modifiers`, and `resolutionOrder`
   naming each set and modifier once as `{"$ref": "#/sets/<n>"}` or
   `{"$ref": "#/modifiers/<n>"}`; later wins. A source is `{"$ref": "<token file>"}`, a
-  file of the brand's version folder. Each modifier is a shared axis: its contexts are the
-  axis's modes, and its default the axis's. A brand may leave out an axis it does not vary.
+  file of the brand's version folder. Each modifier is a shared axis the brand varies:
+  its contexts are the modes it gives, the axis's default among them, and its default the
+  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary.
 - *Fonts* lie in the capability's extension key, `pkit.visual-communication`, on a
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
   how it is measured, `file` alone in format 1.
+
+**The axes a brand has** (DEC-004 point 2, DEC-021 point 2), which its keys span:
+
+- *every shared value axis, whole:* a mode the brand does not give takes its values at
+  the axis's default, and in a brand built on another its base's values there. So a new
+  mode of the foundations reads no released brand as broken;
+- *a shared size axis only where it gives one:* a brand with no base has one where a
+  modifier varies it, with the modes that modifier gives. A brand built on another has
+  its base's sizes. So a brand that gives no size keeps its combinations when the
+  foundations declare a size axis, and a piece that names a size it lacks is refused.
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
 roles' defaults, then resolves aliases. Every shared role must resolve in every
@@ -89,8 +100,9 @@ its major is the one the entry names. In each combination:
 - *each library's private tokens stay its own:* an alias reaches the exported roles and
   the tokens of the library that writes it, never a token its base keeps private, which
   fails. So a base may reshape its private tokens freely;
-- *the base's axes:* the brand varies values on its base's axes, by their names and modes.
-  A modifier for another axis, a context for another mode, or another default fails;
+- *the base's axes:* the brand varies values on its base's axes, by their names and modes,
+  its base's sizes among them. A modifier for another axis, a context for another mode, or
+  another default fails;
 - *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
   has no brand's own roles), so each link of a chain opens at most what the last opens.
   A base opens a role of a library only where it names that library, and a brand built on
@@ -844,7 +856,9 @@ class Brand:
 
     - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
     - `scope`: the roles it is resolved against.
-    - `axes`: the shared axes, each a key's axis, whether the brand varies it or not.
+    - `axes`: the axes it has, each a key's axis: every shared value axis, whole, whether
+      it varies it or not, and each shared size axis it or its base gives, with the modes
+      given (DEC-021 point 2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
       their version fits, whose roles it reaches (DEC-008 point 4).
     - `roles`: the token paths it exports, in path order: the shared roles, and each role
@@ -866,6 +880,7 @@ class Brand:
         version: str,
         folder: Path,
         scope: Scope,
+        axes: dict[str, Axis],
         named: frozenset[str],
         roles: tuple[str, ...],
         valued: tuple[str, ...],
@@ -882,7 +897,7 @@ class Brand:
         self.version = version
         self.folder = folder
         self.scope = scope
-        self.axes = dict(scope.axes)
+        self.axes = axes
         self.named = named
         self.roles = roles
         self.valued = valued
@@ -1118,19 +1133,19 @@ class _BrandReader:
         if self.fatal or resolver is None:
             raise TokenError(self._unique(self.fatal))
         order, sets, modifiers = resolver
-        axes = self.scope.axes
+        axes = self._axes(modifiers, base)
         views: dict[str, _View] = {}
         resolved: dict[str, dict[str, _Resolved]] = {}
         hidden: dict[str, dict[str, _Resolved]] = {}
         everything = keys.combinations({axis.name: axis.modes for axis in axes.values()}, axes)
         for combination in everything:
             key = keys.key_of(combination, axes)
-            sources = self._sources(order, sets, modifiers, combination)
+            sources = self._sources(order, sets, modifiers, combination, base)
             views[key] = self._view(sources, base, key)
             resolved[key], hidden[key] = self._resolve_combination(views[key], key)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
-        self._check_value_axes(views, resolved, hidden)
+        self._check_value_axes(axes, views, resolved, hidden)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
         self._check_library_tokens()
@@ -1152,6 +1167,7 @@ class _BrandReader:
             version=str(library.get("version")),
             folder=self.folder,
             scope=self.scope,
+            axes=axes,
             named=self.named,
             roles=exported,
             valued=valued,
@@ -1344,8 +1360,9 @@ class _BrandReader:
     def _read_modifiers(
         self, raw: Any, rel: str, base: Brand | None
     ) -> dict[str, dict[str, tuple[str, ...]]]:
-        """Each modifier, one of the shared axes; a brand built on another keeps its base's
-        axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
+        """Each modifier, one of the shared axes, by the contexts of the modes it gives, the
+        axis's default among them (DEC-004 point 1); a brand built on another keeps its
+        base's axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
@@ -1403,11 +1420,20 @@ class _BrandReader:
                     f"{where}.default",
                 )
                 continue
-            if not isinstance(contexts, Mapping) or set(contexts) != set(axis.modes):
+            if not isinstance(contexts, Mapping) or added:
                 self._fail(
                     "brand-axis",
-                    f"the modifier `{name}` must have one context for each mode of the axis: "
-                    f"{', '.join(axis.modes)}",
+                    f"the modifier `{name}` must have one context for each mode it gives, "
+                    f"each a mode of the axis: {', '.join(axis.modes)}",
+                    rel,
+                    f"{where}.contexts",
+                )
+                continue
+            if axis.default not in contexts:
+                self._fail(
+                    "brand-axis",
+                    f"the modifier `{name}` must give the axis's default, `{axis.default}`, "
+                    f"among its contexts",
                     rel,
                     f"{where}.contexts",
                 )
@@ -1423,8 +1449,30 @@ class _BrandReader:
             modifiers[name] = {
                 mode: self._read_sources(contexts[mode], rel, f"{where}.contexts.{mode}")
                 for mode in axis.modes
+                if mode in contexts
             }
         return modifiers
+
+    def _axes(
+        self, modifiers: Mapping[str, Mapping[str, tuple[str, ...]]], base: Brand | None
+    ) -> dict[str, Axis]:
+        """The axes the brand has (DEC-021 point 2): its base's, where it builds on one;
+        else every shared value axis, whole, and each shared size axis a modifier varies,
+        with the modes that modifier gives, in the order the foundations declare them."""
+        if base is not None:
+            return dict(base.axes)
+        return {
+            name: axis
+            if axis.kind == "value"
+            else Axis(
+                name=name,
+                kind=axis.kind,
+                modes=tuple(mode for mode in axis.modes if mode in modifiers[name]),
+                default=axis.default,
+            )
+            for name, axis in self.scope.axes.items()
+            if axis.kind == "value" or name in modifiers
+        }
 
     def _read_sources(self, raw: Any, rel: str, where: str) -> tuple[str, ...]:
         if not isinstance(raw, list):
@@ -1626,10 +1674,20 @@ class _BrandReader:
         sets: Mapping[str, tuple[str, ...]],
         modifiers: Mapping[str, Mapping[str, tuple[str, ...]]],
         combination: Mapping[str, str],
+        base: Brand | None,
     ) -> list[str]:
+        """The brand's sources for `combination`, in resolution order. At a mode a modifier
+        does not give, it takes the sources of the axis's default; in a brand built on
+        another, none, so its base's values hold there (DEC-004 point 2)."""
         files: list[str] = []
         for kind, name in order:
-            files.extend(sets[name] if kind == "sets" else modifiers[name][combination[name]])
+            if kind == "sets":
+                files.extend(sets[name])
+                continue
+            contexts, mode = modifiers[name], combination[name]
+            if mode not in contexts and base is None:
+                mode = self.scope.axes[name].default
+            files.extend(contexts.get(mode, ()))
         return files
 
     def _view(self, sources: list[str], base: Brand | None, key: str) -> _View:
@@ -1926,13 +1984,14 @@ class _BrandReader:
 
     def _check_value_axes(
         self,
+        axes: Mapping[str, Axis],
         views: Mapping[str, _View],
         resolved: Mapping[str, Mapping[str, _Resolved]],
         hidden: Mapping[str, Mapping[str, _Resolved]],
     ) -> None:
-        """A value axis changes only colours. A library's role its library leaves at its
-        defaults changes only as the roles they alias do, which are judged themselves."""
-        axes = self.scope.axes
+        """A value axis of the brand's `axes` changes only colours. A library's role its
+        library leaves at its defaults changes only as the roles they alias do, which are
+        judged themselves."""
         for key in resolved:
             combination = keys.parse_key(key, axes)
             for axis in axes.values():
