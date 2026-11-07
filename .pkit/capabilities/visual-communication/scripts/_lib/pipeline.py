@@ -39,7 +39,7 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -455,8 +455,10 @@ class Project:
         """One scene for each language, or each of `languages`, and each key over the size
         axes the piece names, or each that serves one of the combinations `keys`, in the
         piece's order of languages, then in key order. Each scene's root names its key, and
-        it reads each role at that key (`ProjectEnv.at`). Each takes the piece's language
-        and state, and the stand-in for a version's number and its date (DEC-016 point 5).
+        it reads each role at that key (`ProjectEnv.at`), and each size axis of the
+        foundations a component reads at its mode there (`sizes_at`). Each takes the
+        piece's language and state, and the stand-in for a version's number and its date
+        (DEC-016 point 5).
         Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
         facts = layout.stand_ins(self.piece.state)
         served = None if keys is None else {self.size_key(key) for key in keys}
@@ -474,6 +476,7 @@ class Project:
                     seam_version=seam.SEAM_VERSION,
                     env=self.env.at(size),
                     facts=facts,
+                    sizes=sizes_at(self.scope.axes, size),
                 ),
             )
             for language in self.piece.languages
@@ -488,6 +491,20 @@ def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis])
     return keys.key_of(
         {axis: mode for axis, mode in combination.items() if axes[axis].kind == "size"}, axes
     )
+
+
+def size_axes(axes: Mapping[str, tokens.Axis]) -> dict[str, tokens.Axis]:
+    """The axes of kind `size` among `axes`: those a component reads by a marked name
+    (DEC-021 point 3)."""
+    return {name: axis for name, axis in axes.items() if axis.kind == "size"}
+
+
+def sizes_at(axes: Mapping[str, tokens.Axis], size_key: str) -> layout.Sizes:
+    """What a scene at the key over the size axes `size_key` reads of them (DEC-021 point
+    3): each size axis of `axes`, the foundations', with its modes and its default, and the
+    mode the key holds on each. Raises keys.BadKey for a key `axes` do not hold."""
+    sized = size_axes(axes)
+    return layout.Sizes(sized, keys.parse_key(size_key, sized))
 
 
 @dataclass
@@ -780,9 +797,10 @@ def fit(piece: Piece, held: Held) -> Fit | None:
 class Fit:
     """The judgement a draft's render gives the search for its lock (`libraries.Judge`):
     whether a whole combination of versions fits the piece as its lock does (DEC-003 point
-    8). It places the piece under the combination, in every language, as the engine finds
-    a tie's ends (`layout.place_top`), and computes no scene. Versions do not fit where,
-    under them:
+    8). It places the piece under the combination, in every language and at each key over
+    the size axes the piece names that the combination's foundations declare, as the
+    engine finds a tie's ends (`layout.place_top`), and computes no scene. Versions do not
+    fit where, under them, at a key (DEC-021 point 7):
 
     - an item the lock places carries a key that both its component and its list declare,
       where it does not under the lock (DEC-010 point 2). The libraries of the item's
@@ -792,16 +810,19 @@ class Fit:
       Every library whose component the placing read or looked for is implicated.
 
     So what the lock already shows holds nothing back: a clash under the lock, an end it
-    does not find, and what a library it does not name yet brings. Each component file and
-    each produced picture's record is read once, across every combination judged. The
-    placing under the lock, which each combination is compared with, is made at the first
-    judgement."""
+    does not find, and what a library it does not name yet brings. A misfit at every key
+    the lock places the piece at reads as it is; one at some keys is said at each, ending
+    with the key it holds at. Each component file, each produced picture's record and each
+    version of the foundations' declarations is read once, across every combination judged.
+    The placing under the lock, which each combination is compared with, is made at the
+    first judgement."""
 
     def __init__(self, piece: Piece, held: Held) -> None:
         self.piece = piece
         self.held = held
         self.components: dict[Path | None, tuple[dict[str, Any] | None, str | None]] = {}
         self.pictures: dict[str, PictureInfo | str] = {}
+        self.declared: dict[Path, dict[str, tokens.Axis]] = {}
         self._placed: dict[frozenset[str], _Placed] = {}
         self._lock: _Placed | None = None
 
@@ -810,14 +831,22 @@ class Fit:
         if not under_lock.items and not under_lock.drawn:
             return []
         now = self._place(versions)
-        misfits: dict[str, Misfit] = {}
+        by_size: dict[str, dict[str, Misfit]] = {size: {} for size in under_lock.sizes}
         for at, (said, implicates) in now.clashes.items():
-            language, item, _ = at
-            if (language, item) in under_lock.items and at not in under_lock.clashes:
-                misfits.setdefault(said, Misfit("clash", said, implicates))
-        for _, tie, end in sorted(under_lock.drawn - now.found):
+            language, size, item, _ = at
+            if (language, size, item) in under_lock.items and at not in under_lock.clashes:
+                by_size[size].setdefault(said, Misfit("clash", said, implicates))
+        for _, size, tie, end in sorted(under_lock.drawn - now.found):
             said = f"the end `{end}` of the tie `{tie}` would not be found"
-            misfits.setdefault(said, Misfit("end", said, now.asked))
+            by_size[size].setdefault(said, Misfit("end", said, now.asked))
+        misfits: dict[str, Misfit] = {}
+        for size, found in by_size.items():
+            for said, misfit in found.items():
+                if all(said in other for other in by_size.values()):
+                    misfits.setdefault(said, misfit)
+                else:
+                    named = f"{said} at `{size}`"
+                    misfits.setdefault(named, replace(misfit, said=named))
         return list(misfits.values())
 
     def _under_lock(self) -> _Placed:
@@ -841,36 +870,71 @@ class Fit:
             env = _FitEnv(self, versions)
             placed = _Placed()
             asked: set[str] = set()
-            for language in self.piece.languages:
-                ctx = layout.Context(env, language)
-                top = layout.place_top(ctx, self.piece.top, dict(self.piece.contents[language]))
-                asked |= ctx.asked()
-                if top is not None:
-                    placed.add(language, top)
+            sized = self._size_axes(versions)
+            for combination in self._size_combinations(sized):
+                size = keys.key_of(combination, sized)
+                placed.sizes.append(size)
+                sizes = layout.Sizes(sized, combination)
+                for language in self.piece.languages:
+                    ctx = layout.Context(env, language, sizes=sizes)
+                    content = dict(self.piece.contents[language])
+                    top = layout.place_top(ctx, self.piece.top, content)
+                    asked |= ctx.asked()
+                    if top is not None:
+                        placed.add(language, size, top)
             placed.asked = frozenset(asked)
             self._placed[key] = placed
         return self._placed[key]
 
+    def _size_axes(self, versions: Mapping[str, Library]) -> dict[str, tokens.Axis]:
+        """The size axes the foundations among `versions` declare, read once for each
+        version; none where they hold no foundations, or their declarations cannot be read,
+        which their own check reports."""
+        foundations = versions.get(FOUNDATIONS)
+        if foundations is None:
+            return {}
+        path = foundations.folder / "roles.yaml"
+        if path not in self.declared:
+            try:
+                self.declared[path] = size_axes(tokens.read_declarations(path).axes)
+            except tokens.TokenError:
+                self.declared[path] = {}
+        return self.declared[path]
+
+    def _size_combinations(self, sized: Mapping[str, tokens.Axis]) -> list[dict[str, str]]:
+        """Each combination of the modes the piece names on the size axes `sized`, in key
+        order; the one of their defaults alone where it names a mode they lack, which the
+        piece's own read refuses."""
+        named = {axis: modes for axis, modes in self.piece.modes.items() if axis in sized}
+        try:
+            return keys.combinations(named, sized)
+        except keys.BadKey:
+            return [{}]
+
 
 @dataclass
 class _Placed:
-    """What placing the piece under one combination of versions shows, in every language:
-    each item placed, by its language and key path; each key an item carries that both its
-    component and its list declare, in words, with the libraries it implicates; the ends of
-    each tie drawn; every end found, a left-out tie's included where its item lies on the
-    tie's page; and the library of each component read or looked for."""
+    """What placing the piece under one combination of versions shows, in every language
+    and at each key over the size axes, `sizes`, in key order: each item placed, by its
+    language, its key and its key path; each key an item carries that both its component
+    and its list declare, in words, with the libraries it implicates; the ends of each tie
+    drawn; every end found, a left-out tie's included where its item lies on the tie's
+    page; and the library of each component read or looked for, at any key."""
 
-    items: set[tuple[str, str]] = field(default_factory=set)
-    clashes: dict[tuple[str, str, str], tuple[str, frozenset[str]]] = field(default_factory=dict)
-    drawn: set[tuple[str, str, str]] = field(default_factory=set)
-    found: set[tuple[str, str, str]] = field(default_factory=set)
+    sizes: list[str] = field(default_factory=list)
+    items: set[tuple[str, str, str]] = field(default_factory=set)
+    clashes: dict[tuple[str, str, str, str], tuple[str, frozenset[str]]] = field(
+        default_factory=dict
+    )
+    drawn: set[tuple[str, str, str, str]] = field(default_factory=set)
+    found: set[tuple[str, str, str, str]] = field(default_factory=set)
     asked: frozenset[str] = frozenset()
 
-    def add(self, language: str, top: layout.Instance) -> None:
+    def add(self, language: str, size: str, top: layout.Instance) -> None:
         for each in [top, *top.below()]:
             path = _path_of(each)
             if each.is_item:
-                self.items.add((language, path))
+                self.items.add((language, size, path))
             if each.clashed:
                 above, at = set(), each
                 while at is not None:
@@ -882,17 +946,18 @@ class _Placed:
                         f"the item `{path}` carries `{key}`, which both its component "
                         f"`{each.component.use}` and its list declare"
                     )
-                    self.clashes.setdefault((language, path, key), (said, frozenset(above)))
+                    at = (language, size, path, key)
+                    self.clashes.setdefault(at, (said, frozenset(above)))
             if each.tie is not None and each.tie.ends is not None:
                 for name in each.tie.ends:
-                    self.drawn.add((language, path, name))
-                    self.found.add((language, path, name))
+                    self.drawn.add((language, size, path, name))
+                    self.found.add((language, size, path, name))
             for tie in each.left_out:
                 page = tie.page()
                 for which, name in zip(layout.ENDS, tie.tie.ends if tie.tie else (), strict=False):
                     end = tie.ends.get(which)
                     if end is not None and page is not None and end.item.page() is page:
-                        self.found.add((language, _path_of(tie), name))
+                        self.found.add((language, size, _path_of(tie), name))
 
 
 def _path_of(instance: layout.Instance) -> str:
