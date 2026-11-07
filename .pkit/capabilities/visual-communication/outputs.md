@@ -255,7 +255,7 @@ While it draws, the renderer reports three losses of its own:
 
 ## The HTML renderer
 
-The `html` renderer draws a scene as one *page file*: one language's pages, at one key over the size axes, in one web document. The file holds each mode a reader's system can pick ([Modes](#modes)). Writing it takes no browser. No format reaches this renderer yet, so a piece cannot ask for its file as an export ([Exports](#exports)). The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
+The `html` renderer draws a scene as one *page file*: one language's pages, at one key over the size axes, in one web document. The file holds each mode a reader's system can pick ([Modes](#modes)). Writing it takes no browser. It draws the exports a piece declares as `html` ([Exports](#exports)); previews stay SVG. The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
 
 - **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
@@ -310,11 +310,11 @@ In a file of several keys, a loss that lies in one key alone names it, under `ke
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
-- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows two: `svg`, which the SVG renderer draws, and `pdf`, which the PDF renderer draws.
-- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. Each is drawn from the scenes under the lock `piece.yaml` holds.
+- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows three. The SVG renderer draws `svg`, the PDF renderer `pdf`, and the HTML renderer `html`.
+- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes one [page file](#the-html-renderer) for each language and each set of keys that share one, its pages in order ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **What a file shows of its export.** A component may show the version's number and its date. Each file shows the run's own ([The facts of an export](components.md#the-facts-of-an-export)).
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A page file holds every page too, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), but for a copy at a place it names, and the files of the version handed out ([The lock](files.md#the-lock)).
 
 ### The current copy

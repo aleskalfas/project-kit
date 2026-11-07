@@ -43,13 +43,27 @@ from tests.test_visual_communication_pipeline import (
 from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import importable, yaml_text
 
-check, render, export, mark_final, svg, seam, framing, fingerprint, reading = load(
+(
+    check,
+    render,
+    export,
+    mark_final,
+    svg,
+    html,
+    html_declaration,
+    seam,
+    framing,
+    fingerprint,
+    reading,
+) = load(
     "visual-communication",
     "check.py",
     "render.py",
     "export.py",
     "mark-final.py",
     "plugins.svg",
+    "plugins.html",
+    "plugins.html_declaration",
     "plugins.seam",
     "framing",
     "fingerprint",
@@ -68,9 +82,9 @@ BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
 
 @pytest.fixture(autouse=True)
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """The renderer stands in for the import a render makes when it draws, and the test
-    producer is registered, for the length of the test."""
-    importable(monkeypatch, svg)
+    """The renderers stand in for the import a render or an export makes when it draws, and
+    the test producer is registered, for the length of the test."""
+    importable(monkeypatch, svg, html)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
@@ -589,7 +603,7 @@ def test_a_published_piece_with_no_format_fails_and_the_fix_names_declaring_one(
         "location": f"{PIECE_FILE}#exports",
         "message": (
             "the published piece `flow` declares no format under `exports` — declare one there: "
-            "`svg` or `pdf`"
+            "`svg`, `pdf` or `html`"
         ),
         "label": "published-no-format",
     }
@@ -868,6 +882,79 @@ def test_a_version_the_record_no_longer_keeps_gives_no_lock_and_fails(tmp_path: 
         f"{RECORD} gives no lock of version 7, which wrote the current copy: no fingerprint is "
         f"kept — mend {RECORD}, then {EXPORT_AGAIN}"
     )
+
+
+# --- a piece exported as HTML (DEC-005 point 9, DEC-020 point 1) -------------------------------
+
+#: The image the skeleton piece shows, which the HTML renderer loses once its declaration
+#: draws none.
+IMAGE = "figure/body/steps[note]/pictures[square]/image"
+
+
+def losses_of(root: Path) -> list[dict[str, str]]:
+    return [finding for finding in document(root)["findings"] if finding["label"] == "loss"]
+
+
+def test_the_html_renderer_loses_nothing_of_a_piece_the_svg_renderer_draws_whole(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, exports=["html"])
+    write_picture(root, framing)
+    assert losses_of(root) == []
+
+
+def test_the_check_reports_what_the_html_renderer_would_lose_unless_the_piece_accepts_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The renderer declares each primitive the SVG renderer does, so its declaration, the
+    image taken out of it for the length of the test, stands for one it would lose."""
+    monkeypatch.delitem(html_declaration.DECLARATION["draws"], "image")
+    root = drawing_project(tmp_path, exports=["html"])
+    write_picture(root, framing)
+    assert losses_of(root) == [
+        {
+            "severity": "warning",
+            "location": f"{PIECE_FILE}#{IMAGE}",
+            "message": (
+                f"the html renderer refuses `{IMAGE}`: the html renderer draws no `image` — for "
+                f"the piece's author — accept it under `accept-losses` with `plugin: html`, "
+                f"`what: {IMAGE}` and a reason, or change what draws it"
+            ),
+            "label": "loss",
+        }
+    ]
+    accepting = [{"plugin": "html", "what": IMAGE, "reason": "The page shows it apart."}]
+    set_fields(root, accept_losses=accepting)
+    assert losses_of(root) == []
+    set_fields(root, accept_losses=[{**accepting[0], "plugin": "svg"}])
+    assert len(losses_of(root)) == 1
+
+
+def test_a_text_that_does_not_fit_is_reported_for_an_html_export_as_for_an_svg_one(
+    tmp_path: Path,
+) -> None:
+    """The renderer draws in the default font profile, which the check measures each text in
+    (UC-099 step 3)."""
+    found = {}
+    for form in ("svg", "html"):
+        root = drawing_project(tmp_path / form, picture=False, exports=[form])
+        steps = [{"id": "plan", "head": LONG_WORD}]
+        write_content(root, body={"use": "tests/steps", "steps": steps})
+        found[form] = [
+            finding for finding in document(root)["findings"] if finding["label"] == "text-overflow"
+        ]
+    assert found["html"]
+    assert found["html"] == found["svg"]
+
+
+def test_a_published_piece_exported_as_html_owes_nothing_of_its_copy(tmp_path: Path) -> None:
+    root = published(tmp_path, exports=["html"])
+    assert (root / PIECE_FOLDER / "current-copy" / "flow.en.default.html").is_file()
+    assert owed(root) == []
+    (root / PIECE_FOLDER / "current-copy" / "flow.en.default.html").unlink()
+    found = owed(root)
+    assert [each["label"] for each in found] == ["current-copy-file-missing"]
+    assert found[0]["location"] == f"{PIECE_FOLDER}/current-copy/flow.en.default.html"
 
 
 # --- what a final piece owes of the version handed out ------------------------------------------

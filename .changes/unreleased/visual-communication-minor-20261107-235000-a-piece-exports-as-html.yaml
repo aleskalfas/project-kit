@@ -1,0 +1,17 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A piece exports as `html` (#2816). A piece that names `html` under `exports`
+  gets one page file for each language and each set of keys that share one: the
+  keys at one key over the size axes that differ only in modes a reader's
+  signal names. The file holds every page in order, carries the run's number,
+  and takes the first key it serves, as in `deck.v1.en.default.html`. A mode no
+  signal names takes a file of its own. The record of exports and a published
+  piece's current copy name page files, an addition at format 1, and the copy
+  replaces or leaves behind a page file as any other. The check reports what
+  the HTML renderer would lose of a piece that exports as `html`, and
+  `accept-losses` takes it. A refusal that holds an SVG or a PDF export holds
+  an HTML one before any write, and a message that lists the formats names
+  `html`.
