@@ -542,6 +542,75 @@ def test_an_export_takes_what_a_run_writes_in_place_of_the_file(tmp_path: Path) 
     assert taken == fingerprint.fingerprint(fingerprint.export_inputs(**sources))
 
 
+def edits_since(recorded: dict[str, Any], sources: dict[str, Any], **written: Any) -> list[Any]:
+    """What `edits` names of `recorded`, reading what `sources` holds of the piece's own."""
+    return fingerprint.edits(
+        recorded,
+        piece=sources["piece"],
+        files=sources["files"],
+        fonts=sources["fonts"],
+        **written,
+    )
+
+
+def test_a_library_version_the_fingerprint_names_is_no_edit(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    assert any("library" in entry for entry in recorded["inputs"])
+    assert edits_since(recorded, sources) == []
+
+
+def test_an_edit_names_a_file_by_its_path_in_the_piece(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    write(sources["piece"] / "scenes" / "main.yaml", PIECE_YAML)
+    assert edits_since(recorded, sources) == [
+        fingerprint.Edit("scenes/main.yaml", "`scenes/main.yaml` changed")
+    ]
+
+
+def test_an_edit_names_a_font_by_the_start_of_its_hash(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    before = sha(b"font")[: fingerprint.FONT_NAME]
+    after = sha(b"another font")[: fingerprint.FONT_NAME]
+    sources["fonts"][0].write_bytes(b"another font")
+    named = {edit.name: edit.said for edit in edits_since(recorded, sources)}
+    assert named == {
+        f"font:{before}": f"the font {before} is no longer read",
+        f"font:{after}": f"the font {after} is read now",
+    }
+
+
+def test_what_a_run_writes_puts_the_lock_back_for_an_edit(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    path = sources["piece"] / "piece.yaml"
+    held = path.read_bytes()
+    path.write_bytes(held + b"lock: {brand: 2.0.0}\n")
+    assert [edit.name for edit in edits_since(recorded, sources)] == ["piece.yaml"]
+    assert edits_since(recorded, sources, written={path: held}) == []
+
+
+@pytest.mark.parametrize("fault", [{"form": 99}, {"format": 99}, {"inputs": "none"}])
+def test_a_fingerprint_that_cannot_be_read_gives_no_edits(
+    tmp_path: Path, fault: dict[str, Any]
+) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    with pytest.raises(fingerprint.UnreadableFingerprint):
+        edits_since({**recorded, **fault}, sources)
+
+
+def test_an_input_that_cannot_be_read_gives_no_edits(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    later = PIECE_YAML.replace("schema_version: 1", "schema_version: 2")
+    write(sources["piece"] / "scenes" / "main.yaml", later)
+    with pytest.raises(fingerprint.FingerprintError, match="no converter"):
+        edits_since(recorded, sources)
+
+
 def test_only_an_export_leaves_a_field_out(tmp_path: Path) -> None:
     sources = lay_piece(tmp_path / "visual")
     key = fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))

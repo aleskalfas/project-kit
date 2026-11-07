@@ -14,6 +14,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
+        - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing_tool.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -85,10 +86,12 @@ pkit:
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-019#2
         - visual-communication:DEC-020#1
         - visual-communication:DEC-020#2
         - visual-communication:DEC-020#3
         - visual-communication:DEC-020#4
+        - visual-communication:DEC-021#8
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -96,6 +99,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
+        - .pkit/capabilities/visual-communication/files.md#axes-and-modes
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
@@ -271,7 +275,7 @@ An *export* is a set of files a piece is handed out as. Each export run is one *
 A published piece keeps a *current copy*, an unnumbered copy of each file of an export. A page links to it, since a link cannot follow a number (DEC-006 point 7).
 
 - **Where:** `current-copy/`, in the piece's folder, committed with the piece, unless the piece names a place.
-- **When.** Each export of a published piece writes it, in the same change as the numbered files. A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
+- **When.** Each export of a published piece writes it, in the same change as the numbered files. So does the export run of `pkit visual upgrade`, under the same rules ([The lock](files.md#the-lock)). A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
 - **Replaced whole.** A run replaces the folder whole, so a file the new version does not write goes. The folder holds nothing else (DEC-017 point 7).
 - **A file's name** is its version's with the number left out: `flow.v3.en.colour-scheme.dark.svg` gives `flow.en.colour-scheme.dark.svg`.
 - **A file's bytes** are its version's, so the two keep one hash, the SHA-256 of the whole file.
@@ -281,7 +285,7 @@ A published piece keeps a *current copy*, an unnumbered copy of each file of an 
 
 ### The record of exports
 
-`exports.yaml` lies in the piece's folder. `pkit visual export` rewrites it, and nobody edits it. It holds one entry for each version, the oldest first. Here it is with its fingerprint left out:
+`exports.yaml` lies in the piece's folder. `pkit visual export` and `pkit visual upgrade` rewrite it, and nobody edits it. It holds one entry for each version, the oldest first. Here it is with its fingerprint left out:
 
 ```yaml
 pkit_schema: visual-communication:exports
@@ -354,8 +358,7 @@ Each of these is found before the first write, so a refused run records no locat
 
 **A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
 
-- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock. The other is writing back that lock, which is no move of it.
-- **One runs today.** `pkit visual upgrade` is still to come ([project-kit#2572](https://github.com/aleskalfas/project-kit/issues/2572)). Until it comes, only writing back that lock gets past the gate, which fails closed.
+- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock ([The lock](files.md#the-lock)). The other is writing back that lock, which is no move of it.
 - **It reads the record, not the files,** so removing the copy changes nothing.
 - **No copy of its own.** Where the record holds no current copy of the piece's own, the export runs.
 - **A fingerprint it cannot read** refuses, and names the record.
@@ -513,7 +516,7 @@ out: web/brand.css
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it (DEC-005 point 7). So the code changes only when the declaration changes, or when the person names the declaration to `pkit visual add`. Naming it lets the command replace a copy not yet released that the lock names, under the same number ([The lock](files.md#the-lock), DEC-013 point 5). The run that leaves the copy prints the difference in the code first.
-- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), in every combination of the brand's axes, at the versions the lock names. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
+- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
@@ -527,7 +530,7 @@ The CSS writer writes one style sheet. Form 1 spells it as follows.
 
 - **Names.** Each token path gives one custom property: `--`, then the `prefix` and `--` where the declaration names one, then the path's segments joined by `--`. A segment keeps its own single hyphens, so no two paths give one name: `space.1` gives `--space--1`, `text-primary` gives `--text-primary`, a library's role `test-parts.note` gives `--test-parts--note`, and `space.1` with the prefix `brand` gives `--brand--space--1`.
 - **Values.** A `color` is `#rrggbb`, each channel rounded to 8 bits, half up, or `#rrggbbaa` where its alpha is not 1. A `dimension` is its number and `px`. A `fontFamily` is its names, each in double quotes, joined by `, `. A `fontWeight` or a `number` is the number, in the capability's canonical text, such as `1.4` or `16`.
-- **Modes.** Each mode is switched by an attribute, `data-<axis>="<mode>"`, on one element: the page's root by default. An area that changes modes sets every axis's attribute on its own element; the root may leave out an axis at its default. Form 1 spells value axes alone, and refuses a brand with an axis of another kind.
+- **Modes.** Each mode is switched by an attribute, `data-<axis>="<mode>"`, on one element: the page's root by default. An area that changes modes sets every axis's attribute on its own element; the root may leave out an axis at its default. Form 1 spells value axes alone. Of a brand that gives a size, it writes every value at each size axis's default (DEC-021 point 8). No rule follows a window's width.
 
 The rules come in this order:
 
@@ -547,7 +550,7 @@ A rule with no token is not written. A rule holds each token once, in the order 
 
 It holds no `[data-contrast="standard"]` rule: every token the contrast axis changes, the colour scheme changes too, and its name comes first. The writer writes each declaration on a line of its own.
 
-**Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 that type is `typography`, such as the test brand's `type.body`.
+**Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 that type is `typography`, such as the test brand's `type.body`. Each other token a size changes is written at the size axis's default, and reported as approximated.
 
 ### The JSON code writer
 
@@ -556,7 +559,7 @@ The JSON writer writes the [document of values](#the-hand-over) as one file, for
 - **Its form.** Form 1 is version 1 of the document. The schema `.pkit/capabilities/visual-communication/schemas/values.schema.json` states that form, so a program can check the file against it. A later version of the document is a new form, and the writer keeps writing this one ([Versions](#versions)).
 - **What it holds.** It holds what the code holds ([The declaration](#the-declaration)), in the fields the hand-over opens with, and no others.
 - **Names.** A token keeps its path as the brand exports it, such as `space.1`. So the writer takes no `prefix`, and refuses a declaration that names one, saying why.
-- **Modes.** A token's `values` holds its value under the key of each combination ([Keys of combinations](files.md#keys-of-combinations)). A program picks a set of values by its key. Value axes and size axes are written alike.
+- **Modes.** A token's `values` holds its value under the key of each combination ([Keys of combinations](files.md#keys-of-combinations)). A program picks a set of values by its key. Value axes and size axes are written alike, so the keys of each size the brand gives are among them (DEC-021 point 8).
 - **Values.** Each value is in its DTCG form, as in the hand-over.
 - **The text.** Each key of an object lies on its own line, down to a token's values. Each value then keeps to one line, in the capability's canonical text. So a changed value changes one line, and the same document gives the same file on every machine.
 - **Losses.** The writer takes every value type and every kind of axis, so it reports no loss.

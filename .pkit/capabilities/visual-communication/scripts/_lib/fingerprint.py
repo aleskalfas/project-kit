@@ -56,6 +56,10 @@ is kept.
 **A version's lock** is read back from its fingerprint (`lock_of`, DEC-017 point 1): each
 input of a library version names its library and that version, and those pairs are the
 lock.
+
+**An edit since a version** (`edits`, DEC-019 point 3) is an input of a piece's own that
+differs from the version's fingerprint, each with the word a person names it by. The files
+of its library versions are left out, so a lock's move counts for nothing.
 """
 
 from __future__ import annotations
@@ -108,6 +112,9 @@ PIECE_FIELDS_LEFT_OUT = (
 #: The field of a produced output's record an export's fingerprint leaves out: what the
 #: record only records (DEC-006 point 5).
 RECORD_FIELDS_LEFT_OUT = ("recorded",)
+
+#: As much of a font's hash as names it in words.
+FONT_NAME = 12
 
 
 class FingerprintError(Exception):
@@ -300,15 +307,20 @@ def changes(recorded: Mapping[str, Any], inputs: Iterable[Input]) -> list[str]:
     if fault is not None:
         return [fault]
     then = {canonical_json(_identity(entry)): entry["sha256"] for entry in recorded["inputs"]}
-    now = {item.text: item.sha256 for item in inputs}
+    return [said for _, said in _differing(then, {item.text: item.sha256 for item in inputs})]
+
+
+def _differing(then: Mapping[str, str], now: Mapping[str, str]) -> list[tuple[str, str]]:
+    """Each input, by its identity's canonical text, whose hash differs between `then` and
+    `now`, or that only one of them reads, with what differs in words."""
     found = []
     for text in sorted(set(then) | set(now)):
         if text not in now:
-            found.append(f"{describe(text)} is no longer read")
+            found.append((text, f"{describe(text)} is no longer read"))
         elif text not in then:
-            found.append(f"{describe(text)} is read now")
+            found.append((text, f"{describe(text)} is read now"))
         elif then[text] != now[text]:
-            found.append(f"{describe(text)} changed")
+            found.append((text, f"{describe(text)} changed"))
     return found
 
 
@@ -338,7 +350,7 @@ def describe(text: str) -> str:
     if "library" in identity:
         return f"`{identity['path']}` of {identity['library']}@{identity['version']}"
     if "font" in identity:
-        return f"the font {identity['font'][:12]}"
+        return f"the font {identity['font'][:FONT_NAME]}"
     if "plugin" in identity:
         return f"the plugin `{identity['plugin']}` {identity['version']}"
     if "value" in identity:
@@ -571,20 +583,75 @@ def verify(recorded: Mapping[str, Any], kind: str, **sources: Any) -> list[str]:
     `sources` under the form the fingerprint names; empty when it verifies. An export's
     file is read without the fields its kept input names, whatever the list holds today
     (DEC-016 point 4)."""
-    fault = _form_fault(recorded)
+    fault = _form_fault(recorded) or _format_fault(recorded)
     if fault is not None:
         return [fault]
-    form = recorded["form"]
-    format = recorded.get("format")
-    if isinstance(format, bool) or format != FORMAT:
-        return [f"the fingerprint read at format {format!r}, which no converter reaches"]
     if kind == "export":
         sources = {**sources, "kept": _kept_fields(recorded)}
     try:
-        inputs = INPUT_SETS[form][kind](format=format, **sources)
+        inputs = INPUT_SETS[recorded["form"]][kind](format=recorded["format"], **sources)
     except FingerprintError as exc:
         return [str(exc)]
     return changes(recorded, inputs)
+
+
+def _format_fault(recorded: Mapping[str, Any]) -> str | None:
+    """Why this capability reads no fingerprint taken at this format, or None where it does."""
+    format = recorded.get("format")
+    if isinstance(format, bool) or format != FORMAT:
+        return f"the fingerprint read at format {format!r}, which no converter reaches"
+    return None
+
+
+@dataclass(frozen=True)
+class Edit:
+    """An input of a piece's own that differs from a version's fingerprint: `name` is the word
+    a person names it by, a file by its path within the piece's folder and a font by its hash's
+    start, and `said` says what differs in words."""
+
+    name: str
+    said: str
+
+
+def edits(
+    recorded: Mapping[str, Any],
+    *,
+    piece: Path,
+    files: Iterable[Path],
+    fonts: Iterable[Path],
+    written: Mapping[Path, bytes] | None = None,
+) -> list[Edit]:
+    """Each input of an export's fingerprint `recorded`, the files of its library versions left
+    out, that differs from what is read now, in the order `verify` names them (DEC-019 point
+    3). So neither a move of the lock nor a library version gone from the project counts,
+    and `written` puts the lock back in `piece.yaml`. Raises UnreadableFingerprint where the
+    fingerprint cannot be read, and FingerprintError where an input cannot be."""
+    fault = _form_fault(recorded) or _format_fault(recorded) or _inputs_fault(recorded)
+    if fault is not None:
+        raise UnreadableFingerprint(fault)
+    inputs = INPUT_SETS[recorded["form"]]["export"](
+        piece=piece,
+        files=files,
+        versions={},
+        fonts=fonts,
+        format=recorded["format"],
+        written=written,
+        kept=_kept_fields(recorded),
+    )
+    then = {
+        canonical_json(_identity(entry)): entry["sha256"]
+        for entry in recorded["inputs"]
+        if "library" not in entry
+    }
+    now = {item.text: item.sha256 for item in inputs}
+    return [Edit(_name_of(text), said) for text, said in _differing(then, now)]
+
+
+def _name_of(text: str) -> str:
+    """The word a person names an input of a piece's own by, from its identity's canonical
+    text. A part of a file takes the file's path, so one name passes all that file holds."""
+    identity = load_json(text)
+    return identity["file"] if "file" in identity else f"font:{identity['font'][:FONT_NAME]}"
 
 
 def read_whole(recorded: Mapping[str, Any]) -> list[str]:

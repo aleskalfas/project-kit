@@ -20,6 +20,9 @@ written code, a piece's lock and the list of libraries (DEC-002 points 3 and 5).
   entry that a path of keys leads to written again in its place, such as a version of the
   list or the release a library's file names, in the style it was written in, every other
   byte kept. The text must read back as it was with that value, or it is refused.
+- **One entry of a file's top taken out** (`without_entry`): the file's text without the
+  lines of a top-level key, such as the place a piece names for its current copy, every
+  other byte kept. The text must read back as it was without that key, or it is refused.
 """
 
 from __future__ import annotations
@@ -199,6 +202,35 @@ def with_value(original: str, path: Sequence[str], name: str, value: Any, *, eac
     if not path:
         raise RecordError(f"write `{name}:` at the top of the file, on a line of its own")
     raise RecordError(f"write `{dotted}` as a block mapping, one {each} an entry")
+
+
+def without_entry(original: str, name: str) -> str:
+    """`original`, the text of a YAML file, with the entry `name` of its top taken out: the
+    line that opens it, and each line its value takes below, with the comments among them.
+    Every other byte is kept: its comments, its order, its line endings and a byte-order
+    mark. Raises RecordError where `original` cannot be read, its top does not hold `name`,
+    or the text would not read back as it was without it. A key the text writes in quotes is
+    found by no line, and the refusal names it, to be written without them."""
+    bom, lines, _ = _lines(original)
+    before = _loaded(original[len(bom) :])
+    if not isinstance(before, Mapping) or name not in before:
+        raise RecordError(f"the file holds no `{name}`")
+    refusal = f"write `{name}:` at the top of the file, on a line of its own"
+    found = _key_lines(lines, [name])
+    if found is None:
+        if _quoted(lines, [name]):
+            raise RecordError(f"write the key `{name}` without quotes")
+        raise RecordError(refusal)
+    start = found[0]
+    written = bom + "".join([*lines[:start], *lines[_block_end(lines, start, 0) + 1 :]])
+    try:
+        # A text that holds no entry left reads as nothing.
+        after = load_yaml(written[len(bom) :]) or {}
+    except ReadError:
+        after = None
+    if after != {key: value for key, value in before.items() if key != name}:
+        raise RecordError(refusal)
+    return written
 
 
 def _with_value(data: Mapping[str, Any], keys: Sequence[str], value: Any) -> dict[str, Any]:
