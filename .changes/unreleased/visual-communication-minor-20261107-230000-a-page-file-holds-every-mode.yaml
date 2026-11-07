@@ -1,0 +1,20 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The HTML renderer's page file holds every mode a reader's system can pick
+  (#2815). Keys that differ only in colour scheme or contrast share one file of
+  one size, and the browser picks among them by `prefers-color-scheme` and
+  `prefers-contrast`. Each colour role is a custom property, the first key's in
+  the plain rule and each other key's under the signals that part it. The file
+  names its schemes, and gives lines and opaque fills the reader's colours under
+  forced colours. It holds no control and no script. The renderer is at 1.1.0,
+  and its declaration names its signal pairs under `holds-modes`. The seam rose
+  to 4, and every plugin's declaration names it. A loss in one key of a file of
+  several names that key under `key`. `pkit visual look --renderer html` draws
+  every key of a file in one browser start, setting each signal by emulation,
+  and runs each read in each key. Its first read stops where a signal does not
+  repaint the page. Its report says an image of a page with no ground lies on
+  the browser's own ground, under `on-browser-ground`, and each page file lists
+  the keys it holds.

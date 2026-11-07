@@ -18,7 +18,7 @@ import struct
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -1231,8 +1231,9 @@ def browser_for(
 
 class Browser:
     """`viewing_browser.draw` in a browser's place: what each call was handed, the file's bytes
-    as it read them among it. It draws each page at the scale it is given, as `read` says, or
-    raises `stops` at the call of that number, from 1."""
+    as it read them among it. It draws each page in each mode at the scale it is given, as
+    `read` says, or as it says of that mode where it is a function of one, or raises `stops`
+    at the call of that number, from 1."""
 
     def __init__(
         self,
@@ -1245,7 +1246,17 @@ class Browser:
         self.version = version
         self.calls: list[dict[str, Any]] = []
 
-    def __call__(self, file: Path, wanted: Any, scale: float, program: Path, folder: Path) -> Any:
+    def __call__(
+        self,
+        file: Path,
+        wanted: Any,
+        scale: float,
+        program: Path,
+        folder: Path,
+        *,
+        signals: Mapping[str, Sequence[str]] | None = None,
+        modes: Sequence[Mapping[str, str]] = ({},),
+    ) -> Any:
         self.calls.append(
             {
                 "name": file.name,
@@ -1254,6 +1265,8 @@ class Browser:
                 "scale": scale,
                 "program": program,
                 "folder": folder,
+                "signals": dict(signals or {}),
+                "modes": [dict(mode) for mode in modes],
             }
         )
         if len(self.calls) in self.stops:
@@ -1267,7 +1280,15 @@ class Browser:
             )
             for each in wanted
         )
-        return viewing_browser.Drawing(self.version, images, self.read)
+        return viewing_browser.Drawing(
+            self.version,
+            tuple(
+                viewing_browser.Shown(
+                    dict(mode), images, self.read(mode) if callable(self.read) else self.read
+                )
+                for mode in modes
+            ),
+        )
 
 
 @pytest.fixture
@@ -1291,12 +1312,9 @@ def html_flow(tmp_path: Path, program: bool = True) -> Path:
 def test_the_html_renderer_draws_one_image_for_each_page_language_and_key_with_its_frames(
     tmp_path: Path,
 ) -> None:
+    """Both keys lie in one file of each language, which one start draws in each mode."""
     root = starter_project(tmp_path)
-    files = {
-        f"tag.{language}.{key}.html": language
-        for language in ("en", "de")
-        for key in ("default", "contrast.high")
-    }
+    files = {f"tag.{language}.default.html": language for language in ("en", "de")}
     program = browser_for(root, tmp_path, "tag", files)
     shown = run_look(
         root,
@@ -1326,6 +1344,8 @@ def test_the_html_renderer_draws_one_image_for_each_page_language_and_key_with_i
     assert first["lock"] == report["lock"]
     starts = [each for each in logged(program) if "flags" in each]
     assert len(starts) == len(files)
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [name for file in files for name in (viewing_browser.PLANTED_FILE, file)]
 
 
 def test_the_svg_renderer_is_named_as_it_is_by_default(flow: Path) -> None:
@@ -1422,14 +1442,16 @@ def test_a_run_replaces_only_its_own_folder_and_a_stop_deletes_no_svg_image(
 def test_the_browser_reads_the_page_file_as_the_renderer_wrote_it(
     tmp_path: Path, browser: Browser
 ) -> None:
+    """Both keys lie in one file, named by the first, which one call draws in each mode."""
     root = html_flow(tmp_path)
     shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
     assert shown.returncode == 0, shown.stderr
-    for call, key in zip(browser.calls, ("default", "colour-scheme.dark"), strict=True):
-        assert call["name"] == f"{PIECE}.en.{key}.html"
-        assert call["bytes"] == page_file_of(root, PIECE, "en", key)
-        assert (html_folder(root) / call["name"]).read_bytes() == call["bytes"]
-        assert call["folder"] == root / viewing.LOCAL
+    [call] = browser.calls
+    assert call["name"] == f"{PIECE}.en.default.html"
+    assert call["bytes"] == page_file_of(root, PIECE, "en", "default")
+    assert call["bytes"] == page_file_of(root, PIECE, "en", "colour-scheme.dark")
+    assert (html_folder(root) / call["name"]).read_bytes() == call["bytes"]
+    assert call["folder"] == root / viewing.LOCAL
 
 
 def test_a_piece_on_a_size_axis_is_read_through_a_browser_at_each_key_from_its_size_s_scene(
@@ -1443,14 +1465,17 @@ def test_a_piece_on_a_size_axis_is_read_through_a_browser_at_each_key_from_its_s
     name_browser(root, write_program(tmp_path / "browser" / "chromium"))
     shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
     assert shown.returncode == 0, shown.stderr
-    assert [call["name"] for call in browser.calls] == [f"{PIECE}.en.{key}.html" for key in keys]
-    widths = {key: call["pages"][0].width for key, call in zip(keys, browser.calls, strict=True)}
-    assert widths["default"] == widths[dark] > widths[PHONE] == widths[f"{dark}+{PHONE}"]
-    for key, call in zip(keys, browser.calls, strict=True):
-        assert call["bytes"] == page_file_of(root, PIECE, "en", key)
+    files = {"default": ("default", dark), PHONE: (PHONE, f"{dark}+{PHONE}")}
+    assert [call["name"] for call in browser.calls] == [f"{PIECE}.en.{key}.html" for key in files]
+    widths = {key: call["pages"][0].width for key, call in zip(files, browser.calls, strict=True)}
+    assert widths["default"] > widths[PHONE]
+    for held, call in zip(files.values(), browser.calls, strict=True):
+        assert all(call["bytes"] == page_file_of(root, PIECE, "en", key) for key in held)
+        assert [mode["prefers-color-scheme"] for mode in call["modes"]] == ["light", "dark"]
     assert [image["key"] for image in html_report(root)["images"]] == keys
     assert run_look(root, PIECE, "--renderer", "html", "--key", PHONE).returncode == 0
     assert browser.calls[-1]["pages"][0].width == widths[PHONE]
+    assert len(browser.calls[-1]["modes"]) == 1
     assert [image["key"] for image in html_report(root)["images"]] == [PHONE]
 
 
@@ -1482,7 +1507,12 @@ def test_a_run_leaves_the_page_file_beside_the_images_and_writes_nothing_else(
     assert f"{viewing.folder_of(PIECE, 'html')}/flow.en.default.html" in made
     assert [path.name for path in (root / viewing.LOCAL).iterdir()] == ["look"]
     assert html_report(root)["page-files"] == [
-        {"language": "en", "key": "default", "file": "flow.en.default.html"}
+        {
+            "language": "en",
+            "key": "default",
+            "keys": ["default", "colour-scheme.dark"],
+            "file": "flow.en.default.html",
+        }
     ]
     assert (
         f"page file: {viewing.folder_of(PIECE, 'html')}/flow.en.default.html, to open in your "
@@ -1575,14 +1605,17 @@ def test_a_first_read_that_fails_stops_the_run(tmp_path: Path) -> None:
 def test_a_browser_that_stops_at_a_later_file_leaves_no_partial_images(
     tmp_path: Path, browser: Browser
 ) -> None:
-    root = html_flow(tmp_path)
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
     browser.stops[2] = viewing_browser.Stopped("the browser stopped at `Page.captureScreenshot`")
     shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
     assert shown.returncode == look.STOPPED
     assert len(browser.calls) == 2
     assert sorted(path.name for path in html_folder(root).iterdir()) == [
-        "flow.en.colour-scheme.dark.html",
         "flow.en.default.html",
+        f"flow.en.{PHONE}.html",
         viewing.REPORT,
     ]
 
@@ -1840,6 +1873,151 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
     assert any("has no face of Held at weight 700" in each for each in lines)
     assert "refused: en, default: a request for https://example.invalid/a.png" in lines
     assert any(each.startswith("loss: figure (en, default): ") for each in lines)
+
+
+# --- the modes a page file holds (DEC-023 point 6) -----------------------------------------------
+
+DARK_KEY = "colour-scheme.dark"
+
+#: The signals of each key of `flow`, as the HTML renderer's declaration pairs them.
+LIGHT_SIGNALS = {"prefers-color-scheme": "light", "prefers-contrast": "no-preference"}
+DARK_SIGNALS = {**LIGHT_SIGNALS, "prefers-color-scheme": "dark"}
+
+
+def emulated_after_the_file(program: Path) -> list[dict[str, str]]:
+    """The signals each emulation set once the stand-in opened the page file."""
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    after = messages[len(methods) - 1 - methods[::-1].index("Page.navigate") :]
+    return [
+        {each["name"]: each["value"] for each in message["params"]["features"]}
+        for message in after
+        if message.get("method") == "Emulation.setEmulatedMedia"
+    ]
+
+
+def test_every_key_of_a_file_is_drawn_from_one_start_with_its_signals_set_and_no_reload(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    program = browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"})
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    assert len([each for each in logged(program) if "flags" in each]) == 1
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [viewing_browser.PLANTED_FILE, "flow.en.default.html"]
+    assert emulated_after_the_file(program) == [LIGHT_SIGNALS, DARK_SIGNALS]
+    assert [image["key"] for image in html_report(root)["images"]] == ["default", DARK_KEY]
+
+
+def test_a_key_asked_alone_is_drawn_out_of_the_file_that_holds_its_group(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """The file is the renderer's, named by the first key it serves and holding each."""
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html", "--key", DARK_KEY)
+    assert shown.returncode == 0, shown.stderr
+    [call] = browser.calls
+    assert call["name"] == f"{PIECE}.en.default.html"
+    assert call["bytes"] == page_file_of(root, PIECE, "en", DARK_KEY)
+    assert call["modes"] == [DARK_SIGNALS]
+    assert call["signals"] == {
+        "prefers-color-scheme": ("light", "dark"),
+        "prefers-contrast": ("no-preference", "more"),
+    }
+    report = html_report(root)
+    assert [image["key"] for image in report["images"]] == [DARK_KEY]
+    assert [entry["keys"] for entry in report["page-files"]] == [["default", DARK_KEY]]
+    assert sorted(path.name for path in html_folder(root).iterdir()) == [
+        f"{PIECE}.en.{DARK_KEY}.frames.json",
+        f"{PIECE}.en.{DARK_KEY}.png",
+        f"{PIECE}.en.default.html",
+        viewing.REPORT,
+    ]
+
+
+def test_a_text_with_no_ink_in_one_key_alone_is_reported_in_that_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = html_flow(tmp_path)
+    label = "figure/body/steps[plan]/head"
+    dim = viewing_browser.Read(
+        (),
+        (viewing_browser.Dropped("figure", label, "Plan the work.", viewing_browser.NO_INK),),
+        (),
+        (),
+        (),
+    )
+    clean = viewing_browser.Read((), (), (), (), ())
+    monkeypatch.setattr(
+        viewing.viewing_browser,
+        "draw",
+        Browser(lambda mode: dim if mode["prefers-color-scheme"] == "dark" else clean),
+    )
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    assert [(each["key"], each["element"]) for each in html_report(root)["dropped"]] == [
+        (DARK_KEY, label)
+    ]
+
+
+def a_dark_picture_of_its_own(root: Path) -> None:
+    """`flow` whose picture takes another file in dark, as a producer can give it."""
+    folder = root / PIECE_FOLDER / "produced" / OUTPUT
+    (folder / f"{DARK_KEY}.png").write_bytes(producer.png(100, 100, (0, 0, 255, 255)))
+
+
+def test_a_loss_in_one_key_of_a_file_is_reported_in_that_key_and_accepted_by_plugin_and_what(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    a_dark_picture_of_its_own(root)
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    [loss] = html_report(root)["losses"]
+    assert (loss["key"], loss["plugin"], loss["did"], loss["accepted"]) == (
+        DARK_KEY,
+        "html",
+        "approximated",
+        False,
+    )
+    assert f"`{DARK_KEY}` takes another" in loss["why"]
+    assert any(
+        each.startswith(f"loss: {loss['page']} (en, {DARK_KEY}): ")
+        for each in shown.stdout.splitlines()
+    )
+    piece = root / PIECE_FOLDER / "piece.yaml"
+    accepted = f"accept-losses:\n  - plugin: html\n    what: {loss['what']}\n    reason: Known.\n"
+    piece.write_text(piece.read_text(encoding="utf-8") + accepted, encoding="utf-8")
+    assert run_look(root, PIECE, "--renderer", "html", "--every-key").returncode == 0
+    assert [each["accepted"] for each in html_report(root)["losses"]] == [True]
+
+
+def test_an_image_of_a_page_with_no_ground_is_said_to_lie_on_the_browsers_own_ground(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    on_white(root)
+    shown = run_look(root, PIECE, "--renderer", "html", "--key", DARK_KEY)
+    assert shown.returncode == 0, shown.stderr
+    [image] = html_report(root)["images"]
+    assert image[viewing.ON_BROWSER_GROUND] is True
+    assert viewing.ON_WHITE not in image
+    assert (
+        f"on the browser's ground: {image['page']} (en, {DARK_KEY}) draws no ground of its own, "
+        f"so it lies on Chrome's own ground in `{DARK_KEY}`, not on white"
+    ) in shown.stdout.splitlines()
+
+
+def test_an_image_of_a_page_with_a_ground_says_nothing_of_the_browsers(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    [image] = html_report(root)["images"]
+    assert image[viewing.ON_BROWSER_GROUND] is False
+    assert "on the browser's ground" not in shown.stdout
 
 
 # --- what fills an export's facts (DEC-016 point 5) ---------------------------------------------

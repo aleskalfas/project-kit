@@ -204,7 +204,7 @@ def draw(
         language=language,
         lock=dict(VERSIONS),
         size_key="default",
-        seam_version=3,
+        seam_version=4,
         env=FakeEnv(**environment),
         facts=facts if facts is not None else layout.stand_ins("draft"),
     )
