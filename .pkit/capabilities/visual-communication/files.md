@@ -204,7 +204,13 @@ browser: ~/browsers/chromium/chrome
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). A version leaves the library folder by a person's hand, or through `pkit visual prune`, which removes only a version that lies behind ([A version that lies behind](#a-version-that-lies-behind)). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Three commands change the library folder, and no other does:
+
+- **`pkit visual add`** changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through this command (DEC-003 point 5).
+- **`pkit visual release`** writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)).
+- **`pkit visual prune`** removes a version that lies behind, whole ([A version that lies behind](#a-version-that-lies-behind)).
+
+The table names the schema each file binds to (see [The binding](#the-binding)), and who writes it.
 
 | File, in the location | Schema | Written by |
 |---|---|---|
@@ -761,7 +767,7 @@ A brand gives a picture role its value as an empty group at the role's path. DTC
 - **It merges as a token's value does,** in the Resolver document's order of sources. So a value axis may give a dark mode its own logo. A brand built on a base keeps its base's logo, unless the base opens the role ([Open roles](#open-roles)).
 - **No brand owes one a value.** A brand that gives it none is not at fault. Its version states that once, as a fact, and no piece states it (DEC-025 point 9).
 - **It is exported only where the brand gives it a value** (DEC-004 point 5). So ceasing to give one breaks the brand ([What a release compares](#what-a-release-compares)).
-- **No written code holds it** ([Written code](outputs.md#written-code)).
+- **No written code holds it.**
 
 ### A library's roles
 
