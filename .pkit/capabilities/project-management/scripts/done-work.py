@@ -67,8 +67,12 @@ predicate.
 
 CI-status gate (#498): in front of the merge, the PR's `statusCheckRollup`
 must be green — a failing or still-pending check refuses the merge (an
-APPROVED verdict is not evidence CI passed). A rollup with no checks, which
-GitHub answers for a project that runs none, passes. A rollup that cannot be
+APPROVED verdict is not evidence CI passed). A rollup with no checks is what
+GitHub answers for a project that runs none, and for a head just pushed,
+before its checks started: it passes only where the PR's base branch requires
+no check, by its protection and its rulesets, and is refused as a pending
+check otherwise, naming the cause — the checks the base requires, or why they
+could not be read (#1965). A rollup that cannot be
 read, or that GitHub's answer does not carry, is no answer, never one of no
 checks: the gate refuses, names why and writes nothing, and `--bypass-ci` does
 not clear it (#1946). The general `--bypass` NEVER
@@ -304,11 +308,12 @@ from _lib.author_delta import author_delta, base_kept
 # predicate.
 from _lib.checkbox_gate import refusal_message as _checkbox_refusal
 from _lib.checkbox_gate import unticked_box_lines
-from _lib.ci_checks import evaluate_ci_gate
+from _lib.ci_checks import RequiredChecks, evaluate_ci_gate, read_required_checks
 
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import fetch_comments, post_audit_once
 from _lib.criteria import checkbox_headings, tick_hints
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -502,6 +507,7 @@ def _head_key(commits: list) -> str:
     return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
 
 
+@escaping
 def main(argv: list[str] | None = None) -> int:
     """Run done-work on `argv` (default: the command line); its exit code."""
     return run(argv).exit_code
@@ -1071,20 +1077,28 @@ def run(
     # the PR before merging (bypassable-with-audit per validation-severity).
     # Checks that cannot be read are no answer, never an answer of no checks:
     # the gate refuses before anything is written, `--bypass-ci` or not (#1946).
+    # No check reported is also what GitHub answers for a head just pushed,
+    # before its checks started, so it passes only where the base requires
+    # none, and is pending otherwise (#1965).
     rollup = _gh_get_status_rollup(pr_number, config)
     if rollup.problem:
         return _ended(UNREADABLE, 2, _ci_unreadable_refusal(pr_number, rollup.problem))
-    ci_gate = evaluate_ci_gate(list(rollup.checks))
+    required = (
+        None if rollup.checks else _gh_get_required_checks(str(pr.get("baseRefName") or ""), config)
+    )
+    ci_gate = evaluate_ci_gate(list(rollup.checks), required)
     if not ci_gate.passing:
         if not args.bypass_ci:
             # Checks still running are a wait, which a re-run can outlast; a
             # failed check needs a change.
+            cause = f"          {ci_gate.cause}.\n" if ci_gate.cause else ""
             return _ended(
                 REFUSED,
                 1,
                 f"[refused] CI-status gate for PR #{pr_number}: checks are "
                 "not all green.\n"
                 f"          failing/pending: {', '.join(ci_gate.failing_checks)}\n"
+                f"{cause}"
                 "          → wait for the checks to pass, or override this CI "
                 'gate explicitly with `--bypass-ci "<reason>"` (--bypass does '
                 "not clear a red CI).",
@@ -1096,8 +1110,10 @@ def run(
             "  ci-status: [bypass-ci] checks not green "
             f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
         )
+    elif ci_gate.no_checks:
+        print(f"  ci-status: green (no check reported, and {base} requires none)")
     else:
-        print(f"  ci-status: green{' (no checks configured)' if ci_gate.no_checks else ''}")
+        print("  ci-status: green")
 
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
@@ -3185,7 +3201,7 @@ def _post_bypass_audit_idempotent(
 @dataclass(frozen=True)
 class _RollupReading:
     """What `gh pr view --json statusCheckRollup` answered: the PR's checks —
-    none for a project that runs no checks — or, in `problem`, why there is no
+    none where no check has reported — or, in `problem`, why there is no
     answer, which is not an answer of no checks (#1946)."""
 
     checks: tuple[dict, ...] = ()
@@ -3196,9 +3212,10 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> _RollupReading
     """Read the PR's `statusCheckRollup` for the CI-status gate (#498).
 
     GitHub answers an empty rollup for a PR no check reported on, which the
-    gate passes as a project that runs no checks. A call that fails, an answer
-    that is not JSON, and one that carries no list of checks are no answer:
-    `problem` names which, and the gate refuses on it (#1946).
+    gate passes only where the PR's base requires no check (#1965). A call
+    that fails, an answer that is not JSON, and one that carries no list of
+    checks are no answer: `problem` names which, and the gate refuses on it
+    (#1946).
     """
     if pr_number is None:
         return _RollupReading(problem="the PR has no number to read its checks by")
@@ -3222,6 +3239,12 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> _RollupReading
     if not isinstance(rollup, list) or not all(isinstance(check, dict) for check in rollup):
         return _RollupReading(problem="gh's answer carries no statusCheckRollup")
     return _RollupReading(tuple(rollup))
+
+
+def _gh_get_required_checks(base: str, config: dict) -> RequiredChecks:
+    """Read the checks the PR's base branch requires, for a rollup with no
+    check (#1965), through the pm `gh` helper (`_lib.ci_checks`)."""
+    return read_required_checks(base, config, gh_run)
 
 
 def _ci_unreadable_refusal(pr_number: int | None, problem: str) -> str:
@@ -3471,6 +3494,9 @@ def _check_pr_placeholder(
 # The state the merge moves the issue done-work runs for into.
 DONE_STATE = "done"
 
+# The command whose declared transition is the merge's move to done.
+MERGE_COMMAND = "done-work"
+
 
 @dataclass(frozen=True)
 class _LeadIn:
@@ -3482,8 +3508,9 @@ class _LeadIn:
     def describe(self) -> str:
         return (
             f"{self.from_state} → {self.to_state} before the merge, "
-            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares "
-            f"no {self.from_state} → {DONE_STATE} for this issue's type)"
+            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares the "
+            f"merge's move to {DONE_STATE} from {self.to_state}, not from "
+            f"{self.from_state}, for this issue's type)"
         )
 
 
@@ -3495,21 +3522,23 @@ def _lead_in_to_done(
     """The move the issue must make before the merge's move to done, or None.
 
     After the merge done-work runs `move-issue --to done`, and workflow.yaml
-    says which states may make that move. For a Task, In Progress is not one
-    of them: the merge's move is Review → Done. A Task whose PR was opened
+    says which states may make that move: the merge's move is the transition
+    to done that done-work makes (:func:`_merge_moves_to_done`). For a Task it
+    is Review → Done; its In Progress → Done is close-issue's, the close of a
+    Task completed without a pull request (DEC-006). A Task whose PR was opened
     without `review-work` (from a worktree, say) is still In Progress when
     done-work runs. So done-work first makes the declared move that leads to
-    done, In Progress → Review, and the merge then makes the declared Review →
-    Done. The PR is open and ready by then (a draft is refused earlier), which
-    is what Review means, so the move holds even if the merge that follows
-    fails.
+    the merge's move, In Progress → Review, and the merge then makes the
+    declared Review → Done. The PR is open and ready by then (a draft is refused
+    earlier), which is what Review means, so the move holds even if the merge
+    that follows fails.
 
     Where the issue is, what type it is and what it may move to are read with
     the readers move-issue and start-work use, so this cannot disagree with the
     move it precedes. None when the issue needs no lead-in (it is done already,
-    or done is a declared move from where it is), when no single declared move
-    leads to done, or when the issue or its type cannot be read. The move to
-    done then runs as it always has and reports what it finds.
+    or the merge's move is declared from where it is), when no single declared
+    move leads to the merge's move, or when the issue or its type cannot be
+    read. The move to done then runs as it always has and reports what it finds.
     """
     if issue is None:
         return None
@@ -3535,17 +3564,29 @@ def _lead_in_to_done(
     if current == DONE_STATE:
         return None
     workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
-    targets = infer.legal_targets(workflow, current, structural_type)
-    if DONE_STATE in targets:
+    if _merge_moves_to_done(workflow, current, structural_type):
         return None
-    for target in targets:
-        if target != current and DONE_STATE in infer.legal_targets(
-            workflow,
-            target,
-            structural_type,
-        ):
+    for target in infer.legal_targets(workflow, current, structural_type):
+        if target != current and _merge_moves_to_done(workflow, target, structural_type):
             return _LeadIn(from_state=current, to_state=target)
     return None
+
+
+def _merge_moves_to_done(workflow: dict, state: str, structural_type: str) -> bool:
+    """Whether workflow.yaml declares the merge's move to done — a transition
+    done-work makes — from ``state`` for ``structural_type``.
+
+    Another move to done from the same state, such as close-issue's close of a
+    Task completed without a pull request, is not the merge's (DEC-006)."""
+    type_token = f"[issue-types:{structural_type}]"
+    return any(
+        isinstance(t, dict)
+        and t.get("from") == state
+        and t.get("to") == DONE_STATE
+        and t.get("command") == MERGE_COMMAND
+        and type_token in (t.get("applies_to") or [])
+        for t in infer.workflow_process(workflow).get("transitions") or []
+    )
 
 
 # ---- helpers -----------------------------------------------------------
@@ -3553,7 +3594,10 @@ def _lead_in_to_done(
 
 # The fields each PR lookup asks for: an open PR's, to gate and merge it; a
 # merged one's, to complete what follows its merge (#1011).
-_OPEN_PR_FIELDS = "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName"
+_OPEN_PR_FIELDS = (
+    "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName,"
+    "headRepository,headRepositoryOwner"
+)
 _MERGED_PR_FIELDS = "number,headRefName,headRefOid,mergedAt,isCrossRepository,body"
 
 

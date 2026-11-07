@@ -27,6 +27,8 @@ The test step (#1182):
   `PKIT_TEST_WORKERS` names, and then the tests marked `serial` in one
   process; a serial pass with nothing marked passes, a failing one fails the
   step;
+- the parallel pass prints its 30 slowest tests, whatever the count of
+  workers (#2309);
 - at most two full suites run at once on a machine: a third waits, says so and
   names the two it waits for, and takes a slot once one frees — when a run
   ends, killed included;
@@ -37,18 +39,30 @@ the same order, but the suite, and in its place only the tests marked `answers`;
 nothing marked passes, a failing one fails the run. Any other argument is
 refused before a check runs.
 
+The parts of a full run (#2308, #2715, ADR-078 point 1): `--quick` runs every line the
+whole run runs, in the same order, but the test step and the console fences;
+`--rest` runs the console fences, with the tests marked `serial` in the test step's
+place; `--shard i/N` runs only the parallel pass, cut to its share, after taking a
+slot. Together they run what the whole run runs, no line in both `--quick` and
+`--rest`. A slice whose share holds no test, pytest's exit 5, fails; any other failure does too.
+Where `$PKIT_TEST_REPORTS` names a folder, each pass reports into a folder of its
+own, and a slice reports its cut even where it names none.
+
 `check.sh` runs here for real, against a stub `uv` first on PATH, so no test
 runs the suite or pyright: the stub records every command it is handed; its
 `pytest` records its arguments and, on the parallel pass, holds until the test
 lets it go; its `python` is this interpreter, so a slot is taken with a real
 lock, except for the ratchet, the prose lint, the deployed agents' check, the
 console fences and the contents lists, which exit as the test says; the
-numbering check exits as the test says too; every other command passes.
+numbering check exits as the test says too; every other command passes. It runs
+without the caller's `PKIT_TEST_WORKERS` and `PKIT_TEST_REPORTS`; a slice in CI
+sets the second on the very run these tests are part of.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -71,8 +85,8 @@ RUN_EXAMPLES = ".pkit/capabilities/doc-examples/scripts/run-examples.py"
 # fences, which exit with $STUB_CONSOLE_STATUS, and the contents lists, which exit
 # with $STUB_CONTENTS_STATUS;
 # `pkit decisions check-diff` exits with $STUB_NUMBERING_STATUS; `pytest` logs its
-# arguments and, on the parallel pass, holds until the release file exists;
-# anything else passes.
+# arguments and, on the parallel pass, holds until the release file exists and
+# then exits with $STUB_PARALLEL_STATUS; anything else passes.
 STUB_UV = """#!/bin/sh
 shift
 while [ "${{1#-}}" != "$1" ]; do shift; done
@@ -99,7 +113,7 @@ case "$1" in
     case "$*" in
       *"not serial"*)
         while [ ! -e "$STUB_RELEASE" ]; do sleep 0.1; done
-        exit 0 ;;
+        exit "${{STUB_PARALLEL_STATUS:-0}}" ;;
       *"-m answers"*) exit "${{STUB_ANSWERS_STATUS:-0}}" ;;
     esac
     exit "${{STUB_SERIAL_STATUS:-0}}" ;;
@@ -108,6 +122,18 @@ esac
 """
 
 WAIT_SECONDS = 20
+
+#: The parallel pass as a local run, which names no count of workers, hands it to `uv`.
+PARALLEL_PASS = "pytest -q -n auto --durations=30 -m not serial"
+#: The tests marked `serial`, and the console fences, as they reach `uv`.
+SERIAL_PASS = "pytest -q -m serial"
+CONSOLE_FENCES = f"python {RUN_EXAMPLES}"
+
+#: What `check.sh` reads from its caller's environment to shape its passes. The run of
+#: the suite these tests are part of may carry either: a contributor's count of
+#: workers, or the folder a slice in CI reports into (`scripts/ci_parts.py`). So the
+#: `check.sh` under test sees one only where a test sets it.
+CALLERS_TEST_SETTINGS = ("PKIT_TEST_WORKERS", "PKIT_TEST_REPORTS")
 
 
 class Checkout:
@@ -128,7 +154,7 @@ class Checkout:
         self.release = root / "release"
         self.cache = root / "cache"
         self.env = {
-            **{k: v for k, v in os.environ.items() if k != "PKIT_TEST_WORKERS"},
+            **{k: v for k, v in os.environ.items() if k not in CALLERS_TEST_SETTINGS},
             "PATH": f"{stub_bin}{os.pathsep}{os.environ.get('PATH', '')}",
             "XDG_CACHE_HOME": str(self.cache),
             "STUB_LOG": str(self.log),
@@ -204,7 +230,7 @@ def test_the_type_check_runs_after_the_lint_and_format_and_before_the_tests(
         "ruff check .",
         "ruff format --check .",
         "python scripts/pyright_ratchet.py",
-        "pytest -q -n auto -m not serial",
+        PARALLEL_PASS,
     ]
     positions = [steps.index(step) for step in order]
     assert positions == sorted(positions)
@@ -219,6 +245,14 @@ def test_a_failing_type_check_fails_the_run_and_the_checks_after_it_still_run(
     assert "-- types: FAILED" in done.stdout
     assert "-- tests: ok" in done.stdout
     assert "-- changelog lint: ok" in done.stdout
+
+
+def test_each_check_s_result_line_says_how_long_it_took(checkout: Checkout) -> None:
+    """A check's time is one line of the log: how near the doc check runs to its bound, say."""
+    done = checkout.check(STUB_TYPES_STATUS="1")
+
+    assert re.search(r"^-- types: FAILED \(\d+ s\)$", done.stdout, re.MULTILINE)
+    assert re.search(r"^-- doc check: ok \(\d+ s\)$", done.stdout, re.MULTILINE)
 
 
 def test_the_numbering_check_runs_after_the_migration_check_and_a_failure_fails_the_run(
@@ -288,16 +322,22 @@ def test_the_contents_lists_run_after_the_console_fences_and_a_stale_one_fails_t
     assert contents < steps.index("pkit migrations check-diff")
 
 
-@pytest.mark.parametrize(("workers", "expected"), [(None, "-n auto"), ("3", "-n 3"), ("0", "-n 0")])
-def test_the_suite_runs_in_parallel_workers_then_the_serial_tests_in_one_process(
+@pytest.mark.parametrize(
+    ("workers", "expected"),
+    [(None, "-n auto"), ("8", "-n 8"), ("3", "-n 3"), ("0", "-n 0")],
+    ids=["local", "ci", "three", "one-process"],
+)
+def test_the_suite_runs_in_parallel_workers_printing_its_slowest_then_the_serial_tests(
     checkout: Checkout, workers: str | None, expected: str
 ) -> None:
+    """The parallel pass prints its 30 slowest tests in every run, CI's eight workers and
+    a local run's `-n auto` alike; the serial pass prints none (#2309)."""
     env = {} if workers is None else {"PKIT_TEST_WORKERS": workers}
     done = checkout.check(**env)
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert checkout.log.read_text().splitlines() == [
-        f"-q {expected} -m not serial",
+        f"-q {expected} --durations=30 -m not serial",
         "-q -m serial",
     ]
     assert "-- tests: ok" in done.stdout
@@ -383,10 +423,10 @@ def test_the_short_check_runs_every_line_but_the_suite_and_the_tests_marked_answ
     assert full.returncode == 0, full.stdout + full.stderr
     assert done.returncode == 0, done.stdout + done.stderr
     steps = checkout.steps.read_text().splitlines()
-    suite = {"pytest -q -n auto -m not serial", "pytest -q -m serial"}
+    suite = {PARALLEL_PASS, "pytest -q -m serial"}
     # The full run's test step also takes a slot, through `python -`.
     assert steps == [
-        "pytest -q -m answers" if step == "pytest -q -n auto -m not serial" else step
+        "pytest -q -m answers" if step == PARALLEL_PASS else step
         for step in full_steps
         if step != "pytest -q -m serial" and not step.startswith("python - ")
     ]
@@ -407,12 +447,163 @@ def test_the_short_check_passes_with_nothing_marked_and_fails_on_a_failure(
     assert ("FAILED" in done.stdout) != ok
 
 
-@pytest.mark.parametrize("args", [("--quick",), ("--short", "--short"), ("short",)])
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("--fast",),
+        ("--short", "--short"),
+        ("short",),
+        ("--rest", "--short"),
+        ("--quick", "--rest"),
+        ("--shard",),
+        ("--shard", "0/2"),
+        ("--shard", "3/2"),
+        ("--shard", "1/0"),
+        ("--shard", "a/b"),
+        ("--shard", "1/2", "--rest"),
+        ("--shard=1/2",),
+        ("--rest", "--shard", "1/2"),
+        ("--quick", "--shard", "1/2"),
+    ],
+)
 def test_any_other_argument_is_refused_before_a_check_runs(
     checkout: Checkout, args: tuple[str, ...]
 ) -> None:
     done = checkout.check(*args)
 
     assert done.returncode == 2
-    assert "usage: scripts/check.sh [--short]" in done.stderr
+    assert "usage: scripts/check.sh [--short | --quick | --rest | --shard i/N]" in done.stderr
     assert not checkout.steps.exists()
+
+
+# --- the parts of a full run (#2308, ADR-078) ------------------------------------------
+
+#: What taking a test slot hands `uv`: `python -` and the slot's arguments.
+TAKES_A_SLOT = "python - "
+
+
+def _ran(checkout: Checkout, *args: str, **env: str) -> list[str]:
+    """What `check.sh` with `args` hands `uv`, once it ran to the end and passed."""
+    if checkout.steps.exists():
+        checkout.steps.unlink()
+    done = checkout.check(*args, **env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    return checkout.steps.read_text().splitlines()
+
+
+def _quick_lines(whole: list[str]) -> list[str]:
+    """Every line of the whole run but its test step and the console fences."""
+    return [
+        step
+        for step in whole
+        if step not in (PARALLEL_PASS, SERIAL_PASS, CONSOLE_FENCES)
+        and not step.startswith(TAKES_A_SLOT)
+    ]
+
+
+def test_the_quick_checks_run_every_line_but_the_test_step_and_the_console_fences(
+    checkout: Checkout,
+) -> None:
+    whole = _ran(checkout)
+
+    quick = _ran(checkout, "--quick")
+
+    assert quick == _quick_lines(whole)
+    assert {"pkit pm check-doc-mapping", "pkit validate", "pkit friction check"} <= set(quick)
+    assert "python scripts/prose_lint.py" in quick
+
+
+def test_the_remainder_runs_the_console_fences_and_the_tests_marked_serial(
+    checkout: Checkout,
+) -> None:
+    assert _ran(checkout, "--rest") == [SERIAL_PASS, CONSOLE_FENCES]
+
+
+def test_a_slice_runs_its_share_of_the_parallel_pass_and_nothing_else(
+    checkout: Checkout,
+) -> None:
+    ran = _ran(checkout, "--shard", "2/3")
+
+    assert len(ran) == 2
+    assert ran[0].startswith(TAKES_A_SLOT)
+    assert ran[1].startswith(f"{PARALLEL_PASS} --shard=2/3 --test-report=")
+    assert ran[1].endswith("/parallel")
+
+
+@pytest.mark.parametrize("count", [1, 2, 3])
+def test_the_parts_together_are_the_whole_run(checkout: Checkout, count: int) -> None:
+    """The quick checks, the remainder and every slice run each line the whole run runs,
+    no line in both of the first two, the parallel pass once for each slice, with its share."""
+    whole = _ran(checkout)
+    quick = _ran(checkout, "--quick")
+    rest = _ran(checkout, "--rest")
+    shares = [_ran(checkout, "--shard", f"{i}/{count}") for i in range(1, count + 1)]
+
+    parallel = [step for share in shares for step in share if step.startswith(PARALLEL_PASS)]
+    assert [step.split(" --test-report=")[0] for step in parallel] == [
+        f"{PARALLEL_PASS} --shard={i}/{count}" for i in range(1, count + 1)
+    ]
+    slots = [step for step in whole if step.startswith(TAKES_A_SLOT)]
+    assert sorted({*quick, *rest, PARALLEL_PASS, *slots}) == sorted(set(whole))
+    assert len(quick) + len(rest) + 2 == len(whole)
+    assert not set(quick) & set(rest)
+
+
+@pytest.mark.parametrize(
+    ("status", "ok"),
+    [("0", True), ("5", False), ("1", False)],
+    ids=["passed", "an-empty-share", "a-test-fails"],
+)
+def test_a_slice_whose_share_holds_no_test_fails(checkout: Checkout, status: str, ok: bool) -> None:
+    done = checkout.check("--shard", "1/2", STUB_PARALLEL_STATUS=status)
+
+    assert (done.returncode == 0) == ok
+    verdict = "ok" if ok else "FAILED"
+    assert f"-- tests (slice 1/2 of the parallel pass): {verdict}" in done.stdout
+
+
+def test_the_remainder_passes_with_no_test_marked_serial_and_fails_on_a_failure(
+    checkout: Checkout,
+) -> None:
+    assert checkout.check("--rest", STUB_SERIAL_STATUS="5").returncode == 0
+    failed = checkout.check("--rest", STUB_SERIAL_STATUS="1")
+    assert failed.returncode == 1
+    assert "-- tests (the remainder: only those marked serial): FAILED" in failed.stdout
+    assert "-- console fences: ok" in failed.stdout
+
+
+def test_the_quick_checks_run_every_line_after_one_failed(checkout: Checkout) -> None:
+    failed = checkout.check("--quick", STUB_NUMBERING_STATUS="1")
+
+    assert failed.returncode == 1
+    assert "-- record numbering: FAILED" in failed.stdout
+    assert "-- changelog lint: ok" in failed.stdout
+
+
+@pytest.mark.parametrize(
+    ("args", "passes"),
+    [
+        ((), ["parallel", "serial"]),
+        (("--quick",), []),
+        (("--rest",), ["serial"]),
+        (("--short",), ["answers"]),
+        (("--shard", "1/2"), ["parallel"]),
+    ],
+    ids=["whole", "quick", "rest", "short", "slice"],
+)
+def test_each_pass_reports_into_a_folder_of_its_own_where_reports_are_asked_for(
+    checkout: Checkout, tmp_path: Path, args: tuple[str, ...], passes: list[str]
+) -> None:
+    reports = tmp_path / "reports"
+
+    _ran(checkout, *args, PKIT_TEST_REPORTS=str(reports))
+
+    log = checkout.log.read_text() if checkout.log.exists() else ""
+    asked = [line.split("--test-report=")[1] for line in log.splitlines()]
+    assert asked == [str(reports / name) for name in passes]
+
+
+def test_a_whole_run_asks_for_no_report_where_none_is_asked_for(checkout: Checkout) -> None:
+    _ran(checkout)
+
+    assert "--test-report" not in checkout.log.read_text()

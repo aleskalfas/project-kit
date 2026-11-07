@@ -14,7 +14,11 @@ agent reads at session start, and the README it points to, say so:
   of date, until which follow-up, not only "the deferrals";
 - **any other entry**: one for a target the change was not asked about stays a
   person's decision;
-- **the number**: the rule keeps its number, 20, under "Answers on artefacts".
+- **the number**: the rule keeps its number, 20, and its id, `RS-OPS-020`, under
+  "Answers on artefacts".
+
+The rule is read from the loaded file a session loads, `.pkit/rules/core.md`, which is
+generated from the backbone's loaded set `OPS` (COR-068).
 """
 
 from __future__ import annotations
@@ -28,13 +32,16 @@ CORE_RULES = REPO / ".pkit" / "rules" / "core.md"
 AGENTS_README = REPO / ".pkit" / "agents" / "README.md"
 
 
+RULE_20_HEADING = "### 20. A reviewer checks the answers a change owes (RS-OPS-020)"
+
+
 def _rule_20() -> str:
-    """Rule 20's paragraph, read from the section that holds it."""
+    """Rule 20's statement, read from under its heading in the section that holds it."""
     text = CORE_RULES.read_text(encoding="utf-8")
     section = text.split("\n## Answers on artefacts\n", 1)[1].split("\n## ", 1)[0]
-    paragraphs = [p.strip() for p in section.split("\n\n") if p.strip().startswith("20. ")]
-    assert len(paragraphs) == 1, "rule 20 is not the one numbered rule of its section"
-    return paragraphs[0]
+    headings = [line for line in section.splitlines() if line.startswith("### ")]
+    assert headings == [RULE_20_HEADING], "rule 20 is not the one rule of its section"
+    return section.split(f"{RULE_20_HEADING}\n", 1)[1].strip()
 
 
 def _friction_writers() -> str:
@@ -51,36 +58,47 @@ def _change_bullet() -> str:
 
 def test_rule_20_keeps_its_number_and_title():
     assert _rule_20().startswith(
-        "20. **A reviewer checks the answers your change owes, and a person, or the delegate"
+        "**A reviewer checks the answers your change owes, and a person, or the delegate"
         " they named, decides any other answer on an artefact.**"
     )
 
 
 def test_rule_20_names_the_delegate_and_its_bounds():
     """A person may name a delegate to decide the answers no change owes (COR-064): named
-    in the default branch's configuration, never on its own draft, and a reviewer checks
-    every such answer, whoever decided it."""
+    in the default branch's configuration. The rule names where the delegate is named and
+    what a session does with neither the person nor the delegate, and that a reviewer checks
+    every such answer, whoever decided it, blocking the merge or the direct commit on one that
+    does not hold (COR-064 point 4). The delegate's own bound, never on its own draft, is the
+    agents README's, which the rule cites."""
     rule = _rule_20()
-    assert "or the project's delegate decided it." in rule
-    assert "the agent the default branch's configuration names (`friction.delegate`)" in rule
-    assert "it never decides an answer it drafted (COR-064)" in rule
-    assert "The reviewer checks these answers too, whoever decided them." in rule
-    assert "If you can ask neither the person nor the delegate, return the commands" in rule
+    assert "or the delegate the default branch's configuration names (`friction.delegate`)" in rule
+    assert (
+        "The reviewer checks these too, whoever decided them, and blocks the merge, or the"
+        " direct commit, on an answer or an `updated` sentence that does not hold." in rule
+    )
+    assert (
+        "Where you can ask neither the person nor the delegate, return the commands and run"
+        " none" in rule
+    )
+    assert '(COR-064; the agents README, "Friction writers")' in rule
+    writers = _friction_writers()
+    assert "**Whose drafts.** Only an answer another agent drafted." in writers
+    assert "checks every such answer and reason a change writes, whoever decided it" in writers
 
 
 @pytest.mark.parametrize(
     "words",
     [
-        "asks of a change you are making, without asking first.",
-        "Commit what the writers write with your change, a new answer file among it"
-        " (COR-062 point 1).",
-        "make that revalidation's reason judge their combined state (COR-062 point 7).",
-        "Name an open follow-up in the reason of each deferral, or `deferred` revisit"
-        " entry, you write.",
-        "told the sentences and what is left out of date, until which follow-up, as"
-        " information, not a gate",
-        "Any other answer, on an artefact or for a link's target your change was not asked about,",
-        'Details: the agents README, "Friction writers".',
+        "Write the answers `pkit friction check` asks of your change, without asking the"
+        " person to accept them,",
+        "commit them with it, a new answer file among them (COR-062 point 1).",
+        "make its reason judge their combined state (COR-062 point 7).",
+        "Name an open follow-up in each deferral or `deferred` revisit entry,",
+        "is told these sentences and what is left out of date, until which follow-up, as"
+        " information.",
+        "Write any other answer, on an artefact or a link's target, or every reason for having"
+        " no anchors, only once a person accepted it word for word,",
+        '(COR-064; the agents README, "Friction writers")',
     ],
 )
 def test_rule_20_names_revisit_entries(words):
@@ -108,11 +126,12 @@ def test_the_readme_bullet_agrees(words):
 
 
 def test_the_readme_leaves_any_other_entry_to_a_person():
+    writers = _friction_writers()
     assert (
-        "Any other answer — on an artefact or for a target a change was not asked about —"
-        " and every reason for having no anchors is written by any agent only under the"
-        " four conditions above."
-    ) in _friction_writers()
+        "Any agent writes any other answer, on an artefact or for a target a change was not"
+        " asked about, only under the four conditions above."
+    ) in writers
+    assert "The same holds for every reason for having no anchors." in writers
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,89 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: spans
+    layout: slide
+    title: Ein Netz neben einem Terminal, die breite Tafel nimmt mehr der Zeile
+    visual:
+      use: starter/panels
+      panels:
+        - id: network
+          use: starter/network
+          span: wide
+          item: {use: starter/card, fill: tint, concept: test-notation/service}
+          left:
+            - {id: living-docs, head: living-docs, text: Dokumentation für jede Leserschaft.}
+            - {id: software-analysis, head: software-analysis, text: Was sie leisten muss.}
+          right:
+            - id: groups
+              use: starter/groups
+              groups:
+                - id: project-management
+                  head: project-management
+                  items:
+                    - {id: doc-check, text: Zu aktualisierende Dokumente.}
+                    - {id: fixers, text: Wer was korrigiert.}
+          ties:
+            - id: docs-check
+              from: {item: "left[living-docs]"}
+              to: {item: "right[groups].groups[project-management].items[doc-check]"}
+            - id: analysis-fixers
+              from: {item: "left[software-analysis]"}
+              to: {item: "right[groups].groups[project-management].items[fixers]"}
+        - id: status
+          use: starter/code
+          span: normal
+          head: Was der Status zeigt
+          text:
+            - {text: "$ ", style: prompt}
+            - {text: "pkit status\n", style: command}
+            - "  Rollen     3 benannt\n"
+            - "  Anschlüsse 6 definiert"
+
+  - id: under
+    layout: slide
+    title: Tafeln nebeneinander, und eine weitere Komponente darunter
+    visual:
+      use: starter/panels
+      panels:
+        - {id: rules, head: Arbeitsregeln, text: "Genau, was zu tun ist, für jede Sitzung."}
+        - {id: checks, head: Prüfungen, text: Bei jeder Änderung ausgeführt.}
+        - {id: work, head: Ihr Quellcode, text: "Die Arbeit selbst, verknüpft mit ihren Abhängigkeiten."}
+      under:
+        use: starter/aside
+        head: Jede Tafel eine Karte
+        text: Eine Tafel, die keine Komponente nennt, zeichnet die Karte.
+
+  - id: nested
+    layout: slide
+    title: Eine Tafel mit eigenen Tafeln, neben dem Text einer Datei
+    visual:
+      use: starter/panels
+      panels:
+        - id: steps
+          use: starter/panels
+          panels:
+            - id: install
+              use: starter/code
+              text:
+                - {text: "# einmalig, auf Ihrem Rechner\n", style: comment}
+                - {text: "$ ", style: prompt}
+                - {text: "uv tool install pkit\n", style: command}
+                - {text: "$ ", style: prompt}
+                - {text: "pkit init", style: command}
+          under:
+            use: starter/aside
+            head: Nicht im Repository gewünscht?
+            command: "$ pkit visibility private"
+            text: Es bleibt nur in Ihrem Klon.
+        - id: tree
+          use: starter/code
+          text:
+            - "ihr-projekt/\n"
+            - "├── .pkit/"
+            - {text: "        # die Methodik\n", style: comment}
+            - "├── CLAUDE.md"
+            - {text: "     # lädt die Regeln\n", style: comment}
+            - "└── src/"
+            - {text: "          # Ihr Quellcode", style: comment}

@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+body: >
+  `pkit visual look <piece>` draws a piece's pages as images, for a person or
+  an agent to read (#2674). Under the lock `piece.yaml` holds, which it never
+  moves, it writes one PNG for each page, language and key asked for, by
+  default every page in the source language in the first key. Each takes 1568
+  pixels on its long edge, or more where the page's smallest text would land
+  under 10 pixels. It writes them in the clone's local `look/<piece>/`, and a
+  run replaces what an earlier run left there. Beside each image lie each
+  element's frame with its trace id, and the lock. One report says which page
+  lies on white, each text or run the tool drew nothing of, each loss the
+  renderer reports, accepted or not, and each run measured in more than one
+  family. The command runs no helper and no producer, takes no number and
+  records no location. It refuses a piece with no lock, naming the render that
+  writes one. `pkit visual pages <piece>` lists what it can draw, and being a
+  query, `pkit sync` provisions the `resvg-py` wheel through it, so the command
+  draws with no network.

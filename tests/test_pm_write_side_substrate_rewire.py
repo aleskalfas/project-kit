@@ -255,13 +255,29 @@ def test_create_issue_greenfield_parity_byte_identical(ci) -> None:
         "workstream": "workstream:cli",
     }
 
-    # Board mode: only the type axis is labelled.
+    # A board configured and no map: the flag carries no axis (DEC-062 point 1),
+    # so the same kit labels are written.
     board_labels, _, board_resolved = ci._build_labels(
         kind="feature",
         priority="Medium",
         workstream=None,
         config=_BOARD_CONFIG,
         substrate_map=None,
+    )
+    assert board_labels == ["type:feature", "priority:Medium"]
+    assert board_resolved == {"type": "type:feature", "priority": "priority:Medium"}
+
+    # A map binding priority to the board, and type to the kit's labels: only
+    # the type axis is labelled, as with no map.
+    on_board = ci.axis_labels.SubstrateMap(
+        axes={"type": {"kit-label": True}, "priority": {"board": True}}
+    )
+    board_labels, _, board_resolved = ci._build_labels(
+        kind="feature",
+        priority="Medium",
+        workstream=None,
+        config=_BOARD_CONFIG,
+        substrate_map=on_board,
     )
     assert board_labels == ["type:feature"]
     assert board_resolved == {"type": "type:feature"}

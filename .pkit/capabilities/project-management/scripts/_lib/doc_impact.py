@@ -2,12 +2,12 @@
 
 A change's anchored pages answer it on the page itself — updated, unchanged
 with its justification, deferred with its reason (COR-050) — and the answers
-the change wrote are listed in the description's own `## Documentation this
-change affects` section (`_lib.friction_answers`, DEC-055).
+the change wrote are read from the change check, and no section of the
+description carries them (`_lib.friction_answers`, DEC-065).
 `open-pr --doc-impact-from-friction`
-fills an unwritten `## Doc impact` with one line pointing there (`prefill`),
-naming no path and no reason, and names the pages still carrying friction
-(`unanswered`).
+fills an unwritten `## Doc impact` with one line pointing at the check
+(`prefill`), naming no path and no reason, and names the pages still carrying
+friction (`unanswered`).
 
 Rendering only: the section is never read back as an answer. The doc-check
 point's obligations are met by the pages in the diff, and the section stays

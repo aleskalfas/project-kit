@@ -751,13 +751,15 @@ def test_an_ancestor_the_engine_cannot_place_is_not_written_and_ends_the_walk(
     assert world.promote(task) == 0
 
     err = capsys.readouterr().err
-    # The engine's cause, and what its classifier said, under the ancestor (#1244).
+    # The engine's cause, and what its classifier said, under the ancestor (#1244):
+    # the predicate code's words, then the script's own line.
     assert (
         f"  #{outer}: not moved: the engine cannot tell where it is, so the walk stops here\n"
         "    couldn't evaluate detection predicate 'detect-state': it exited 2\n"
         "      the predicate said:\n"
         f"        could not read issue #{outer}: `gh issue view` exited 1\n"
         "        HTTP 502: Bad Gateway\n"
+        f"        detect-state: could not read issue #{outer} (gh failure)\n"
         f"  #{epic}: not reached\n"
     ) in err
     assert world.moves(inner) == [("todo", "backlog", "promote-issue")]
@@ -1045,6 +1047,77 @@ def test_a_wont_do_move_to_done_moves_no_ancestor(
     assert world.views(task) == ("done", "done")
     assert world.labels(feature) == world.labels(epic) == []
     assert world.moves(feature) == world.moves(epic) == []
+
+
+@pytest.mark.parametrize("origin", ["todo", "backlog"])
+def test_a_task_closed_as_completed_from_todo_or_backlog_brings_its_ancestors_level(
+    world: World, origin: str
+) -> None:
+    """Completed work is progress (DEC-006): a Task closed as completed whose
+    label still reads Todo or Backlog is no won't-do close, so its move to Done
+    brings its ancestors up to In Progress."""
+    epic, feature, task = _epic_feature_task(world, task=origin)
+    world.tracker.close(task, "COMPLETED")
+
+    assert world.move(task, "done") == 0
+
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, f"{origin} → done")
+
+
+def test_a_task_closed_as_not_planned_from_backlog_moves_no_ancestor(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(world, task="backlog")
+    world.tracker.close(task, "NOT_PLANNED")
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+
+    assert (
+        "[cascade] the forward cascade moves no ancestor: "
+        "a move to done from backlog is a won't-do close."
+    ) in capsys.readouterr().out
+    assert world.moves(feature) == world.moves(epic) == []
+
+
+COMPLETED_RESULT = "the findings are filed as #908"
+
+
+@pytest.mark.parametrize("origin", ["todo", "backlog"])
+def test_a_completed_close_brings_the_ancestors_level_before_the_closure_cascade(
+    world: World,
+    cl: ModuleType,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    origin: str,
+) -> None:
+    """close-issue's completed close of a Task with no pull request, from Todo
+    or Backlog, runs move-issue's forward cascade, so its Feature and its EPIC
+    reach In Progress. The closure cascade runs after it, and offers the Feature,
+    with no open child left, for closing (DEC-006)."""
+    # The fold over the Feature's children is the engine's, answered by
+    # predicates this harness does not run: no open child is left, it says here.
+    monkeypatch.setattr(cl, "_engine_cascade_fold", lambda _n: {"opened": True})
+    epic, feature, task = _epic_feature_task(world, task="" if origin == "todo" else origin)
+    capsys.readouterr()
+
+    assert world.close(task, "--mode", "completed", "--result", COMPLETED_RESULT) == 0
+
+    out = capsys.readouterr().out
+    assert world.views(task) == ("done", "done")
+    assert world.moves(task)[-1] == (origin, "done", "close-issue")
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, "at done")
+        assert world.labels(number) == ["state:in-progress"]
+    closure = f"[cascade] parents to check for eligibility: #{feature}"
+    assert out.index("[cascade] forward cascade") < out.index(closure)
+    assert (
+        f"eligible to close: run `pkit pm close-issue {feature} --mode=cascade-eligibility-close`"
+    ) in out
+    _no_drift(world, capsys, task, feature, epic)
 
 
 def _reviewed_task_merged(world: World, *, closed: bool) -> tuple[int, int, int]:
@@ -1343,15 +1416,6 @@ def test_with_journal_logging_off_the_cascade_warns_of_nothing(
 # --- where the kit does not write the state as a label ----------------------
 
 
-def _with_config(world: World, monkeypatch: pytest.MonkeyPatch, config: dict) -> None:
-    read_yaml = world.mi._read_yaml
-
-    def read(path: Path, loader):
-        return dict(config) if path.name == "config.yaml" else read_yaml(path, loader)
-
-    monkeypatch.setattr(world.mi, "_read_yaml", read)
-
-
 def _with_substrate_map(world: World, monkeypatch: pytest.MonkeyPatch, axes: dict) -> None:
     substrate_map = world.mi.axis_labels.SubstrateMap(axes=axes)
     monkeypatch.setattr(world.mi.axis_labels, "load_substrate_map", lambda *a, **kw: substrate_map)
@@ -1360,7 +1424,6 @@ def _with_substrate_map(world: World, monkeypatch: pytest.MonkeyPatch, axes: dic
 @pytest.mark.parametrize(
     ("carriage", "says"),
     [
-        ("board", "state is carried on your Projects-v2 board"),
         ("degrade", "state is carried by nothing"),
         ("label binding without backlog", "the state label binding has no value for 'backlog'"),
     ],
@@ -1374,9 +1437,7 @@ def test_the_cascade_does_not_run_where_the_kit_writes_no_state_label(
 ) -> None:
     epic, feature, task = _epic_feature_task(world)
     world.tracker.issues[task]["milestone"] = MILESTONE  # Backlog, by its milestone
-    if carriage == "board":
-        _with_config(world, monkeypatch, {"has_projects_v2_board": True})
-    elif carriage == "degrade":
+    if carriage == "degrade":
         _with_substrate_map(world, monkeypatch, {})
     else:
         remap = {"todo": "Inbox", "in-progress": "Doing", "review": "Review", "done": "Done"}

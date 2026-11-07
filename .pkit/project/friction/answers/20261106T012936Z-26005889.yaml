@@ -1,0 +1,40 @@
+answers:
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T01:29:36Z
+      outcome: unchanged
+      unchanged-because: "DEC-065 point 2 now says the command at a checkout of a head is the head's own. Step 1 does rest on that run where an anchor needs a resolver: the check refuses away from the head, as it does on this project, so the reviewer can run step 1 only from a checkout at the head. Step 1 names the command and no place to run it, so that addition makes nothing here untrue. DEC-067 point 5 also bears on step 1: the reviewer of a head from elsewhere that nobody named is told to check it out nowhere. Where a resolver is needed, that reviewer cannot run the check, which variant 1a already ends in a `[block]` finding. Step 5 reads the sentences as DEC-065 point 1 says, and this change leaves that point. So the use case holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T01:30:18Z
+      outcome: unchanged
+      unchanged-because: Step 1 runs the check on the branch, and step 9 has CI name the head through `PKIT_CHECK_HEAD`. Both read as before. `--own-head` serves a caller that names a commit with `--head`, which neither the developer nor the CI pipeline here does, and ADR-068 point 6 keeps the variable's rule. The refusal document goes only to such a caller, so it changes no step this use case describes.

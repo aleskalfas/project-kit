@@ -13,6 +13,7 @@ from project_kit import data_points as dp
 from project_kit.cli import main, status
 from project_kit.status import _data_point_lines, _skill_owner
 from tests.adopter_repo import MakeAdopterRepo
+from tests.shipped_rule_sets import shipped_rules
 
 
 @pytest.fixture
@@ -105,8 +106,21 @@ def _deploy_agent(root: Path, name: str, *, marked: bool = True) -> None:
 
 
 def _deployed(output: str) -> list[str]:
-    """The adapter section's lines after `settings.json`."""
-    return _section(output, "Adapter: claude-code").splitlines()[1:]
+    """The adapter section's lines after `settings.json`, up to the rules index's."""
+    lines = _section(output, "Adapter: claude-code").splitlines()[1:]
+    ends = [i for i, line in enumerate(lines) if line.startswith("    rules index")]
+    return lines[: ends[0]] if ends else lines
+
+
+def test_status_reports_the_rules_index_after_the_agents(installed_target: Path) -> None:
+    """The capabilities' rules index, beside the deployed skills and agents (ADR-076):
+    first install renders it, including no capability's rules yet."""
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    lines = _section(result.output, "Adapter: claude-code").splitlines()
+    assert lines[-1] == (
+        f"    {'rules index':<18} .pkit/rules/capabilities.md, including no capability's rules"
+    )
 
 
 def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target: Path) -> None:
@@ -444,10 +458,19 @@ def _section(output: str, heading: str) -> str:
     return output.split(f"\n  {heading}\n", 1)[1].split("\n\n", 1)[0]
 
 
-def test_status_reports_no_rule_sets_on_a_fresh_install(installed_target: Path) -> None:
+def test_status_reports_the_shipped_rule_sets_alone_on_a_fresh_install(
+    installed_target: Path,
+) -> None:
+    """A fresh install holds the backbone's rule sets alone, which pin nothing (COR-068;
+    ADR-075 point 1)."""
+    rules = len(shipped_rules(installed_target))
+    assert rules > 0
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
-    assert _section(result.output, "Rule sets").split() == ["found", "none"]
+    assert _section(result.output, "Rule sets").splitlines() == [
+        f"    {'found':<18} 1 rule set(s), {rules} rule(s)",
+        f"    {'pins':<18} none",
+    ]
 
 
 def test_status_shows_each_pin_behind_the_inherited_major_with_the_fix(
@@ -465,8 +488,9 @@ def test_status_shows_each_pin_behind_the_inherited_major_with_the_fix(
         f"review what changed in CMN, then update the pin to CMN@2 in `inherits` of "
         f"{PROJECT_SETS}/doc.md"
     )
+    shipped = len(shipped_rules(installed_target))  # the backbone's set, beside the three
     assert _section(result.output, "Rule sets").splitlines() == [
-        f"    {'found':<18} 3 rule set(s), 0 rule(s)",
+        f"    {'found':<18} 4 rule set(s), {shipped} rule(s)",
         f"    {'pins':<18} 2 checked, 1 behind the inherited set's major:",
         "                         DOC pins CMN@1; CMN is at 2.1.0",
         f"                           fix: {fix}",

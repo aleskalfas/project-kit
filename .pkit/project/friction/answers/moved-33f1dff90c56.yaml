@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-change
-    revalidated:
-      at: 2026-10-21T14:25:43Z
-      outcome: unchanged
-      unchanged-because: COR-050 is partially superseded and its point 6 says where an answer is judged. A change is still a unit of work that lands on the branch it targets, so the definition holds.

@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  The permission model's reference, `.pkit/permissions/README.md`, keeps
+  only what an agent acts on (#2061). The reasons behind its rules leave it
+  for the records they rest on, or for the guide, and every rule, path,
+  status and heading stays. It anchors the files it names, so no surface
+  moves.

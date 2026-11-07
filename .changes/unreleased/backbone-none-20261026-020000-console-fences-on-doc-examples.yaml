@@ -1,7 +1,0 @@
-component: backbone
-kind: none
-body: >
-  Project-kit runs its own console examples with the doc-examples capability,
-  which it now installs, and its README's examples write the version as
-  `<VERSION>`, the placeholder project-kit's configuration of the run declares.
-  Nothing the backbone ships or runs changes.

@@ -1,0 +1,15 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  The overview leads from each area to its journeys, as software-analysis
+  DEC-005 point 2 decides (#2426). Below its use cases, each area lists each
+  journey in force with a step among them, linked, in the order of their
+  numbers, or reads `**Its journeys:** none.`. A journey whose steps cross
+  several areas is listed under each, and its flow stays under Journeys, in
+  reference. The list follows from each journey's `steps` and each use case's
+  area, which the overview's fingerprint already reads, so its version stays 5:
+  `pkit analysis validate` fails an overview once a step moves to another
+  area's use case, and an overview written before passes until its next
+  rewrite, which `pkit analysis overview` or the stamp makes.

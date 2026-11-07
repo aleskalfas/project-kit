@@ -54,15 +54,19 @@ cut is named (`history.cut`).
   kinds are the ones it registers, as the base's are the base's. A resolver
   is a command run in the working tree, never read from a commit, so one runs
   only where the working tree is that commit, and the check refuses anywhere
-  else (`_NamedHeadKinds`). What discovery reads from the working tree
+  else (`_NamedHeadKinds`). So a run away from the commit named starts nothing
+  that commit holds, and `--json` beside `--own-head` gives the refusal as a
+  document (`render_refusal_json`). What discovery reads from the working tree
   whichever state it walks — which files are synced copies, where a link
   leads — stays the running checkout's.
 - *The change's own head* (`own_head`; COR-062 point 4, ADR-068 point 6) is
-  the tree each answer the change adds had to read: a head named with
-  `--head`, else the commit `$PKIT_CHECK_HEAD` names — HEAD or a parent of
-  it, anything else refused — else HEAD, read as the working tree. A host
-  that checks out its merge of the change with its base names the change's
-  head there, so an answer landed on the base in parallel never fails it.
+  the tree each answer the change adds had to read: the commit `--own-head`
+  names beside `--head`, else a head named with `--head`, else the commit
+  `$PKIT_CHECK_HEAD` names, else HEAD, read as the working tree. The flag and
+  the variable each name the commit checked or a parent of it, anything else
+  refused. A host that checks out its merge of the change with its base names
+  the change's head there, and a reader of that merge from git objects names
+  it beside `--head`, so an answer landed on the base in parallel never fails it.
 
 **Answers read from answer files** (COR-062; `_ChangeAnswers`,
 `_FileReading`). At head an artefact's answers are read from the answer files
@@ -269,6 +273,7 @@ from project_kit.friction_discovery import (
     ArtefactKind,
     Discovery,
     FrictionSettings,
+    PathIndex,
     RecordContent,
     RepositoryTree,
     ResolverCommand,
@@ -333,6 +338,9 @@ BASE_ENV = default_branch.CHECK_BASE_ENV
 #: host checks out its merge of the change with its base (ADR-068 point 6). Unset or
 #: empty, the own head is HEAD; `--head REV` makes it REV, and it is not read.
 HEAD_ENV = default_branch.CHECK_HEAD_ENV
+#: The flag that names the change's own head beside `--head`, under the rule `HEAD_ENV`
+#: keeps (ADR-068 point 6).
+OWN_HEAD_FLAG = "--own-head"
 
 #: The mode in which the change check fails (COR-050 point 12).
 ENFORCING = "enforcing"
@@ -630,10 +638,13 @@ class HeadState:
     uncommitted: int  # paths the working tree changes beyond HEAD, untracked included
     named: str | None = None  # the revision named with `--head`; `None` reads the working tree
     # The change's own head (`own_head`): what each answer had to read (COR-062 point 4).
-    # `None` until it is read; then `commit`, or a parent of it named with `HEAD_ENV`.
+    # `None` until it is read; then `commit`, or a parent of it named with `HEAD_ENV`
+    # or `OWN_HEAD_FLAG`.
     own: str | None = None
-    own_source: str | None = None  # `HEAD_ENV` where the variable named it, else `None`
+    # `HEAD_ENV` or `OWN_HEAD_FLAG`, whichever named it, else `None`.
+    own_source: str | None = None
     merge: bool = False  # the commit checked has more than one parent
+    own_rev: str | None = None  # the revision named with `OWN_HEAD_FLAG`
 
     @property
     def name(self) -> str:
@@ -644,6 +655,13 @@ class HeadState:
     def own_head(self) -> str:
         """The change's own head: `own`, else the commit checked."""
         return self.commit if self.own is None else self.own
+
+    @property
+    def own_named_by(self) -> str:
+        """What named the change's own head, as a message says it: the flag, or the
+        variable with its `$`."""
+        source = self.own_source or ""
+        return f"${source}" if source == HEAD_ENV else source
 
 
 @dataclass(frozen=True)
@@ -706,20 +724,23 @@ def head_commit(root: Path) -> str:
     return head
 
 
-def named_head(root: Path, rev: str) -> HeadState:
+def named_head(root: Path, rev: str, own_rev: str | None = None) -> HeadState:
     """The head named with `--head`: the commit `rev` names, read from git objects, with
-    nothing uncommitted — the working tree is not read. Refuses a name that is no commit."""
+    nothing uncommitted — the working tree is not read. `own_rev` is what `--own-head`
+    names beside it, which `own_head` reads. Refuses a name that is no commit."""
     commit = None if not rev or rev.startswith("-") else commit_of(root, rev)
     if commit is None:
         raise FrictionCheckError(f"--head {rev!r} names no commit of this repository.")
-    return HeadState(commit, 0, rev)
+    return HeadState(commit, 0, rev, own_rev=own_rev)
 
 
 def own_head(root: Path, head: HeadState) -> HeadState:
     """`head` with the change's own head read (COR-062 point 4; ADR-068 point 6): the tree
     each answer the change adds had to read, wherever the check runs.
 
-    - A head named with `--head` is its own head: `HEAD_ENV` is not read.
+    - A head named with `--head` is its own head, unless `--own-head` names another
+      beside it: the commit checked or a parent of it, under the variable's rule below.
+      `HEAD_ENV` is not read.
     - Else `$PKIT_CHECK_HEAD` names it, read as unset where empty: the commit
       checked, HEAD, or a parent of HEAD — the change's head, where a host checks
       out its merge of the change with its base. Anything else is refused, failing
@@ -733,7 +754,10 @@ def own_head(root: Path, head: HeadState) -> HeadState:
     parents = tuple(listed.split()[1:])
     merge = len(parents) > 1
     if head.named is not None:
-        return replace(head, own=head.commit, own_source=None, merge=merge)
+        if head.own_rev is None:
+            return replace(head, own=head.commit, own_source=None, merge=merge)
+        commit = _named_own_head(root, head, parents)
+        return replace(head, own=commit, own_source=OWN_HEAD_FLAG, merge=merge)
     value = (os.environ.get(HEAD_ENV) or "").strip()
     if not value:
         return replace(head, own=head.commit, own_source=None, merge=merge)
@@ -752,6 +776,27 @@ def own_head(root: Path, head: HeadState) -> HeadState:
             f"out the change or that merge, or unset the variable."
         )
     return replace(head, own=commit, own_source=HEAD_ENV, merge=merge)
+
+
+def _named_own_head(root: Path, head: HeadState, parents: tuple[str, ...]) -> str:
+    """The commit `--own-head` names beside `--head`, under the rule `HEAD_ENV` keeps: the
+    commit checked or a parent of it. Anything else is refused, failing closed."""
+    value = head.own_rev or ""
+    commit = None if not value or value.startswith("-") else commit_of(root, value)
+    if commit is None:
+        raise FrictionCheckError(
+            f"{OWN_HEAD_FLAG} {value!r} names no commit of this repository. It names the "
+            f"change's own head, the commit --head names or a parent of it (ADR-068 point "
+            f"6): fetch that commit, or leave the flag out."
+        )
+    if commit != head.commit and commit not in parents:
+        raise FrictionCheckError(
+            f"{OWN_HEAD_FLAG} names {commit[:SHORT]}, which is neither --head "
+            f"{head.name} ({head.commit[:SHORT]}) nor a parent of it. The change's own head "
+            f"is the commit checked, or the change's head where --head names its merge with "
+            f"the base (ADR-068 point 6)."
+        )
+    return commit
 
 
 def resolve_base(
@@ -862,6 +907,14 @@ class Listing:
     def __init__(self, files: Iterable[str], settings: FrictionSettings) -> None:
         self.files = frozenset(files)
         self.settings = settings
+        self._index: PathIndex | None = None
+
+    def matched(self, pattern: str) -> tuple[str, ...]:
+        """This state's files a path `pattern` matches, whatever leaves them out, sorted:
+        read through one index of the files (`PathIndex`)."""
+        if self._index is None:
+            self._index = PathIndex(self.files)
+        return self._index.matching(pattern)
 
     def excluded(self, path: str) -> bool:
         """Whether `friction.exclude` leaves `path` out: discovery's one decision of it."""
@@ -894,8 +947,9 @@ class Listing:
         commit's, or every path a history touched — read under this state's
         exclusions.
         """
-        listing = self.files if files is None else files
-        return tuple(sorted(filter(self.stands_on(pattern), listing)))
+        if files is None:
+            return tuple(filter(self.stands_on(pattern), self.matched(pattern)))
+        return tuple(sorted(filter(self.stands_on(pattern), files)))
 
     def left_out(self, pattern: str) -> tuple[str, ...]:
         """The files here a path anchor's `pattern` matches but does not stand on,
@@ -936,7 +990,7 @@ class Side(Listing):
         anchor is.
         """
         if anchor.kind == "path":
-            return any(map(self.stands_on(anchor.value), self.files))
+            return any(map(self.stands_on(anchor.value), self.matched(anchor.value)))
         if anchor.kind == "record":
             rel = self.record_path(anchor.value)
             if rel is None:
@@ -3219,7 +3273,7 @@ class _ChangeAnswers:
     def prunable_at_base(self) -> frozenset[str]:
         """The answer files of the base in which no answer is live there (COR-062 point 8)."""
         if self._prunable is None:
-            self._prunable = frozenset(self.base.prunable(self.base_side.discovery))
+            self._prunable = frozenset(self.base.not_live(self.base_side.discovery))
         return self._prunable
 
     def head_answers(self, artefact: Artefact) -> Answers:
@@ -3367,7 +3421,7 @@ class _ChangeAnswers:
         head = self.head_state
         named = "this change's own head"
         if head.own_source is not None:
-            named += f" ({head.own_head[:SHORT]}, from ${head.own_source})"
+            named += f" ({head.own_head[:SHORT]}, from {head.own_named_by})"
         message = (
             f"{path_of(entry.file)} answers it, live at {named}, and its `read` leaves out "
             f"{_listed(missing)}, which answer it there: an answer names every other answer "
@@ -3383,7 +3437,7 @@ class _ChangeAnswers:
             else:
                 message += (
                     f". --head {head.named} is a merge: where it is a host's merge of the "
-                    f"change with its base, name the change's own head with --head instead"
+                    f"change with its base, name the change's own head with {OWN_HEAD_FLAG}"
                 )
         return message
 
@@ -3519,6 +3573,18 @@ def truth_chain_order(discovery: Discovery, record_path: Callable[[str], str | N
 # --- the check ---------------------------------------------------------------------
 
 
+class ResolverElsewhere(FrictionCheckError):
+    """The check refused a resolver a head named with `--head` needs, since the working
+    tree is not that commit (`_NamedHeadKinds`). `render_refusal_json` gives it to a
+    reader as a document, with the sentence its message says."""
+
+    def __init__(self, message: str, *, head: str, anchor: Anchor, working_tree: str) -> None:
+        super().__init__(message)
+        self.head = head
+        self.anchor = anchor
+        self.working_tree = working_tree
+
+
 class _NamedHeadKinds(AnchorKinds):
     """The anchor kinds of a head named with `--head` (`named_head`), and what their
     resolvers answer for it, read against that commit's files and naming it.
@@ -3526,9 +3592,13 @@ class _NamedHeadKinds(AnchorKinds):
     A resolver is a command run in the working tree, which reads what is on disk:
     it is never read from a commit. So one runs only where the working tree is
     the commit named — HEAD at it, nothing uncommitted — and anywhere else the
-    check refuses (`FrictionCheckError`) rather than read the disk as that commit.
+    check refuses (`ResolverElsewhere`) rather than read the disk as that commit.
     Only an anchor whose resolver would run is refused; an anchor of a core kind,
     or of a kind nothing may resolve, reads the same from any checkout.
+
+    That refusal is a promise, not only a guard (ADR-068 point 6): a run away from
+    the commit named starts nothing that commit holds. A reader may run the check
+    on a commit it does not trust, from a working tree of its own.
     """
 
     def __init__(
@@ -3550,12 +3620,15 @@ class _NamedHeadKinds(AnchorKinds):
             elsewhere = self._working_tree_elsewhere()
             if elsewhere is not None:
                 name = self._head.name
-                raise FrictionCheckError(
+                raise ResolverElsewhere(
                     f"--head {name}: the anchor {anchor.kind} {anchor.value!r} is resolved by "
                     f"its capability's command, which runs in the working tree and reads what "
                     f"is there — and the working tree is not {name} ({elsewhere}). Run from a "
                     f"checkout at {name}: HEAD at {self._head.commit[:SHORT]}, nothing "
-                    f"uncommitted."
+                    f"uncommitted.",
+                    head=self._head.commit,
+                    anchor=anchor,
+                    working_tree=elsewhere,
                 )
         return super().resolve(anchor)
 
@@ -3807,6 +3880,32 @@ def _outdated_message(base: BaseState, head: HeadState) -> str:
 #: against — a key removed, renamed or given another meaning — raises it; a key added
 #: does not. A document without it comes from a backbone that predates it: version 1.
 CHANGE_SCHEMA_VERSION = 1
+
+
+#: The kind of refusal `render_refusal_json` gives: the one a reader answers by running
+#: from a checkout at the head, if it may start what that head holds.
+RESOLVER_ELSEWHERE = "resolver-elsewhere"
+
+
+def render_refusal_json(refused: ResolverElsewhere) -> str:
+    """The check's refusal of a resolver away from the commit named, as a document (ADR-068
+    point 6): a reader tells it from any other failure by `refused.kind`, not by a sentence.
+    It holds no `answers`, so no reader takes it for a check that ran, and it says `failed`
+    as the run's exit code does. It goes only to a caller that names `--own-head`: one
+    older than that flag would read a document with no `answers` as an older backbone's."""
+    document = {
+        "schema_version": CHANGE_SCHEMA_VERSION,
+        "check": "change",
+        "failed": True,
+        "refused": {
+            "kind": RESOLVER_ELSEWHERE,
+            "head": refused.head,
+            "anchor": {"kind": refused.anchor.kind, "value": refused.anchor.value},
+            "working_tree": refused.working_tree,
+            "message": refused.message,
+        },
+    }
+    return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
 
 def render_json(result: ChangeCheck) -> str:
@@ -4155,7 +4254,7 @@ def _header_lines(result: ChangeCheck) -> list[str]:
         lines.append(
             f"  Own head: {result.head.own_head[:SHORT]}"
             + cli_render.style(
-                "muted", f"   (${result.head.own_source}: what each answer had to read)"
+                "muted", f"   ({result.head.own_named_by}: what each answer had to read)"
             )
         )
     if result.shallow:

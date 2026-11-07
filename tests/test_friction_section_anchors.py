@@ -13,7 +13,8 @@ extension point or a record is refused, each with its reason and the anchor to
 use, and validation fails every dead, ambiguous or refused part anchor. An
 anchor on a part of its own artefact is a cycle.
 
-The checks' tests stand up a real adopter repository, commit a base on `main`
+The checks' tests stand up a real adopter repository, its install committed once per
+session (`committed_adopter`), commit a base on `main`
 with the manual and a guide anchored to its section, revalidated there, branch
 `feature` off it and commit one change.
 """
@@ -56,8 +57,10 @@ ON_LEAD = {"artefact": ["docs/manual.md#"]}
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _start(timeline: Timeline, anchors: dict[str, list[str]] | None = None, **kept: Any) -> str:
@@ -84,10 +87,14 @@ def _change_check(timeline: Timeline) -> list[tuple[str, str | None]]:
 
 
 def _repository(timeline: Timeline) -> list[tuple[str, str | None, str | None]]:
+    """(kind, anchor, origin commit) per finding of the whole-repository check, an
+    over-broad anchor left out: in a history of a few commits, most anchors flagged
+    their artefacts in more than half of them (ADR-080 point 3)."""
     result = fr.run_repository_check(timeline.adopter.root)
     return [
         (f.kind.value, None if f.anchor is None else f.anchor.value, f.origin and f.origin.sha)
         for f in result.findings
+        if f.kind is not fr.RepositoryFindingKind.OVER_BROAD
     ]
 
 
@@ -197,7 +204,10 @@ def test_a_whole_artefact_anchor_still_changes_with_any_edit(timeline: Timeline)
     _start(timeline, anchors={"artefact": ["docs/manual.md", "docs/manual.md#using"]})
     changed = _change(timeline, sections=_edited("Installing", "Run the new installer."))
     assert _change_check(timeline) == [("friction", "docs/manual.md")]
-    assert _repository(timeline) == [("stale", "docs/manual.md", changed)]
+    assert _repository(timeline) == [
+        ("stale", "docs/manual.md", changed),
+        ("whole-and-parts", "docs/manual.md", None),  # the whole anchor flags what the part does
+    ]
 
 
 # --- a renamed heading, a shared slug -------------------------------------------------

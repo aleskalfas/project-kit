@@ -7,15 +7,18 @@ parts, a use case not anchored to its actor, a journey whose use-case anchors
 do not match its steps, and revalidation records against their schema. It
 reads the working tree alone: a number the default branch took first is
 `pkit analysis check-numbers`' (`test_software_analysis_numbers.py`).
+
+The validator and the stamp run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2319). One test keeps a process:
+`pkit validate` starting the validator as its member.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
-import sys
-from collections.abc import Mapping
+import subprocess
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +42,7 @@ from tests.analysis_repo import (
     JOURNEYS,
     MAIN,
     NEW,
+    OBLIGATION,
     OVERVIEW_FILE,
     OVERVIEW_SCRIPT,
     QUALITY,
@@ -46,19 +50,20 @@ from tests.analysis_repo import (
     SETTINGS,
     USE_CASES,
     VALIDATE,
-    accepting_san,
     actor_at,
     field_hint,
     fill,
+    fingerprint,
     front,
     installed,
     load_lib,
     new,
     prepare_seeded,
     requirement,
-    run_script,
+    run_in_process,
     stamped,
 )
+from tests.in_process import InProcessPkit, Runner
 
 
 @pytest.fixture
@@ -76,9 +81,11 @@ def seeded(
     return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
-def check(repo: AdopterRepo) -> dict[str, Any]:
-    """The validator's findings document, run as the backbone runs it: `--json` alone."""
-    completed = run_script(repo, VALIDATE, "--json")
+def check(repo: AdopterRepo, *, pkit: Runner | None = None) -> dict[str, Any]:
+    """The validator's findings document, run as the backbone runs it, `--json` alone, in
+    the test's own process (`run_in_process`): its `pkit` calls answered by `pkit` where
+    given, such as one that stands for an older backbone."""
+    completed = run_in_process(repo, VALIDATE, "--json", pkit=pkit)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -123,6 +130,10 @@ def unbound(n: int) -> dict[str, str]:
 # --- in the check gate ----------------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the check gate end to end: `pkit validate` starts the validator as its member, through "
+    "the backbone's runner, and fails on its error"
+)
 def test_the_validator_is_a_member_of_pkit_validate(seeded: AdopterRepo) -> None:
     only = ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
     result = CliRunner().invoke(main, only)
@@ -245,11 +256,13 @@ def test_a_stamped_artefact_is_reported_once_and_passes_filled_as_its_hints_show
     for its body's hints, by the placeholder check, and once for each field still holding
     its hint: never again for a part its hint leaves empty or missing (#2088). Written
     over with its example, each hint holds its part's form, so every kind the stamp
-    writes passes filled as its hints show. The overview the stamp kept is then stale, and
-    the check names the one command that writes it anew."""
+    writes passes filled as its hints show. Each requirement's fingerprint and the overview
+    the stamp kept are then stale, and the check names the command that writes each anew."""
     project.write(
-        {SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"}
-        | accepting_san(project)
+        {
+            SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n",
+            ANALYSIS_SET: ANALYSIS_SET_TEXT,
+        }
     )
     project.commit("bind the format rule, and keep the overview")
     stamped(project, "actor", "tester", "--path", "src/run.py")
@@ -272,11 +285,17 @@ def test_a_stamped_artefact_is_reported_once_and_passes_filled_as_its_hints_show
     for path in sorted(analysis.rglob("*.md")):
         text = path.read_text(encoding="utf-8")
         path.write_text(HINT.sub(r"\g<example>", text), encoding="utf-8")
+    *fingerprints, stale = errors(check(project))
+    assert len(fingerprints) == 3  # each requirement's, its texts written over its hints
+    assert all(location.endswith(":/obligation") for location, _message in fingerprints)
+    assert all("Run `pkit analysis obligation`" in message for _at, message in fingerprints)
+    written = run_in_process(project, OBLIGATION)
+    assert written.returncode == 0, written.stderr
     (stale,) = errors(check(project))
     assert stale[0] == OVERVIEW_FILE
     assert stale[1].startswith("it is stale: what it draws changed since it was written")
     assert "Run `pkit analysis overview` to write it anew" in stale[1]
-    written = run_script(project, OVERVIEW_SCRIPT)
+    written = run_in_process(project, OVERVIEW_SCRIPT)
     assert written.returncode == 0, written.stderr
     document = check(project)
     assert errors(document) == []
@@ -318,7 +337,7 @@ def test_a_field_s_hint_is_never_judged_against_its_form(seeded: AdopterRepo) ->
     """A field still holding its hint is the placeholder check's alone: previewed as
     accepted, the format rule reports no form of it (#1593)."""
     stamped(seeded, "actor", "admin", "--name", "Administrator")
-    completed = run_script(seeded, VALIDATE, "--json", "--preview")
+    completed = run_in_process(seeded, VALIDATE, "--json", "--preview")
     document = json.loads(completed.stdout)
     at_needs = [
         f["message"]
@@ -356,35 +375,34 @@ def test_a_hint_left_in_is_refused_with_no_rule_needed(seeded: AdopterRepo) -> N
     ]
 
 
-#: A `pkit` answering `friction artefacts` as a backbone from before the document
-#: carried `anchors`: the real answer, with the key taken out of every artefact.
-_OLDER_PKIT = """#!{python}
-import json, subprocess, sys
-done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
-                      capture_output=True, text=True)
-out = done.stdout
-if sys.argv[1:3] == ["friction", "artefacts"] and done.returncode == 0:
-    document = json.loads(out)
+def _older_pkit(strip: Callable[[dict[str, Any]], object]) -> Runner:
+    """A `pkit` answering `friction artefacts` as a backbone from before a key of its
+    document: the in-process `pkit`'s answer, with `strip` applied to the document."""
+    pkit = InProcessPkit()
+
+    def older(args: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        done = pkit(args, **options)
+        if list(args[1:3]) == ["friction", "artefacts"] and done.returncode == 0:
+            document = json.loads(done.stdout)
+            strip(document)
+            return subprocess.CompletedProcess(done.args, 0, json.dumps(document), done.stderr)
+        return done
+
+    return older
+
+
+def _without_anchors(document: dict[str, Any]) -> None:
+    """The document of a backbone from before it carried `anchors`: the key taken out of
+    every artefact."""
     for artefact in document["artefacts"]:
         del artefact["anchors"]
-    out = json.dumps(document)
-sys.stdout.write(out)
-sys.stderr.write(done.stderr)
-sys.exit(done.returncode)
-"""
 
 
-def test_a_backbone_without_anchors_in_its_document_is_unreadable(
-    seeded: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_backbone_without_anchors_in_its_document_is_unreadable(seeded: AdopterRepo) -> None:
     """Read as none, missing anchors would report every use case as not anchored to its
     actor and every journey as not anchored to its steps; the check says what is missing."""
-    older = tmp_path / "older-backbone"
-    older.mkdir()
-    (older / "pkit").write_text(_OLDER_PKIT.format(python=sys.executable), encoding="utf-8")
-    (older / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
-    document = check(seeded)
+    older = _older_pkit(_without_anchors)
+    document = check(seeded, pkit=older)
     assert document["summary"] == ["the analysis could not be read; nothing checked."]
     ((location, message),) = errors(document)
     assert location == "."
@@ -393,7 +411,7 @@ def test_a_backbone_without_anchors_in_its_document_is_unreadable(
         "without the `anchors` key this capability reads each artefact's anchors from: the "
         "installed backbone predates it — upgrade it (`pkit upgrade`)"
     )
-    refused = run_script(seeded, NEW, "use-case", "more", "--actor", "ACT-tester")
+    refused = run_in_process(seeded, NEW, "use-case", "more", "--actor", "ACT-tester", pkit=older)
     assert refused.returncode == 1
     assert "without the `anchors` key" in refused.stderr
 
@@ -468,7 +486,7 @@ def test_the_validator_reads_the_working_tree_alone(
         answers.append(check(project))
     assert answers == [answers[0]] * 3
     assert answers[0]["findings"] == [unbound(2)]
-    completed = run_script(project, VALIDATE, "--json", "--base", MAIN)
+    completed = run_in_process(project, VALIDATE, "--json", "--base", MAIN)
     assert completed.returncode == 2
     assert "unrecognized arguments: --base main" in completed.stderr
 
@@ -816,7 +834,7 @@ def test_an_artefact_in_force_names_nothing_withdrawn_as_the_stamp_refuses(
         ),
     ]
     # The stamp refuses the same, and a withdrawn artefact may name withdrawn ones: it is history.
-    refused = run_script(seeded, NEW, "use-case", "later", "--actor", "ACT-retired")
+    refused = run_in_process(seeded, NEW, "use-case", "later", "--actor", "ACT-retired")
     assert "actor ACT-retired is withdrawn" in refused.stderr
     _set(seeded, READ_REPORT, "status: active", "status: withdrawn")
     _set(seeded, JOURNEY, "status: active", "status: withdrawn")
@@ -907,7 +925,8 @@ EARLIER_SET_TEXT = ANALYSIS_SET_TEXT.replace(
 
 def _requirement(shown: str, last: str, **fields: str | None) -> str:
     """A requirement filled as its kind's structure asks, its front matter's `fields`
-    changed, and one set to `None` left out."""
+    changed, one set to `None` left out, and its `obligation` the fingerprint of its texts
+    (DEC-006 point 6)."""
     front: dict[str, str | None] = {
         "id": "REQ-004",
         "title": "Show a run's result quickly",
@@ -917,6 +936,7 @@ def _requirement(shown: str, last: str, **fields: str | None) -> str:
         "applies-to": "Every run of a suite.",
         **fields,
     }
+    front["obligation"] = fingerprint({k: v for k, v in front.items() if v is not None})
     written = "".join(f"{k}: {json.dumps(v)}\n" for k, v in front.items() if v is not None)
     return (
         f"---\n{written}pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
@@ -936,7 +956,7 @@ def test_a_requirement_is_held_to_its_kind_s_schema_and_where_the_rule_binds_its
     the kinds selects none of them, so it holds no requirement to its structure."""
     place, shown, last = REQUIREMENT_KINDS[kind]
     rel = f"{place}/REQ-004-quick-result.md"
-    project.write({**accepting_san(project), rel: _requirement(shown, last)})
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT, rel: _requirement(shown, last)})
     document = check(project)
     assert errors(document) == []
     noun = kind.replace("-", " ")
@@ -1018,7 +1038,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     """A requirement's id is `REQ-NNN`, its file's name carries it, and its heading shows
     its id, its kind and its title (DEC-002 point 2, #1693). The heading is the heading
     check's whatever the format rule binds, so the structure never reports it twice."""
-    project.write({**accepting_san(project), QUICK: requirement()})
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT, QUICK: requirement()})
     assert errors(check(project)) == []
     title = "Show a run's result quickly"
     wanted = f"`# REQ-004 · Quality · {title}`"
@@ -1328,36 +1348,19 @@ def test_the_files_outside_the_kinds_are_read_from_the_location_s_unplaced_files
     assert model.analysis_of(document).outside_kinds == read
 
 
-#: A `pkit` answering `friction artefacts` as a backbone from before the document carried
-#: `unplaced`: the real answer, with the key taken out.
-_PKIT_WITHOUT_UNPLACED = """#!{python}
-import json, subprocess, sys
-done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
-                      capture_output=True, text=True)
-out = done.stdout
-if sys.argv[1:3] == ["friction", "artefacts"] and done.returncode == 0:
-    document = json.loads(out)
+def _without_unplaced(document: dict[str, Any]) -> None:
+    """The document of a backbone from before it carried `unplaced`: the key taken out."""
     del document["unplaced"]
-    out = json.dumps(document)
-sys.stdout.write(out)
-sys.stderr.write(done.stderr)
-sys.exit(done.returncode)
-"""
 
 
 def test_a_backbone_that_gives_no_unplaced_files_makes_the_check_say_it_did_not_look(
-    project: AdopterRepo, pkit_on_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    project: AdopterRepo,
 ) -> None:
     """Without the backbone's list, nothing says whether `requirements/` holds a file
     outside the three kinds' folders, so the check says it could not look, and never
     reads the silence as no such file (#1724)."""
-    older = tmp_path / "older-backbone"
-    older.mkdir()
-    (older / "pkit").write_text(_PKIT_WITHOUT_UNPLACED.format(python=sys.executable))
-    (older / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
     project.write({QUICK: requirement()})
-    assert errors(check(project)) == [
+    assert errors(check(project, pkit=_older_pkit(_without_unplaced))) == [
         (
             "tech-docs/analysis",
             "no file under `requirements/` outside the three kinds' folders is looked for: "

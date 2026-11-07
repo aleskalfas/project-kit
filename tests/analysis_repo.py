@@ -3,25 +3,31 @@
 Shared by the software-analysis tests (`test_software_analysis*.py`): the
 paths the capability's places resolve to with the internal root at
 `tech-docs/`, `prepare` for an adopter repository, and the stamp, run as the
-dispatcher runs `pkit analysis new`. The scripts run as subprocesses under
-this interpreter — their `uv run --script` shebang pointed at it — and the
-`pkit` they read through is the real CLI under this interpreter (the
-`pkit_on_path` fixture), so nothing reaches `uv` or the network.
+dispatcher runs `pkit analysis new`.
+
+The stamp, the links and the overview run in the test's own process
+(`run_in_process`): each script's `main`, its `pkit` calls answered by the
+backbone's CLI in this process (`tests/in_process.py`). So a template's stamps
+start no process of `pkit` or of a script (#2319). `run_script` runs a script as
+a subprocess under this interpreter, its `uv run --script` shebang pointed at
+it, for a test whose point is the process. The `pkit` such a script reads
+through is the real CLI under this interpreter (the `pkit_on_path` fixture), so
+nothing reaches `uv` or the network.
 
 `installed` builds the adopter each test module's `project` fixture returns, with
 `$PKIT_CHECK_BASE` removed: the backbone names the scripts' base from it when
 set, and a developer's own value must not decide what these repositories answer.
 The adopter is a copy of a template built once per test session, `prepare`d —
-or `prepare_seeded`, the shape a module's `seeded` fixture returns: stamping
-the seed starts some two dozen `pkit` processes, more than most tests of these
-modules cost in all (#1204).
+or `prepare_seeded`, the shape a module's `seeded` fixture returns, the seed
+stamped and filled (#1204).
 """
 
 from __future__ import annotations
 
-import importlib
+import functools
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +40,7 @@ from scripts import prose_lint as pl
 
 from project_kit import document_parts
 from project_kit.friction_check import BASE_ENV
+from tests import in_process
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
 
 REPO = Path(__file__).resolve().parent.parent
@@ -45,6 +52,8 @@ VALIDATE = SA / "scripts" / "validate.py"
 LINK = SA / "scripts" / "link.py"
 #: The command that writes each analysis's overview (DEC-003 point 8).
 OVERVIEW_SCRIPT = SA / "scripts" / "overview.py"
+#: The command that writes each requirement's fingerprint of its texts (DEC-006 point 6).
+OBLIGATION = SA / "scripts" / "obligation.py"
 NUMBERS = SA / "scripts" / "check-numbers.py"
 CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
@@ -81,29 +90,19 @@ MAIN = "main"
 
 #: The method rule set, as the adopter holds it, and a set of the project's own through
 #: which it binds on the whole analysis: `SAN` takes no scope, so its rules bind only
-#: through such a set (DEC-001 point 1; COR-051 point 7).
+#: through such a set (DEC-001 point 1; COR-051 point 7). The set pins `SAN` at the major
+#: it ships, 2 since its judgement rules were accepted (#1727): a pin behind binds nothing.
+#: `SAN` ships each rule accepted (#1370, #1727), so writing the set makes them bind.
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
 ANALYSIS_SET_TEXT = (
-    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@2]\n"
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
     "software-analysis:use-case, software-analysis:journey, "
     "software-analysis:quality-requirement, software-analysis:functional-requirement, "
     "software-analysis:constraint, software-analysis:domain-model-view]\nrules: {}\n---\n\n"
     "# ANALYSIS — the project's rules for its analysis\n"
 )
-
-
-def accepting_san(repo: AdopterRepo) -> dict[str, str]:
-    """What to write so `SAN`'s rules bind on the whole analysis, the format rule and the
-    append-only rule: the adopter's copy of `SAN` with each rule accepted, as it ships
-    them since the maintainer accepted both (#1370), and a set of the project's own that
-    inherits it."""
-    text = (repo.root / SAN_REL).read_text(encoding="utf-8")
-    return {
-        SAN_REL: text.replace("status: proposed", "status: accepted"),
-        ANALYSIS_SET: ANALYSIS_SET_TEXT,
-    }
 
 
 def proposing_san(repo: AdopterRepo) -> dict[str, str]:
@@ -128,23 +127,10 @@ _yaml: Any = YAML(typ="safe")
 
 
 def load_lib(*names: str) -> tuple[ModuleType, ...]:
-    """Pure `_lib` modules of the capability's scripts, imported together as the scripts
-    import them: `_lib` is on the path only while they load, since another capability's
-    `_lib` is not importable beside it."""
-    scripts = str(CAPABILITY / "scripts")
-
-    def ours() -> list[str]:
-        return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
-
-    saved = {k: sys.modules.pop(k) for k in ours()}
-    sys.path.insert(0, scripts)
-    try:
-        return tuple(importlib.import_module(f"_lib.{name}") for name in names)
-    finally:
-        sys.path.remove(scripts)
-        for key in ours():
-            del sys.modules[key]
-        sys.modules.update(saved)
+    """`_lib` modules of the capability's scripts, imported together as the scripts import
+    them, through the one loader (`tests/in_process.py`, `load`): `_lib` is on the path
+    only while they load, since another capability's `_lib` is not importable beside it."""
+    return in_process.load(CAPABILITY / "scripts", *names)
 
 
 def field_hint(kind: str, name: str) -> str:
@@ -182,7 +168,7 @@ def prepare(repo: AdopterRepo) -> AdopterRepo:
     return repo
 
 
-# Slow: four stamps, built once per session; the first test to ask pays it in its setup.
+# Four stamps, built once per session; the first test to ask pays them in its setup.
 def prepare_seeded(repo: AdopterRepo) -> None:
     """`prepare`, then `seed`: an actor, two use cases and a journey, filled."""
     prepare(repo)
@@ -204,6 +190,7 @@ def installed(
 
 
 def run_script(repo: AdopterRepo, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """`script`, the adopter's copy, run as the dispatcher runs it: a process."""
     return subprocess.run(
         [sys.executable, str(repo.root / script), *args],
         cwd=repo.root,
@@ -213,9 +200,44 @@ def run_script(repo: AdopterRepo, script: Path, *args: str) -> subprocess.Comple
     )
 
 
+#: The `pkit` the `pkit_on_path` fixture puts first on PATH (`tests/conftest.py`): the
+#: real CLI under this interpreter.
+_REAL_PKIT = f'#!/bin/sh\nexec "{sys.executable}" -P -m project_kit "$@"\n'
+
+
+def _real_pkit_first() -> bool:
+    """Whether the `pkit` first on PATH is the real CLI under this interpreter, as
+    `pkit_on_path` writes it. A `pkit` a test put before it, such as one that stands for
+    an older backbone, is not."""
+    found = shutil.which("pkit")
+    try:
+        return found is not None and Path(found).read_text(encoding="utf-8") == _REAL_PKIT
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
+def run_in_process(
+    repo: AdopterRepo, script: Path, *args: str, pkit: in_process.Runner | None = None
+) -> subprocess.CompletedProcess[str]:
+    """`script` run as `run_script` runs it, but in the test's own process: the adopter's
+    copy's `main` with `args`, from the repository's root, in the test's environment,
+    standard output and standard error apart (`tests/in_process.py`, `run_main`). Its
+    `pkit` calls go through the capability's one private function, `backbone._run`,
+    unchanged. `pkit` answers them where given. Else the backbone's CLI answers them in
+    this process where the real CLI is first on PATH, and otherwise the `pkit` first on
+    PATH does, as a process."""
+    scripts = (repo.root / script).parent
+    loaded, backbone = in_process.load(scripts, script.name, "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        if pkit is not None or _real_pkit_first():
+            in_process.route_pkit(patched, backbone, pkit)
+        return in_process.run_main(loaded, *args, cwd=repo.root)
+
+
 def new(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis new …`, run as the dispatcher runs it, against `main`."""
-    return run_script(repo, NEW, *args, "--base", MAIN)
+    """`pkit analysis new …`, run as the dispatcher runs it, against `main`, in the test's
+    own process (`run_in_process`)."""
+    return run_in_process(repo, NEW, *args, "--base", MAIN)
 
 
 def stamped(repo: AdopterRepo, *args: str) -> str:
@@ -226,9 +248,9 @@ def stamped(repo: AdopterRepo, *args: str) -> str:
 
 
 def link(repo: AdopterRepo) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis link`, run as the dispatcher runs it: the links between the terms
-    and the views written (DEC-004 point 7)."""
-    completed = run_script(repo, LINK)
+    """`pkit analysis link`, run as the dispatcher runs it, in the test's own process: the
+    links between the terms and the views written (DEC-004 point 7)."""
+    completed = run_in_process(repo, LINK)
     assert completed.returncode == 0, completed.stderr
     return completed
 
@@ -282,11 +304,12 @@ def requirement(
     heading: str | None = None,
     **fields: Any,
 ) -> str:
-    """A requirement of `kind`, filled as its structure asks, written by hand as no stamp
-    writes one yet: its front matter's `fields` added or changed, a field set to `None`
-    left out, each of `anchored` an artefact anchor beside its path anchor, and its
-    `heading`, the line its body opens with — its id, its kind and its title unless given,
-    none when empty."""
+    """A requirement of `kind`, filled as its structure asks, written by hand: its front
+    matter's `fields` added or changed, a field set to `None` left out, its `obligation`
+    the fingerprint of its texts as `pkit analysis obligation` writes it unless given,
+    each of `anchored` an artefact anchor beside its path anchor, and its `heading`, the
+    line its body opens with — its id, its kind and its title unless given, none when
+    empty."""
     _place, shown, last = REQUIREMENT_PLACES[kind]
     front: dict[str, Any] = {
         "id": req_id,
@@ -297,6 +320,8 @@ def requirement(
         "applies-to": "Every run of a suite.",
         **fields,
     }
+    if "obligation" not in fields:
+        front["obligation"] = fingerprint({k: v for k, v in front.items() if v is not None}, kind)
     anchors: dict[str, list[str]] = {"path": ["src/run.py"]}
     if anchored:
         anchors["artefact"] = anchored
@@ -308,6 +333,23 @@ def requirement(
         + "**Verified by:** A timing test runs the suite and measures when its result shows.\n\n"
         + f"**{last}:** None.\n"
     )
+
+
+def fingerprint(fields: dict[str, Any], kind: str = "quality-requirement") -> str:
+    """A requirement's `obligation` for its front matter's `fields`, as `pkit analysis
+    obligation` writes it where the texts lie in front matter, a text the fields leave out
+    read as absent (software-analysis DEC-006 points 6 and 7)."""
+    structure, obligation = _fingerprinting()
+    declared: Any = structure.read_kinds()[kind]
+    read = obligation.texts(fields, list, declared)
+    return obligation.value(read, obligation.LINK_FORMS)
+
+
+@functools.cache
+def _fingerprinting() -> tuple[Any, Any]:
+    """The capability's structure and fingerprint modules, loaded once for the session."""
+    structure, obligation = load_lib("structure", "obligation")
+    return structure, obligation
 
 
 #: A shipped example's citation of the example project's own record, such as `(PRJ-003)`.
@@ -322,7 +364,9 @@ def fill(repo: AdopterRepo) -> None:
     warn of one that resolves to nothing (software-analysis DEC-001 point 13). Then the
     links are written, as the authoring skill runs `pkit analysis link` after any artefact
     is written: a journey's step lines name their use cases by id, which link to them
-    (DEC-001 point 14). The overview is generated, and holds nothing a person fills
+    (DEC-001 point 14). Each requirement's `obligation` is then written anew, as a person
+    runs `pkit analysis obligation` once its texts are written (DEC-006 point 6). The
+    overview is generated, and holds nothing a person fills
     (DEC-003 point 8). An actor's `summary` is drawn there, so where an overview is kept,
     it is written anew after, as a person runs its command."""
     overviews = [
@@ -335,10 +379,13 @@ def fill(repo: AdopterRepo) -> None:
             lambda m: _EXAMPLE_CITATION.sub("", m["example"]), path.read_text(encoding="utf-8")
         )
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
-    linked = run_script(repo, LINK)
+    linked = run_in_process(repo, LINK)
     assert linked.returncode == 0, linked.stderr
+    if any((repo.root / ANALYSIS).rglob("requirements/*/**/*.md")):
+        fingerprinted = run_in_process(repo, OBLIGATION)
+        assert fingerprinted.returncode == 0, fingerprinted.stderr
     if overviews:
-        written = run_script(repo, OVERVIEW_SCRIPT)
+        written = run_in_process(repo, OVERVIEW_SCRIPT)
         assert written.returncode == 0, written.stderr
 
 

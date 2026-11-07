@@ -1,0 +1,106 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+    revalidated:
+      at: 2026-10-31T01:05:27Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+    revalidated:
+      at: 2026-10-31T01:05:35Z
+      outcome: unchanged
+      unchanged-because: The fix records the move to Done a merge's close makes where the board carries the state, in close-issue and move-issue; neither command's forward cascade nor its closure cascade changes, so the definition of the cascade and its distinctions still hold.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+    revalidated:
+      at: 2026-10-31T01:05:41Z
+      outcome: unchanged
+      unchanged-because: move-issue now records a merge's close from the card it sets to Done where the board carries the state; the lifecycle's states and moves, and the board's Status as the source of an open issue's position, are as the term says.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+    revalidated:
+      at: 2026-10-31T01:05:50Z
+      outcome: unchanged
+      unchanged-because: "The change records a merge's close where the board carries the state, which this use case does not tell: its board variants describe an open issue's moves and refusals, and 'a closed issue is Done whatever its card says' still holds, since only the journal entry is new."

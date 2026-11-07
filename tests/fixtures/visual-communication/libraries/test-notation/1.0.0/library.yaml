@@ -1,0 +1,11 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# The notation the capability's tests name concepts from (DEC-004 point 10): the parts of
+# a system, each mapped to a colour family the foundations declare. No project locks it.
+name: test-notation
+version: 1.0.0
+kind: notation
+needs-release: 0.1.0
+builds-on:
+  - {name: foundations, major: 1}

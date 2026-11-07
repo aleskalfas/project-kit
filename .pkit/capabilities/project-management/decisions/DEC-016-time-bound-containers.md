@@ -105,7 +105,11 @@ The Milestone description opens with a `Close trigger:` line. Three valid values
 
 Marker pattern: `^Close trigger: (date-based|content-based|either)$`. Severity for a new Milestone filing missing or malformed marker: `[validation-severity:hard-reject]`. Severity for an existing Milestone read without the marker: `[validation-severity:warning]` — the agent infers (has due date → date-based; no due date → content-based) and offers to write the marker into the description.
 
-Optional `Rollforward target: <Milestone>` second line on date-based Milestones declares an explicit rollforward destination. Default (when absent) is the next-numbered open Milestone; ambiguous candidates prompt the user at rollforward time.
+An optional `Rollforward target: <Milestone>` line on date-based Milestones, read wherever it stands in the description, declares an explicit rollforward destination. Default (when absent) is the next-numbered open Milestone of its category, by the number in its title ("Numbering as sort prefix" above); ambiguous candidates prompt the user at rollforward time. Where the project's topology declares pools of workers, the default stays within the pool: a Milestone in a pool rolls to the next open one of its category in the same pool, and one in no pool to the next open one of its category in no pool. The user is asked where there is none or more than one, and the close's consent prompt names a target in another pool (refinement per [project-management:DEC-061-pools-of-workers] point 7).
+
+### Pool — an optional line that puts the Milestone into a pool of workers
+
+Where the project's topology declares pools of workers, a Milestone's description may carry a `Pool: <name>` line, which puts the Milestone and each issue in it into that pool. The line may stand anywhere in the description, while `Close trigger:` stays first, and DEC-061 point 2 sets how it is read and changed (refinement per [project-management:DEC-061-pools-of-workers] point 2). It is written only with the user's consent, whose record DEC-061 point 6 keeps in the description, never in the `Pool:` form.
 
 ### Rollforward cascade for date-based Milestone close
 

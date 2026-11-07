@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
-    revalidated:
-      at: 2026-10-25T00:38:28Z
-      outcome: unchanged
-      unchanged-because: Core rule 20's words change, and the rules file is still the one every session loads, so the term holds.

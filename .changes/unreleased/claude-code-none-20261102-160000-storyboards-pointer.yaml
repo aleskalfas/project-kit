@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  The adapter's README points to the agents reference's `storyboards.md`,
+  "Frontmatter declaration", where the storyboard convention moved from the
+  agents README (#2457). Nothing the adapter ships or runs changes.

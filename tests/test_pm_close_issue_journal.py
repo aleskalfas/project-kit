@@ -38,6 +38,7 @@ from tests.process_journal_support import set_journal_logging
 
 ENGINE_WARNING = "the process engine refused this move"
 WONT_DO_REASON = "superseded by #99"
+RESULT = "the findings are filed as #908"
 PR = 500
 
 UNTICKED_BODY = AUTHORED_BODY.replace("- [x]", "- [ ]")
@@ -121,6 +122,12 @@ def _container_in_progress(world: World) -> int:
     return parent
 
 
+def _task_in_progress(world: World) -> int:
+    number = _backlog_task(world)
+    assert world.move(number, "in-progress") == 0
+    return number
+
+
 def _merged_task_in_review(world: World) -> int:
     """What done-work's pr-merge close finds: GitHub closed the issue as the
     pull request merged and left its Review label in place."""
@@ -156,8 +163,23 @@ CLOSES = [
         f"pr-merge close: closed by merged PR #{PR}",
         id="pr-merge",
     ),
+    pytest.param(
+        _task_in_progress,
+        ["--mode", "completed", "--result", RESULT],
+        ("in-progress", "done"),
+        "close-issue",
+        f"completed close: {RESULT}",
+        id="completed",
+    ),
 ]
 CLOSE_FIELDS = ("set_up", "options", "move", "trigger", "reason")
+
+
+def _engine_calls_of(options: list[str]) -> list[str]:
+    """The engine calls a close makes: the one move that records it, then, for
+    a completed close, the read move-issue makes as it runs the forward cascade
+    (DEC-006), which finds no ancestor to move here."""
+    return ["move", *(["status"] if "completed" in options else [])]
 
 
 # --- each close is journaled once ---------------------------------------------
@@ -188,7 +210,7 @@ def test_each_close_journals_one_move_from_where_the_issue_was(
     assert entry["reason"] == reason
     assert entry["actor"] == INVOKER.github_login
     # One engine call records the close, and nothing reads the engine before it.
-    assert [call[2] for call in calls] == ["move"]
+    assert [call[2] for call in calls] == _engine_calls_of(options)
 
 
 @pytest.mark.parametrize(CLOSE_FIELDS, CLOSES)
@@ -274,6 +296,23 @@ def test_a_close_through_a_pr_that_does_not_relate_to_the_issue_records_nothing(
     assert world.journal(elsewhere) == before
 
 
+def test_a_wont_do_close_of_a_task_in_progress_is_journaled(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """In Progress → Done is declared for a Task since a Task closes from there
+    as completed without a pull request (#2282), so a won't-do close from In
+    Progress is recorded too."""
+    number = _task_in_progress(world)
+    capsys.readouterr()
+
+    assert world.close(number, "--reason", WONT_DO_REASON) == 0
+
+    assert "this move was not recorded" not in capsys.readouterr().err
+    assert world.moves(number)[-1] == ("in-progress", "done", "close-issue")
+    assert world.journal(number)[-1]["reason"] == f"wont-do close: {WONT_DO_REASON}"
+    assert world.history(number) == 0
+
+
 # --- a close that is not recorded ---------------------------------------------
 
 
@@ -309,29 +348,30 @@ def test_a_close_the_engine_refuses_is_reported_like_a_direct_moves_refusal(
 def test_a_close_the_workflow_does_not_declare_for_the_type_is_not_recorded(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # The workflow declares In Progress → Done for containers only. The engine
-    # does not read a transition's `applies_to`, so it would record the move
-    # for a Task; close-issue does not hand it over, and says so.
-    number = _backlog_task(world)
-    assert world.move(number, "in-progress") == 0
+    # The workflow declares Review → Done for a Task alone: no container enters
+    # Review. The engine does not read a transition's `applies_to`, so it would
+    # record the move for a container whose label was set to Review by hand;
+    # close-issue does not hand it over, and says so.
+    number = _container_in_progress(world)
+    labels = world.tracker.issues[number]["labels"]
+    labels[labels.index("state:in-progress")] = "state:review"
     capsys.readouterr()
 
-    rc, calls = _engine_calls_during(world, lambda: world.close(number, "--reason", WONT_DO_REASON))
+    rc, calls = _engine_calls_during(
+        world, lambda: world.close(number, "--mode", "cascade-eligibility-close")
+    )
 
     closed = capsys.readouterr()
     assert rc == 0
     assert calls == []
     assert (
-        "[warn] this move was not recorded: no transition 'in-progress' → 'done' "
-        "declared in workflow.yaml for 'task'. "
+        "[warn] this move was not recorded: no transition 'review' → 'done' "
+        "declared in workflow.yaml for 'feature'. "
     ) in closed.err
     assert f"`pkit pm history {number} --check-drift` will show the gap" in closed.err
-    assert f"[ok] closed #{number} (wont-do)." in closed.out
+    assert f"[ok] closed #{number} (cascade-eligibility, completed)." in closed.out
     assert world.views(number) == ("done", "done")
-    assert world.moves(number) == [
-        ("todo", "backlog", "promote-issue"),
-        ("backlog", "in-progress", "start-work"),
-    ]
+    assert world.moves(number) == _LEVEL
     assert world.history(number) == 3
 
 
@@ -359,8 +399,8 @@ def test_with_journal_logging_off_nothing_is_journaled(
     assert world.journal_files() == []
     # Whether a move is recorded is the engine's to say: the close asks it once,
     # as move-issue asks for each move, and it records nothing. Nothing else is
-    # asked of it.
-    assert [call[2] for call in calls] == ["move"]
+    # asked of it, but where the forward cascade runs after the close.
+    assert [call[2] for call in calls] == _engine_calls_of(options)
 
 
 # --- move-issue on an issue GitHub closed -------------------------------------
@@ -463,9 +503,9 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
 # its milestone (Backlog, inferred), else Todo for an issue still open, and
 # nothing for one already closed with neither — by close-issue's entry, by
 # move-issue's entry for relabelling a closed issue, and by the forward cascade,
-# which tells a finished issue from a won't-do one by it. So a landing never
-# journals a won't-do close while the cascade brings ancestors level as for a
-# finished one.
+# which tells a finished issue from a won't-do one by it where the issue did not
+# close as completed. So a landing never journals a won't-do close while the
+# cascade brings ancestors level as for a finished one.
 
 _LEVEL = [("todo", "backlog", "promote-issue"), ("backlog", "in-progress", "start-work")]
 
@@ -510,8 +550,10 @@ def test_a_merge_closing_a_task_with_only_a_milestone_reads_backlog_for_both(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Only a milestone: Backlog, inferred — the journal records the close from
-    Backlog, and the cascade, reading the same Backlog, takes it as a won't-do
-    and moves no ancestor. The two agree, on an inference both name."""
+    Backlog, and the cascade reads the same Backlog. The merge closed the Task
+    as completed, which is progress from Backlog too (DEC-006), so the cascade
+    brings the ancestors level, naming that Backlog. The two agree, on an
+    inference both name."""
     epic, feature, task = _unlabelled_task_under_a_feature(world)
     world.tracker.issues[task]["milestone"] = {"number": 7, "title": "Sprint 1"}
     world.tracker.merge(PR, [task])
@@ -521,8 +563,11 @@ def test_a_merge_closing_a_task_with_only_a_milestone_reads_backlog_for_both(
     _land(world, task, "--no-cascade")
 
     assert world.moves(task) == [("backlog", "done", "close-issue")]
-    assert world.moves(feature) == world.moves(epic) == []
-    assert "a move to done from backlog is a won't-do close" in capsys.readouterr().out
+    for number in (feature, epic):
+        assert world.moves(number) == _LEVEL, number
+        assert world.journal(number)[0]["reason"] == (
+            f"forward cascade from #{task}: backlog → done"
+        )
 
 
 def test_a_wont_do_close_of_an_open_task_nothing_placed_is_journaled_from_todo(

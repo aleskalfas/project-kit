@@ -1,6 +1,0 @@
-answers:
-  - artefact: .pkit/adapters/README.md
-    revalidated:
-      at: 2026-10-25T05:23:15Z
-      outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, and the command keeps the same edges. This page says nothing of that graph, so it holds.

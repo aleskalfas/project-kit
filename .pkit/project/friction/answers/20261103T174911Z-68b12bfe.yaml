@@ -1,0 +1,19 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-008
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+    revalidated:
+      at: 2026-11-03T17:50:01Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-014
+    read:
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261031T011427Z-45248979.yaml
+    revalidated:
+      at: 2026-11-03T17:50:05Z
+      outcome: updated

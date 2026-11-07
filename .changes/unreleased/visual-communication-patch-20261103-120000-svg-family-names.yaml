@@ -1,0 +1,14 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The SVG renderer writes each font family's name as a CSS string, in each
+  `@font-face` rule and each `font-family` attribute (#2505). It quotes the
+  name, escapes `"` and `\`, and writes as the escape of its code point each
+  `<`, `>` and `&`, each control character and each character XML 1.0 does
+  not allow. A brand's family name could before end the drawing's `<style>`
+  element and put a script into every preview and export drawn with it, and
+  a `'` in a name broke the CSS. Every family name format 1 accepts still
+  draws, as itself. The renderer is now at version 1.0.1, since the same
+  scene gives another file.

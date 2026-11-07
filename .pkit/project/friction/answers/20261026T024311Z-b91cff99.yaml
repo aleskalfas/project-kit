@@ -1,8 +1,0 @@
-answers:
-  - artefact: .pkit/capabilities/doc-examples/README.md
-    read:
-      - 20261026T023422Z-1926903c.yaml
-    revalidated:
-      at: 2026-10-26T02:43:11Z
-      outcome: unchanged
-      unchanged-because: living-docs DEC-001 changed only where the authoring command offers to set shared roots apart, in points 1 and 2. COR-050 and COR-056 gained only pointers to COR-063 on where a document's data may sit, and no type allows a sidecar yet. The page type, the reading evidence and what the page says of COR-050 and COR-056 hold, so the page holds.

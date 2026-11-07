@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A piece is computed once for each language and each key over the size axes
+  it names (#2790). Each scene reads the brand's roles at its key, and each
+  combination is drawn from the scene of its key, so `render`, `look` and
+  `export` give a file for each key, and `pages` lists each. A scene finding
+  the same at every size reads as before. One found at only some sizes, or
+  that reads otherwise at each, is reported for each size, its message opening
+  with that size's key. Contrast is measured on each size's scene. A piece on
+  no size axis is computed and drawn as it was, byte for byte. The shipped
+  foundations declare no size axis yet.

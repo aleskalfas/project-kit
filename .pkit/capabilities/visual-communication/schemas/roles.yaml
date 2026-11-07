@@ -1,0 +1,34 @@
+# A library's declarations, `roles.yaml` (visual-communication DEC-004 points 2, 7, 8
+# and 10): its roles, each with its type, and a default that aliases an older role; in
+# the foundations also the shared axes, the colour families and the pairs of colour roles
+# that must contrast. A role carries no value: a brand gives it one.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:roles
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+roles:
+  background:
+    type: color
+  text-primary:
+    type: color
+  text-muted:
+    type: color
+    default: '{text-primary}'
+  space.1:
+    type: dimension
+axes:
+  colour-scheme:
+    kind: value
+    modes:
+      - light
+      - dark
+    default: light
+families: {}
+pairs:
+  - text: text-primary
+    under: background
+    level: text

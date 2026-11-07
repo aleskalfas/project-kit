@@ -24,7 +24,8 @@ reads:
     - .pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md
     - .pkit/capabilities/software-engineering/decisions/DEC-004-skeleton-conventions-in-corpus.md
     - .pkit/lifecycle/ownership.py
-  patterns: []
+  patterns:
+    - tech-docs/coding-conventions.md
 ---
 
 # Software engineer

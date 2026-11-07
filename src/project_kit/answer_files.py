@@ -67,8 +67,23 @@ everything about them:
   `friction_history` supplies the walk.
 - **The first commit holding two answers made apart** (`AnswerHistory.
   first_holding`), where their debt originates (COR-050 point 9, COR-062 point 7).
-- **What a prune would remove** (`StateAnswers.prunable`): each answer file in
-  which no answer is live (COR-062 point 8; ADR-068 point 4).
+- **What one commit wrote for an artefact** (`AnswerHistory.revalidated_in`),
+  against its first parent, for the warning on an over-broad anchor (ADR-080
+  point 1): whether it wrote a revalidation, a value of `at` in the artefact's
+  block or in an answer file it added or rewrote that the artefact's answers, in
+  either home, never carried at its first parent or before
+  (`AnswerHistory.carried_by`). A file rewritten counts, since a change may rewrite
+  one it added, as a fix round does, and its commits may land one by one. So an
+  answer moved out of the block, an answer file renamed or put back, and a value
+  written back, as a revert writes it, write none (COR-050 point 3, COR-062 point
+  3). It reads what the commit wrote, never which answers are live after it, as
+  the change check reads a change's head against its base's values: that would
+  take a state's answers at every commit.
+- **What a prune removes** (`StateAnswers.prune`): each answer file in which no
+  answer is live (`StateAnswers.not_live`), unless removing it would change one that
+  is. A file is kept where it cannot be read, where removing it brings back an
+  answer it replaced (COR-062 point 8, "What stays replaced"), and where a live
+  deferral keeps its point from it (point 6; ADR-068 point 4).
 - **What a change does to the folder** (`changed_files`; COR-062 point 3): the
   answer files its diff adds, the ones of its base it rewrites, and the ones it
   removes, a file paired with another as a rename read as one removed and one
@@ -94,6 +109,7 @@ from typing import Any, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import (
     ANSWER_FILE_SCHEMA_KIND,
     BackboneSchemaInvalid,
@@ -156,7 +172,8 @@ DEFERRED_KEY = "deferred"
 BLOCK_HOME = "block"
 FILES_HOME = "files"
 
-_yaml: Any = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 # --- the folder ---------------------------------------------------------------------
@@ -415,7 +432,7 @@ def read_answer_file(name: str, raw: bytes | None) -> AnswerFile:
     except UnicodeDecodeError:
         return AnswerFile(name, None, (), "is not UTF-8 text")
     try:
-        loaded = _yaml.load(text)
+        loaded = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError as exc:
         reason = " ".join(str(getattr(exc, "problem", None) or exc).split())
         return AnswerFile(name, None, (), f"does not parse as YAML ({reason})")
@@ -569,11 +586,21 @@ def commit_files(tree: CommitTree) -> dict[str, AnswerFile]:
 class HistoryNames:
     """Whether a name in `read` is one history agrees with (COR-062 point 5), from a
     history read from the state's commit: the named file was added in a commit that
-    first carried the name, or in an ancestor of one."""
+    first carried the name, or in an ancestor of one.
 
-    def __init__(self, history: History, blobs: BlobReader) -> None:
+    `read` reads one version of an answer file, its tree entry and its name, as
+    `read_answer_file` does. A caller that reads the same versions passes its own,
+    so each is parsed once for both (`AnswerHistory`)."""
+
+    def __init__(
+        self,
+        history: History,
+        blobs: BlobReader,
+        read: Callable[[TreeEntry, str], AnswerFile] | None = None,
+    ) -> None:
         self.history = history
         self._blobs = blobs
+        self._read = self._read_version if read is None else read
         self._reads: dict[str, frozenset[str]] = {}
         self._adds: dict[str, tuple[int, ...]] = {}
         self._carried: dict[tuple[str, str], tuple[int, ...]] = {}
@@ -614,11 +641,13 @@ class HistoryNames:
                 entry = self.history.entry(index, path)
                 if entry is None or entry.status == "D" or entry.after is None:
                     continue
-                if named not in self.reads(entry.after):
+                if named not in self.reads(entry.after, reader):
                     continue
                 added = entry.status == "A" or entry.status == "R"
                 parents = () if added else entry.before
-                if not any(state is not None and named in self.reads(state) for state in parents):
+                if not any(
+                    state is not None and named in self.reads(state, reader) for state in parents
+                ):
                     writes.append(index)
             found = tuple(
                 w
@@ -628,15 +657,18 @@ class HistoryNames:
             self._carried[key] = found
         return found
 
-    def reads(self, state: TreeEntry) -> frozenset[str]:
-        """Every name the version `state` of an answer file reads, any entry's."""
+    def reads(self, state: TreeEntry, name: str = "") -> frozenset[str]:
+        """Every name the version `state` of the answer file `name` reads, any entry's."""
         found = self._reads.get(state[1])
         if found is None:
-            raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
-            parsed = read_answer_file("", raw)
-            found = frozenset(name for entry in parsed.entries for name in entry.read)
+            parsed = self._read(state, name)
+            found = frozenset(read for entry in parsed.entries for read in entry.read)
             self._reads[state[1]] = found
         return found
+
+    def _read_version(self, state: TreeEntry, name: str) -> AnswerFile:
+        raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
+        return read_answer_file(name, raw)
 
 
 class Starts:
@@ -722,6 +754,17 @@ class Liveness:
                 found.append(other)
         return tuple(found)
 
+    def revisit_replacers(self, entry: Entry, revisit: RevisitAnswer) -> tuple[Entry, ...]:
+        """The present entries that replace the revisit entry `revisit` of `entry`: those that
+        read its file and revisit its target (COR-062 point 5)."""
+        return tuple(
+            other
+            for other in self.entries
+            if other.file != entry.file
+            and entry.file in self.reads[other]
+            and revisit.anchor in other.revisited_anchors
+        )
+
     def inherited(self, entry: Entry, deferral: Deferment) -> tuple[tuple[Entry, Deferment], ...]:
         """The deferrals of `deferral`'s anchor whose point it keeps (COR-062 point 6): those
         in a file its entry read that it replaces, and that no other answer replaced
@@ -739,6 +782,33 @@ class Liveness:
                 if all(entry.file in self.reads[r] for r in others):
                     found.append((other, earlier))
         return tuple(found)
+
+    def keeps_point_of(
+        self,
+        entry: Entry,
+        deferral: Deferment,
+        seen: frozenset[tuple[str, Anchor]] = frozenset(),
+    ) -> tuple[frozenset[str], frozenset[tuple[Anchor, str | None]]]:
+        """Whose point `deferral` keeps, followed as `AnswerHistory.deferral_points` follows
+        it (COR-062 point 6): the answer files it keeps its point through, and, by anchor and
+        reason, the deferrals whose own point it keeps. History alone gives those points, so
+        two states that give the same deferrals here give the deferral the same points."""
+        key = (entry.file, deferral.anchor)
+        inherited = [
+            found
+            for found in self.inherited(entry, deferral)
+            if (found[0].file, found[1].anchor) not in seen
+        ]
+        if not inherited:
+            return frozenset(), frozenset({(deferral.anchor, deferral.reason)})
+        files: set[str] = set()
+        roots: set[tuple[Anchor, str | None]] = set()
+        for other, earlier in inherited:
+            through, own = self.keeps_point_of(other, earlier, seen | {key})
+            files.add(other.file)
+            files.update(through)
+            roots.update(own)
+        return frozenset(files), frozenset(roots)
 
 
 def liveness(
@@ -1041,17 +1111,92 @@ class StateAnswers:
             judged,
         )
 
-    def prunable(self, discovery: Discovery) -> tuple[str, ...]:
-        """The answer files in which no answer is live at this state, sorted: what a prune
-        would remove (COR-062 point 8; ADR-068 point 4). An entry whose location holds no
-        artefact answers nothing."""
+    def without(self, names: Collection[str]) -> StateAnswers:
+        """This state with the answer files `names` removed, judged as this one is."""
+        return StateAnswers(
+            {name: found for name, found in self.files.items() if name not in names},
+            self._honoured,
+            self._locations,
+            history=self.history,
+            predates=self._predates,
+        )
+
+    def not_live(self, discovery: Discovery) -> tuple[str, ...]:
+        """The answer files in which no answer is live at this state, sorted (COR-062 point
+        8). An entry whose location holds no artefact answers nothing."""
         live: set[str] = set()
         for artefact in discovery.artefacts:
-            judged = self.liveness(artefact, discovery)
-            live.update(e.file for e in judged.revalidations)
-            live.update(e.file for e, _d in judged.deferrals)
-            live.update(e.file for e, _r in judged.revisits)
+            live.update(_judged(self.liveness(artefact, discovery)).files)
         return tuple(sorted(name for name in self.files if name not in live))
+
+    def prune(self, discovery: Discovery) -> Pruning:
+        """What a prune removes at this state (COR-062 point 8; ADR-068 point 4): each answer
+        file in which no answer is live, removed together, unless that would change an
+        answer that is live. Such a file is kept, with why:
+
+        - one that cannot be read, since what it holds cannot be judged
+        - one whose removal brings back an answer it replaced. A later answer that read it
+          may not have read the answer it replaced (COR-062 point 8, "What stays
+          replaced").
+        - one a live deferral keeps its point from, through the deferral it replaced
+          (COR-062 point 6)
+
+        Keeping a file can make another one needed, so the files are judged again until
+        none changes."""
+        artefacts = discovery.artefacts
+        before = [_judged(self.liveness(artefact, discovery)) for artefact in artefacts]
+        live = {name for judged in before for name in judged.files}
+        kept: dict[str, str] = {}
+        for name in sorted(self.files):
+            problem = _unread(self.files[name])
+            if name not in live and problem is not None:
+                kept[name] = (
+                    f"it {problem}, so whether an answer in it is live cannot be told; "
+                    f"`pkit validate` reports it"
+                )
+        candidates = {name for name in self.files if name not in live and name not in kept}
+        while candidates:
+            after = self.without(candidates)
+            needed: dict[str, str] = {}
+            changed = False
+            for artefact, was in zip(artefacts, before, strict=True):
+                now = _judged(after.liveness(artefact, discovery))
+                if now.answers == was.answers and now.points == was.points:
+                    continue
+                changed = True
+                for key in sorted(now.answers - was.answers, key=_key_order):
+                    for name in sorted(was.replacers(key) & candidates):
+                        needed.setdefault(
+                            name,
+                            f"removing it brings back the answer on {artefact.location} in "
+                            f"{key[1]} that it replaced (COR-062 point 8)",
+                        )
+                for key in sorted(was.points, key=_key_order):
+                    if now.points.get(key) == was.points[key]:
+                        continue
+                    for name in sorted(was.through[key] & candidates):
+                        needed.setdefault(
+                            name,
+                            f"the live deferral on {artefact.location} in {key[1]} keeps its "
+                            f"point from it (COR-062 point 6)",
+                        )
+            if not changed:
+                break
+            if not needed:
+                # A change no file is named for: keep every file left, erring toward
+                # keeping an answer file rather than changing a live answer.
+                needed = {
+                    name: "removing the files together changes a live answer the prune "
+                    "cannot lay at one of them"
+                    for name in candidates
+                }
+            kept.update(needed)
+            candidates -= needed.keys()
+        return Pruning(
+            tuple(sorted(candidates)),
+            tuple(Kept(name, kept[name]) for name in sorted(kept)),
+            len(live),
+        )
 
     def gone(self, discovery: Discovery) -> tuple[Entry, ...]:
         """The entries whose location, followed through renames, holds no artefact."""
@@ -1064,6 +1209,112 @@ class StateAnswers:
             for entry in answer_file.entries
             if entry not in named
         )
+
+
+# --- what a prune removes -----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Kept:
+    """An answer file in which no answer is live that a prune keeps, and why."""
+
+    name: str
+    why: str
+
+
+@dataclass(frozen=True)
+class Pruning:
+    """What a prune does at a state (`StateAnswers.prune`): the answer files it removes, by
+    name, sorted; those it keeps though no answer in them is live, with why; and how many
+    files hold a live answer."""
+
+    remove: tuple[str, ...]
+    kept: tuple[Kept, ...]
+    live: int
+
+
+#: One live answer on an artefact: its kind, its file, its entry's position, and its anchor
+#: — a deferral's or a revisit entry's, `None` for a revalidation.
+_Key = tuple[str, str, int, Anchor | None]
+
+_REVALIDATION = "revalidation"
+_DEFERRAL = "deferral"
+_REVISIT = "revisit"
+
+
+@dataclass(frozen=True)
+class _Judged:
+    """One artefact's live answers at a state (`Liveness`), as a prune compares two states:
+    each live answer (`answers`), and per live deferral, by anchor and reason, the
+    deferrals whose point it keeps (`points`) and the files it keeps it through
+    (`through`)."""
+
+    liveness: Liveness
+    answers: frozenset[_Key]
+    points: dict[_Key, frozenset[tuple[Anchor, str | None]]]
+    through: dict[_Key, frozenset[str]]
+
+    @property
+    def files(self) -> frozenset[str]:
+        """The answer files holding a live answer on the artefact."""
+        return frozenset(key[1] for key in self.answers)
+
+    def replacers(self, key: _Key) -> frozenset[str]:
+        """The files whose entries replace the answer `key` at this state (COR-062 point 5)."""
+        kind, name, index, anchor = key
+        found = [e for e in self.liveness.entries if e.file == name and e.index == index]
+        if not found:
+            return frozenset()
+        (entry,) = found
+        if kind == _REVALIDATION:
+            replacing = self.liveness.replacers(entry)
+        elif kind == _DEFERRAL:
+            replacing = tuple(
+                r
+                for d in entry.deferrals
+                if d.anchor == anchor
+                for r in self.liveness.replacers(entry, deferral=d)
+            )
+        else:
+            replacing = tuple(
+                r
+                for revisit in entry.revisits
+                if revisit.anchor == anchor
+                for r in self.liveness.revisit_replacers(entry, revisit)
+            )
+        return frozenset(e.file for e in replacing)
+
+
+def _judged(judged: Liveness) -> _Judged:
+    answers: set[_Key] = {(_REVALIDATION, e.file, e.index, None) for e in judged.revalidations}
+    answers.update((_DEFERRAL, e.file, e.index, d.anchor) for e, d in judged.deferrals)
+    answers.update((_REVISIT, e.file, e.index, r.anchor) for e, r in judged.revisits)
+    points: dict[_Key, frozenset[tuple[Anchor, str | None]]] = {}
+    through: dict[_Key, frozenset[str]] = {}
+    for entry, deferral in judged.deferrals:
+        key: _Key = (_DEFERRAL, entry.file, entry.index, deferral.anchor)
+        through[key], points[key] = judged.keeps_point_of(entry, deferral)
+    return _Judged(judged, frozenset(answers), points, through)
+
+
+def _key_order(key: _Key) -> tuple[str, int, str, str]:
+    kind, name, index, anchor = key
+    return (name, index, kind, "" if anchor is None else f"{anchor.kind}:{anchor.value}")
+
+
+def _unread(answer_file: AnswerFile) -> str | None:
+    """Why an answer file, or an entry in it, cannot be read, or `None`."""
+    if answer_file.problem is not None:
+        return answer_file.problem
+    document = answer_file.document
+    listed = (
+        cast(Mapping[str, Any], document).get(ANSWERS_KEY)
+        if isinstance(document, Mapping)
+        else None
+    )
+    if isinstance(listed, list) and len(cast(list[Any], listed)) != len(answer_file.entries):
+        return "holds an entry that names no artefact"
+    return None
 
 
 def renames(target_root: Path) -> Mapping[str, str]:
@@ -1320,7 +1571,8 @@ class AnswerPoints:
 
 class AnswerHistory:
     """The answer files through one history, beside each artefact's block (COR-062
-    point 6): every version of every answer file read once, by its object.
+    point 6): every version of every answer file read once, by its object — for the
+    names history agrees with too (`HistoryNames`).
 
     `dormant` — no answer file in the history — leaves every reading to the
     artefact's block, exactly as before.
@@ -1331,13 +1583,16 @@ class AnswerHistory:
         self.walker = walker
         self.blobs = blobs
         self.trees = TreeReader(blobs)
-        self.names = HistoryNames(history, blobs)
+        self._parsed: dict[str, AnswerFile] = {}
+        self.names = HistoryNames(history, blobs, self.parsed)
         self.starts = Starts(self.names, walker)
         self.paths = tuple(p for p in history.paths if is_answer_file(p))
-        self._parsed: dict[str, AnswerFile] = {}
+        self._entries: Mapping[str, tuple[tuple[int, Entry], ...]] | None = None
         self._naming: dict[str, bool] = {}
         self._at: dict[str, Mapping[str, TreeEntry]] = {}
         self._locations: dict[str, frozenset[str]] = {}
+        self._written: dict[int, Mapping[str, tuple[Entry, ...]]] = {}  # by commit
+        self._value_writes: dict[tuple[str, Any], tuple[int, ...] | None] = {}
 
     @property
     def dormant(self) -> bool:
@@ -1408,17 +1663,26 @@ class AnswerHistory:
             found = self._locations[like.location] = frozenset(head_locations(self.history)(like))
         return found
 
+    def _by_location(self) -> Mapping[str, tuple[tuple[int, Entry], ...]]:
+        """Every entry of every version of every answer file in the history, by the
+        location it names, each with the log index of its version: read once, so asking
+        about an artefact walks its own entries, never every file's."""
+        if self._entries is None:
+            found: dict[str, list[tuple[int, Entry]]] = {}
+            for path in self.paths:
+                name = name_of(path)
+                for index, state in self.versions(path):
+                    for entry in self.parsed(state, name).entries:
+                        found.setdefault(entry.location, []).append((index, entry))
+            self._entries = {location: tuple(each) for location, each in found.items()}
+        return self._entries
+
     def ever_named(self, like: Artefact) -> bool:
         """Whether any answer file in the history names `like`."""
         found = self._naming.get(like.location)
         if found is None:
-            locations = self._names_artefact(like)
-            found = any(
-                entry.location in locations
-                for path in self.paths
-                for _index, state in self.versions(path)
-                for entry in self.parsed(state, name_of(path)).entries
-            )
+            named = self._by_location()
+            found = any(location in named for location in self._names_artefact(like))
             self._naming[like.location] = found
         return found
 
@@ -1485,15 +1749,12 @@ class AnswerHistory:
         return None if start is None else self.history.descendants(start)
 
     def _file_candidates(self, like: Artefact, in_entry: Callable[[Entry], bool]) -> set[int]:
-        locations = self._names_artefact(like)
+        named = self._by_location()
         return {
             index
-            for path in self.paths
-            for index, state in self.versions(path)
-            if any(
-                entry.location in locations and in_entry(entry)
-                for entry in self.parsed(state, name_of(path)).entries
-            )
+            for location in self._names_artefact(like)
+            for index, entry in named.get(location, ())
+            if in_entry(entry)
         }
 
     # --- a revalidation's value ----------------------------------------------------
@@ -1517,6 +1778,102 @@ class AnswerHistory:
         if unreachable:
             return Carried((), unreachable=True, cut=True)
         return self.walker.first_carried(like, writes, cut=block.cut)
+
+    # --- what one commit wrote -----------------------------------------------------
+
+    def revalidated_in(
+        self,
+        like: Artefact,
+        index: int,
+        diff: Iterable[DiffEntry],
+        before: Artefact | None,
+        after: Artefact | None,
+    ) -> bool:
+        """Whether the commit at log `index` wrote a revalidation of `like` against its
+        first parent, `diff` being what it changed against that parent (ADR-080 point 1).
+
+        It wrote one where it wrote a value of `at` that the artefact's answers, in
+        either home, carried at no commit its first parent is or descends from
+        (`carried_by`; COR-050 point 3). The values it wrote are its block's `at`
+        where `after`, the artefact after the commit, carries one that `before`, the
+        artefact at the first parent, did not, and the `at` of each entry naming the
+        artefact in an answer file the diff adds or rewrites (`changed_files`). A
+        change may rewrite an answer file it added itself, as a fix round does, and
+        where its commits land one by one the rewrite is a commit of its own (COR-062
+        point 3). A value the file carried before is refused as any is. So an answer
+        moved out of the block, an answer file renamed or put back, and a value written
+        back, as a revert writes it, write none. A merge on the line wrote what its other
+        parents brought in. Which answers are live after the commit is not read."""
+        values: list[Any] = []
+        if after is not None:
+            value = parsed_at(after)
+            if value is not None and (before is None or parsed_at(before) != value):
+                values.append(value)
+        written = self._written_in(index, diff)
+        for location in self._names_artefact(like):
+            for entry in written.get(location, ()):
+                if entry.revalidation is not None and entry.revalidation.at is not None:
+                    values.append(entry.revalidation.at)
+        if not values:
+            return False
+        parents = self.history.parent_positions[index]
+        first = parents[0] if parents else None
+        if first is None:  # no parent in this clone to have carried it
+            return True
+        return any(not self.carried_by(like, value, first) for value in dict.fromkeys(values))
+
+    def carried_by(self, like: Artefact, value: Any, index: int) -> bool:
+        """Whether the artefact's answers, in either home, carried `value`, a parsed `at`,
+        at the commit at log `index` or at one it descends from, within the artefact's own
+        history (`_since_added`; COR-050 point 3, COR-062 point 6). A value a shallow
+        clone's cut carries is taken as carried there, before every commit of the clone."""
+        writes = self._writes_of(like, value)
+        if writes is None:
+            return True
+        older = [write for write in writes if write >= index]  # the log lists parents later
+        return bool(older) and any(write in self.history.ancestors(index) for write in older)
+
+    def _writes_of(self, like: Artefact, value: Any) -> tuple[int, ...] | None:
+        """The commits that wrote a version of one of the artefact's homes carrying `value`:
+        its block's writes (`Walker.block_writes`), and each version of an answer file in
+        which an entry naming the artefact carries it; read once for each value. `None`
+        where a shallow clone's cut carries it."""
+        key = (like.location, value)
+        if key in self._value_writes:
+            return self._value_writes[key]
+        block = self.walker.block_writes(like, value)
+        found: tuple[int, ...] | None = None
+        if not block.unreachable:
+
+            def in_entry(entry: Entry) -> bool:
+                return entry.revalidation is not None and entry.revalidation.at == value
+
+            writes = set(block.points)
+            if not self.dormant:
+                writes |= self._file_candidates(like, in_entry)
+            since = self._since_added(like)
+            found = tuple(sorted(writes if since is None else writes & since))
+        self._value_writes[key] = found
+        return found
+
+    def _written_in(self, index: int, diff: Iterable[DiffEntry]) -> Mapping[str, tuple[Entry, ...]]:
+        """The entries of the answer files a commit's `diff` adds or rewrites
+        (`changed_files`), as the commit left them, by the location each names; read once
+        for the commit at log `index`, each file by its object (`parsed`)."""
+        found = self._written.get(index)
+        if found is None:
+            listed = list(diff)
+            by_path = {entry.path: entry for entry in listed}
+            changed = changed_files(listed)
+            entries: dict[str, list[Entry]] = {}
+            for name in (*changed.added, *changed.rewritten):
+                state = by_path[path_of(name)].after
+                if state is None:
+                    continue
+                for entry in self.parsed(state, name).entries:
+                    entries.setdefault(entry.location, []).append(entry)
+            found = self._written[index] = {loc: tuple(each) for loc, each in entries.items()}
+        return found
 
     # --- a deferral's point --------------------------------------------------------
 
@@ -1707,11 +2064,13 @@ __all__ = [
     "Deferment",
     "Entry",
     "HistoryNames",
+    "Kept",
     "LiveDeferral",
     "LiveRevalidation",
     "LiveRevisit",
     "Liveness",
     "Moved",
+    "Pruning",
     "Revalidation",
     "RevisitAnswer",
     "Starts",

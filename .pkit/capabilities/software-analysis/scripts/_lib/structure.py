@@ -450,7 +450,9 @@ class _Body:
     blanks: tuple[bool, ...] = ()
 
 
-def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
+def _read(lines: Sequence[Line], labels: frozenset[str], *, lead: bool = False) -> _Body:
+    """`lines` read as a body. With `lead`, the first line is the text after a label on the
+    label's line, so it opens no fenced code and holds no mark (`as_part`)."""
     content: list[str] = []
     fences: list[int] = []
     blanks: list[bool] = []
@@ -471,7 +473,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         content.append(visible)
         fences.append(0)
         blanks.append(not line.strip() and not started_in_comment)
-        if started_in_comment:
+        if started_in_comment or (lead and index == 0):
             continue
         opening = _FENCE.match(visible)
         if opening is not None and not (
@@ -695,6 +697,26 @@ def parts(lines: Sequence[Line], kind: Kind) -> list[tuple[Element, forms.Part]]
         for i in range(len(elements))
         if (part := _part(i, elements, at, body)) is not None
     ]
+
+
+def part_of(lines: Sequence[Line], kind: Kind, element_id: str) -> forms.Part | None:
+    """The part of `kind`'s body whose permanent id is `element_id`, as `parts` finds it:
+    the text after its label on the label's line, then each line to the part's end, its
+    comments left out and a fenced line whole. `None` where the body carries no such part,
+    or the kind declares none. A requirement's fingerprint reads a text in the body here
+    (DEC-006 point 7; `_lib/obligation.py`)."""
+    return next((part for element, part in parts(lines, kind) if element.id == element_id), None)
+
+
+def as_part(text: str) -> forms.Part:
+    """`text` read as the part it would be after a label, on the label's line, as `parts`
+    reads a part: its first line the part's lead, which opens no fenced code, and each line
+    below it a row, its comments left out and a fenced line whole. A front-matter field's
+    text is read so, and the same text moved after its label in the body reads the same
+    (DEC-006 point 7; `_lib/obligation.py`)."""
+    lines = [(number, line) for number, line in enumerate(_lines(text), start=1)]
+    body = _read(lines, frozenset(), lead=True)
+    return forms.Part(1, _rows(body, range(1, len(lines))), forms.Row(1, body.content[0]))
 
 
 def _located(

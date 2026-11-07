@@ -34,6 +34,15 @@ it to, and the command says which commit it read (point 1).
   where another clone holds the seat. A clone that loses the seat to a claim
   made in the same instant holds no seat, and writes nothing more: its agent
   takes another free seat, or stops, as it judges.
+- **No seat is taken by code that cannot read the topology in full** (DEC-061
+  point 9): a key it does not know, at any depth, or a value it cannot read.
+  The refusal says what it did not understand, and exits 2.
+- **The pools.** Where the topology declares pools of workers, the command
+  shows each pool's open milestones, by number and title, read once, and warns
+  of what would leave work stranded: a pool no seat serves, a pool with no open
+  milestone, a seat that builds and names no pool, and a milestone whose `Pool:`
+  line names an undeclared pool (DEC-061 point 10). Where the milestones cannot
+  be read, it says so and still takes the seat (ADR-072 point 6).
 
 Who may write on a seat's state issue comes from the members the default branch
 holds (ADR-071 point 3). The membership gate (DEC-021), the bootstrap gate and
@@ -48,7 +57,7 @@ Exit codes:
   1  refused: membership, no topology, the default branch, no free seat that
      matches, a seat another clone holds or took first
   2  usage error: the capability is not found or not bootstrapped, or no agent
-     definition was given
+     definition was given / this code cannot read the topology in full
   3  GitHub failed
 """
 
@@ -67,7 +76,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, instance_identity, session_guard, state_issues, topology
+from _lib import (
+    bootstrap_gate,
+    instance_identity,
+    pools,
+    session_guard,
+    state_issues,
+    topology,
+)
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -196,6 +212,11 @@ def take_seat(
     print(f"{VERB}: the topology of {tree.where()}")
     for problem in tree.problems:
         print(f"warn: {topology.TOPOLOGY_RELATIVE}: {problem.message}", file=sys.stderr)
+    refusal = topology.not_understood_refusal(tree)
+    if refusal is not None:
+        print(f"[refused] {VERB}: {refusal} No seat is taken.", file=sys.stderr)
+        return 2
+    show_pools(tree, gh)
 
     named = tree.seat(name) if name is not None else None
     if name is not None:
@@ -261,6 +282,25 @@ def take_seat(
         file=sys.stderr,
     )
     return 3
+
+
+def show_pools(tree: topology.Topology, gh: state_issues.Gh) -> None:
+    """Where the topology declares pools, show each pool's open milestones, read
+    once, and warn of what would leave work stranded (DEC-061 point 10). Where
+    the milestones cannot be read, say so and go on: no milestone decides which
+    seat a clone takes (ADR-072 point 6)."""
+    if tree.pools is None:
+        return
+    pool_map = pools.read_map(tree.pools, gh=gh)
+    if pool_map is None:
+        print(
+            "warn: the open milestones could not be read, so no pool's milestones are shown.",
+            file=sys.stderr,
+        )
+    else:
+        pools.show_pools(pool_map)
+    for warning in pools.listing_warnings(tree, pool_map):
+        print(f"warn: {warning}", file=sys.stderr)
 
 
 def _named_refusal(

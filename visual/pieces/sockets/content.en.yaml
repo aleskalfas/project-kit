@@ -1,0 +1,28 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+body:
+  use: starter/network
+  item: {use: starter/card, fill: tint}
+  tie: {use: starter/connector, concept: pkit/core}
+  left:
+    - {id: living-docs, concept: pkit/capability, head: living-docs, tag: "pkit::documentation", text: docs for each reader}
+    - {id: software-analysis, concept: pkit/capability, head: software-analysis, tag: "pkit::analysis", text: what the software must do}
+  right:
+    - id: slots
+      use: starter/groups
+      groups:
+        - id: project-management
+          concept: pkit/capability
+          head: project-management
+          tag: plays pkit::work-tracking
+          items:
+            - {id: doc-check, tag: doc-check, text: the docs a change must update}
+            - {id: fixers, tag: fixers, text: which agent fixes each document}
+            - {id: use-cases, tag: use-cases, text: the use cases to plan from}
+  ties:
+    - {id: docs-doc-check, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[doc-check]"}}
+    - {id: docs-fixers, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
+    - {id: analysis-fixers, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
+    - {id: analysis-use-cases, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[use-cases]"}}
+caption: A capability never names another, only a role. One that needs something opens a slot, and any other can fill it.

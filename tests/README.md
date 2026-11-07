@@ -6,12 +6,10 @@ other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 ## Running the suite
 
 **While you build, run the tests of what you changed.** The full suite — some
-9 400 tests — is the pre-push hook's and CI's to run, not a builder's (the
+21 300 tests — is the pre-push hook's and CI's to run, not a builder's (the
 project's rules, `.pkit/rules/project.md`): run the test modules for the files
-you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
-`uv run pkit validate`, `uv run pkit friction check`,
-`uv run pkit migrations check-diff`, `uv run pkit decisions check-diff` and
-`uv run pkit release check`.
+you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates
+[CONTRIBUTING.md](../CONTRIBUTING.md), "Running checks", lists.
 
 **CI skips the suite where only answers changed.** On a pull request whose only
 changes since its most recent full run, which passed, are answers, CI runs the
@@ -31,7 +29,7 @@ only the tests marked `answers`.
   the landing.
 
 **The full suite runs in parallel.** `scripts/check.sh` — the one command the
-pre-push hook and CI's full run call, with no arguments in both — runs it in
+pre-push hook and CI's full run call — runs it in
 [pytest-xdist](https://pytest-xdist.readthedocs.io/) workers, `-n auto` (one per
 CPU), and then the tests marked `serial` on their own, in one process, in the
 same step. `PKIT_TEST_WORKERS` sets the number of workers; `0` runs the whole
@@ -39,6 +37,71 @@ suite in one process. The two passes by hand:
 `uv run pytest -q -n auto -m "not serial"`, then `uv run pytest -q -m serial`.
 A plain `uv run pytest -q` still runs everything in one process, the `serial`
 tests included.
+
+**CI splits a full run across four machines** (ADR-078). The hook runs the
+aggregator whole, on one machine. CI runs it as four parts side by side, each
+a job of its own, which the aggregator defines:
+
+- **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs
+  its share of the parallel pass, in parallel workers, and nothing else;
+- **the quick checks,** `./scripts/check.sh --quick`: every line of the
+  aggregator but the test step and the console fences. They end within a few
+  minutes;
+- **the remainder,** `./scripts/check.sh --rest`: the console fences, with the
+  tests marked `serial` in the test step's place. No other worker shares its
+  machine, as the mark asks.
+
+**How the suite is cut.** A slice reads the tests left after the `serial` mark's
+filter, in the order pytest collects them. It cuts them into runs of
+consecutive tests, where the running time crosses each half of the total
+(`tests/slices.py`). So every module stays in one slice, but the one a cut falls
+in.
+
+- **The times** come from the table of test times, `tests/test_times.json`: the
+  time each test took in a full run in CI. A test the table lacks weighs the
+  median, and an entry no test bears is ignored. A stale table costs time, never
+  coverage, since the cut covers the tests collected.
+- **The same cut in every slice.** It reads only the tests and the table, both
+  fixed by the commit, so a slice run again by hand runs the same tests, with the
+  same tests around them. A failing slice's summary says how.
+- **The same tests on every machine.** A folder lists its files in an order its
+  machine sets, and two of CI's runners list them differently. So a test
+  parametrized over a folder's files sorts them first.
+  `tests/test_collection_order.py` collects the suite with every listing sorted
+  and with every listing reversed, and fails where the two differ (#2668).
+- **What a slice reports.** It ends by printing its report: a digest of the tests
+  collected, in order, with the table and the count of slices, how many tests it
+  collected, and how many its share held. `checks` fails unless the slices report
+  one digest and one count, and their shares add up to it.
+- **An empty share fails.** A slice whose share holds no test fails, where the
+  aggregator's passes of the tests marked `serial` and `answers` pass with none.
+- **By hand:** `uv run pytest -n auto -m "not serial" --shard=1/2` runs a slice's
+  tests alone. The option takes one token.
+
+**Keeping the table.** The project's maintainer refreshes it, from CI's own times,
+never a contributor's machine.
+
+- **When:** a full run on `main` is held to twenty minutes. Refresh the table when
+  full runs on `main` take longer, or when a tenth of the tests collected are
+  missing from it. The summary of `checks` shows both: each part's time, and how
+  many tests collected the table lacks.
+- **How:** `uv run python -m tests.slices table` writes it from the times each
+  slice of the newest full run on `main` that passed kept as an artifact of the
+  run, `test-times-<i>-of-<N>`. `--run <id>` names another run. Review it like any
+  change. No run writes the table, so a pull request's run cannot change what
+  later runs read.
+- **Which run:** each slice's times come from that slice's own runner, and one
+  runner can take half as long again as another. So a run whose runners differ
+  bakes that difference into the cut, and the slices of later runs end further
+  apart. The command says how far apart the run's runners were. It reads that from
+  the test time each slice summed, since the cut gave the slices equal shares. Over
+  a tenth apart, run `git restore tests/test_times.json` and name another run. By
+  #2677's estimate, tables from runs 3%, 15% and 39% apart leave the slices 27, 69
+  and 172 s apart on equal runners.
+
+**The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
+in every run: in a local run's output, and in the log of each slice's step in
+CI.
 
 **A test that cannot share the machine with other workers** is marked
 `@pytest.mark.serial`. Make it worker-safe instead when you can — whatever it
@@ -60,28 +123,117 @@ opened (a read-only cache directory, a sandbox that does not allow it), the step
 says so and runs without the limit. `tests/test_check_script.py` pins both the
 passes and the slots.
 
-**The slowest modules**, by the time their tests take together, setup
-included, in one parallel pass (`uv run pytest -q -n 4 -m "not serial"
---junitxml=...`, 2026-10-01, on a 12-core Mac other runs were sharing; the pass
-summed 1 879 s of test time and took 529 s on the clock):
+**A test calls the code in its own process.** A process of `pkit` or of a
+capability script costs a third of a second to a second, and most tests check
+what the code answers, not that a process ran it (#2313). So a test keeps a real
+process only where the process is the point. The rule below says which tests do,
+and how a test is converted.
 
-| Module | Tests | Seconds | Per test | Slowest test |
-|---|---:|---:|---:|---:|
-| `test_software_analysis.py` | 45 | 233 | 5.2 | 20.7 |
-| `test_software_analysis_numbers.py` | 15 | 116 | 7.7 | 21.8 |
-| `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
-| `test_living_docs_spaces.py` | 51 | 92 | 1.8 | 6.7 |
-| `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
-| `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
-| `test_process_cascade_engine.py` | 33 | 60 | 1.8 | 5.9 |
-| `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
+The rule: which tests keep a real process, and how one is converted (#2314,
+choice 2).
 
-A software-analysis test runs the capability's scripts as the backbone does — a
-stamp, the check, the number check — each a process that starts several `pkit`
-processes of its own, from a third of a second to a second each; living-docs'
-tests run its validator the same way. What their tests share is built once
-("Built once, copied for each test", below); what is left is each test's own
-runs. A test that stays slow says why in a comment above it.
+1. Per command, one or two end-to-end tests keep a real process. So do one test
+   per output mode, and one per registered validator, filler or resolver, run
+   through `pkit`'s runner.
+2. A converted test enters where the process test entered. That is the script's
+   `main(argv)` in the test's own process, or a public function where the
+   assertion is on its result, and never a private helper alone.
+3. Convert a test rather than delete it. Delete only an exact duplicate, and name
+   the test that keeps its assertion.
+4. A template is built by the real code in the test's own process, never written
+   by hand.
+5. Each slice proves its conversion with a planted-bug spot-check against its old
+   tests and its new ones.
+
+**A kept process test is marked with its reason**:
+`@pytest.mark.process("<why the process is the point>")`. A guard, the autouse
+fixture `process_starts`, counts each process of `pkit` or a capability script
+the test starts, and fails a test that starts one without the mark. It counts
+from the start itself, so the count is the same on every run. It does not count
+what an adopter template's build starts, nor what a test of the runner asks of
+`run_command` itself.
+
+**The guard holds every module but those in its baseline**,
+`tests/process_guard_baseline.txt`: the modules left as they are when #2313
+closed, under the reason each stays (#2329). A change that marks or converts a
+module's starts takes it out, and no module is ever added. So a new module is held
+from its first test.
+
+**What a converted test calls** lives in `tests/in_process.py`:
+
+- `load(capability, *names)` loads a capability's scripts, such as `validate.py`,
+  and its `_lib` modules in the test's own process. Each capability's `_lib` is
+  kept apart in `sys.modules`. While a call loads, no `_lib` folder is on the
+  import path and no `_lib` module imported by path is in `sys.modules`. Given
+  `lib=`, a `_lib` package the test already imported, it loads the scripts into
+  that package instead, so they run with what the test patched there.
+  `run_main(script, *args, cwd=...)` runs a script's `main` as its process ran.
+- `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
+  with the backbone's CLI in the test's own process. Each capability makes its
+  calls through one private function, `_lib.backbone._run`, looked up when
+  called, and the route replaces only that function. The argument lists and the
+  documents are unchanged (ADR-057 point 1). project-management's streaming
+  starts (`agent_runs`, `merge_queue`) and its top-level scripts' calls do not
+  go through it, and its route takes the keywords its calls pass (`timeout`, an
+  `env` with routing off, UTF-8 decoding with `replace`), which the in-process
+  `pkit` itself refuses.
+- `InProcessPkit`, the in-process `pkit`, answers as a process does. It gives a
+  `CompletedProcess` with its exit code and standard error apart, from the
+  working directory given, in the environment the runner gives a query. An
+  exception is exit 1 with its traceback, a keyword it does not model is
+  refused, and the backbone's caches are cleared before each call.
+- `start_in_process(monkeypatch)` starts in the test's own process each command
+  the backbone's runner starts for a component, such as a validator. The
+  runner's one lookup still resolves the command, so a broken registration still
+  fails. Given `lib=`, it loads each script of that `_lib`'s capability into it.
+  `tests/pm_lifecycle_world.py` starts project-management's predicates so.
+
+**A test leaves the import path as it found it.** A fixture that puts a folder on
+`sys.path` takes it off after its tests, through `monkeypatch.syspath_prepend` or
+its own teardown. A folder left on the path outlives the test, and every later
+test on its worker imports from it. A capability's `_lib` folder left so made
+eleven of `friction_answers`' tests start a real `pkit` on one of CI's workers
+(#2353).
+
+**The spot-check** is `uv run python scripts/spot_check.py BUGS --base REF TEST...`.
+It plants each bug the JSON file BUGS lists, one at a time, and runs the tests as
+REF holds them and as they are now. It exits 1 when the new tests miss a bug the
+old tests caught. Where a change converted a helper module the old tests share,
+`--old-helper FILE` puts it at its version at REF for the old run alone. The bugs
+of #2315 are in `tests/spot_checks/`.
+
+**The slowest modules**, by the time their tests take together, setup included,
+measured again once #2313's slices had merged (#2329). CI's seconds are the median
+of three full runs on `main` on 30 October, from the times each slice keeps
+(`test-times-<i>-of-2`). A slice's runner has four workers. In those runs the
+parallel pass summed 3 600 to 4 900 s of test time. The local seconds are one run
+of the aggregator's two passes, `-n auto`, on 31 October, on a 12-core Mac other
+builders were sharing. That run summed 31 250 s of test time and took 53 minutes
+on the clock.
+
+| Module | Tests | CI, s | Per test | Slowest test | Locally, s |
+|---|---:|---:|---:|---:|---:|
+| `test_software_analysis_check.py` | 61 | 164 | 2.7 | 16.4 | 823 |
+| `test_software_analysis_overview.py` | 18 | 141 | 7.8 | 19.9 | 1 067 |
+| `test_living_docs_new.py` | 56 | 121 | 2.2 | 34.8 | 486 |
+| `test_software_analysis.py` | 51 | 117 | 2.3 | 8.1 | 1 432 |
+| `test_living_docs_spaces.py` | 180 | 117 | 0.6 | 7.7 | 340 |
+| `test_friction_repository.py` | 162 | 109 | 0.7 | 1.4 | 2 376 |
+| `test_self_host_documentation.py` | 41 | 100 | 2.4 | 42.1 | 121 |
+| `test_friction_check.py` | 148 | 87 | 0.6 | 1.5 | 1 613 |
+
+**What is left is mostly `git`.** #2313's slices took most starts of `pkit` and of
+the capability scripts out of the slow tests, and measured each area on #2313. A
+friction or analysis test still commits and reads its history through tens of
+`git` processes. On a Mac other builders share, each takes a third of a second or
+more. So these modules take five to over twenty times as long there as in CI.
+
+A software-analysis test stamps, links and writes the overview in its own
+process, through `tests/analysis_repo.py` (#2319). A script a test runs through
+`run_script`, such as the number check, runs as a process, and the test carries
+the `process` mark with why. What its tests share is built once ("Built once,
+copied for each test", below). A test that stays slow says why in a comment above
+it.
 
 ## Type checking
 
@@ -123,12 +275,13 @@ do when a change raises a count, and the only causes for raising the baseline.
 
 Most tests that need "a project with the kit installed" should not `git init`
 and call `install_kit` by hand. `tests/adopter_repo.py` provides one builder
-and `tests/conftest.py` exposes it as two fixtures:
+and `tests/conftest.py` exposes it as three fixtures:
 
 | Fixture | Gives you | Reach for it when |
 |---|---|---|
 | `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path, prepare=None, fresh=False)` returning an `AdopterRepo`, a copy of a template built once per session (below). | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
 | `adopter_repo` | `make_adopter_repo(history=True)`: the same adopter with the scripted history committed; `adopter_repo.history` holds the SHAs. | A test needs real git state — validators that read history, the friction engine (COR-050), anything tracing a front-matter field across commits. |
+| `committed_adopter` | `make_adopter_repo(prepare=commit_install)`: the bare shape, its install committed on `main` in one commit dated `INSTALLED_AT` (`tests/friction_documents.py`). | A test commits a base of its own, as the friction tests do. It then commits only its own files, never the whole installed `.pkit/` (#2320). |
 
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly; it builds the
@@ -171,8 +324,8 @@ first.
 what the module's tests start from — a seed stamped, a history committed. It
 runs once per session, from the template's root, and what it leaves is in every
 copy. `tests/analysis_repo.py` is the worked example: stamping the
-software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) starts
-some two dozen `pkit` processes, ten seconds and more, which no copy pays again.
+software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) asks
+`pkit` some two dozen times, which no copy pays again.
 A `prepare` depends on nothing but the repository it is handed — nothing of the
 test that happens to ask first, which may be in any module — and its full name
 is the template's key, so a lambda or a nested function is refused. It runs in
@@ -261,3 +414,11 @@ message naming this section, and no test reaches the developer's signing agent. 
 test that sets `GIT_CONFIG_GLOBAL` itself, or runs git with an environment of its
 own, is outside the guard; turn signing off in its repositories all the same.
 `tests/test_adopter_repo.py` pins the guard and the helpers.
+
+## Fixtures bound to a schema
+
+**The visual-communication fixtures are the first bound YAML under `tests/`**
+(#2428). A file under `tests/fixtures/visual-communication/` that names a schema
+in `pkit_schema` is checked by project-kit's own `pkit validate`, as any bound
+file of the repository is. So never commit one its schema refuses. A test of a
+refusal builds the refused file in `tmp_path`.

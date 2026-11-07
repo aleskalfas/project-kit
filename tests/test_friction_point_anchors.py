@@ -10,7 +10,8 @@ point is a dead anchor, and an anchor on a retired point stands on nothing
 until it is re-pointed. The explanation shows the point's diff alone, and a
 whole-record anchor works as before.
 
-Every test stands up a real adopter repository, commits a base on `main`
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`), commits a base on `main`
 with the record and an artefact anchored to its point, revalidated there,
 branches `feature` off it and commits one change.
 """
@@ -24,7 +25,7 @@ import pytest
 from project_kit import friction_check as fc
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import (
     LISTED,
     POINTED,
@@ -44,8 +45,10 @@ ON_POINT = {"record": ["PRJ-900#2"]}
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _start(timeline: Timeline, anchors: dict[str, list[str]] | None = None, **record: Any) -> str:
@@ -71,10 +74,14 @@ def _change_check(timeline: Timeline) -> list[tuple[str, str | None]]:
 
 
 def _repository(timeline: Timeline) -> list[tuple[str, str | None, str | None]]:
+    """(kind, anchor, origin commit) per finding of the whole-repository check, an
+    over-broad anchor left out: in a history of a few commits, most anchors flagged
+    their artefacts in more than half of them (ADR-080 point 3)."""
     result = fr.run_repository_check(timeline.adopter.root)
     return [
         (f.kind.value, None if f.anchor is None else f.anchor.value, f.origin and f.origin.sha)
         for f in result.findings
+        if f.kind is not fr.RepositoryFindingKind.OVER_BROAD
     ]
 
 
@@ -271,7 +278,10 @@ def test_a_whole_record_anchor_still_changes_with_any_edit(timeline: Timeline) -
     _start(timeline, anchors={"record": ["PRJ-900", "PRJ-900#2"]})
     changed = _change(timeline, rationale="Another reason this way.")
     assert _change_check(timeline) == [("friction", "PRJ-900")]
-    assert _repository(timeline) == [("stale", "PRJ-900", changed)]
+    assert _repository(timeline) == [
+        ("stale", "PRJ-900", changed),
+        ("whole-and-parts", "PRJ-900", None),  # the whole anchor flags what the point does
+    ]
 
 
 # --- the explanation ----------------------------------------------------------------
@@ -328,7 +338,11 @@ def test_a_deferral_covers_a_point_as_it_stood_and_lists_only_its_changes(
     )
     _change(timeline, points=later)  # another point: the deferral still covers point 2
     assert _repository(timeline) == [("deferred", "PRJ-900#2", changed)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = [
+        f
+        for f in frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+        if f.finding.kind is not fr.RepositoryFindingKind.OVER_BROAD
+    ]
     assert finding.finding.kind is fr.RepositoryFindingKind.DEFERRED
     assert [c.commit.sha for c in finding.commits] == [changed]
 

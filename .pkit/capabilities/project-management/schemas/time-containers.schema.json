@@ -195,6 +195,43 @@
               "description": "Severity when the rollforward target references a non-existent or closed container."
             }
           }
+        },
+        "pool_field": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pattern", "opening", "position", "absent_behaviour", "write_rule", "malformed_severity"],
+          "description": "The optional `Pool: <name>` line that puts a Milestone into a pool of workers (DEC-061 point 2).",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Regex a well-formed `Pool:` line matches, as a whole line."
+            },
+            "opening": {
+              "type": "string",
+              "minLength": 1,
+              "description": "What a line opens with to count as a `Pool:` line, well formed or not."
+            },
+            "position": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Where the line may stand in the description."
+            },
+            "absent_behaviour": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Which pool a Milestone is in with no line, two lines, a malformed one, or one naming an undeclared pool."
+            },
+            "write_rule": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Who writes the line, how a write replaces it, and where the consent is logged."
+            },
+            "malformed_severity": {
+              "$ref": "validation-severity.schema.json#/$defs/severity_ref",
+              "description": "Severity when a Milestone's `Pool:` lines put it in no pool: a warning."
+            }
+          }
         }
       }
     },

@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The check reads a copy of a library the capability ships as the capability's
+  to correct (#2607, DEC-013 point 6). A finding that would fail inside a copy
+  the list names from the source `shipped`, released or not, asks for attention
+  instead, and names whoever maintains the capability. A released copy whose
+  files no longer match its hash is still the project's to restore, so its
+  findings fail, and its `library-changed` names `pkit visual add <library>`
+  where the capability releases that version with the hash the list keeps. Two
+  new findings ask the project for attention: `copy-not-shipped`, a copy not
+  released that holds other files than the capability ships under its number,
+  whose number the capability released, or whose number it does not ship; and
+  `copy-hash-differs`, a released copy whose hash in the list differs from the
+  one the capability records, naming both. A finding in a project's own library
+  not yet released still fails.

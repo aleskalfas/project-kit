@@ -1,0 +1,7 @@
+{
+  "$description": "The dark colour scheme: the edition's own accent, from its palette.",
+  "accent": {
+    "$type": "color",
+    "$value": "{palette.orange.300}"
+  }
+}

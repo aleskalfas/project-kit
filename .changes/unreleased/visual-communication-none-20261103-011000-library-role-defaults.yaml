@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-008 decides that a library's own role may default to another role, so a
+  brand that does not name the library still draws it (#2496). The record
+  designs ahead: the code that reads the defaults lands in a later pull
+  request, so no surface moves yet.

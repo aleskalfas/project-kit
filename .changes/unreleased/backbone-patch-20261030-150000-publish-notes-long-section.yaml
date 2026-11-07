@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release publish-notes` publishes a release whose changelog section is
+  long (#2384). It passes the notes to `gh` on standard input rather than as
+  one argument, which the system refused for 2.0.0's section. A section longer
+  than the 125,000 characters a GitHub Release keeps is replaced by short
+  notes: the section's heading, a link to that section of `CHANGELOG.md` at the
+  release's tag, and each component's bump. A section within that is published
+  whole, as before, and `--dry-run` says which of the two it would publish.

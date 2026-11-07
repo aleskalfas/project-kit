@@ -15,6 +15,10 @@ Held to software-analysis DEC-002 point 7:
   the working tree, and writes nothing. A file it cannot read is no answer.
 
 The companion schemas' field is `test_software_analysis_templates.py`'s.
+
+"Met by", the stamp and the check run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2324). One test keeps the process of "Met
+by": the command end to end, in both output modes.
 """
 
 from __future__ import annotations
@@ -44,6 +48,7 @@ from tests.analysis_repo import (
     new,
     prepare_seeded,
     requirement,
+    run_in_process,
     run_script,
     stamped,
 )
@@ -124,12 +129,19 @@ def _tree(repo: AdopterRepo) -> dict[str, bytes]:
 
 
 def _met_by(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis met-by …`, run as the dispatcher runs it."""
+    """`pkit analysis met-by …`, run as the dispatcher runs it, in the test's own process
+    (`run_in_process`)."""
+    return run_in_process(repo, MET_BY, *args)
+
+
+def _met_by_as_a_process(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis met-by …`, run as the dispatcher runs it: a process."""
     return run_script(repo, MET_BY, *args)
 
 
 def _met(repo: AdopterRepo, *args: str) -> dict[str, list[str]]:
-    """Each requirement's id, and the ids of what meets it, from `--json`."""
+    """Each requirement's id, and the ids of what meets it, from `--json`, in the test's own
+    process."""
     completed = _met_by(repo, *args, "--json")
     assert completed.returncode == 0, completed.stderr
     document = json.loads(completed.stdout)
@@ -143,7 +155,6 @@ def _met(repo: AdopterRepo, *args: str) -> dict[str, list[str]]:
 # --- the stamp --------------------------------------------------------------------------------
 
 
-# Slow by design: two stamps, each a script that starts several `pkit` processes.
 def test_the_stamp_writes_each_requirement_listed_and_anchors_it(listed: AdopterRepo) -> None:
     """`--requirement`, once for each, writes `requirements` and an artefact anchor on each
     requirement, after the actor and the other anchors the stamp writes. What it writes
@@ -175,7 +186,6 @@ def test_the_stamp_writes_each_requirement_listed_and_anchors_it(listed: Adopter
     assert front(listed, RUN_SUITE)["requirements"] == []
 
 
-# Slow by design: six refused stamps, each a script that starts several `pkit` processes.
 def test_the_stamp_refuses_a_requirement_not_held_or_withdrawn(listed: AdopterRepo) -> None:
     """A requirement the analysis does not hold, an artefact of another kind, and one
     withdrawn are each refused, for a use case and a journey, and nothing is written."""
@@ -302,6 +312,10 @@ def test_the_requirement_anchors_match_the_list_exactly(listed: AdopterRepo) -> 
 # --- "Met by" ---------------------------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "`pkit analysis met-by` end to end: its exit code, its lines, and its document with "
+    "--json, from the script's own process"
+)
 def test_met_by_lists_the_use_cases_and_journeys_in_force_that_list_each_one(
     listed: AdopterRepo,
 ) -> None:
@@ -315,7 +329,7 @@ def test_met_by_lists_the_use_cases_and_journeys_in_force_that_list_each_one(
     before = _tree(listed)
     assert _met(listed) == {"REQ-001": ["UC-001"], "REQ-004": ["UC-001", "UC-002", "JRN-001"]}
     assert _met(listed, "REQ-001") == {"REQ-001": ["UC-001"]}
-    completed = _met_by(listed)
+    completed = _met_by_as_a_process(listed)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [
         f"REQ-001 · Constraint · {LOCAL_TITLE}",
@@ -327,7 +341,7 @@ def test_met_by_lists_the_use_cases_and_journeys_in_force_that_list_each_one(
         "    UC-002 — Read report",
         "    JRN-001 — First run",
     ]
-    document = json.loads(_met_by(listed, "REQ-001", "--json").stdout)
+    document = json.loads(_met_by_as_a_process(listed, "REQ-001", "--json").stdout)
     assert document == {
         "schema_version": 1,
         "requirements": [

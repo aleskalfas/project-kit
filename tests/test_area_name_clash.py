@@ -5,7 +5,9 @@ before v1.149.0 first shipped the core area of that name. The core area holds
 `ownership.py`, and a project's own does not. A transition and sync's copy stop
 on it before they write (`tests/test_upgrade.py` and `tests/test_sync.py` run
 both commands). Until #1600 builds the full check, no release adds a core area
-or a core adapter, and the hold's test below fails on any change to either.
+or a core adapter but the one exception the hold names, `rule-sets`, where the
+backbone keeps its method rule sets, and the hold's test below fails on any change
+to either.
 """
 
 from __future__ import annotations
@@ -21,8 +23,9 @@ from project_kit import install, router, sync, treecopy
 from project_kit.manifest import read_kit_version
 from tests.adopter_repo import MakeAdopterRepo
 
-# The areas a release propagates, and the core adapters it ships, as #1572 left
-# them. The hold (ADR-065 point 13) keeps both until #1600 builds the full check.
+# The areas a release propagates, and the core adapters it ships: those #1572 left,
+# and `rule-sets`, the one area that passes the hold (ADR-065 point 13). The hold keeps
+# both until #1600 builds the full check.
 HELD_AREAS = frozenset(
     {
         "decisions",
@@ -37,6 +40,7 @@ HELD_AREAS = frozenset(
         "process",
         "lifecycle",
         "migrations",
+        "rule-sets",
     }
 )
 HELD_ADAPTERS = frozenset({"claude-code"})
@@ -45,7 +49,8 @@ HOLD_MESSAGE = (
     "No release adds, removes or changes a core area or a core adapter, or moves the core "
     "lifecycle area's ownership.py, until #1600 builds the full check of a clash of area "
     "names (ADR-065 point 13). A project's own area or adapter of the same name would be "
-    "copied over. Build #1600 first, then lift this hold there."
+    "copied over. The one exception is `rule-sets`, where the backbone keeps its method "
+    "rule sets; it is no precedent. Build #1600 first, then lift this hold there."
 )
 
 

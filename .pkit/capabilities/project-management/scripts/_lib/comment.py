@@ -10,6 +10,16 @@ it carries no validation-severity finding; the only failure is an empty body.
 Both `scripts/comment-issue.py` and `scripts/comment-pr.py` are thin wrappers
 that call :func:`run_comment_verb` with their subject.
 
+**Who posted.** Every clone posts under the same account, so GitHub's author
+line cannot tell a planner's comment from a worker's or the person's own. The
+verb ends each comment with a line that names the seat and instance of the
+clone that runs it, or says the clone holds no seat, and a stamp that carries
+the same for tooling (:class:`Poster`). A clone's identity is its seat's
+(DEC-059 point 6), and which agent wrote a comment is an off-surface fact a
+comment may carry (DEC-052's boundary rule). In a project with a topology, the
+seat is confirmed on its state issue before the comment is posted, as for every
+write that acts as an instance (DEC-059 point 6).
+
 It is also the one home of the issue/PR comment `gh` wiring the audit writers
 share: :func:`post_comment`, :func:`fetch_comments`, and :func:`post_audit_once`
 — the fetch / scan / post-if-absent shape every audit comment (`done-work`,
@@ -22,9 +32,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+from urllib.parse import unquote
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -36,6 +50,8 @@ try:
     import session_guard  # type: ignore[import-not-found]
     from agent_verdicts import parse_verdict_line  # type: ignore[import-not-found]
     from audit import own_audit_posted  # type: ignore[import-not-found]
+    from audit_log import code, encode  # type: ignore[import-not-found]
+    from body_rules import lines_outside_fences  # type: ignore[import-not-found]
     from gh import gh_run, load_adopter_config  # type: ignore[import-not-found]
     from membership import (  # type: ignore[import-not-found]
         CAPABILITY_NAME,
@@ -47,6 +63,8 @@ except ImportError:  # pragma: no cover
     from _lib import session_guard  # type: ignore[no-redef]
     from _lib.agent_verdicts import parse_verdict_line  # type: ignore[no-redef]
     from _lib.audit import own_audit_posted  # type: ignore[no-redef]
+    from _lib.audit_log import code, encode  # type: ignore[no-redef]
+    from _lib.body_rules import lines_outside_fences  # type: ignore[no-redef]
     from _lib.gh import gh_run, load_adopter_config  # type: ignore[no-redef]
     from _lib.membership import (  # type: ignore[no-redef]
         CAPABILITY_NAME,
@@ -70,6 +88,106 @@ def stamp_freeform(body: str) -> str:
     if FREEFORM_MARKER in body:
         return body
     return f"{body.rstrip()}\n\n{FREEFORM_MARKER}\n"
+
+
+#: The stamp that names the clone that posted a freeform comment, and its
+#: version, which changes only with the grammar.
+POSTER_PREFIX = "pkit:posted-by"
+POSTER_VERSION = 1
+
+#: The stamp's fields, in the order it writes them: the names a claim's stamp
+#: gives the same facts (DEC-059 point 9).
+_POSTER_FIELDS = ("instance", "seat", "seat_number", "clone")
+
+_POSTER_STAMP = re.compile(
+    r"<!--\s*pkit:posted-by\s+v=(?P<v>[0-9]{1,6})"
+    r"(?P<fields>(?:\s+[a-z][a-z0-9_]*=[^\s>]*)*)\s*-->"
+)
+_POSTER_PAIR = re.compile(r"([a-z][a-z0-9_]*)=([^\s>]*)")
+
+
+@dataclass(frozen=True)
+class Poster:
+    """The clone that posts a freeform comment, as the comment names it.
+
+    ``instance`` is the clone's instance number, where it has one. ``seat``,
+    ``seat_number`` and ``clone``, the clone's key, are set where it holds a
+    seat. A poster with no seat is a clone that holds none.
+    """
+
+    instance: int | None = None
+    seat: str | None = None
+    seat_number: int | None = None
+    clone: str | None = None
+
+    def named(self, *, shown: Callable[[str], str] = str) -> str:
+        """How a line names the poster. ``shown`` writes the seat's name."""
+        if self.seat is not None:
+            return f"seat {shown(self.seat)}, instance {self.instance}"
+        if self.instance is not None:
+            return f"instance {self.instance}, which holds no seat"
+        return "a clone that holds no seat"
+
+    def line(self) -> str:
+        """The line a person reads, in the comment's frame."""
+        return f"<sub>🪑 Posted by {self.named(shown=code)}</sub>"
+
+    def stamp(self) -> str:
+        """The hidden stamp tooling reads: each field the poster has, encoded
+        as the audit-log facility encodes a value."""
+        values = {name: getattr(self, name) for name in _POSTER_FIELDS}
+        fields = "".join(
+            f" {name}={encode(str(value))}" for name, value in values.items() if value is not None
+        )
+        return f"<!-- {POSTER_PREFIX} v={POSTER_VERSION}{fields} -->"
+
+
+def poster_of(clone: Any) -> Poster:
+    """The poster that ``clone`` is, as ``instance_claims.this_clone`` answers
+    it: None for a clone that takes no part in instance ownership."""
+    if clone is None:
+        return Poster()
+    seat = clone.seat
+    if seat is None:
+        return Poster(instance=clone.instance)
+    return Poster(clone.instance, seat.name, seat.number, clone.key)
+
+
+def sign(body: str, poster: Poster) -> str:
+    """``body`` with the line and the stamp that name ``poster`` after it. The
+    words stay as they are, and come first (DEC-052)."""
+    return f"{body.rstrip()}\n\n{poster.line()}\n\n{poster.stamp()}\n"
+
+
+def read_poster(body: str) -> Poster | None:
+    """The poster a comment's stamp names, or None where it carries none.
+
+    The verb appends its stamp last, so the last stamp outside a fenced code
+    block counts, and one the words quote above it never does. A stamp of a
+    later version than this reader knows reads as None.
+    """
+    found: Poster | None = None
+    for line in lines_outside_fences(body or ""):
+        match = _POSTER_STAMP.fullmatch(line.strip())
+        if match is None:
+            continue
+        if int(match.group("v")) > POSTER_VERSION:
+            found = None
+            continue
+        values: dict[str, str] = {}
+        for name, value in _POSTER_PAIR.findall(match.group("fields")):
+            values.setdefault(name, unquote(value))
+        found = Poster(
+            _number(values.get("instance")),
+            values.get("seat"),
+            _number(values.get("seat_number")),
+            values.get("clone"),
+        )
+    return found
+
+
+def _number(value: str | None) -> int | None:
+    return int(value) if value is not None and re.fullmatch(r"[0-9]{1,9}", value) else None
 
 
 #: A `gh` runner: `gh_run`'s signature. Audit writers pass their own module's
@@ -256,7 +374,8 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
 
 
 def run_comment_verb(subject: str) -> int:
-    """Full `comment-<subject>` flow: guards, body resolution, post."""
+    """Full `comment-<subject>` flow: guards, body resolution, the clone that
+    posts, and the post, framed with the line and stamp that name that clone."""
     label = _SUBJECT_LABEL[subject]
     parser = argparse.ArgumentParser(
         description=(
@@ -328,11 +447,25 @@ def run_comment_verb(subject: str) -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
+    # Who posts: the clone's seat, confirmed on its state issue, or no seat
+    # (DEC-059 point 6). Imported here, since `instance_claims` imports this
+    # module for its audit comments.
+    from _lib import instance_claims
+
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed(f"comment-{subject}", args.number, exc)
+    poster = poster_of(clone)
+
     preview = body.strip().splitlines()[0] if body.strip() else ""
     if len(preview) > 72:
         preview = preview[:69] + "..."
     print(f"comment-{subject}: #{args.number}")
     print(f"  body: {len(body)} chars — {preview!r}")
+    print(f"  posted by: {poster.named()}")
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
@@ -344,7 +477,7 @@ def run_comment_verb(subject: str) -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    if not post_comment(subject, args.number, stamp_freeform(body), config):
+    if not post_comment(subject, args.number, stamp_freeform(sign(body, poster)), config):
         return 3
 
     print(f"\n[ok] commented on {label} #{args.number}.")

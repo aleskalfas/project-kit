@@ -1,0 +1,46 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: row
+    layout: slide
+    title: Gruppen nebeneinander, jede mit den Elementen, die zusammengehören
+    visual:
+      use: starter/groups
+      groups:
+        - id: core
+          head: Der Kern
+          tag: immer installiert
+          items:
+            - {id: rules, head: Regeln, text: "Genau, was zu tun ist."}
+            - {id: checks, head: Prüfungen, text: Bei jeder Änderung ausgeführt.}
+        - id: capabilities
+          head: Fähigkeiten
+          items:
+            - {id: docs, head: living-docs, text: Dokumentation für jede Leserschaft.}
+            - {id: work, head: project-management, text: Die Arbeit und ihre Vorgänge.}
+            - {id: analysis, head: software-analysis, text: Was die Software leisten muss.}
+        - id: project
+          head: Ihr Projekt
+          items:
+            - {id: code, head: Ihr Quellcode, text: Die Arbeit selbst.}
+
+  - id: families
+    layout: slide
+    title: Jede Gruppe nach ihrem Begriff getönt, die Komponente für alle benannt
+    visual:
+      use: starter/groups
+      group: {use: starter/group, concept: test-notation/service}
+      groups:
+        - id: services
+          head: Dienste
+          items:
+            - {id: check, text: Die Prüfung beurteilt jede Datei.}
+            - {id: render, text: Der Zeichner zeichnet jedes Stück.}
+        - id: stores
+          concept: test-notation/store
+          head: Datenspeicher
+          tag: aufbewahrt
+          items:
+            - {id: findings, text: Das Verzeichnis der Befunde.}
+            - {id: exports, text: Das Verzeichnis der Exporte.}

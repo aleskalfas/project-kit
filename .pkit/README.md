@@ -30,7 +30,7 @@ pkit:
 - [`adapters/`](adapters/README.md) — the methodology's content translated for the AI harness you use, one adapter per harness.
 - [`lifecycle/`](lifecycle/README.md) — how project-kit installs, updates and removes resources, and how versions evolve across the backbone and its components.
 - [`cli/`](cli/README.md) — `pkit`, the command-line interface you use to install the methodology, pull updates, manage capabilities and check state.
-- [`rules/`](rules/README.md) — operational rules and tool hygiene: the shipped ones in `core.md`, and your own in `project.md` beside it.
+- [`rules/`](rules/README.md) — operational rules and tool hygiene: the shipped ones in `core.md`, the index of each installed capability's in `capabilities.md`, and your own in `project.md` beside them.
 - [`skills/`](skills/README.md) — installable agent skills, which the adapter deploys into your AI harness: the conversational half of the authoring loop.
 - [`agents/`](agents/README.md) — persistent roles AI tooling can be delegated to, each with its own scope, reading list, tools and behaviour.
 - [`schemas/`](schemas/README.md) — the schemas mechanism: data files, each with a shape declaration, that hold rules and data apart from the code that reads them.

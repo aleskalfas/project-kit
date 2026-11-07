@@ -4,9 +4,10 @@
 whole-repository check, so every test holds them to it: the debt is exactly
 the check's stale and deferred findings, oldest first; an explanation's
 findings are exactly the check's for that artefact, each with the commits
-behind it and what clears it. Every test stands up a real adopter repository
-and lays down dated history (`Timeline`); the read-only test compares every
-byte of the repository, `.git` included, before and after each command.
+behind it and what clears it. Every test stands up a real adopter repository,
+its install committed once per session (`committed_adopter`), and lays down
+dated history (`Timeline`); the read-only test compares every byte of the
+repository, `.git` included, before and after each command.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
-from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -34,7 +35,9 @@ from tests.friction_documents import (
     document,
     friction_config,
     guide,
+    without_over_broad,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -52,8 +55,8 @@ CORE = Anchor("path", "src/core/**")
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 def _cli(*args: str) -> Result:
@@ -149,7 +152,7 @@ def test_debt_lists_both_kinds_oldest_first_with_their_origins(timeline: Timelin
     ]
     # The check reports them in walk order; the listing is by the age of the debt.
     check = fr.run_repository_check(root)
-    assert [(f.kind.value, f.location) for f in check.findings] == [
+    assert [(f.kind.value, f.location) for f in without_over_broad(check.findings)] == [
         ("deferred", "docs/a-notes.md"),
         ("stale", "docs/b-guide.md"),
     ]
@@ -202,6 +205,7 @@ def test_debt_matches_the_whole_repository_check(timeline: Timeline) -> None:
 
 
 def test_debt_json_document_shape(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     shas = _debt_history(timeline)
     result = _cli("debt", "--json")
     assert result.exit_code == 0, result.output
@@ -264,6 +268,7 @@ def test_debt_human_view(timeline: Timeline) -> None:
 
 
 def test_debt_when_there_is_none_and_while_dormant(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start({"docs/guide.md": guide()})
     result = _cli("debt")
     assert result.exit_code == 0, result.output
@@ -281,6 +286,7 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
 ) -> None:
     """COR-050 points 1 and 8: after the debt, the check's unanchored measure — the
     forgotten artefacts, counted, and apart from them those accepted with a reason."""
+    without_shipped_rule_sets(timeline.adopter)
     reason = "No code embodies the sponsor: it funds the project."
     timeline.start(
         {
@@ -322,6 +328,7 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
 
 def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) -> None:
     """COR-050 point 7: excluded paths are left out of the measures, the debt with them."""
+    without_shipped_rule_sets(timeline.adopter)
     _excluded_history(timeline)
     listing = frep.run_debt(timeline.adopter.root)
     assert [(e.finding.kind.value, e.finding.location) for e in listing.entries] == [
@@ -375,7 +382,7 @@ def test_explain_names_each_changed_anchor_with_the_commits_behind_it(timeline: 
         (CLI, "stale", 2),
         (CORE, "current", 0),
     ]
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert stale.finding.origin is not None and stale.finding.origin.sha == first
     assert [(c.commit.sha, c.paths) for c in stale.commits] == [
         (first, ("src/cli/main.py",)),
@@ -405,7 +412,7 @@ def test_explain_names_each_changed_anchor_with_the_commits_behind_it(timeline: 
 def test_the_commands_named_clear_the_finding(timeline: Timeline, answer: str) -> None:
     timeline.start({"docs/guide.md": guide()})
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
-    (stale,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (stale,) = without_over_broad(frep.run_explain(timeline.adopter.root, "docs/guide.md").findings)
     (command,) = [a.command for a in stale.answers if a.answer == answer]
 
     words = shlex.split(command)
@@ -420,10 +427,17 @@ def test_the_commands_named_clear_the_finding(timeline: Timeline, answer: str) -
     )
 
 
-def test_explain_findings_are_the_whole_repository_checks(timeline: Timeline) -> None:
+def test_explain_findings_are_the_whole_repository_checks(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Over a window as long as the line, `.`, flagged in the base, the CLI change and the
+    # unrelated one, 3 of 4 commits, is over-broad; the CLI's anchor, in two, half of them,
+    # is not (ADR-080 point 3).
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 4)
     anchors = {"path": ["src/cli/**", "src/core/**", "src/gone/**", "."], "use-case": ["UC-1"]}
     timeline.start({"docs/guide.md": guide(anchors=anchors), "docs/other.md": _notes()})
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    timeline.commit("unrelated", {"README.md": "Hello.\n"})
     timeline.commit(
         "defer the engine",
         {"docs/guide.md": guide(anchors=anchors, deferred=[("path", "src/core/**", "later")])},
@@ -459,7 +473,9 @@ def test_explain_findings_are_the_whole_repository_checks(timeline: Timeline) ->
         assert by_kind[kind].answers == () and by_kind[kind].commits == ()
     assert "the writers do not edit anchors" in by_kind["dead-anchor"].clears
     assert "resolves `use-case` anchors" in by_kind["unresolved-kind"].clears
-    assert by_kind["over-broad"].clears.startswith("narrow path:.")
+    assert by_kind["over-broad"].clears.startswith(
+        "replace path:. in the block by the kind of narrower anchor its finding suggests"
+    )
 
 
 def test_explain_a_deferral_what_it_postpones_and_what_came_after(timeline: Timeline) -> None:
@@ -473,7 +489,7 @@ def test_explain_a_deferral_what_it_postpones_and_what_came_after(timeline: Time
     after = timeline.commit("change the CLI again", {"src/cli/main.py": "print('3')\n"})
 
     explanation = frep.run_explain(timeline.adopter.root, "docs/guide.md")
-    stale, postponed = explanation.findings
+    stale, postponed = without_over_broad(explanation.findings)
     assert (stale.finding.kind.value, [c.commit.sha for c in stale.commits]) == ("stale", [after])
     assert (postponed.finding.kind.value, [c.commit.sha for c in postponed.commits]) == (
         "deferred",
@@ -510,7 +526,7 @@ def test_explain_an_artefact_anchor_lists_each_change_of_the_targets_content(
     third = timeline.commit("engine notes: three", {"docs/a-engine.md": engine(T2, "Three.")})
 
     explanation = frep.run_explain(timeline.adopter.root, "overview")
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert stale.finding.anchor == Anchor("artefact", "engine-notes")
     assert stale.finding.origin is not None and stale.finding.origin.sha == first
     # The middle commit changed only the container: not content, so nothing behind the change.
@@ -540,7 +556,7 @@ def test_explain_an_artefact_anchor_names_no_merge_that_only_kept_a_sides_conten
     # The merge combined both sides' edits of the file, but its content is the side's: the
     # side's commit is the one change behind the finding, never the merge that kept it.
     explanation = frep.run_explain(timeline.adopter.root, "overview")
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert stale.finding.origin is not None and stale.finding.origin.sha == side
     assert [c.commit.sha for c in stale.commits] == [side]
 
@@ -550,7 +566,7 @@ def test_explain_a_move(timeline: Timeline) -> None:
     moved = timeline.rename("notes/guide.md", "docs/guide.md")
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert (stale.finding.anchor, [c.commit.sha for c in stale.commits]) == (None, [moved])
     assert [c.paths for c in stale.commits] == [("docs/guide.md", "notes/guide.md")]
     assert stale.clears == "revalidate the artefact: a move cannot be deferred"
@@ -713,7 +729,7 @@ def test_explain_in_a_shallow_clone(timeline: Timeline, tmp_path: Path) -> None:
     assert [a.files for a in explanation.anchors] == [
         fr.AnchorFiles(None, ("src/cli/main.py",), ())
     ]
-    (finding,) = explanation.findings
+    (finding,) = without_over_broad(explanation.findings)
     assert finding.finding.kind is fr.RepositoryFindingKind.UNREACHABLE
     assert finding.clears == "fetch the full history (`git fetch --unshallow`) and run again"
 
@@ -745,7 +761,7 @@ def test_explain_a_deferral_point_beyond_a_shallow_clone(
     assert [(a.state, a.files) for a in explanation.anchors] == [
         ("unreachable", fr.AnchorFiles(("src/cli/main.py",), ("src/cli/main.py",), ()))
     ]
-    (finding,) = explanation.findings
+    (finding,) = without_over_broad(explanation.findings)
     assert finding.finding.kind is fr.RepositoryFindingKind.UNREACHABLE
     assert "the deferral point of path src/cli/**" in finding.finding.message
     assert finding.commits == ()
@@ -753,7 +769,8 @@ def test_explain_a_deferral_point_beyond_a_shallow_clone(
     assert doc["anchors"][0]["files"]["point"] == ["src/cli/main.py"]
 
 
-def test_explain_json_document_shape(timeline: Timeline) -> None:
+def test_explain_json_document_shape(timeline: Timeline, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)  # as long as the line
     base = timeline.start({"docs/guide.md": guide()})
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"}, author=ALICE)
     result = _cli("explain", "guide", "--json")
@@ -802,21 +819,28 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
             "value": "src/cli/**",
             "state": "stale",
             "changes": 1,
-            "over_broad": False,
+            "over_broad": True,  # it flagged the guide in both commits, more than half
             "files": {"point": ["src/cli/main.py"], "head": ["src/cli/main.py"], "excluded": []},
             "diff": None,
         }
     ]
-    (finding,) = doc["findings"]
+    (finding,) = [f for f in doc["findings"] if f["kind"] != "over-broad"]
     assert sorted(finding) == [
         "anchor",
         "answers",
+        "bar",
         "clears",
         "commits",
         "kind",
         "message",
         "origin",
+        "parts",
+        "share",
     ]
+    assert finding["bar"] is None  # only an over-broad finding crosses a bar
+    assert finding["share"] is None  # only a second bar's finding has a share
+    # The CLI's anchor flagged the guide in both commits of the line, the first bar's.
+    assert [f["bar"] for f in doc["findings"] if f["kind"] == "over-broad"] == ["flags"]
     assert [c["commit"] for c in finding["commits"]] == [changed]
     assert sorted(finding["commits"][0]) == ["author", "change", "commit", "date", "paths"]
     assert finding["commits"][0]["paths"] == ["src/cli/main.py"]
@@ -868,7 +892,7 @@ def test_explain_lists_each_path_anchors_files_at_the_point_and_at_head(
         ("src/cli/vendor/**", "dead-anchor", fr.AnchorFiles((), (), ("src/cli/vendor/lib.py",))),
         ("ADR-404", "dead-anchor", None),
     ]
-    by_anchor = {f.finding.anchor: f for f in explanation.findings}
+    by_anchor = {f.finding.anchor: f for f in without_over_broad(explanation.findings)}
     assert [c.commit.sha for c in by_anchor[CLI].commits] == [reworked]
     # A dead anchor's commits say where the files it matched went: excluded ones never count,
     # and a record that resolves to nothing names no file whose history could be read.
@@ -905,7 +929,7 @@ def test_a_commits_paths_are_what_the_check_reads_never_the_artefacts_own_file(
     timeline.commit("the guide alone", {"docs/guide.md": guide(anchors=anchors, body="Three.")})
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert stale.finding.origin is not None and stale.finding.origin.sha == both
     # The guide's own edits are never its anchor's change: one commit, and not its own file.
     assert [(c.commit.sha, c.paths) for c in stale.commits] == [(both, ("docs/notes.txt",))]
@@ -927,7 +951,7 @@ def test_a_file_that_lived_only_between_the_point_and_head_is_no_change(
     timeline.commit("drop the scratch module", {"src/cli/scratch.py": None})
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    assert explanation.findings == ()
+    assert without_over_broad(explanation.findings) == ()
     assert explanation.report is not None
     assert explanation.report.state is fr.ArtefactState.CURRENT
     (anchor,) = explanation.anchors
@@ -1007,7 +1031,7 @@ def test_explain_names_an_exclusion_added_since_the_point_as_why_an_anchor_is_de
             ),
         ),
     ]
-    by_anchor = {f.finding.anchor: f for f in explanation.findings}
+    by_anchor = {f.finding.anchor: f for f in without_over_broad(explanation.findings)}
     dead = by_anchor[Anchor("path", "src/cli/generated/**")]
     day = (HISTORY_EPOCH + timedelta(days=2)).date().isoformat()
     assert dead.finding.message == (
@@ -1048,7 +1072,7 @@ def test_explain_names_the_edit_a_later_widening_left_out(timeline: Timeline) ->
     )
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert stale.finding.kind is fr.RepositoryFindingKind.STALE
     assert stale.finding.origin is not None
     assert (stale.finding.origin.sha, stale.finding.origin.author) == (edited, "Bob")
@@ -1065,7 +1089,7 @@ def test_explain_says_how_an_artefact_let_back_in_is_answered(timeline: Timeline
     narrowed = timeline.commit("stop excluding the generated pages", {CONFIG: friction_config()})
 
     explanation = frep.run_explain(timeline.adopter.root, "guide")
-    (stale,) = explanation.findings
+    (stale,) = without_over_broad(explanation.findings)
     assert stale.finding.message.startswith(fr.LET_BACK_IN)
     assert stale.clears == "revalidate the artefact: letting it back in cannot be deferred"
     assert [(c.commit.sha, c.paths) for c in stale.commits] == [(narrowed, (CONFIG,))]

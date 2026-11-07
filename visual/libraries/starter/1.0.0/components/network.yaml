@@ -1,0 +1,99 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  What is connected to what: items in two columns, or three, each column centred on the
+  pattern's height, and ties between any two items below it, each drawn by the
+  connector. An item is drawn by the card unless it, or the content, names another
+  component, a pattern included, so a tie may end at an item that a pattern in a column
+  draws. A lane between the columns leaves room for the ties.
+
+fields:
+  type: object
+  required: [left, right]
+  properties:
+    left:
+      type: array
+      minItems: 1
+      description: >-
+        The items of the left column, top first, each with the fields of the component
+        that draws it.
+      items: {type: object}
+    middle:
+      type: array
+      description: >-
+        The items of the middle column, drawn where the network has three columns, each
+        with the fields of the component that draws it.
+      items: {type: object}
+    right:
+      type: array
+      minItems: 1
+      description: >-
+        The items of the right column, top first, each with the fields of the component
+        that draws it.
+      items: {type: object}
+    item:
+      type: object
+      description: >-
+        The component that draws each item of a column that names none, with words for
+        its options: the card unless the content names another.
+    ties:
+      type: array
+      description: >-
+        The ties between items below the network, each from one item to another, both
+        named by their key paths.
+      items: {type: object}
+    tie:
+      type: object
+      description: >-
+        The component that draws each tie that names none, with words for its options:
+        the connector unless the content names another.
+
+lists:
+  left: {component: item}
+  middle: {component: item}
+  right: {component: item}
+  ties: {component: tie, ends: [from, to]}
+
+options:
+  # Two columns, the left and the right, or three, the middle between them.
+  columns: [two, three]
+
+values:
+  # The lane between two columns, where the ties run, and how wide a column is.
+  lane: "=:width / 6"
+  column-width:
+    by: columns
+    two: "=(:width - lane) / 2"
+    three: "=(:width - 2 * lane) / 3"
+
+parts:
+  left:
+    repeat: left
+    draw: starter/card
+    y: "=(:height - left.height) / 2"
+    width: "=column-width"
+    column: {gap: "=@starter.gap", align-items: stretch}
+  middle:
+    when: {columns: [three]}
+    repeat: middle
+    draw: starter/card
+    x: "=column-width + lane"
+    y: "=(:height - middle.height) / 2"
+    width: "=column-width"
+    column: {gap: "=@starter.gap", align-items: stretch}
+  right:
+    repeat: right
+    draw: starter/card
+    x: "=:width - column-width"
+    y: "=(:height - right.height) / 2"
+    width: "=column-width"
+    column: {gap: "=@starter.gap", align-items: stretch}
+  # Drawn last, over the columns.
+  ties:
+    repeat: ties
+    draw: starter/connector
+
+preferred:
+  height: "=max(left.height, middle.height, right.height)"

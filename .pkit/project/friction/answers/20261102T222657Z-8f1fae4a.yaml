@@ -1,0 +1,628 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-audit-comment
+    read:
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-11-02T22:26:57Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-bypass
+    read:
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-11-02T22:27:01Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:27:05Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-task
+    revalidated:
+      at: 2026-11-02T22:27:09Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-topology
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:27:13Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-use-case-entry
+    read:
+      - 20261029T150941Z-ca5f64b9.yaml
+    revalidated:
+      at: 2026-11-02T22:27:17Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+    revalidated:
+      at: 2026-11-02T22:27:21Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+    revalidated:
+      at: 2026-11-02T22:27:25Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/010-issues-and-their-hierarchy.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:27:29Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:27:34Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-11-02T22:27:38Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/020-classification-of-issues.md
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-11-02T22:27:43Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+    revalidated:
+      at: 2026-11-02T22:27:47Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:27:51Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:27:55Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:00Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:04Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:08Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T183638Z-abcc0940.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:12Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:16Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:21Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:25Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:28:29Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-02T22:28:34Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+    revalidated:
+      at: 2026-11-02T22:28:38Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-classification-axis
+    read:
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+    revalidated:
+      at: 2026-11-02T22:28:52Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's project, which the definition names (DEC-001 point 4), and links kind of work.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-instance
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+    revalidated:
+      at: 2026-11-02T22:29:51Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's project, which the definition names (DEC-001 point 4), and links clone.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261031T010527Z-8e577440.yaml
+    revalidated:
+      at: 2026-11-02T22:29:02Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's process, which the definition names (DEC-001 point 4), and links substrate map.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-merge-gate
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T215451Z-69a1d552.yaml
+    revalidated:
+      at: 2026-11-02T22:29:06Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's pull request, which the definition names (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-milestone-category
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-11-02T22:29:11Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's project, which the definition names (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-required-reviewer
+    read:
+      - moved-d00fadb0e573.yaml
+    revalidated:
+      at: 2026-11-02T22:29:16Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's pull request, project, capability and change, which the definition names (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-scope
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:29:20Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's project, which the definition names (DEC-001 point 4), and links kind of work and ready Task.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-verdict
+    read:
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-11-02T22:29:24Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's reviewer, pull request and change, which the definition names (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-workstream
+    read:
+      - 20261028T205654Z-b292a5c8.yaml
+      - moved-fa8beb8be8cb.yaml
+    revalidated:
+      at: 2026-11-02T22:29:28Z
+      outcome: unchanged
+      unchanged-because: Its definition and text hold as written. This change only anchors the records behind the core's project, which the definition names (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:30:21Z
+      outcome: unchanged
+      unchanged-because: Its statement and measure still hold. ACT-planner only gains UC-083's need, and this change only anchors the records behind core:ACT-developer, in its actors (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+    revalidated:
+      at: 2026-11-02T22:30:26Z
+      outcome: unchanged
+      unchanged-because: Its statement still holds. ACT-planner only gains UC-083's need, and this change only anchors the records behind core:ACT-developer, in its actors (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T211250Z-f74ab866.yaml
+      - 20261029T214542Z-efb6f11b.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+    revalidated:
+      at: 2026-11-02T22:30:30Z
+      outcome: unchanged
+      unchanged-because: Its statement still holds. ACT-planner only gains UC-083's need, and this change only anchors the records behind core:ACT-developer, in its actors (DEC-001 point 4).
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-11-02T22:30:34Z
+      outcome: unchanged
+      unchanged-because: One owner per issue still holds. ACT-worker-agent changed only in that its role holders act on their seat's direction, and gained the DEC-059 point 8 anchor.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-11-02T22:30:38Z
+      outcome: unchanged
+      unchanged-because: Finding an instance's work in flight from GitHub still holds. The worker agent now acts on its seat's direction and the planner gains UC-083's need, and neither touches it.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T040414Z-bea9746a.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:31:36Z
+      outcome: unchanged
+      unchanged-because: Its steps still hold. ACT-planner only gains UC-083's need, and this change only anchors the records behind its core other actors, the AI agent and the operator (DEC-001 point 4), and links system and clone.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:31:40Z
+      outcome: unchanged
+      unchanged-because: Its steps still hold. ACT-planner only gains UC-083's need, and this change only anchors the records behind its core other actors, the AI agent and the operator (DEC-001 point 4), and links system and substrate map.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:30:51Z
+      outcome: unchanged
+      unchanged-because: Its steps still hold. The worker agent now acts on its seat's direction, and this change only anchors the records behind core:ACT-developer and links the new terms.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:30:55Z
+      outcome: unchanged
+      unchanged-because: Its steps still hold. The worker agent now acts on its seat's direction, and this change only anchors the records behind core:ACT-operator and links the new terms.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-02T22:31:00Z
+      outcome: unchanged
+      unchanged-because: Its steps still hold. This change only anchors the records behind core:ACT-ai-agent, among its other actors (DEC-001 point 4), and links the new terms.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261029T002130Z-82af462f.yaml
+    revalidated:
+      at: 2026-11-02T22:31:04Z
+      outcome: unchanged
+      unchanged-because: Its steps still hold. This change only anchors the records behind core:ACT-adopter, its actor (DEC-001 point 4), and links ownership.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:31:08Z
+      outcome: unchanged
+      unchanged-because: Its path still holds. UC-060 writes kind of work in full, UC-061 writes ownership for claim, and UC-062 names the developer's Task, so each step still hands over the same. This change anchors the records behind core:ACT-developer.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-02T22:31:13Z
+      outcome: unchanged
+      unchanged-because: Its path still holds. UC-084 and UC-089 now build through the build command under boxes, UC-083's actor became the planner, and UC-060 and UC-092 change no hand-over, so each step still hands over the same.

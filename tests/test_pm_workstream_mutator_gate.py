@@ -239,11 +239,18 @@ def test_kit_label_mutation_note_fires_for_a_label_bound_axis_under_a_board() ->
 
 
 def test_kit_label_mutation_note_fires_for_a_board_carried_axis() -> None:
-    """Today's behaviour, preserved: a board adopter with no binding still skips
-    the label half — now with a reason attached instead of silently."""
-    note = axis_carriage.kit_label_mutation_note("workstream", BOARD, None)
+    """A board adopter whose map binds `workstream: {board: true}` skips the
+    label half — with a reason attached instead of silently."""
+    on_board = axis_labels.SubstrateMap(axes={"workstream": {"board": True}})
+    note = axis_carriage.kit_label_mutation_note("workstream", BOARD, on_board)
     assert note is not None
     assert "Projects-v2 board" in note
+
+
+def test_kit_label_mutation_note_is_silent_under_a_board_the_map_binds_nothing_to() -> None:
+    """The board flag carries no axis (DEC-062 point 1): with no map, the kit's
+    `workstream:*` labels are the substrate, and the mutators manage them."""
+    assert axis_carriage.kit_label_mutation_note("workstream", BOARD, None) is None
 
 
 def _stage_label_bound_board_adopter(cap_root: Path) -> None:

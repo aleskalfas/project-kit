@@ -1,0 +1,11 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit visual add` gives the right advice where the list of libraries
+  writes a key on the way to the new entry in quotes, such as
+  `'libraries':` or a library's name (#2550). The command still refuses to
+  add the version as text there, and now names each such key, to be written
+  without quotes, where it told the person to write the mapping as a block
+  mapping, which it already was. Every other refusal reads as before.

@@ -16,6 +16,7 @@ from project_kit import project_config as pc
 from project_kit import report_context
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -265,6 +266,15 @@ def test_config_set_writes_with_yes(make_adopter_repo: MakeAdopterRepo) -> None:
     assert pc.read_config(repo.root) == {"docs": {"internal": "tech-docs"}}
     text = _config_path(repo).read_text(encoding="utf-8")
     assert text.startswith(pc.EDITOR_DIRECTIVE + "\n")
+
+
+def test_config_set_writes_the_refusals_key_as_a_boolean(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    result = _run(pc.REFUSE_PROPOSALS_KEY, "true", "--yes")
+    assert result.exit_code == 0, result.output
+    assert pc.read_config(repo.root) == {"decisions": {"refuse-proposals": True}}
 
 
 def test_config_set_refuses_non_interactively_without_yes(
@@ -520,7 +530,7 @@ RULE_SET = "---\nrule-set: CMN\nversion: 1.0.0\nrules: {}\n---\n\n# Rules\n"
 def _project_rule_sets(repo: AdopterRepo) -> list[str]:
     from project_kit import rule_sets
 
-    return [s.path for s in rule_sets.discover_rule_sets(repo.root).rule_sets]
+    return [s.path for s in own(rule_sets.discover_rule_sets(repo.root).rule_sets)]
 
 
 def _places(repo: AdopterRepo) -> list:

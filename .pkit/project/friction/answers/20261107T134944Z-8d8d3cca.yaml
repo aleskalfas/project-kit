@@ -1,0 +1,329 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:52:32Z
+      outcome: unchanged
+      unchanged-because: "DEC-023's edits give a file that holds several combinations the first key it serves, as a variant takes one (DEC-004 point 3), and have the browser's module take the reader's signals to set (DEC-015 point 2). This page, as main holds it, says a key names a combination in the names of previews, exports and produced pictures, and lists look/<piece>/ and the fonts' temporary folder that pkit visual look writes. No file holds several combinations yet, and look writes the same files, so each still holds of the code. It replaces the re-checks made apart in 20261106T151937Z-c65fc01f.yaml, whose change added pkit visual upgrade among the writers of a piece's lock, findings, exports and copy, with how it moves a published lock; 20261107T124642Z-7a8e773a.yaml, which found DEC-021's edits leave the page true while the foundations declare no size axis; and 20261107T124703Z-4b574535.yaml, which found a scene for each key over the size axes leaves the keys and the names of previews and exports as written. Together they hold, and none touches Keys of combinations or look/<piece>/. The Tasks of Feature #2570 that hold every mode in one file and add the html format, which names its file, change this page where they need."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:52:34Z
+      outcome: unchanged
+      unchanged-because: DEC-023's edits give a file that holds several combinations the first key it serves (DEC-004 point 3), and have a format whose medium switches modes hold in one file, for each language and size, the modes a reader's signal names (DEC-006 point 7). This page names no export's file or its key. It says a scene is computed for one language and one key over the size axes, and that colours stay role names, so one scene serves every mode of the value axes at its key. A page file rests on that (DEC-023 point 4), so the edits agree with the page, which still holds of the code. It replaces the re-checks made apart in 20261107T124703Z-4b574535.yaml, whose change computes a scene for each language and each key over the size axes; 20261106T151937Z-c65fc01f.yaml, which found who writes the lock leaves the page true; and 20261107T124642Z-7a8e773a.yaml, which found DEC-021's edits leave it true until `:device` is built. That last judged the passage on the size key before the first change rewrote it to compute a scene at each key a piece names, as DEC-021 asks, so the three hold together.
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:52:36Z
+      outcome: unchanged
+      unchanged-because: "DEC-023's edits have the HTML renderer's page hold, in one file for each language and size, the modes a reader's signal names. It names its schemes, gives its shapes the reader's colours under forced colours, and keeps a picture's first variant with a loss in each other key (DEC-020 point 4, DEC-006 points 3 and 7). A renderer names each such format with its signal pairs, a loss in one mode names its key, and the viewing step sets the signals through the browser, an HTML page lying on the browser's ground (DEC-005 point 9, DEC-015 points 2 and 5). This page says the html renderer 1.0.0 draws one language's pages at one key, sets no colour around them, and is reached by no format. It says a loss carries no key, and pkit visual look draws what the SVG renderer draws, on white. Each still holds of the code. It replaces the re-checks made apart in 20261106T151937Z-c65fc01f.yaml, whose change has pkit visual upgrade write the current copy and the record of exports; 20261107T124642Z-7a8e773a.yaml, which found DEC-021's edits change no renderer's output; and 20261107T124703Z-4b574535.yaml, which found each output still one file for each page, language and combination, named by its key. Together they hold, and none touches the HTML renderer or the viewing step. The Tasks of Feature #2570 that hold every mode in one file and add the html format, and #2785 for look, change this page."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:52:37Z
+      outcome: unchanged
+      unchanged-because: "DEC-023's edits give a file that holds several combinations the first key it serves (DEC-004 point 3). They have a renderer name each format that holds modes, with its signal pairs, and a loss in one mode of such a file name its key (DEC-005 point 9). This page's loss row says a renderer's losses are known from its declaration. No renderer holds several modes in one file, so no declaration names such a format and no loss carries a mode's key yet, and the page still holds of the check. It replaces the re-checks made apart in 20261106T013502Z-01dc9885.yaml, which found the CLI reference's new refs row leaves the check's place in pkit validate as it was; 20261106T151937Z-c65fc01f.yaml, whose change has pkit visual upgrade write the findings record and names it as a way past the export's gate; 20261107T124642Z-7a8e773a.yaml, which found DEC-021's edits leave brand-axis, base-axis and piece-unreadable true; and 20261107T124703Z-4b574535.yaml, whose change reports a finding found at only some sizes for each key, its message opening with the key. Together they hold, since each judged or changed a passage of its own. The Task of Feature #2570 that holds every mode in one file builds the format's declaration and the loss's key, and changes this page where the check reports them."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:52:40Z
+      outcome: unchanged
+      unchanged-because: "DEC-023's edits have the browser's module take the reader's signals to set, and lay an image of the HTML renderer's page on the browser's own ground in its mode (DEC-015 points 2 and 5). This page's entries for pkit visual look and the reviewer say look draws a piece's pages as images for a person or the reviewer to read, and name no tool and no ground, so they hold. No command reaches the HTML renderer yet, as its plugins' entry says. It replaces the re-checks made apart in 20261106T013502Z-01dc9885.yaml, which found the reviewer's deployment as the agents reference gives it; 20261106T151937Z-c65fc01f.yaml, whose change adds the entry for pkit visual upgrade; 20261107T124642Z-7a8e773a.yaml, which found no shipped component names a size; and 20261107T124703Z-4b574535.yaml, which found the commands still draw and write a file for each key. Together they hold, and none touches the entries for look or the reviewer. #2785, which has look read the HTML page through a browser, changes them."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T13:52:41Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 7 comes to have a format whose medium switches modes hold in one file, for each language and size, the modes a reader's signal names, and leaves any other mode to that format. Such a file is still a file a piece is handed out as, numbered by its run and never overwritten. So the definition, the example of version 3's PDFs in English and in Czech, and the distinction from what a renderer drew hold. It replaces the re-checks made apart in 20261106T151937Z-c65fc01f.yaml, which found pkit visual upgrade's run numbers its files as any export does, and 20261107T124703Z-4b574535.yaml, which found each file drawn from the scene of its key leaves the number and the record as they were. Together they hold, since neither touches what an export is.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:52:43Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 7 comes to have a format whose medium switches modes, such as a web page, hold in one file, for each language and size, the modes a reader's signal names, and leaves any other mode to that format. Step 5 rests on the record of exports fingerprinting the shared content a piece reads, and on a published piece's stale copy failing the check. Variant 5a rests on a final view staying as it was handed out. The edits change neither the record, the copy's check nor what a final piece keeps, so the steps and the variant hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-097-put-produced-picture.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-07T13:52:47Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 point 3 comes to have the HTML renderer's page keep a picture's first variant, with a loss in each other key whose variant differs, until #2575 decides how a page holds every variant. DEC-004 point 3 gives a file that holds several combinations its key as a variant takes one. Variant 2b's piece shows the picture of the mode it is drawn in, which holds of every format a piece can export today, each file of one combination. No producer ships until #2575, which also decides the page's variants, so no piece meets the HTML page's lone variant before then. Each variant is still named by the brand's key, so the Sources of variant 2b hold."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:52:49Z
+      outcome: unchanged
+      unchanged-because: "DEC-005 point 9's edits concern renderers alone: one names each format that holds several modes in one file, with the signal pairs it reads, and its loss in one mode of such a file names that mode's key. Step 3 rests on a code writer declaring the kinds of value it has a form for, and reporting what it lost in one form, which the edits leave as they stood. DEC-004 point 3 comes to give a file that holds several combinations the first key it serves, and variant 1a's JSON writer still names each set of values by the key of its combination. So both hold."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-07T13:52:51Z
+      outcome: unchanged
+      unchanged-because: DEC-005 point 9 comes to have a renderer name each format that holds several modes in one file, with the signal pairs it reads, and a loss in one mode of such a file name that mode's key. Steps 1 to 3 rest on a renderer reporting what it could not draw, in one form of report, and how it drew it instead. The key adds where a loss arose and keeps the one form, so the steps, and the postcondition that the developer knows each difference, hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T13:52:53Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 7 comes to have a format whose medium switches modes, such as a web page, hold in one file, for each language and size, the modes a reader's signal names. A PDF switches no mode while open, so it stays one file for each language and combination of modes, numbered by its run. Steps 2 and 3, variant 4a's exports kept as the piece's freeze, and the guarantee that no export overwrites another hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-07T13:52:55Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 7 comes to have a format whose medium switches modes, such as a web page, hold in one file, for each language and size, the modes a reader's signal names, and leaves any other mode to that format. Variant 2a's talk shown from a web page or from its PDF holds, as does step 5's PDF drawn from the content, never from a board, under one export number. A web page that follows the reader's system shows the talk in the mode of the machine that shows it, which the journey does not fix.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+      - 20261106T024508Z-5f0b1c44.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+    revalidated:
+      at: 2026-11-07T13:53:12Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 point 7 comes to have a format whose medium switches modes, such as a web page, hold in one file the modes a reader's signal names, and point 3 has the HTML renderer's page keep a picture's first variant until #2575. Steps 3 and 5's figure, drawn in each mode of the colour scheme and following the reader's switch, holds: that axis pairs with a reader's signal, and the figure has no produced picture. How a published copy in a page follows the reader is open #2700's. Step 4's copy and variant 6a's stale copy rest on point 7's copy and the check of it, which the edits leave as they were. It replaces the re-checks made apart in 20261107T124642Z-7a8e773a.yaml, which kept deferrals on DEC-003 points 8 and 9 and DEC-006 points 7 and 8 for the sentence of Sources on a published lock's move, and 20261107T131232Z-a68f64d0.yaml. That change mended variant 6b and that sentence with the move that shows only an after, beside marking final, and kept only point 9's deferral. Together they leave point 9's deferral alone standing, and this revalidation keeps it until open #2767."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#9
+          reason: "DEC-003 point 9 says the fact names the command that proposes the move only within the lock's majors, for a version the installed capability reads. Of a later major it says a person takes that version on purpose, by naming it. Variant 6b and its sentence of Sources say the system names that command for any new library version, so both are false of a later major and of a version the capability cannot read, and hold of the rest. Open #2767, which builds outdated, mends them and revalidates this use case with no deferral."

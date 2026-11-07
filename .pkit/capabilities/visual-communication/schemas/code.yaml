@@ -1,0 +1,21 @@
+# A declaration of written code, `code/<name>.yaml` in the location
+# (visual-communication DEC-002 point 1, DEC-005 point 7): the code writer, the version
+# of its spelling, the brand and its lock, and where the code goes. The writer is `css`
+# or `json`. Only `css` takes a `prefix`: a token path stays as the brand exports it in
+# the `json` writer's document.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:code
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+writer: css
+form: 1
+brand: test-brand
+lock:
+  foundations: 1.0.0
+  test-brand: 1.0.0
+out: web/brand.css
+prefix: brand

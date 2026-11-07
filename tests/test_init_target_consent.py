@@ -76,11 +76,23 @@ def spy_install(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, bool]]:
     """Replace `cli.install_kit` with a recorder of (target, dry_run) calls."""
     calls: list[tuple[Path, bool]] = []
 
-    def _spy(target: Path, dry_run: bool = False) -> None:
+    def _spy(target: Path, dry_run: bool = False, refuse_proposals: bool = False) -> None:
         calls.append((Path(target), dry_run))
 
     monkeypatch.setattr(cli, "install_kit", _spy)
     return calls
+
+
+@pytest.fixture
+def spy_refusal(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+    """Replace `cli.install_kit` with a recorder of the refusal's flag."""
+    flags: list[bool] = []
+
+    def _spy(_target: Path, dry_run: bool = False, refuse_proposals: bool = False) -> None:
+        flags.append(refuse_proposals)
+
+    monkeypatch.setattr(cli, "install_kit", _spy)
+    return flags
 
 
 @pytest.fixture
@@ -295,6 +307,59 @@ def test_init_git_root_no_prompt(
 
 
 # ---- CLI gate: git-subfolder confirm (#4) -----------------------------------
+
+
+def test_the_refusals_flag_reaches_an_install_where_you_stand(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_refusal
+) -> None:
+    _git_init(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["init", "--refuse-proposals"])
+
+    assert result.exit_code == 0, result.output
+    assert spy_refusal == [True]
+
+
+def test_the_refusals_flag_reaches_an_install_at_the_git_root_above(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_refusal, set_tty
+) -> None:
+    _git_init(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    set_tty(True)
+
+    result = CliRunner().invoke(main, ["init", "--refuse-proposals"], input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert spy_refusal == [True]
+
+
+def test_the_refusals_flag_reaches_an_install_at_a_named_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_refusal
+) -> None:
+    _git_init(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+
+    result = CliRunner().invoke(main, ["init", "--root", str(tmp_path), "--refuse-proposals"])
+
+    assert result.exit_code == 0, result.output
+    assert spy_refusal == [True]
+
+
+def test_init_without_the_refusals_flag_leaves_it_off(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spy_refusal
+) -> None:
+    _git_init(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["init"])
+
+    assert result.exit_code == 0, result.output
+    assert spy_refusal == [False]
 
 
 def test_init_git_subfolder_confirm_accept(

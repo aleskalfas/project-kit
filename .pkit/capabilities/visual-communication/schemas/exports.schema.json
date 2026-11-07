@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exports.schema.json",
+  "title": "The record of a piece's exports — visual-communication capability",
+  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale; who wrote a published piece's current copy (DEC-017 point 7); and which version was handed out (DEC-017 point 2). `pkit visual export` rewrites it, and `pkit visual mark-final` adds its last line. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "versions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:exports`.",
+      "const": "visual-communication:exports"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "current-copy": {
+      "description": "A published piece's current copy (DEC-017 point 7): the piece and the version that wrote it, and each of its files. Absent until an export of a published piece writes one, and kept by an export in another state.",
+      "type": "object",
+      "required": [
+        "piece",
+        "version",
+        "files"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "piece": {
+          "description": "The piece that wrote the copy, by its name (DEC-017 point 7).",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "version": {
+          "description": "The number of the version that wrote the copy.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "files": {
+          "description": "Each file of the copy, by its path with its SHA-256: under `current-copy/`, read from the piece's folder, and at the place the piece names, read from the repository's root (DEC-017 point 7). A file's name is its version's with the number left out.",
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[^/.\\\\][^/\\\\]*(/[^/.\\\\][^/\\\\]*)*/[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
+          },
+          "additionalProperties": {
+            "$ref": "defs.schema.json#/$defs/sha256"
+          },
+          "minProperties": 1
+        }
+      }
+    },
+    "handed-out": {
+      "description": "The number of the version handed out (DEC-017 point 2), one of those `versions` holds. Absent until `pkit visual mark-final` names it, and no input of any fingerprint.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "version",
+          "fingerprint",
+          "files",
+          "recorded"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fingerprint": {
+            "$ref": "defs.schema.json#/$defs/fingerprint"
+          },
+          "files": {
+            "description": "Each file the version made, by name, with its SHA-256. A name is `<piece>.v<N>.<language>.<key>.svg`, or `.pdf` for a PDF; an SVG file of a piece of more than one page adds the page's number, from 1, before `.svg`, and a PDF, which holds every page, adds none.",
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*\\.v[1-9][0-9]*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
+            },
+            "additionalProperties": {
+              "$ref": "defs.schema.json#/$defs/sha256"
+            },
+            "minProperties": 1
+          },
+          "recorded": {
+            "type": "object",
+            "required": [
+              "time",
+              "state",
+              "capability",
+              "renderers",
+              "used",
+              "used-stale"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "time": {
+                "$ref": "defs.schema.json#/$defs/time"
+              },
+              "state": {
+                "description": "The piece's state when the version was made.",
+                "enum": [
+                  "draft",
+                  "final",
+                  "published"
+                ]
+              },
+              "capability": {
+                "$ref": "defs.schema.json#/$defs/release"
+              },
+              "renderers": {
+                "$ref": "defs.schema.json#/$defs/plugins"
+              },
+              "used": {
+                "description": "Each produced output the version's scenes read, with the version used: the `value` of its record's fingerprint (DEC-006 point 7).",
+                "type": "object",
+                "propertyNames": {
+                  "$ref": "defs.schema.json#/$defs/name"
+                },
+                "additionalProperties": {
+                  "$ref": "defs.schema.json#/$defs/sha256"
+                }
+              },
+              "used-stale": {
+                "description": "The produced outputs the version used while they were stale, as `--use-stale` named them.",
+                "type": "array",
+                "items": {
+                  "$ref": "defs.schema.json#/$defs/name"
+                },
+                "uniqueItems": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

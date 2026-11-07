@@ -942,6 +942,16 @@ def test_main_board_path_uses_cached_node_id_no_project_view(ci, tmp_path, monke
         config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_cached\n",
         encoding="utf-8",
     )
+    # The axes on the kit's own labels, and the state left out, so no board
+    # Status is written for it (DEC-062 point 5): the one board read left is the
+    # hook's, which the cache spares.
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n"
+        "  type:\n    kit-label: true\n"
+        "  priority:\n    kit-label: true\n"
+        "  workstream:\n    kit-label: true\n",
+        encoding="utf-8",
+    )
 
     project_view_calls = {"n": 0}
 
@@ -1279,6 +1289,137 @@ def test_main_label_fallback_path_omits_board_keys_hook_skips(ci, tmp_path, monk
     # target, and skips. The seam `boom` above asserts no write was attempted.
     assert "board_item_id" not in captured_context["issue"]
     assert captured_context["project_node_id"] is None
+
+
+# --- the card's first Status (DEC-006, #2276) --------------------------------
+# Where the board's Status is a projection the project keeps — a board, and the
+# state not carried on it — the card create-issue adds gets the Status of the
+# state the new issue is in: Todo, or Backlog where it was filed with a
+# milestone, as `_lib/lifecycle_inference` reads it.
+
+
+#: A map that puts priority, workstream and state on the board, and keeps type on
+#: the kit's own labels.
+BOARD_AXES: dict = {
+    "type": {"kit-label": True},
+    "priority": {"board": True},
+    "workstream": {"board": True},
+    "state": {"board": True},
+}
+
+
+def _status_kept_filing(
+    ci, tmp_path: Path, monkeypatch, *, axes: dict | None, repository: str = "acme/repo"
+):
+    """Stage a board filing in ``repository``, whose owner owns the board, and
+    route the board's calls to a `BoardTracker`."""
+    import shutil
+
+    from tests.pm_board_world import BoardTracker
+
+    root = _stage_capability_tree(tmp_path, has_board=True)
+    shutil.copy(SCRIPT_PATH.parent.parent / "schemas" / "workflow.yaml", root / "schemas")
+    board = BoardTracker()
+    board.repository, board.owner = repository, repository.split("/", 1)[0]
+    benign = _gh_command_dispatcher(f"https://github.com/{repository}/issues/42")
+
+    def run(cmd, *args, **kwargs):
+        argv = [str(c) for c in cmd]
+        if argv[:2] == ["gh", "project"] or argv[1:3] == ["api", "graphql"]:
+            return board.gh(argv)
+        return benign(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    substrate_map = None if axes is None else ci.axis_labels.SubstrateMap(axes=axes)
+    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *a, **kw: substrate_map)
+    monkeypatch.setattr(ci, "fire_hooks", lambda *a, **kw: None)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, "--capability-root", str(root), "--yes"])
+    return board
+
+
+@pytest.mark.parametrize(
+    "repository",
+    [
+        pytest.param("acme/repo", id="an-organisations-board"),
+        pytest.param("alice/repo", id="a-persons-board"),
+    ],
+)
+def test_a_filed_issues_card_gets_its_first_status(
+    ci, tmp_path, monkeypatch, capsys, repository
+) -> None:
+    """With no `gh.default_owner`, the board is found under the owner the new
+    issue's url names, the repository's (the README, the `gh:` block)."""
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE, repository=repository)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42]
+    assert board.edits == [(42, "Todo")]
+    assert "[board] #42: Status set to 'Todo'" in capsys.readouterr().out
+    owner = repository.split("/", 1)[0]
+    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
+    assert {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
+
+
+def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE)
+    del board.options["Todo"]
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert (
+        "[warn] #42: the board's Status was not set to 'Todo': the board's Status field has "
+        "no 'Todo' option; the issue is filed, and `sync-board` sets it"
+    ) in capsys.readouterr().err
+
+
+def test_the_first_status_is_the_states_source_where_the_board_carries_it(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The map binds state to the board: its Status is the state's source
+    (DEC-062 point 5), and the new card's Status puts the issue where it is filed,
+    Todo with no milestone (#2271)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == [(42, "Todo")]
+    out = capsys.readouterr().out
+    assert "the state the issue is filed into, the state's source (DEC-062 point 5)" in out
+    assert "[board] #42: Status set to 'Todo'" in out
+
+
+def test_a_first_status_not_written_where_the_board_carries_the_state_says_so(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
+    board.fail_edits.add(42)
+
+    assert ci.main() == 0
+
+    err = capsys.readouterr().err
+    assert "the board carries its state, so its position cannot be read until its card" in err
+    assert "sync-board" not in err
+
+
+def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monkeypatch) -> None:
+    """A present map leaving the state out writes no Status (DEC-062 point 5)."""
+    axes = {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"}
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert not [argv for argv in board.calls if argv[2:3] == ["field-list"]]
 
 
 def _hooks_module(ci):
@@ -2793,17 +2934,19 @@ def test_build_labels_map_binding_beats_the_board_flag(ci) -> None:
 
 
 def test_build_labels_board_carried_axis_writes_no_label_and_no_advisory(ci) -> None:
-    """The map is silent about `priority`, so the flag still governs and the board
-    carries it: no label — and NO "unsupported" advisory, because the axis is
-    SERVED. `resolve_write` returns DEGRADE for a board-carried axis exactly as it
-    does for an absent one, so a writer keying on the resolver alone would report a
-    served axis as unsupported (ADR-053 decision point 6)."""
+    """The map binds `priority` to the board, so the board carries it: no label —
+    and NO "unsupported" advisory, because the axis is SERVED. `resolve_write`
+    returns DEGRADE for a board-carried axis exactly as it does for an absent one,
+    so a writer keying on the resolver alone would report a served axis as
+    unsupported (ADR-053 decision point 6)."""
     labels, advisories, resolved = ci._build_labels(
         kind="feature",
         priority="High",
         workstream=None,
         config=_BOARD_CONFIG_ONLY,
-        substrate_map=None,
+        substrate_map=ci.axis_labels.SubstrateMap(
+            axes={"type": {"kit-label": True}, "priority": {"board": True}}
+        ),
     )
     assert not any(lbl.startswith("priority") or lbl == "P0" for lbl in labels)
     assert "priority" not in resolved
@@ -3261,3 +3404,65 @@ def test_the_children_view_is_rendered_from_issues_of_work_alone(ci, monkeypatch
     ci._refresh_parent_children_view({}, parent_number=5, containment_mode="textual")
     assert set(seen["corpus"]) == {7}
     assert set(seen["titles"]) == {7}
+
+
+# ---- pools of workers (DEC-061 point 6) ----------------------------------------------
+
+
+def _file_pooled(ci, tmp_path, monkeypatch, *, yes: bool, pool_line: str = "Pool: alpha"):
+    """File a Task into milestone #6, whose description carries ``pool_line``,
+    in a topology that declares alpha; return (rc, every argv run)."""
+    from types import SimpleNamespace
+
+    root = _stage_filing_tree(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        calls.append(list(cmd))
+        stdout = "https://github.com/acme/repo/issues/55\n" if "create" in cmd else ""
+        return SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+
+    rows = [
+        {"number": 6, "title": "Sprint 6", "description": f"Close trigger: either\n{pool_line}"}
+    ]
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    milestone = SimpleNamespace(number=6, title="Sprint 6")
+    monkeypatch.setattr(ci, "resolve_milestone", lambda _a, _c: milestone)
+    monkeypatch.setattr(ci, "list_open_milestones", lambda _c, gh=None: rows)
+    monkeypatch.setattr(ci.pools, "declared_pools", lambda _r: (("alpha",), None))
+    monkeypatch.setattr(ci.pools.consent, "at_a_terminal", lambda: False)
+    argv = ["create-issue.py", "--type", "task", "--title", "File the authentication work now"]
+    argv += ["--milestone", "6", "--workstream", "spyre", "--capability-root", str(root)]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, *(["--yes"] if yes else [])])
+    return ci.main(), calls
+
+
+def test_a_task_filed_into_a_pool_off_a_terminal_without_yes_is_refused(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=False)
+    assert rc == 1
+    assert not _issue_created(calls)
+    assert "Putting the new Task into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_task_filed_into_a_pool_with_consent_logs_it_on_the_task(
+    ci, tmp_path, monkeypatch
+) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=True)
+    assert rc == 0
+    comments = [c for c in calls if c[:3] == ["gh", "issue", "comment"]]
+    consent = [c[c.index("--body") + 1] for c in comments if "pool-consent" in c[-1]]
+    assert len(consent) == 1
+    assert "into milestone #6, pool none → alpha, with the person's consent" in consent[0]
+
+
+def test_a_task_filed_into_a_milestone_of_no_pool_asks_nothing(ci, tmp_path, monkeypatch) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=False, pool_line="")
+    assert rc == 0
+    assert _issue_created(calls)
+    assert not any("pool-consent" in c[-1] for c in calls if c)

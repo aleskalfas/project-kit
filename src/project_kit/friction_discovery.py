@@ -155,6 +155,8 @@ git plumbing behind a commit in `friction_git`.
 
 from __future__ import annotations
 
+import bisect
+import copy
 import functools
 import json
 import os
@@ -169,7 +171,7 @@ from typing import Any, Protocol, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
+from project_kit import block_yaml, command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.document_parts import (
     Body,
@@ -307,7 +309,8 @@ _SKIPPED_TOP_LEVEL = frozenset({".git"})
 
 _GLOB_CHARS = frozenset("*?[")
 
-_yaml = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml = YAML(typ="safe", pure=True)
 
 
 # --- repository trees ---------------------------------------------------
@@ -1239,6 +1242,24 @@ def _mapping_loader(
     return lambda rel: read(rel)[0]
 
 
+#: Why a file at a state does not read where git holds a link there. A reading of the
+#: working tree follows the link, so validation reads what it leads to.
+UNFOLLOWED_LINK = "is a link, which a reading at a commit does not follow"
+
+
+def read_mapping_at(
+    target_root: Path, tree: RepositoryTree, rel: str
+) -> tuple[dict[str, Any], str | None]:
+    """The repository-relative YAML file `rel` as the state `tree` holds it: a mapping with
+    text keys, and why it does not read (`_yaml_reader`), a link being one that does not
+    (`UNFOLLOWED_LINK`), never read as absent. The one reading of a file at a state, which
+    a reader of a configuration key at a commit stands on (ADR-057 point 2)."""
+    found, unread = _yaml_reader(target_root, tree)(rel)
+    if found or unread is not None or rel not in tree.files():
+        return found, unread
+    return found, UNFOLLOWED_LINK if tree.read_bytes([rel]).get(rel) is None else None
+
+
 def _yaml_reader(
     target_root: Path, tree: RepositoryTree | None
 ) -> Callable[[str], tuple[dict[str, Any], str | None]]:
@@ -1274,9 +1295,20 @@ def _load_mapping(path: Path) -> tuple[dict[str, Any], str | None]:
 
 def _parse_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     """YAML text as a mapping with text keys, and why it is none: it does not parse,
-    or it is no mapping. Empty text is an empty mapping."""
+    or it is no mapping. Empty text is an empty mapping.
+
+    A text's parse is kept for the life of the process, keyed on its content (the 256
+    texts read last), and each caller is given a copy of its own: the checks read the
+    settings of many commits, and a capability's package metadata is the same text at
+    most of them."""
+    found, reason = _parsed_mapping(text)
+    return copy.deepcopy(found), reason
+
+
+@functools.lru_cache(maxsize=256)
+def _parsed_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     try:
-        data = _yaml.load(text)
+        data = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError:
         return {}, "does not parse as YAML"
     if data is None:
@@ -1831,11 +1863,42 @@ def pattern_matcher(pattern: str) -> Callable[[str], bool]:
     normalised = os.path.normpath(pattern).replace(os.sep, "/")
     if normalised == ".":
         return lambda _path: True
-    if any(ch in _GLOB_CHARS for ch in normalised):
+    literal = _literal_path(pattern)
+    if literal is None:
         regex = compile_glob(normalised)
         return lambda path: regex.fullmatch(path) is not None
-    prefix = normalised + "/"
-    return lambda path: path == normalised or path.startswith(prefix)
+    prefix = literal + "/"
+    return lambda path: path == literal or path.startswith(prefix)
+
+
+def _literal_path(pattern: str) -> str | None:
+    """The path a `pattern` without glob characters names, normalised: the file it is,
+    or the folder every file beneath it lies in. `None` for a glob and for `.`."""
+    normalised = os.path.normpath(pattern).replace(os.sep, "/")
+    if normalised == "." or any(ch in _GLOB_CHARS for ch in normalised):
+        return None
+    return normalised
+
+
+class PathIndex:
+    """Repository-relative paths, sorted once, so a pattern without glob characters
+    finds the paths it matches by bisection rather than by reading every path: the
+    paths `pattern_matcher` matches, in sorted order. A glob, and `.`, read every path."""
+
+    def __init__(self, paths: Iterable[str]) -> None:
+        self.paths = tuple(sorted(set(paths)))
+
+    def matching(self, pattern: str) -> tuple[str, ...]:
+        """The paths `pattern` matches (`pattern_matcher`), sorted."""
+        literal = _literal_path(pattern)
+        if literal is None:
+            return tuple(filter(pattern_matcher(pattern), self.paths))
+        at = bisect.bisect_left(self.paths, literal)
+        named = self.paths[at : at + 1] if self.paths[at : at + 1] == (literal,) else ()
+        # The paths beneath it sort from `<literal>/` up to `<literal>0`, `0` following `/`.
+        start = bisect.bisect_left(self.paths, literal + "/", at)
+        end = bisect.bisect_left(self.paths, literal + "0", start)
+        return named + self.paths[start:end]
 
 
 @functools.lru_cache(maxsize=1024)
@@ -2423,6 +2486,19 @@ class AnchorKinds:
                     self._overran[anchor.kind] = anchor.value
             self._resolved[key] = resolution
         return self._resolved[key]
+
+    def resolve_each(self, anchors: Iterable[Anchor]) -> None:
+        """Run, in their order, the resolver of each of `anchors` whose kind can be resolved,
+        each value once (`resolve`), and keep the answers for the run.
+
+        A check that will ask every one of them calls this before anything else
+        it reads. A resolver run inside another run has only the time that run has
+        left (ADR-057 point 3), so asked first, a resolver has the most of it, and
+        however long the rest of the check takes, it takes none of a resolver's
+        time."""
+        for anchor in anchors:
+            if anchor.kind not in CORE_ANCHOR_KINDS and self.unresolved(anchor.kind) is None:
+                self.resolve(anchor)
 
     def files(self, anchor: Anchor) -> tuple[str, ...]:
         """The files an anchor of a registered kind stands on — its resolver's answer —
@@ -4324,6 +4400,15 @@ def unreadable_configuration(target_root: Path, tree: RepositoryTree | None = No
     if data is not None and not isinstance(data, Mapping):
         return f"the configuration {rel} is not a mapping of keys to values"
     return None
+
+
+def configuration_at(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:
+    """The backbone configuration's mapping at one state, read as the settings are:
+    forgivingly, `{}` for a file that is absent or does not read as a mapping (COR-048
+    point 4). With a `tree`, the file that state holds."""
+    rel = project_config_path(target_root).relative_to(target_root).as_posix()
+    config, _unparsed = _yaml_reader(target_root, tree)(rel)
+    return config
 
 
 def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:

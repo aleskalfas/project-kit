@@ -1,8 +1,0 @@
-component: claude-code
-kind: none
-body: >
-  Only the adapter README changes: its section on the prompt-free command
-  shape says which shapes the hook allows before Claude Code parses them, a
-  compound whose every segment is granted and a granted command whose only
-  redirections write no file, and its answer is revalidated. The hook script
-  does not change, and nothing you run changes.

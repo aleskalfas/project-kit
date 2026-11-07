@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-003
-    revalidated:
-      at: 2026-10-20T22:11:43Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 2 changes only how it names the overview's folder. An area's folder name and its number are untouched, and an area's goal sits beside that name in the configuration.

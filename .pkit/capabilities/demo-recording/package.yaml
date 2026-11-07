@@ -2,9 +2,9 @@ schema_version: 2
 component:
   kind: capability
   name: demo-recording
-  version: 0.1.0
+  version: 0.2.0
 description: Screen-recorded CLI demos driven by an executable markdown storyboard — a generic storyboard format (parser + plugin interface + runner) plus a macOS CLI-recording plugin.
-requires_backbone: ">=1.26.0,<2.0.0"
+requires_backbone: ">=1.26.0,<2.1.0"
 commands:
   record:
     script: scripts/record.sh

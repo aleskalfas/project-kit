@@ -1,0 +1,20 @@
+# A piece's content in one language, `pieces/<piece>/content.<language>.yaml`
+# (visual-communication DEC-001 point 3, DEC-002 point 4): the top component's fields.
+# Each mapping that places a component reserves `id`, `use`, `concept`, `state`,
+# `override` and the methodology's container `pkit`. The components the content fills
+# declare its fields, so the capability's check judges it against them; this schema
+# only keeps its top's keys to names and reserved keys.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:content
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+title: How a piece is drawn
+body:
+  use: tests/pattern
+  items:
+    - id: brand
+      label: Brand

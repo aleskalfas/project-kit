@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/domain-model/050-a-projects-own-files.md
-    revalidated:
-      at: 2026-10-23T08:54:15Z
-      outcome: unchanged
-      unchanged-because: TERM-seeding's entry only gains a link to the new term overlay. Its section in the view holds.
