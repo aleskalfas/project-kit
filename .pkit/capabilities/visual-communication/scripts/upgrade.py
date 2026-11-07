@@ -29,7 +29,8 @@ Where it would propose the lock the piece holds, and the version that wrote the 
 under that lock, it says so and writes nothing. Otherwise the run is a lock move, a render with
 no preview, then an export run, under every rule of an export but the gate, as one change.
 `pkit visual before-after --ahead` looks ahead for it, and the drawing lies in the clone's
-local folder.
+local folder. Its scenes take the stand-ins for a version's number and its date, its drawing's
+too, since its export refuses a piece that shows either (`exports.plan`, DEC-016 point 5).
 
 It stops on an edit of the piece since the copy, naming each input that changed, unless
 `--edited <input>` names it: a file by its path in the piece's folder, a font as the refusal
@@ -138,7 +139,9 @@ def _upgrade(root: Path, args: argparse.Namespace) -> int:
         return 0
     named = proposals.Named(args.versions, args.edited, args.use_stale)
     planned = proposals.plan(move, named)
-    before, after = looks.sides(move.look)
+    # The run's export takes the stand-ins, and refuses a piece that shows a version's number
+    # or its date, so its drawing takes them too.
+    before, after = looks.sides(move.look, move.look.piece.stand_ins)
     if args.dry_run:
         for line in (
             *looks.report(move.look, before, after, kept=False),

@@ -240,21 +240,21 @@ class WriteFailed(Exception):
 
 
 class Change:
-    """The files a command writes, folders it adds or replaces and files it removes, as one
-    change: a write that fails leaves every file as it was before the run, or names each it
-    could not put back.
+    """The files a command writes, folders it adds, replaces or removes, and files it removes,
+    as one change: a write that fails leaves every file as it was before the run, or names
+    each it could not put back.
 
     `commit` stages every step beside its place first: a file is written to a temporary
     file beside it, a folder is copied to a temporary folder beside it, and a file to remove
     is read. Then it moves each into place, or removes it, in the order the steps were
     given, so a command gives its records last. A folder it replaces is moved aside, beside
-    its place, before its copy is moved in. Where a step fails, each step taken is taken
-    back, the last first: a file the change made is removed, a file it replaced or removed
-    is written again with its bytes from before, a folder it added is removed, and a folder
-    it replaced is moved back. Every temporary file and folder is removed, and every folder
-    the change made that is empty again. Once every step is taken, each folder moved aside
-    is removed; one that cannot be stays beside its place, hidden, as a temporary file
-    whose removal fails does."""
+    its place, before its copy is moved in, and a folder it removes is moved aside whole.
+    Where a step fails, each step taken is taken back, the last first: a file the change
+    made is removed, a file it replaced or removed is written again with its bytes from
+    before, a folder it added is removed, and a folder it replaced or removed is moved back.
+    Every temporary file and folder is removed, and every folder the change made that is
+    empty again. Once every step is taken, each folder moved aside is removed; one that
+    cannot be stays beside its place, hidden, as a temporary file whose removal fails does."""
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -279,6 +279,10 @@ class Change:
     def remove(self, target: Path) -> None:
         """Remove the file `target`."""
         self._steps.append(_Removal(target))
+
+    def remove_folder(self, target: Path) -> None:
+        """Remove the folder `target`, which exists, whole, with every file it holds."""
+        self._steps.append(_FolderRemoval(target))
 
     def commit(self) -> None:
         """Take every step, or none. Raises WriteFailed, naming the step that failed and
@@ -480,6 +484,37 @@ class _Removal(_Step):
     def take_back(self) -> None:
         if self.before is not None:
             write_whole(self.target, self.before)
+
+
+class _FolderRemoval(_Step):
+    """A folder removed whole: moved aside, beside its place, in one move. Taken back, it is
+    moved back; once every step is taken, the folder moved aside is removed."""
+
+    done = "removed"
+
+    def __init__(self, target: Path) -> None:
+        super().__init__(target)
+        self.aside: Path | None = None
+
+    def stage(self) -> None:
+        """Nothing is staged: the move aside is the whole removal."""
+
+    def take(self) -> None:
+        aside = _free_folder(self.target, ".old")
+        aside.rmdir()
+        os.rename(self.target, aside)
+        self.aside = aside
+
+    def take_back(self) -> None:
+        assert self.aside is not None
+        os.rename(self.aside, self.target)
+        self.aside = None
+
+    def finish(self) -> None:
+        if self.aside is not None:
+            with contextlib.suppress(OSError):
+                shutil.rmtree(self.aside)
+            self.aside = None
 
 
 def _shown(root: Path, path: Path) -> str:

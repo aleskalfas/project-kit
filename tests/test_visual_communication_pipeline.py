@@ -13,10 +13,12 @@ whose nodes take their colour family by concept, by the pattern's and by state.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import re
 import shutil
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -42,7 +44,7 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-pl, framing, seam, reading, fingerprint, before_after, copies, svg = load(
+pl, framing, seam, reading, fingerprint, before_after, copies, svg, exports, layout = load(
     "visual-communication",
     "pipeline",
     "framing",
@@ -52,6 +54,8 @@ pl, framing, seam, reading, fingerprint, before_after, copies, svg = load(
     "before_after",
     "copies",
     "plugins.svg",
+    "exports",
+    "layout",
 )
 
 TESTS = FIXTURES / "libraries" / "tests" / "1.0.0"
@@ -60,6 +64,8 @@ PIECE = "flow"
 OUTPUT = "square"
 LOCK = {"foundations": "1.0.0", "test-brand": "1.0.0", "tests": "1.0.0"}
 PIECE_FOLDER = f"visual/pieces/{PIECE}"
+#: Where the piece's exports lie, local to the clone.
+EXPORTS_FOLDER = f".pkit/capabilities/visual-communication/project/local/exports/{PIECE}"
 
 #: The red the callout's picture is painted, as 8-bit RGBA.
 RED = (200, 30, 30, 255)
@@ -219,6 +225,43 @@ def project_of(root: Path) -> Any:
     piece = piece_of(root)
     held = pl.Held(root, "visual")
     return pl.Project(piece, piece.lock, held)
+
+
+def exported_up_to(root: Path, number: int) -> None:
+    """A file of version `number` in the piece's exports folder, so this clone's next export
+    takes the number after it."""
+    write(root / EXPORTS_FOLDER / f"{PIECE}.v{number}.en.default.svg", "<svg/>")
+
+
+def filled(monkeypatch: pytest.MonkeyPatch, pipeline: ModuleType) -> list[Any]:
+    """Each filling of an export's facts that `pipeline`'s scenes are computed with, from now
+    to the end of the test, in order: one for each call of `Project.scenes`."""
+    taken: list[Any] = []
+    scenes = pipeline.Project.scenes
+
+    def spy(self: Any, *asked: Any, facts: Any) -> Any:
+        taken.append(facts)
+        return scenes(self, *asked, facts=facts)
+
+    monkeypatch.setattr(pipeline.Project, "scenes", spy)
+    return taken
+
+
+def today() -> str:
+    """Today's date, as a scene shows it. A test takes it before and after a run, which may
+    cross midnight."""
+    return datetime.now(UTC).strftime("%Y-%m-%d")
+
+
+def stand_ins_of(root: Path) -> Any:
+    """What the check's scenes of the piece fill its facts with, read from its own file
+    alone, so a fault in its content refuses nothing."""
+    return pl.read_piece_file(root, "visual", PIECE).stand_ins
+
+
+def stand_in_scenes(project: Any) -> list[tuple[str, Any]]:
+    """The project's scenes, each with the stand-ins, as the check computes them."""
+    return project.scenes(facts=project.piece.stand_ins)
 
 
 # --- reading a piece ----------------------------------------------------------------------------
@@ -439,7 +482,7 @@ def test_a_missing_picture_is_kept_with_why_and_never_a_crash(tmp_path: Path) ->
         OUTPUT: f"{PIECE_FOLDER}/produced/{OUTPUT}/record.yaml does not exist: the picture "
         f"was never produced"
     }
-    [(_, result)] = project.scenes()
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
     assert [f.code for f in result.findings if f.code == "missing-picture"] == ["missing-picture"]
 
 
@@ -462,7 +505,7 @@ def test_a_project_has_a_scene_per_language_and_a_key_per_combination(tmp_path: 
     write_picture(root, framing)
     project = project_of(root)
     assert project.keys == ["default", "colour-scheme.dark"]
-    scenes = project.scenes()
+    scenes = project.scenes(facts=project.piece.stand_ins)
     assert [language for language, _ in scenes] == ["en", "cs"]
     assert all(result.scene.to_dict()["size-key"] == "default" for _, result in scenes)
     assert all(result.findings == [] for _, result in scenes)
@@ -540,7 +583,7 @@ def test_a_piece_on_a_size_axis_has_a_scene_for_each_language_and_size_key(
     write_content(root, "cs", body=two_steps("Naplánovat."))
     project = project_of(root)
     assert project.keys == project.size_keys == ["default", PHONE]
-    scenes = project.scenes()
+    scenes = project.scenes(facts=project.piece.stand_ins)
     assert [(language, made.scene.to_dict()["size-key"]) for language, made in scenes] == [
         ("en", "default"),
         ("en", PHONE),
@@ -548,7 +591,7 @@ def test_a_piece_on_a_size_axis_has_a_scene_for_each_language_and_size_key(
         ("cs", PHONE),
     ]
     assert all(made.findings == [] for _, made in scenes)
-    asked = project.scenes(["cs"], [PHONE])
+    asked = project.scenes(["cs"], [PHONE], facts=project.piece.stand_ins)
     assert [(language, made.scene.size_key) for language, made in asked] == [("cs", PHONE)]
 
 
@@ -556,7 +599,7 @@ def test_each_scene_reads_the_roles_at_its_key_and_a_text_takes_the_height_it_ne
     tmp_path: Path,
 ) -> None:
     root = on_devices(tmp_path, head=WRAPS)
-    [(_, desktop), (_, phone)] = project_of(root).scenes()
+    [(_, desktop), (_, phone)] = stand_in_scenes(project_of(root))
 
     def found(trace: str) -> tuple[Any, Any]:
         """The element at `trace` in the desktop's scene, then in the phone's."""
@@ -592,7 +635,7 @@ def test_a_piece_on_a_size_and_a_value_axis_draws_four_combinations_from_two_sce
     project = project_of(root)
     dark = "colour-scheme.dark"
     assert project.keys == ["default", dark, PHONE, f"{dark}+{PHONE}"]
-    results = project.scenes()
+    results = project.scenes(facts=project.piece.stand_ins)
     assert [made.scene.size_key for _, made in results] == ["default", PHONE]
     drawn = {key: made.pages[0].svg for _, key, made in pl.drawn(project, results, "svg")}
     assert list(drawn) == project.keys
@@ -617,7 +660,7 @@ def test_a_piece_on_no_size_axis_is_computed_and_drawn_as_it_was(
     write_picture(root, framing)
 
     def computed() -> tuple[list[str], dict[str, str]]:
-        scenes = [json.dumps(made.scene.to_dict()) for _, made in project_of(root).scenes()]
+        scenes = [json.dumps(made.scene.to_dict()) for _, made in stand_in_scenes(project_of(root))]
         return scenes, previews_of(root)
 
     before = computed()
@@ -687,7 +730,7 @@ def flipping(tmp_path: Path, **fields: Any) -> Path:
 def test_a_pieces_own_pattern_lays_its_steps_along_a_row_on_a_desktop_and_down_a_phone(
     tmp_path: Path,
 ) -> None:
-    [(_, desktop), (_, phone)] = project_of(flipping(tmp_path)).scenes()
+    [(_, desktop), (_, phone)] = stand_in_scenes(project_of(flipping(tmp_path)))
 
     assert desktop.findings == phone.findings == []
     across = [desktop.scene.find(f"figure/body/across[{step}]") for step in ("plan", "build")]
@@ -713,7 +756,7 @@ def test_a_switch_by_a_value_axis_is_refused_at_each_size_alike(
     changed["parts"]["note"]["x"] = {"by": ":colour-scheme", "light": "=@space.2"}
     write(root / PIECE_FOLDER / "components" / "flip.yaml", yaml_text(changed))
 
-    found = [made.findings for _, made in project_of(root).scenes()]
+    found = [made.findings for _, made in stand_in_scenes(project_of(root))]
 
     assert [[f.code for f in each] for each in found] == [["size-switch"], ["size-switch"]]
     assert found[0][0].message == found[1][0].message
@@ -734,7 +777,7 @@ def test_under_a_brand_that_gives_no_size_a_pattern_draws_the_shape_of_the_defau
     resolver.write_text(json.dumps(data, indent=2), encoding="utf-8")
     project = project_of(root)
 
-    [(_, made)] = project.scenes()
+    [(_, made)] = stand_in_scenes(project)
 
     assert "device" not in project.brand.axes
     assert project.keys == ["default"]
@@ -848,7 +891,7 @@ def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes
     piece = pl.read_piece(root, "visual", "system")
     project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
 
-    [(_, result)] = project.scenes()
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
 
     assert result.findings == []
     painted = {}
@@ -971,7 +1014,7 @@ def test_a_project_reads_the_own_roles_of_each_library_it_locks(tmp_path: Path) 
 
 def test_a_part_reading_a_librarys_roles_draws_them_at_their_defaults(tmp_path: Path) -> None:
     project = tags_project(parts_project(tmp_path))
-    [(_, result)] = project.scenes()
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
     assert result.findings == []
     box = result.scene.find("figure/body/box")
     label = result.scene.find("figure/body/label")
@@ -1008,7 +1051,7 @@ def test_a_role_with_no_value_under_the_brand_is_none_to_the_engine_or_the_docum
     with pytest.raises(KeyError) as raised:
         project.env.role("test-parts.nothing")
     assert type(raised.value).__name__ == "UnknownRole"
-    [(_, result)] = project.scenes()
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
     label = result.scene.find("figure/body/label")
     assert label is not None
     [[run]] = label.properties["paragraphs"]
@@ -1400,7 +1443,7 @@ def previews_of(root: Path) -> dict[str, str]:
     """The previews of the piece as its own location draws them."""
     drawn_project = project_of(root)
     found: dict[str, str] = {}
-    for language, key, drawn in pl.drawn(drawn_project, drawn_project.scenes(), "svg"):
+    for language, key, drawn in pl.drawn(drawn_project, stand_in_scenes(drawn_project), "svg"):
         found.update(pl.preview_files(PIECE, language, key, drawn.pages))
     return found
 
@@ -1429,7 +1472,9 @@ def test_a_field_an_export_leaves_out_changes_no_scene(
     write_picture(root, framing)
 
     def scenes() -> list[tuple[str, dict[str, Any]]]:
-        return [(language, made.scene.to_dict()) for language, made in project_of(root).scenes()]
+        return [
+            (language, made.scene.to_dict()) for language, made in stand_in_scenes(project_of(root))
+        ]
 
     before, drawn = scenes(), previews_of(root)
     path = root / PIECE_FOLDER / "piece.yaml"
@@ -1465,7 +1510,7 @@ def test_a_side_with_no_version_given_is_what_the_pieces_own_location_draws(
 ) -> None:
     importable(monkeypatch, svg)
     root = drawing_project(tmp_path, picture=False)
-    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.why == ""
     assert side.files == previews_of(root)
     assert sorted(side.files) == [f"{PIECE}.en.colour-scheme.dark.svg", f"{PIECE}.en.default.svg"]
@@ -1478,8 +1523,8 @@ def test_a_version_given_stands_in_for_the_copy_and_no_file_of_the_project_chang
     root = drawing_project(tmp_path, picture=False)
     source = shipped_tests(changed_tests(tmp_path / "shipped"))
     before = every_file(root)
-    side = before_after.drawing(root, "visual", PIECE, LOCK, [source])
-    other = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, [source], facts=stand_ins_of(root))
+    other = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.why == ""
     assert sorted(before_after.differing(other, side)) == sorted(other.files)
     assert every_file(root) == before
@@ -1492,8 +1537,10 @@ def test_a_side_under_another_lock_draws_the_versions_it_names(
     importable(monkeypatch, svg)
     root = drawing_project(tmp_path, picture=False)
     changed_tests(root / "visual/libraries/tests/1.1.0", "1.1.0")
-    side = before_after.drawing(root, "visual", PIECE, {**LOCK, "tests": "1.1.0"})
-    other = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(
+        root, "visual", PIECE, {**LOCK, "tests": "1.1.0"}, facts=stand_ins_of(root)
+    )
+    other = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert (side.why, other.why) == ("", "")
     assert sorted(before_after.differing(other, side)) == sorted(other.files)
 
@@ -1514,7 +1561,7 @@ def test_a_side_holds_the_pieces_own_files_and_the_locations_fonts(
     base.write_text(json.dumps(data, indent=2), encoding="utf-8")
     (root / "visual" / "fonts").mkdir()
     regular.rename(root / "visual" / "fonts" / "any-name.otf")
-    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.why == ""
     assert side.files == previews_of(root)
     assert all("data:image/png" in text for text in side.files.values())
@@ -1526,7 +1573,7 @@ def test_a_side_that_cannot_be_drawn_says_why_and_names_the_projects_file(
     importable(monkeypatch, svg)
     root = drawing_project(tmp_path, picture=False)
     write(root / PIECE_FOLDER / "content.en.yaml", "not: [content\n")
-    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.files == {}
     assert side.why.startswith(f"{PIECE_FOLDER}/content.en.yaml: ")
     assert list((root / before_after.FOLDER).iterdir()) == []
@@ -1540,7 +1587,7 @@ def test_a_side_whose_scenes_hold_no_page_says_why_once_for_every_language(
         tmp_path, top="foundations/nothing", picture=False, languages=["en", "cs"]
     )
     write_content(root, "cs")
-    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.files == {}
     assert side.why == (
         "the piece draws no page in `en`, `cs`: the piece's top names no component "
@@ -1555,7 +1602,7 @@ def test_a_top_that_cannot_be_read_names_the_component_and_no_path_of_the_side(
     importable(monkeypatch, svg)
     root = drawing_project(tmp_path, picture=False)
     write(root / "visual/libraries/foundations/1.0.0/components/figure.yaml", "not: [yaml\n")
-    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.files == {}
     assert side.why.startswith(
         "the piece draws no page in `en`: the component `foundations/figure` cannot be read: "
@@ -1570,7 +1617,7 @@ def test_a_language_with_no_page_and_nothing_found_is_a_side_that_cannot_be_draw
     root = drawing_project(tmp_path, top="foundations/deck", picture=False, languages=["en", "cs"])
     write_content(root, slides=[{"id": "first", "layout": "slide", "title": "The flow"}])
     write_content(root, "cs", slides=[])
-    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, facts=stand_ins_of(root))
     assert side.files == {}
     assert side.why == "the piece draws no page in `cs`"
 
@@ -1583,7 +1630,9 @@ def test_a_lock_entry_that_spells_no_version_reads_nothing_outside_the_library_f
 ) -> None:
     importable(monkeypatch, svg)
     root = drawing_project(tmp_path, picture=False)
-    side = before_after.drawing(root, "visual", PIECE, {**LOCK, library: version})
+    side = before_after.drawing(
+        root, "visual", PIECE, {**LOCK, library: version}, facts=stand_ins_of(root)
+    )
     assert side.why.startswith(f"the lock of {PIECE_FOLDER}/piece.yaml names `{library}: ")
 
 
@@ -1604,10 +1653,111 @@ def test_each_scene_takes_the_pieces_language_and_state_and_the_stand_ins(
 ) -> None:
     root = stamped(tmp_path, shows, state="published")
     piece = piece_of(root)
-    [(_, result)] = pl.Project(piece, piece.lock, pl.Held(root, "visual")).scenes()
+    [(_, result)] = pl.Project(piece, piece.lock, pl.Held(root, "visual")).scenes(
+        facts=piece.stand_ins
+    )
     element = result.scene.find(f"figure/body/{part}")
     assert element is not None
     assert element.properties["text"] == text
+
+
+def test_what_fills_the_facts_is_a_required_argument_of_computing_the_scenes() -> None:
+    """No caller takes a filling by default (DEC-016 point 5)."""
+    facts = inspect.signature(pl.Project.scenes).parameters["facts"]
+    assert facts.kind is inspect.Parameter.KEYWORD_ONLY
+    assert facts.default is inspect.Parameter.empty
+
+
+@pytest.mark.parametrize(
+    ("shows", "part", "text"), [("number", "number", "v7"), ("date", "date", "2026-01-02")]
+)
+def test_a_scene_shows_what_its_caller_fills(
+    tmp_path: Path, shows: str, part: str, text: str
+) -> None:
+    project = project_of(stamped(tmp_path, shows))
+    [(_, result)] = project.scenes(facts=layout.Facts("v7", "2026-01-02", "draft"))
+    element = result.scene.find(f"figure/body/{part}")
+    assert element is not None
+    assert element.properties["text"] == text
+
+
+@pytest.mark.parametrize(("exported", "number"), [(None, "v1"), (41, "v42")])
+def test_a_preview_fills_this_clones_next_number_and_the_date_of_the_run(
+    tmp_path: Path, exported: int | None, number: str
+) -> None:
+    root = stamped(tmp_path, "number", state="published")
+    if exported is not None:
+        exported_up_to(root, exported)
+    now = datetime(2026, 11, 7, 23, 30, tzinfo=UTC)
+    filling = exports.preview_filling(piece_of(root), now)
+    assert filling == exports.Filling(layout.Facts(number, "2026-11-07", "published"))
+    assert filling.why == ""
+
+
+def test_a_preview_fills_the_date_of_this_run_by_default(tmp_path: Path) -> None:
+    before = today()
+    filling = exports.preview_filling(piece_of(stamped(tmp_path, "date")))
+    assert filling.facts.date in {before, today()}
+
+
+#: A record of exports that conflicts on a merge, as version control leaves it.
+CONFLICTED = (
+    "<<<<<<< HEAD\n"
+    "pkit_schema: visual-communication:exports\nschema_version: 1\nversions: []\n"
+    "=======\n"
+    "pkit_schema: visual-communication:exports\nschema_version: 1\nversions: []\n"
+    ">>>>>>> other\n"
+)
+
+
+def test_a_preview_that_cannot_read_the_next_number_takes_the_stand_ins_and_says_why(
+    tmp_path: Path,
+) -> None:
+    root = stamped(tmp_path, "number")
+    write(root / PIECE_FOLDER / "exports.yaml", CONFLICTED)
+    piece = piece_of(root)
+    filling = exports.preview_filling(piece)
+    assert filling.facts == piece.stand_ins
+    assert filling.why.startswith(f"no next number can be read ({PIECE_FOLDER}/exports.yaml: ")
+    assert str(root) not in filling.why
+
+
+@pytest.mark.parametrize("by", ["state", "record"])
+def test_a_final_pieces_preview_takes_the_stand_ins_and_says_why(tmp_path: Path, by: str) -> None:
+    root = stamped(tmp_path, "number", state="final" if by == "state" else "draft")
+    if by == "record":
+        write(
+            root / PIECE_FOLDER / "exports.yaml",
+            "pkit_schema: visual-communication:exports\nschema_version: 1\nversions: []\n"
+            "handed-out: 1\n",
+        )
+    piece = piece_of(root)
+    assert exports.preview_filling(piece) == exports.Filling(
+        piece.stand_ins, exports.NO_NEXT_EXPORT
+    )
+
+
+def test_what_a_run_says_of_a_stand_in_names_each_element_and_why(tmp_path: Path) -> None:
+    project = project_of(stamped(tmp_path, "number"))
+    shown = exports.shown_stand_ins(project.scenes(facts=project.piece.stand_ins))
+    took = exports.Filling(project.piece.stand_ins, "why")
+    assert took.said(shown) == "why, so a stand-in shows: `version` at `figure/body/number`"
+    assert exports.Filling(project.piece.stand_ins).said(shown) == ""
+    files = project_of(stamped(tmp_path / "files", "files"))
+    assert exports.shown_stand_ins(files.scenes(facts=files.piece.stand_ins)) == []
+    assert took.said([]) == ""
+
+
+def test_an_export_takes_the_stand_ins_whatever_the_clone_holds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = stamped(tmp_path, "files")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    project = project_of(root)
+    exports.plan(project)
+    assert taken == [project.piece.stand_ins]
 
 
 def test_the_search_for_a_lock_places_a_piece_that_shows_a_fact(tmp_path: Path) -> None:

@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  What a person looks at shows the real text of a version's number and its
+  date (#2769, DEC-016 point 5). A preview, a before-and-after and `look`
+  show what this clone's next export would fill: its next number, and the
+  date of the run. Where the record of exports cannot be read, as on a
+  conflict, and for a final piece, they take the stand-ins and say so, with
+  why. `render` says what a fact's real text finds in a preview that the
+  stand-ins do not, such as a number that overflows, and no record keeps it.
+  The check's scenes, a render's findings, an export and `upgrade` take the
+  stand-ins as before, so the findings record is the same on every clone.

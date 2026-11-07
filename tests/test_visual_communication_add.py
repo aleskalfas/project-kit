@@ -53,7 +53,7 @@ from tests.visual_communication_project import (
 )
 from tests.visual_communication_writes import FULL, failing
 
-script, libraries, reading, copies, shipped, before_after, svg, css = load(
+script, libraries, reading, copies, shipped, before_after, exports, pl, svg, css = load(
     "visual-communication",
     "add.py",
     "libraries",
@@ -61,6 +61,8 @@ script, libraries, reading, copies, shipped, before_after, svg, css = load(
     "copies",
     "shipped",
     "before_after",
+    "exports",
+    "pipeline",
     "plugins.svg",
     "plugins.css",
 )
@@ -1175,8 +1177,15 @@ def test_a_published_pieces_copy_stays_with_its_before_and_after_until_it_is_nam
     assert (published / PIECE_FILE).read_bytes() == piece
 
 
+def preview_facts(root: Path) -> Any:
+    """What a preview of `flow` fills its facts with, as the run's before-and-after does."""
+    return exports.preview_filling(pl.read_piece_file(root, "visual", "flow")).facts
+
+
 def test_the_after_side_is_what_the_piece_draws_once_it_is_named(pinned: Path) -> None:
-    drawn_before = before_after.drawing(pinned, "visual", "flow", FLOW_LOCK)
+    drawn_before = before_after.drawing(
+        pinned, "visual", "flow", FLOW_LOCK, facts=preview_facts(pinned)
+    )
     assert run(pinned, "foundations").returncode == 0
     kept = tree(pinned / FLOW)
     piece = (pinned / PIECE_FILE).read_bytes()
@@ -1184,7 +1193,9 @@ def test_the_after_side_is_what_the_piece_draws_once_it_is_named(pinned: Path) -
     assert named.returncode == 0, named.stderr
     assert (pinned / PIECE_FILE).read_bytes() == piece
     assert CHANGED_CAPTION in (pinned / COPY / "components/figure.yaml").read_text(encoding="utf-8")
-    drawn_after = before_after.drawing(pinned, "visual", "flow", FLOW_LOCK)
+    drawn_after = before_after.drawing(
+        pinned, "visual", "flow", FLOW_LOCK, facts=preview_facts(pinned)
+    )
     assert drawn_before.why == drawn_after.why == ""
     for file, text in drawn_before.files.items():
         assert kept[f"before/{file}"] == text.encode("utf-8")

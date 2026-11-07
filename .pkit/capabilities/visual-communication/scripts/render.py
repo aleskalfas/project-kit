@@ -23,8 +23,9 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
   at its bound and kept the lock, each a fact at the lock (DEC-010 point 9, DEC-011 point
   8). The findings record keeps none: its key covers only the versions the lock names.
 - **Computes every scene:** one for each language the piece lists and each key over the
-  size axes it names. A font with no file, or a character no family measures, refuses the
-  render before anything is laid out.
+  size axes it names, each with the stand-in for a version's number and its date, so a
+  render on any clone finds the same (DEC-016 point 5). A font with no file, or a character
+  no family measures, refuses the render before anything is laid out.
 - **Writes the piece's findings record,** `findings.yaml`, keyed by a fingerprint of every
   file the scenes were computed from: what the check reads while the key verifies. A final
   piece's render writes none, since the check reads none, and a record left from before
@@ -32,10 +33,14 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
 - **Draws the previews** with the SVG renderer, one file for each page, language and
   combination of modes the piece names, under
   `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, local to the
-  clone and never committed.
-- **Prints** what the renderer loses that the piece does not accept, and the findings. Of
-  a final piece it also prints each stand-in a preview shows: it has no next export to fill
-  (DEC-016 point 5, DEC-017 point 3).
+  clone and never committed. A preview fills what this clone's next export would: its next
+  number and the date of the run (`exports.preview_filling`). So a piece that shows either
+  has its scenes computed again for its previews, and one that shows neither only once.
+- **Prints** what the renderer loses that the piece does not accept, and the findings.
+  Where a preview takes the stand-ins, as a final piece's does, which has no next export,
+  or one whose record of exports cannot be read, it prints each it shows, and why (DEC-016
+  point 5, DEC-017 point 3). It prints what a fact's real text finds in a preview that the
+  stand-ins do not, such as a number that overflows, and no record keeps that.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
@@ -114,15 +119,18 @@ def _render(root: Path, name: str, given: str | None) -> int:
     except tokens.TokenError as exc:
         _print(exc.findings)
         raise pl.Refused(f"the brand of `{name}` cannot be read") from exc
+    filling = exports.preview_filling(piece)
     try:
-        results = project.scenes()
+        results = project.scenes(facts=piece.stand_ins)
+        previewed = _previewed(project, results, filling)
     except MissingFont as exc:
         raise pl.Refused(
             f"the render of `{name}` is refused before anything is laid out: {exc}"
         ) from exc
     found = checks.scene_findings(project, results)
-    lost = _known(results)
-    previews = _draw(project, results, lost)
+    real = [] if previewed is results else _real(project, previewed, found)
+    lost = _known(previewed)
+    previews = _draw(project, previewed, lost)
     # What can refuse is checked before the first write, so a refusal writes nothing: the
     # key is taken over `piece.yaml` as the render writes it.
     change = files.Change(root)
@@ -154,9 +162,11 @@ def _render(root: Path, name: str, given: str | None) -> int:
         print(f"lock: {', '.join(f'{lib} {lock[lib]}' for lib in sorted(lock))}")
     _print(_stated(piece, moved))
     print(f"previews: {len(previews)} file(s) in {PREVIEWS}/{name}/")
-    if piece.final:
-        for shown in exports.shown_stand_ins(results):
-            print(f"preview: a final piece has no next export, so a stand-in shows: {shown}")
+    said = filling.said(exports.shown_stand_ins(previewed))
+    if said:
+        print(f"preview: {said}")
+    for finding in real:
+        print(f"preview: {finding.level}: {checks.place(finding)}: {checks.said(finding)}")
     for loss in lost:
         if not checks.accepted(loss, piece.accepted_losses):
             print(f"loss: {checks.loss_finding(loss).message}")
@@ -216,6 +226,28 @@ def _stated(piece: pl.Piece, moved: libraries.Moved) -> list[Finding]:
     if moved.kept:
         found.append(Finding("lock-kept", FACT, moved.kept, file=file, where="lock"))
     return found
+
+
+def _previewed(project: pl.Project, results: Results, filling: exports.Filling) -> Results:
+    """The scenes the previews draw (DEC-016 point 5). They are `results`, computed with the
+    stand-ins, where the filling takes those too, or no scene shows a version's number or its
+    date. Otherwise they are computed again, with what the filling fills. So only a piece
+    that shows such a fact is computed twice."""
+    if filling.facts == project.piece.stand_ins or not exports.shown_stand_ins(results):
+        return results
+    return project.scenes(facts=filling.facts)
+
+
+def _real(project: pl.Project, previewed: Results, found: Sequence[Finding]) -> list[Finding]:
+    """What the previews' scenes find that the scenes computed with the stand-ins, `found`,
+    do not: what a fact's real text finds, such as a number that overflows. The render says
+    it, and no record keeps it (DEC-016 point 5)."""
+    piece = project.piece
+    return [
+        checks.rooted(finding, piece)
+        for finding in checks.scene_findings(project, previewed)
+        if finding not in found
+    ]
 
 
 def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[str, str]:

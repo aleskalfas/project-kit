@@ -270,7 +270,7 @@ def colours_of(piece: Any) -> dict[str, Mapping[str, Any]]:
 
 def scenes_of(piece: Any) -> Iterator[Mapping[str, Any]]:
     """The scene of a piece in each of its languages."""
-    for _, result in piece.scenes():
+    for _, result in piece.scenes(facts=piece.piece.stand_ins):
         assert result.findings == []
         yield result.scene.to_dict()
 

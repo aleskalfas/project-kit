@@ -247,7 +247,9 @@ class _Emitter:
         if key in spec and not (node.part.kind == "text" and key == "height"):
             return instance.source(f"parts.{node.part.name}.{key}", spec[key])
         if node.child is not None and key in ("width", "height"):
-            return f"default:{node.child.component.use}"
+            # A stretch its instance passes on sets the size, beside what the child asks.
+            passed = self.ctx.attempt(lambda: instance.passed_on(node.part.name, key), 0.0)
+            return ENGINE if passed > TOLERANCE else f"default:{node.child.component.use}"
         return ENGINE
 
     def _frame(self, element: Element, instance: Instance, node: Node) -> None:
