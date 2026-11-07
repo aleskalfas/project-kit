@@ -14,6 +14,7 @@ pkit:
         - .pkit/capabilities/doc-examples/project/config.yaml
         - scripts/page_contents.py
         - scripts/short_check.py
+        - scripts/visual_drawings.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
         - .github/workflows/friction-report.yml
@@ -28,6 +29,7 @@ pkit:
         - RS-OPS-020
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
         - .pkit/capabilities/doc-examples/README.md
+        - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#writing-a-record
@@ -65,6 +67,8 @@ The same aggregator runs in two places, so the gate can't drift:
 A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
 
 Each part names its own failures in its job's summary, and a slice names each failing test and how to run the slice again. Run any part by hand with the same argument. The hook runs the aggregator whole, so it runs what the parts run. [`tests/README.md`](tests/README.md), "Running the suite", says how the suite is cut and how the table of times is kept.
+
+**The drawings job.** On a pull request, CI runs one more job, `drawings`, once the quick checks end. It draws each piece's HTML pages on the runner's Chrome, through `scripts/visual_drawings.py`, and keeps them as the artefact `visual-drawings-<commit>`. [The visual-communication outputs page, "A pipeline's drawings"](.pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings), says what it keeps and how an agent fetches it. `checks` does not wait on it, and `main` does not require it. A look that stops fails the job all the same, so the pull request shows a failing check.
 
 **When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, beside the quick checks, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
