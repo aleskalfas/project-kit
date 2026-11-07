@@ -1748,16 +1748,22 @@ def test_what_a_run_says_of_a_stand_in_names_each_element_and_why(tmp_path: Path
     assert took.said([]) == ""
 
 
-def test_an_export_takes_the_stand_ins_whatever_the_clone_holds(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("shows", ["files", "number"])
+def test_an_exports_findings_take_the_stand_ins_and_only_a_shown_number_is_filled_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shows: str
 ) -> None:
+    """The scenes the findings rest on take the stand-ins, whatever the clone holds. Only a
+    piece that shows a version's number or its date is computed again, with the number and
+    the date the export fills (DEC-016 point 5)."""
     importable(monkeypatch, svg)
-    root = stamped(tmp_path, "files")
+    root = stamped(tmp_path, shows)
     exported_up_to(root, 41)
     taken = filled(monkeypatch, pl)
     project = project_of(root)
-    exports.plan(project)
-    assert taken == [project.piece.stand_ins]
+    planned = exports.plan(project)
+    assert planned.facts == layout.Facts("v42", planned.facts.date, "draft")
+    again = [] if shows == "files" else [planned.facts]
+    assert taken == [project.piece.stand_ins, *again]
 
 
 def test_the_search_for_a_lock_places_a_piece_that_shows_a_fact(tmp_path: Path) -> None:

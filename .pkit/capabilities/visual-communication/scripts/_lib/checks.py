@@ -85,7 +85,9 @@ reads and before a lock finding stops the piece, so each of these stands beside 
 - a published piece fails where it declares no format, where it has no current copy of its
   own, where a file of that copy is missing or holds another hash, or where something the
   version that wrote the copy read has changed (`published_findings`). So it is held to that
-  version, and not to the last. A copy made over a stale output asks for attention;
+  version, and not to the last. A copy made over a stale output asks for attention. A copy
+  made with a number or a date let through fails, at the component the text did not fit,
+  so it asks for attention in a released library, naming its owner (DEC-016 point 6);
 - a draft with a file of its own current copy standing asks for attention, whatever the file
   holds (`standing_findings`);
 - a final piece raises none of these, since no export can mend its copy (`_final`).
@@ -215,6 +217,7 @@ COPY_FILE_CHANGED = "current-copy-file-changed"
 COPY_STALE = "current-copy-stale"
 COPY_UNREADABLE = "current-copy-unreadable"
 COPY_OVER_STALE = "current-copy-over-stale"
+COPY_LET_THROUGH = "current-copy-let-through"
 COPY_STANDING = "current-copy-standing"
 
 #: The findings on what a final piece owes of the version handed out (DEC-017 point 6), and on
@@ -1184,7 +1187,10 @@ def published_findings(
     or None where it names none (`current_copy.own`), among the record's `versions` (DEC-006
     point 8, DEC-017 points 5 and 6): a copy that is whole, and that nothing it read has
     changed since. It reads the version that wrote the copy, not the last, so a piece set
-    back to published is held to it. A copy made over a stale output asks for attention."""
+    back to published is held to it. A copy made over a stale output asks for attention. A
+    copy made with a number or a date let through fails in the library version of the
+    component the text did not fit, so it asks for attention in a released one, naming its
+    owner, until a version that fits writes the copy (DEC-016 point 6)."""
     record = piece.file(pl.EXPORTS_FILE)
     if entry is None:
         said = f"the published piece `{piece.name}` has no current copy of its own"
@@ -1232,6 +1238,24 @@ def published_findings(
                 where=current_copy.FIELD,
                 fix=f"run {pl.produce_command(piece.name, output)}, then {fix}",
                 who=AUTHOR,
+            )
+        )
+    for each in current_copy.written_let_through(entry, versions):
+        said = (
+            f"the current copy of `{piece.name}`, which version {number} wrote, was made with "
+            f"{current_copy.let_through_said(each)} let through, which does not fit"
+        )
+        component = each["component"]
+        version = each.get("version", "")
+        found.append(
+            Finding(
+                COPY_LET_THROUGH,
+                FAILS,
+                said,
+                file=record,
+                where=current_copy.FIELD,
+                fix=f"give the text room in `{component}`, then {fix}",
+                library=f"{component.partition('/')[0]}@{version}" if version else "",
             )
         )
     return found
