@@ -838,6 +838,57 @@ def test_a_library_moves_below_its_lock_only_where_nothing_at_or_above_fits_and_
     )
 
 
+#: Three versions of each of `a` and `b`, and a lock between the oldest and the newest.
+LADDER = ("1.0.0", "1.1.0", "1.2.0")
+BETWEEN = {"a": "1.1.0", "b": "1.1.0"}
+
+
+@pytest.mark.parametrize("move", [False, True], ids=["render", "proposed-move"])
+def test_a_search_goes_below_its_lock_only_where_nothing_at_or_above_it_fits(
+    tmp_path: Path, move: bool
+) -> None:
+    """What removing a version that lies behind rests on (DEC-019 point 9): for every set of
+    combinations that do not fit, a draft's search and a proposed move each find a lock at or
+    above the one held wherever a combination at or above it fits, and one that fits."""
+    root = two_libraries(tmp_path, *LADDER)
+    listing(root)
+    found_in = held(root)
+    pairs = [(a, b) for a in LADDER for b in LADDER]
+    above = {(a, b) for a, b in pairs if min(V(a), V(b)) >= V("1.1.0")}
+    for mask in range(1 << len(pairs)):
+        unfit = {pair for index, pair in enumerate(pairs) if mask >> index & 1}
+        judge = Judging(
+            lambda chosen, unfit=unfit: {"a", "b"} if (chosen["a"], chosen["b"]) in unfit else set()
+        )
+        search = libraries.propose_lock if move else libraries.move_lock
+        fits = set(pairs) - unfit
+        try:
+            moved = search(found_in, ["a", "b"], BETWEEN, judge=judge)
+        except libraries.LockRefused:
+            assert not fits, unfit
+            continue
+        lock = (moved.lock["a"], moved.lock["b"])
+        assert lock in fits, unfit
+        if fits & above:
+            assert lock in above, unfit
+
+
+def test_a_searchs_advice_past_its_bounds_names_no_command_that_removes_versions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The advice stays as it is (DEC-019, Implications): the command that removes versions
+    spares many that a search tries."""
+    root = two_libraries(tmp_path, *LADDER)
+    monkeypatch.setattr(libraries, "SEARCH_JUDGED", 1)
+    kept = libraries.move_lock(held(root), ["a", "b"], BETWEEN, judge=Judging(lambda _: {"a"}))
+    monkeypatch.setattr(libraries, "SEARCH_STEPS", 1)
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.move_lock(held(root), ["a", "b"], BETWEEN)
+    for advice in (kept.kept, str(refused.value)):
+        assert "take the versions no piece needs out of the library folder" in advice
+        assert "prune" not in advice
+
+
 def test_past_its_bound_of_combinations_judged_the_search_keeps_the_lock_and_says_so(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
