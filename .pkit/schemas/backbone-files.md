@@ -40,14 +40,14 @@ pkit:
         - .pkit/cli/README.md#friction-record-status-artefact---yes----dry-run
         - .pkit/cli/README.md#friction-prune---yes----dry-run---json
         - .pkit/cli/README.md#rule-sets-reach-path---at-rev---preview---json
-        - .pkit/lifecycle/README.md#the-methodologys-literals
-        - .pkit/lifecycle/README.md#how-the-wiring-is-resolved
-        - .pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping
-        - .pkit/lifecycle/README.md#how-a-data-point-resolves
-        - .pkit/lifecycle/README.md#how-a-registered-anchor-kind-is-resolved
-        - .pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks
-        - .pkit/lifecycle/README.md#validation-the-package-schema
-        - .pkit/lifecycle/README.md#strict-on-unknown-keys
+        - .pkit/lifecycle/manifest.md#the-methodologys-literals
+        - .pkit/lifecycle/manifest.md#how-the-wiring-is-resolved
+        - .pkit/lifecycle/manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping
+        - .pkit/lifecycle/manifest.md#how-a-data-point-resolves
+        - .pkit/lifecycle/manifest.md#how-a-registered-anchor-kind-is-resolved
+        - .pkit/lifecycle/manifest.md#the-connection-documentation-and-friction-blocks
+        - .pkit/lifecycle/manifest.md#validation-the-package-schema
+        - .pkit/lifecycle/manifest.md#strict-on-unknown-keys
         - .pkit/lifecycle/README.md#the-ownership-predicates-ownershippy
 ---
 
@@ -87,7 +87,7 @@ Three things hold for all of them, each decided by the record named.
 
 - **The configuration file** binds by its fixed path (COR-048 point 1).
 - **An answer file** binds by the folder the backbone fixes, `.pkit/project/friction/answers/` (COR-062 point 2, "Answer files" below).
-- **A filler file** binds by the path its point's address gives, under the internal documentation root (COR-052 point 2). The mapping, and its inverse, are [the lifecycle reference's, "Where a project filler file lives"](../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping).
+- **A filler file** binds by the path its point's address gives, under the internal documentation root (COR-052 point 2). The mapping, and its inverse, are in [the lifecycle reference's manifest schema, "Where a project filler file lives"](../lifecycle/manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping).
 - **A rule-set file** binds by the places declared to hold rule sets, a `rule-sets/` folder among them (COR-051 point 2). This area's README lists the folders, under "Rule-set files".
 - **The container** binds by the front matter of a Markdown document, or by a collection's entry, in a declared place (COR-050 point 1).
 - **Before the binding of adopter data:** a location rule is meant to claim its file before the binding of adopter data reads it. Today only the answer folder's rule does, for `pkit data validate`. Named to that command, the configuration file and a filler file reach the binding, and are refused as having none ([the CLI reference, "data validate"](../cli/README.md#data-validate-path)).
@@ -141,9 +141,9 @@ It refuses unknown keys at every level the backbone owns, and takes no version k
 
 A component's `package.yaml`: every field in use, and the `connections`, `docs` and `friction` blocks. Its required fields are those COR-017 asks of every component.
 
-- **Unknown keys** are refused at every level, as for the rest of the class, each with the nearest known key. The lifecycle reference's "Strict on unknown keys" records when and why the schema, first shipped permissive, became strict.
+- **Unknown keys** are refused at every level, as for the rest of the class, each with the nearest known key. The lifecycle reference's manifest schema, "Strict on unknown keys", records the rule. The lifecycle README's "Why, and what an adopter does" records when and why the schema, first shipped permissive, became strict.
 - **What binds a file to it:** its place, as the `package.yaml` at the root of a component the project registers. Unlike the other schemas here, it binds by no location rule, and its file carries a `schema_version` of its own.
-- **What applies it:** `project_kit.package_validate`, with its repository checks. `pkit validate`'s `packages` pass runs it, and so does the pre-flight of `register` ([the lifecycle reference, "Validation: the package schema"](../lifecycle/README.md#validation-the-package-schema)).
+- **What applies it:** `project_kit.package_validate`, with its repository checks. `pkit validate`'s `packages` pass runs it, and so does the pre-flight of `register` ([the lifecycle reference's manifest schema, "Validation: the package schema"](../lifecycle/manifest.md#validation-the-package-schema)).
 
 ### `rule-set.schema.json`
 
@@ -165,7 +165,7 @@ It refuses unknown keys.
 - **What binds a file to it:** by the location rule, every file under the fillers' prefix of the internal documentation root. The document a command filler prints binds to it too.
 - **What applies it:** `project_kit.data_points`, which also resolves each data point. `pkit validate`'s `connections` member runs it.
 
-Its findings, of three severities ([the lifecycle reference, "How a data point resolves"](../lifecycle/README.md#how-a-data-point-resolves)):
+Its findings, of three severities ([the lifecycle reference's manifest schema, "How a data point resolves"](../lifecycle/manifest.md#how-a-data-point-resolves)):
 
 - **Errors,** which the project can mend whatever the point's inert policy:
   - a file that does not parse
@@ -192,7 +192,7 @@ An answer file: an `answers` list, each entry holding one artefact's answers ("A
 
 ## The container
 
-An artefact's front matter may hold one key that the methodology owns: `pkit:` in this distribution ([the lifecycle reference, "The methodology's literals"](../lifecycle/README.md#the-methodologys-literals)). For a collection's entry, the entry itself holds it. Everything under the key is the methodology's, and everything outside it is the artefact's own (COR-053 point 10).
+An artefact's front matter may hold one key that the methodology owns: `pkit:` in this distribution ([the lifecycle reference's manifest schema, "The methodology's literals"](../lifecycle/manifest.md#the-methodologys-literals)). For a collection's entry, the entry itself holds it. Everything under the key is the methodology's, and everything outside it is the artefact's own (COR-053 point 10).
 
 Inside the container:
 
@@ -215,7 +215,7 @@ pkit:
 - **Any other key** is a role block only if every child is a point block that carries `schema_version`.
 - **Anything else** is an unknown-key error. It names the nearest known key, from the functionality names, the active role words and their qualified forms. It also reminds that a role block needs a versioned point block.
 
-**What the active wiring decides.** Which roles are active, and at which version each point stands, is read from the wiring resolver. It is read once for each run of `pkit validate` ([the lifecycle reference, "How the wiring is resolved"](../lifecycle/README.md#how-the-wiring-is-resolved)). It gives the qualified roles with an active provider. For each, it gives every data point that provider defines, with the point's version and schema.
+**What the active wiring decides.** Which roles are active, and at which version each point stands, is read from the wiring resolver. It is read once for each run of `pkit validate` ([the lifecycle reference's manifest schema, "How the wiring is resolved"](../lifecycle/manifest.md#how-the-wiring-is-resolved)). It gives the qualified roles with an active provider. For each, it gives every data point that provider defines, with the point's version and schema.
 
 - **An orphan:** a role block whose role has no active provider. It is kept and reported, never an error, and validated again when a provider returns.
 - **A shared bare word:** a bare role word that two active roles share names neither of them. It is an error until the key is written qualified.
@@ -281,7 +281,7 @@ The block holds three keys, of which an artefact writes `anchors` or `unanchored
   - **One part of a document** (COR-050 point 2): the artefact, `#` and a heading's slug names one section, such as `docs/guide.md#installing`. The artefact and a bare `#` name its lead, the body before its first heading, such as `docs/guide.md#`.
   - **A slug** is the heading's title in lower case. Every character but letters, digits, spaces and hyphens is dropped, and each space becomes a hyphen.
   - **How a value splits:** a value that names an artefact whole, `#` included, is read whole. Any other value splits at its last `#`. The schema admits any text, and validation judges the part ("Validation findings" below).
-- **A kind a capability registers,** as `friction.kinds` in its package metadata. living-docs registers `source`, an outside source, captured as the version read ([the lifecycle reference, "How a registered anchor kind is resolved"](../lifecycle/README.md#how-a-registered-anchor-kind-is-resolved)). A kind is a word, and its values are a list, as for the three above.
+- **A kind a capability registers,** as `friction.kinds` in its package metadata. living-docs registers `source`, an outside source, captured as the version read ([the lifecycle reference's manifest schema, "How a registered anchor kind is resolved"](../lifecycle/manifest.md#how-a-registered-anchor-kind-is-resolved)). A kind is a word, and its values are a list, as for the three above.
 
 **`unanchored-because` never stands beside anchors.** The unanchored measure lists an artefact with a reason apart, with its reason. It counts only those without one (COR-050 point 8, [the CLI reference, "friction check --all"](../cli/README.md#friction-check---all---json)). Validation refuses the reason beside anchors ("Validation findings" below).
 
@@ -298,7 +298,7 @@ Artefacts are looked for only in the declared places:
 - **The project's places:** `friction.places` in `.pkit/project/config.yaml` <!-- unanchored: names the file the step reads or writes, not its content -->. Each is a path or a glob from the repository's root. A folder, or a glob ending in `**`, means every Markdown file beneath it.
 - **Each installed capability's places:** `friction.places` in its `package.yaml`.
 
-**A capability's place** is an object, `{path, location?, type?, revisits?, derived-links?, description?}`. That is the package schema's only shape for it ([the lifecycle reference, "The connection, documentation and friction blocks"](../lifecycle/README.md#the-connection-documentation-and-friction-blocks)).
+**A capability's place** is an object, `{path, location?, type?, revisits?, derived-links?, description?}`. That is the package schema's only shape for it ([the lifecycle reference's manifest schema, "The connection, documentation and friction blocks"](../lifecycle/manifest.md#the-connection-documentation-and-friction-blocks)).
 
 - **With `location`,** `path` lies inside that entry of the capability's `docs.locations`. Without one, `path` is relative to the repository's root.
 - **A `type`** names the type the place's artefacts take ("A place may give a type" below).
@@ -330,7 +330,7 @@ Artefacts are looked for only in the declared places:
 - **What it takes out:** no place walks a file it holds, whether a root's, another component's, the project's or its own component's. So neither measure counts such a file.
 - **What discovery does with one:** it lists the file with its owner, and with whether `exclude` leaves it out. Its owner then counts an excluded file no more than the measures count an excluded artefact. Discovery reads only its front matter, where a friction block anywhere is a validation finding (below).
 
-**A held folder is bounded,** so that one component holds each held file, and no declaration empties another's. Where it does one of these, it holds nothing, and the packages pass refuses it at its entry ([the lifecycle reference, "Validation: the package schema"](../lifecycle/README.md#validation-the-package-schema)):
+**A held folder is bounded,** so that one component holds each held file, and no declaration empties another's. Where it does one of these, it holds nothing, and the packages pass refuses it at its entry ([the lifecycle reference's manifest schema, "Validation: the package schema"](../lifecycle/manifest.md#validation-the-package-schema)):
 
 - it equals or encloses a documentation root, or any declaration's place, its own component's included
 - it shares a file with another component's held folder, or with a rule-set folder, whose files are rules and stay artefacts (COR-051 point 2)
@@ -378,7 +378,7 @@ With `--at <rev>`, the same walk reads one commit. So a script reads another sta
 
 A type is a declared name for what an artefact is, and an artefact has one type or none ([COR-056](../decisions/core/COR-056-artefact-types.md)).
 
-- **A capability's types:** it declares them in its type registry, `friction.types` in its `package.yaml` ([the lifecycle reference, "The connection, documentation and friction blocks"](../lifecycle/README.md#the-connection-documentation-and-friction-blocks)). It names one on a place as `type`. Its full name is `<capability>:<name>`.
+- **A capability's types:** it declares them in its type registry, `friction.types` in its `package.yaml` ([the lifecycle reference's manifest schema, "The connection, documentation and friction blocks"](../lifecycle/manifest.md#the-connection-documentation-and-friction-blocks)). It names one on a place as `type`. Its full name is `<capability>:<name>`.
 - **A project's place** is a bare path, which gives no type, or `{path, type}` in `.pkit/project/config.yaml` <!-- unanchored: names the file the step reads or writes, not its content -->. Its `type` is a bare type of the project's own, or a capability's type whose registry admits project places.
 - **What the configuration schema refuses:** a `backbone:` type, since no place names one, and a value that is not a type's name.
 - **A rule** is always of the type `backbone:rule`.
@@ -388,7 +388,7 @@ A type is a declared name for what an artefact is, and an artefact has one type 
 
 ### A place may declare links
 
-A capability names, under `revisits` on one of its places, the links of the artefacts the place holds (COR-050 point 16). A link's source changing asks for a revisit of its targets ([the lifecycle reference, "The connection, documentation and friction blocks"](../lifecycle/README.md#the-connection-documentation-and-friction-blocks)).
+A capability names, under `revisits` on one of its places, the links of the artefacts the place holds (COR-050 point 16). A link's source changing asks for a revisit of its targets ([the lifecycle reference's manifest schema, "The connection, documentation and friction blocks"](../lifecycle/manifest.md#the-connection-documentation-and-friction-blocks)).
 
 Each link names the artefact's own fields, outside the `pkit` container, that choose its targets. It does so in exactly one of two ways, and names its trigger fields:
 
