@@ -1,7 +1,7 @@
 ---
 id: DEC-021
 title: A component follows the page's size through a switch on one shared axis
-status: proposed
+status: accepted
 date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
