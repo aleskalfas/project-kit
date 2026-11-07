@@ -473,7 +473,7 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
 | `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
-| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. An item passes the stretch on to the last part it draws ([What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets)). Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
+| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
 
 - **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest.
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
@@ -552,7 +552,7 @@ links:
 
 ### What an element asks for, and what it gets
 
-- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for, with any stretch passed on to it. An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
+- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
 - **A stretch reaches the part drawn last.** An item that `stretch` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
   - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
   - **The size passed on names `engine` as its source** ([Sources](#sources)).
