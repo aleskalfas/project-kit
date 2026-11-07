@@ -760,8 +760,12 @@ HELD = "pkit-held"
 LEFT_OUT = "pkit-left-out"
 BROKEN = "pkit-broken"
 
-#: A character the face lacks, and the requests the page makes.
-LACKED = "字"
+#: A character the face lacks, and the requests the page makes. The character, "identical to",
+#: lies in the faces a machine falls back to: macOS's, and on Linux fontconfig's defaults and
+#: those Chrome's package installs. A character of one script alone, such as Chinese, has no
+#: font on a machine without that script's, and there the browser draws it in the face, as a
+#: box.
+LACKED = "≡"
 NETWORK = "https://example.invalid/network.png"
 BESIDE = "beside.png"
 
@@ -829,6 +833,14 @@ NO_FACE = "no face"
 MACHINE_FONT = "font of the machine"
 REFUSED = "refused"
 
+#: What the font read names of the span with the character the face lacks, and what a stop
+#: adds where it does not.
+LACKED_FINDING = (MACHINE_FONT, "character-the-face-lacks", f"lacks {LACKED}")
+NO_FONT_HOLDS = (
+    f"Where no font of the machine holds {LACKED}, the browser draws it in the file's own face, "
+    "as a box"
+)
+
 #: What the four reads must name of the planted page, in `_named`'s form, and nothing else.
 PLANTED_FINDINGS = frozenset(
     {
@@ -843,7 +855,7 @@ PLANTED_FINDINGS = frozenset(
         (NO_FACE, "weight-with-no-face", HELD, "700"),
         (MACHINE_FONT, "face-left-out", "left out"),
         (MACHINE_FONT, "face-broken", "broken"),
-        (MACHINE_FONT, "character-the-face-lacks", f"lacks {LACKED}"),
+        LACKED_FINDING,
         (REFUSED, Path(NETWORK).name),
         (REFUSED, BESIDE),
     }
@@ -852,7 +864,8 @@ PLANTED_FINDINGS = frozenset(
 
 def _first_read(started: _Started, place: Path) -> None:
     """Read the planted page. Raises Stopped where the reads do not name each fault, with the
-    font that drew each span of the machine's, or name what is clean."""
+    font that drew each span of the machine's, or name what is clean. Where the character the
+    face lacks is not named, the stop says what a machine with no font for it does."""
     file = place / PLANTED_FILE
     try:
         file.write_text(_planted_html(PLANTED_FACE.read_bytes()), encoding="utf-8")
@@ -864,7 +877,8 @@ def _first_read(started: _Started, place: Path) -> None:
     if unnamed or wrong:
         said = [f"did not name {_listed(unnamed)}" if unnamed else ""]
         said += [f"named {_listed(wrong)}, which the page does not plant" if wrong else ""]
-        raise started.stop(f"the first read {' and '.join(each for each in said if each)}")
+        why = f". {NO_FONT_HOLDS}" if LACKED_FINDING in unnamed else ""
+        raise started.stop(f"the first read {' and '.join(each for each in said if each)}{why}")
 
 
 def _named(read: Read) -> set[tuple[str, ...]]:

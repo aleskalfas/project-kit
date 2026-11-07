@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fontTools.ttLib import TTFont
 
 from tests.in_process import load
 from tests.visual_communication_browser import (
@@ -149,7 +150,7 @@ def planted() -> dict[str, Any]:
         "requests": [viewing_browser.NETWORK, f"file:///folder/{viewing_browser.BESIDE}"],
     }
     by_text = {each["id"]: each for each in texts}
-    by_text["character-the-face-lacks"]["lines"][0][0]["fonts"] = [HELD_FONT, MACHINE_FONT]
+    by_text[viewing_browser.LACKED_FINDING[1]]["lines"][0][0]["fonts"] = [HELD_FONT, MACHINE_FONT]
     by_text["run-swallowed"]["lines"][0][0]["text"] = "swal"
     by_text["colour-of-its-ground"]["lines"][0][0]["ink"] = (BLACK,)
     return document
@@ -629,6 +630,14 @@ def test_the_planted_page_is_in_the_renderers_form() -> None:
     assert "swal<lowed" in planted_html
 
 
+def test_the_planted_face_lacks_the_planted_character_and_holds_the_rest_of_its_span() -> None:
+    cmap = TTFont(viewing_browser.PLANTED_FACE).getBestCmap()
+    assert cmap is not None
+    text = viewing_browser.LACKED_FINDING[2]
+    assert ord(viewing_browser.LACKED) not in cmap
+    assert all(ord(each) in cmap for each in text.replace(viewing_browser.LACKED, ""))
+
+
 @pytest.mark.parametrize(
     "finding",
     sorted(viewing_browser.PLANTED_FINDINGS),
@@ -642,6 +651,9 @@ def test_a_planted_fault_the_reads_do_not_name_stops_the_start(
     assert "did not name" in stop.what
     assert " ".join(finding) in stop.what
     assert "named" not in stop.what.split("did not name")[1]
+    assert (viewing_browser.NO_FONT_HOLDS in stop.what) == (
+        finding == viewing_browser.LACKED_FINDING
+    )
     assert not [each for each in called(program, "Page.navigate") if each["url"].endswith(FILE)]
 
 
