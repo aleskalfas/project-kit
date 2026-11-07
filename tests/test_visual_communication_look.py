@@ -13,6 +13,7 @@ run, or asks whether an image is blank, and so runs on any machine and any tool.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import struct
 import subprocess
@@ -1651,8 +1652,8 @@ def test_where_no_browser_runs_the_report_says_what_stopped_it_under_which_lock(
     stop = report["stopped"]
     assert stop["what"] == "no browser of the Chromium family was found"
     assert str(tmp_path / "no-browser") in stop["looked"]
-    assert stop["sandbox"] is False
-    assert "`pkit visual look flow --renderer svg`" in stop["go-on"]
+    assert stop["sandbox"] is False and stop["as-root"] is False
+    assert stop["go-on"] == viewing.ways_on(PIECE)
     lines = shown.stderr.splitlines()
     assert lines[0].startswith("stopped: no browser of the Chromium family was found; looked at:")
     assert lines[1] == (
@@ -1660,8 +1661,31 @@ def test_where_no_browser_runs_the_report_says_what_stopped_it_under_which_lock(
         f"{viewing.folder_of(PIECE, 'html')}/"
     )
     assert lines[2] == "lock: foundations 1.0.0, test-brand 1.0.0, tests 1.0.0"
-    assert lines[-1].startswith("go on: `pkit visual look flow --renderer svg` draws ")
+    assert lines[4:] == [
+        *(f"go on: {way}" for way in viewing.ways_on(PIECE)),
+        f"for an agent: {viewing.FOR_AN_AGENT}",
+    ]
     assert shown.stdout == ""
+
+
+def test_a_stop_names_the_ways_on_in_their_order() -> None:
+    """A build pipeline's drawings, a way a project may take, of a pushed commit; the same
+    look, addressed to a person, outside any sandbox; then the SVG renderer's pages
+    (DEC-024 point 4)."""
+    pipeline, person, svg_pages = viewing.ways_on(PIECE)
+    assert pipeline.startswith("a build pipeline's drawings, where the project has its pipeline ")
+    assert "`visual-drawings-<commit>`" in pipeline
+    assert "They show a pushed commit, not the working tree" in pipeline
+    assert person.startswith(f"for a person: run `pkit visual look {PIECE} --renderer html` once ")
+    assert "outside any sandbox, such as in your own terminal" in person
+    assert "with your rights" in person
+    assert svg_pages.startswith(f"`pkit visual look {PIECE} --renderer svg` draws the same scenes")
+
+
+def test_the_page_a_stop_names_holds_the_section_on_a_pipeline_s_drawings() -> None:
+    page = Path(__file__).resolve().parents[1] / viewing.DRAWINGS_PAGE
+    assert f"### {viewing.DRAWINGS_SECTION}\n" in page.read_text(encoding="utf-8")
+    assert viewing.DRAWINGS.replace("<commit>", "") in page.read_text(encoding="utf-8")
 
 
 def test_a_stop_a_sandbox_made_says_so(tmp_path: Path, browser: Browser) -> None:
@@ -1670,11 +1694,106 @@ def test_a_stop_a_sandbox_made_says_so(tmp_path: Path, browser: Browser) -> None
     browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=said)
     shown = run_look(root, PIECE, "--renderer", "html")
     assert shown.returncode == look.STOPPED
-    assert html_report(root)["stopped"]["sandbox"] is True
-    assert (
-        "stopped: a sandbox stopped the browser; draw the pages in a session outside it"
-        in shown.stderr.splitlines()
+    stop = html_report(root)["stopped"]
+    assert stop["sandbox"] is True and stop["as-root"] is False
+    lines = shown.stderr.splitlines()
+    assert lines[0] == f"stopped: the browser stopped; started: b; it said: {said}"
+    assert lines[1] == "stopped: a sandbox stopped the browser"
+    assert [line for line in lines if line.startswith("go on: ")] == [
+        f"go on: {way}" for way in viewing.ways_on(PIECE)
+    ]
+
+
+def test_a_stop_with_no_sandbox_in_its_words_names_what_the_browser_said(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    said = "Trace/BPT trap: 5"
+    browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=said)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["sandbox"] is False and stop["as-root"] is False and stop["said"] == said
+    lines = shown.stderr.splitlines()
+    assert lines[0] == f"stopped: the browser stopped; started: b; it said: {said}"
+    assert [line for line in lines if line.startswith("stopped: ")] == [
+        lines[0],
+        f"stopped: no image; the page files and report.json lie in "
+        f"{viewing.folder_of(PIECE, 'html')}/",
+    ]
+
+
+#: What Chrome says where it runs as root, which refuses to start with its own sandbox on.
+AS_ROOT = (
+    "[1107/101010.000000:ERROR:zygote_host_impl_linux.cc(128)] Running as root without "
+    "--no-sandbox is not supported. See https://crbug.com/638180."
+)
+
+
+def test_a_browser_run_as_root_gets_a_stop_of_its_own_with_the_same_ways_on(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=AS_ROOT)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["as-root"] is True and stop["sandbox"] is False
+    assert stop["go-on"] == viewing.ways_on(PIECE)
+    lines = shown.stderr.splitlines()
+    assert lines[1] == (
+        "stopped: the browser runs as root, where it refuses to start with its own sandbox on, "
+        "and the step never turns that sandbox off"
     )
+    assert "stopped: a sandbox stopped the browser" not in lines
+    assert [line for line in lines if line.startswith("go on: ")] == [
+        f"go on: {way}" for way in viewing.ways_on(PIECE)
+    ]
+
+
+#: What no stop names, outside the browser's own words: the harness's escape, the model's
+#: command that applies an exclusion, any exclusion, whether of the viewing command, of
+#: `pkit` or of `uv`, and any form of the command that runs through `uv` (DEC-024 point 4).
+NEVER_NAMED = (
+    r"exclu",
+    r"dangerous",
+    r"escape",
+    r"permissions",
+    r"unsandboxed",
+    r"\buv\b",
+    r"no-sandbox",
+)
+
+
+@pytest.mark.parametrize(
+    "said",
+    [
+        pytest.param("", id="no-browser"),
+        pytest.param("sandbox initialization failed: Operation not permitted", id="sandbox"),
+        pytest.param(AS_ROOT, id="as-root"),
+        pytest.param("Trace/BPT trap: 5", id="otherwise"),
+    ],
+)
+def test_no_stop_names_a_way_out_of_the_sandbox(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, browser: Browser, said: str
+) -> None:
+    """The browser's own words, and where the step looked, are left out of what is read."""
+    root = html_flow(tmp_path, program=bool(said))
+    if said:
+        browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=said)
+    else:
+        no_browser_here(tmp_path, monkeypatch)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    held = {key: value for key, value in stop.items() if key not in ("said", "looked")}
+    printed = shown.stderr.replace(said, "") if said else shown.stderr
+    for place in stop["looked"]:
+        printed = printed.replace(place, "")
+    written = [printed, json.dumps(held)]
+    for words in NEVER_NAMED:
+        for each in written:
+            assert not re.search(words, each, re.IGNORECASE), (words, each)
 
 
 def test_a_stop_is_an_exit_of_its_own_and_a_refusal_leaves_the_folder_as_it_was(

@@ -12,16 +12,19 @@ description: Reads the images `pkit visual look` draws of a piece, through the
   the page and the element's trace id, and its report says which pages, 
   languages and modes it looked at, and which tool or renderer drew each image, 
   under which lock. A folder with a report and no image is a stop, which it 
-  reports. Advisory — they join no validation and hold no merge. Needs a harness
-  that reads images, and stops and says so where it has none. Read-only on what 
-  it reviews; it never draws and never edits. Shipped by the 
-  visual-communication capability.
+  reports, passing on to whoever asked it the ways on the stop names. It names a
+  build pipeline's images as drawn by the pipeline, at the commit it drew. 
+  Advisory — they join no validation and hold no merge. Needs a harness that 
+  reads images, and stops and says so where it has none. Read-only on what it 
+  reviews; it never draws and never edits. Shipped by the visual-communication 
+  capability.
 tools: [Read, Glob, Grep]
 reads:
   paths:
     - .pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md
     - .pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md
     - .pkit/capabilities/visual-communication/decisions/DEC-023-html-page-modes.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md
     - .pkit/capabilities/visual-communication/outputs.md
     - .pkit/capabilities/visual-communication/checks.md
     - .pkit/capabilities/visual-communication/components.md
@@ -59,7 +62,8 @@ You own **no** paths. You write nothing in the repository.
 - [visual-communication:DEC-015-viewing-step-and-reviewer], `.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md`: the step and your first form. Point 7 is yours.
 - [visual-communication:DEC-020-html-page-drawing], `.pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md`: how the step draws the HTML renderer's pages through a browser. Points 5, 6 and 8 bear on what you read.
 - [visual-communication:DEC-023-html-page-modes], `.pkit/capabilities/visual-communication/decisions/DEC-023-html-page-modes.md`: how one page file holds the modes a reader's system picks, and how the step draws each. Points 6 to 8 bear on what you read.
-- `.pkit/capabilities/visual-communication/outputs.md`, "The viewing step": what a run writes, what its report says, how far an image can be trusted, and what a stop leaves.
+- [visual-communication:DEC-024-outside-programs-sandbox], `.pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md`: where a sandbox stops the browser. Point 4 says what a stop names, point 5 what a build pipeline draws, and point 6 that you pass a stop's ways on to whoever asked you.
+- `.pkit/capabilities/visual-communication/outputs.md`, "The viewing step": what a run writes, what its report says, how far an image can be trusted, what a stop leaves, and what a build pipeline's drawings hold.
 - `.pkit/capabilities/visual-communication/checks.md`: what the check measures, and so what you need not measure again.
 - `.pkit/capabilities/visual-communication/components.md`, "Trace ids": the ids your findings name.
 - `.pkit/capabilities/visual-communication/files.md`: where a piece's content and a brand's tokens lie.
@@ -82,6 +86,8 @@ Read all of these, and judge a page by its image above all:
 - **The brand** the piece names, under the location's `libraries/`: its tokens say which family each typography role takes.
 
 **Other images.** Your dispatcher may hand you other images of the same pages, drawn by another tool or renderer. They promise nothing about their pixels either. Note which tool or renderer drew each, and under which lock, from what your dispatcher tells you. Where it does not say, say so. Read them as you read the step's, and never take one for another.
+
+**A build pipeline's drawings.** Your dispatcher may hand you a folder a build pipeline drew and kept, fetched into a folder named by the commit it shows ([visual-communication:DEC-024-outside-programs-sandbox] point 5). It holds what a look's folder holds. Name its images as drawn by the pipeline, at that commit, with the browser its report names: they show a pushed commit, never the working tree ([visual-communication:DEC-020-html-page-drawing] point 5). Where the piece's files have changed since that commit, say so at the head of your report.
 
 ## How you work
 
@@ -129,7 +135,7 @@ Open with what you looked at, because nothing unseen reads as clean:
 
 ```
 Looked at: <piece>, under lock <lock>
-Drawn by: <for each set of images, the renderer and the tool with their versions, and the lock>
+Drawn by: <for each set of images, the renderer and the tool with their versions, and the lock; for a pipeline's, the pipeline and the commit it drew>
 Pages: <the pages looked at>
 Languages: <the languages looked at>
 Modes: <the keys looked at>
@@ -174,10 +180,11 @@ Where the folder holds a report whose `stopped` says what stopped the browser, t
 Not reviewed: the browser stopped, under lock <lock>.
 Stopped: <what stopped it, and what is missing, as the report's `stopped` says>
 Looked at: nothing.
-Go on: <the way on the report names>
+Go on: <each way on the report's `go-on` names, in its order>
+For an agent: <what the report's `for-an-agent` says>
 ```
 
-Give no finding, and no reading of the page file in its place.
+Give no finding, and no reading of the page file in its place. Pass the ways on to whoever asked you, each as the report words it, in its order ([visual-communication:DEC-024-outside-programs-sandbox] point 6). Its line for a person is addressed to a person: leave it so, and take none of them yourself, since you never run a command.
 
 ## Intermediate files
 

@@ -32,7 +32,12 @@ The parts (#2308, #2715, ADR-078):
 - **only a new head cancels**, and a run on `main` or in the merge queue takes a
   group of its own; each job but `checks` stops after 30 minutes, `checks` after 5;
 - **the reviewers start** on a job this workflow names: the check project-kit's
-  configuration names to start the review is the quick checks' (#2638, #2715).
+  configuration names to start the review is the quick checks' (#2638, #2715);
+- **the drawings** (#2837, visual-communication DEC-024 point 5): on a pull request
+  alone, once the quick checks have ended, a job draws each piece's HTML pages from
+  the pull request's head commit, and keeps them as `visual-drawings-<head>`. Its
+  token only reads, it holds no secret, it sets nothing that bears on the browser's
+  sandbox, and `checks` does not wait on it.
 
 `test_short_check.py` holds the decision.
 """
@@ -47,7 +52,7 @@ from typing import Any
 
 import pytest
 from ruamel.yaml import YAML
-from scripts import ci_parts, short_check
+from scripts import ci_parts, short_check, visual_drawings
 
 from tests import slices
 from tests.adopter_repo import sign_nothing
@@ -66,6 +71,7 @@ PM_CONFIG = (
 SLICES = 2
 SLICE_JOBS = [f"slice-{i}" for i in range(1, SLICES + 1)]
 JOBS = ["decide", "quick", "rest", *SLICE_JOBS, "checks"]
+DRAWINGS = "drawings"
 EVENTS = ["pull_request", "merge_group", "push"]
 
 PINNED_BASE = "${{ needs.decide.outputs.base }}"
@@ -114,7 +120,7 @@ def test_checks_run_on_the_merge_the_queue_is_about_to_make(workflow) -> None:
 
 
 def test_the_jobs_are_the_deciding_job_the_parts_and_checks(workflow) -> None:
-    assert list(workflow["jobs"]) == JOBS
+    assert list(workflow["jobs"]) == [*JOBS, DRAWINGS]
     for name in JOBS[1:-1]:
         assert _job(workflow, name)["needs"] == "decide", name
     assert _job(workflow, "checks")["needs"] == JOBS[:-1]
@@ -150,7 +156,7 @@ def test_the_required_workflow_holds_no_friction_report(workflow) -> None:
 
 
 def test_each_job_but_checks_stops_after_30_minutes_and_checks_after_5(workflow) -> None:
-    for name in JOBS[:-1]:
+    for name in [*JOBS[:-1], DRAWINGS]:
         assert _job(workflow, name)["timeout-minutes"] == 30, name
     assert _job(workflow, "checks")["timeout-minutes"] == 5
 
@@ -182,7 +188,7 @@ def test_only_the_deciding_job_reads_runs_and_pull_requests(workflow) -> None:
         "actions": "read",
         "pull-requests": "read",
     }
-    for name in JOBS[1:]:
+    for name in [*JOBS[1:], DRAWINGS]:
         assert _job(workflow, name)["permissions"] == {"contents": "read"}, name
 
 
@@ -195,7 +201,7 @@ def test_every_checkout_keeps_the_token_out_and_only_the_decider_holds_it(workfl
         for _, step in _all_steps(workflow)
         if step.get("uses", "").startswith("actions/checkout@")
     ]
-    assert len(checkouts) == len(JOBS)
+    assert len(checkouts) == len(JOBS) + 1
     for step in checkouts:
         assert step["uses"] == "actions/checkout@v4"
         assert step["with"]["persist-credentials"] is False
@@ -1125,3 +1131,223 @@ def test_the_check_that_starts_the_reviewers_is_the_quick_checks(
     reviewers waiting for every check, with nothing to say so (#2638)."""
     config = YAML(typ="safe").load(PM_CONFIG.read_text(encoding="utf-8"))
     assert config["review"]["agents"]["start_after_checks"] == [_job(workflow, "quick")["name"]]
+
+
+# --- the drawings -------------------------------------------------------------------------
+
+
+def _drawings(workflow: dict[str, Any]) -> dict[str, Any]:
+    return _job(workflow, DRAWINGS)
+
+
+def test_the_drawings_run_on_a_pull_request_alone_once_the_quick_checks_end(workflow) -> None:
+    """Whatever became of the quick checks, so a failed line still leaves the pages drawn,
+    and after them, so a run holds no more runners at once than its parts (ADR-078
+    point 9)."""
+    job = _drawings(workflow)
+    assert job["needs"] == "quick"
+    assert job["if"] == "${{ !cancelled() && github.event_name == 'pull_request' }}"
+
+
+def test_checks_does_not_wait_on_the_drawings(workflow) -> None:
+    """No required check stands on them: a stop holds no status `main` requires."""
+    assert DRAWINGS not in _job(workflow, "checks")["needs"]
+
+
+def test_the_drawings_are_of_the_pull_request_s_head_commit(workflow) -> None:
+    job = _drawings(workflow)
+    checkout = job["steps"][0]
+    assert checkout["uses"] == "actions/checkout@v4"
+    assert checkout["with"]["ref"] == PR_HEAD
+    assert checkout["with"]["persist-credentials"] is False
+    assert _by_id(job, "draw")["env"] == {"PKIT_DRAWN_COMMIT": PR_HEAD}
+
+
+def test_the_drawings_set_up_as_a_part_does(workflow) -> None:
+    steps = [str(step.get("name", step.get("uses"))) for step in _drawings(workflow)["steps"]]
+    assert steps[1:5] == [
+        "Set up Python",
+        "Install uv",
+        "Install project (clean resolve)",
+        "Sync (provisions the query commands)",
+    ]
+
+
+def test_the_drawings_hold_no_secret_and_their_token_only_reads(workflow) -> None:
+    job = _drawings(workflow)
+    assert job["permissions"] == {"contents": "read"}
+    held = json.dumps(job)
+    assert "secrets." not in held
+    assert "github.token" not in held
+    assert "env" not in job
+
+
+def test_the_drawings_run_the_look_as_the_project_writes_it(workflow) -> None:
+    draw = _by_id(_drawings(workflow), "draw")
+    assert draw["run"] == 'uv run python scripts/visual_drawings.py "$RUNNER_TEMP/visual-drawings"'
+    assert visual_drawings.command("p") == [
+        "uv",
+        "run",
+        "pkit",
+        "visual",
+        "look",
+        "p",
+        "--renderer",
+        "html",
+        "--every-language",
+        "--every-key",
+    ]
+
+
+#: What would bear on the browser's own sandbox: a flag that turns it off, a variable
+#: Chrome reads to find or skip one, or a setting of the runner's kernel or its profiles.
+SANDBOX_SETTINGS = ("sandbox", "zygote", "single-process", "sysctl", "userns", "apparmor", "sudo")
+
+
+def test_the_drawings_pass_no_flag_and_no_setting_that_bears_on_the_browser_s_sandbox(
+    workflow,
+) -> None:
+    """The job, and the look its script runs, which sets no variable of its own."""
+    held = json.dumps(_drawings(workflow)).lower()
+    assert not [word for word in SANDBOX_SETTINGS if word in held]
+    looked = " ".join(visual_drawings.command("p")).lower()
+    assert not [word for word in SANDBOX_SETTINGS if word in looked]
+    script = Path(str(visual_drawings.__file__)).read_text(encoding="utf-8")
+    assert "env=" not in script and "environ[" not in script
+
+
+def test_the_drawings_are_kept_named_by_the_commit_drawn_whatever_the_looks_did(
+    workflow,
+) -> None:
+    keep = _drawings(workflow)["steps"][-1]
+    assert keep["uses"] == "actions/upload-artifact@v4"
+    assert keep["if"] == "${{ !cancelled() && steps.draw.outcome != 'skipped' }}"
+    assert keep["with"]["name"] == f"visual-drawings-{PR_HEAD}"
+    assert keep["with"]["path"] == "${{ runner.temp }}/visual-drawings/"
+    assert visual_drawings.ARTEFACT.format(commit="abc") == "visual-drawings-abc"
+
+
+def test_the_name_the_drawings_are_kept_under_is_the_one_the_capability_names() -> None:
+    """The capability's pages, its stop and its skill name the same artefact."""
+    root = Path(__file__).resolve().parents[1] / ".pkit" / "capabilities" / "visual-communication"
+    named = visual_drawings.ARTEFACT.format(commit="<commit>")
+    assert named in (root / "outputs.md").read_text(encoding="utf-8")
+    assert named in (root / "skills" / "visual-author" / "build-loop.md").read_text(
+        encoding="utf-8"
+    )
+    viewing = (root / "scripts" / "_lib" / "viewing.py").read_text(encoding="utf-8")
+    assert f'DRAWINGS = "{named}"' in viewing
+
+
+# --- the drawings' script -----------------------------------------------------------------
+
+#: How the stand-in look ends for a piece of each name, and what it prints on standard error.
+ENDS = {"stopped": (3, "stopped: a sandbox stopped the browser"), "refused": (1, "error: no lock")}
+
+
+class LookStandIn:
+    """The look in place of the process the script runs: it writes the piece's folder as a
+    look would, records what it was handed, and ends as the piece's name says."""
+
+    def __init__(self) -> None:
+        self.ran: list[tuple[list[str], Path]] = []
+
+    def __call__(self, argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+        self.ran.append((list(argv), cwd))
+        piece = argv[5]
+        folder = cwd / visual_drawings.LOOK_FOLDER / f"{piece}.html"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "report.json").write_text(json.dumps({"piece": piece}), encoding="utf-8")
+        code, said = ENDS.get(piece, (0, ""))
+        return subprocess.CompletedProcess(argv, code, f"look: {piece}\n", said)
+
+
+def _workspace(root: Path, names: list[str], location: str | None = None) -> None:
+    """A project whose visual workspace holds a piece of each name, and a folder that is
+    none."""
+    config = root / visual_drawings.CONFIG
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        f"schema_version: 1\nlocation: {location}\n" if location else "schema_version: 1\n",
+        encoding="utf-8",
+    )
+    pieces = root / (location or visual_drawings.DEFAULT_LOCATION) / "pieces"
+    for name in names:
+        (pieces / name).mkdir(parents=True)
+        (pieces / name / "piece.yaml").write_text("schema_version: 1\n", encoding="utf-8")
+    (pieces / "no-piece").mkdir(parents=True)
+
+
+@pytest.fixture
+def looks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LookStandIn:
+    """The stand-in look, run from the project's root, `tmp_path / "project"`, with the
+    summary in `tmp_path`."""
+    standing = LookStandIn()
+    monkeypatch.setattr(visual_drawings, "run", standing)
+    (tmp_path / "project").mkdir()
+    monkeypatch.chdir(tmp_path / "project")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "summary.md"))
+    monkeypatch.setenv("PKIT_DRAWN_COMMIT", "0123abcd")
+    return standing
+
+
+def test_the_script_finds_each_piece_of_the_location_the_configuration_records(
+    tmp_path: Path,
+) -> None:
+    _workspace(tmp_path, ["sockets", "showcase"], location="work/visual")
+    assert visual_drawings.pieces(tmp_path) == ["showcase", "sockets"]
+
+
+def test_the_script_takes_the_default_location_where_none_is_recorded(tmp_path: Path) -> None:
+    _workspace(tmp_path, ["figure"])
+    assert visual_drawings.location(tmp_path) == tmp_path / "visual"
+    assert visual_drawings.pieces(tmp_path) == ["figure"]
+
+
+def test_every_piece_drawn_keeps_each_folder_and_passes(looks: LookStandIn, tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    _workspace(root, ["one", "two"])
+    out = tmp_path / "out"
+    assert visual_drawings.main([str(out)]) == 0
+    assert sorted(path.name for path in out.iterdir()) == ["one.html", "two.html"]
+    assert looks.ran == [(visual_drawings.command(name), root) for name in ("one", "two")]
+    summary = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    assert "Kept as the artefact `visual-drawings-0123abcd`, of commit `0123abcd`" in summary
+    assert "| `one` | drew |" in summary and "| `two` | drew |" in summary
+
+
+@pytest.mark.usefixtures("looks")
+def test_a_stop_fails_the_job_and_its_report_is_kept_with_the_rest(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _workspace(tmp_path / "project", ["drawn", "refused", "stopped"])
+    out = tmp_path / "out"
+    assert visual_drawings.main([str(out)]) == 1
+    assert sorted(path.name for path in out.iterdir()) == [
+        "drawn.html",
+        "refused.html",
+        "stopped.html",
+    ]
+    assert (out / "stopped.html" / "report.json").is_file()
+    summary = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    assert "| `stopped` | stopped |" in summary and "| `refused` | refused |" in summary
+    assert "stopped: a sandbox stopped the browser" in summary
+    assert "error: no lock" in summary
+    errors = capsys.readouterr().err.splitlines()
+    assert errors == [
+        "error: the look of `refused` refused",
+        "error: the look of `stopped` stopped",
+    ]
+
+
+@pytest.mark.usefixtures("looks")
+def test_a_workspace_with_no_piece_draws_nothing_and_passes(tmp_path: Path) -> None:
+    _workspace(tmp_path / "project", [])
+    out = tmp_path / "out"
+    assert visual_drawings.main([str(out)]) == 0
+    assert out.is_dir() and list(out.iterdir()) == []
+    assert "holds no piece" in (tmp_path / "summary.md").read_text(encoding="utf-8")
+
+
+def test_the_script_takes_one_folder_to_keep_the_drawings_in() -> None:
+    assert visual_drawings.main([]) == 2
