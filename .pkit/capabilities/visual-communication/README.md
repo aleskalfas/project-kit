@@ -71,6 +71,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
+        - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
@@ -153,7 +154,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
-No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
+No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)). A piece shows a picture of its own, such as a photo, from a picture file it holds ([Picture files](files.md#picture-files)).
 
 The pages beside this README are the reference:
 
@@ -186,11 +187,11 @@ A library the capability ships reaches the location only through [`pkit visual a
 The skill `visual-author` walks steps 1 to 6 with you, or with the agent that draws for you. `pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/visual-author/` ([the Claude Code adapter's README, `deploy-skills.sh`](../../adapters/claude-code/README.md#deploy-skillssh)). Its `piece.md` starts a piece, and its `build-loop.md` renders, checks, reads and mends it until it can stop.
 
 1. **Bring the libraries.** [`pkit visual add <library>`](#pkit-visual-add-library) copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand: bring the neutral brand, or write the project's own ([Brands](files.md#brands)).
-2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
+2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)). A picture it shows, such as a photo, lies in its `pictures/` folder ([Picture files](files.md#picture-files)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
-6. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
+6. **Commit the piece's folder:** `piece.yaml`, the content, its `pictures/` and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
 7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).

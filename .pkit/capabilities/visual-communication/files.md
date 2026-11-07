@@ -136,7 +136,9 @@ pkit:
         - visual-communication:DEC-019#11
         - visual-communication:DEC-020#7
         - visual-communication:DEC-021#2
+        - visual-communication:DEC-025#1
         - visual-communication:DEC-025#2
+        - visual-communication:DEC-025#3
         - visual-communication:DEC-025#4
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#9
@@ -228,6 +230,7 @@ The table names the schema each file binds to (see [The binding](#the-binding)),
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` and `pkit visual upgrade` rewrite its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
+| `pieces/<piece>/pictures/<file>`, a picture file | none: a PNG or a JPEG ([Picture files](#picture-files)) | a person |
 | `pieces/<piece>/produced/<output>/record.yaml`, and a PNG for each variant | `produced-record` | `pkit visual produce` |
 | `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render`, of a piece that is not final; `pkit visual upgrade` |
 | `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export` and `pkit visual upgrade`; `pkit visual mark-final` adds the version handed out |
@@ -324,7 +327,7 @@ No path binds a file, and the capability writes no line that points an editor at
 
 ## A piece
 
-A *piece* is one finished item of visual work, such as a figure (DEC-001 point 3). Its sources are one folder, `pieces/<piece>/`, named with the name shape. The folder holds `piece.yaml`, a content file for each language, and the piece's local components.
+A *piece* is one finished item of visual work, such as a figure (DEC-001 point 3). Its sources are one folder, `pieces/<piece>/`, named with the name shape. The folder holds `piece.yaml`, a content file for each language, the piece's local components, and its picture files in `pictures/` ([Picture files](#picture-files)).
 
 ### `piece.yaml`
 
@@ -471,6 +474,7 @@ caption: The flow.
 - **A list the component repeats** holds items, each a mapping. The component names the component that draws an item by default, `tests/card` for `tests/steps`. Where the list has a component field, the component it names draws each item that names none, and the item takes each key the field gives that it does not give itself. An item may name its own with `use`, and then takes nothing from the field. An item may also give its list's *arrangement fields*, each one of the words the component declares for it, such as `span: wide`; an item that leaves one out takes its first word (DEC-010 points 2 and 3).
 - **A page of a top whose layouts are its pages' forms** is a mapping in the list the top marks as holding its pages, `slides` for the foundations' `deck`. It names one of the top's layouts with `layout`, and holds that layout's slots and the reserved keys, nothing else: `{id: cover, layout: cover, title: Building with AI}`. Or it names the component that draws it with `use`, and its other keys are that component's. Every page names one or the other, and none takes a layout by default (DEC-010 point 5). How a layout declares its slots is in *Components*.
 - **`use: piece/<name>`** names a local component, `components/<name>.yaml` in the piece's folder.
+- **A picture file** of the piece is named by its bare name, in a field an image shows, such as `photo: team.jpg` ([Picture files](#picture-files)). Each language names its own file, as it gives its own text. A picture every language shows is named in each content file.
 - **An option** takes one word from the list the component declares, such as `spacing: wide` on `tests/steps`. An option that names an item takes `{item: <id>}`, or `{item: <id>, point: <name>}` for a point the item exposes.
 - **A tie's ends.** In a list of ties, every item is a tie, and gives both of its list's end fields (DEC-011 points 1 to 3). Each takes the shape of an option that names an item: `{item: <key path>}`, or `{item: <key path>, point: <name>}`. The *key path* starts at a field of the mapping that holds the tie's list. It names each field that leads to the item, joined by `.`, and in each list the item by its id, as `[<id>]`. It writes the keys the content file writes, so a component that passes a list on under another name changes nothing in it. `right[groups].groups[project-management].items[doc-check]` names an item of a list inside a component that the list `right` holds. An end never names a tie, the two ends never name one item, and neither leads through the other. An end's quotes in a flow mapping are in *Components*.
 - **`state`** names a state the component declares, such as `state: marked`.
@@ -483,7 +487,7 @@ Each key of a mapping that places a component must be a field or an option of th
 
 ## Picture files
 
-A *picture file* is a PNG or a JPEG file that a person puts in the `pictures/` folder of a library's version (DEC-025 point 2). A brand's picture role names one ([Picture roles](#picture-roles)). What the check and a release report of a picture file is under *Picture files* in *What the check reports*.
+A *picture file* is a PNG or a JPEG file in the `pictures/` folder of a piece, or of a library's version (DEC-025 point 2). An image shows a piece's file by the name a field of the content gives ([Content files](#content-files)). It shows a version's file by the name its component gives, the same in every mode and under every brand (DEC-025 point 3). A local component's name finds a file of the piece. How an image names either is in *Components*. A brand's picture role names one too ([Picture roles](#picture-roles)). What the check and a release report of a picture file is under *Picture files* in *What the check reports*.
 
 ### How a name finds its file
 

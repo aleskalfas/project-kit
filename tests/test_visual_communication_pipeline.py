@@ -468,8 +468,12 @@ def test_the_env_reads_the_produced_picture_from_its_record(tmp_path: Path) -> N
     assert picture.points == {
         "tip": {"colour-scheme.dark": {"x": 75, "y": 25}, "default": {"x": 75, "y": 25}}
     }
-    assert project.env.pictures_at("colour-scheme.dark") == {
-        OUTPUT: root / PIECE_FOLDER / "produced" / OUTPUT / "colour-scheme.dark.png"
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
+    image = "figure/body/steps[note]/pictures[square]/image"
+    assert project.env.handed(result.scene.to_dict(), "colour-scheme.dark") == {
+        image: seam.Shown(
+            root / PIECE_FOLDER / "produced" / OUTPUT / "colour-scheme.dark.png", seam.PNG
+        )
     }
 
 
@@ -1905,7 +1909,9 @@ def test_a_file_of_several_keys_is_handed_over_in_one_call_with_each_keys_colour
     assert list(call["keys"]) == list(held)
     document = project.values()
     assert call["colours"] == {key: pl.colours_at(document, key) for key in held}
-    assert call["pictures"] == {key: project.env.pictures_at(key) for key in held}
+    [(_, result)] = stand_in_scenes(project)
+    scene = result.scene.to_dict()
+    assert call["pictures"] == {key: project.env.handed(scene, key) for key in held}
     assert call["pictures"]["default"]
     assert call["font_file"] == project.brand.font_file
 

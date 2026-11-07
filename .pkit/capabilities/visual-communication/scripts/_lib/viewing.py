@@ -15,7 +15,9 @@ is read, and none is used up (DEC-016 point 5).
   default it draws every page in the source language, in the first key in the order a
   picture's variant uses (`keys.variant_key`), through the renderer `renderer_of` gives.
 - **The SVG renderer's pages.** `viewing_tool` draws each page, at `LONG_EDGE` pixels on its
-  long edge, or more where the page's smallest text would land under `SMALLEST_TEXT`.
+  long edge, or more where the page's smallest text would land under `SMALLEST_TEXT`. The
+  tool may draw a picture without the colour profile it carries, so the report names each
+  picture a page shows with one (`with_profiles`, DEC-025 point 5).
 - **The HTML renderer's pages.** `viewing_browser` draws each page file as the renderer wrote
   it, in one browser start, its pages at one device scale, the largest any of them asks. A
   file holds every key its group gives it, whichever keys the caller picks, and the start
@@ -52,6 +54,7 @@ from _lib import (
     layout,
     libraries,
     location,
+    pictures,
     tokens,
     viewing_browser,
     viewing_tool,
@@ -323,8 +326,9 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     with tempfile.TemporaryDirectory(prefix="faces-", dir=local) as faces:
         for language, (key,), drawn in pl.drawn(project, results, SVG, wanted.keys):
             scene, numbers = shown[language, project.size_key(key)]
+            handed = project.env.handed(scene, key)
             for number in numbers:
-                made.add(scene, language, key, number, drawn, Path(faces))
+                made.add(scene, language, key, number, drawn, Path(faces), handed)
             made.lost(scene, language, key, numbers, drawn.losses)
     return made.viewed()
 
@@ -487,6 +491,7 @@ class _Made:
         self.words: list[dict[str, Any]] = []
         self.dropped: list[dict[str, Any]] = []
         self.otherwise: list[dict[str, Any]] = []
+        self.profiles: list[dict[str, Any]] = []
         self.refused: list[dict[str, Any]] = []
         self.losses: list[dict[str, Any]] = []
 
@@ -498,9 +503,11 @@ class _Made:
         number: int,
         drawn: Any,
         faces: Path,
+        handed: Mapping[str, seam.Shown],
     ) -> None:
         """One page of the SVG renderer's, of one language and key: its image and its frames,
-        and what the report says of it."""
+        and what the report says of it, each picture `handed` that carries a colour profile
+        among it."""
         page = pages_of(scene)[number - 1]
         at = {"language": language, "key": key, "page": page["id"]}
         try:
@@ -515,6 +522,7 @@ class _Made:
             for each in image.dropped
         )
         self.otherwise.extend({**at, **each} for each in drawn_otherwise(page))
+        self.profiles.extend({**at, **each} for each in with_profiles(page, handed))
 
     def page_file(self, language: str, keys: Sequence[str], name: str, document: bytes) -> None:
         """A page file the HTML renderer wrote, left beside the images as it was written: the
@@ -694,6 +702,7 @@ class _Made:
                 losses=self.losses,
             )
             report["drawn-otherwise"] = self.otherwise
+            report["profiles"] = self.profiles
             return Viewed({**self.files, REPORT: _json(report)}, report)
         if self.stop is None and self.tool is not None:
             report["stands-for"] = (
@@ -846,6 +855,32 @@ def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
                 families = [face.get("family") for face in run.get("fonts", [])]
                 if len(set(families)) > 1:
                     yield {"element": element["id"], "text": run.get("text"), "families": families}
+
+
+#: What the report says of a picture the SVG renderer's page shows with a colour profile.
+WITHOUT_PROFILE = (
+    "the tool may draw the picture without the colour profile it carries, so its colours "
+    "may differ from those a browser draws by it"
+)
+
+
+def with_profiles(
+    page: Mapping[str, Any], handed: Mapping[str, seam.Shown]
+) -> Iterator[dict[str, Any]]:
+    """Each picture `page` shows that carries a colour profile, as it is `handed` to the
+    renderer, which the tool may draw without it (DEC-025 point 5, DEC-015 point 3): its
+    image's trace id and the name of the file it shows. A file the reader cannot read names
+    no profile here: the check names why."""
+    for element in _elements(page):
+        shown = handed.get(str(element.get("id"))) if element.get("type") == "image" else None
+        if shown is None:
+            continue
+        try:
+            read = pictures.read(shown.file.read_bytes(), shown.file.name)
+        except (OSError, ValueError, pictures.Refused):
+            continue
+        if read.profile is not None:
+            yield {"element": element["id"], "picture": shown.file.name, "why": WITHOUT_PROFILE}
 
 
 def write(root: Path, folder: str, viewed: Viewed) -> str:

@@ -178,6 +178,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"loss{accepted}: {_at(each)}: `{each['what']}` {each['did']}: {each['why']}")
     for each in report["drawn-otherwise"]:
         print(f"drawn otherwise: {_at(each)}: {_otherwise(each)}")
+    for each in report.get("profiles", []):
+        print(f"profile: {_at(each)}: `{each['element']}` shows `{each['picture']}`: {each['why']}")
     for each in report.get("refused", []):
         print(f"refused: {each['language']}, {each['key']}: a request for {each['url']}")
     if stand_ins:

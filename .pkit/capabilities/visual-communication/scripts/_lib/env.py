@@ -2,8 +2,9 @@
 
 The engine (`formula`, `layout`, `text`, `scene`) knows nothing of the working folder,
 pieces, the library list or the configuration. It reads every component, role, colour
-family, concept, font and produced picture through an `Env`, which the pipeline builds
-from the project's files, and which the engine's tests stand in for with an in-memory one.
+family, concept, font, produced picture and picture file through an `Env`, which the
+pipeline builds from the project's files, and which the engine's tests stand in for with an
+in-memory one.
 """
 
 from __future__ import annotations
@@ -11,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+
+from _lib.pictures import Judged
 
 
 class MissingFont(Exception):
@@ -106,6 +109,15 @@ class Env(Protocol):
 
     def picture(self, output: str) -> PictureInfo:
         """A produced output of the piece. Raises `KeyError` where the piece has none."""
+        ...
+
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> Judged:
+        """The picture file `name` names, found by its bare name and read (DEC-025 points 2,
+        5 and 9): in the piece's own `pictures/` where `holder` is `piece`, else in the
+        `pictures/` of the version the lock names of the library `holder`. It comes with its
+        findings, each lying where `pictures.Folder` places it: one on the file itself at the
+        file, and one on the name, which `named` gives in words, at `where`, in no file, so
+        the engine places it in what named it, the content or a component."""
         ...
 
     def family(self, name: str) -> dict[str, str]:

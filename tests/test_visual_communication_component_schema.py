@@ -104,6 +104,21 @@ def test_a_text_takes_the_engines_facts() -> None:
     assert DEFS["text"]["oneOf"] == [{"required": ["content"]}, {"required": ["fact"]}]
 
 
+def test_an_image_shows_exactly_one_of_the_engines_sources() -> None:
+    assert DEFS["image"]["oneOf"] == [{"required": [source]} for source in engine.IMAGE_SOURCES]
+
+
+@pytest.mark.parametrize(
+    "image",
+    [{"produced": "text"}, {"content": "text"}, {"file": "logo.png"}],
+    ids=["produced", "content", "file"],
+)
+def test_an_image_of_each_source_holds_the_schema_and_the_engine(image: dict[str, str]) -> None:
+    data = changed("parts.extra", {"image": image, "width": "=:width"})
+    assert problems(data) == []
+    assert engine_issues(data) == []
+
+
 def test_a_part_is_exactly_one_kind_of_the_engines() -> None:
     assert [one["required"] for one in DEFS["part"]["oneOf"]] == [[kind] for kind in engine.KINDS]
 
@@ -282,7 +297,20 @@ def repeat(**more: Any) -> dict[str, Any]:
         ("a use that is no use", {"use": "tag"}),
         ("a line without its ends", {"line": {"stroke": "line"}, "x1": "=0", "y1": "=0"}),
         ("a line without its stroke", {"line": {}, "x1": "=0", "y1": "=0", "x2": "=0", "y2": "=0"}),
-        ("an image without its output", {"image": {}, "width": "=:width"}),
+        ("an image that shows nothing", {"image": {}, "width": "=:width"}),
+        (
+            "an image of a produced output and a picture file",
+            {"image": {"produced": "text", "file": "logo.png"}, "width": "=:width"},
+        ),
+        (
+            "an image of the content's picture file and the library's",
+            {"image": {"content": "text", "file": "logo.png"}, "width": "=:width"},
+        ),
+        (
+            "an image of every source",
+            {"image": {"produced": "text", "content": "text", "file": "a.png"}, "width": "=:width"},
+        ),
+        ("an image of a picture role", {"image": {"role": "picture.logo"}, "width": "=:width"}),
     ],
     ids=lambda value: value if isinstance(value, str) else "",
 )

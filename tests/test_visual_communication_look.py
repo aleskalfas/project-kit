@@ -515,7 +515,7 @@ def test_a_text_over_a_picture_of_its_own_colour_was_drawn(tmp_path: Path) -> No
         key="default",
         colours=colours,
         font_file=lambda _family: FONT,
-        pictures={"red": picture},
+        pictures={"figure/picture": seam.Shown(picture, seam.PNG)},
     )
     [page] = drawn.pages
     faces = tmp_path / "faces"

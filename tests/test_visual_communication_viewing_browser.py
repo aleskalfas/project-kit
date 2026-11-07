@@ -1204,10 +1204,11 @@ def scene_pages(scene: Mapping[str, Any]) -> list[Any]:
 def test_a_real_browser_reads_the_renderers_reference_file_clean(tmp_path: Path) -> None:
     """A picture, an ellipse, a run in two families, a text under a later box and pages of two
     sizes, as the renderer writes them: the reads name nothing."""
-    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture
+    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture, seam
 
     file = tmp_path / "reference.html"
-    file.write_bytes(draw(REFERENCE, pictures={"square": reference_picture(tmp_path)}).document)
+    shown = seam.Shown(reference_picture(tmp_path), seam.PNG)
+    file.write_bytes(draw(REFERENCE, pictures={"first/picture": shown}).document)
     browser = found_browser()
     assert browser is not None
     pages = scene_pages(REFERENCE)

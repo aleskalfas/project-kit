@@ -103,12 +103,13 @@ def render(
     key: str,
     colours: Mapping[str, Mapping[str, Any]],
     font_file: Callable[[str], Path],
-    pictures: Mapping[str, Path],
+    pictures: Mapping[str, seam.Shown],
 ) -> Drawn:
     """`scene` (`Scene.to_dict()`) drawn in the combination `key` as one PDF file: `colours`
     gives each colour role's value there, in canonical form; `font_file` the committed file
-    of a font family. `pictures`, the file of each produced output's variant, is handed to
-    every renderer; this one refuses the image, so it reads none."""
+    of a font family. `pictures`, the picture each image shows there by the image's trace id
+    (`seam.Shown`), is handed to every renderer; this one refuses the image, so it reads
+    none."""
     document = _Document(scene, key, colours, font_file)
     for trace in scene.get("pages", []):
         element = _find(scene.get("children", []), trace)

@@ -58,8 +58,11 @@ DEC-012).
 - a primitive, `box`, `ellipse`, `text`, `line` or `image`, whose own mapping holds its
   properties under SVG's names: `fill`, `stroke`, `stroke-width`, `rx`, `text-anchor`;
   a text's `content` (a field), or `fact` (a fact of its export, one of `FACTS`, which
-  takes no switch), and `style` (a typography role); an image's `produced` (a field
-  naming a produced output). Only a text part shows a field of runs: its `style`
+  takes no switch), and `style` (a typography role); an image's source, exactly one of
+  `produced` (a field naming a produced output), `content` (a field whose text is the bare
+  name of a picture file of the piece) and `file` (the bare name of a picture file of the
+  component's own library version, or of the piece for a local component; DEC-025 points 1
+  to 3). Only a text part shows a field of runs: its `style`
   and `fill` may switch on the run styles of the field it shows, `{by: <field>, <word>:
   <value>, ...}`, naming every word, and give each run the role and the paint its word
   chooses;
@@ -81,6 +84,12 @@ DEC-012).
   `column`: each tie is drawn in the part's whole frame, by default the component's, and
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
 
+**An image** shows a produced output, its variants by key and its exposed points; or a
+picture file, found by its bare name and read through the environment, which judges it
+(`Env.picture_file`). A picture file has no points. A finding on its name lies in what
+named it, the content or the component; one on the file, at the file. A field the content
+leaves empty, and a picture file that cannot be read, draws no image, at zero size.
+
 A part may carry `when`: a field the content fills, a field of runs where one of its
 runs holds text, `{<option>: [<word>, ...]}`, or a switch on a size (below) whose each
 branch is `true`, `false`, or one of those. A missing part has zero size at its
@@ -91,7 +100,8 @@ runs from its start to its end, straight or with corners, never around anything,
 spreads the ends that meet one side of an item evenly (DEC-005 point 2). A line's
 `marker-start` and `marker-end` are `none`, the default, or `arrow`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
-image's height, where none is given, keeps its picture's proportions. Any property
+image's height, where none is given, keeps its picture's proportions, a produced output's
+first variant's or a picture file's. Any property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
 switch on a field's run styles serves only a text part's `style` and `fill`, and no part
 passes a field of runs on, or reads one but in `when`. A colour is a role's token path,
@@ -146,7 +156,7 @@ from __future__ import annotations
 import itertools
 import re
 from collections.abc import Callable, Collection, Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, TypeVar
 
 from _lib import formula as fm
@@ -154,6 +164,7 @@ from _lib import names
 from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, UnvaluedRole
 from _lib.findings import FAILS, Finding
 from _lib.keys import AxisLike, key_order
+from _lib.pictures import Judged, Picture
 from _lib.text import Broken, Faces, Run, Style, break_runs
 
 PRIMITIVES = ("box", "ellipse", "text", "line", "image")
@@ -194,13 +205,17 @@ PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "ellipse": ("fill", "stroke", "stroke-width"),
     "text": ("content", "fact", "style", "fill", "text-anchor"),
     "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
-    "image": ("produced",),
+    "image": ("produced", "content", "file"),
 }
 REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "text": ("style",),
     "line": ("stroke",),
-    "image": ("produced",),
 }
+
+#: What an image shows, of which it names exactly one (DEC-025 point 1): a produced output,
+#: by a field; a picture file of the piece, by a field; a picture file of the component's own
+#: library, by its bare name.
+IMAGE_SOURCES = ("produced", "content", "file")
 
 #: The paint content's `override` points at another role, by kind of part.
 OVERRIDDEN = {"box": "fill", "ellipse": "fill", "text": "fill", "line": "stroke"}
@@ -924,6 +939,9 @@ class Component:
                 self._shape(where, f"the {part.kind} `{part.name}` needs `{key}`")
         if part.kind == "text" and ("content" in part.props) == ("fact" in part.props):
             self._shape(where, f"the text `{part.name}` names one of `content` and `fact`")
+        if part.kind == "image" and sum(key in part.props for key in IMAGE_SOURCES) != 1:
+            sources = ", ".join(f"`{source}`" for source in IMAGE_SOURCES)
+            self._shape(where, f"the image `{part.name}` names exactly one of {sources}")
         # A text part that shows a field of runs may choose its role and paint by the
         # field's run styles (DEC-012 point 2).
         shown = part.props.get("content") if part.kind == "text" else None
@@ -943,9 +961,11 @@ class Component:
             elif key == "fact":
                 if value not in FACTS:
                     self._shape(at, f"`fact` takes {', '.join(FACTS)}, and no `{value}`")
+            elif key == "file":
+                continue  # a picture file's bare name, judged where it is drawn
             elif not _is_field(value, self.fields):  # content, produced
                 self._shape(at, f"`{key}` names no field `{value}`")
-            elif key == "produced" and value in self.runs:
+            elif part.kind == "image" and value in self.runs:
                 self._shape(
                     at,
                     f"the image `{part.name}` names the field of runs `{value}`, which only a "
@@ -1693,7 +1713,7 @@ class Context:
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
         self.active: set[tuple[int, tuple[str, ...]]] = set()
-        self._seen: set[tuple[str, str, str]] = set()
+        self._seen: set[tuple[str, str, str, str, str]] = set()
         self._components: dict[str, Component | None] = {}
         self._unreadable: set[str] = set()
         self._roles: dict[str, Any] = {}
@@ -1727,7 +1747,7 @@ class Context:
         self.add(self.finding(code, message, where=where, use=use))
 
     def add(self, finding: Finding) -> None:
-        key = (finding.code, finding.where, finding.message)
+        key = (finding.code, finding.file, finding.where, finding.message, finding.library)
         if key not in self._seen:
             self._seen.add(key)
             self.findings.append(finding)
@@ -1740,6 +1760,21 @@ class Context:
             if fault.finding is not None:
                 self.add(fault.finding)
             return default
+
+    def picture_file(
+        self, holder: str, name: object, *, named: str, where: str, use: str
+    ) -> Judged:
+        """The picture file `name` names, of the piece where `holder` is `piece`, else of the
+        version the lock names of the library `holder`, judged through the environment
+        (`Env.picture_file`), its findings recorded. One on the file lies at the file. One on
+        the name lies at `where` in the component `use`, which names the file, or, with no
+        `use`, in the content, as every finding on what the content gave."""
+        judged = self.env.picture_file(holder, name, named=named, where=where)
+        for finding in judged.findings:
+            if not finding.file and use:
+                finding = replace(finding, extra={**finding.extra, "component": use})
+            self.add(finding)
+        return judged
 
     def library(self, use: str) -> str:
         """`<library>@<version>` of the library a component lies in; empty for the piece's
@@ -1919,8 +1954,14 @@ class Node:
     items: list[Instance] = field(default_factory=list)
     text: str = ""
     runs: list[TextRun] = field(default_factory=list)
+    # An image of a produced output: the output, as its record keeps it, and its name.
     picture: PictureInfo | None = None
     output: str = ""
+    # An image of a picture file: its bare name, where it lies, `piece` or a library's
+    # name, and the file as the reader read it (DEC-025 points 2 and 3).
+    file: str = ""
+    holder: str = ""
+    read: Picture | None = None
 
     @property
     def line_height(self) -> float:
@@ -2462,6 +2503,50 @@ class Instance:
         node.present = False
 
     def _build_image(self, node: Node, trace: str) -> None:
+        """The picture an image shows (DEC-025 points 1 to 3): a produced output, by the field
+        `produced` names; a picture file of the piece, by the bare name the field `content`
+        names holds, whichever component draws it; or a picture file of the component's own
+        library version, or of the piece for a local component, by `file`. A field the
+        content leaves empty draws nothing, at zero size, with no finding; so does a picture
+        file that cannot be read, which is its finding. An image that names none of them is
+        recorded when its component was read."""
+        props = node.part.props
+        if "produced" in props:
+            self._build_produced(node, trace)
+        elif "content" in props:
+            shown = props["content"]
+            name = self.given.get(shown)
+            if not isinstance(name, str) or not name:
+                node.present = False
+                return
+            source = self.source_of_field(shown)
+            where = source[len(CONTENT) :] if source.startswith(CONTENT) else trace
+            named = f"the content's `{where}`"
+            self._show_file(node, names.PIECE, name, named=named, where=where, use="")
+        elif "file" in props:
+            use = self.component.use
+            where = f"parts.{node.part.name}.image.file"
+            named = f"{use}: the image `{node.part.name}`"
+            library = use.partition("/")[0]
+            self._show_file(node, library, props["file"], named=named, where=where, use=use)
+        else:
+            node.present = False
+
+    def _show_file(
+        self, node: Node, holder: str, name: object, *, named: str, where: str, use: str
+    ) -> None:
+        """The picture file `name` of `holder` an image shows, judged (`Context.picture_file`);
+        the image is not drawn where it cannot be read."""
+        judged = self.ctx.picture_file(holder, name, named=named, where=where, use=use)
+        if judged.picture is None or not isinstance(name, str):
+            node.present = False
+            return
+        node.file, node.holder, node.read = name, holder, judged.picture
+
+    def _build_produced(self, node: Node, trace: str) -> None:
+        """A produced output's picture, from its record: missing where the piece has no such
+        output; its variants of one pixel size and one set of points, as one scene holds
+        them (DEC-005 point 5)."""
         produced = node.part.props.get("produced", "")
         output = self.given.get(produced)
         if not isinstance(output, str):
@@ -2978,6 +3063,8 @@ class Instance:
         if part.kind == "image" and key == "height" and node.picture is not None:
             pixels = node.picture.variants[first_variant(node.picture)]["pixels"]
             return self.get("part", name, "width") * pixels["height"] / pixels["width"]
+        if part.kind == "image" and key == "height" and node.read is not None:
+            return self.get("part", name, "width") * node.read.height / node.read.width
         if node.child is not None:
             return node.child.get("preferred", key)
         if part.kind == "repeat" and self.component.ties(part) is not None:
@@ -3603,13 +3690,17 @@ def _point_part(item: Instance, point: str) -> str | None:
 
 
 def _pictured(item: Instance) -> bool:
-    """Whether every image part `item` exposes and draws has its picture: where one has
-    none, the missing picture is the finding."""
+    """Whether every image part of a produced output `item` exposes and draws has its
+    picture: where one has none, the missing picture is the finding. A picture file has no
+    points, so an end at one is its own finding (DEC-025 point 7)."""
     nodes = [item.nodes.get(name) for name in item.component.exposes]
     return all(
         node.picture is not None
         for node in nodes
-        if node is not None and node.present and node.part.kind == "image"
+        if node is not None
+        and node.present
+        and node.part.kind == "image"
+        and "produced" in node.part.props
     )
 
 
