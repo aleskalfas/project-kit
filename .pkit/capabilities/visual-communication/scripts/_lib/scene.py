@@ -30,9 +30,10 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   item of the field that holds the pages, `<field>[<id>]`, and lies at the top's origin,
   as large as the top. Each drawn property names its source: `content:<field path>`, a
   run of a list of runs by its place, `<field path>#<place>`, as an item with no id,
-  `fact:<word>`, `option:<name>`, `default:<library>/<component>`, `role:<token path>` or
-  `engine`. A value the component leaves to the engine, such as a text's `text-anchor`
-  where it gives none, is the engine's.
+  `fact:<word>`, `option:<name>`, `size:<axis>`, a size axis a switch chose by,
+  `default:<library>/<component>`, `role:<token path>` or `engine`. A value the
+  component leaves to the engine, such as a text's `text-anchor` where it gives none, is
+  the engine's.
 - **The root** holds the piece, its lock, the language, the key over its size axes, the
   seam's version, and the trace ids of its pages in order.
 
@@ -59,8 +60,10 @@ from _lib.layout import (
     Facts,
     Instance,
     Node,
+    Sizes,
     TextRun,
     place_top,
+    source_of_choice,
 )
 from _lib.text import MEASURED, Broken, paragraphs
 
@@ -159,11 +162,14 @@ def compute_scene(
     seam_version: int,
     env: Env,
     facts: Facts,
+    sizes: Sizes | None = None,
 ) -> SceneResult:
     """The scene of a piece in one language and size combination, with what computing it
     found. `facts` fills the facts of its export, and no caller takes one by default (DEC-016
-    point 5). Raises `MissingFont`, or `MissingGlyph`, before anything is laid out."""
-    ctx = Context(env, language, facts)
+    point 5). `sizes` gives the size axes a piece can name, each at its mode at `size_key`
+    (DEC-021 point 3); none where it is not given. Raises `MissingFont`, or `MissingGlyph`,
+    before anything is laid out."""
+    ctx = Context(env, language, facts, sizes)
     root = place_top(ctx, top, content)
     pages: list[str] = []
     children = []
@@ -353,7 +359,7 @@ class _Emitter:
         _, _, chosen = instance.pick(f"{where}.text-anchor", anchor_raw)
         anchor = instance.word(f"{where}.text-anchor", anchor_raw, "start")
         given = f"default:{instance.component.use}" if anchor_raw is not None else ENGINE
-        element.set("text-anchor", anchor, f"option:{chosen}" if chosen else given)
+        element.set("text-anchor", anchor, source_of_choice(chosen) if chosen else given)
         tallest = max(node.runs, key=lambda run: run.style.line_height).style
         element.set("line-height", length(node.line_height), f"role:{tallest.role}")
         element.set("text", node.text, instance.source_of_text(node.part))
@@ -415,7 +421,9 @@ class _Emitter:
         if chosen and chosen in instance.component.runs:
             style_source = run.word_source
         else:
-            style_source = f"option:{chosen}" if chosen else f"default:{instance.component.use}"
+            style_source = (
+                source_of_choice(chosen) if chosen else f"default:{instance.component.use}"
+            )
         role = f"role:{style.role}"
         held: dict[str, Any] = {"text": text}
         sources = {"text": run.source, "style": style_source}

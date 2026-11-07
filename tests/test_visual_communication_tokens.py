@@ -271,7 +271,8 @@ PX = {"value": 5, "unit": "px"}
         (RESOLVER, setting("resolutionOrder", [{"$ref": "#/sets/palette"}]), "resolver-shape"),
         (RESOLVER, setting("modifiers|density", {"contexts": {}, "default": "x"}), "brand-axis"),
         (RESOLVER, setting("modifiers|colour-scheme|default", "dark"), "brand-axis"),
-        (RESOLVER, dropping("modifiers|contrast|contexts|high"), "brand-axis"),
+        (RESOLVER, dropping("modifiers|contrast|contexts|standard"), "brand-axis"),
+        (RESOLVER, setting("modifiers|contrast|contexts|low", []), "brand-axis"),
         (RESOLVER, setting("sets|base|sources", [{"$ref": "../base.json"}]), "brand-file"),
         (RESOLVER, setting("sets|base|sources", [{"$ref": "tokens/none.json"}]), "brand-file"),
     ],
@@ -645,6 +646,162 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
     document = pl.Project(piece, lock, held).values()
     assert document["tokens"]["accent"]["values"]["colour-scheme.dark"] == ORANGE
     assert document["tokens"]["space.4"]["values"]["default"] == {"value": 40, "unit": "px"}
+
+
+# --- the axes a brand has (DEC-021 point 2) ------------------------------------------------------
+
+#: The size axis the foundations come to declare (DEC-021 point 1), as a line of `axes`.
+DEVICE = "  device: {kind: size, modes: [desktop, tablet, phone], default: desktop}\n"
+
+PHONE = "tokens/phone.tokens.json"
+
+#: The test brand's `space.3`, and its value on a phone where a brand gives that size.
+WIDE, NARROW = {"value": 16, "unit": "px"}, {"value": 8, "unit": "px"}
+
+
+def with_device(text: str) -> str:
+    """The text of a `roles.yaml` with the size axis `device` beside its other axes."""
+    assert "axes:\n" in text
+    return text.replace("axes:\n", "axes:\n" + DEVICE)
+
+
+@pytest.fixture(scope="module")
+def sized(tmp_path_factory: pytest.TempPathFactory) -> Any:
+    """The shipped foundations' declarations, with the size axis `device`."""
+    path = tmp_path_factory.mktemp("sized") / "roles.yaml"
+    path.write_text(with_device(ROLES.read_text(encoding="utf-8")), encoding="utf-8")
+    return tokens.read_declarations(path)
+
+
+def giving_device(folder: Path, contexts: dict[str, Any] | None = None) -> Path:
+    """The brand at `folder`, made to vary `device` in a modifier of its Resolver document:
+    by `contexts`, or at `desktop` as it is and with a narrower `space.3` on a `phone`."""
+    narrow = {"space": {"$type": "dimension", "3": {"$value": NARROW}}}
+    write(folder / PHONE, json.dumps(narrow))
+
+    def change(data: dict[str, Any]) -> None:
+        given = {"desktop": [], "phone": [{"$ref": PHONE}]} if contexts is None else contexts
+        data["modifiers"]["device"] = {"contexts": given, "default": "desktop"}
+        data["resolutionOrder"].append({"$ref": "#/modifiers/device"})
+
+    edit_json(folder / f"{folder.parent.name}.resolver.json", change)
+    return folder
+
+
+def test_a_value_mode_the_brand_does_not_give_takes_its_values_at_the_default(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    """The copy gives the contrast at `standard` alone, with the test brand's high-contrast
+    values: so at `high` too."""
+    folder = brand_copy(tmp_path)
+    strong = {"standard": [{"$ref": "tokens/high-contrast.tokens.json"}]}
+    edit_json(folder / RESOLVER, setting("modifiers|contrast|contexts", strong))
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == ()
+    assert read.axes == brand.axes
+    assert len(read.combinations()) == 4
+    for combination in brand.combinations():
+        at_high = {**combination, "contrast": "high"}
+        for path in ("line", "text-primary", "background"):
+            assert read.resolve(path, combination) == brand.resolve(path, at_high)
+
+
+def test_a_brand_built_on_another_keeps_its_bases_values_at_a_mode_it_does_not_give(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    """The edition gives the colour scheme at `light` alone, with its orange accent: in the
+    dark scheme, the base's accent holds."""
+    base, folder = chain_copy(tmp_path)
+    light = {"light": [{"$ref": DARK}]}
+    resolver = folder / "test-edition.resolver.json"
+    edit_json(resolver, setting("modifiers|colour-scheme|contexts", light))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.axes == brand.axes
+    assert read.resolve("accent", {}) == ORANGE
+    assert read.resolve("accent", DARK_MODE) == brand.resolve("accent", DARK_MODE) != ORANGE
+
+
+def test_a_brand_that_gives_no_size_keeps_its_axes_and_combinations(sized: Any, brand: Any) -> None:
+    assert sized.axes["device"].kind == "size"
+    read = tokens.read_brand(TEST_BRAND, sized)
+    assert read.findings == ()
+    assert read.axes == brand.axes
+    assert [keys.key_of(c, read.axes) for c in read.combinations()] == [
+        keys.key_of(c, brand.axes) for c in brand.combinations()
+    ]
+    with pytest.raises(keys.BadKey, match="`device`"):
+        read.resolve("space.3", {"device": "phone"})
+
+
+def test_a_brand_has_a_size_axis_with_the_modes_its_modifier_gives(
+    tmp_path: Path, sized: Any
+) -> None:
+    read = tokens.read_brand(giving_device(brand_copy(tmp_path)), sized)
+    assert read.findings == ()
+    assert read.axes["device"] == tokens.Axis("device", "size", ("desktop", "phone"), "desktop")
+    assert read.axes["colour-scheme"] == sized.axes["colour-scheme"]
+    assert len(read.combinations()) == 8
+    assert read.resolve("space.3", {}) == WIDE
+    assert read.resolve("space.3", {"device": "phone", "contrast": "high"}) == NARROW
+    with pytest.raises(keys.BadKey, match="`tablet` is not a mode of `device`"):
+        read.resolve("space.3", {"device": "tablet"})
+
+
+def test_a_size_axis_a_brand_gives_holds_its_default(tmp_path: Path, sized: Any) -> None:
+    folder = giving_device(brand_copy(tmp_path), {"phone": [{"$ref": PHONE}]})
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, sized)
+    (finding,) = raised.value.findings
+    assert finding.code == "brand-axis"
+    assert "must give the axis's default, `desktop`" in finding.message
+
+
+def test_a_brand_built_on_another_has_its_bases_sizes(tmp_path: Path, sized: Any) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_device(base)
+    read = tokens.read_brand(folder, sized, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.axes == read.base.axes
+    assert read.axes["device"].modes == ("desktop", "phone")
+    assert read.resolve("space.3", {"device": "phone"}) == NARROW
+    assert read.resolve("space.4", {"device": "phone"}) == {"value": 40, "unit": "px"}
+
+    bare, edition = chain_copy(tmp_path / "bare")
+    giving_device(edition, {"desktop": []})
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(edition, sized, locked={"test-brand": bare})
+    (finding,) = [f for f in raised.value.findings if f.code == "base-axis"]
+    assert "the modifier `device` adds an axis" in finding.message
+
+
+def piece_on_device(tmp_path: Path, brand: Path, modes: dict[str, list[str]]) -> Any:
+    """A project whose foundations declare `device`, holding `brand` as `test-brand`, and
+    a piece in it drawn in `modes`: its lock, and what it is read with."""
+    root = project(tmp_path)
+    roles = copy_library(root, FOUNDATIONS, "foundations", "1.0.0") / "roles.yaml"
+    roles.write_text(with_device(roles.read_text(encoding="utf-8")), encoding="utf-8")
+    copy_library(root, brand, "test-brand", "1.0.0")
+    write_piece(root, "card", brand="test-brand", modes=modes)
+    write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
+    held = libraries.Held(root, "visual", (0, 1, 0))
+    piece = pl.read_piece(root, "visual", "card")
+    return piece, libraries.move_lock(held, pl.needed(piece)).lock, held
+
+
+def test_a_piece_names_only_a_size_its_brand_gives(tmp_path: Path) -> None:
+    piece, lock, held = piece_on_device(tmp_path / "none", TEST_BRAND, {"device": ["phone"]})
+    with pytest.raises(pl.Refused, match="`modes`: `device` is not an axis"):
+        pl.Project(piece, lock, held)
+
+    given = giving_device(brand_copy(tmp_path))
+    piece, lock, held = piece_on_device(tmp_path / "some", given, {"device": ["tablet"]})
+    with pytest.raises(pl.Refused, match="`modes`: `tablet` is not a mode of `device`"):
+        pl.Project(piece, lock, held)
+
+    piece, lock, held = piece_on_device(tmp_path / "phone", given, {"device": ["desktop", "phone"]})
+    document = pl.Project(piece, lock, held).values()
+    assert document["keys"] == ["default", "device.phone"]
+    assert document["tokens"]["space.3"]["values"]["device.phone"] == NARROW
 
 
 # --- contrast -----------------------------------------------------------------------------------

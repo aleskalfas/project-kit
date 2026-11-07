@@ -14,7 +14,8 @@ those build on (`libraries.newest_of_majors`).
 - **Read by the engine.** The foundations' declarations and the version's own roles, the
   scope of the versions it is read with (`tokens.read_scope`). Each of its components, the
   file of each under `components/`, through the environment of a library checked alone,
-  which no piece or brand stands behind (`pipeline.LibraryEnv`). A brand over its base,
+  which no piece or brand stands behind (`pipeline.LibraryEnv`), a switch or a `when` by a
+  size against the size axes of the foundations it is read with. A brand over its base,
   its tokens and its fonts opened as the engine opens them. A notation against the
   foundations' colour families. It computes no scene.
 
@@ -148,7 +149,9 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
     brand = None
     if library.kind == "components":
         env = pl.LibraryEnv(chosen, scope)
-        ctx = layout.Context(env, "")
+        # A switch or a `when` by a size reads the foundations' size axes; nothing is placed,
+        # so no mode is read (DEC-021 point 7).
+        ctx = layout.Context(env, "", sizes=layout.Sizes(pl.size_axes(scope.axes)))
         for path in held.files(name, version):
             if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
                 continue

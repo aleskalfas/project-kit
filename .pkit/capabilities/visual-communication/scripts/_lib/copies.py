@@ -805,6 +805,12 @@ def no_lock(is_final: bool) -> str:
     return WRITE_BACK if is_final else FIRST_RENDER
 
 
+def take_up_command(piece: str) -> str:
+    """The command that takes a final piece up again, as a new piece a person names: no state
+    leads out of final (DEC-017 points 5 and 8)."""
+    return f"`pkit visual take-up {piece} <name>`"
+
+
 def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
     """A piece's lock, from its `piece.yaml`: its `lock`, `state` and, of a draft, `pinned`.
     Its record of exports says whether it is final, and one that cannot be read makes it so

@@ -453,8 +453,10 @@ def test_one_document_gives_one_style_sheet(brand: Any) -> None:
 def test_it_refuses_a_size_axis_another_form_or_document_and_missing_combinations(
     brand: Any,
 ) -> None:
+    """A size axis never reaches the writer: the command hands it a brand's values at the
+    default of each size (DEC-021 point 8), so one handed to it is refused."""
     doc, axes = written_document(brand), axes_of(brand)
-    with pytest.raises(css.CssError, match="size axis"):
+    with pytest.raises(css.CssError, match=r"size axis; .* at the default of every other axis"):
         css.write(doc, {**axes, "contrast": {**axes["contrast"], "kind": "size"}})
     with pytest.raises(css.CssError, match="form 2"):
         css.write(doc, axes, form=2)
