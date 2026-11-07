@@ -1357,7 +1357,7 @@ def test_the_skeleton_piece_with_its_picture_fails_nothing(tmp_path: Path) -> No
     write_picture(root, framing)
     report = checks.check(root)
     assert not report.failed()
-    assert {f.code for f, _ in report.judged} == {"component-experimental"}
+    assert {f.code for f, _ in report.judged} == {"component-experimental", "picture-role-unvalued"}
     assert report.summary == [
         "1 piece(s) in `visual`: the scenes of 0 read from their findings record, of 1 "
         "computed now, of 0 not checked."
@@ -1890,6 +1890,47 @@ def test_a_version_that_names_majors_no_versions_fit_cannot_be_checked_alone(
     [(missing, level)] = judged(report, "alone-missing")
     assert (level, missing.library) == ("fails", "")
     assert checks.place(missing) == "visual/libraries/libraries.yaml#libraries.test-parts"
+
+
+def test_a_picture_role_a_library_other_than_the_foundations_declares_fails(
+    tmp_path: Path,
+) -> None:
+    """Only the foundations declare a picture role (DEC-025 points 4 and 9)."""
+    root = parts_project(tmp_path)
+    roles = root / PARTS_FOLDER / "1.0.0" / "roles.yaml"
+    roles.write_text(
+        roles.read_text(encoding="utf-8").replace(
+            "  test-parts.warning: {type: color}\n",
+            "  test-parts.warning: {type: color}\n  test-parts.logo: {type: picture}\n",
+        ),
+        encoding="utf-8",
+    )
+    report = checks.check(root)
+    assert report.failed()
+    [(finding, level)] = judged(report, "role-picture")
+    assert level == "fails"
+    assert checks.place(finding) == f"{PARTS_FOLDER}/1.0.0/roles.yaml#roles.test-parts.logo"
+
+
+def test_a_logo_the_brand_names_its_version_does_not_hold_fails_and_one_it_holds_passes(
+    tmp_path: Path,
+) -> None:
+    """A brand that gives `picture.logo` a value names a file of its version's `pictures/`
+    (DEC-025 point 9). Giving one, it states no fact."""
+    root = parts_project(tmp_path)
+    path = root / BRAND_FOLDER / "tokens" / "base.tokens.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["picture"] = {"logo": {"$extensions": {"pkit.visual-communication": {"file": "logo.png"}}}}
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    report = checks.check(root)
+    assert report.failed()
+    [(finding, level)] = judged(report, "picture-missing")
+    assert level == "fails"
+    assert checks.place(finding) == f"{BRAND_FOLDER}/tokens/base.tokens.json#picture.logo"
+    write(root / BRAND_FOLDER / "pictures" / "logo.png", "")
+    report = checks.check(root)
+    assert not report.failed()
+    assert judged(report, "picture-missing") == judged(report, "picture-role-unvalued") == []
 
 
 # --- a part that reads a library's role with no value (DEC-008 points 8 and 9) -----------------

@@ -642,13 +642,15 @@ class _Run:
                 env = pl.LibraryEnv(chosen, scope)
                 found = [*scope.findings_of(name), *default_clashes(self.held, library, env)]
             elif library.kind == "brand" and FOUNDATIONS in folders:
-                found = tokens.read_brand(
+                brand = tokens.read_brand(
                     library.folder,
                     tokens.read_scope(folders, root=self.root),
                     fonts=self.root / self.location / pl.FONTS,
                     root=self.root,
                     locked=folders,
-                ).findings
+                )
+                # What the version alone states, which no piece's lock reads (DEC-025 point 9).
+                found = [*brand.findings, *brand.facts]
             else:
                 found = []
         except tokens.TokenError as exc:

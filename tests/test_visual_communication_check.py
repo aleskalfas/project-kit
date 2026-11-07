@@ -178,7 +178,8 @@ def test_past_the_validations_bound_a_piece_without_a_record_fails_as_not_checke
     write_picture(root, framing)
     found = document(root, PKIT_COMMAND_DEADLINE=str(time.time()))
     assert [(f["severity"], f["location"], f["label"]) for f in found["findings"]] == [
-        ("error", f"{PIECE_FOLDER}/findings.yaml", "not-checked")
+        ("info", "visual/libraries/test-brand/1.0.0/#picture.logo", "picture-role-unvalued"),
+        ("error", f"{PIECE_FOLDER}/findings.yaml", "not-checked"),
     ]
     # A record that verifies is read whatever the bound.
     assert run_main(render, PIECE, cwd=root).returncode == 0

@@ -122,11 +122,21 @@ def test_it_names_the_foundations_alone_opens_no_role_and_holds_no_component() -
 # --- its values -------------------------------------------------------------------------------
 
 
-def test_it_gives_every_shared_role_a_value_in_every_combination(brand: Any) -> None:
-    shared = read(FOUNDATIONS / "roles.yaml")["roles"]
+def test_it_gives_every_shared_role_but_its_logo_a_value_in_every_combination(
+    brand: Any,
+) -> None:
+    """It gives `picture.logo` no value, which no brand owes, so it does not export it, and
+    its version states so (DEC-025 points 4 and 9)."""
+    shared = {
+        role: declared
+        for role, declared in read(FOUNDATIONS / "roles.yaml")["roles"].items()
+        if declared["type"] != tokens.PICTURE
+    }
     assert brand.findings == ()
     assert len(brand.combinations()) == math.prod(len(a.modes) for a in brand.axes.values())
     assert set(shared) <= set(brand.roles)
+    assert "picture.logo" not in brand.roles
+    assert [(f.code, f.where) for f in brand.facts] == [("picture-role-unvalued", "picture.logo")]
     for role, combination in itertools.product(shared, brand.combinations()):
         assert brand.resolve(role, combination) is not None, (role, combination)
 
@@ -284,13 +294,17 @@ def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 
 
 def test_every_reference_render_passes_the_check_under_it(location: Path) -> None:
+    """The brand's version states, once, that it gives `picture.logo` no value, and no
+    piece states it (DEC-025 point 9)."""
     report = checks.check(location)
     found = [
-        (level, finding.code, finding.file, finding.message)
+        (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
         if finding.code != "component-experimental"
     ]
-    assert found == []
+    assert found == [
+        ("fact", "picture-role-unvalued", "visual/libraries/neutral/1.0.0/", "picture.logo")
+    ]
     assert not report.failed()
 
 

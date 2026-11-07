@@ -83,6 +83,8 @@ pkit:
         - visual-communication:DEC-019#8
         - visual-communication:DEC-021#5
         - visual-communication:DEC-021#7
+        - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#9
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -112,6 +114,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#notations
+        - .pkit/capabilities/visual-communication/files.md#picture-roles
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
@@ -307,6 +310,7 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 |---|---|---|
 | `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
 | `roles-declaration` | A library other than the foundations declares `axes` or `families`, which are the foundations' alone. It is not read. | fails |
+| `role-picture` | A library other than the foundations declares a role of the type `picture`. Only the foundations declare a picture role (DEC-025 point 4). The role is not read. | fails |
 | `role-default`, `default-dangling`, `default-loop` | A library's own role has a default that is no alias, or that aliases a component token, a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). The role takes no default. | fails |
 | `pair-defaults` | A library's pair, at its defaults, falls on no pair the foundations, the library or a library it builds on declares at a level as strict (DEC-008 point 6). | fails |
 | `role-brand-only` | A library's own role whose chain of defaults does not end at a shared role, so only a brand that gives it a value draws it. States a fact. | states a fact |
@@ -320,10 +324,13 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
 | `brand-axis` | A modifier is no shared axis, gives a mode the axis lacks, gives no context for its default, or defaults to another mode. Stops the brand. | fails |
 | `tokens-unreadable`, `tokens-shape`, `token-name`, `token-type`, `token-value`, `token-shared-group` | A token file cannot be read, or holds a key, a name, a type or a value format 1 does not read, or a brand's own token in a group of the shared roles. Stops the brand. | fails |
-| `role-missing`, `role-type` | The brand gives a shared role no value, or a value of another type, in some combination. Stops the brand. | fails |
-| `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, to a role of a library the brand does not name or to one with no value under it, or lead to a token of another type. Stops the brand. | fails |
+| `role-missing`, `role-type` | The brand gives a shared role other than a picture role no value, or a value of another type, in some combination. Stops the brand. | fails |
+| `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, to a role of a library the brand does not name or to one with no value under it, or lead to a token of another type. Or an alias leads to a picture role, which no token aliases. Stops the brand. | fails |
 | `alias-private` | An alias leads to a token that the brand's base, or a base below it, keeps private. A brand aliases only the roles its base exports. Stops the brand. | fails |
-| `value-axis-changes-size` | A mode of a value axis changes something other than a colour. Stops the brand. | fails |
+| `value-axis-changes-size` | A mode of a value axis changes something other than a colour or a picture. Stops the brand. | fails |
+| `picture-shape`, `picture-name` | A picture role's value is no empty group that names its file as `{"file": "<name>"}` in the capability's extension key. Or the name is no picture file's bare name ([Picture roles](files.md#picture-roles)). Stops the brand. | fails |
+| `picture-missing` | A picture role's value names a file the brand's version does not hold in `pictures/` by that exact name. Or the file is a symbolic link. | fails |
+| `picture-role-unvalued` | The brand gives a shared picture role, such as `picture.logo`, no value. Its version states it once, checked alone, and no piece does (DEC-025 point 9). | states a fact |
 | `open-shape`, `open-unknown` | `open` in the brand's `library.yaml` is not a list, or names no role the brand exports, nor a group of them, or names roles of a library the brand does not name. | fails |
 | `open-wider` | An entry of the brand's `open` names roles its base does not open to it. It opens only those its base opens. | fails |
 | `library-role-missing` | The brand names a library and gives one of its roles that has no default no value in some combination (DEC-008 point 4). | fails |

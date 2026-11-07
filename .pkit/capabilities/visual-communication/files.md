@@ -135,6 +135,10 @@ pkit:
         - visual-communication:DEC-019#11
         - visual-communication:DEC-020#7
         - visual-communication:DEC-021#2
+        - visual-communication:DEC-025#2
+        - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#9
+        - visual-communication:DEC-025#10
 ---
 
 # The files of the visual work
@@ -581,7 +585,7 @@ The capability ships the foundations' version being built at `.pkit/capabilities
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure` and `size.slide`, a slide's width. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code.
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure` and `size.slide`, a slide's width. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 
@@ -609,7 +613,7 @@ pairs:
   - {text: family.blue.text, under: family.blue.fill, level: text}
 ```
 
-- **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number` or `typography`. A role carries no value: a brand gives it one. A role may carry a `default`, `{<role>}`, which it takes wherever no brand gives it a value. A shared role's default aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
+- **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number`, `typography` or `picture`. A role carries no value: a brand gives it one. A role of the type `picture` takes a picture file of the brand as its value ([Picture roles](#picture-roles)). Only the foundations declare one, with no default, and no brand owes it a value (DEC-025 point 4). A role may carry a `default`, `{<role>}`, which it takes wherever no brand gives it a value. A shared role's default aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
 - **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them. The foundations alone declare axes.
 - **`families`** maps each colour family to its members, each naming a colour role. A notation maps a concept to a family by its name ([Notations](#notations)). The foundations alone declare families.
 - **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*Brands, tokens and contrast* in *What the check reports*).
@@ -635,7 +639,7 @@ pairs:
 - **A default lies below every brand's value** (DEC-008 point 1). The capability merges a brand's sources over the defaults, then resolves the aliases, so a default follows the value the brand gives the role it aliases. `test-parts.note` takes the brand's `text-primary` through `test-parts.ink`, wherever the brand gives neither its own value.
 - **A role with no default** takes a value only from a brand, as `test-parts.warning` does. A role whose chain of defaults ends at one, rather than at a shared role, has no value under a brand that gives none along it. Only a role whose chain ends at a shared role draws under every brand.
 - **Each pair names one of its own roles.** At its defaults, each of the library's own roles replaced by the role its default aliases, a pair falls on one that the foundations, the library or a library it builds on declares, in either order, at a level that needs as much contrast or more (DEC-008 point 6). `test-parts.ink` on `test-parts.paper` falls on the foundations' `text-primary` on `background`. Under a brand, a library's pair is measured only where the brand's values reach it: a value the brand gives a library's role along either role's chain of defaults. It is then measured in every combination where both roles have a value.
-- **It declares no `axes` and no `families`,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
+- **It declares no `axes`, no `families` and no picture role,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
 
 ### What a release compares
 
@@ -659,9 +663,9 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
   - **A top's layouts.** A layout or a slot removed breaks, and so does a new required slot (DEC-003 point 6, DEC-009 point 7). A top that makes its layouts its pages' forms, or ceases to, breaks too (DEC-010 point 7). A new layout and a new optional slot are additions. A slot of a page's form is compared as a field is, and a slot that comes to hold pages, or ceases to, breaks.
 - **A library's own roles.** A role promises what the components that read it promise (DEC-008 point 7). So only an own role a stable or deprecated component reads, directly or through a default, can break. It breaks where it is removed, changes type, or no longer ends its chain of defaults at a shared role, where it did. A new one such a component reads breaks where its chain ends at no shared role, and any other new own role is an addition.
 - **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
-- **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition.
+- **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition, and so is a new picture role, which no brand owes a value. A new top group of the shared roles breaks, even where each of its roles carries a default. No library takes its name (DEC-004 point 7), so it fails a library already named so (DEC-025 point 10).
 - **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new axis, mode, colour family or member is an addition.
-- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition. So a size a brand comes to give is an addition, and one it ceases to give breaks.
+- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition. So a size a brand comes to give is an addition, and one it ceases to give breaks. So is a logo, since a brand exports a picture role only where it gives it a value ([Picture roles](#picture-roles)).
 
 Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made, and the release refuses. A brand's component tokens are not compared yet.
 
@@ -731,11 +735,33 @@ The Resolver document holds `version` (`2025.10`), `sets`, `modifiers` and `reso
 - **A modifier** is a shared axis the brand varies. Its `contexts` hold one list of sources for each mode the brand gives, the axis's default among them. Its `default` is the axis's default. What a mode the brand leaves out takes is under [Axes and modes](#axes-and-modes).
 - **`resolutionOrder`** names each set and each modifier once, as `{"$ref": "#/sets/<name>"}` or `{"$ref": "#/modifiers/<name>"}`. A later source wins.
 
-For each combination of modes, the capability merges the brand's sources in resolution order, over the roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles, and each role of a library it names that it gives a value ([A library's roles](#a-librarys-roles)). Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
+For each combination of modes, the capability merges the brand's sources in resolution order, over the roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role but a picture role must have a value of its declared type in every combination. The brand *exports* the shared roles, and each role of a library it names that it gives a value ([A library's roles](#a-librarys-roles)). It exports a picture role only where it gives it a value ([Picture roles](#picture-roles)). Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
 
 ### Fonts
 
 A `fontFamily` token names each family's font file in the capability's extension key, `pkit.visual-communication`, as `font.body` does above. `files` maps each family to a file of the brand's version folder, or to `{"hash": "sha256:<hex>"}`. A family named by its hash is a font the brand may not ship. The project commits it in the location's `fonts/`, where the capability finds it by the hash of its bytes (DEC-004 point 9). `measure` is `file`: the font is measured from its file. A font file is committed unchanged with its licence, where its licence allows (DEC-004 point 9).
+
+### Picture roles
+
+A *picture role* is a role whose value is a picture file of the brand's version (DEC-025 point 4). The foundations declare the shared picture roles in one group, `picture`. The first is `picture.logo`, the brand's logo. Only the foundations declare a picture role.
+
+A brand gives a picture role its value as an empty group at the role's path. DTCG has no type for a file, so the group carries no `$type`. Its `$extensions` name the file in the capability's extension key, by its bare name:
+
+```json
+{
+  "picture": {
+    "logo": {"$extensions": {"pkit.visual-communication": {"file": "logo.png"}}}
+  }
+}
+```
+
+- **The file** lies in the `pictures/` folder of the brand's version. Its bare name is lower-case letters, digits and hyphens, starting with a letter, then `.png`, `.jpg` or `.jpeg` (DEC-025 point 2).
+- **Found by its exact name,** so `logo.png` never finds `Logo.png`. A name the folder does not hold fails, and so does one that names a symbolic link (DEC-025 point 9).
+- **The group holds nothing else** but a `$description` and a `$deprecated`. It aliases nothing, and no token aliases it.
+- **It merges as a token's value does,** in the Resolver document's order of sources. So a value axis may give a dark mode its own logo. A brand built on a base keeps its base's logo, unless the base opens the role ([Open roles](#open-roles)).
+- **No brand owes one a value.** A brand that gives it none is not at fault. Its version states that once, as a fact, and no piece states it (DEC-025 point 9).
+- **It is exported only where the brand gives it a value** (DEC-004 point 5). So ceasing to give one breaks the brand ([What a release compares](#what-a-release-compares)).
+- **No written code holds it** ([Written code](outputs.md#written-code)).
 
 ### A library's roles
 
@@ -795,7 +821,7 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Both are value axes. The foundations declare no size axis.
 
 - **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no axis of its own and no mode, and changes no default.
-- **A value axis** changes only colours. A mode of a value axis that changes another value fails.
+- **A value axis** changes only colours and pictures. A mode of a value axis that changes another value fails.
 - **Every brand has each value axis whole** (DEC-004 point 2). A mode it does not give takes its values at the axis's default. In a brand built on another, its base's values hold there.
 - **A size axis** may change any value. A brand has a shared size axis only where a modifier varies it, with the modes that modifier gives (DEC-021 point 2). A brand built on another has its base's sizes. So a brand that gives no size keeps its combinations and its written code.
 - **A piece** chooses the modes it is drawn in under its `modes`. A mode its brand does not have fails, a size it does not give among them.
@@ -806,7 +832,7 @@ The capability ships `neutral`, a brand to start from, so a project can draw bef
 
 `pkit visual add neutral` copies it whole to `libraries/neutral/1.0.0/`, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
 
-- **Its values.** It gives every shared role a value in each of the four combinations of the shared axes ([Keys of combinations](#keys-of-combinations)). Each pair the foundations declare reaches its level in all four.
+- **Its values.** It gives every shared role a value in each of the four combinations of the shared axes ([Keys of combinations](#keys-of-combinations)), but `picture.logo`. It has no logo, which its version states as a fact ([Picture roles](#picture-roles)). Each pair the foundations declare reaches its level in all four.
 - **Its look.** Greys, with a blue accent. The colour families keep their hues in dark and at high contrast.
 - **The libraries it names.** It builds on the foundations alone, so the starter draws at its defaults ([`roles.yaml`](#rolesyaml)), and a project need not hold the starter to use it.
 - **Its open roles.** `open` is empty, so a brand built on it can change no value. A project that wants other values writes its own brand.
