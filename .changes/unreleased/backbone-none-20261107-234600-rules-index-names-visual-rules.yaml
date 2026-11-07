@@ -1,8 +1,0 @@
-component: backbone
-kind: none
-body: >
-  The capabilities' rules index, `.pkit/rules/capabilities.md`, gains the
-  visual-communication capability's rules file, as `pkit sync` renders it here
-  now that the capability ships a loaded rule set (#2837). No command, path or
-  format of the backbone changes, and each project renders its own index, so no
-  surface moves.
