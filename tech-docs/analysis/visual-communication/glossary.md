@@ -306,7 +306,7 @@ TERM-pinned:
 TERM-published:
   name: published
   status: active
-  definition: "in use where others rely on it, its lock moving only through a reviewed change showing it before and after, or when marked final"
+  definition: "in use where others rely on it, its lock moving only through a reviewed change, or when marked final"
   pkit:
     friction:
       anchors:
@@ -429,7 +429,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Pinned:** said of a draft's lock that a person pinned. The piece is still a draft, and its lock moves only when a person moves it.
-- **Published:** said of a piece whose lock moves only through a change that shows it before and after, or when it is marked final.
+- **Published:** said of a piece whose lock moves only through a change that shows it before and after, or when it is marked final. With no copy standing, that change shows only an after.
 
 ## TERM-experimental — experimental
 
@@ -581,7 +581,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-published — published
 
-**Example:** A figure of the project's parts, shown in its documentation, is published. A new library version reaches it only once a change that shows the figure before and after lands.
+**Example:** A figure of the project's parts, shown in its documentation, is published. A new library version reaches it only once a change that shows the figure before and after lands. With no copy standing, that change shows only an after.
 
 **Distinctions:**
 

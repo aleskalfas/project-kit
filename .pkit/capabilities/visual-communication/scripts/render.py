@@ -61,14 +61,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, copies, exports, files, fingerprint, libraries, location, records, tokens
+from _lib import checks, copies, exports, files, libraries, location, rendering, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.findings import FACT, Finding
@@ -81,13 +80,6 @@ Results = Sequence[tuple[str, SceneResult]]
 
 #: Where the previews of each piece lie, relative to the project root.
 PREVIEWS = f"{LOCAL}/previews"
-
-#: The comment that opens the findings record, a line each.
-HEADER = (
-    "The findings record of the piece (visual-communication DEC-005 point 13): what",
-    "computing its scenes found, keyed by a fingerprint of every file they were computed",
-    "from. `pkit visual render` rewrites it; commit it, so the check reads it.",
-)
 
 
 def main() -> int:
@@ -137,7 +129,7 @@ def _render(root: Path, name: str, given: str | None) -> int:
     said = location.record(change, where)
     locked = pl.locked(piece, lock)
     # No check reads a final piece's record, so its render keeps none, and one left stays.
-    record = None if piece.final else _record(project, found, locked)
+    record = None if piece.final else rendering.record(project, found, locked)
     folder = root / PREVIEWS / name
     for path in (
         *(() if record is None else (piece.folder / pl.FINDINGS_FILE,)),
@@ -154,7 +146,7 @@ def _render(root: Path, name: str, given: str | None) -> int:
     if locked is not None:
         change.write(piece.folder / pl.PIECE_FILE, locked)
     if record is not None:
-        change.write(piece.folder / pl.FINDINGS_FILE, records.text(record, HEADER).encode("utf-8"))
+        change.write(piece.folder / pl.FINDINGS_FILE, rendering.record_text(record))
     change.commit()
     if said is not None:
         print(said)
@@ -201,22 +193,6 @@ def _moved(piece: pl.Piece, held: libraries.Held) -> libraries.Moved:
         raise pl.Refused(f"{shown}: {exc}") from exc
 
 
-def _record(project: pl.Project, found: Sequence[Finding], locked: bytes | None) -> dict[str, Any]:
-    """The piece's findings record: what its scenes `found`, keyed over the files as the
-    render leaves them, `locked` the bytes of `piece.yaml` where it writes them."""
-    piece = project.piece
-    written = {piece.folder / pl.PIECE_FILE: locked} if locked is not None else {}
-    sources = pl.findings_key_sources(
-        project.root, project.held, piece, project.lock, sorted(project.env.fonts_read)
-    )
-    return {
-        "pkit_schema": "visual-communication:findings",
-        "schema_version": 1,
-        "key": _key({**sources, "written": written}),
-        "findings": [checks.record_entry(finding) for finding in found],
-    }
-
-
 #: The fact the render states of a version it held back, by the rule it would break.
 HELD = {"clash": "held-clash", "end": "held-end"}
 
@@ -240,16 +216,6 @@ def _stated(piece: pl.Piece, moved: libraries.Moved) -> list[Finding]:
     if moved.kept:
         found.append(Finding("lock-kept", FACT, moved.kept, file=file, where="lock"))
     return found
-
-
-def _key(sources: Mapping[str, Any]) -> dict[str, Any]:
-    """The findings record's key over the files as the render leaves them: `sources` gives,
-    under `written`, the bytes of each file the render writes. Raises Refused where one of
-    them cannot be read under form 1."""
-    try:
-        return fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))
-    except fingerprint.FingerprintError as exc:
-        raise pl.Refused(f"the findings record's key cannot be taken: {exc}") from exc
 
 
 def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[str, str]:

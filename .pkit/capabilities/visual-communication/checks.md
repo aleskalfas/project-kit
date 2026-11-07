@@ -464,7 +464,7 @@ The check reads no other file of an export. It checks the binding of a piece's `
 
 ## The findings record
 
-`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. Commit it, so the check reads it on a fresh clone.
+`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. `pkit visual upgrade` writes it too, under the lock it moves ([the lock](files.md#the-lock)). Commit it, so the check reads it on a fresh clone.
 
 It holds the scene findings, the losses among them. The findings on files, libraries, locks, brands, notations, content, produced pictures and written code are not in it: the check works them out at every run. Its fields:
 
