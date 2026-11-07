@@ -8,10 +8,12 @@ published piece's current copy, in its folder or at a place, with the gate on it
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import shutil
 import subprocess
 from collections.abc import Callable, Iterator, Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
@@ -26,7 +28,10 @@ from tests.test_visual_communication_pipeline import (
     PHONE,
     PIECE,
     PIECE_FOLDER,
+    TESTS,
     drawing_project,
+    every_file,
+    exported_up_to,
     list_drawing_libraries,
     on_devices,
     stamped,
@@ -45,22 +50,35 @@ from tests.visual_communication_project import (
 )
 from tests.visual_communication_writes import FULL, failing
 
-script, render_script, exports, svg, pdf, seam, framing, files, reading, fingerprint, pl, checks = (
-    load(
-        "visual-communication",
-        "export.py",
-        "render.py",
-        "exports",
-        "plugins.svg",
-        "plugins.pdf",
-        "plugins.seam",
-        "framing",
-        "files",
-        "reading",
-        "fingerprint",
-        "pipeline",
-        "checks",
-    )
+(
+    script,
+    render_script,
+    exports,
+    svg,
+    pdf,
+    seam,
+    framing,
+    files,
+    reading,
+    fingerprint,
+    pl,
+    checks,
+    text,
+) = load(
+    "visual-communication",
+    "export.py",
+    "render.py",
+    "exports",
+    "plugins.svg",
+    "plugins.pdf",
+    "plugins.seam",
+    "framing",
+    "files",
+    "reading",
+    "fingerprint",
+    "pipeline",
+    "checks",
+    "text",
 )
 
 FOLDER = ".pkit/capabilities/visual-communication/project/local/exports/flow"
@@ -405,34 +423,365 @@ def test_a_refusal_exits_1_and_writes_nothing(
     assert not (root / RECORD).exists()
 
 
-@pytest.mark.parametrize(
-    ("shows", "fact", "part"),
-    [("number", "version", "number"), ("date", "date", "date")],
+# --- the facts an export fills -----------------------------------------------------------------
+
+#: A component of the piece's own that shows a version's number and its date, each in the
+#: width the component is given.
+FACTS = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A version's number and its date.
+
+parts:
+  number:
+    text: {fact: version, style: type.body, fill: text-primary}
+    width: "=:width"
+  date:
+    text: {fact: date, style: type.body, fill: text-primary}
+    y: "=number.bottom"
+    width: "=:width"
+
+preferred:
+  height: "=@space.4 * 2"
+"""
+
+#: A component that shows a version's number in a width the stand-in fits, and a number of
+#: ten digits does not.
+NUMBER = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A version's number, in a width for a number of a few digits.
+
+parts:
+  number:
+    text: {fact: version, style: type.body, fill: text-primary}
+    width: "=@space.3 * 3"
+
+preferred:
+  height: "=@space.4 * 2"
+"""
+
+#: A component that asks for the width its number takes, and one that places it in a width
+#: the stand-in fits, so a number of ten digits leaves it less than it asks for.
+BOXED = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A version's number, as wide as it takes.
+
+parts:
+  number:
+    text: {fact: version, style: type.body, fill: text-primary}
+
+preferred:
+  width: "=number.width"
+  height: "=@space.4"
+"""
+HOLDER = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A version's number, boxed in a width for a number of a few digits.
+
+parts:
+  box:
+    use: piece/boxed
+    width: "=@space.3 * 3"
+
+preferred:
+  height: "=@space.4 * 2"
+"""
+
+#: A component that shows each fact of its export in a width none of them fits.
+NARROW = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: Each fact of the export, too narrow for any.
+
+parts:
+  language:
+    text: {fact: language, style: type.body, fill: text-primary}
+    width: "=@space.1"
+  state:
+    text: {fact: state, style: type.body, fill: text-primary}
+    y: "=language.bottom"
+    width: "=@space.1"
+  number:
+    text: {fact: version, style: type.body, fill: text-primary}
+    y: "=state.bottom"
+    width: "=@space.1"
+  date:
+    text: {fact: date, style: type.body, fill: text-primary}
+    y: "=number.bottom"
+    width: "=@space.1"
+
+preferred:
+  height: "=@space.4 * 2"
+"""
+
+#: Where the piece's own components lie.
+OWN = f"{PIECE_FOLDER}/components"
+
+#: The number a piece takes once `exported_up_to` names 1 000 000 000, too wide for `NUMBER`.
+LONG = "v1000000001"
+
+#: How an export says the way past a number or a date that overflows.
+WAY_PAST = (
+    "Give each room in its component, or name its fact with `--use-overflowing <fact>` to "
+    "export its text as it is"
 )
-def test_a_piece_that_shows_a_number_or_a_date_is_refused_naming_the_element(
-    tmp_path: Path, shows: str, fact: str, part: str
+
+
+def showing(tmp_path: Path, component: str, *more: str, **fields: Any) -> Path:
+    """The drawing project without its picture, its body the piece's own component
+    `component`, each of `more` beside it, read from this module's text of that name."""
+    root = drawing_project(tmp_path, picture=False, **fields)
+    for name in (component, *more):
+        write(root / OWN / f"{name}.yaml", globals()[name.upper()])
+    write_content(root, body={"use": f"piece/{component}"})
+    return root
+
+
+def texts(path: Path) -> list[str]:
+    """Each text an exported SVG file shows, in order, but the figure's head, which follows
+    the body."""
+    drawn = ElementTree.fromstring(path.read_text(encoding="utf-8"))
+    return ["".join(text.itertext()) for text in drawn.iter(TEXT)][:-1]
+
+
+def refused(root: Path, *args: str) -> str:
+    """What a refused run says on standard error, having written nothing: no export, no
+    record and no location."""
+    before = every_file(root)
+    shown = run(root, PIECE, *args)
+    assert shown.returncode == 1, shown.stdout
+    assert shown.stdout == ""
+    assert every_file(root) == before
+    return shown.stderr
+
+
+def test_every_file_of_a_version_shows_the_one_number_and_date_its_record_keeps(
+    tmp_path: Path,
+) -> None:
+    root = showing(tmp_path, "facts", languages=["en", "cs"])
+    write_content(root, "cs", body={"use": "piece/facts"})
+    exported_up_to(root, 41)
+    done = run(root, PIECE)
+    assert done.returncode == 0, done.stderr
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert version["version"] == 42
+    date = version["recorded"]["time"][: len("YYYY-MM-DD")]
+    assert sorted(version["files"]) == [
+        "flow.v42.cs.colour-scheme.dark.svg",
+        "flow.v42.cs.default.svg",
+        "flow.v42.en.colour-scheme.dark.svg",
+        "flow.v42.en.default.svg",
+    ]
+    for name in version["files"]:
+        assert texts(root / FOLDER / name) == ["v42", date]
+    assert "let-through" not in version["recorded"]
+
+
+@pytest.mark.parametrize(("shows", "fact"), [("number", "version"), ("date", "date")])
+def test_a_piece_that_shows_a_number_or_a_date_exports_it_no_longer_refused(
+    tmp_path: Path, shows: str, fact: str
 ) -> None:
     root = stamped(tmp_path, shows)
-    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
     done = run(root, PIECE)
-    assert done.returncode == 1
+    assert done.returncode == 0, done.stderr
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    shown = "v1" if fact == "version" else version["recorded"]["time"][: len("YYYY-MM-DD")]
+    assert texts(root / FOLDER / "flow.v1.en.default.svg") == [shown]
+
+
+def test_a_new_number_makes_nothing_stale(tmp_path: Path) -> None:
+    """The fingerprint reads none of the facts an export fills (DEC-016 point 5)."""
+    root = stamped(tmp_path, "number", state="published")
+    assert run(root, PIECE).returncode == 0
+    exported_up_to(root, 41)
+    owed = [f.code for f, _ in checks.check(root, only=PIECE).judged if "copy" in f.code]
+    assert owed == []
+    assert run(root, PIECE).returncode == 0
+    first, second = record_of(root)["versions"]
+    assert (first["version"], second["version"]) == (1, 42)
+    assert first["fingerprint"] == second["fingerprint"]
+    assert texts(root / COPY / "flow.en.default.svg") == ["v42"]
+    assert [f.code for f, level in checks.check(root, only=PIECE).judged if level == "fails"] == []
+
+
+def test_a_number_that_overflows_stops_the_export_before_any_write(tmp_path: Path) -> None:
+    """The stand-in fits, so the check finds nothing, and the export stops on the real text
+    alone (DEC-016 point 6)."""
+    root = showing(tmp_path, "number")
+    exported_up_to(root, 1_000_000_000)
+    assert "text-overflow" not in {f.code for f, _ in checks.check(root, only=PIECE).judged}
+    said = refused(root)
+    assert said == (
+        f"error: a number or a date the export fills does not fit: `version` as `{LONG}` at "
+        f"`figure/body/number` in `piece/number`, which overflows its width. {WAY_PAST}\n"
+    )
+
+
+def test_a_component_around_a_number_that_gets_less_than_it_asks_for_stops_the_export(
+    tmp_path: Path,
+) -> None:
+    root = showing(tmp_path, "holder", "boxed")
+    exported_up_to(root, 1_000_000_000)
+    said = refused(root)
+    assert said == (
+        f"error: a number or a date the export fills does not fit: `version` as `{LONG}` at "
+        f"`figure/body/box` in `piece/boxed`, which gets less than it asks for. {WAY_PAST}\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("use", "state"),
+    [
+        pytest.param("piece/stamp", "draft", id="own"),
+        pytest.param("tests/stamp", "draft", id="corrected-by-the-project"),
+        pytest.param("tests/stamp", "published", id="released"),
+    ],
+)
+def test_a_number_that_overflows_with_its_stand_in_too_stops_in_any_library(
+    tmp_path: Path, use: str, state: str
+) -> None:
+    root = drawing_project(tmp_path, picture=False, state=state)
+    write(root / OWN / "stamp.yaml", (TESTS / "components" / "stamp.yaml").read_text("utf-8"))
+    write_content(root, body={"use": use, "shows": "narrow"})
+    said = refused(root)
+    assert said.startswith(
+        "error: a number or a date the export fills does not fit: `version` as `v1` at "
+        f"`figure/body/narrow` in `{use}`, which overflows its width. "
+    )
+
+
+def test_a_fact_named_lets_its_text_through_and_the_record_keeps_it(tmp_path: Path) -> None:
+    root = showing(tmp_path, "number")
+    exported_up_to(root, 1_000_000_000)
+    done = run(root, PIECE, "--use-overflowing", "version")
+    assert done.returncode == 0, done.stderr
     assert (
-        f"`flow` shows a fact no export fills yet, so a file would hold a stand-in: "
-        f"`{fact}` at `figure/body/{part}`"
-    ) in done.stderr
-    assert not (root / FOLDER).exists()
-    assert not (root / RECORD).exists()
-    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+        f"let through: `version` as `{LONG}` at `figure/body/number` in `piece/number`, which "
+        f"overflows its width"
+    ) in done.stdout.splitlines()
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert version["recorded"]["let-through"] == [
+        {
+            "fact": "version",
+            "text": LONG,
+            "element": "figure/body/number",
+            "component": "piece/number",
+        }
+    ]
+    assert texts(root / FOLDER / f"flow.{LONG}.en.default.svg") == [LONG]
 
 
-def test_every_run_through_the_plan_stops_on_a_number_or_a_date(tmp_path: Path) -> None:
-    root = stamped(tmp_path, "date", languages=["en", "cs"])
-    write_content(root, "cs", body={"use": "tests/stamp", "shows": "date"})
+def test_a_text_let_through_in_a_library_names_the_version_of_its_component(
+    tmp_path: Path,
+) -> None:
+    root = stamped(tmp_path, "narrow")
+    assert run(root, PIECE, "--use-overflowing", "version").returncode == 0
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert version["recorded"]["let-through"] == [
+        {
+            "fact": "version",
+            "text": "v1",
+            "element": "figure/body/narrow",
+            "component": "tests/stamp",
+            "version": "1.0.0",
+        }
+    ]
+
+
+def test_a_fact_nobody_named_still_stops(tmp_path: Path) -> None:
+    root = showing(tmp_path, "narrow")
+    said = refused(root, "--use-overflowing", "version")
+    assert said.startswith("error: a number or a date the export fills does not fit: `date` as `")
+    assert "`version`" not in said
+    assert said.endswith(f"in `piece/narrow`, which overflows its width. {WAY_PAST}\n")
+
+
+def test_the_language_and_the_state_stop_nothing_here(tmp_path: Path) -> None:
+    """The check measures them as they stand, so the export leaves them to it, and naming
+    either is refused (DEC-016 point 6)."""
+    root = showing(tmp_path, "narrow")
+    done = run(root, PIECE, "--use-overflowing", "version", "--use-overflowing", "date")
+    assert done.returncode == 0, done.stderr
+    let = [line for line in done.stdout.splitlines() if line.startswith("let through: ")]
+    assert [line.split("`")[1] for line in let] == ["date", "version"]
+    found = {f.code: f.where for f, _ in checks.check(root, only=PIECE).judged}
+    assert found["text-overflow"]
+    for word in ("language", "state"):
+        said = run(root, PIECE, "--use-overflowing", word)
+        assert said.returncode == 1
+        assert said.stderr == (
+            f"error: `--use-overflowing {word}` names no fact an export fills, which are "
+            "`version` and `date`: the check measures the language and the state as they stand\n"
+        )
+
+
+def test_a_fact_named_that_does_not_overflow_is_used_as_it_is_and_said(tmp_path: Path) -> None:
+    root = showing(tmp_path, "number")
+    done = run(root, PIECE, "--use-overflowing", "date")
+    assert done.returncode == 0, done.stderr
+    assert "not overflowing, so used as it is: date" in done.stdout.splitlines()
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert "let-through" not in version["recorded"]
+
+
+def test_an_overflow_measured_by_an_estimate_stops_nothing_and_the_run_says_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check only asks attention for it, so the export stops nothing on it (DEC-005
+    point 14, DEC-016 point 6)."""
+    of_role = text.Style.of_role.__func__
+
+    def estimated(cls: Any, *given: Any) -> Any:
+        return dataclasses.replace(of_role(cls, *given), measured="table")
+
+    monkeypatch.setattr(text.Style, "of_role", classmethod(estimated))
+    root = showing(tmp_path, "number")
+    exported_up_to(root, 1_000_000_000)
+    done = run(root, PIECE)
+    assert done.returncode == 0, done.stderr
+    assert (
+        "stops nothing, measured otherwise than from a font file, from a table or by an "
+        f"estimate: `version` as `{LONG}` at `figure/body/number` in `piece/number`, which "
+        "overflows its width"
+    ) in done.stdout.splitlines()
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert "let-through" not in version["recorded"]
+
+
+def test_every_run_through_the_plan_measures_each_overflow_once(tmp_path: Path) -> None:
+    root = stamped(tmp_path, "narrow", languages=["en", "cs"])
+    write_content(root, "cs", body={"use": "tests/stamp", "shows": "narrow"})
     piece = pl.read_piece(root, "visual", PIECE)
     project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
     with pytest.raises(pl.Refused) as refused:
         exports.plan(project)
-    assert str(refused.value).count("`date` at `figure/body/date`") == 1
+    assert str(refused.value).count("`version` as `v1` at `figure/body/narrow`") == 1
+    planned = exports.plan(project, use_overflowing=["version"])
+    assert [overflow.element for overflow in planned.let_through] == ["figure/body/narrow"]
+
+
+def test_a_run_that_proposes_a_move_says_its_own_way_past_an_overflow(tmp_path: Path) -> None:
+    root = stamped(tmp_path, "narrow")
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    with pytest.raises(pl.Refused) as caught:
+        exports.plan(project, way_past_overflow=lambda facts: f"Name {sorted(facts)}")
+    assert str(caught.value).endswith(", which overflows its width. Name ['version']")
 
 
 def test_a_piece_that_shows_only_its_language_and_state_exports_their_real_text(
@@ -1665,9 +2014,10 @@ def test_a_plan_fingerprints_what_a_run_writes_in_place_of_the_file(tmp_path: Pa
     project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
     path = root / PIECE_FOLDER / "piece.yaml"
     moved = path.read_bytes()
-    from_the_file = exports.plan(project, now="now")
+    now = datetime(2026, 11, 7, tzinfo=UTC)
+    from_the_file = exports.plan(project, now=now)
     path.write_bytes(moved.replace(b"tests: 1.1.0", b"tests: 1.0.0"))
-    assert exports.plan(project, now="now", written={path: moved}).versions == (
+    assert exports.plan(project, now=now, written={path: moved}).versions == (
         from_the_file.versions
     )
 

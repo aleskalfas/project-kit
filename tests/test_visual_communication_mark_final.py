@@ -1,9 +1,9 @@
 """`pkit visual mark-final <piece> <version>` (visual-communication DEC-017 points 1, 2 and 8):
 a piece marked final, with its files in their folder; a draft and a published piece; the lock
 put back; a piece changed after the version; each refusal; a lock that no longer holds; a piece
-set final by hand; a version made before the reading of DEC-016 point 1; a record that cannot
-be read; and a failed write put back. Run in this process, the renderers standing in for the
-import an export makes when it draws."""
+set final by hand; a version made before the reading of DEC-016 point 1; a number let through
+(DEC-016 point 6); a record that cannot be read; and a failed write put back. Run in this
+process, the renderers standing in for the import an export makes when it draws."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE_FOLDER,
     drawing_project,
     every_file,
+    write_content,
 )
 from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import importable, write, yaml_text
@@ -293,6 +294,27 @@ def test_the_runs_own_state_counts_for_nothing_and_a_pin_reads_as_a_change_there
     assert "changed since version 1: `piece.yaml` changed" in said
     assert WHOLE in said
     assert piece_of(root)["state"] == "final"
+
+
+def test_a_number_let_through_is_named_and_stops_nothing(tmp_path: Path) -> None:
+    """No check judges a final piece's drawing, and nothing mends a file that went out
+    (DEC-017 point 1)."""
+    root = drawing_project(tmp_path, picture=False, released=True)
+    write_content(root, body={"use": "tests/stamp", "shows": "narrow"})
+    done = run_main(export_script, PIECE, "--use-overflowing", "version", cwd=root)
+    assert done.returncode == 0, done.stderr
+    said = marked(root)
+    assert (
+        "let through: version 1 shows `version` as `v1` at `figure/body/narrow` in "
+        "`tests/stamp`, which does not fit, and no check judges it once the piece is final"
+    ) in said
+    assert piece_of(root)["state"] == "final"
+    assert record_of(root)["handed-out"] == 1
+
+
+def test_a_version_that_let_nothing_through_names_none(tmp_path: Path) -> None:
+    root = exported(tmp_path)
+    assert not [line for line in marked(root) if line.startswith("let through")]
 
 
 # --- what refuses -------------------------------------------------------------------------------

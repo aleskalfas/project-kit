@@ -4,8 +4,9 @@ document and exits 0; without it, it exits 1 when a finding fails. Its findings 
 `test_visual_communication_checks.py`'s; here, the command: the findings record read while
 its key verifies, the validation's bound, the time it takes, one run through `pkit
 validate`'s runner as a process of its own, what a state owes of a current copy, read after
-each state's real export, and what a final piece owes of the version handed out, read after a
-real mark (DEC-006 point 8, DEC-017 points 3 to 7)."""
+each state's real export, a number let through among it (DEC-016 point 6), and what a final
+piece owes of the version handed out, read after a real mark (DEC-006 point 8, DEC-017 points
+3 to 7)."""
 
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ from tests.test_visual_communication_pipeline import (
     PHONE_WIDE,
     PIECE,
     PIECE_FOLDER,
+    TESTS,
     drawing_project,
     lay_out_drawing,
     list_drawing_libraries,
@@ -683,6 +685,67 @@ def test_a_copy_made_over_a_stale_output_asks_for_attention_and_fails_nothing(
         "label": "current-copy-over-stale",
     }
     assert run(root).returncode == 0
+
+
+def let_through(tmp_path: Path, use: str) -> Path:
+    """The piece published, its body the stamp's number in a width too narrow for it, the
+    stamp `use` names, the piece's own or the released `tests` library's, exported with that
+    number let through."""
+    root = drawing_project(tmp_path, state="published", picture=False)
+    stamp = (TESTS / "components" / "stamp.yaml").read_text(encoding="utf-8")
+    (root / OWN_STAMP).parent.mkdir(parents=True)
+    (root / OWN_STAMP).write_text(stamp, encoding="utf-8")
+    write_content(root, body={"use": use, "shows": "narrow"})
+    return exported(root, "--use-overflowing", "version")
+
+
+#: Where the piece's own copy of the `tests` library's stamp lies.
+OWN_STAMP = f"{PIECE_FOLDER}/components/stamp.yaml"
+
+
+@pytest.mark.parametrize(
+    ("use", "severity", "who"),
+    [
+        pytest.param("piece/stamp", "error", "", id="own"),
+        pytest.param(
+            "tests/stamp",
+            "warning",
+            " — for the owner of `tests`, who corrects it in a new release",
+            id="released",
+        ),
+    ],
+)
+def test_a_copy_made_with_a_number_let_through_fails_where_the_project_corrects_the_component(
+    tmp_path: Path, use: str, severity: str, who: str
+) -> None:
+    """It fails where the project can correct the component, and asks the owner of a released
+    library for attention (DEC-016 point 6, DEC-002 point 7)."""
+    root = let_through(tmp_path, use)
+    [finding] = [each for each in owed(root) if each["label"] == "current-copy-let-through"]
+    assert finding == {
+        "severity": severity,
+        "location": AT_THE_RECORD,
+        "message": (
+            "the current copy of `flow`, which version 1 wrote, was made with `version` as `v1` "
+            f"at `figure/body/narrow` in `{use}` let through, which does not fit{who} — give "
+            f"the text room in `{use}`, then {EXPORT_AGAIN}"
+        ),
+        "label": "current-copy-let-through",
+    }
+    assert (run(root).returncode == 1) == (severity == "error")
+
+
+def test_a_copy_made_with_a_number_let_through_is_a_finding_until_a_version_fits(
+    tmp_path: Path,
+) -> None:
+    root = let_through(tmp_path, "piece/stamp")
+    path = root / OWN_STAMP
+    path.write_text(
+        path.read_text(encoding="utf-8").replace('width: "=@space.1"', 'width: "=:width"'),
+        encoding="utf-8",
+    )
+    exported(root)
+    assert "current-copy-let-through" not in {each["label"] for each in owed(root)}
 
 
 def test_a_draft_with_a_file_of_its_copy_standing_asks_for_attention_whatever_it_holds(

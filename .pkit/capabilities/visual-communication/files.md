@@ -382,6 +382,7 @@ A library moves no lower than the version the lock names while versions at or ab
 - **Only the lock.** To bring the sources back too, restore them from history first.
 - **What else changed.** It reads the piece as the version's fingerprint does, with the lock put back (*The input set of each kind* in *What the check reports*). It names each input that still does not verify.
 - **A version made before an export left fields out of `piece.yaml`.** It read that file whole, so a pin or a change of state reads as a change. The run says the file was read whole.
+- **A number or a date the version let through** is named too, and stops nothing. No check judges a final piece's drawing.
 - **The version's files.** Each moves from the clone's local folder into `handed-out/`, in the piece's folder, under the name it carries. Commit them with the piece. Every other version stays in the clone that made it.
 - **What it writes.** It writes `state` and `lock` as text, every other byte of `piece.yaml` kept, and the version in the record (*The record of exports* in *What is made from a piece*).
 - **A lock that no longer holds** stops nothing, such as one that names a version gone, changed or not released. The run says so, and the piece carries the finding its lock takes.
