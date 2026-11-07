@@ -10,8 +10,9 @@ losses a declaration of written code meets, without importing the writer.
   written code names one; the writer keeps writing every form it shipped.
 - `kinds`: the DTCG types its language has a form for. A token of another type is a loss,
   left out, known before the writer runs.
-- `axis-kinds`: the kinds of axis its selectors spell. A brand with an axis of another
-  kind is refused.
+- `axis-kinds`: the kinds of axis its selectors spell: value axes alone. The command hands
+  it a brand's values at the default of each axis of another kind, a size, and reports
+  each token that axis changes as a loss, approximated (DEC-021 point 8).
 - `programs`, `services`: what it needs beyond the project's files: none.
 """
 

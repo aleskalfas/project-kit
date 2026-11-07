@@ -116,6 +116,7 @@ pkit:
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-021#2
 ---
 
 # The files of the visual work
@@ -559,8 +560,8 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
 - **A library's own roles.** A role promises what the components that read it promise (DEC-008 point 7). So only an own role a stable or deprecated component reads, directly or through a default, can break. It breaks where it is removed, changes type, or no longer ends its chain of defaults at a shared role, where it did. A new one such a component reads breaks where its chain ends at no shared role, and any other new own role is an addition.
 - **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
 - **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition.
-- **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does a new axis, or an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new mode, colour family or member is an addition.
-- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition.
+- **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new axis, mode, colour family or member is an addition.
+- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition. So a size a brand comes to give is an addition, and one it ceases to give breaks.
 
 Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made, and the release refuses. A brand's component tokens are not compared yet.
 
@@ -627,7 +628,7 @@ The Resolver document holds `version` (`2025.10`), `sets`, `modifiers` and `reso
 ```
 
 - **A set** holds `sources`, and may hold `description`. A source is `{"$ref": "<token file>"}`, a file of the brand's version folder.
-- **A modifier** is a shared axis. Its `contexts` hold one list of sources for each mode of the axis. Its `default` is the axis's default.
+- **A modifier** is a shared axis the brand varies. Its `contexts` hold one list of sources for each mode the brand gives, the axis's default among them. Its `default` is the axis's default. What a mode the brand leaves out takes is under [Axes and modes](#axes-and-modes).
 - **`resolutionOrder`** names each set and each modifier once, as `{"$ref": "#/sets/<name>"}` or `{"$ref": "#/modifiers/<name>"}`. A later source wins.
 
 For each combination of modes, the capability merges the brand's sources in resolution order, over the roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles, and each role of a library it names that it gives a value ([A library's roles](#a-librarys-roles)). Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
@@ -693,9 +694,11 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 
 An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Both are value axes. The foundations declare no size axis.
 
-- **A brand varies an axis** through a modifier of its Resolver document. It may leave out an axis it does not vary. It adds no axis of its own, and changes no default.
+- **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no axis of its own and no mode, and changes no default.
 - **A value axis** changes only colours. A mode of a value axis that changes another value fails.
-- **A piece** chooses the modes it is drawn in under its `modes`.
+- **Every brand has each value axis whole** (DEC-004 point 2). A mode it does not give takes its values at the axis's default. In a brand built on another, its base's values hold there.
+- **A size axis** may change any value. A brand has a shared size axis only where a modifier varies it, with the modes that modifier gives (DEC-021 point 2). A brand built on another has its base's sizes. So a brand that gives no size keeps its combinations and its written code.
+- **A piece** chooses the modes it is drawn in under its `modes`. A mode its brand does not have fails, a size it does not give among them.
 
 ### The neutral brand
 
