@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Where no browser can run, a look's stop names three ways on, in order (#2837): a
+  build pipeline's drawings, kept as `visual-drawings-<commit>`; the same look run
+  once by a person outside any sandbox; and the SVG renderer's pages. It says when a
+  sandbox stopped the browser, and gives Chrome run as root a stop of its own. The
+  report's `go-on` lists the ways on, beside `as-root` and `for-an-agent`. A first
+  loaded rule set, `VIS`, says what an agent does at a stop: it never takes a command
+  out of the sandbox itself, and never runs a look over a person's folder. Its rules
+  are proposed, so its rules file holds the preface alone until they are accepted.
+  The outputs page says what a pipeline's drawings hold and how an agent fetches
+  them; the skill and the reviewer pass the ways on to whoever asked.
