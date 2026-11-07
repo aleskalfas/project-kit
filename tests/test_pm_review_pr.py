@@ -129,7 +129,7 @@ def test_invoke_verdict_on_first_line(rpr, monkeypatch) -> None:
     """Regression: a verdict on line 1 still parses (the happy path)."""
     out = "Reviewer agent (local, reviewer): APPROVED\n\nLooks good."
     _stub_claude(rpr, monkeypatch, out)
-    verdict, body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict == "APPROVED"
     assert body == "\nLooks good."
 
@@ -145,7 +145,7 @@ def test_invoke_verdict_after_preamble(rpr, monkeypatch) -> None:
         "Finding: fix the off-by-one in foo()."
     )
     _stub_claude(rpr, monkeypatch, out)
-    verdict, body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict == "CHANGES_REQUESTED"
     assert body == "\nFinding: fix the off-by-one in foo()."
 
@@ -153,7 +153,7 @@ def test_invoke_verdict_after_preamble(rpr, monkeypatch) -> None:
 def test_invoke_verdict_line_tolerates_surrounding_whitespace(rpr, monkeypatch) -> None:
     out = "   Reviewer agent (local, reviewer): APPROVED   \n"
     _stub_claude(rpr, monkeypatch, out)
-    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict == "APPROVED"
 
 
@@ -165,7 +165,7 @@ def test_invoke_first_match_wins(rpr, monkeypatch) -> None:
         "Reviewer agent (local, reviewer): CHANGES_REQUESTED\n"
     )
     _stub_claude(rpr, monkeypatch, out)
-    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict == "APPROVED"
 
 
@@ -178,7 +178,7 @@ def test_invoke_no_match_fails_closed_and_surfaces_full_output(
     FULL agent output is surfaced to the operator for debugging."""
     out = "I reviewed the PR but forgot to emit the verdict line.\nSorry!"
     _stub_claude(rpr, monkeypatch, out)
-    verdict, body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict is None
     assert body == ""
     err = capsys.readouterr().err
@@ -193,13 +193,13 @@ def test_invoke_verdict_pinned_to_invoked_agent_name(rpr, monkeypatch) -> None:
     review-pr only accepts a verdict from the agent it invoked."""
     out = "Reviewer agent (local, other-agent): APPROVED\n"
     _stub_claude(rpr, monkeypatch, out)
-    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict is None
 
 
 def test_invoke_nonzero_exit_returns_no_verdict(rpr, monkeypatch) -> None:
     _stub_claude(rpr, monkeypatch, "", returncode=1, stderr="boom")
-    verdict, _body = rpr._invoke_agent("reviewer", 99, {})
+    verdict, _body = rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert verdict is None
 
 
@@ -265,14 +265,14 @@ def test_timeout_above_a_week_errors_before_any_run(rpr) -> None:
 def test_invoke_agent_passes_timeout_as_the_runs_limit(rpr, monkeypatch) -> None:
     """The resolved timeout reaches the run as its limit."""
     captured = _capture_invocation(rpr, monkeypatch)
-    rpr._invoke_agent("reviewer", 99, {}, 720)
+    rpr._invoke_agent("reviewer", 99, {}, 720, folder=REPO_ROOT)
     assert captured["limit_seconds"] == 720
 
 
 def test_invoke_agent_defaults_timeout_to_1200(rpr, monkeypatch) -> None:
     """Omitting the timeout arg uses the raised default, not the old 300/600."""
     captured = _capture_invocation(rpr, monkeypatch)
-    rpr._invoke_agent("reviewer", 99, {})
+    rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT)
     assert captured["limit_seconds"] == 1200
 
 
@@ -446,7 +446,7 @@ def test_review_brief_leaves_an_unknown_base_as_a_placeholder(rpr) -> None:
 def test_invoke_agent_sends_the_brief(rpr, monkeypatch) -> None:
     """The brief is what reaches the reviewer session as its prompt."""
     captured = _capture_invocation(rpr, monkeypatch)
-    rpr._invoke_agent("reviewer", 99, {}, 720, base="main", head="feat/147-x")
+    rpr._invoke_agent("reviewer", 99, {}, 720, folder=REPO_ROOT, base="main", head="feat/147-x")
     prompt = captured["brief"]
     assert prompt == rpr._review_brief(
         "reviewer",
@@ -588,6 +588,7 @@ def _wire_main(
         timeout=None,
         effort=None,
         *,
+        folder=None,
         base=None,
         head="HEAD",
         sha="",
@@ -1716,25 +1717,61 @@ def _capture_invocation(rpr, monkeypatch) -> dict:
 
 def test_invoke_agent_passes_effort_to_the_harness(rpr, monkeypatch) -> None:
     captured = _capture_invocation(rpr, monkeypatch)
-    rpr._invoke_agent("reviewer", 99, {}, 720, effort="medium")
+    rpr._invoke_agent("reviewer", 99, {}, 720, effort="medium", folder=REPO_ROOT)
     assert captured["effort"] == "medium"
     assert captured["name"] == "reviewer"
 
 
 def test_invoke_agent_passes_no_effort_when_unset(rpr, monkeypatch) -> None:
     captured = _capture_invocation(rpr, monkeypatch)
-    rpr._invoke_agent("reviewer", 99, {}, 720)
+    rpr._invoke_agent("reviewer", 99, {}, 720, folder=REPO_ROOT)
     assert captured["effort"] is None
     assert captured["name"] == "reviewer"
 
 
-def test_invoke_agent_runs_the_reviewer_in_the_working_folder(rpr, monkeypatch, tmp_path) -> None:
-    """The reviewer runs where `review-pr` runs, as it did when it called the
-    harness itself (ADR-066 point 10)."""
+def test_invoke_agent_runs_the_reviewer_in_the_folder_it_is_given(
+    rpr, monkeypatch, tmp_path
+) -> None:
+    """The reviewer runs in the folder it is given, not in the one the command
+    was run in (#2255)."""
     monkeypatch.chdir(tmp_path)
     captured = _capture_invocation(rpr, monkeypatch)
-    rpr._invoke_agent("reviewer", 99, {}, 720)
-    assert captured["folder"] == tmp_path
+    rpr._invoke_agent("reviewer", 99, {}, 720, folder=REPO_ROOT)
+    assert captured["folder"] == REPO_ROOT
+
+
+def test_run_from_a_subfolder_starts_each_reviewer_in_the_project_root(
+    rpr, monkeypatch, tmp_path
+) -> None:
+    """Run from a folder below the project's root, the command finds the root
+    and starts every reviewer there, where the harness takes the project's
+    settings (ADR-066 point 10, #2255)."""
+    real_invoke, find_root = rpr._invoke_agent, rpr.resolve_capability_root
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("reviewer", "code-reviewer")),
+        invoked=[],
+    )
+    monkeypatch.setattr(rpr, "_invoke_agent", real_invoke)
+    monkeypatch.setattr(rpr, "resolve_capability_root", find_root)
+    folders: list[Path] = []
+
+    def run_agent(name, _brief, **kwargs):
+        folders.append(kwargs["folder"])
+        return rpr.agent_runs.AgentRun(
+            rpr.agent_runs.FINISHED,
+            exit_code=0,
+            output=f"Reviewer agent (local, {name}): APPROVED\n",
+        )
+
+    monkeypatch.setattr(rpr.agent_runs, "run_agent", run_agent)
+    below = tmp_path / "docs" / "guide"
+    below.mkdir(parents=True)
+    monkeypatch.chdir(below)
+    assert rpr.main() == 0
+    assert folders == [tmp_path, tmp_path]
 
 
 def test_a_refused_run_posts_no_verdict_and_says_why(rpr, monkeypatch, capsys) -> None:
@@ -1744,7 +1781,7 @@ def test_a_refused_run_posts_no_verdict_and_says_why(rpr, monkeypatch, capsys) -
         rpr.agent_runs.REFUSED, reason="no registered adapter registers an agent runner"
     )
     monkeypatch.setattr(rpr.agent_runs, "run_agent", lambda *_a, **_k: refused)
-    assert rpr._invoke_agent("reviewer", 99, {}) == (None, "")
+    assert rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT) == (None, "")
     assert (
         "[reviewer] invocation refused: no registered adapter registers an agent runner"
         in capsys.readouterr().err
@@ -2141,7 +2178,7 @@ def test_invoke_agent_carries_the_brief_of_a_head_from_elsewhere(rpr, monkeypatc
         return done
 
     monkeypatch.setattr(rpr.agent_runs, "run_agent", run_agent)
-    rpr._invoke_agent("reviewer", 99, {}, confined=True)
+    rpr._invoke_agent("reviewer", 99, {}, folder=REPO_ROOT, confined=True)
     assert rpr.START_NOTHING in briefs[0]
 
 
