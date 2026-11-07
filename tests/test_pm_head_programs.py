@@ -582,7 +582,7 @@ def test_a_word_at_the_review_command_reaches_the_reviewers(
 def test_the_host_s_word_counts_only_for_the_head_it_named(rpr, monkeypatch, capsys) -> None:
     """A reading of another head says nothing of this one (DEC-067 point 1)."""
     monkeypatch.setattr(head_programs, "build_commits", lambda *a: frozenset())
-    monkeypatch.setattr(rpr.friction_answers, "base_remote", lambda _base: "origin")
+    monkeypatch.setattr(rpr.pr_head, "base_remote", lambda _base: "origin")
     monkeypatch.setattr(
         rpr.friction_answers,
         "checked",

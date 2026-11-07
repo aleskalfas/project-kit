@@ -126,6 +126,7 @@ from _lib import (
     friction_answers,
     head_programs,
     issue_branch,
+    pr_head,
     session_guard,
 )
 from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
@@ -812,7 +813,7 @@ def _head_standing(
     that tells them to start nothing (`START_NOTHING`)."""
     number, base = pr.get("number"), str(pr.get("baseRefName") or "")
     placed = pr.get("isCrossRepository") if pr.get("headRefOid") == reviewed else None
-    source = friction_answers.pull_request_source(
+    source = pr_head.pull_request_source(
         str(pr.get("headRefName") or ""),
         int(number or 0),
         cross_repository=placed is not False,
