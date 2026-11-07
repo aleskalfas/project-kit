@@ -35,6 +35,7 @@ current_copy, files, fingerprint, reading, pl = load(
         ),
         ("deck.v1.en.default.2.svg", "deck.en.default.2.svg"),
         ("deck.v1.pt-br.default.pdf", "deck.pt-br.default.pdf"),
+        ("deck.v1.en.colour-scheme.dark.html", "deck.en.colour-scheme.dark.html"),
         ("release-notes.v2.en.default.pdf", "release-notes.en.default.pdf"),
         ("v1.v2.en.default.svg", "v1.en.default.svg"),
     ],
@@ -208,6 +209,7 @@ def test_an_entry_is_read_whichever_piece_it_names(tmp_path: Path) -> None:
         "flow.en.default.svg",
         "flow.en.colour-scheme.dark+contrast.high.2.svg",
         "flow.pt-br.default.pdf",
+        "flow.en.device.phone.html",
     ],
 )
 @pytest.mark.parametrize("folder", ["current-copy", "docs/images"])
@@ -259,6 +261,10 @@ def test_an_entry_the_schema_takes_is_read_as_it_stands(
         pytest.param(
             {**entry_of(PIECE), "files": {"current-copy/x.en.default.svg": "0" * 63}},
             id="no-hash",
+        ),
+        pytest.param(
+            {**entry_of(PIECE), "files": {"current-copy/x.en.default.2.html": "0" * 64}},
+            id="a-page-file-with-a-page-number",
         ),
     ],
 )

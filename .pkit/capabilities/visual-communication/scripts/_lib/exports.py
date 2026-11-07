@@ -4,15 +4,20 @@
   languages and each combination of modes it names, drawn from the scene of its key over
   the size axes by the renderer of that format (`RENDERERS`). `svg` makes one file for
   each page, language and combination; `pdf` one file for each language and combination,
-  which holds every page in order (`DOCUMENTS`). A piece with no page in one of its
-  languages is refused.
+  which holds every page in order (`DOCUMENTS`). `html` makes one file for each language
+  and each set of combinations that share a file, which holds every page in order: those
+  at one key over the size axes that differ only in modes a reader's signal names, as the
+  HTML renderer's declaration pairs them (`pipeline.files_of`, DEC-023 point 1). A
+  combination whose mode no signal names takes a file of its own. A piece with no page in
+  one of its languages is refused.
 - **A number for each run.** Version `N` is one more than the highest the piece's
   `exports.yaml` records or a file in the piece's exports folder carries, shared by every
   file the run makes; each file is named `<piece>.v<N>.<language>.<key>.<format>`, and a
   file of one page of a piece of more than one page adds the page's number, from 1:
-  `<piece>.v<N>.<language>.<key>.<n>.<format>`. The files lie in the clone's local exports
-  folder, never committed; no export overwrites another, and a file a failed run left
-  there refuses no later run.
+  `<piece>.v<N>.<language>.<key>.<n>.<format>`. A file that holds several combinations
+  takes the first key it serves, in key order (DEC-004 point 3). The files lie in the
+  clone's local exports folder, never committed; no export overwrites another, and a file
+  a failed run left there refuses no later run.
 - **What a preview fills** (`preview_filling`). The facts of the next export on this clone:
   its next number and the date of the run. A final piece, which takes no export, and a
   record of exports that cannot be read give none, so those take the stand-ins and say why
@@ -77,11 +82,12 @@ from _lib.scene import Element, Scene, SceneResult
 from _lib.text import MEASURED
 
 #: The renderer that draws each format a piece may export in format 1.
-RENDERERS = {"svg": "svg", "pdf": "pdf"}
+RENDERERS = {"svg": "svg", "pdf": "pdf", "html": "html"}
 
 #: The formats whose file holds every page of a scene, in order: one file for each
-#: language and combination. Every other format makes one file for each page.
-DOCUMENTS = frozenset({"pdf"})
+#: language and each set of combinations its renderer holds in one file, one combination
+#: where it holds no modes. Every other format makes one file for each page.
+DOCUMENTS = frozenset({"pdf", "html"})
 
 #: Where each piece's exports lie, relative to the project root.
 FOLDER = f"{LOCAL}/exports"
@@ -191,9 +197,16 @@ def file_name(
     """An exported file's name: the piece, the version, the language, the combination's
     key and the format, with the page's number before the format where `page` names one,
     as for the file of each page of a piece of more than one page. A file that holds every
-    page, as a PDF does, names none."""
+    page, as a PDF or a page file does, names none. A file that holds several combinations
+    names the first it serves."""
     numbered = "" if page is None else f".{page}"
     return f"{piece}.{version_text(number)}.{language}.{key}{numbered}.{form}"
+
+
+def formats_said() -> str:
+    """Each format a piece may export in, in words: `svg`, `pdf` or `html`."""
+    named = [f"`{form}`" for form in RENDERERS]
+    return f"{', '.join(named[:-1])} or {named[-1]}"
 
 
 def recorded(piece: pl.Piece) -> dict[str, Any]:
@@ -277,7 +290,7 @@ def plan(
     if not piece.exports:
         raise pl.Refused(
             f"{piece.file(pl.PIECE_FILE)} declares no format under `exports`: name "
-            f"{' or '.join(f'`{form}`' for form in RENDERERS)} there"
+            f"{formats_said()} there"
         )
     undeclared = sorted(set(use_stale) - set(piece.produced))
     if undeclared:
@@ -567,14 +580,15 @@ def _drawn(
     project: pl.Project, results: Sequence[tuple[str, SceneResult]], number: int
 ) -> dict[str, bytes]:
     """Each file of the export and its bytes, by its name, format by format as the piece
-    declares them: for a format of `DOCUMENTS`, one for each language and combination,
-    which holds every page in order; for another, one for each page, language and
+    declares them: for a format of `DOCUMENTS`, one for each language and each set of
+    combinations its renderer holds in one file, which holds every page in order, named by
+    the first key it serves (`pipeline.drawn`); for another, one for each page, language and
     combination, the pages of each in order. Raises Refused where a language has no page,
     since the version would hold no file in it."""
     piece = project.piece
     files: dict[str, bytes] = {}
     for form in piece.exports:
-        for language, (key,), drawn in pl.drawn(project, results, RENDERERS[form]):
+        for language, (key, *_), drawn in pl.drawn(project, results, RENDERERS[form], form=form):
             if not drawn.pages:
                 raise pl.Refused(
                     f"`{piece.name}` has no page in `{language}`, so the export would hold no "

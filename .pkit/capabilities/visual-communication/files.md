@@ -878,5 +878,6 @@ A *combination* takes one mode on each axis. Its *key* names it (DEC-004 point 3
 - **A key that names a default mode,** or names its axes out of order, is no key.
 - **Adding an axis with a default** changes no key: every combination that existed takes the new axis's default, which its key leaves out.
 - **Keys are kept in one order** wherever a list of them is kept: by their count of segments, then by their spelling. `default` comes first.
+- **A file that holds several combinations** takes the first of their keys in that order.
 
 A key names a combination in the names of previews, exports and produced pictures, and in written code (*What is made from a piece*).

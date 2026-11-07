@@ -1166,14 +1166,13 @@ def behind_findings(held: Held, piece: pl.Piece) -> list[Finding]:
 
 def _no_format(piece: pl.Piece) -> Finding:
     """The finding on a published piece that declares no format (DEC-017 point 6)."""
-    formats = " or ".join(f"`{form}`" for form in exports.RENDERERS)
     return Finding(
         PUBLISHED_NO_FORMAT,
         FAILS,
         f"the published piece `{piece.name}` declares no format under `exports`",
         file=piece.file(pl.PIECE_FILE),
         where="exports",
-        fix=f"declare one there: {formats}",
+        fix=f"declare one there: {exports.formats_said()}",
     )
 
 
