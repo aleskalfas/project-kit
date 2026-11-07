@@ -382,10 +382,10 @@ Lists what each lock a person moves could still take, across majors ([The lock](
 
 Removes each library version that lies behind, with its entry in the list, once it has shown its list and asked ([A version that lies behind](files.md#a-version-that-lies-behind)).
 
-- **Prints its list first:** each version it would remove, with the newer one that serves in its place, and each version it spares, with why. Then each kept export made under a version it would remove, and each kept export whose lock it cannot read.
+- **Prints its list first:** what it would remove and what it spares, with why, and each kept export made under one it would remove ([A version that lies behind](files.md#a-version-that-lies-behind)). Then each kept export whose lock it cannot read.
 - **`--dry-run`** prints that list, and removes nothing.
 - **Asks** a terminal once whether to remove the versions listed. `--yes` gives that consent up front. With no terminal and no `--yes`, it refuses and removes nothing.
-- **Removes** each version's folder, and its entry in `libraries/libraries.yaml`, from the working tree alone. It stages nothing: land the removal as a change of its own. It prints each version it removed, and how to bring one back.
+- **Removes** the versions listed, and prints each version it removed, and how to bring one back. How it removes them, how to land the removal and how to undo it are under [A version that lies behind](files.md#a-version-that-lies-behind).
 - **Says so** where no version lies behind.
 - **Stops,** removing nothing and naming the file, on a lock it cannot read, a record of exports it cannot read, or a fingerprint it cannot read of the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)). It stops on a list it cannot read, or whose text cannot lose an entry ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
 - **Exits** 0 when it removed what lies behind, found nothing to remove, ended a dry run, or was answered no; 1 when it stopped or refused, with nothing removed, or a removal failed ([Commands](#commands)); 2 on a usage error.
