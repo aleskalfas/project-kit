@@ -1,7 +1,8 @@
 component: visual-communication
 kind: none
 body: >
-  A proposed record decides that the capability asks the permission model for
-  no grant and no way out for an outside program it starts, a browser first
-  (#2775). It designs ahead: no command, file, flag or format changes in this
-  change, so no surface moves.
+  A proposed record, DEC-024, decides that an outside program the capability
+  starts keeps its own sandbox on, and that the viewing command may run outside
+  a session's sandbox through an exclusion a person applies (#2775). It designs
+  ahead: no command, file, flag or format changes in this change, so no surface
+  moves.
