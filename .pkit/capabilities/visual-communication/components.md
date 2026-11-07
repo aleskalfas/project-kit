@@ -32,6 +32,7 @@ pkit:
         - visual-communication:DEC-001#6
         - visual-communication:DEC-003#7
         - visual-communication:DEC-004#2
+        - visual-communication:DEC-004#3
         - visual-communication:DEC-004#9
         - visual-communication:DEC-004#10
         - visual-communication:DEC-005#1
@@ -39,6 +40,7 @@ pkit:
         - visual-communication:DEC-005#3
         - visual-communication:DEC-005#4
         - visual-communication:DEC-005#5
+        - visual-communication:DEC-005#6
         - visual-communication:DEC-005#14
         - visual-communication:DEC-006#7
         - visual-communication:DEC-007#1
@@ -514,7 +516,13 @@ links:
 
 ## How the engine computes a scene
 
-The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, or each one asked for, at the size key `default`, since format 1 has no size axis ([Keys of combinations](files.md#keys-of-combinations)). A scene is computed, never committed. Under one release of the capability, the same files and facts give the same scene on every machine.
+The *scene* is every element's final frame, values and source, for one language and one key over the size axes. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute a scene for each language and each key over the size axes the piece names, or for those asked for.
+
+- **A size axis** is an axis of kind `size` ([`roles.yaml`](files.md#rolesyaml)). A scene's key names the modes of the size axes alone ([Keys of combinations](files.md#keys-of-combinations)).
+- **Each scene reads each role at its key.** So a frame, a width or a text's lines may differ from one size to another.
+- **A piece drawn only in each size axis's default** has one scene for each language, at the key `default`.
+
+A scene is computed, never committed. Under one release of the capability, the same files and facts give the same scene on every machine.
 
 - **Built from the content.** The engine places the top component with the content, then builds each part, item and placed component below it.
 - **Fonts first.** Before it computes any place or size, a font family with no file, or a character no family measures, refuses the scene ([Text](#text)).
@@ -540,7 +548,7 @@ Each fact takes one form in every language. Each stand-in is wide enough that a 
 
 ### What a scene holds
 
-The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
+The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
 A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
@@ -556,7 +564,7 @@ A `text` adds the rest of what [Text](#text) describes:
 
 An `image` adds `output`, `preserveAspectRatio` (`xMidYMid meet`), `variants` by key with each file and pixel size, and `points` mapped into its frame.
 
-Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes (*outputs*). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
+Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes at its key (*outputs*). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
 
 ```json
 {"type": "text", "id": "figure/body/steps[plan]/head",

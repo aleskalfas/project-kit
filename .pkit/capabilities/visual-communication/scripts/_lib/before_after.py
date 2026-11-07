@@ -236,12 +236,13 @@ def _stale(project: pl.Project, built: Path) -> dict[str, list[str]]:
 
 def _refuse_no_page(results: Sequence[tuple[str, SceneResult]]) -> None:
     """Raises Refused where a scene holds no page, which the engine reports as findings and
-    the renderer draws as no file: naming each such language, and what failed in it, each
-    reason once."""
+    the renderer draws as no file: naming each such language once, at any key over the size
+    axes, and what failed in it, each reason once."""
     blank = [(language, result) for language, result in results if not result.scene.pages]
     if not blank:
         return
-    languages = ", ".join(f"`{language}`" for language, _ in blank)
+    named = dict.fromkeys(language for language, _ in blank)
+    languages = ", ".join(f"`{language}`" for language in named)
     failed = [
         finding.message
         for _, result in blank

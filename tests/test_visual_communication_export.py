@@ -23,10 +23,12 @@ from tests.in_process import load, run_main
 from tests.test_visual_communication_pdf import read as read_pdf
 from tests.test_visual_communication_pipeline import (
     LOCK,
+    PHONE,
     PIECE,
     PIECE_FOLDER,
     drawing_project,
     list_drawing_libraries,
+    on_devices,
     stamped,
     write_content,
     write_picture,
@@ -170,6 +172,26 @@ def test_an_export_draws_what_the_preview_draws(tmp_path: Path) -> None:
     light = (root / FOLDER / "flow.v1.en.default.svg").read_text(encoding="utf-8")
     assert light.startswith("<svg ") and 'data-key="default"' in light
     assert "data:image/png;base64," in light
+
+
+def test_a_piece_on_a_size_axis_exports_a_file_for_each_key_from_its_size_s_scene(
+    tmp_path: Path,
+) -> None:
+    dark = "colour-scheme.dark"
+    modes = {"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    root = on_devices(tmp_path, modes=modes, exports=["svg", "pdf"])
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    keys = ["default", dark, PHONE, f"{dark}+{PHONE}"]
+    assert exported(root) == sorted(
+        f"flow.v1.en.{key}.{form}" for key in keys for form in ("svg", "pdf")
+    )
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert sorted(version["files"]) == exported(root)
+    drawn = {key: (root / FOLDER / f"flow.v1.en.{key}.svg").read_text("utf-8") for key in keys}
+    for key, text in drawn.items():
+        assert f'data-key="{key}"' in text
+        assert ('width="480"' in text) == key.endswith(PHONE)
 
 
 def test_an_exports_inputs_name_its_whole_lock(tmp_path: Path) -> None:
