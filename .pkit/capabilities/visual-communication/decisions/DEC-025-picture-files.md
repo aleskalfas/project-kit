@@ -1,7 +1,7 @@
 ---
 id: DEC-025
 title: A piece shows a picture file it holds by name, and a brand gives its logo as a value
-status: proposed
+status: accepted
 date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
