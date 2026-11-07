@@ -272,13 +272,17 @@ def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> 
 
 
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
+    """The test brand's version states, once, that it gives `picture.logo` no value, and no
+    piece states it (DEC-025 point 9)."""
     report = checks.check(location)
     found = [
-        (level, finding.code, finding.file, finding.message)
+        (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
         if finding.code != "component-experimental"
     ]
-    assert found == []
+    assert found == [
+        ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.0.0/", "picture.logo")
+    ]
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
