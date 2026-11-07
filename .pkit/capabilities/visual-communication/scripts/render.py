@@ -22,8 +22,9 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
   end, each library it moved below the version the lock named, and a search that stopped
   at its bound and kept the lock, each a fact at the lock (DEC-010 point 9, DEC-011 point
   8). The findings record keeps none: its key covers only the versions the lock names.
-- **Computes every scene:** one for each language the piece lists. A font with no file,
-  or a character no family measures, refuses the render before anything is laid out.
+- **Computes every scene:** one for each language the piece lists and each key over the
+  size axes it names. A font with no file, or a character no family measures, refuses the
+  render before anything is laid out.
 - **Writes the piece's findings record,** `findings.yaml`, keyed by a fingerprint of every
   file the scenes were computed from: what the check reads while the key verifies. A final
   piece's render writes none, since the check reads none, and a record left from before
