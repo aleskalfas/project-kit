@@ -68,7 +68,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import answers_told, bootstrap_gate, fixers, friction_answers
+from _lib import answers_told, bootstrap_gate, fixers, friction_answers, pr_head
 from _lib.agent_verdicts import (
     all_verdicts,
     latest_verdicts_per_reviewer,
@@ -235,7 +235,7 @@ def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | N
     if not head or not base:
         print(f"error: GitHub named no head or no base for PR #{number}.", file=sys.stderr)
         return None
-    source = friction_answers.pull_request_source(
+    source = pr_head.pull_request_source(
         str(pr.get("headRefName") or ""),
         number,
         cross_repository=bool(pr.get("isCrossRepository")),

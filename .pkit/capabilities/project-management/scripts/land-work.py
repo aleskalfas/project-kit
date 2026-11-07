@@ -263,6 +263,7 @@ from _lib import (
     head_programs,
     issue_branch,
     merge_queue,
+    pr_head,
     pr_merge,
     provenance,
     session_guard,
@@ -423,10 +424,10 @@ class _Head:
     standing: head_programs.Standing = head_programs.UNTAKEN
 
     @property
-    def source(self) -> friction_answers.Source:
+    def source(self) -> pr_head.Source:
         """Where the head is fetched from, where this clone lacks it: for a PR from a
         fork, the base's remote, which keeps a ref for it."""
-        return friction_answers.pull_request_source(
+        return pr_head.pull_request_source(
             self.branch,
             self.pr_number,
             cross_repository=self.cross_repository,
@@ -440,7 +441,7 @@ class _Head:
         own for a PR from a fork, whose branch's remote is the fork's; else the
         branch's."""
         if self.cross_repository and self.base_branch:
-            return friction_answers.base_remote(self.base_branch)
+            return pr_head.base_remote(self.base_branch)
         return self.remote
 
     @property
@@ -928,7 +929,7 @@ def _pin_head(
         branch,
         oid,
         base=str(pr.get("baseRefName") or "") or "the base branch",
-        remote=friction_answers.branch_remote(branch),
+        remote=pr_head.branch_remote(branch),
         base_branch=str(pr.get("baseRefName") or ""),
         cross_repository=cross,
         placed=pr.get("isCrossRepository"),
@@ -936,7 +937,7 @@ def _pin_head(
     )
     if args.expect_head and not oid.startswith(args.expect_head):
         head = _covered(head, args.expect_head)
-    notes = _local_notes(head, cross_repository=cross)
+    notes = _local_notes(head)
     if head.covered:
         notes.insert(0, head.covered)
     _say(f"head: {short_sha(oid)} (PR #{number}, {branch})" + "".join(f"; {n}" for n in notes))
@@ -1031,7 +1032,7 @@ def _covered(head: _Head, authorised: str) -> _Head:
             f"{moved}, and its base branch could not be read, so whether that authorisation "
             f"covers it cannot be told. {again}",
         )
-    missing = friction_answers.fetch_head(head.oid, head.source)
+    missing = pr_head.fetch_head(head.oid, head.source)
     found = (
         friction_answers.covers(authorised, head.oid, head.base_branch)
         if missing is None
@@ -1062,21 +1063,24 @@ def _covered(head: _Head, authorised: str) -> _Head:
     return replace(head, authorised=found.since)
 
 
-def _local_notes(head: _Head, *, cross_repository: bool) -> list[str]:
+def _local_notes(head: _Head) -> list[str]:
     """What the local checkout says about the pinned head; refuses a local
-    branch holding commits the head lacks."""
+    branch holding commits the head lacks. A head this clone lacks is fetched from
+    its source first: for a PR from a fork, the ref its base repository keeps."""
     branch, oid, remote = head.branch, head.oid, head.remote
     tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
     notes: list[str] = []
     if tip and tip != oid:
-        if not friction_answers.has_commit(oid) and not cross_repository:
-            _git("fetch", "--quiet", remote, f"refs/heads/{branch}")
-        if not friction_answers.has_commit(oid):
+        # The source is read only for a head this clone lacks: for a PR from a fork,
+        # it asks the backbone for the base's remote.
+        fetched = None if pr_head.has_commit(oid) else pr_head.fetch(oid, head.source)
+        if fetched is not None and not fetched.held:
+            named = fetched.ref.removeprefix("refs/heads/")
             raise _Stop(
                 EXIT_UNREADABLE,
                 f"head: cannot tell whether local {branch} (at {short_sha(tip)}) holds commits "
                 f"PR #{head.pr_number}'s head {short_sha(oid)} lacks: this clone does not have "
-                f"that head. Fetch it (`git fetch {remote} {branch}`) and run "
+                f"that head. Fetch it (`git fetch {fetched.remote} {named}`) and run "
                 f"`land-work {head.issue}` again",
             )
         ahead = _count_commits(f"{oid}..{tip}")

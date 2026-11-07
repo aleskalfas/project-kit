@@ -53,6 +53,7 @@ from tests.test_friction_revisit import (
 )
 from tests.test_friction_revisit import entry as revisit_entry
 from tests.test_pm_backbone import route_every_backbone
+from tests.test_pm_pr_head import HEAD_OID, clone_git
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -830,82 +831,18 @@ def test_checked_reads_the_answers_and_no_friction_settings(
     assert found.settings == ()
 
 
-HEAD_OID = "c" * 40
-
-
-def _clone_git(monkeypatch, fa: ModuleType, *, holds: bool, fetch_brings: bool) -> list[tuple]:
-    """`git` as a clone answers it, recorded: whether it holds `HEAD_OID`, and
-    whether a fetch brings it."""
-    held = {HEAD_OID} if holds else set()
-    calls: list[tuple] = []
-
-    def git(*argv: str) -> subprocess.CompletedProcess[str]:
-        calls.append(argv)
-        if argv[0] == "cat-file":
-            return subprocess.CompletedProcess(argv, 0 if HEAD_OID in held else 1, "", "")
-        if argv[0] == "fetch":
-            if not fetch_brings:
-                return subprocess.CompletedProcess(argv, 128, "", "fatal: couldn't find ref\n")
-            held.add(HEAD_OID)
-        return subprocess.CompletedProcess(argv, 0, "", "")
-
-    monkeypatch.setattr(fa, "_git", git)
-    return calls
-
-
-def _base_resolved(fa: ModuleType, monkeypatch, ref: str, resolved: str | None) -> None:
-    """The backbone resolves every base named to `ref`, `resolved` as it says."""
-    base = fa.default_branch.Base(ref, "e" * 40, None, None, resolved)
-    monkeypatch.setattr(fa.default_branch, "check_base", lambda _named=None: base)
-
-
-@pytest.mark.parametrize(
-    ("cross_repository", "remote", "ref"),
-    [(False, "fork", "refs/heads/feat/7-x"), (True, "upstream", "refs/pull/7/head")],
-    ids=["same-repository", "fork"],
-)
-def test_a_head_this_clone_lacks_is_fetched_from_its_source(
-    fa: ModuleType, monkeypatch, cross_repository: bool, remote: str, ref: str
-) -> None:
-    """A PR from the base's own repository is fetched from its branch, on the remote
-    the branch is pushed to. One from a fork is fetched by the ref the base repository
-    keeps for it, on the base's remote as the base is fetched, never the branch's."""
-    calls = _clone_git(monkeypatch, fa, holds=False, fetch_brings=True)
-    _base_resolved(fa, monkeypatch, "upstream/main", "remote")
-    source = fa.pull_request_source(
-        "feat/7-x", 7, cross_repository=cross_repository, base="main", remote="fork"
-    )
-    assert source == fa.Source(remote, ref)
-    assert fa.fetch_head(HEAD_OID, source) is None
-    assert ("fetch", "--quiet", remote, ref) in calls
-
-
-@pytest.mark.parametrize("resolved", ["local", None], ids=["local-branch", "revision"])
-def test_a_base_that_names_no_remote_s_branch_is_fetched_from_origin(
-    fa: ModuleType, monkeypatch, resolved: str | None
-) -> None:
-    _base_resolved(fa, monkeypatch, "main", resolved)
-    assert fa.base_remote("main") == "origin"
-
-
-def test_a_head_this_clone_holds_is_not_fetched(fa: ModuleType, monkeypatch) -> None:
-    calls = _clone_git(monkeypatch, fa, holds=True, fetch_brings=True)
-    assert fa.fetch_head(HEAD_OID, fa.Source("origin", "refs/heads/feat/7-x")) is None
-    assert [argv for argv in calls if argv[0] == "fetch"] == []
-
-
 def test_a_head_no_fetch_brings_makes_the_derivation_unreadable(
     fa: ModuleType, monkeypatch
 ) -> None:
     """Never a pass on a guess: the check is not run on a head the clone lacks."""
-    _clone_git(monkeypatch, fa, holds=False, fetch_brings=False)
+    clone_git(monkeypatch, fa.pr_head, holds=False, fetch_brings=False)
     monkeypatch.setattr(fa, "_refresh_base", lambda base: None)
 
     def run_check(*_args: Any, **_kwargs: Any) -> Any:
         raise AssertionError("the check ran on a head the clone lacks")
 
     monkeypatch.setattr(fa, "_run_check", run_check)
-    found = fa.checked(HEAD_OID, "main", source=fa.Source("origin", "refs/heads/feat/7-x"))
+    found = fa.checked(HEAD_OID, "main", source=fa.pr_head.Source("origin", "refs/heads/feat/7-x"))
     assert found.document is None
     assert found.problem == (
         "the head ccccccc is not in this clone, and fetching refs/heads/feat/7-x from origin "
