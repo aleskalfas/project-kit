@@ -16,6 +16,7 @@ builds-on:
       - {id: TERM-decision-record, name: decision record}
       - {id: TERM-default-branch, name: default branch}
       - {id: TERM-deferral, name: deferral}
+      - {id: TERM-delegate, name: delegate}
       - {id: TERM-finding, name: finding}
       - {id: TERM-head, name: head}
       - {id: TERM-link-target, name: link target}
@@ -160,6 +161,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
+  - **Term:** [delegate](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-delegate--delegate)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
   - **Term:** [link target](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-link-target--link-target)
