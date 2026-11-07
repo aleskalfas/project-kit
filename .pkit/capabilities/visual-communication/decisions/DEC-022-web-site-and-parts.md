@@ -198,9 +198,9 @@ A page alone, such as the figure, can be placed in a slide, and a site cannot. S
 - **Left open:**
   - **A deck's layouts saying their heights,** so its text past a page's foot is reported. That is a change of the foundations' deck of its own.
   - **A page's own mark in the shared navigation,** such as the link to the page a reader is on. A family can paint it, but a page would have to give the shared header a word naming its link, and nothing passes a page's word to a field of the top.
-  - **A site shown inside a slide,** which point 1 refuses. The record of how a picture file reaches a piece ([project-kit#2794](https://github.com/aleskalfas/project-kit/issues/2794)) may give that a way.
+  - **A site shown inside a slide,** which point 1 refuses. A slide shows a picture of the page instead, given as a picture file, which does not follow the site ([visual-communication:DEC-025-picture-files], Implications).
   - **A brand's drawing of a site's layout** says its page's height in its own file. How waits for the change that lets a brand declare its drawings (DEC-009 point 8).
-  - **A logo in a header that follows the brand** is #2794's.
+  - **A logo in a header that follows the brand** is the brand's value of the picture role `picture.logo`, which the shared header shows ([visual-communication:DEC-025-picture-files] point 4).
   - **A page shorter than a screen,** and where a screen's first view ends.
   - **A brand's or a local part past a page's edge,** which only the reviewer sees until a finding covers it.
   - **The starter's older patterns, which follow no size,** and squash in a phone's main part. Each follows a size in a change of its own.
