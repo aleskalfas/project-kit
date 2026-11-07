@@ -80,6 +80,8 @@ pkit:
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-021#5
+        - visual-communication:DEC-021#7
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines

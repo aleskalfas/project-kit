@@ -65,6 +65,8 @@ pkit:
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
         - visual-communication:DEC-016#5
+        - visual-communication:DEC-021#5
+        - visual-communication:DEC-021#7
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
