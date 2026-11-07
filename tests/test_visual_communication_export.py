@@ -2,14 +2,16 @@
 the clone's local folder, never overwriting another; their record, `exports.yaml`; no stale
 or missing produced picture, unless the person names a stale one; a piece of several
 pages, one file for each page under one number; a piece exported as PDF, one file for each
-language and combination holding its pages in order; what a write that fails leaves; and a
-published piece's current copy, in its folder or at a place, with the gate on its lock
-(DEC-017 points 5, 7 and 8)."""
+language and combination holding its pages in order; a piece exported as HTML, one page file
+for each language and set of combinations that share one (DEC-023 point 1); what a write
+that fails leaves; and a published piece's current copy, in its folder or at a place, with
+the gate on its lock (DEC-017 points 5, 7 and 8)."""
 
 from __future__ import annotations
 
 import dataclasses
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Callable, Iterator, Mapping
@@ -26,15 +28,20 @@ from tests.test_visual_communication_pdf import read as read_pdf
 from tests.test_visual_communication_pipeline import (
     LOCK,
     PHONE,
+    PHONE_GROUND,
     PIECE,
     PIECE_FOLDER,
     TESTS,
+    add_device,
     drawing_project,
     every_file,
     exported_up_to,
+    hex_of,
     list_drawing_libraries,
     on_devices,
+    page_values,
     stamped,
+    two_steps,
     write_content,
     write_picture,
 )
@@ -56,6 +63,8 @@ from tests.visual_communication_writes import FULL, failing
     exports,
     svg,
     pdf,
+    html,
+    html_declaration,
     seam,
     framing,
     files,
@@ -71,6 +80,8 @@ from tests.visual_communication_writes import FULL, failing
     "exports",
     "plugins.svg",
     "plugins.pdf",
+    "plugins.html",
+    "plugins.html_declaration",
     "plugins.seam",
     "framing",
     "files",
@@ -91,7 +102,7 @@ TEXT = "{http://www.w3.org/2000/svg}text"
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The renderers stand in for the import a run makes when it draws, and the test
     producer is registered, for the length of the test."""
-    importable(monkeypatch, svg, pdf)
+    importable(monkeypatch, svg, pdf, html)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
@@ -404,7 +415,7 @@ def test_a_published_pieces_lock_refused_is_told_of_its_state_and_of_no_pin(
         pytest.param(
             {"exports": []},
             "error: visual/pieces/flow/piece.yaml declares no format under `exports`: name "
-            "`svg` or `pdf` there",
+            "`svg`, `pdf` or `html` there",
             id="no-format",
         ),
     ],
@@ -1112,6 +1123,252 @@ def test_a_pdf_names_no_page(name: str) -> None:
     assert files.shape_problems(record_naming([name]), "exports") != []
 
 
+# --- a piece exported as HTML (DEC-020 point 4, DEC-023 points 1 and 3) -------------------------
+
+#: The page files a run of the deck of three slides makes as HTML, version 1: one for each
+#: language, which holds both colour schemes under its first key.
+HTML_FILES = [f"flow.v1.{language}.default.html" for language in THREE]
+
+DARK = "colour-scheme.dark"
+
+
+def page_file(path: Path) -> tuple[str, str, list[str], list[str]]:
+    """What an exported page file names: its language, its key, the trace id of each page it
+    holds, in order, and the signals each rule of its root lies under, the plain rule's
+    empty."""
+    drawn = path.read_text(encoding="utf-8")
+    head = re.search(r"<html ([^>]*)>", drawn)
+    assert head is not None
+    named = dict(re.findall(r'([a-z-]+)="([^"]*)"', head.group(1)))
+    pages = re.findall(r'<div data-page="([^"]+)"', drawn)
+    rules = [media for media, _ in page_values(path.read_bytes())]
+    return named["lang"], named["data-key"], pages, rules
+
+
+def test_a_deck_exported_as_html_makes_one_page_file_for_each_language_its_modes_in_it(
+    tmp_path: Path,
+) -> None:
+    root = deck(tmp_path, THREE, exports=["html"])
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [line for line in shown.stdout.splitlines() if line.startswith("export: ")] == [
+        *(f"export: {FOLDER}/{name}" for name in HTML_FILES),
+        f"export: version 1 recorded in {RECORD}",
+    ]
+    assert exported(root) == sorted(HTML_FILES)
+    for name in HTML_FILES:
+        language = name.split(".")[2]
+        pages = [f"deck/slides[{slide}]" for slide in THREE[language]]
+        assert page_file(root / FOLDER / name) == (
+            language,
+            "default",
+            pages,
+            ["", "(prefers-color-scheme:dark)"],
+        )
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert version["files"] == {
+        name: reading.sha256((root / FOLDER / name).read_bytes()) for name in HTML_FILES
+    }
+    assert version["recorded"]["renderers"] == {"html": html.VERSION}
+
+
+def test_html_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
+    root = deck(tmp_path, THREE, exports=["pdf", "html"])
+    assert run(root, PIECE).returncode == 0
+    assert exported(root) == sorted([*PDF_FILES, *HTML_FILES])
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert sorted(version["files"]) == exported(root)
+    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.0.0"}
+
+
+@pytest.mark.parametrize(
+    ("modes", "key"),
+    [(["light", "dark"], "default"), (["dark"], DARK)],
+    ids=["light-and-dark", "dark-alone"],
+)
+def test_a_page_file_takes_the_first_key_it_serves(
+    tmp_path: Path, modes: list[str], key: str
+) -> None:
+    root = drawing_project(
+        tmp_path, picture=False, modes={"colour-scheme": modes}, exports=["html"]
+    )
+    assert run(root, PIECE).returncode == 0
+    assert exported(root) == [f"flow.v1.en.{key}.html"]
+    assert page_file(root / FOLDER / f"flow.v1.en.{key}.html")[1] == key
+    assert files.shape_problems(reading.read_yaml(root / RECORD), "exports") == []
+
+
+def test_each_key_over_a_size_axis_takes_a_page_file_of_its_own_at_its_sizes_values(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]},
+        exports=["html"],
+    )
+    add_device(root, PHONE_GROUND)
+    assert run(root, PIECE).returncode == 0
+    names = ["flow.v1.en.default.html", f"flow.v1.en.{PHONE}.html"]
+    assert exported(root) == names
+    desktop, phone = (root / FOLDER / name for name in names)
+    assert [page_file(path)[1:] for path in (desktop, phone)] == [
+        ("default", ["figure"], ["", "(prefers-color-scheme:dark)"]),
+        (PHONE, ["figure"], ["", "(prefers-color-scheme:dark)"]),
+    ]
+    widths = [
+        re.findall(r"width:min\(100%,([0-9.]+)px\)", path.read_text(encoding="utf-8"))
+        for path in (desktop, phone)
+    ]
+    assert widths == [["960"], ["480"]]
+    black = "#000000"
+    assert [held["--background"] for _, held in page_values(phone.read_bytes())] == [black] * 2
+    assert black not in {held["--background"] for _, held in page_values(desktop.read_bytes())}
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert sorted(version["files"]) == names
+
+
+def test_a_piece_on_no_size_axis_takes_one_page_file_for_each_language_whatever_its_modes(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        languages=["en", "cs"],
+        modes={"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]},
+        exports=["html"],
+    )
+    write_content(root, "cs", body=two_steps("Naplánovat."))
+    assert run(root, PIECE).returncode == 0
+    assert exported(root) == ["flow.v1.cs.default.html", "flow.v1.en.default.html"]
+    for language in ("en", "cs"):
+        assert page_file(root / FOLDER / f"flow.v1.{language}.default.html") == (
+            language,
+            "default",
+            ["figure"],
+            [
+                "",
+                "(prefers-color-scheme:dark)",
+                "(prefers-contrast:more)",
+                "(prefers-color-scheme:dark) and (prefers-contrast:more)",
+            ],
+        )
+
+
+def test_a_mode_no_signal_names_takes_a_page_file_of_its_own_under_the_first_key_it_serves(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every mode the foundations ship has a pair, so a pair left out stands for one."""
+    monkeypatch.setitem(
+        html_declaration.HOLDS_MODES["html"]["colour-scheme"], "pairs", {"light": "light"}
+    )
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]},
+        exports=["html"],
+    )
+    assert run(root, PIECE).returncode == 0
+    names = ["flow.v1.en.default.html", f"flow.v1.en.{DARK}.html"]
+    assert exported(root) == sorted(names)
+    light, dark = (root / FOLDER / name for name in names)
+    assert [page_file(path)[1:] for path in (light, dark)] == [
+        ("default", ["figure"], ["", "(prefers-contrast:more)"]),
+        (DARK, ["figure"], ["", "(prefers-contrast:more)"]),
+    ]
+    assert "prefers-color-scheme" not in dark.read_text(encoding="utf-8")
+    document = pl.Project(
+        pl.read_piece(root, "visual", PIECE), LOCK, pl.Held(root, "visual")
+    ).values()
+    [(_, plain), _] = page_values(dark.read_bytes())
+    assert plain["--background"] == hex_of(pl.colours_at(document, DARK)["background"])
+    assert files.shape_problems(reading.read_yaml(root / RECORD), "exports") == []
+
+
+#: Names of exported page files: one for each language and set of combinations, of no page.
+HTML_NAMES = [
+    "flow.v1.en.default.html",
+    "flow.v12.cs.colour-scheme.dark.html",
+    f"flow.v1.en.{PHONE}.html",
+]
+
+
+def test_the_record_takes_a_page_files_name_beside_every_name_format_1_accepted() -> None:
+    names = FORMAT_1_NAMES + PAGED_NAMES + PDF_NAMES + HTML_NAMES
+    assert files.shape_problems(record_naming(names), "exports") == []
+
+
+@pytest.mark.parametrize("name", ["flow.v1.en.default.1.html", "flow.v1.en.default.htm"])
+def test_a_page_file_names_no_page(name: str) -> None:
+    assert files.shape_problems(record_naming([name]), "exports") != []
+
+
+def no_page_in_czech(tmp_path: Path, form: str) -> Path:
+    return deck(tmp_path, {**SLIDES, "cs": {}}, exports=[form])
+
+
+def a_stale_picture(tmp_path: Path, form: str) -> Path:
+    root = ready(tmp_path, exports=[form])
+    make_stale(root)
+    return root
+
+
+def a_number_that_does_not_fit(tmp_path: Path, form: str) -> Path:
+    root = showing(tmp_path, "number", exports=[form])
+    exported_up_to(root, 1_000_000_000)
+    return root
+
+
+def an_unreadable_record(tmp_path: Path, form: str) -> Path:
+    root = ready(tmp_path, exports=[form])
+    write(root / RECORD, "pkit_schema: visual-communication:exports\n[")
+    return root
+
+
+def a_link_for_the_exports_folder(tmp_path: Path, form: str) -> Path:
+    root = ready(tmp_path, exports=[form])
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (root / FOLDER).parent.mkdir(parents=True)
+    (root / FOLDER).symlink_to(elsewhere, target_is_directory=True)
+    return root
+
+
+#: A piece of each kind an export refuses, in a format the test names.
+REFUSED: dict[str, Callable[[Path, str], Path]] = {
+    "final": lambda tmp_path, form: drawing_project(
+        tmp_path, state="final", picture=False, exports=[form]
+    ),
+    "no-lock": lambda tmp_path, form: drawing_project(tmp_path, lock=None, exports=[form]),
+    "a-lock-that-does-not-hold": lambda tmp_path, form: drawing_project(
+        tmp_path, lock={**LOCK, "test-brand": "2.0.0"}, picture=False, exports=[form]
+    ),
+    "a-picture-missing": lambda tmp_path, form: drawing_project(tmp_path, exports=[form]),
+    "a-stale-picture": a_stale_picture,
+    "no-page-in-a-language": no_page_in_czech,
+    "a-number-that-does-not-fit": a_number_that_does_not_fit,
+    "an-unreadable-record": an_unreadable_record,
+    "a-link-for-the-exports-folder": a_link_for_the_exports_folder,
+}
+
+
+@pytest.mark.parametrize("kind", sorted(REFUSED))
+def test_what_refuses_an_svg_or_a_pdf_export_refuses_an_html_one_before_any_write(
+    tmp_path: Path, kind: str
+) -> None:
+    """Each refusal names the same, but a file's format where it names a file."""
+    said = {}
+    for form in ("svg", "pdf", "html"):
+        root = REFUSED[kind](tmp_path / form, form)
+        said[form] = re.sub(r"\.(svg|pdf|html)\b", ".<format>", refused(root))
+    assert said["html"] == said["svg"] == said["pdf"]
+    assert said["html"].startswith("error: ")
+
+
 # --- what a failed export leaves ----------------------------------------------------------------
 
 
@@ -1749,6 +2006,65 @@ def test_a_failed_export_puts_each_file_at_the_place_back(
     assert {path: (root / path).read_bytes() for path in PLACED} == held
     assert (root / RECORD).read_bytes() == record
     assert copied(root, PLACE) == COPIES
+
+
+# --- a page file's current copy (DEC-006 point 7, DEC-017 points 7 and 8) -----------------------
+
+
+@pytest.mark.parametrize("place", [None, PLACE], ids=["in-its-folder", "at-a-place"])
+def test_a_published_pieces_copy_holds_its_page_file_and_its_next_export_reads_the_record(
+    tmp_path: Path, place: str | None
+) -> None:
+    root = published(tmp_path, exports=["html"], **({} if place is None else {"copy-place": place}))
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    folder = COPY if place is None else place
+    assert copied(root, folder) == ["flow.en.default.html"]
+    assert (root / folder / "flow.en.default.html").read_bytes() == (
+        root / FOLDER / "flow.v1.en.default.html"
+    ).read_bytes()
+    record = record_of(root)
+    assert files.shape_problems(record, "exports") == []
+    recorded = "current-copy" if place is None else place
+    [version] = record["versions"]
+    assert record["current-copy"] == {
+        "piece": PIECE,
+        "version": 1,
+        "files": {f"{recorded}/flow.en.default.html": version["files"]["flow.v1.en.default.html"]},
+    }
+    reworded(root)
+    again = run(root, PIECE)
+    assert again.returncode == 0, again.stderr
+    assert record_of(root)["current-copy"]["version"] == 2
+    assert copied(root, folder) == ["flow.en.default.html"]
+
+
+@pytest.mark.parametrize("place", [None, PLACE], ids=["in-its-folder", "at-a-place"])
+def test_a_page_file_whose_first_key_changes_goes_or_is_left_behind_as_any_file_of_the_copy(
+    tmp_path: Path, place: str | None
+) -> None:
+    """A piece of dark alone that gains light names its file by the default key."""
+    root = published(
+        tmp_path,
+        exports=["html"],
+        modes={"colour-scheme": ["dark"]},
+        **({} if place is None else {"copy-place": place}),
+    )
+    assert run(root, PIECE).returncode == 0
+    folder = COPY if place is None else place
+    assert copied(root, folder) == [f"flow.en.{DARK}.html"]
+    edit(root, "    - dark\n", "    - light\n    - dark\n")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    left = [line for line in shown.stdout.splitlines() if line.startswith("left behind: ")]
+    if place is None:
+        assert copied(root, folder) == ["flow.en.default.html"]
+        assert left == []
+    else:
+        assert copied(root, folder) == [f"flow.en.{DARK}.html", "flow.en.default.html"]
+        assert left == [f"left behind: {place}/flow.en.{DARK}.html: {LEFT}"]
+    recorded = "current-copy" if place is None else place
+    assert list(record_of(root)["current-copy"]["files"]) == [f"{recorded}/flow.en.default.html"]
 
 
 # --- the gate on a published piece's lock -------------------------------------------------------

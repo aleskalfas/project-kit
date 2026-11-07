@@ -1299,10 +1299,11 @@ def browser(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Browser
     yield drawn
 
 
-def html_flow(tmp_path: Path, program: bool = True) -> Path:
+def html_flow(tmp_path: Path, program: bool = True, **fields: Any) -> Path:
     """`flow` in both colour schemes with its picture, and a program the configuration names
-    as the browser, which `Browser` stands in for."""
-    root = drawing_project(tmp_path)
+    as the browser, which `Browser` stands in for; `fields` are the piece's own, such as its
+    `exports`."""
+    root = drawing_project(tmp_path, **fields)
     write_picture(root, framing)
     if program:
         name_browser(root, write_program(tmp_path / "browser" / "chromium"))
@@ -1382,20 +1383,35 @@ def test_a_renderer_of_another_name_is_refused_with_nothing_written(
 def test_a_piece_that_declares_html_is_read_through_it_and_any_other_through_svg(
     tmp_path: Path, formats: list[str], renderer: str
 ) -> None:
-    """No piece can declare `html` yet, so the rule is held on a piece's list of formats."""
-    piece = viewing.pl.Piece(tmp_path, "visual", PIECE, {"exports": formats}, {})
+    root = drawing_project(tmp_path, picture=False, exports=formats)
+    piece = viewing.pl.read_piece(root, "visual", PIECE)
     assert viewing.renderer_of(piece) == renderer
 
 
 def test_a_piece_that_declares_html_is_drawn_through_it_with_no_renderer_named(
-    tmp_path: Path, browser: Browser, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, browser: Browser
 ) -> None:
-    root = html_flow(tmp_path)
-    monkeypatch.setattr(viewing, "renderer_of", lambda piece: "html")
+    root = html_flow(tmp_path, exports=["html"])
     shown = run_look(root, PIECE)
     assert shown.returncode == 0, shown.stderr
     assert html_report(root)["renderer"]["name"] == "html"
     assert not folder_of(root).exists()
+
+
+def test_a_piece_that_declares_html_still_reaches_the_svg_renderers_images_when_named(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path, exports=["html"])
+    shown = run_look(root, PIECE, "--renderer", "svg")
+    assert shown.returncode == 0, shown.stderr
+    assert report_of(root)["renderer"]["name"] == "svg"
+    assert sorted(path.name for path in folder_of(root).iterdir()) == [
+        "flow.en.default.frames.json",
+        "flow.en.default.png",
+        viewing.REPORT,
+    ]
+    assert not html_folder(root).exists()
+    assert browser.calls == []
 
 
 def test_with_no_renderer_named_a_piece_that_does_not_declare_html_draws_as_before(
@@ -2133,13 +2149,14 @@ def test_it_says_where_it_looked_where_no_browser_is_found(
     )
 
 
+@pytest.mark.parametrize(("formats", "renderer"), [(["html"], "html"), (["svg"], "svg")])
 def test_it_reads_through_the_html_renderer_by_default_a_piece_that_declares_it(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, formats: list[str], renderer: str
 ) -> None:
-    root = starter_project(tmp_path)
-    monkeypatch.setattr(pages.viewing, "renderer_of", lambda piece: "html")
-    shown = run_pages(root, "--json", "tag")
-    assert json.loads(shown.stdout)["renderer"] == "html"
+    root = drawing_project(tmp_path, picture=False, exports=formats)
+    shown = run_pages(root, "--json", PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert json.loads(shown.stdout)["renderer"] == renderer
 
 
 def test_it_lists_each_key_of_a_piece_on_a_size_axis(tmp_path: Path) -> None:
