@@ -2984,7 +2984,9 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _deny_forms   → _deny_parts, _rule_form
     #   _deny_parts   → _without_harmless_redirections, _words, _assignments,
     #                   _export_prefix, _git_configures, _runner_parts,
-    #                   _names_runner (+ _SEP/_RUN_SEP/_CONFIG_VAR)
+    #                   _names_runner, _split_outside_quotes
+    #                   (+ _SEP/_RUN_SEP/_CONFIG_VAR)
+    #   _split_outside_quotes → (+ _QUOTE_TOKEN)
     #   _runner_parts → _program_name, _shell_script, _deny_parts, _doubts,
     #                   _runner_commands, _expands, _git_configures
     #                   (+ _SHELLS/_RUNNER_HOPS)
@@ -3061,6 +3063,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_glob_widened",
         "_named_behind_glob",
         "_deny_parts",
+        "_split_outside_quotes",
         "_runner_parts",
         "_runner_commands",
         "_uv_command",
@@ -3093,6 +3096,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_HARMLESS_REDIRECTION",
         "_SHELL_KEYWORDS",
         "_RUN_SEP",
+        "_QUOTE_TOKEN",
         "_RUNNERS",
         "_UV_OPTIONS",
         "_SHELLS",
@@ -3205,6 +3209,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_glob_widened",
         "_named_behind_glob",
         "_deny_parts",
+        "_split_outside_quotes",
         "_runner_parts",
         "_runner_commands",
         "_uv_command",
@@ -3216,6 +3221,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_names_runner",
         "_expands",
         "_RUN_SEP",
+        "_QUOTE_TOKEN",
         "_RUNNERS",
         "_UV_OPTIONS",
         "_SHELLS",

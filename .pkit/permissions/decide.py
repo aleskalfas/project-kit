@@ -237,6 +237,15 @@ _UNSEEN_KIND = {
 # around a separator, which the reading of a segment's words drops, so a long
 # run of spaces costs it linear time.
 _RUN_SEP = re.compile(r"&&|\|\||\||(?<![ \t\n]\\)(?<!\A\\);|&|\n")
+# A piece of a command as the standard library's POSIX quoting rules read it,
+# as `_words` reads one (#1990): a quoted string, closed or running to the end
+# of the command, a backslash and the character it escapes, a separator `_SEP`
+# names, or a run of anything else. `_split_outside_quotes` cuts a command at
+# the separators alone, so a `-c` script whose quotes hold one stays whole.
+# No two of the pieces open alike, so it reads a command in linear time.
+_QUOTE_TOKEN = re.compile(
+    r"""'[^']*'?|"(?:[^"\\]|\\.)*"?|\\.?|&&|\|\||[;&|\n]|[^'"\\;&|\n]+""", re.S
+)
 # The runners whose command a deny reads (#1990, ADR-025 point 5), with the
 # options of each that the core knows, as GNU's, BSD's and the shells' read
 # them. Each holds, in turn:
@@ -1073,6 +1082,21 @@ def _runner_parts(
     return parts, opaque
 
 
+def _split_outside_quotes(command: str) -> list[str]:
+    """`command` cut at each separator `_SEP` names that stands outside
+    quotes, and outside a backslash's escape, as `_words` reads them
+    (`_QUOTE_TOKEN`). So `sh -c 'rm -rf ~; echo'` is one piece, and find's
+    `\\;` stays in its piece wherever it stands."""
+    pieces: list[str] = []
+    start = 0
+    for token in _QUOTE_TOKEN.finditer(command):
+        if token.group() in ("&&", "||", "|", ";", "&", "\n"):
+            pieces.append(command[start : token.start()])
+            start = token.end()
+    pieces.append(command[start:])
+    return pieces
+
+
 def _deny_parts(
     command: str, depth: int
 ) -> tuple[list[tuple[list[tuple[str, str]], str | None]], bool]:
@@ -1082,10 +1106,15 @@ def _deny_parts(
 
     Each segment `_SEP` yields is one, as the denies read it before #1990. So
     is each command a runner runs, found in the segments `_RUN_SEP` yields,
-    which keep find's `\\;` in its segment. An assignment that changes the
-    program's configuration counts where the shell hands it on: in front of a
-    command, for that command, and in a segment that only assigns or exports,
-    `builtin export` included, for the segments after it.
+    which keep find's `\\;` in its segment. It is found again in the segments
+    `_split_outside_quotes` yields, where they differ from those, so a `-c`
+    script whose quotes hold a separator is read whole. Each reading only adds
+    to the others: where the quotes are read otherwise than the shell reads
+    them, as in a comment holding an apostrophe, `_RUN_SEP`'s segments are
+    still read. An assignment that changes the program's configuration counts
+    where the shell hands it on: in front of a command, for that command, and
+    in a segment that only assigns or exports, `builtin export` included, for
+    the segments after it.
 
     It reads the command with each redirection that writes no file removed
     (#2002), so a program behind one, as in `2>/dev/null rm -rf ~`, is the
@@ -1093,9 +1122,14 @@ def _deny_parts(
     cleaned = _without_harmless_redirections(command).strip()
     parts: list[tuple[list[tuple[str, str]], str | None]] = []
     opaque = False
-    for splitter in (_SEP, _RUN_SEP):
+    run_segments = _RUN_SEP.split(cleaned)
+    quoted_segments = _split_outside_quotes(cleaned)
+    readings = [(_SEP.split(cleaned), False), (run_segments, True)]
+    if quoted_segments != run_segments:
+        readings.append((quoted_segments, True))
+    for pieces, reads_runners in readings:
         inherited: str | None = None
-        for raw in splitter.split(cleaned):
+        for raw in pieces:
             read = _words(raw)
             words = read if read is not None else [(tok, tok) for tok in raw.split()]
             exported = _export_prefix(words)
@@ -1107,7 +1141,7 @@ def _deny_parts(
                 inherited = inherited or configured
                 continue
             kind = inherited or configured
-            if splitter is _SEP:
+            if not reads_runners:
                 parts.append((rest, kind or _git_configures(rest)))
                 continue
             # A fault in reading what a runner runs never drops a deny the

@@ -1228,6 +1228,11 @@ _RUNNER_HOOK_DENIES = (
     "env rm -rf ~",
     "sh -c 'rm -rf ~'",
     "uv run rm -rf ~",
+    # a script whose quotes hold a separator, the guarded command first
+    "sh -c 'rm -rf ~; echo hi'",
+    "bash -c 'git push --force && true'",
+    "uv run sh -c 'git push --force; true'",
+    "find . -exec sh -c 'rm -rf ~; echo' \\;",
 )
 _RUNNER_HOOK_ASKS = (
     "find . -exec sh -c 'rm \"$1\"' _ {} \\;",

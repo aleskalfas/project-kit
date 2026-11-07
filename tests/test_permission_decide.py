@@ -4300,6 +4300,23 @@ _RUNNER_DENIES = [
     ("bash --norc -lc 'git push --force origin main'", "vcs-history-rewrite"),
     ("sh -c 'cd /x && rm -rf ~'", "destructive-fs"),
     ("sh -c 'git status; sudo id'", "privilege-escalation"),
+    # a script whose quotes hold a separator is read whole, so the guarded
+    # command is denied first in the script as well as last
+    ("sh -c 'rm -rf ~; echo'", "destructive-fs"),
+    ("sh -c 'rm -rf ~; echo hi'", "destructive-fs"),
+    ("bash -c 'git push --force && true'", "vcs-history-rewrite"),
+    ('bash -c "rm -rf ~ | cat"', "destructive-fs"),
+    ("bash -c 'sudo id || true'", "privilege-escalation"),
+    ("zsh -c 'rm -rf ~ & wait'", "destructive-fs"),
+    ("dash -c 'sudo id\necho'", "privilege-escalation"),
+    ("uv run sh -c 'git push --force; true'", "vcs-history-rewrite"),
+    ("find . -exec sh -c 'rm -rf ~; echo' \\;", "destructive-fs"),
+    ("xargs bash -c 'git push origin +main && echo ok'", "vcs-history-rewrite"),
+    ("echo a; sh -c 'rm -rf ~; echo'", "destructive-fs"),
+    # where the core reads quotes otherwise than the shell, as in a comment
+    # holding an apostrophe, the segments the quote-blind splitter yields are
+    # still read
+    ("echo x # don't\nenv rm -rf ~", "destructive-fs"),
     # each `o` or `O` in a bundle takes a word of its own, zsh reads `-o`'s
     # value in the rest of its word, and a long option may take the next word
     ("bash -OO extglob nullglob -c 'git push origin +main'", "vcs-history-rewrite"),
@@ -4353,6 +4370,22 @@ def test_a_deny_binds_on_the_command_a_runner_runs(decide_mod, catalog, command,
         assert privilege in why, why
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sh -c 'echo hi; rm -rf ~'",
+        "sh -c 'rm -rf ~; echo hi'",
+        "find . -exec sh -c 'echo; rm -rf ~ && echo' \\;",
+    ],
+)
+def test_a_script_whose_quotes_hold_a_separator_is_read_whole(decide_mod, command):
+    # The script itself is split and read, so its guarded command is found as
+    # the shell runs it, `~` unquoted, and not only where the quote-blind
+    # splitter happens to leave it at the head of a segment.
+    parts, _ = decide_mod._deny_parts(command, 0)
+    assert ["rm", "-rf", "~"] in [[word for _, word in words] for words, _ in parts], parts
+
+
 # A runner whose command the core cannot read: every guardrail may bind.
 _UNREAD_RUNNERS = [
     # the architect's table on #1990
@@ -4383,6 +4416,11 @@ _UNREAD_RUNNERS = [
     "bash -c 'rm $(cat list)'",
     "sh -c \"sh -c 'rm -rf ~'\"",
     "xargs sh -c 'bash -c \"rm -rf ~\"'",
+    "sh -c 'echo; sh -c \"rm -rf ~\"'",
+    # a script whose quotes hold a separator, which the quote-blind splitter
+    # cuts: read whole for the denies (`_RUNNER_DENIES`), and still asks
+    "sh -c 'echo a; echo b'",
+    "find . -exec sh -c 'echo {}; echo' \\;",
 ]
 
 
