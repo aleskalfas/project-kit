@@ -615,19 +615,20 @@ def _by_size(value: Any) -> bool:
     return isinstance(by, str) and by.startswith(MARKED)
 
 
-def _says_yes_or_no(when: Any) -> bool:
-    """Whether `when` is a switch by a size each of whose branches says yes or no."""
-    return _by_size(when) and all(
-        isinstance(branch, bool) for key, branch in when.items() if key != SWITCH
-    )
-
-
-def _says_yes(when: Mapping[str, Any], modes: Mapping[str, str], axes: Mapping[str, Any]) -> bool:
-    """Whether a `when` by a size that says yes or no says yes where its axis takes the mode
-    `modes` gives it: the branch of that mode, else of the axis's default."""
-    axis = str(when[SWITCH])[len(MARKED) :]
-    mode = modes[axis]
-    return when.get(mode, when.get(axes[axis].default)) is True
+def _may_draw(when: Any, modes: Mapping[str, str], axes: Mapping[str, AxisLike]) -> bool:
+    """Whether a part whose `when` is `when` may be drawn where each size axis takes the mode
+    `modes` gives it, as `Instance._when` draws it: with no `when`, always; by a field or an
+    option's words, on some content, so it may; by a size, by the branch of that mode, else
+    of the axis's default, `true` or a `when` of those forms (DEC-021 points 3 and 5). A
+    `false`, and a `when` of no form, never draws it."""
+    if when is None:
+        return True
+    if _by_size(when):
+        axis = str(when[SWITCH])[len(MARKED) :]
+        when = when.get(modes[axis], when.get(axes[axis].default))
+        if isinstance(when, bool):
+            return when
+    return isinstance(when, str) or (isinstance(when, Mapping) and len(when) == 1)
 
 
 def source_of_choice(chosen: Any) -> str:
@@ -1165,32 +1166,34 @@ class Component:
         )
 
     def _read_size_repeats(self) -> None:
-        """Two parts or more that repeat over one list, whose `when`s by a size each say yes
-        or no in every branch: at each combination of the modes of the axes they read,
-        exactly one of them says yes, so each item is drawn once at every size (DEC-021
-        points 4 and 7). A `when` that reads no size axis is reported already."""
+        """Two parts or more that repeat over one list, a `when` by a size among theirs: at
+        each combination of the modes of the axes those read, exactly one of them may be
+        drawn, so each item is drawn once at every size (DEC-021 points 4, 5 and 7). Every
+        part over the list counts, whatever its `when` (`_may_draw`). The finding lies at the
+        first `when` by a size. One that reads no size axis is reported already."""
         over: dict[str, list[Part]] = {}
         for part in self.parts.values():
-            listed, when = part.spec.get("repeat"), part.spec.get("when")
-            if part.kind == "repeat" and isinstance(listed, str) and _says_yes_or_no(when):
+            listed = part.spec.get("repeat")
+            if part.kind == "repeat" and isinstance(listed, str):
                 over.setdefault(listed, []).append(part)
         known = self._ctx.sizes.axes
         for listed, parts in over.items():
-            read = sorted({str(part.spec["when"][SWITCH])[len(MARKED) :] for part in parts})
-            if len(parts) < 2 or any(axis not in known for axis in read):
+            sized = [part for part in parts if _by_size(part.spec.get("when"))]
+            read = sorted({str(part.spec["when"][SWITCH])[len(MARKED) :] for part in sized})
+            if len(parts) < 2 or not sized or any(axis not in known for axis in read):
                 continue
             for modes in itertools.product(*(known[axis].modes for axis in read)):
                 at = dict(zip(read, modes, strict=True))
-                said = [part.name for part in parts if _says_yes(part.spec["when"], at, known)]
-                if len(said) == 1:
+                drawn = [part for part in parts if _may_draw(part.spec.get("when"), at, known)]
+                if len(drawn) == 1:
                     continue
                 shown = " and ".join(f"`{mode}` of `{axis}`" for axis, mode in at.items())
                 self._issue(
                     SIZE_REPEAT,
-                    f"parts.{parts[0].name}.when",
+                    f"parts.{sized[0].name}.when",
                     f"the parts {', '.join(f'`{p.name}`' for p in parts)} repeat over "
-                    f"`{listed}`, and at {shown} {len(said)} of their `when`s say yes: "
-                    "exactly one says yes at each mode, so each item is drawn once",
+                    f"`{listed}`, and at {shown} {len(drawn)} of them may be drawn: exactly "
+                    "one may be drawn at each mode, so each item is drawn once",
                 )
                 break
 
