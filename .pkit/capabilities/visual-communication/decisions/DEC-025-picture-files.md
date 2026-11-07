@@ -1,5 +1,5 @@
 ---
-id: DEC-023
+id: DEC-025
 title: A piece shows a picture file it holds by name, and a brand gives its logo as a value
 status: proposed
 date: 2026-11-07
