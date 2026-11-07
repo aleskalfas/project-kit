@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A milestone's close that cannot read the topology in full no longer rolls
+  Tasks into another pool's milestone unseen (#2265). `close-milestone` still
+  reads no pool, and now takes each milestone's `Pool:` line to stand, as
+  `edit-issue --milestone` does. The next-numbered open milestone is the
+  target only where its `Pool:` line names the closing milestone's pool, or
+  neither names one; otherwise the close refuses with exit 1 before it writes
+  anything, and asks for `--target`. A target that `--target` or the
+  `Rollforward target:` line names, whose `Pool:` line puts it in another
+  pool, is named in the consent prompt by that line, which says the pools
+  could not be read.

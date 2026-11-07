@@ -331,7 +331,8 @@ def test_a_final_piece_takes_no_export_and_nothing_is_written(
     assert shown.returncode == 1
     assert shown.stdout == ""
     assert shown.stderr == (
-        "error: the piece `flow` is final (its state says so), and a final piece takes no export\n"
+        "error: the piece `flow` is final (its state says so), and a final piece takes no export: "
+        "run `pkit visual take-up flow <name>` to take it up again as a new draft\n"
     )
     assert not (root / FOLDER).exists()
     assert not (root / RECORD).exists()
