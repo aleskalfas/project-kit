@@ -502,7 +502,10 @@ preferred:
 - **At `tablet`,** which neither part names, both take their `desktop` branch, so the steps lie in a row.
 - **What it costs.** No option names an item of the list, as of any list two parts repeat over ([Options](#options)). An item's trace id names the part that draws it, so it differs by size ([Trace ids](#trace-ids)). A formula that reads the list's frame reads both parts, and the hidden one has zero size.
 - **An item a size hides** is missing at that size. A formula that reads it fails there, and so does a tie that ends at it ([Ties and connectors](#ties-and-connectors)). Content drawn at one size and not at another is stated as a fact (*checks*).
-- **What is refused** when the component is read: two such parts whose `when`s say yes or no, unless exactly one says yes at each mode.
+- **What is refused** when the component is read: parts over one list where not exactly one may be drawn at some mode. A list is judged where one of its parts has a `when` by a size, and then every part over it counts:
+  - **A part with no `when`** is drawn at every mode.
+  - **A `when` that names a field or an option's words** may draw its part at every mode, as the content or the option decides.
+  - **A `when` by a size** reads the mode's branch: `true` draws its part, and a field or an option's words may draw it.
 
 ### Ties and connectors
 
