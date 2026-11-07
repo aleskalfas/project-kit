@@ -1,0 +1,36 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-051-id-names-one-artefact.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-07T15:57:47Z
+      outcome: unchanged
+      unchanged-because: The change drops the merge-or-rebase advice from check-numbers' outdated-base report, and its tests assert the new wording. REQ-051 states and verifies that an id once settled names one artefact for good and that a number the default branch took since fails the check; the collision findings and their renumber advice are unchanged, so it still holds.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T174956Z-c97b966f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:57:53Z
+      outcome: unchanged
+      unchanged-because: "The change drops the merge-or-rebase-then-run-again advice from check-numbers' outdated-base report in numbers.py. The README's numbers-check section never quoted that advice: it says the check reports an outdated base, like the change check, and never fails on it, with the same base document, which still holds; the clash table's advice to merge the default branch and keep one file, or renumber, is unchanged in the code."
