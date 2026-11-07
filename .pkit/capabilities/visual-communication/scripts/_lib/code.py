@@ -4,7 +4,8 @@
 - **The declaration** is `code/<name>.yaml` in the location (format `code`): the code
   writer, the form of its spelling, the brand, a lock of the brand and what it builds on,
   where the code goes (`out`), and optionally a `prefix` and the losses a person
-  accepted. Its name is the file's name.
+  accepted. Its name is the file's name. A writer whose declaration says `prefix: False`
+  keeps each token path as the brand exports it, and a declaration naming one is refused.
 - **Where the code goes.** `out` is a file of the project's tree. It is refused outside
   the repository, under `.pkit/`, under a hidden folder, reached through a link, as a
   folder, in the location's library folder, whose copies only the command that brings a
@@ -17,16 +18,18 @@
   The command reads the brand at the versions it names, and never moves it.
 - **A run** resolves every token the brand exports, and every other role of the
   component libraries the lock names at the brand's value or its default (DEC-008 point
-  5), in every combination of its axes (the values document, version 1), and knows its
-  losses before the writer runs: each token of a type the writer's declaration has no
-  form for is left out, and reported unless the declaration accepts it. The writer gets
-  the rest. The command writes the code, then its record: the fingerprint, form 1, over
-  the declaration file, each value written in each combination, and the writer's version
-  (`fingerprint.code_record_inputs`); the hash of the code; and what is only recorded. It
-  writes the two as one change: where a write fails, both are as they were before the
-  run, or each file the run could not put back is named, so the check never reads new
-  code beside its old record as code edited by hand. Where the record verifies and the
-  code is what it would write, nothing is written.
+  5), in every combination of the brand's axes whose kind the writer's declaration spells,
+  each other axis at its default (the values document, version 1). It knows its losses
+  before the writer runs: each token of a type the writer's declaration has no form for
+  is left out, and each other token an axis of another kind changes, such as a size, is
+  written at that axis's default (DEC-021 point 8). Each is reported unless the
+  declaration accepts it. The writer gets the rest. The command writes the code, then its
+  record: the fingerprint, form 1, over the declaration file, each value written in each
+  combination, and the writer's version (`fingerprint.code_record_inputs`); the hash of
+  the code; and what is only recorded. It writes the two as one change: where a write
+  fails, both are as they were before the run, or each file the run could not put back is
+  named, so the check never reads new code beside its old record as code edited by hand.
+  Where the record verifies and the code is what it would write, nothing is written.
 - **The findings** (DEC-006 points 4 and 8): a record missing beside the code, or naming
   code that is missing, fails; code stale by a value or by its declaration fails, and so
   does code that differs from what was written; code stale only by its writer's version
@@ -41,13 +44,13 @@ Reads the location's files; imports a code writer only when it runs.
 from __future__ import annotations
 
 import platform
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, libraries, records, tokens, values
+from _lib import fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
@@ -111,9 +114,12 @@ class Plan:
     """What a run of the writer is handed, and what its record compares.
 
     - `writer`: the code writer's declaration (`seam`).
-    - `axes`: each axis of the brand, `{kind, modes, default}`, its modes in declared order.
-    - `document`: the values document the writer gets: the tokens it has a form for.
-    - `losses`: each token left out, whether a person accepted it or not.
+    - `axes`: each axis of the brand of a kind the writer spells, `{kind, modes, default}`,
+      its modes in declared order. Every other axis is taken at its default.
+    - `document`: the values document the writer gets: the tokens it has a form for, in
+      each combination of those axes.
+    - `losses`: each token left out, or written at the default of an axis the writer does
+      not spell, whether a person accepted it or not.
     - `sources`: what the record's input set is worked out from, but the writer.
     """
 
@@ -288,30 +294,43 @@ def plan(
             f"{declaration.file}: the {writer['name']} writer {writer['version']} writes "
             f"form {forms}, not form {declaration.form}"
         )
+    if declaration.prefix is not None and not writer.get("prefix", True):
+        raise CodeRefused(
+            f"{declaration.file}: the {writer['name']} writer takes no `prefix`, since a token "
+            f"path stays as the brand exports it: remove `prefix: {declaration.prefix}`"
+        )
     brand = _brand(root, location, declaration, held)
+    spells = writer.get("axis-kinds", ())
+    ordered = sorted(brand.axes.values(), key=lambda axis: axis.name)
     axes = {
         axis.name: {"kind": axis.kind, "modes": list(axis.modes), "default": axis.default}
-        for axis in sorted(brand.axes.values(), key=lambda axis: axis.name)
+        for axis in ordered
+        if axis.kind in spells
     }
-    for name, axis in axes.items():
-        if axis["kind"] not in writer.get("axis-kinds", ()):
-            raise CodeRefused(
-                f"the brand {brand.name} {brand.version} has the {axis['kind']} axis `{name}`, "
-                f"which form {declaration.form} of the {writer['name']} writer does not spell"
-            )
-    document = values.document(brand, brand.combinations(), declaration.lock)
+    at_default = [axis for axis in ordered if axis.kind not in spells]
+    combinations = keys.combinations(
+        {name: axis["modes"] for name, axis in axes.items()}, brand.axes
+    )
+    document = values.document(brand, combinations, declaration.lock)
     kinds = writer.get("kinds", ())
     written = {path: token for path, token in document["tokens"].items() if token["type"] in kinds}
+    form = f"form {declaration.form} of the {writer['name']} writer"
     losses = tuple(
         seam.Loss(
-            writer["name"],
-            path,
-            seam.LEFT_OUT,
-            f"form {declaration.form} of the {writer['name']} writer has no form for a "
-            f"{token['type']} value",
+            writer["name"], path, seam.LEFT_OUT, f"{form} has no form for a {token['type']} value"
         )
         for path, token in document["tokens"].items()
         if path not in written
+    ) + tuple(
+        seam.Loss(
+            writer["name"],
+            path,
+            seam.APPROXIMATED,
+            f"{form} spells no {' or '.join(sorted({axis.kind for axis in by}))} axis, so it "
+            f"writes the value at "
+            + " and ".join(f"`{axis.name}`'s default, `{axis.default}`" for axis in by),
+        )
+        for path, by in _changed_by(brand, written, at_default).items()
     )
     sources = {
         "name": declaration.name,
@@ -330,6 +349,27 @@ def plan(
         losses=losses,
         sources=sources,
     )
+
+
+def _changed_by(
+    brand: tokens.Brand, paths: Collection[str], axes: Iterable[tokens.Axis]
+) -> dict[str, list[tokens.Axis]]:
+    """Each of `paths` that one of `axes` changes, in path order, with the axes that change
+    it: in some combination of the brand's axes, its value differs from its value with that
+    axis at its default."""
+    found: dict[str, list[tokens.Axis]] = {}
+    for axis in axes:
+        changed = {
+            path
+            for combination in brand.combinations()
+            if combination[axis.name] != axis.default
+            for path in paths
+            if brand.resolve(path, combination)
+            != brand.resolve(path, {**combination, axis.name: axis.default})
+        }
+        for path in changed:
+            found.setdefault(path, []).append(axis)
+    return dict(sorted(found.items()))
 
 
 def text_of(planned: Plan) -> str:

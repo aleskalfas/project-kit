@@ -369,6 +369,27 @@ def test_a_merge_of_another_branch_counts_whole(repo: AdopterRepo) -> None:
     assert [o.path for o in found.outside] == ["src/other.py"]
 
 
+def test_a_merge_of_three_parents_counts_whole(repo: AdopterRepo) -> None:
+    """Only a merge of two parents is a merge of the base, so one of three whose other
+    parents both lie in the base's history is read against its first parent, as the
+    document's version says of what `all_inside` counts."""
+    since = _authorised(repo)
+    repo.checkout("main")
+    repo.checkout("left", create=True)
+    left = repo.commit("left", {"src/left.py": "LEFT = 1\n"})
+    repo.checkout("main")
+    repo.checkout("right", create=True)
+    right = repo.commit("right", {"src/right.py": "RIGHT = 1\n"})
+    repo.checkout("main")
+    repo.git("merge", "-q", "--no-edit", "--no-ff", left, right)
+    repo.checkout("topic")
+    repo.git("merge", "-q", "--no-edit", "--no-ff", left, right)
+    merge = repo.git("rev-parse", "HEAD").stdout.strip()
+    found = _since(repo, since)
+    assert found.steps == (fs.Step(merge, merges_base=False),)
+    assert [o.path for o in found.outside] == ["src/left.py", "src/right.py"]
+
+
 # ---- a line the changes cannot be read along ---------------------------------------
 
 

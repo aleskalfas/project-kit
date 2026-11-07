@@ -8,13 +8,22 @@ imported only when it runs.
 
 from __future__ import annotations
 
-from _lib.plugins import css_declaration, pdf_declaration, seam, svg_declaration
+from _lib.plugins import (
+    css_declaration,
+    html_declaration,
+    json_declaration,
+    pdf_declaration,
+    seam,
+    svg_declaration,
+)
 
 # The renderers.
 seam.ship(svg_declaration.DECLARATION)
 seam.ship(pdf_declaration.DECLARATION)
+seam.ship(html_declaration.DECLARATION)
 
 # The code writers.
 seam.ship(css_declaration.DECLARATION)
+seam.ship(json_declaration.DECLARATION)
 
 __all__ = ["seam"]

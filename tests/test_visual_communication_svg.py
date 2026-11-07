@@ -27,8 +27,14 @@ from tests.in_process import load
 from tests.visual_communication_producer import png
 from tests.visual_communication_project import TEST_BRAND
 
-svg, svg_declaration, seam, env, text = load(
-    "visual-communication", "plugins.svg", "plugins.svg_declaration", "plugins.seam", "env", "text"
+svg, svg_declaration, seam, env, text, canvas = load(
+    "visual-communication",
+    "plugins.svg",
+    "plugins.svg_declaration",
+    "plugins.seam",
+    "env",
+    "text",
+    "canvas",
 )
 
 FONT = TEST_BRAND / "fonts" / "SourceSansPro-Regular.otf"
@@ -66,7 +72,7 @@ def scene(*children: dict[str, Any], width: float = 200, height: float = 100) ->
         "lock": {"foundations": "1.0.0"},
         "language": "en",
         "size-key": "default",
-        "seam": 3,
+        "seam": 4,
         "pages": ["figure"],
         "children": [page],
     }
@@ -410,13 +416,13 @@ def test_a_line_that_holds_neither_its_ends_nor_its_points_is_refused() -> None:
 
 
 def test_a_colour_rounds_half_up_and_keeps_its_alpha() -> None:
-    assert svg.colour_text({"components": [0.5, 1 / 255 / 2, 1], "alpha": 0.5}) == (
+    assert canvas.colour_text({"components": [0.5, 1 / 255 / 2, 1], "alpha": 0.5}) == (
         "#8001ff",
         0.5,
     )
-    assert svg.number(-0.001) == "0"
-    assert svg.number(2.505) == "2.5"
-    assert svg.number(3.10) == "3.1"
+    assert canvas.number(-0.001) == "0"
+    assert canvas.number(2.505) == "2.5"
+    assert canvas.number(3.10) == "3.1"
 
 
 # --- the declaration ----------------------------------------------------------------------------
@@ -425,7 +431,7 @@ def test_a_colour_rounds_half_up_and_keeps_its_alpha() -> None:
 def test_it_draws_every_primitive_it_declares_and_declares_every_one_it_draws() -> None:
     declared = set(svg_declaration.DECLARATION["draws"])
     assert declared == {"group", "box", "ellipse", "line", "text", "image"}
-    drawn_by = {name[1:] for name in vars(svg._Canvas) if name[1:] in declared | {"path"}}
+    drawn_by = {name[1:] for name in vars(canvas.Canvas) if name[1:] in declared | {"path"}}
     assert drawn_by == declared
 
 
@@ -433,6 +439,29 @@ def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("svg", seam.RENDERER) == svg_declaration.DECLARATION
     assert svg.NAME == "svg"
     assert svg.VERSION == "1.0.1"
+
+
+#: Each plugin the capability ships, with its own version.
+SHIPPED = {"svg": "1.0.1", "pdf": "1.0.0", "html": "1.1.0", "css": "1.0.0", "json": "1.0.0"}
+
+
+def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:
+    """The seam's version rose to 4 for a format that holds modes (DEC-023 point 2). No other
+    renderer's output changed, so the SVG and PDF renderers keep their versions."""
+    assert seam.SEAM_VERSION == 4
+    declared = {name: seam.declaration(name) for name in SHIPPED}
+    assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 4)
+    assert {name: each["version"] for name, each in declared.items()} == SHIPPED
+    assert set(SHIPPED) <= set(seam.names())
+
+
+def test_a_loss_names_a_key_in_a_field_no_other_loss_carries() -> None:
+    held = {"plugin": "html", "what": "figure/back", "did": "left-out", "why": "no colour"}
+    assert seam.Loss(**held).as_dict() == held
+    assert seam.Loss(**held, key="colour-scheme.dark").as_dict() == {
+        **held,
+        "key": "colour-scheme.dark",
+    }
 
 
 # --- a family's name ----------------------------------------------------------------------------
@@ -480,7 +509,7 @@ def named(families: list[str]) -> dict[str, Any]:
 
 
 def test_a_familys_name_is_written_as_a_css_string_as_pinned() -> None:
-    assert svg.css_string('A "b" \\ <&>\x07\n￿\ud800\x85 é') == (
+    assert canvas.css_string('A "b" \\ <&>\x07\n￿\ud800\x85 é') == (
         '"A \\"b\\" \\\\ \\3c \\26 \\3e \\7 \\a \\ffff \\d800 \\85  é"'
     )
 

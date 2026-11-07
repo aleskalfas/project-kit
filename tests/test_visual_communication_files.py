@@ -50,6 +50,17 @@ def test_without_binding_leaves_the_content() -> None:
     assert files.without_binding(bound("piece", state="draft")) == {"state": "draft"}
 
 
+def test_load_bound_reads_bytes_as_read_bound_reads_a_file() -> None:
+    good = yaml_text(bound("piece", state="draft")).encode("utf-8")
+    assert files.load_bound(good, "at/a/commit", "piece")["state"] == "draft"
+    with pytest.raises(files.FileError, match=r"^at/a/commit: names the schema"):
+        files.load_bound(good, "at/a/commit", "exports")
+    with pytest.raises(reading.ReadError, match=r"^at/a/commit: does not parse as YAML"):
+        files.load_bound(b"not: [yaml\n", "at/a/commit", "piece")
+    with pytest.raises(reading.ReadError, match=r"^at/a/commit: is not UTF-8"):
+        files.load_bound(b"\xff", "at/a/commit", "piece")
+
+
 def test_read_bound_reads_a_bound_file_and_refuses_another(tmp_path: Path) -> None:
     good = write(tmp_path / "piece.yaml", yaml_text(bound("piece", state="draft")))
     assert files.read_bound(good, "piece")["state"] == "draft"
@@ -304,3 +315,70 @@ def test_a_folder_whose_copy_cannot_be_moved_in_is_named_where_it_cannot_be_move
     assert (tmp_path / "record.yaml").read_bytes() == b"c: 1\n"
     [aside] = [path for path in tmp_path.iterdir() if path.name.startswith(".kept.")]
     assert tree(aside) == {"old.txt": b"old\n"}
+
+
+def removed_in(root: Path) -> Any:
+    """A change that removes the folder `gone/`, holding `old.txt` and `sub/deep.txt`, then
+    writes `record.yaml`."""
+    write(root / "gone" / "old.txt", "old\n")
+    write(root / "gone" / "sub" / "deep.txt", "deep\n")
+    write(root / "record.yaml", "c: 1\n")
+    change = files.Change(root)
+    change.remove_folder(root / "gone")
+    change.write(root / "record.yaml", b"c: 2\n")
+    return change
+
+
+def test_a_folder_removed_goes_whole_and_leaves_nothing_beside_it(tmp_path: Path) -> None:
+    removed_in(tmp_path).commit()
+    assert tree(tmp_path) == {"record.yaml": b"c: 2\n"}
+    assert [path.name for path in tmp_path.iterdir()] == ["record.yaml"]
+
+
+def test_a_write_that_fails_after_a_folder_is_removed_moves_the_folder_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    change = removed_in(tmp_path)
+    before = tree(tmp_path)
+    failing(monkeypatch, write={"record.yaml"})
+    with pytest.raises(files.WriteFailed) as failed:
+        change.commit()
+    assert str(failed.value) == f"record.yaml could not be written: {FULL}"
+    assert tree(tmp_path) == before
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["gone", "record.yaml"]
+
+
+def test_a_folder_that_cannot_be_moved_aside_is_named_and_nothing_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    change = removed_in(tmp_path)
+    before = tree(tmp_path)
+    rename = os.rename
+
+    def held(source: Any, target: Any) -> None:
+        if Path(source).name == "gone":
+            raise OSError(errno.EBUSY, os.strerror(errno.EBUSY), str(source))
+        rename(source, target)
+
+    monkeypatch.setattr(os, "rename", held)
+    with pytest.raises(files.WriteFailed) as failed:
+        change.commit()
+    assert str(failed.value) == f"gone could not be removed: {os.strerror(errno.EBUSY)}"
+    assert tree(tmp_path) == before
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["gone", "record.yaml"]
+
+
+def test_a_folder_removed_that_cannot_be_moved_back_is_named(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    change = removed_in(tmp_path)
+    failing(monkeypatch, write={"record.yaml", "gone"})
+    with pytest.raises(files.WriteFailed) as failed:
+        change.commit()
+    assert str(failed.value) == (
+        f"record.yaml could not be written: {FULL}; these could not be put back as they were "
+        f"before the run: gone"
+    )
+    assert (tmp_path / "record.yaml").read_bytes() == b"c: 1\n"
+    [aside] = [path for path in tmp_path.iterdir() if path.name.startswith(".gone.")]
+    assert tree(aside) == {"old.txt": b"old\n", "sub/deep.txt": b"deep\n"}

@@ -6,16 +6,19 @@ and the own roles of the component libraries resolved with a brand (DEC-008).
 its type, and a default that aliases an older role where it has one; each shared axis with
 its kind, its modes and its default; the colour families, each a mapping of its members to
 colour roles; and the pairs of colour roles that must contrast, at WCAG's levels. A shared
-role carries no value, so it is no DTCG token.
+role carries no value, so it is no DTCG token. A role of the type `picture` takes a picture
+file of the brand as its value; it carries no default, and no brand owes it a value
+(DEC-025 point 4).
 
 **A component library's own roles** (`roles.yaml` of a library of kind `components` other
 than the foundations, `read_own_roles`) lie under a group of its name, none under the group
 of component tokens (DEC-004 point 7). Each has a type, and may carry a default: an alias
 to another of its own roles, or to a role of a library it builds on, the shared roles
 included, of the same type, never to a value or a component token (DEC-008 point 3). Its
-pairs each name one of its own roles. It declares no axes and no colour families, which
-the foundations' alone are. What is wrong in it never refuses it: it is kept as its
-findings, each naming its version, and a role or a pair that cannot be read is left out.
+pairs each name one of its own roles. It declares no axes, no colour families and no
+picture role, which the foundations' alone are. What is wrong in it never refuses it: it
+is kept as its findings, each naming its version, and a role or a pair that cannot be
+read is left out.
 
 **A scope** (`Scope`) is the roles one resolution reads: the foundations' and the own roles
 of each component library resolved with them, one version of each, under a lock or as a
@@ -42,18 +45,34 @@ format may add:
 - *The Resolver document* has `version`, `sets` and `modifiers`, and `resolutionOrder`
   naming each set and modifier once as `{"$ref": "#/sets/<n>"}` or
   `{"$ref": "#/modifiers/<n>"}`; later wins. A source is `{"$ref": "<token file>"}`, a
-  file of the brand's version folder. Each modifier is a shared axis: its contexts are the
-  axis's modes, and its default the axis's. A brand may leave out an axis it does not vary.
+  file of the brand's version folder. Each modifier is a shared axis the brand varies:
+  its contexts are the modes it gives, the axis's default among them, and its default the
+  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary.
 - *Fonts* lie in the capability's extension key, `pkit.visual-communication`, on a
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
   how it is measured, `file` alone in format 1.
+- *A picture role's value* is an empty group at the role's path, with no `$type`, since
+  DTCG has no type for a file (DEC-025 point 4). Its `$extensions` name the file in the
+  capability's extension key, `{"file": "<name>"}`, by its bare name in the version's
+  `pictures/`. It aliases nothing, no token aliases it, and it merges as a token does.
+
+**The axes a brand has** (DEC-004 point 2, DEC-021 point 2), which its keys span:
+
+- *every shared value axis, whole:* a mode the brand does not give takes its values at
+  the axis's default, and in a brand built on another its base's values there. So a new
+  mode of the foundations reads no released brand as broken;
+- *a shared size axis only where it gives one:* a brand with no base has one where a
+  modifier varies it, with the modes that modifier gives. A brand built on another has
+  its base's sizes. So a brand that gives no size keeps its combinations when the
+  foundations declare a size axis, and a piece that names a size it lacks is refused.
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
-roles' defaults, then resolves aliases. Every shared role must resolve in every
-combination, to its declared type; a loop or a dangling alias fails; a value axis that
-changes anything but a colour fails. Open roles name roles the brand may give values, or
-groups of them by whole segments.
+roles' defaults, then resolves aliases. Every shared role but a picture role must resolve
+in every combination, to its declared type; a loop or a dangling alias fails; a value axis
+that changes anything but a colour or a picture fails. A picture role's value names a file
+the version holds in `pictures/`, by its exact name, or that is a finding. Open roles name
+roles the brand may give values, or groups of them by whole segments.
 
 **A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
 
@@ -69,8 +88,10 @@ groups of them by whole segments.
   brand; a brand that names its library gives each of its roles with no default a value
   in every combination, or that is a finding;
 - *exports:* a brand exports, beside the shared roles, each role of a library it names
-  that it or its base gives a value (`roles`). Every role with a value under it, a role
-  left at its default included, is `valued`, which the document of values holds;
+  that it or its base gives a value (`roles`). It exports a shared picture role only
+  where it or its base gives it a value (DEC-025 point 4). Every role with a value under
+  it but a picture role, a role left at its default included, is `valued`, which the
+  document of values holds;
 - *pairs:* a library's pair is judged at a brand only where the brand's values reach it,
   through a value the brand or its base gives a library's role along either role's chain
   of defaults, and then in every combination; at its defaults it is its library's to
@@ -89,8 +110,9 @@ its major is the one the entry names. In each combination:
 - *each library's private tokens stay its own:* an alias reaches the exported roles and
   the tokens of the library that writes it, never a token its base keeps private, which
   fails. So a base may reshape its private tokens freely;
-- *the base's axes:* the brand varies values on its base's axes, by their names and modes.
-  A modifier for another axis, a context for another mode, or another default fails;
+- *the base's axes:* the brand varies values on its base's axes, by their names and modes,
+  its base's sizes among them. A modifier for another axis, a context for another mode, or
+  another default fails;
 - *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
   has no brand's own roles), so each link of a chain opens at most what the last opens.
   A base opens a role of a library only where it names that library, and a brand built on
@@ -98,9 +120,11 @@ its major is the one the entry names. In each combination:
 
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
-not have, a value for a role its base does not open, a font file nothing holds, a declared
-pair below its contrast, a token under a library's name that gives none of its roles a
-value, a role of a library it names that it leaves with no value. A library's own
+not have, a value for a role its base does not open, a font file or a picture file
+nothing holds, a declared pair below its contrast, a token under a library's name that
+gives none of its roles a value, a role of a library it names that it leaves with no
+value. Its `facts` hold what its version alone states: each shared picture role it gives
+no value (DEC-025 point 9). A library's own
 `roles.yaml` is no brand's: its findings are the scope's (`Scope.findings`), each naming
 the library's version. Every finding of a brand names the brand's version as where it
 lies, so its level is read where it lies (DEC-002 point 7); a fault of the lock, a base it
@@ -137,6 +161,23 @@ DTCG_VERSIONS = ("2025.10",)
 #: The DTCG types format 1 reads.
 TYPES = ("color", "dimension", "fontFamily", "fontWeight", "number", "typography")
 
+#: The type of a picture role, whose value is a picture file of the brand's version
+#: (DEC-025 point 4). DTCG has no type for a file, so no token takes it.
+PICTURE = "picture"
+
+#: The types a role may have: the DTCG types format 1 reads, and a picture.
+ROLE_TYPES = (*TYPES, PICTURE)
+
+#: The folder of a brand's version that holds the files its picture roles name.
+PICTURES = "pictures"
+
+#: The keys a picture role's group may hold (DEC-025 point 4): no `$type` and no child.
+_PICTURE_KEYS = ("$description", "$extensions", "$deprecated")
+
+#: A picture file's bare name (DEC-025 point 2): lower-case letters, digits and hyphens,
+#: from a letter, then its extension.
+_PICTURE_NAME = re.compile(r"^[a-z][a-z0-9-]*\.(png|jpg|jpeg)$")
+
 #: The members of a typography value, each with its type.
 TYPOGRAPHY = {
     "fontFamily": "fontFamily",
@@ -146,8 +187,9 @@ TYPOGRAPHY = {
     "lineHeight": "number",
 }
 
-#: The kinds of value a value axis may change (DEC-004 point 2): colours alone in format 1.
-VALUE_AXIS_TYPES = ("color",)
+#: The kinds of value a value axis may change (DEC-004 point 2): colours and pictures in
+#: format 1.
+VALUE_AXIS_TYPES = ("color", PICTURE)
 
 #: The axes' kinds.
 AXIS_KINDS = ("value", "size")
@@ -360,12 +402,28 @@ def _read_roles(raw: Any, problems: _Problems, own: str = "") -> dict[str, Role]
                 where,
             )
             continue
-        if not isinstance(spec, Mapping) or spec.get("type") not in TYPES:
+        if not isinstance(spec, Mapping) or spec.get("type") not in ROLE_TYPES:
             problems.add(
-                "role-type", f"the role `{path}` names no type of {', '.join(TYPES)}", where
+                "role-type", f"the role `{path}` names no type of {', '.join(ROLE_TYPES)}", where
+            )
+            continue
+        if own and spec["type"] == PICTURE:
+            problems.add(
+                "role-picture",
+                f"the role `{path}` is of the type `{PICTURE}`, and only the foundations "
+                f"declare a picture role, so the capability does not read it",
+                where,
             )
             continue
         default = spec.get("default")
+        if default is not None and spec["type"] == PICTURE:
+            problems.add(
+                "role-default",
+                f"the picture role `{path}` carries a default, and a picture role carries "
+                f"none, since no brand owes it a value",
+                where,
+            )
+            continue
         target = None
         if default is not None:
             match = _ALIAS.match(default) if isinstance(default, str) else None
@@ -844,19 +902,26 @@ class Brand:
 
     - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
     - `scope`: the roles it is resolved against.
-    - `axes`: the shared axes, each a key's axis, whether the brand varies it or not.
+    - `axes`: the axes it has, each a key's axis: every shared value axis, whole, whether
+      it varies it or not, and each shared size axis it or its base gives, with the modes
+      given (DEC-021 point 2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
       their version fits, whose roles it reaches (DEC-008 point 4).
-    - `roles`: the token paths it exports, in path order: the shared roles, and each role
-      of a library it names that it or its base gives a value (DEC-008 point 5).
+    - `roles`: the token paths it exports, in path order: the shared roles, each shared
+      picture role only where it or its base gives it a value (DEC-025 point 4), and each
+      role of a library it names that it or its base gives a value (DEC-008 point 5).
     - `valued`: every role with a value in every combination, in path order: its exports,
       and each other role of the scope's libraries, at its default. The document of values
-      holds these (DEC-005 point 7).
+      holds these (DEC-005 point 7). A picture role is none of them, since the document
+      has no form for a file yet (DEC-025 point 4).
     - `open`: its open roles, as its `library.yaml` lists them.
     - `opened`: the roles a brand built on it may give values: those its open roles name,
       narrowed to those its base opens to it.
     - `base`: the brand it builds on as its base, read, or None.
     - `findings`: what is wrong, leaving it usable: its own, then its base's.
+    - `facts`: what its version states, and no piece: each shared picture role it gives no
+      value, once (DEC-025 point 9). The check of the version alone reports them, apart
+      from `findings`, which a piece's lock reads too.
     """
 
     def __init__(
@@ -866,6 +931,7 @@ class Brand:
         version: str,
         folder: Path,
         scope: Scope,
+        axes: dict[str, Axis],
         named: frozenset[str],
         roles: tuple[str, ...],
         valued: tuple[str, ...],
@@ -877,12 +943,13 @@ class Brand:
         hidden: dict[str, dict[str, _Resolved]],
         fonts: dict[str, Path | None],
         findings: tuple[Finding, ...],
+        facts: tuple[Finding, ...],
     ) -> None:
         self.name = name
         self.version = version
         self.folder = folder
         self.scope = scope
-        self.axes = dict(scope.axes)
+        self.axes = axes
         self.named = named
         self.roles = roles
         self.valued = valued
@@ -890,6 +957,7 @@ class Brand:
         self.opened = opened
         self.base = base
         self.findings = findings
+        self.facts = facts
         self._views = views
         self._resolved = resolved
         self._hidden = hidden
@@ -903,11 +971,12 @@ class Brand:
         """The value of the role at `token_path` in `combination` (an axis left out takes
         its default), aliases resolved, in canonical form: a colour `{colorSpace,
         components, alpha}`, a dimension `{value, unit}`, a font family a list of names, a
-        typography its five members so, a number. Raises RoleWithoutValue for a role the
-        scope declares that has no value under the brand, UnknownRole for a path it holds
-        no role at, and keys.BadKey for a combination the axes do not hold."""
+        typography its five members so, a number. Raises RoleWithoutValue for a library's
+        role that has no value under the brand, UnknownRole for a path it holds no role at
+        or a picture role, which no part shows yet, and keys.BadKey for a combination the
+        axes do not hold."""
         if token_path not in self.valued:
-            if token_path in self.scope.roles:
+            if token_path in self.scope.roles and self.scope.owner[token_path]:
                 library = self.scope.owner[token_path]
                 raise RoleWithoutValue(token_path, library, named=self.names(library))
             raise UnknownRole(token_path)
@@ -1038,6 +1107,9 @@ class _BrandReader:
         self.root = root
         self.locked = locked
         self.chain = chain
+        self.pictures = frozenset(
+            path for path, role in scope.foundations.roles.items() if role.type == PICTURE
+        )
         self.fatal: list[Finding] = []
         self.kept: list[Finding] = []
         self.flat: dict[str, dict[str, _Token]] = {}
@@ -1118,40 +1190,50 @@ class _BrandReader:
         if self.fatal or resolver is None:
             raise TokenError(self._unique(self.fatal))
         order, sets, modifiers = resolver
-        axes = self.scope.axes
+        axes = self._axes(modifiers, base)
         views: dict[str, _View] = {}
         resolved: dict[str, dict[str, _Resolved]] = {}
         hidden: dict[str, dict[str, _Resolved]] = {}
         everything = keys.combinations({axis.name: axis.modes for axis in axes.values()}, axes)
         for combination in everything:
             key = keys.key_of(combination, axes)
-            sources = self._sources(order, sets, modifiers, combination)
+            sources = self._sources(order, sets, modifiers, combination, base)
             views[key] = self._view(sources, base, key)
             resolved[key], hidden[key] = self._resolve_combination(views[key], key)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
-        self._check_value_axes(views, resolved, hidden)
+        self._check_value_axes(axes, views, resolved, hidden)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
         self._check_library_tokens()
         self._check_library_roles(resolved, base)
+        self._check_pictures()
         open_roles, opened = self._check_open(library.get("open", []), base)
         fonts = self._read_fonts(resolved, hidden, base)
         self._check_pairs(views, resolved, base)
         valued = tuple(
-            path for path in sorted(self.scope.roles) if all(path in r for r in resolved.values())
-        )
-        exported = tuple(
             path
-            for path in valued
-            if not self.scope.owner[path]
-            or any(path in view.roles and view.roles[path].owner for view in views.values())
+            for path in sorted(self.scope.roles)
+            if path not in self.pictures and all(path in r for r in resolved.values())
+        )
+        pictures = {path for path in self.pictures if any(path in r for r in resolved.values())}
+        exported = tuple(
+            sorted(
+                {
+                    path
+                    for path in valued
+                    if not self.scope.owner[path]
+                    or any(path in view.roles and view.roles[path].owner for view in views.values())
+                }
+                | pictures
+            )
         )
         return Brand(
             name=self.name,
             version=str(library.get("version")),
             folder=self.folder,
             scope=self.scope,
+            axes=axes,
             named=self.named,
             roles=exported,
             valued=valued,
@@ -1163,6 +1245,16 @@ class _BrandReader:
             hidden=hidden,
             fonts=fonts,
             findings=(*self._unique(self.kept), *(base.findings if base is not None else ())),
+            facts=tuple(
+                self._finding(
+                    "picture-role-unvalued",
+                    f"the brand gives the shared picture role `{path}` no value, which no "
+                    f"brand owes it",
+                    where=path,
+                    level=FACT,
+                )
+                for path in sorted(self.pictures - pictures)
+            ),
         )
 
     @staticmethod
@@ -1344,8 +1436,9 @@ class _BrandReader:
     def _read_modifiers(
         self, raw: Any, rel: str, base: Brand | None
     ) -> dict[str, dict[str, tuple[str, ...]]]:
-        """Each modifier, one of the shared axes; a brand built on another keeps its base's
-        axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
+        """Each modifier, one of the shared axes, by the contexts of the modes it gives, the
+        axis's default among them (DEC-004 point 1); a brand built on another keeps its
+        base's axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
@@ -1403,11 +1496,20 @@ class _BrandReader:
                     f"{where}.default",
                 )
                 continue
-            if not isinstance(contexts, Mapping) or set(contexts) != set(axis.modes):
+            if not isinstance(contexts, Mapping) or added:
                 self._fail(
                     "brand-axis",
-                    f"the modifier `{name}` must have one context for each mode of the axis: "
-                    f"{', '.join(axis.modes)}",
+                    f"the modifier `{name}` must have one context for each mode it gives, "
+                    f"each a mode of the axis: {', '.join(axis.modes)}",
+                    rel,
+                    f"{where}.contexts",
+                )
+                continue
+            if axis.default not in contexts:
+                self._fail(
+                    "brand-axis",
+                    f"the modifier `{name}` must give the axis's default, `{axis.default}`, "
+                    f"among its contexts",
                     rel,
                     f"{where}.contexts",
                 )
@@ -1423,8 +1525,30 @@ class _BrandReader:
             modifiers[name] = {
                 mode: self._read_sources(contexts[mode], rel, f"{where}.contexts.{mode}")
                 for mode in axis.modes
+                if mode in contexts
             }
         return modifiers
+
+    def _axes(
+        self, modifiers: Mapping[str, Mapping[str, tuple[str, ...]]], base: Brand | None
+    ) -> dict[str, Axis]:
+        """The axes the brand has (DEC-021 point 2): its base's, where it builds on one;
+        else every shared value axis, whole, and each shared size axis a modifier varies,
+        with the modes that modifier gives, in the order the foundations declare them."""
+        if base is not None:
+            return dict(base.axes)
+        return {
+            name: axis
+            if axis.kind == "value"
+            else Axis(
+                name=name,
+                kind=axis.kind,
+                modes=tuple(mode for mode in axis.modes if mode in modifiers[name]),
+                default=axis.default,
+            )
+            for name, axis in self.scope.axes.items()
+            if axis.kind == "value" or name in modifiers
+        }
 
     def _read_sources(self, raw: Any, rel: str, where: str) -> tuple[str, ...]:
         if not isinstance(raw, list):
@@ -1575,7 +1699,9 @@ class _BrandReader:
             if not isinstance(child, Mapping):
                 self._fail("tokens-shape", f"`{path}` is neither a group nor a token", file, path)
                 continue
-            if "$value" in child:
+            if path in self.pictures:
+                self._picture(child, path, file)
+            elif "$value" in child:
                 self._token(child, path, group_type, file)
             else:
                 self._walk(child, path, group_type, file)
@@ -1618,6 +1744,36 @@ class _BrandReader:
             path, type_, node["$value"], extensions, file, owner=self.label, prefix=self.shown
         )
 
+    def _picture(self, node: Mapping[str, Any], path: str, file: str) -> None:
+        """The value of the picture role at `path` (DEC-025 point 4): an empty group, since
+        DTCG has no type for a file, whose `$extensions` name the file by its bare name in
+        the capability's extension key, `{"file": "<name>"}`, and alias nothing. It is kept
+        as a token of the type `picture`, so it merges as a token does."""
+        shape = (
+            f"`{path}` is a picture role, so its value is an empty group whose `$extensions` "
+            f'hold `{EXTENSION}` as `{{"file": "<name>"}}`'
+        )
+        stray = next((key for key in node if key not in _PICTURE_KEYS), None)
+        extensions = node.get("$extensions")
+        given = extensions.get(EXTENSION) if isinstance(extensions, Mapping) else None
+        if stray is not None or not isinstance(given, Mapping) or set(given) != {"file"}:
+            held = f", and it holds `{stray}`" if stray is not None else ""
+            self._fail("picture-shape", f"{shape}{held}", file, path)
+            return
+        name = given["file"]
+        if not isinstance(name, str) or _PICTURE_NAME.match(name) is None:
+            self._fail(
+                "picture-name",
+                f"`{path}` names `{name}`, which is no picture file's bare name: lower-case "
+                f"letters, digits and hyphens, from a letter, then `.png`, `.jpg` or `.jpeg`",
+                file,
+                path,
+            )
+            return
+        self.flat[file][path] = _Token(
+            path, PICTURE, name, {}, file, owner=self.label, prefix=self.shown
+        )
+
     # resolution
 
     def _sources(
@@ -1626,10 +1782,20 @@ class _BrandReader:
         sets: Mapping[str, tuple[str, ...]],
         modifiers: Mapping[str, Mapping[str, tuple[str, ...]]],
         combination: Mapping[str, str],
+        base: Brand | None,
     ) -> list[str]:
+        """The brand's sources for `combination`, in resolution order. At a mode a modifier
+        does not give, it takes the sources of the axis's default; in a brand built on
+        another, none, so its base's values hold there (DEC-004 point 2)."""
         files: list[str] = []
         for kind, name in order:
-            files.extend(sets[name] if kind == "sets" else modifiers[name][combination[name]])
+            if kind == "sets":
+                files.extend(sets[name])
+                continue
+            contexts, mode = modifiers[name], combination[name]
+            if mode not in contexts and base is None:
+                mode = self.scope.axes[name].default
+            files.extend(contexts.get(mode, ()))
         return files
 
     def _view(self, sources: list[str], base: Brand | None, key: str) -> _View:
@@ -1728,6 +1894,8 @@ class _BrandReader:
                 self._fail_problem(problem)
         for role in self.scope.foundations.roles.values():
             found = resolved.get(role.path)
+            if role.path not in view.roles and role.type == PICTURE:
+                continue  # no brand owes a picture role a value (DEC-025 point 4)
             if role.path not in view.roles:
                 self._fail(
                     "role-missing",
@@ -1813,6 +1981,14 @@ class _BrandReader:
         target = self._alias(token.value)
         if target is not None:
             found = self._resolve(self._target(token, target, path, view), view, done, chain)
+            if found.type == PICTURE:
+                raise _Problem(
+                    "alias-type",
+                    f"`{path}` aliases `{target}`, a picture role, whose value is a group no "
+                    f"token aliases",
+                    token.shown,
+                    path,
+                )
             if token.type is not None and token.type != found.type:
                 raise _Problem(
                     "alias-type",
@@ -1830,7 +2006,9 @@ class _BrandReader:
                 token.shown,
                 path,
             )
-        if token.type == "typography":
+        if token.type == PICTURE:
+            value = token.value  # the file's bare name, read with its group (`_picture`)
+        elif token.type == "typography":
             value = self._typography(token, view, done, chain)
         else:
             value = _canonical(token.type, token.value, token.shown, path)
@@ -1926,13 +2104,14 @@ class _BrandReader:
 
     def _check_value_axes(
         self,
+        axes: Mapping[str, Axis],
         views: Mapping[str, _View],
         resolved: Mapping[str, Mapping[str, _Resolved]],
         hidden: Mapping[str, Mapping[str, _Resolved]],
     ) -> None:
-        """A value axis changes only colours. A library's role its library leaves at its
-        defaults changes only as the roles they alias do, which are judged themselves."""
-        axes = self.scope.axes
+        """A value axis of the brand's `axes` changes only colours. A library's role its
+        library leaves at its defaults changes only as the roles they alias do, which are
+        judged themselves."""
         for key in resolved:
             combination = keys.parse_key(key, axes)
             for axis in axes.values():
@@ -1961,7 +2140,8 @@ class _BrandReader:
                             continue
                         self._fail(
                             "value-axis-changes-size",
-                            f"the value axis `{axis.name}` may change only colours, but its mode "
+                            f"the value axis `{axis.name}` may change only colours and "
+                            f"pictures, but its mode "
                             f"`{combination[axis.name]}` changes `{path}`, a `{type_}`, in the "
                             f"combination `{key}`",
                             "",
@@ -2056,6 +2236,29 @@ class _BrandReader:
                 path,
                 fix=f"give `{path}` a value in every combination",
             )
+
+    def _check_pictures(self) -> None:
+        """Each file the brand's own picture values name is one its version holds in
+        `pictures/`, found by its exact name, and no symbolic link (DEC-025 point 9). A
+        base's values are its base's to judge."""
+        folder = self.folder / PICTURES
+        held = (
+            {entry.name for entry in folder.iterdir() if entry.is_file() and not entry.is_symlink()}
+            if folder.is_dir()
+            else set()
+        )
+        for file, tokens in sorted(self.flat.items()):
+            for path, token in sorted(tokens.items()):
+                if token.type == PICTURE and token.value not in held:
+                    self._keep(
+                        "picture-missing",
+                        f"the picture role `{path}` names `{token.value}`, which the brand's "
+                        f"version does not hold in `{PICTURES}/`",
+                        file,
+                        path,
+                        fix=f"add `{PICTURES}/{token.value}` to the brand's version, or name a "
+                        f"file it holds there",
+                    )
 
     def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
         """The open roles as `open` lists them, and the roles they open: those each entry

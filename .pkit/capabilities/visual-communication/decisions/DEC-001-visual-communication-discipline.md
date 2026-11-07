@@ -56,7 +56,7 @@ A *piece* is one finished item of visual work, such as a deck, a standalone diag
 - **What a piece declares.** A piece declares, as fields, what a check or a reviewer selects it by. They say who it is for, where it is shown, the language it is first written in and the files it is handed out as. They also say whether it explains, and name its brand and notations. The fields are the same for every kind of work, and the capability's schema for a piece names them.
 - **Shared content.** A piece may also read content it shares with other pieces from a source it names, such as a model of one system that several views read. What it reads stays where it lives.
 - **Two levels of checking.** The capability's own files bind to the schemas it ships, as the core binds data files (COR-023). The fields of a piece's content are checked against the schemas of the components they fill, by the capability's check, within the project's one validation (COR-055).
-- **A picture made elsewhere is content,** such as a screenshot or a drawing from another tool. It does not follow a brand, and switching the brand reports it.
+- **A picture made elsewhere is content,** such as a screenshot or a drawing from another tool. It lies in the piece's folder, under a name its content gives. It does not follow a brand, and switching the brand reports it. A command that moves the piece's lock onto another brand names each such picture (refinement per [visual-communication:DEC-025-picture-files] points 2 and 8).
 
 ### 4. Components are data, and the engine knows none by name
 
@@ -104,7 +104,7 @@ Some pieces need what the engine's tools cannot compute, such as items placed on
 - **Who runs it, and what it writes.** A person or an agent runs a program: a *helper*, which is a script of the project's own, or one of the capability's producers (point 2). It writes a local component, as data, or a picture.
 - **Checked like everything else.** Its output is kept beside the piece. A local component it writes holds no raw values and takes its text from the content. It places its parts by formulas, or is written once for each scene it is drawn in, so it fits each language and set of fonts. A picture takes its values from the brand alone, holds none of the piece's words, and may name points in its pixels, so the piece places a label at one as its own text.
 - **A record of its inputs says when its output is stale,** so the program runs again when any of them changes.
-- **The engine runs no helper, no producer and no other program,** and reads neither the machine's fonts nor the network. It computes only from the project's files, so the same files give the same scene on every machine, and its check can run within validation.
+- **The engine runs no helper, no producer and no other program,** and reads neither the machine's fonts nor the network. It computes only from the project's files and the facts of an export, so the same files and facts give the same scene on every machine. Its check takes stand-ins for the facts no file holds, so it can run within validation (refinement per [visual-communication:DEC-016-what-an-export-reads]).
 - **A helper needed again and again** is a sign that the engine lacks a general tool (point 4).
 
 ### 9. What is outside the capability

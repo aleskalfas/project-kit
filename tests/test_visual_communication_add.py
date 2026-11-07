@@ -10,7 +10,7 @@ taken with its hash, or another the person names, or the version being built; an
 copy of the library brought up to date in the same run, under the locks that name it.
 
 The last tests name a lock that moves only on purpose in the command, and read the
-before-and-after a run shows of a lock it leaves: a pinned draft's scenes drawn both ways,
+before-and-after a run shows of a lock it leaves: a piece's scenes drawn both ways,
 and the difference in the code a declaration's writer writes (DEC-013 point 5).
 
 The tests of sync install the capability in an adopter's repository and show that `pkit
@@ -53,7 +53,7 @@ from tests.visual_communication_project import (
 )
 from tests.visual_communication_writes import FULL, failing
 
-script, libraries, reading, copies, shipped, before_after, svg, css = load(
+script, libraries, reading, copies, shipped, before_after, exports, pl, svg, css = load(
     "visual-communication",
     "add.py",
     "libraries",
@@ -61,6 +61,8 @@ script, libraries, reading, copies, shipped, before_after, svg, css = load(
     "copies",
     "shipped",
     "before_after",
+    "exports",
+    "pipeline",
     "plugins.svg",
     "plugins.css",
 )
@@ -645,7 +647,29 @@ def test_a_copy_not_released_under_an_unpinned_draft_is_replaced_and_listed_rele
     assert libraries.Held(root, "visual").findings() == []
 
 
-@pytest.mark.parametrize("held_by", ["pinned", "code", "unreadable", "final"])
+@pytest.mark.parametrize("fields", [{}, {"pinned": True}], ids=["not-pinned", "pinned"])
+def test_a_copy_not_released_under_a_final_pieces_lock_is_replaced_with_no_piece_named(
+    tmp_path: Path, released: tuple[Path, dict[str, Any]], fields: dict[str, Any]
+) -> None:
+    folder, entry = released
+    root = project(tmp_path)
+    unreleased_copy(root)
+    final = write_piece(root, "poster", lock={"foundations": "1.0.0"}, state="final", **fields)
+    piece = final.read_bytes()
+    added = run(root, "foundations")
+    assert added.returncode == 0, added.stderr
+    assert final.read_bytes() == piece
+    assert tree(root / COPY) == tree(place(folder))
+    assert listed(root) == {"1.0.0": entry}
+    assert added.stdout.splitlines()[1:] == [
+        f"replaced foundations@1.0.0, {len(tree(place(folder)))} files, in {COPY}/, with the "
+        f"released version",
+        "  locked by the final piece `poster`",
+        f"listed foundations@1.0.0 in {LIST} as released, with the hash the capability records",
+    ]
+
+
+@pytest.mark.parametrize("held_by", ["pinned", "published", "code", "unreadable", "no-such-state"])
 def test_a_copy_not_released_under_a_lock_that_moves_on_purpose_stays_and_the_run_goes_on(
     tmp_path: Path, released: tuple[Path, dict[str, Any]], held_by: str
 ) -> None:
@@ -658,6 +682,10 @@ def test_a_copy_not_released_under_a_lock_that_moves_on_purpose_stays_and_the_ru
         write_piece(root, "poster", lock={"foundations": "1.0.0"}, pinned=True)
         named = "  the pinned draft `poster`"
         way = ["  to replace it, run `pkit visual add foundations --piece poster`"]
+    elif held_by == "published":
+        write_piece(root, "poster", lock={"foundations": "1.0.0"}, state="published")
+        named = "  the published piece `poster`"
+        way = ["  to replace it, run `pkit visual add foundations --piece poster`"]
     elif held_by == "code":
         declaration(root, "css", {"foundations": "1.0.0", "test-brand": "1.0.0"})
         named = "  the declaration `css` of written code"
@@ -668,9 +696,9 @@ def test_a_copy_not_released_under_a_lock_that_moves_on_purpose_stays_and_the_ru
             "  visual/pieces/poster/piece.yaml, whose lock cannot be read: does not parse as YAML"
         )
     else:
-        write_piece(root, "poster", lock={"foundations": "2.0.0"}, state="final")
+        write_piece(root, "poster", lock={"foundations": "2.0.0"}, state="retired")
         named = (
-            "  visual/pieces/poster/piece.yaml, whose lock cannot be read: its state `final` is "
+            "  visual/pieces/poster/piece.yaml, whose lock cannot be read: its state `retired` is "
             "not one format 1 takes"
         )
     before = tree(copy)
@@ -884,6 +912,16 @@ def pinned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     changed(folder / "libraries/foundations/components/figure.yaml", CAPTION, CHANGED_CAPTION)
     importable(monkeypatch, svg)
     return lay_out_drawing(project(tmp_path), picture=False, pinned=True)
+
+
+@pytest.fixture
+def published(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The published piece `flow`, which locks a copy of the foundations not yet released, as
+    the draft of `pinned` does, under the same capability. Returns the project."""
+    folder = capability(tmp_path, monkeypatch)
+    changed(folder / "libraries/foundations/components/figure.yaml", CAPTION, CHANGED_CAPTION)
+    importable(monkeypatch, svg)
+    return lay_out_drawing(project(tmp_path), picture=False, state="published", released=False)
 
 
 @pytest.fixture
@@ -1116,8 +1154,38 @@ def test_a_pinned_drafts_before_and_after_is_drawn_both_ways_and_writes_nothing_
         assert b"The flow." in kept[f"after/{file}"]
 
 
+def test_a_published_pieces_copy_stays_with_its_before_and_after_until_it_is_named(
+    published: Path,
+) -> None:
+    piece = (published / PIECE_FILE).read_bytes()
+    copy = tree(published / COPY)
+    left = run(published, "foundations")
+    assert left.returncode == 0, left.stderr
+    assert tree(published / COPY) == copy
+    assert left.stdout.splitlines()[1:] == [
+        "left foundations@1.0.0 as it is: a lock that moves only on purpose names it",
+        "  the published piece `flow`",
+        f"    drawn both ways in {FLOW}/: 2 of 2 files differ",
+        "  to replace it, run `pkit visual add foundations --piece flow`",
+    ]
+    named = run(published, "foundations", "--piece", "flow")
+    assert named.returncode == 0, named.stderr
+    assert "  locked by the published piece `flow`" in named.stdout.splitlines()
+    assert CHANGED_CAPTION in (published / COPY / "components/figure.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert (published / PIECE_FILE).read_bytes() == piece
+
+
+def preview_facts(root: Path) -> Any:
+    """What a preview of `flow` fills its facts with, as the run's before-and-after does."""
+    return exports.preview_filling(pl.read_piece_file(root, "visual", "flow")).facts
+
+
 def test_the_after_side_is_what_the_piece_draws_once_it_is_named(pinned: Path) -> None:
-    drawn_before = before_after.drawing(pinned, "visual", "flow", FLOW_LOCK)
+    drawn_before = before_after.drawing(
+        pinned, "visual", "flow", FLOW_LOCK, facts=preview_facts(pinned)
+    )
     assert run(pinned, "foundations").returncode == 0
     kept = tree(pinned / FLOW)
     piece = (pinned / PIECE_FILE).read_bytes()
@@ -1125,7 +1193,9 @@ def test_the_after_side_is_what_the_piece_draws_once_it_is_named(pinned: Path) -
     assert named.returncode == 0, named.stderr
     assert (pinned / PIECE_FILE).read_bytes() == piece
     assert CHANGED_CAPTION in (pinned / COPY / "components/figure.yaml").read_text(encoding="utf-8")
-    drawn_after = before_after.drawing(pinned, "visual", "flow", FLOW_LOCK)
+    drawn_after = before_after.drawing(
+        pinned, "visual", "flow", FLOW_LOCK, facts=preview_facts(pinned)
+    )
     assert drawn_before.why == drawn_after.why == ""
     for file, text in drawn_before.files.items():
         assert kept[f"before/{file}"] == text.encode("utf-8")

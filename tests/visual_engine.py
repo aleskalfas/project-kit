@@ -192,9 +192,11 @@ def draw(
     *,
     use: str = "lab/top",
     language: str = "en",
+    facts: Any = None,
     **environment: Any,
 ) -> Any:
-    """The scene of a piece whose top is `use`, and its findings."""
+    """The scene of a piece whose top is `use`, and its findings, its facts filled by `facts`
+    or by the stand-ins of a draft."""
     return scene.compute_scene(
         piece="test-piece",
         top=use,
@@ -202,8 +204,9 @@ def draw(
         language=language,
         lock=dict(VERSIONS),
         size_key="default",
-        seam_version=3,
+        seam_version=4,
         env=FakeEnv(**environment),
+        facts=facts if facts is not None else layout.stand_ins("draft"),
     )
 
 

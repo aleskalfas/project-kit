@@ -22,7 +22,7 @@ pkit:
         - src/project_kit/working_tree.py
         - .pkit/lifecycle/ownership.py
         - .pkit/capabilities/living-docs/scripts/resolve-source.py
-      record: [COR-010, COR-017, "COR-033#P7", COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-054, COR-055, COR-056, "COR-058#4", COR-062, "living-docs:DEC-001#3", "COR-064#1", COR-068, COR-069, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1"]
+      record: [COR-010, COR-017, "COR-033#P7", COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-054, COR-055, COR-056, "COR-058#4", COR-062, "living-docs:DEC-001#3", "COR-064#1", "COR-066#4", COR-068, COR-069, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1"]
       artefact:
         - .pkit/cli/README.md#configuration-file
         - .pkit/cli/README.md#validate
@@ -123,6 +123,7 @@ The container, in both its forms: a document's front matter, and a collection's 
 The backbone configuration file, at the fixed path the CLI reference's "Configuration file" gives. Its keys:
 
 - `name`
+- `decisions`: the key that turns the landing check's refusal on ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 4)
 - `docs`
 - `friction`
 - `connections`

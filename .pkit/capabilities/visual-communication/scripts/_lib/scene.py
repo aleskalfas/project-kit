@@ -30,20 +30,23 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   item of the field that holds the pages, `<field>[<id>]`, and lies at the top's origin,
   as large as the top. Each drawn property names its source: `content:<field path>`, a
   run of a list of runs by its place, `<field path>#<place>`, as an item with no id,
-  `option:<name>`, `default:<library>/<component>`, `role:<token path>` or `engine`. A
-  value the component leaves to the engine, such as a text's `text-anchor` where it gives
-  none, is the engine's.
+  `fact:<word>`, `option:<name>`, `size:<axis>`, a size axis a switch chose by,
+  `default:<library>/<component>`, `role:<token path>` or `engine`. A value the
+  component leaves to the engine, such as a text's `text-anchor` where it gives none, is
+  the engine's.
 - **The root** holds the piece, its lock, the language, the key over its size axes, the
   seam's version, and the trace ids of its pages in order.
 
 Computed, never committed: `Scene.to_dict()` gives one ordered value, so under one
-release the same files give the same scene on every machine, and two scenes compare.
+release the same files and facts give the same scene on every machine, and two such
+scenes compare. Two scenes with one root differ only in the text of an export's facts
+(DEC-016 point 5). A renderer still gets plain text, so the seam's version stands.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from _lib import formula as fm
@@ -54,10 +57,13 @@ from _lib.layout import (
     ENDS_OF_LINE,
     TOLERANCE,
     Context,
+    Facts,
     Instance,
     Node,
+    Sizes,
     TextRun,
     place_top,
+    source_of_choice,
 )
 from _lib.text import MEASURED, Broken, paragraphs
 
@@ -137,8 +143,12 @@ class Scene:
 
 @dataclass
 class SceneResult:
+    """A scene, what computing it found, and which facts of its export it shows: each fact's
+    word with the trace of every element that shows it."""
+
     scene: Scene
     findings: list[Finding]
+    facts: dict[str, list[str]]
 
 
 def compute_scene(
@@ -151,20 +161,26 @@ def compute_scene(
     size_key: str,
     seam_version: int,
     env: Env,
+    facts: Facts,
+    sizes: Sizes | None = None,
 ) -> SceneResult:
     """The scene of a piece in one language and size combination, with what computing it
-    found. Raises `MissingFont`, or `MissingGlyph`, before anything is laid out."""
-    ctx = Context(env, language)
+    found. `facts` fills the facts of its export, and no caller takes one by default (DEC-016
+    point 5). `sizes` gives the size axes a piece can name, each at its mode at `size_key`
+    (DEC-021 point 3); none where it is not given. Raises `MissingFont`, or `MissingGlyph`,
+    before anything is laid out."""
+    ctx = Context(env, language, facts, sizes)
     root = place_top(ctx, top, content)
     pages: list[str] = []
     children = []
+    emitter = _Emitter(ctx, pages)
     if root is not None:
         for trace, node in root.texts():
             for run in node.runs:
                 run.style.check(run.text, trace)
-        children.append(_Emitter(ctx, pages).root(root))
+        children.append(emitter.root(root))
     scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children)
-    return SceneResult(scene, list(ctx.findings))
+    return SceneResult(scene, list(ctx.findings), emitter.facts)
 
 
 class _Emitter:
@@ -173,6 +189,7 @@ class _Emitter:
     def __init__(self, ctx: Context, pages: list[str]) -> None:
         self.ctx = ctx
         self.pages = pages
+        self.facts: dict[str, list[str]] = {}
 
     def root(self, top: Instance) -> Element:
         preferred = top.component.preferred
@@ -230,7 +247,9 @@ class _Emitter:
         if key in spec and not (node.part.kind == "text" and key == "height"):
             return instance.source(f"parts.{node.part.name}.{key}", spec[key])
         if node.child is not None and key in ("width", "height"):
-            return f"default:{node.child.component.use}"
+            # A stretch its instance passes on sets the size, beside what the child asks.
+            passed = self.ctx.attempt(lambda: instance.passed_on(node.part.name, key), 0.0)
+            return ENGINE if passed > TOLERANCE else f"default:{node.child.component.use}"
         return ENGINE
 
     def _frame(self, element: Element, instance: Instance, node: Node) -> None:
@@ -342,10 +361,12 @@ class _Emitter:
         _, _, chosen = instance.pick(f"{where}.text-anchor", anchor_raw)
         anchor = instance.word(f"{where}.text-anchor", anchor_raw, "start")
         given = f"default:{instance.component.use}" if anchor_raw is not None else ENGINE
-        element.set("text-anchor", anchor, f"option:{chosen}" if chosen else given)
+        element.set("text-anchor", anchor, source_of_choice(chosen) if chosen else given)
         tallest = max(node.runs, key=lambda run: run.style.line_height).style
         element.set("line-height", length(node.line_height), f"role:{tallest.role}")
-        element.set("text", node.text, instance.source_of_field(props["content"]))
+        element.set("text", node.text, instance.source_of_text(node.part))
+        if "fact" in props:
+            self.facts.setdefault(props["fact"], []).append(element.id)
         split = broken.paragraphs or paragraphs([run.text for run in node.runs])
         element.set(
             "paragraphs",
@@ -402,7 +423,9 @@ class _Emitter:
         if chosen and chosen in instance.component.runs:
             style_source = run.word_source
         else:
-            style_source = f"option:{chosen}" if chosen else f"default:{instance.component.use}"
+            style_source = (
+                source_of_choice(chosen) if chosen else f"default:{instance.component.use}"
+            )
         role = f"role:{style.role}"
         held: dict[str, Any] = {"text": text}
         sources = {"text": run.source, "style": style_source}
@@ -427,26 +450,32 @@ class _Emitter:
     def _overflow(self, element: Element, instance: Instance, node: Node, broken: Broken) -> None:
         """A text that overflows its width: it fails where each of its runs is measured from
         a font file, and asks for attention where some run is measured from a table or by an
-        estimate, which may be wider than it is drawn (DEC-005 point 14)."""
+        estimate, which may be wider than it is drawn (DEC-005 point 14). A fact's text lies
+        in no content file, so its overflow lies in the component that gives it its width,
+        which it names (DEC-016 point 5)."""
         width = element.properties["width"]
-        source = instance.source_of_field(node.part.props["content"])
-        message = (
-            f"{element.id}: a word of {source} is wider than the text's width {width} px: "
-            f"{length(broken.natural)} px"
+        use = instance.component.use if "fact" in node.part.props else ""
+        source = instance.source_of_text(node.part)
+        shown = f"{source} in `{use}`" if use else source
+        found = self.ctx.finding(
+            "text-overflow",
+            f"{element.id}: a word of {shown} is wider than the text's width {width} px: "
+            f"{length(broken.natural)} px",
+            where=element.id,
+            use=use,
         )
+        if use:
+            found = replace(found, fix=f"give the text `{node.part.name}` of `{use}` more width")
         estimated = sorted({run.style.measured for run in node.runs} - {MEASURED})
-        if not estimated:
-            self.ctx.report("text-overflow", message, where=element.id)
-            return
-        self.ctx.add(
-            Finding(
-                "text-overflow",
-                ATTENTION,
-                f"{message}, measured in part {', '.join(estimated)}, not from a font file",
-                where=element.id,
+        if estimated:
+            found = replace(
+                found,
+                level=ATTENTION,
+                message=f"{found.message}, measured in part {', '.join(estimated)}, "
+                "not from a font file",
                 who="the piece's author",
             )
-        )
+        self.ctx.add(found)
 
     def _image(self, element: Element, instance: Instance, node: Node) -> None:
         picture = node.picture

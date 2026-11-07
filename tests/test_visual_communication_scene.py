@@ -21,17 +21,23 @@ produced picture with a label at the point the picture exposes.
 - a text's runs (DEC-012 points 3, 4 and 8, DEC-005 point 14): its paragraphs of runs,
   each with its role, its paint, its fonts and its sources, and its lines of spans; a
   run that names a concept and shows it in no colour; a text measured in part otherwise
-  than from a font file, which overflows asking for attention.
+  than from a font file, which overflows asking for attention;
+- a fact of the export (DEC-006 point 7, DEC-016 point 5): each shown as one run of what
+  fills it, with its source and in the scene's result, what fills it a required argument,
+  the stand-ins the reference holds, and a fact's text that overflows, a finding that
+  names the component.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import inspect
 import json
 from typing import Any
 
 import pytest
 
+from tests.visual_communication_project import CAPABILITY
 from tests.visual_engine import (
     FAMILY,
     FONT,
@@ -40,9 +46,12 @@ from tests.visual_engine import (
     SEMIBOLD,
     SEMIBOLD_FONT,
     block,
+    codes,
     draw,
     env,
     frame,
+    layout,
+    scene,
     text,
     top,
 )
@@ -150,7 +159,7 @@ def test_the_root_says_what_the_scene_is_and_to_dict_is_stable_and_ordered() -> 
         "test-piece",
         "en",
         "default",
-        3,
+        4,
     )
     assert list(first["lock"]) == sorted(first["lock"])
     group = first["children"][0]
@@ -543,3 +552,148 @@ def test_an_overflowing_text_measured_in_part_otherwise_than_from_a_file_asks_fo
     assert asks.message == f"{fails.message}, measured in part table, not from a font file"
     runs = in_part.scene.find("top/say").properties["paragraphs"][0]
     assert [run["measured"] for run in runs] == ["file", "table"]
+
+
+# --- the facts of an export ---------------------------------------------------------------------
+
+#: What fills the facts in these tests, with no stand-in among it.
+FILLED = layout.Facts("v3", "2026-11-06", "published")
+
+
+def showing(word: Any, *, language: str = "en", facts: Any = FILLED, **props: Any) -> Any:
+    """A top that shows the fact `word` in a text as wide as the figure role."""
+    shown = {"text": {"fact": word, "style": "type.body", **props}, "width": "=:width"}
+    return draw(language=language, facts=facts, components={"lab/top": top({"t": shown})})
+
+
+@pytest.mark.parametrize(
+    ("word", "shown"),
+    [
+        ("version", "v3"),
+        ("date", "2026-11-06"),
+        ("language", "cs"),
+        ("state", "published"),
+    ],
+)
+def test_a_text_shows_each_fact_as_one_run_of_what_fills_it(word: str, shown: str) -> None:
+    result = showing(word, language="cs", fill="text-primary")
+    assert result.findings == []
+    element = result.scene.find("top/t")
+    assert element is not None
+    assert element.properties["text"] == shown
+    assert element.sources["text"] == f"fact:{word}"
+    [[run]] = element.properties["paragraphs"]
+    assert (run["text"], run["style"]) == (shown, "type.body")
+    assert run["sources"]["text"] == f"fact:{word}"
+    assert run["sources"]["style"] == run["sources"]["fill"] == "default:lab/top"
+
+
+def test_a_scenes_result_says_which_facts_it_shows_and_where() -> None:
+    def shown(word: str, **geometry: Any) -> dict[str, Any]:
+        return {"text": {"fact": word, "style": "type.body"}, **geometry}
+
+    parts = {
+        "first": shown("date"),
+        "second": shown("date"),
+        "state": shown("state"),
+        "absent": shown("version", when="never"),
+    }
+    result = draw(facts=FILLED, components={"lab/top": top(parts)})
+    assert result.facts == {"date": ["top/first", "top/second"], "state": ["top/state"]}
+
+
+def test_what_fills_the_facts_is_a_required_argument_of_a_scene() -> None:
+    required = inspect.signature(scene.compute_scene).parameters["facts"]
+    assert required.default is inspect.Parameter.empty
+
+
+def test_two_scenes_with_one_root_differ_only_in_the_text_of_a_fact() -> None:
+    def held(facts: Any) -> dict[str, Any]:
+        return showing("version", facts=facts).scene.to_dict()
+
+    first, second = held(FILLED), held(dataclasses.replace(FILLED, version="v4"))
+    assert first != second
+    assert json.loads(json.dumps(first).replace('"v3"', '"v4"')) == second
+
+
+def test_a_piece_that_shows_no_fact_draws_the_same_whatever_fills_them() -> None:
+    other = layout.Facts("v1", "2000-01-01", "draft")
+    drawn, again = figure(facts=FILLED), figure(facts=other)
+    assert drawn.scene.to_dict() == again.scene.to_dict()
+    assert drawn.facts == {}
+    assert "fact:" not in json.dumps(drawn.scene.to_dict())
+
+
+def test_the_stand_ins_are_those_the_reference_holds() -> None:
+    assert layout.stand_ins("final") == layout.Facts("v88", "2088-08-28", "final")
+    page = (CAPABILITY / "components.md").read_text(encoding="utf-8")
+    assert all(f"`{text_}`" in page for text_ in layout.STAND_INS.values())
+
+
+def narrow(word: str = "version") -> Any:
+    """A top that shows the fact `word` in a text too narrow for its stand-in."""
+    shown = {"text": {"fact": word, "style": "type.body"}, "width": "=@space.1"}
+    return draw(facts=layout.stand_ins("draft"), components={"lab/top": top({"t": shown})})
+
+
+@pytest.mark.parametrize("word", ["version", "date"])
+def test_a_stand_in_is_one_word_so_too_narrow_a_text_overflows_rather_than_breaks_it(
+    word: str,
+) -> None:
+    held = narrow(word).scene.find("top/t")
+    assert held is not None
+    assert held.properties["overflow"] is True
+    assert [line["text"] for line in held.properties["lines"]] == [layout.STAND_INS[word]]
+
+
+def test_a_fact_that_overflows_is_a_finding_at_its_element_naming_the_component() -> None:
+    result = narrow()
+    [found] = [f for f in result.findings if f.code == "text-overflow"]
+    assert (found.level, found.where) == ("fails", "top/t")
+    assert (found.library, found.extra) == ("lab@1.0.0", {"component": "lab/top"})
+    assert found.message.startswith(
+        "top/t: a word of fact:version in `lab/top` is wider than the text's width 4.0 px: "
+    )
+    assert found.fix == "give the text `t` of `lab/top` more width"
+
+
+def test_a_fact_that_overflows_measured_otherwise_than_from_a_file_asks_for_attention(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fails = narrow()
+    of_role = text.Style.of_role
+
+    def tabled(role: str, value: Any, faces: Any) -> Any:
+        return dataclasses.replace(of_role(role, value, faces), measured="table")
+
+    monkeypatch.setattr(text.Style, "of_role", staticmethod(tabled))
+    [asks] = [f for f in narrow().findings if f.code == "text-overflow"]
+    [failing] = [f for f in fails.findings if f.code == "text-overflow"]
+    assert (asks.level, asks.who, asks.library) == ("attention", "the piece's author", "lab@1.0.0")
+    assert asks.message == f"{failing.message}, measured in part table, not from a font file"
+
+
+def test_a_field_that_overflows_stays_in_the_content() -> None:
+    result = figure({"body": {"use": "tests/steps", "steps": [{"head": "W" * 60}]}})
+    [found] = [f for f in result.findings if f.code == "text-overflow"]
+    assert (found.library, found.extra, found.fix) == ("", {}, "")
+    assert " in `" not in found.message
+
+
+@pytest.mark.parametrize(
+    ("props", "where"),
+    [
+        ({"fact": "number"}, "parts.t.text.fact"),
+        ({"fact": "version", "content": "say"}, "parts.t.text"),
+        ({}, "parts.t.text"),
+    ],
+    ids=["no-such-fact", "both", "neither"],
+)
+def test_a_text_that_names_no_one_thing_to_show_is_refused_and_computes(
+    props: dict[str, Any], where: str
+) -> None:
+    fields = {"say": {"type": "string"}}
+    part = {"text": {"style": "type.body", **props}, "width": "=:width"}
+    result = draw(facts=FILLED, components={"lab/top": top({"t": part}, fields=fields)})
+    assert codes(result) == ["component-shape"]
+    assert result.findings[0].where == where

@@ -1,0 +1,13 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Changed
+body: >
+  `docs-reviewer` reads each sentence on an updated document from the pull
+  request's `## What changed in each updated document` section alone, since the
+  description carries no list of the answers (#2664, project-management
+  DEC-065). The reference and the guide say what the landing command tells the
+  person who authorises the merge, and point a person who approves in `human`
+  review mode at `show-pr --field answers`. Upgrade project-management with it.
+requires_capabilities:
+  project-management: release

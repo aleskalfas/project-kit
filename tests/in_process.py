@@ -161,8 +161,8 @@ def _software_analysis(original: Callable[..., Any], pkit: Runner) -> Callable[.
 
 
 def _living_docs(original: Callable[..., Any], pkit: Runner) -> Callable[..., Any]:
-    """living-docs' `_run(argv, **options)`, `subprocess.run`'s signature: the in-process
-    `pkit` in its place."""
+    """living-docs' `_run(argv, **options)`, and visual-communication's, `subprocess.run`'s
+    signature: the in-process `pkit` in its place."""
     return pkit
 
 
@@ -208,6 +208,7 @@ ROUTES: Mapping[str, Callable[[Callable[..., Any], Runner], Callable[..., Any]]]
     "living-docs": _living_docs,
     "project-management": _project_management,
     "software-analysis": _software_analysis,
+    "visual-communication": _living_docs,
 }
 
 

@@ -5,10 +5,12 @@ status: active
 explains:
   - TERM-topology
   - TERM-seat
+  - TERM-organizer-seat
   - TERM-scope
   - TERM-pool
   - TERM-ready-task
   - TERM-clone
+  - TERM-clone-key
   - TERM-instance
   - TERM-owner
   - TERM-ownership
@@ -29,10 +31,12 @@ pkit:
       artefact:
         - TERM-topology
         - TERM-seat
+        - TERM-organizer-seat
         - TERM-scope
         - TERM-pool
         - TERM-ready-task
         - TERM-clone
+        - TERM-clone-key
         - TERM-instance
         - TERM-owner
         - TERM-ownership
@@ -52,14 +56,14 @@ Three more concepts serve that work:
 
 Each seat has a [state issue](../glossary.md#term-state-issue--state-issue), which shows which clone holds the seat now ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md) and [DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
 
-A topology may also declare [pools](../glossary.md#term-pool--pool) of workers. Each seat that builds then takes its work only from the pools it serves. A person puts a [Milestone](../glossary.md#term-milestone--milestone)'s work into a pool by marking the Milestone ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
+A topology may also declare [pools](../glossary.md#term-pool--pool). Each seat that builds then takes its work only from the pools it serves. A person puts a [Milestone](../glossary.md#term-milestone--milestone)'s work into a pool by marking the Milestone ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
 
 These concepts serve the use cases in [040-work-in-parallel](../overview/README.md#040-work-in-parallel). The journey [JRN-004](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md) follows the adopter across those use cases, from setting up the topology to adjusting the topology on what the adopter measures.
 
 ```mermaid
 classDiagram
   accTitle: Parallel work
-  accDescr: A topology declares seats, the settings the seats share, and may declare pools. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat that builds serves pools, and a pool holds open Milestones. A seat that builds takes ready Tasks. A seat has one state issue, keyed by the seat's name. A clone with a number is an instance. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee. An ownership makes the owner. A builder agent builds one Task.
+  accDescr: A topology declares seats, the settings the seats share, and may declare pools. One seat may be the organizer seat. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat that builds serves pools, and a pool holds open Milestones. A seat that builds takes ready Tasks. A seat has one state issue, keyed by the seat's name. A clone generates a clone key. A clone with a number is an instance. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee. An ownership makes the owner. A builder agent builds one Task.
   class Topology {
     seats
     shared settings
@@ -74,21 +78,22 @@ classDiagram
     number
     what its agent does
     agent definition
-    organizer or not
+    organizer seat or not
   }
+  class OrganizerSeat["Organizer seat"]
   class Scope {
     workstreams
     kinds of work
   }
   class ReadyTask["Ready Task"]
   class Clone {
-    key
     seat it holds
   }
+  class CloneKey["Clone key"]
   class Instance {
     number
     name
-    key
+    clone key
   }
   class Owner {
     assignee
@@ -97,7 +102,7 @@ classDiagram
   class Ownership {
     seat
     seat's number
-    clone's key
+    clone key
   }
   class StateIssue["State issue"] {
     key
@@ -111,11 +116,13 @@ classDiagram
   class Issue
   Topology "1" --> "1..*" Seat : declares
   Topology "1" --> "*" Pool : may declare
+  Seat <|-- OrganizerSeat
   Seat "*" --> "*" Pool : serves
   Pool "1" --> "*" Milestone : holds the open
   Seat "1" --> "0..1" Scope : may give its agent
   Seat "*" ..> "*" ReadyTask : takes from
   Seat "1" --> "1" StateIssue : has
+  Clone "1" *-- "0..1" CloneKey : generates
   Clone "1" --> "0..1" Instance : is, with a number
   Instance "0..1" --> "0..1" Seat : holds
   Scope "*" --> "*" Workstream : names
@@ -165,7 +172,7 @@ A topology is the set of seats a [project](../../core/glossary.md#term-project--
 
 - its seats, in a list where each seat keeps its place (DEC-059 points [2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology))
 - the settings its seats share, such as the mode in which a seat is released (DEC-059 point 2)
-- the [pools](../glossary.md#term-pool--pool) of workers it declares, where it declares any ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves))
+- the [pools](../glossary.md#term-pool--pool) it declares, where it declares any ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves))
 
 **Relations:**
 
@@ -198,7 +205,7 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 - a [scope](../glossary.md#term-scope--scope), which is optional (DEC-059 point 2)
 - the [pools](../glossary.md#term-pool--pool) it serves, where it builds and the topology declares pools ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves))
 - the number of its [state issue](../glossary.md#term-state-issue--state-issue) ([DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names))
-- whether it is the organizer seat, whose clone may release other seats by force (DEC-059 point 2)
+- whether it is the [organizer seat](../glossary.md#term-organizer-seat--organizer-seat), whose clone may release other seats by force (DEC-059 point 2)
 
 **Relations:**
 
@@ -211,6 +218,28 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 **Always true:**
 
 - A seat keeps its name and its number for as long as the topology lists the seat (DEC-059 points 2 and 6).
+
+## Organizer seat
+
+Defined in [TERM-organizer-seat](../glossary.md#term-organizer-seat--organizer-seat).
+
+**Why:** A [seat](../glossary.md#term-seat--seat) that stays taken holds back its [clone](../glossary.md#term-clone--clone)'s work. The organizer seat's clone, or a person, frees such a seat, which frees that work too ([DEC-059](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
+
+An organizer seat is the one seat of a [topology](../glossary.md#term-topology--topology), where it has one, whose clone may release other seats by force. It is typically the planning agent's seat. Each release by force carries its reason, which the released seat's [state issue](../glossary.md#term-state-issue--state-issue) logs (DEC-059 points [2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [5](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
+
+**Attributes:** None.
+
+**Relations:**
+
+- A topology marks at most one seat as the organizer seat (DEC-059 point 2).
+- Its clone may release any other seat by force (DEC-059 point 5).
+
+**States:** None.
+
+**Always true:**
+
+- The release by force is its one privilege, which a reviewed [change](../../core/glossary.md#term-change--change) to the topology grants (DEC-059).
+- That privilege rests on a [clone key](../glossary.md#term-clone-key--clone-key) each clone asserts, so the privilege catches mistakes and is no security boundary (DEC-059).
 
 ## Scope
 
@@ -273,7 +302,7 @@ Defined in [TERM-ready-task](../glossary.md#term-ready-task--ready-task).
 
 **Why:** An agent that builds needs work that no other agent holds, and whose prerequisites are done. A [Task](../glossary.md#term-task--task) that meets both is ready, and the [seats](../glossary.md#term-seat--seat) that build take their work from the ready Tasks ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 
-A ready Task is a Task in Backlog that no [instance](../glossary.md#term-instance--instance) owns, whose `## Dependencies` section names no open [issue](../glossary.md#term-issue--issue) (`next-task.py`). In a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology), a Task In Progress whose [ownership](../glossary.md#term-ownership--ownership) no longer counts is ready too ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)). Where the topology declares no [pool](../glossary.md#term-pool--pool), every seat shares the ready Tasks.
+A ready Task is a Task in Backlog that no [instance](../glossary.md#term-instance--instance) owns, whose `## Dependencies` section names no open [issue](../glossary.md#term-issue--issue) (DEC-059 point 7). In a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology), a Task In Progress whose [ownership](../glossary.md#term-ownership--ownership) no longer counts is ready too ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)). Where the topology declares no [pool](../glossary.md#term-pool--pool), every seat shares the ready Tasks.
 
 **Attributes:** None.
 
@@ -286,7 +315,7 @@ A ready Task is a Task in Backlog that no [instance](../glossary.md#term-instanc
 
 **Always true:**
 
-- A Task in Backlog that a worker's own instance owns is no ready Task, and comes before the ready Tasks for that worker (`next-task.py`).
+- A Task in Backlog that a worker's own instance owns is no ready Task (DEC-059 point 7).
 
 ## Clone
 
@@ -294,12 +323,12 @@ Defined in [TERM-clone](../glossary.md#term-clone--clone).
 
 **Why:** One person's agents often work at once, each in a working copy of its own under one account. The [system](../../core/glossary.md#term-system--system) must tell each copy's work apart, so each copy keeps an identity of its own ([DEC-035 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in) and [DEC-059 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 
-A clone is a working copy of a [project](../../core/glossary.md#term-project--project)'s repository on one machine. A clone becomes an [instance](../glossary.md#term-instance--instance) once it sets a number, or once it takes a [seat](../glossary.md#term-seat--seat) in a project with a [topology](../glossary.md#term-topology--topology). The clone keeps its number, its key and its seat in a file it never commits.
+A clone is a working copy of a [project](../../core/glossary.md#term-project--project)'s repository on one machine. A clone becomes an [instance](../glossary.md#term-instance--instance) once it sets a number, or once it takes a [seat](../glossary.md#term-seat--seat) in a project with a [topology](../glossary.md#term-topology--topology). The clone keeps its number, its [clone key](../glossary.md#term-clone-key--clone-key) and its seat in a file it never commits.
 
 **Attributes:**
 
 - its number, where it set one or took a seat (DEC-035 point 1 and DEC-059 point 6)
-- its key, which it generates the first time it takes a seat ([DEC-058 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task))
+- its clone key, which it generates the first time it takes a seat ([DEC-058 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task))
 - the name of the seat it holds, where it holds one ([DEC-059 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat))
 
 **Relations:**
@@ -313,6 +342,28 @@ A clone is a working copy of a [project](../../core/glossary.md#term-project--pr
 
 - In a project with a topology, a clone that holds no seat marks no [issue](../glossary.md#term-issue--issue), and is guarded by nothing (DEC-059 point 6).
 
+## Clone key
+
+Defined in [TERM-clone-key](../glossary.md#term-clone-key--clone-key).
+
+**Why:** One person's [clones](../glossary.md#term-clone--clone) act under one GitHub account, and a clone may have no number yet, since a [seat](../glossary.md#term-seat--seat) may be what gives it one. So a read after a clone takes a seat must tell that clone apart by something else ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md)).
+
+A clone key is the identifier a clone generates the first time it takes a seat. The clone keeps it beside its number, in a file it never commits ([DEC-058 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)). It outlives every session in the clone, so a new session takes up the seat the clone holds ([DEC-059 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+
+**Attributes:** None.
+
+**Relations:**
+
+- A clone generates one clone key, and keeps it (DEC-058 point 5).
+- A clone's taking of a seat names its clone key, on the seat's [state issue](../glossary.md#term-state-issue--state-issue) (DEC-058 point 5).
+- An [ownership](../glossary.md#term-ownership--ownership) in a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology) names the clone key ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+
+**States:** None.
+
+**Always true:**
+
+- No commit carries a clone key ([DEC-035 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in) and DEC-058 point 5).
+
 ## Instance
 
 Defined in [TERM-instance](../glossary.md#term-instance--instance).
@@ -325,7 +376,7 @@ An instance is a clone of a [project](../../core/glossary.md#term-project--proje
 
 - its number, typed into the clone from a set of four numbers for each person (DEC-035 points [1](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in) and [2](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee)). In a project with a topology, the number is the number of the clone's seat (DEC-059 point 6)
 - its name, such as `data`, which is the name of the clone's seat in a project with a topology ([DEC-045 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#1-instances-gain-a-human-readable-name))
-- its key, which the clone generates the first time the clone takes a seat ([DEC-058 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task))
+- its [clone key](../glossary.md#term-clone-key--clone-key), which the clone generates the first time the clone takes a seat ([DEC-058 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task))
 
 **Relations:**
 
@@ -339,7 +390,7 @@ An instance is a clone of a [project](../../core/glossary.md#term-project--proje
 
 **Always true:**
 
-- A typed number and the key are kept in a file of the clone that is never committed. The key is named only on issues and [state issues](../glossary.md#term-state-issue--state-issue) (DEC-035 point 1 and DEC-058 point 5).
+- A typed number and the clone key are kept in a file of the clone that is never committed. The clone key is named only on issues and [state issues](../glossary.md#term-state-issue--state-issue) (DEC-035 point 1 and DEC-058 point 5).
 - Every command that acts as an instance confirms the clone's seat before the command writes (DEC-059 point 6).
 - An instance is never an input to a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) ([DEC-035 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)).
 
@@ -366,7 +417,7 @@ The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../g
 **Always true:**
 
 - Two instances that take one issue at the same instant end with one owner, the lower number (DEC-035 point 6).
-- The owner is never an input to a gate, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade) ([DEC-035 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state) and [DEC-043 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#6-realm-blindness-is-preserved)).
+- The owner is never an input to a check the [backbone](../../core/glossary.md#term-backbone--backbone)'s engine makes, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade). [DEC-035 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state) and [DEC-043 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#6-realm-blindness-is-preserved) decide this.
 - In the comment log, the comments are the record, and the summary in the description is rebuilt from the comments (DEC-043 points [3](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#3-in-comment-mode-the-source-of-truth-is-a-per-instance-append-only-ownership-event-log) and [4](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)).
 
 ## Ownership
@@ -375,12 +426,12 @@ Defined in [TERM-ownership](../glossary.md#term-ownership--ownership).
 
 **Why:** In a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology), a [clone](../glossary.md#term-clone--clone) may die or lose its [seat](../glossary.md#term-seat--seat) while it owns work. Its ownership must then stop counting, so that another agent can take the work over ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 
-An ownership is the mark that makes an [instance](../glossary.md#term-instance--instance) the [owner](../glossary.md#term-owner--owner) of an [issue](../glossary.md#term-issue--issue). In a project with a topology, an ownership names the seat, the seat's number and the clone's key. It counts only while that clone holds that seat. The owner's work renews it (DEC-059 point 9).
+An ownership is the mark that makes an [instance](../glossary.md#term-instance--instance) the [owner](../glossary.md#term-owner--owner) of an [issue](../glossary.md#term-issue--issue). In a project with a topology, an ownership names the seat, the seat's number and the [clone key](../glossary.md#term-clone-key--clone-key). It counts only while that clone holds that seat. The owner's work renews it (DEC-059 point 9).
 
 **Attributes:**
 
 - the instance it makes the owner, paired with the assignee ([DEC-035 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee))
-- the seat, the seat's number and the clone's key, in a project with a topology (DEC-059 point 9)
+- the seat, the seat's number and the clone key, in a project with a topology (DEC-059 point 9)
 - the time GitHub records for its writing and for each renewal (DEC-059 point 9)
 
 **Relations:**
@@ -421,7 +472,7 @@ A state issue holds one piece of shared data that changes while agents work, nam
 
 - A comment counts only where its author may write to the repository (DEC-058 point 4).
 - Where a state issue's data says who holds a seat or the like, the first comment that takes a free seat holds. A later comment, while the seat is held, counts for nothing ([DEC-058 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#6-the-first-claim-on-a-free-state-holds)).
-- Every listing, check and plan of work leaves state issues out. A state issue is never an input to a gate, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade) (DEC-058 point 3).
+- Every listing, check and plan of work leaves state issues out. A state issue is never an input to a check the [backbone](../../core/glossary.md#term-backbone--backbone)'s engine makes, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade). DEC-058 point 3 decides both.
 
 ## Builder agent
 
@@ -455,18 +506,19 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Topology:**
 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Seat:**
 
@@ -476,13 +528,19 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+
+**Organizer seat:**
+
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 
 **Scope:**
 
@@ -490,7 +548,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
@@ -499,12 +557,12 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
@@ -520,7 +578,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Clone:**
 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
@@ -532,7 +590,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+
+**Clone key:**
+
+- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
+- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Instance:**
 
@@ -541,12 +606,12 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Owner:**
 
@@ -556,12 +621,12 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Ownership:**
 
@@ -571,6 +636,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
+- [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **State issue:**
 
@@ -581,5 +648,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Builder agent:**
 
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)

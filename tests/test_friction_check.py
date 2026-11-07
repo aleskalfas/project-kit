@@ -1367,6 +1367,26 @@ def test_an_outdated_base_is_reported_and_never_fails(repo: AdopterRepo) -> None
     assert result.exit_code == 0
 
 
+def test_the_outdated_base_report_states_the_fact_and_names_no_remedy(
+    repo: AdopterRepo,
+) -> None:
+    """Whether and how a branch takes in its base is the project's workflow to decide,
+    so the report says where the base is and where the branch left it, and advises
+    neither a merge nor a rebase (COR-050 point 12)."""
+    _start(repo, {"docs/guide.md": guide()})
+    left = repo.head()
+    repo.commit("feature work", {"src/core/engine.py": "ENGINE = 4\n"})
+    repo.checkout("main")
+    tip = repo.commit("main moves on", {"README.md": "main moved\n"})
+    repo.checkout("feature")
+    (finding,) = _run(repo).findings
+    assert finding.message == (
+        f"the base main is at {tip[:12]}, which is not an ancestor of HEAD: it moved on "
+        f"after this branch left it at {left[:12]}; results hold only against an "
+        "up-to-date base"
+    )
+
+
 def test_every_run_names_the_base_commit_it_compared_against(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     base = repo.head()
@@ -2429,13 +2449,35 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     feature = repo.head()
 
     repo.checkout("main")
-    refused = _cli("--base", "main", "--head", "feature", "--json")
+    refused = _cli("--base", "main", "--head", "feature", "--own-head", "feature", "--json")
     assert refused.exit_code == 1 and started == []
     assert "--head feature: the anchor source 'alpha' is resolved by its capability's command" in (
         refused.output
     )
     assert f"HEAD is at {repo.head()[: fc.SHORT]}" in refused.output
     assert f"Run from a checkout at feature: HEAD at {feature[: fc.SHORT]}" in refused.output
+    # The refusal is a document too, told from any other failure by its kind, with no
+    # `answers` a reader could take for a check that ran.
+    told = json.loads(refused.stdout)
+    # Its keys are sorted, as every reading document's are: the bytes, which parsing hides.
+    assert refused.stdout == json.dumps(told, indent=2, sort_keys=True) + "\n"
+    assert (told["schema_version"], told["failed"]) == (fc.CHANGE_SCHEMA_VERSION, True)
+    assert "answers" not in told
+    assert told["refused"] == {
+        "kind": fc.RESOLVER_ELSEWHERE,
+        "head": feature,
+        "anchor": {"kind": "source", "value": "alpha"},
+        "working_tree": f"HEAD is at {repo.head()[: fc.SHORT]}",
+        "message": told["refused"]["message"],
+    }
+    assert "Run from a checkout at feature" in told["refused"]["message"]
+    # Without `--json` the run prints no document.
+    assert _cli("--base", "main", "--head", "feature", "--own-head", "feature").stdout == ""
+    # Nor without `--own-head`: a reader older than the flag takes any document for a check
+    # that ran, and knows this refusal by nothing on standard output and the sentence.
+    older = _cli("--base", "main", "--head", "feature", "--json")
+    assert older.exit_code == 1 and older.stdout == "" and started == []
+    assert "Run from a checkout at feature" in " ".join(older.stderr.split())
 
     repo.checkout("feature")
     at_head = _cli("--base", "main", "--head", "feature", "--json")
@@ -2455,10 +2497,31 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     assert "the working tree is not feature (1 uncommitted path)" in uncommitted.output
 
 
+def test_a_run_away_from_the_commit_named_starts_nothing_that_commit_holds(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A commit that registers a kind of its own, and anchors a page to it, starts nothing
+    from a working tree at another commit, though it names the command to run: the run
+    ends in the refusal (ADR-068 point 6)."""
+    started = start_in_process(monkeypatch)
+    _start(repo, {"docs/guide.md": guide()})
+    register_kinds(repo.root, "kinds", kinds={"planted": "resolve"}, script_body=NAMES_A_STRAY_FILE)
+    repo.write({"docs/planted.md": document("planted", anchors={"planted": ["x"]}, at=T1)})
+    repo.commit("a kind and a page of the head's own", files=None)
+    repo.checkout("main")
+    refused = _cli("--base", "main", "--head", "feature", "--own-head", "feature", "--json")
+    assert refused.exit_code == 1 and started == []
+    assert json.loads(refused.stdout)["refused"]["anchor"] == {"kind": "planted", "value": "x"}
+
+
 def test_a_named_head_is_refused_with_all_and_when_it_names_no_commit(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     with_all = _cli("--all", "--head", "feature")
     assert with_all.exit_code == 2 and "--head and --all exclude each other" in with_all.output
+    own_alone = _cli("--base", "main", "--own-head", "feature")
+    assert own_alone.exit_code == 2 and "beside --head" in own_alone.output
+    own_with_all = _cli("--all", "--head", "feature", "--own-head", "feature")
+    assert own_with_all.exit_code == 2
     unknown = _cli("--base", "main", "--head", "no-such-rev")
     assert unknown.exit_code == 1
     assert "--head 'no-such-rev' names no commit of this repository." in unknown.output

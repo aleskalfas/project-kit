@@ -44,14 +44,14 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../glossary.md#term-project--project) declares, in [changesets](../../../glossary.md#term-changeset--changeset) under `.changes/unreleased/`, what each [change](../../../glossary.md#term-change--change) means for its [release step](../../../glossary.md#term-release-step--release-step), as project-kit does ([PRJ-002 D1](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- Surface is a person's judgement ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)). The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) reads only paths, so it can flag a change that moves no surface, or miss one that does (`release.py`).
+- [Surface](../../../glossary.md#term-surface--surface) is a person's judgement ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)). The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) reads only paths, so it can flag a change that moves no surface, or miss one that does (`release.py`).
 - The change edits no [version](../../../glossary.md#term-version--version) number, such as `.pkit/VERSION` or a [component](../../../glossary.md#term-component--component)'s `version`, since only the release step writes them (PRJ-002 D1).
 
-**Trigger:** The developer's [change](../../../glossary.md#term-change--change) touches the surface of the [backbone](../../../glossary.md#term-backbone--backbone) or of a [component](../../../glossary.md#term-component--component).
+**Trigger:** The developer's [change](../../../glossary.md#term-change--change) touches the [surface](../../../glossary.md#term-surface--surface) of the [backbone](../../../glossary.md#term-backbone--backbone) or of a [component](../../../glossary.md#term-component--component).
 
 **Main path:**
 
-1. The developer judges whose surface the [change](../../../glossary.md#term-change--change) moves, the [backbone](../../../glossary.md#term-backbone--backbone)'s or a [component](../../../glossary.md#term-component--component)'s, and by which [bump segment](../../../glossary.md#term-bump-segment--bump-segment): `patch`, `minor`, `major` or `none`.
+1. The developer judges whose [surface](../../../glossary.md#term-surface--surface) the [change](../../../glossary.md#term-change--change) moves, the [backbone](../../../glossary.md#term-backbone--backbone)'s or a [component](../../../glossary.md#term-component--component)'s, and by which [bump segment](../../../glossary.md#term-bump-segment--bump-segment): `patch`, `minor`, `major` or `none`.
 2. The developer adds a [changeset](../../../glossary.md#term-changeset--changeset) for each under `.changes/unreleased/`, with `changie new` or by hand. Each gives its `component`, `kind` and `body`.
 3. The developer commits the changesets, and runs `pkit release lint` to check their format.
 4. The developer runs `pkit release check`, which compares the committed change with where the branch left its [base](../../../glossary.md#term-base--base).
@@ -62,7 +62,7 @@ pkit:
 **Variants:**
 
 - **1a.** The [change](../../../glossary.md#term-change--change) touches no path of the [backbone](../../../glossary.md#term-backbone--backbone) or of a [component](../../../glossary.md#term-component--component), such as a change to `tech-docs/` alone. The developer adds no [changeset](../../../glossary.md#term-changeset--changeset), and the path goes on at step 4.
-- **1b.** The change moves no surface, yet touches a component's paths, such as an internal refactor under `src/project_kit/`. The developer adds a `none` changeset for it, and the path goes on at step 3.
+- **1b.** The change moves no [surface](../../../glossary.md#term-surface--surface), yet touches a component's paths, such as an internal refactor under `src/project_kit/`. The developer adds a `none` changeset for it, and the path goes on at step 3.
 - **1c.** What the change moves comes to need a backbone, or a [version](../../../glossary.md#term-version--version) of another [capability](../../../glossary.md#term-capability--capability). Its changeset says so in `requires_backbone`, `requires_capabilities` or `runs_on_capabilities`, as `release` or a shipped version. The [release step](../../../glossary.md#term-release-step--release-step) then raises the floor, or widens the bound ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - **2a.** The change records a decision. Its changeset declares `none` where the decision's feature ships in a later change. Where the decision's text itself changes what adopters do, it declares `patch` or above ([PRJ-002](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)).
 - **3a.** A changeset's format is wrong, such as a `body` that is no sentence. `pkit release lint` names it, and the path rejoins at step 2.
@@ -75,7 +75,7 @@ pkit:
 - **7a.** The pull request carries the `skip-changeset` label. The CI pipeline passes it to the guard as `PKIT_CHANGESET_SKIP`, which skips the surface check. The guard still checks floors, bounds and range edits.
 - **7b.** The pull request reaches a merge queue. The guard does not run on the queue's merge, which carries no labels, since it judged the pull request's diff already.
 
-**Postconditions:** For the [backbone](../../../glossary.md#term-backbone--backbone) and each [component](../../../glossary.md#term-component--component) whose surface the [change](../../../glossary.md#term-change--change) moves, a [changeset](../../../glossary.md#term-changeset--changeset) in the change names it and its [bump segment](../../../glossary.md#term-bump-segment--bump-segment). Each waits under `.changes/unreleased/` for the next [release step](../../../glossary.md#term-release-step--release-step).
+**Postconditions:** For the [backbone](../../../glossary.md#term-backbone--backbone) and each [component](../../../glossary.md#term-component--component) whose [surface](../../../glossary.md#term-surface--surface) the [change](../../../glossary.md#term-change--change) moves, a [changeset](../../../glossary.md#term-changeset--changeset) in the change names it and its [bump segment](../../../glossary.md#term-bump-segment--bump-segment). Each waits under `.changes/unreleased/` for the next [release step](../../../glossary.md#term-release-step--release-step).
 
 **Minimal guarantees:**
 

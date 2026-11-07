@@ -72,7 +72,7 @@ pkit:
 
 **Assumptions:**
 
-- Each [changeset](../../../glossary.md#term-changeset--changeset)'s [bump segment](../../../glossary.md#term-bump-segment--bump-segment) is a person's judgement of the [change](../../../glossary.md#term-change--change)'s surface, and the [release step](../../../glossary.md#term-release-step--release-step) takes the bump segment as written ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- Each [changeset](../../../glossary.md#term-changeset--changeset)'s [bump segment](../../../glossary.md#term-bump-segment--bump-segment) is a person's judgement of the [change](../../../glossary.md#term-change--change)'s [surface](../../../glossary.md#term-surface--surface), and the [release step](../../../glossary.md#term-release-step--release-step) takes the bump segment as written ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - Where the [release](../../../glossary.md#term-release--release) ships a [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration) that adds a missing default, the changelog entry names that default, from a pending changeset. No command checks for that sentence, so the maintainer looks for it at step 8 ([COR-010](../../../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
 
 **Trigger:** The maintainer starts `release-pr.yml` by hand.
@@ -93,7 +93,7 @@ pkit:
    - the move of the backbone and of each component, with the floors and upper bounds declared for it
    - any warning on a [migration](../../../glossary.md#term-migration--migration)'s folder
    - the new changelog entry
-7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) reads the release pull request's diff as only what `pkit release apply` writes, with any answers those writes need. The guard exempts that diff from the surface check ([UC-003](../030-change/UC-003-declare-changeset.md)).
+7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) reads the release pull request's diff as only what `pkit release apply` writes, with any answers those writes need. The guard exempts that diff from the [surface](../../../glossary.md#term-surface--surface) check ([UC-003](../030-change/UC-003-declare-changeset.md)).
 8. The maintainer reviews the new versions and the changelog entry.
 9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` head branch under a `chore(release):` title.
 14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).

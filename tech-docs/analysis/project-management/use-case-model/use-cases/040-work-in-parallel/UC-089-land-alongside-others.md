@@ -13,7 +13,7 @@ requirements:
   - REQ-041
   - REQ-042
 after:
-  - [UC-084]
+  - [UC-084, UC-088]
 shortfalls:
   - at: "4a"
     issue: "#2287"
@@ -63,6 +63,7 @@ pkit:
         - PRJ-004
         - ADR-063
         - ADR-034#1
+        - ADR-066#1
       artefact:
         - ACT-worker-agent
         - REQ-040
@@ -81,7 +82,7 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer) whose verdict does not stand for the new head, such as after a conflict the worker resolved. Each such [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) reviews the new head again. A merge of the [base](../../../../core/glossary.md#term-base--base) without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It is also each agent the [project](../../../../core/glossary.md#term-project--project) granted, which `fix-drift` starts to propose answers after the merge ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The worker's [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-084](UC-084-take-next-task.md) or [UC-088](UC-088-delegate-to-agent.md):** The [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 
@@ -95,7 +96,7 @@ pkit:
 1. The worker runs `pkit pm land-work <N>`. The [system](../../../../core/glossary.md#term-system--system) checks, reviews and stops ready at the [head](../../../../core/glossary.md#term-head--head) the system judged, as `UC-062` steps 2 to 10 describe.
 2. The merge authoriser authorises the merge of that head, as `UC-062` step 11 describes ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 3. Another agent's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merges first, so the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) moves past the worker's [base](../../../../core/glossary.md#term-base--base).
-4. The worker does not merge the default branch into the [Task](../../../glossary.md#term-task--task)'s branch only because it moved on ([DEC-064 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#4-where-the-pull-requests-author-takes-in-the-base)). The worker takes it in where the pull request conflicts with it, or where the system names that merge. The worker also takes it in where it judges that the merge settles a check failing only on the hosting service's merge or the queue's. The [change check](../../../../core/glossary.md#term-change-check--change-check)'s outdated-base advice names no merge.
+4. The worker does not merge the default branch into the [Task](../../../glossary.md#term-task--task)'s branch only because the default branch moved on ([DEC-064 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#4-where-the-pull-requests-author-takes-in-the-base)). The worker takes it in where the pull request conflicts with it, or where the system names that merge. The worker takes it in where the worker judges that the merge settles a check failing only on the hosting service's merge or the queue's. The [change check](../../../../core/glossary.md#term-change-check--change-check) names no merge when it reports an outdated base.
 5. The worker runs `pkit pm land-work <N> --yes --expect-head <sha>`, naming the head the merge authoriser authorised, as `UC-062` step 12 describes.
 6. The system keeps each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer)'s [verdict](../../../glossary.md#term-verdict--verdict), which still stands for the head ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). The system runs the change check on that head merged with the default branch as it stands, and the check passes ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)). The system then merges at the head the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, as `UC-062` steps 13 and 14 describe.
 7. After the merge, the worker runs `pkit pm fix-drift` ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)). The [fixers](../../../glossary.md#term-fixer--fixer) the [project](../../../../core/glossary.md#term-project--project) granted propose answers for what the merge left out of date.
@@ -121,7 +122,7 @@ pkit:
 
 - **7a.** Another run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The command refuses, and the worker runs `fix-drift` again later ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).
 
-**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the gate judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
+**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
 
 **Minimal guarantees:**
 

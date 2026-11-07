@@ -3,9 +3,9 @@ id: REQ-026
 title: An interrupted version transition never reads as finished, and the next one completes it
 status: active
 statement: A version transition that stops before its end never reads as finished, and the next transition completes it.
-measure: A version transition of the backbone that stops at any step leaves `completed_version` missing, or unequal to `backbone_version`, and status shows the transition incomplete. A transition of one capability that stops leaves the capability's manifest at the version it held. The next transition runs each migration from the recorded completion or version. Where no completion is recorded, it runs every backbone migration once.
+measure: A version transition of the backbone that stops after it records its target leaves `completed_version` missing, or unequal to `backbone_version`, and status shows it incomplete. A transition of one capability that stops before its migrations finish leaves the capability's manifest at the version it held. The next transition runs each migration from the recorded completion or version. Where no completion is recorded, it runs every backbone migration once.
 applies-to: "Every version transition: of the backbone, by `pkit upgrade` and by `pkit pin` to a newer release, and of one capability, by `pkit capabilities upgrade`. First install records the backbone's two states in the same order (COR-059 point 6)."
-obligation: v1:sha256:ffe1422ed38890749e970e0c9c8b3d7ea306329c9881cdc162a5a4c1a8413790
+obligation: v1:sha256:5d6c298d19b7d38f9167246bf94b6d7d4ab30d134a5e77f81e0811c384c1cc68
 actors:
   - ACT-adopter
 refines: []

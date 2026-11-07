@@ -1,7 +1,8 @@
 """The library folder, the list of the project's libraries, versions, the libraries the
 capability ships, a piece's lock, and the versions a library is checked alone with
 (DEC-001 point 5, DEC-002 point 3, DEC-003 points 1, 4, 5, 8 and 9, DEC-004 point 6,
-DEC-005 point 7, DEC-008 point 1, DEC-013 points 2, 5 and 6, DEC-014 point 5).
+DEC-005 point 7, DEC-008 point 1, DEC-013 points 2, 5 and 6, DEC-014 point 5, DEC-019
+point 7).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -42,6 +43,16 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 points 2, 5 and 6, DEC-014 point 5).
   fits, naming the libraries it was choosing. After `SEARCH_JUDGED` combinations judged,
   it stops and keeps the lock. A library the lock does not name yet takes its newest
   version of any major. A pinned draft's lock never moves: it is checked, never changed.
+- **A lock's proposed move** (`propose_lock`, DEC-019 point 7) is worked out as a draft's
+  lock is, among released versions alone, and it says why it held back each newer version
+  (`HeldBack`). A version a person names moves what it names and only what that needs: a
+  library the name leaves alone keeps the version the lock names. Only a name takes a new
+  major, and no clash or lost end holds it back, so the result names each (`Moved.past`).
+  A lock a hand moves, a pinned draft's or written code's, may take a version not yet
+  released, so its move is worked out among every version (DEC-019 point 8).
+- **What is newer than a lock** (`newer_than`, DEC-003 point 9, DEC-019 point 8): for each
+  library it names, the newest released version the installed capability reads of the
+  lock's major, and of a later major, read from the list and the versions alone.
 - **A version checked alone** is resolved with the newest version the project holds of
   each major it builds on, and of each major those build on (`newest_of_majors`). The
   search and that choice take a library's versions through one filter (`readable`): the
@@ -434,6 +445,23 @@ class Held:
             files=self.files(name, version),
         )
 
+    def changed(
+        self, name: str, version: Version, changes: Sequence[str], restored: Collection[str]
+    ) -> Finding:
+        """The finding on a released version that no longer matches what was released, by
+        its `hash_changes`. `restored` is as `findings` takes it."""
+        label = f"{name}@{version}"
+        return Finding(
+            "library-changed",
+            FAILS,
+            f"{label} no longer matches what was released: " + "; ".join(changes),
+            file=f"{self.location}/{FOLDER}/{name}/{version}",
+            library=label,
+            fix=f"run `pkit visual add {name}`, which restores it as released"
+            if label in restored
+            else "restore the version folder as it was released",
+        )
+
     def findings(self, restored: Collection[str] = ()) -> list[Finding]:
         """What is wrong with the library folder and its list (DEC-003 point 9): a version
         the list does not name or the folder does not hold, a version the capability
@@ -512,21 +540,7 @@ class Held:
                     )
                 changes = self.hash_changes(name, version)
                 if changes:
-                    fix = (
-                        f"run `pkit visual add {name}`, which restores it as released"
-                        if label in restored
-                        else "restore the version folder as it was released"
-                    )
-                    found.append(
-                        Finding(
-                            "library-changed",
-                            FAILS,
-                            f"{label} no longer matches what was released: " + "; ".join(changes),
-                            file=f"{self.location}/{FOLDER}/{where}",
-                            library=label,
-                            fix=fix,
-                        )
-                    )
+                    found.append(self.changed(name, version, changes, restored))
         for name, library in listed.items():
             versions = library.get("versions") if isinstance(library, Mapping) else None
             for text in versions or {}:
@@ -622,8 +636,29 @@ def newest_of_majors(held: Held, library: Library) -> dict[str, Library]:
     return {name: chosen[name] for name in sorted(chosen)}
 
 
+#: What holds a version back from a proposed move, beside a misfit, each a `Reason.rule`
+#: (DEC-019 point 7): it is not released; it is of a later major, or builds on a later major
+#: of a library the lock holds; or the installed capability cannot read it.
+NOT_RELEASED = "not-released"
+LATER_MAJOR = "later-major"
+UNREADABLE = "unreadable"
+
+#: What holds back a version the search tried, where none of those rules says why: what it
+#: builds on fits nothing the search could take with it. The search gives its own words.
+NO_FIT = "no-fit"
+
+
 @dataclass(frozen=True)
-class Misfit:
+class Reason:
+    """Why a search held a version back: `rule` says which kind of reason it is, and `said`
+    says it in words."""
+
+    rule: str
+    said: str
+
+
+@dataclass(frozen=True)
+class Misfit(Reason):
     """One reason a whole combination of versions does not fit a piece as its lock does
     (DEC-003 point 8). `rule` is `clash`: an item carries a key that both its component and
     its list declare, where it does not under the lock (DEC-010 point 2). Or it is `end`:
@@ -631,8 +666,6 @@ class Misfit:
     the item and the key, or the tie and the end. `implicates` names the libraries whose
     versions decide it."""
 
-    rule: str
-    said: str
     implicates: frozenset[str]
 
 
@@ -645,22 +678,31 @@ Judge = Callable[[Mapping[str, Library]], Sequence[Misfit]]
 @dataclass(frozen=True)
 class HeldBack:
     """A version the search held back, newer than the one it chose of its library, with
-    what made the first combination judged with it, that implicated it, not fit."""
+    why: what made the first combination judged with it, that implicated it, not fit, or,
+    for a proposed move, each other reason that holds. It names the version, since one the
+    installed capability cannot read gives no `Library`."""
 
-    library: Library
-    misfits: tuple[Misfit, ...]
+    name: str
+    version: Version
+    reasons: tuple[Reason, ...]
+
+    @property
+    def label(self) -> str:
+        return f"{self.name}@{self.version}"
 
 
 @dataclass(frozen=True)
 class Moved:
-    """The lock a render writes, and what the search states of it: each version it held
-    back; each library it moved below the version the lock named, in words; and, where it
-    stopped at its bound of combinations judged and kept the lock, that, in words."""
+    """The lock a search gives, and what it states of it: each version it held back; each
+    library it moved below the version the lock named, in words; where it stopped at its
+    bound of combinations judged and kept the lock, that, in words; and each clash or lost
+    end that versions a person named go past, as those records state one (`propose_lock`)."""
 
     lock: dict[str, str]
     held_back: tuple[HeldBack, ...] = ()
     below: tuple[str, ...] = ()
     kept: str = ""
+    past: tuple[Misfit, ...] = ()
 
 
 def move_lock(
@@ -687,7 +729,84 @@ def move_lock(
     roots = sorted(set(roots))
     if pinned:
         return Moved(_checked_pinned(held, roots, lock))
-    search = _Search(held, lock or {}, judge)
+    return _searched(_Search(held, lock or {}, judge), roots)
+
+
+def propose_lock(
+    held: Held,
+    roots: Iterable[str],
+    lock: Mapping[str, str] | None = None,
+    *,
+    names: Iterable[str] = (),
+    unreleased: bool = False,
+    judge: Judge | None = None,
+) -> Moved:
+    """The lock a person's move proposes for a piece that names the libraries `roots`, with
+    what they build on (DEC-019 point 7).
+
+    With no `names`, the search works as a draft's render does (`move_lock`), among released
+    versions alone unless `unreleased`, and `Moved.held_back` gives each newer version it did
+    not take, with why.
+
+    Each of `names` is `<library>@<version>`, the form `pkit visual add` takes. The lock takes
+    what is named, which may lie below it, and only what that needs: a library the name leaves
+    alone keeps the version the lock names, and a library it needs moves within the lock's
+    major. So `Moved.held_back` is empty, since nothing was held back. `judge`, where given,
+    judges the lock found once and moves nothing: `Moved.past` gives each clash or lost end.
+
+    `unreleased` lets the lock hold a version not yet released, as a pinned draft's look ahead
+    may, and as a hand may move a pinned draft's or written code's lock, which a published
+    piece's move may not (DEC-003 point 8, DEC-019 points 5 and 8).
+
+    Raises LockRefused, naming the fault: a list that cannot be read, a name `_named` refuses
+    or the piece does not use, a new major a name needs that nothing names, and all that
+    `move_lock` refuses. Past the bound of combinations judged, it keeps the lock, as
+    `move_lock` does."""
+    try:
+        _ = held.listed
+    except LibraryError as exc:
+        raise LockRefused(str(exc)) from exc
+    named = _named(held, names, unreleased)
+    search = _Search(
+        held, lock or {}, judge, released_only=not unreleased, named=named, proposed=True
+    )
+    moved = _searched(search, sorted(set(roots)))
+    unused = sorted(set(named) - set(moved.lock))
+    if unused:
+        listed = ", ".join(f"`{name}`" for name in unused)
+        raise LockRefused(f"the piece does not use {listed}, so no lock of it names one")
+    return moved
+
+
+def _named(held: Held, names: Iterable[str], unreleased: bool) -> dict[str, Version]:
+    """The version each of `names` names, by library. Raises LockRefused for a name of
+    another form, two versions of one library, a version the project does not hold, one the
+    installed capability cannot read, and, unless `unreleased`, one not released."""
+    named: dict[str, Version] = {}
+    for text in names:
+        name, _, number = text.partition("@")
+        try:
+            version = Version.parse(number)
+        except ValueError as exc:
+            raise LockRefused(f"`{text}` is no `<library>@<version>`") from exc
+        if named.setdefault(name, version) != version:
+            raise LockRefused(
+                f"`{name}` is named at {named[name]} and at {version}: a lock holds one version "
+                f"of each library"
+            )
+        if version not in held.folders.get(name, {}):
+            raise LockRefused(f"the project does not hold {text}: bring it in")
+        why = held.unreadable(name, version)
+        if why is not None:
+            raise LockRefused(f"{text} cannot be read: {why}")
+        if not unreleased and not held.released(name, version):
+            raise LockRefused(f"{text} is not released, and this move takes released versions")
+    return named
+
+
+def _searched(search: _Search, roots: list[str]) -> Moved:
+    """The lock `search` finds for `roots`, with what it states. Raises LockRefused, as
+    `move_lock` says."""
     kept = ""
     try:
         try:
@@ -701,7 +820,12 @@ def move_lock(
                 f"name yet; move the lock by hand, or take the versions no piece needs out of "
                 f"the library folder"
             )
-            search = _Search(held, lock or {})
+            search = _Search(
+                search.held,
+                search.lock,
+                released_only=search.released_only,
+                proposed=search.proposed,
+            )
             found = search.run(roots, fixed=True)
     except _Stopped as stopped:
         named = ", ".join(f"`{name}`" for name in stopped.choosing)
@@ -718,6 +842,7 @@ def move_lock(
         search.held_back(found),
         search.below(found),
         kept,
+        search.past,
     )
 
 
@@ -754,28 +879,65 @@ class _Search:
       take any version of its line. `below` names each library it then moved below the
       version the lock named. Past the bound of combinations judged, a library the lock
       names takes only that version (`fixed`).
+    - **Released versions alone.** With `released_only`, it takes no version not yet released,
+      the one the lock names included.
+    - **A proposed move.** With `proposed`, it says each reason it held back a newer version,
+      not only a misfit, and only a name moves the lock to another major (`propose_lock`).
+    - **Versions named.** A library in `named` takes that version alone, of any major. Each
+      other library the lock names tries that version first, so it moves only where what is
+      named needs it to, and never past its line. A whole combination is the lock, judged
+      once to say what it goes past (`past`), and nothing is held back.
 
     `_step` returns the combination found, or the libraries whose choice another try may
     mend: those the judgement implicated, every library chosen where a choice failed, and
     each library that builds on one whose versions all failed."""
 
-    def __init__(self, held: Held, lock: Mapping[str, str], judge: Judge | None = None) -> None:
+    def __init__(
+        self,
+        held: Held,
+        lock: Mapping[str, str],
+        judge: Judge | None = None,
+        *,
+        released_only: bool = False,
+        named: Mapping[str, Version] | None = None,
+        proposed: bool = False,
+    ) -> None:
         self.held = held
         self.lock = lock
         self.judge = judge
+        self.released_only = released_only
+        self.named = named or {}
+        self.proposed = proposed
+        self.past: tuple[Misfit, ...] = ()
         self.conflict: str | None = None
+        self._last = ""
         self.steps = 0
         self.judged = 0
         self.reached: set[str] = set()
         self.floors = False
         self.fixed = False
-        self._misfits: dict[tuple[str, Version], tuple[Library, tuple[Misfit, ...]]] = {}
+        self._misfits: dict[tuple[str, Version], tuple[Misfit, ...]] = {}
+        self._unfit: dict[tuple[str, Version], str] = {}
 
     def _note(self, conflict: str) -> None:
+        self._last = conflict
         if self.conflict is None:
             self.conflict = conflict
 
-    def floor(self, name: str) -> Version | None:
+    def _crossing(self, label: str, name: str, major: int) -> str | None:
+        """Why `label`, which builds on `name` at `major`, stands against what a proposed
+        move holds of `name`: a version named, or another major than the lock's, which only
+        a name takes (DEC-019 point 7). None where neither says why, as in a draft's search."""
+        if name in self.named:
+            return f"{label} builds on `{name}` {major}, and {name}@{self.named[name]} is named"
+        if self.proposed and name in self.lock:
+            return (
+                f"{label} builds on `{name}` {major}, and the lock names {name}@{self.lock[name]}: "
+                f"only a name moves a lock to another major"
+            )
+        return None
+
+    def _locked(self, name: str) -> Version | None:
         """The version the lock names of `name`, where the project holds it and the
         installed capability reads it; else None."""
         try:
@@ -786,8 +948,18 @@ class _Search:
             return None
         return version if self.held.unreadable(name, version) is None else None
 
+    def floor(self, name: str) -> Version | None:
+        """The version the lock names of `name`, where the search may take it: it is
+        `_locked`, and released where the search takes released versions alone; else None."""
+        version = self._locked(name)
+        if version is None or (self.released_only and not self.held.released(name, version)):
+            return None
+        return version
+
     def candidates(self, name: str) -> list[Library]:
         held = self.held
+        if name in self.named:
+            return [held.library(name, self.named[name])]
         if not held.versions(name):
             self._note(f"the project holds no version of `{name}`: bring it in")
             return []
@@ -799,18 +971,23 @@ class _Search:
                 self._note(f"the lock names `{name}: {self.lock[name]}`, which is no version")
                 return []
         found, unread = readable(held, name, line)
-        floor = self.floor(name) if self.floors or self.fixed else None
-        if floor is not None:
+        if self.released_only:
+            found = [library for library in found if held.released(name, library.version)]
+        floor = self.floor(name)
+        if floor is not None and (self.floors or self.fixed):
             found = [
                 library
                 for library in found
                 if library.version == floor or (library.version > floor and not self.fixed)
             ]
+        if floor is not None and self.named:
+            found.sort(key=lambda library: library.version != floor)
         if not found:
             within = f" of major {line}, the line the lock names" if line is not None else ""
             reasons = f" ({'; '.join(unread)})" if unread else ""
+            kind = "released version" if self.released_only else "version"
             self._note(
-                f"the project holds no version of `{name}`{within} that the installed "
+                f"the project holds no {kind} of `{name}`{within} that the installed "
                 f"capability reads{reasons}"
             )
         return found
@@ -861,7 +1038,8 @@ class _Search:
         if candidates and not fitting:
             (label, major), *_ = sorted(wanted)
             self._note(
-                f"{label} builds on `{name}` {major}, of which the project holds no version "
+                self._crossing(label, name, major)
+                or f"{label} builds on `{name}` {major}, of which the project holds no version "
                 f"that fits"
             )
         if not fitting:
@@ -881,9 +1059,11 @@ class _Search:
             )
             if clash is not None:
                 self._note(
-                    f"no lock fits: {library.label} builds on `{clash.name}` {clash.major}, but "
+                    self._crossing(library.label, clash.name, clash.major)
+                    or f"no lock fits: {library.label} builds on `{clash.name}` {clash.major}, but "
                     f"{chosen[clash.name].label} is in the lock"
                 )
+                self._unfit[name, library.version] = self._last
                 mend |= before
                 continue
             added = sorted(
@@ -898,6 +1078,7 @@ class _Search:
                 return found
             if name not in found:
                 return found  # no other version of this library mends what failed
+            self._unfit[name, library.version] = self._last
             mend |= found - {name}
         # Every version failed: a library that builds on this one decides which fit.
         mend |= {
@@ -910,8 +1091,13 @@ class _Search:
     def _judged(self, chosen: dict[str, Library]) -> dict[str, Library] | frozenset[str]:
         """A whole combination, judged where a judgement is given: itself where it fits,
         else the libraries the judgement implicates, each of whose versions keeps the
-        misfits that implicate it, the first time a combination with it does not fit."""
+        misfits that implicate it, the first time a combination with it does not fit. Where
+        versions are named it is itself in any case, and what the judgement finds is what
+        they go past."""
         if self.judge is None:
+            return chosen
+        if self.named:
+            self.past = tuple(self.judge(chosen))
             return chosen
         self.judged += 1
         if self.judged > SEARCH_JUDGED:
@@ -926,48 +1112,122 @@ class _Search:
             mine = tuple(misfit for misfit in misfits if name in misfit.implicates)
             if mine:
                 implicated.add(name)
-                key = (name, chosen[name].version)
-                self._misfits.setdefault(key, (chosen[name], mine))
+                self._misfits.setdefault((name, chosen[name].version), mine)
         return frozenset(implicated or chosen)
 
     def held_back(self, found: Mapping[str, Library]) -> tuple[HeldBack, ...]:
-        """Each version a misfit implicated that is newer than the one chosen of its
-        library, by library and the newest first."""
-        held = [
-            (library, misfits)
-            for (name, version), (library, misfits) in self._misfits.items()
-            if name in found and version > found[name].version
-        ]
-        held.sort(key=lambda entry: entry[0].version, reverse=True)
-        held.sort(key=lambda entry: entry[0].name)
-        return tuple(HeldBack(library, misfits) for library, misfits in held)
+        """Each version newer than the one chosen of its library that the search says why it
+        held back (`_why`), by library and the newest first. Where versions are named there
+        is none: a library the name left alone was not held back."""
+        if self.named:
+            return ()
+        held = []
+        for name in sorted(found):
+            for version in self.held.versions(name):
+                if version > found[name].version:
+                    why = self._why(name, version, found)
+                    if why:
+                        held.append(HeldBack(name, version, why))
+        return tuple(held)
+
+    def _why(self, name: str, version: Version, found: Mapping[str, Library]) -> tuple[Reason, ...]:
+        """Why the search did not take a version newer than the one chosen of its library. A
+        draft's search says only what a misfit held back. A proposed move's says what a
+        misfit held back, else what failed where the search tried the version, else each
+        reason that kept it from trying it, its not being released among them where the
+        search takes released versions alone. Past the bound of combinations judged no reason
+        may hold, and `Moved.kept` says why the lock stayed."""
+        key = (name, version)
+        misfits = self._misfits.get(key, ())
+        if misfits or not self.proposed:
+            return misfits
+        if key in self._unfit:
+            needs = self.held.library(name, version).builds_on
+            later = any(
+                need.name in found and need.major > found[need.name].version.major for need in needs
+            )
+            return (Reason(LATER_MAJOR if later else NO_FIT, self._unfit[key]),)
+        reasons = []
+        unread = self.held.unreadable(name, version)
+        if unread is not None:
+            reasons.append(Reason(UNREADABLE, unread))
+        if self.released_only and not self.held.released(name, version):
+            reasons.append(Reason(NOT_RELEASED, "it is not released"))
+        taken = found[name].version.major
+        if version.major > taken:
+            said = f"it is of major {version.major}, and the move stays within major {taken}"
+            reasons.append(Reason(LATER_MAJOR, said))
+        return tuple(reasons)
 
     def below(self, found: Mapping[str, Library]) -> tuple[str, ...]:
-        """Each library chosen below the version the lock names, in words, with why."""
+        """Each library chosen below the version the lock names, in words, with why, other
+        than a library a person named at that version."""
         said = []
         for name in sorted(found):
+            if name in self.named:
+                continue
             try:
-                named = Version.parse(self.lock.get(name))
+                locked = Version.parse(self.lock.get(name))
             except ValueError:
                 continue
             version = found[name].version
-            if version >= named:
+            if version >= locked:
                 continue
-            why = (
-                "no versions at or above those the lock names fit together"
-                if self.floor(name) is not None
-                else f"the project holds no version {named} that the installed capability reads"
-            )
+            if self.floor(name) is not None:
+                why = "no versions at or above those the lock names fit together"
+            elif self._locked(name) is not None:
+                why = f"{locked} is not released"
+            else:
+                why = f"the project holds no version {locked} that the installed capability reads"
             said.append(
-                f"`{name}` moves below {named}, the version the lock named, to {version}: {why}"
+                f"`{name}` moves below {locked}, the version the lock named, to {version}: {why}"
             )
         return tuple(said)
 
 
+@dataclass(frozen=True)
+class Newer:
+    """What is newer than the version a lock names of a library: the newest released version
+    the installed capability reads of the lock's major, and of a later major, each None where
+    the project holds none."""
+
+    name: str
+    locked: Version
+    within: Version | None
+    later: Version | None
+
+
+def newer_than(held: Held, lock: Mapping[str, str]) -> list[Newer]:
+    """Each library `lock` names, in name order, of which the project holds a newer released
+    version the installed capability reads, of any major (DEC-003 point 9, DEC-019 point 8).
+    It reads the list and each version's `library.yaml`, and judges no fit, so it names a
+    version no move takes by default too. A version not released, one the capability cannot
+    read, and an entry of the lock that is no version give nothing."""
+    found = []
+    for name, text in sorted(lock.items()):
+        try:
+            locked = Version.parse(text)
+        except ValueError:
+            continue
+        newer = [
+            version
+            for version in held.versions(name)
+            if version > locked
+            and held.released(name, version)
+            and held.unreadable(name, version) is None
+        ]
+        within = next((version for version in newer if version.major == locked.major), None)
+        later = next((version for version in newer if version.major > locked.major), None)
+        if newer:
+            found.append(Newer(name, locked, within, later))
+    return found
+
+
 def _checked_pinned(held: Held, roots: list[str], lock: Mapping[str, str] | None) -> dict[str, str]:
-    """A pinned lock, checked: it names every library the piece needs, each a version the
-    project holds and the capability reads, fitting together. Each library's own entry is
-    checked before whether the entries fit, so a refusal names the plainer fault."""
+    """A lock that stays, a pinned draft's or a final or published piece's, checked: it
+    names every library the piece needs, each a version the project holds and the capability
+    reads, fitting together. Each library's own entry is checked before whether the entries
+    fit, so a refusal names the plainer fault."""
     if not lock:
         raise LockRefused("the piece is pinned but has no lock yet: unpin it for its first render")
     pending, seen = list(roots), set()
@@ -979,8 +1239,7 @@ def _checked_pinned(held: Held, roots: list[str], lock: Mapping[str, str] | None
         seen.add(name)
         if name not in lock:
             raise LockRefused(
-                f"the piece needs `{name}`, which its pinned lock does not name: move the lock "
-                f"on purpose"
+                f"the piece needs `{name}`, which the lock does not name: move the lock on purpose"
             )
         try:
             version = Version.parse(lock[name])
@@ -990,14 +1249,11 @@ def _checked_pinned(held: Held, roots: list[str], lock: Mapping[str, str] | None
             ) from exc
         if version not in held.folders.get(name, {}):
             raise LockRefused(
-                f"the pinned lock names {name}@{version}, which the project does not hold: "
-                f"restore it"
+                f"the lock names {name}@{version}, which the project does not hold: restore it"
             )
         why = held.unreadable(name, version)
         if why is not None:
-            raise LockRefused(
-                f"the pinned lock names {name}@{version}, which cannot be read: {why}"
-            )
+            raise LockRefused(f"the lock names {name}@{version}, which cannot be read: {why}")
         for need in held.library(name, version).builds_on:
             needs.append((name, version, need))
             pending.append(need.name)
@@ -1005,7 +1261,7 @@ def _checked_pinned(held: Held, roots: list[str], lock: Mapping[str, str] | None
         locked = Version.parse(lock[need.name])
         if locked.major != need.major:
             raise LockRefused(
-                f"the pinned lock does not fit: {name}@{version} builds on `{need.name}` "
+                f"the lock does not fit: {name}@{version} builds on `{need.name}` "
                 f"{need.major}, but the lock names {need.name}@{locked}"
             )
     return dict(lock)

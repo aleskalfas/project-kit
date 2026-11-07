@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A `land-work` run that stops inside the review step prints each `[person]`
+  finding too, with the `findings to judge:` line, just above its last line
+  (#2724, DEC-055 point 3). One reviewer's block, or a reviewer that failed,
+  used to end the run before the findings' step, so a finding another reviewer
+  posted in that run went unprinted, and a later `--yes` could merge on it. A
+  head that moved during the review keeps its stop, and the verdict is judged
+  for the head the PR has by then. Verdicts that cannot be read there draw a
+  `warn:` line and leave the stop as it is. A stop on the accepted records the
+  change alters no longer hides the findings read before it. After exit 6, the
+  pm skill and the README have the run made again without `--yes`, as after
+  exit 7.

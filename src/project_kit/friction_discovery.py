@@ -1242,6 +1242,24 @@ def _mapping_loader(
     return lambda rel: read(rel)[0]
 
 
+#: Why a file at a state does not read where git holds a link there. A reading of the
+#: working tree follows the link, so validation reads what it leads to.
+UNFOLLOWED_LINK = "is a link, which a reading at a commit does not follow"
+
+
+def read_mapping_at(
+    target_root: Path, tree: RepositoryTree, rel: str
+) -> tuple[dict[str, Any], str | None]:
+    """The repository-relative YAML file `rel` as the state `tree` holds it: a mapping with
+    text keys, and why it does not read (`_yaml_reader`), a link being one that does not
+    (`UNFOLLOWED_LINK`), never read as absent. The one reading of a file at a state, which
+    a reader of a configuration key at a commit stands on (ADR-057 point 2)."""
+    found, unread = _yaml_reader(target_root, tree)(rel)
+    if found or unread is not None or rel not in tree.files():
+        return found, unread
+    return found, UNFOLLOWED_LINK if tree.read_bytes([rel]).get(rel) is None else None
+
+
 def _yaml_reader(
     target_root: Path, tree: RepositoryTree | None
 ) -> Callable[[str], tuple[dict[str, Any], str | None]]:

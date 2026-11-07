@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit decisions check-landing` judges what a change's merge would land (#2665;
+  COR-066 points 2 to 4, ADR-081). It reports each decision record and rule that
+  would land proposed, and lists what the change makes accepted, with the commits
+  that accepted it, the work before them and the edits since. A second list gives
+  what the base accepted since the branch left it and the merge changes. The new
+  configuration key `decisions.refuse-proposals`, read at the base's tip, decides
+  whether a reported proposal fails a landing on the default branch. It is off
+  until a project writes it, by `pkit init --refuse-proposals`, `pkit config set`
+  or an edit. The run names its base, and exits 0 on a pass, 1 on a refusal and 3
+  where it cannot compute what lands. Its `--json` document has a version of its
+  own. No hook or check gate runs it, and the document of `decisions check-diff`
+  stays at version 1. Adding the key is additive, so no migration ships.

@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual outdated` lists what each lock a person moves could still take,
+  across majors (DEC-019 points 8 and 11): a published piece's, a pinned
+  draft's and written code's. For each library it names the newest version that
+  fits within the lock's major, and each other newer version with why a move
+  would not take it: a later major, a clash, a lost end, or a version the
+  installed capability cannot read. It reads only and writes nothing. The check
+  now states a fact, `lock-behind`, on a published piece whose lock is behind a
+  newer released version the capability reads (DEC-003 point 9). Within the
+  lock's majors it names `pkit visual upgrade`, and of a later major it says a
+  person takes that version on purpose, by naming it. It judges no fit, names
+  `pkit visual outdated`, fails nothing and refuses no export.

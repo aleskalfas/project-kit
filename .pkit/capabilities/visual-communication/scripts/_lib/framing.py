@@ -4,12 +4,15 @@
 A *producer* is a plugin of the capability that makes a picture while a piece is prepared.
 The engine never runs it: a person or an agent runs `pkit visual produce <piece> <output>`,
 and this module frames that run, step by step, so a later command that frames a project's
-own script reuses the same steps.
+own script reuses the same steps. A final piece takes no such run (DEC-017 point 3): making
+its pictures again would change it. `produce` refuses it, and `plan`, which an export and
+the check read too, does not.
 
 1. **The declaration.** `piece.yaml` declares each produced output under
    `produced.<output>`: the producer, its inputs, each naming a role by its token path,
    and the pixel size of each variant. The piece's lock says which brand version the
-   values come from. A piece with no lock yet is refused: its first render writes one.
+   values come from. A piece with no lock yet is refused: a draft's first render writes
+   one, a published piece is set back to a draft for it, and a final piece takes no run.
 2. **The values and the variants.** Each role the inputs name is resolved in every
    combination the piece names, and the combinations that give the same values share one
    *variant*, under the first key it serves (DEC-004 point 3, `values.variants`).
@@ -89,7 +92,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, keys, libraries, records, tokens, values
+from _lib import copies, fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
@@ -250,6 +253,7 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
     its picture. Raises Refused, writing nothing in the location; loc.LocationRefused when
     the location cannot be recorded; WriteFailed where a write fails, every file in the
     location then as it was before the run, or named."""
+    _refuse_final(root, where.path, piece)
     before = plan(root, where.path, piece, output)
     runnable(before)
     handed = handover(before)
@@ -272,20 +276,47 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
     return Produced(before, record, removed, said, checked.losses)
 
 
-def plan(root: Path, location: str, piece: str, output: str) -> Plan:
+def _refuse_final(root: Path, location: str, piece: str) -> None:
+    """Refuse a piece that is final, before anything else is read of it. Raises Refused."""
+    folder = _piece_folder(root, location, piece)
+    why = copies.why_final(_piece(root, folder, piece), folder)
+    if why:
+        raise Refused(
+            f"the piece `{piece}` is final ({why}), and a final piece takes no producer's run: "
+            f"making its pictures again would change it"
+        )
+
+
+def plan(
+    root: Path,
+    location: str,
+    piece: str,
+    output: str,
+    held: libraries.Held | None = None,
+    lock: Mapping[str, str] | None = None,
+) -> Plan:
     """Read, from the files as they are now, what a run of the producer that the piece
-    `piece` declares for `output` reads. Raises Refused."""
+    `piece` declares for `output` reads. The library versions come from `held` where it
+    is given, as for a location git ignores, and otherwise as git lists them. They are those
+    of `lock` where it is given, as for a lock not yet written, and otherwise of the lock the
+    piece's file holds. Raises Refused."""
     folder = _piece_folder(root, location, piece)
     data = _piece(root, folder, piece)
     declaration = _declaration(data, piece, output)
     plugin = producer(declaration.producer)
-    lock = data.get("lock")
+    lock = data.get("lock") if lock is None else lock
     if not isinstance(lock, Mapping) or not lock:
+        final = copies.final(data, folder)
+        if copies.lock_stays(data, final):
+            raise Refused(
+                f"the piece `{piece}` is {data['state']} and has no lock: "
+                f"{copies.no_lock(final)}, then produce"
+            )
         raise Refused(
             f"the piece `{piece}` has no lock yet: run `{RENDER} {piece}` first, which writes "
             f"it, then produce"
         )
-    brand, chain = _brand(root, location, piece, data.get("brand"), lock)
+    brand, chain = _brand(root, location, piece, data.get("brand"), lock, held)
     _check_inputs(declaration, plugin, brand)
     modes = data.get("modes", {})
     if not isinstance(modes, Mapping):
@@ -755,14 +786,19 @@ def _check_inputs(declaration: Declaration, plugin: Mapping[str, Any], brand: to
 
 
 def _brand(
-    root: Path, location: str, piece: str, name: Any, lock: Mapping[str, Any]
+    root: Path,
+    location: str,
+    piece: str,
+    name: Any,
+    lock: Mapping[str, Any],
+    held: libraries.Held | None,
 ) -> tuple[tokens.Brand, dict[str, str]]:
     """The brand version the piece's lock names, read against the shared roles the locked
     foundations declare, as the pipeline reads them; with the lock of the two, which is
     the brand and what it builds on in format 1. Raises Refused."""
     if not isinstance(name, str) or not is_name(name):
         raise Refused(f"the piece `{piece}` names no `brand`")
-    held = libraries.Held(root, location)
+    held = libraries.Held(root, location) if held is None else held
     found: dict[str, libraries.Library] = {}
     for library in (name, FOUNDATIONS):
         text = lock.get(library)

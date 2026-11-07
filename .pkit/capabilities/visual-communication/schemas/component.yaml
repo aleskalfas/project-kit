@@ -47,6 +47,11 @@ parts:
     x: "=pad"
     y: "=pad"
     width: "=:width - 2 * pad"
+  stamp:
+    text: {fact: version, style: type.body, fill: text-secondary}
+    x: "=pad"
+    y: "=label.bottom"
+    width: "=:width - 2 * pad"
 exposes: [label]
 preferred:
-  height: "=label.bottom + pad"
+  height: "=stamp.bottom + pad"

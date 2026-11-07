@@ -834,6 +834,7 @@ def test_explain_json_document_shape(timeline: Timeline, monkeypatch: pytest.Mon
         "kind",
         "message",
         "origin",
+        "parts",
         "share",
     ]
     assert finding["bar"] is None  # only an over-broad finding crosses a bar

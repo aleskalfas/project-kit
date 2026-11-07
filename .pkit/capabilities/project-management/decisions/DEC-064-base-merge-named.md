@@ -16,7 +16,7 @@ A habit of merging the base before every landing pays a new head's costs on ever
 
 ## Decision
 
-**No command or skill of this capability merges the base into a pull request's branch, or tells its author to, only because the base has moved on. The landing command names that merge in four cases: a conflict with the base, a check of the merge that fails, a base that changed what the list of answers shows, and a host that merges only an up-to-date branch reading the branch as behind. This capability's commands and skills tell the pull request's author to take in the base where it conflicts, where the landing command names the merge, or where the author judges that a check failing only on the host's merge or the queue's needs it. A person may still merge it whenever they choose. Leaving the base out leaves two gaps open, which point 7 names.**
+**No command or skill of this capability merges the base into a pull request's branch, or tells its author to, only because the base has moved on. The landing command names that merge in four cases: a conflict with the base, a check of the merge that fails, a base that changed what the list of answers shows or the friction settings the change alters, and a host that merges only an up-to-date branch reading the branch as behind. This capability's commands and skills tell the pull request's author to take in the base where it conflicts, where the landing command names the merge, or where the author judges that a check failing only on the host's merge or the queue's needs it. A person may still merge it whenever they choose. Leaving the base out leaves two gaps open, which point 7 names.**
 
 ### 1. The merges the landing command names
 
@@ -24,7 +24,7 @@ A command names a merge when it stops and gives the merge of the base to make, w
 
 - **A conflict.** The host reads the pull request as conflicting with its base, or the merge the check of the merge builds conflicts (DEC-055 point 6).
 - **A check that fails at the merge.** The change check fails on the merge as it would land, in the project's mode (DEC-055 point 6).
-- **What the list shows.** The change wrote answers or alters the friction settings the list shows, and the base's commits since the head left it changed a file the list's words are on, or those settings. The merge is named too where which of them the base changed cannot be read (DEC-055 point 3).
+- **What the list shows.** The change wrote answers or alters the friction settings, and the base's commits since the head left it changed a file the list's words are on, or those settings. The list is the change check's list of the answers (refinement per [project-management:DEC-065-answers-read-from-check]). The friction settings are no part of it, and the landing command reads them beside it. The merge is named too where which of them the base changed cannot be read (DEC-055 point 3).
   - **The files the list's words are on** are the ones the change check names for its answers. Each is an answer file the change adds, or an artefact's own file, for an answer in its block or a target revisited by changing it.
 - **A host that merges only an up-to-date branch.** Such a host reads the branch as behind its base, or refuses the merge of the head for it. Point 2 sets out when the landing command takes that reading.
 
@@ -37,7 +37,7 @@ A command names a merge when it stops and gives the merge of the base to make, w
 
 ### 3. What names no merge
 
-- **The change check's report of an outdated base.** The change check reports a base that moved on, and fails nothing on it, since the fix is to update the branch and run again (COR-050 point 12). The check of the merge is that run again, with no new head: it judges the change with the base as it stands (DEC-055 point 6).
+- **The change check's report of an outdated base.** The change check reports a base that moved on, fails nothing on it, and names no remedy (COR-050 point 12). The check of the merge runs the change check again, with no new head: it judges the change with the base as it stands (DEC-055 point 6).
 - **A refusal a new head might cure, where the host does not read the branch as behind.** An example is a check the base came to require after the head was pushed. The landing command reports it as a failed request, as it reports any other.
 - **A check that fails on the host's merge, or the queue's, where the branch alone passes.** The base's changes then meet this change's. No command can tell a failure that taking in the base settles from one it does not, so none names the merge. The author judges it (point 4).
 
@@ -49,7 +49,7 @@ This capability's commands and skills tell the author of a pull request, an agen
 - **A named merge.** The landing command names the merge (point 1).
 - **A check that fails only on the host's merge or the queue's.** The author judges whether taking in the base settles it, and merges where they judge it does, or a person judges it and merges (point 3).
 
-The change check's report of an outdated base, and the merge or rebase it advises, name no merge (point 3). In a project with a topology, the author makes the merge into a worker's Task branch through the build command ([project-management:DEC-063-task-builder] point 1). A person may still merge it whenever they choose (point 5).
+The change check's report of an outdated base names no merge (point 3). In a project with a topology, the author makes the merge into a worker's Task branch through the build command ([project-management:DEC-063-task-builder] point 1). A person may still merge it whenever they choose (point 5).
 
 ### 5. A merge of the base a person makes
 
@@ -86,7 +86,7 @@ On a busy default branch every open pull request would pay both after every merg
 - **Where it falls short.** The check does not hold the base still. A commit that reaches the base between the check and the merge lands unchecked against this change (DEC-055 point 5). A queue holds the base still, and an up-to-date host makes the branch take in each commit. So for a project that enforces friction, those two stay COR-050 point 6's requirement, not options. Point 1 names the merge an up-to-date host asks for.
 - **A merge by another command.** A merge through this capability's other merge commands, or outside it, takes no check of the merge (DEC-055 point 5). A project that enforces friction and merges so, with neither an up-to-date host nor a queue, does not meet COR-050 point 6. Its host's settings are what meet that point, so this record leaves the case as it is.
 
-**Why these merges are named.** In each case the pull request cannot land as it stands, or would land what nobody checked. A conflict, or a host that merges only an up-to-date branch, stops every merge until the branch takes in its base. A check that fails at the merge needs the change to answer what the merge would land. A base that changed the list's files or settings would land words the list does not show (DEC-055 point 3). Where which of them it changed cannot be read, the merge is named too, since once the branch holds the base nothing is left to read.
+**Why these merges are named.** In each case the pull request cannot land as it stands, or would land what nobody checked. A conflict, or a host that merges only an up-to-date branch, stops every merge until the branch takes in its base. A check that fails at the merge needs the change to answer what the merge would land. A base that changed the list's files would land words the list does not show, and one that changed the friction settings the change alters would change what the merged check asks (DEC-055 point 3). Where which of them it changed cannot be read, the merge is named too, since once the branch holds the base nothing is left to read.
 
 **Why the host's reading is taken with the checks.** The early reading buys one thing: where the host's reading has settled, the first run, before any authorisation, never stops ready on a head the host would refuse as it stands. A reading not settled, one of another block, and a queue that cannot be read go on rather than stop on a guess. Where one of them hides a branch behind its base, the host's refusal at the merge costs a re-run after a clean merge of the base. It needs no new authorisation where nothing at the new head needs the person, since the authorisation covers the head such a merge makes (DEC-055 point 3).
 
@@ -113,4 +113,4 @@ On a busy default branch every open pull request would pay both after every merg
 - The landing command reads whether the host reads the branch as behind with the checks on the head, unless the base merges through a queue (point 2). It names the merge there, and where the host refuses the merge of such a head. The capability README lists the cases.
 - The pm skill's landing step says where the author takes in the base (point 4).
 - In a project with a topology, a merge this record names is built through the build command, since the provenance check refuses a commit on a worker's Task branch that no recorded build produced (DEC-063 point 1). So the provenance check finds it among a build's commits.
-- The backbone's change check advises a merge or a rebase with its report of an outdated base, and COR-050 point 12 names updating the branch as the fix. #2662 has the backbone state the fact and leave the remedy to the workflow, and rewords COR-050 point 12 to match.
+- The backbone's report of an outdated base names no remedy (COR-050 point 12), so it advises no merge of the base.

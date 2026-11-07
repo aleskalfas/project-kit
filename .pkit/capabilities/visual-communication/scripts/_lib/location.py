@@ -19,13 +19,16 @@ pieces (DEC-002 points 1 and 2).
   refused too, by reading and writing commands alike, rather than read as no location.
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
-Outside a git repository, the folder is walked. A link is never listed.
+Outside a git repository, the folder is walked. A link is never listed. What a commit holds
+is read from git alone (`files_at`, `file_at`). Whether a path is one git keeps is git's word
+too (`ignored`).
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -262,26 +265,56 @@ def files(root: Path, folder: str) -> list[str]:
     links, and without a tracked file the working tree no longer holds."""
     if not _in_repository(root):
         return walked(root, folder)
-    argv = [
-        "git",
-        "--literal-pathspecs",
-        "ls-files",
-        "-z",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--",
-        folder,
-    ]
+    found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", folder)
+    listed = {entry for entry in found.decode("utf-8").split("\0") if entry}
+    return sorted(rel for rel in listed if _plain_file(root / rel))
+
+
+def files_at(root: Path, commit: str, folder: str) -> list[str]:
+    """The files under `folder` at `commit`, relative to `root`, in path order: none where
+    that commit holds no such folder. Raises GitFailed."""
+    found = _git(root, "ls-tree", "-r", "-z", "--name-only", commit, "--", folder)
+    return sorted(entry for entry in found.decode("utf-8").split("\0") if entry)
+
+
+def file_at(root: Path, commit: str, rel: str) -> bytes:
+    """The bytes of the file `rel`, relative to `root`, at `commit`. Raises GitFailed where
+    that commit holds no such file."""
+    return _git(root, "cat-file", "blob", f"{commit}:./{rel}")
+
+
+def ignored(root: Path, paths: Iterable[str]) -> list[str]:
+    """Those of `paths`, relative to `root`, that git ignores, whether or not a file lies
+    there, so a commit would leave a file written there out: a tracked file is not one, and
+    outside a git repository none is. Raises GitFailed."""
+    if not _in_repository(root):
+        return []
+    asked = "\0".join(paths).encode("utf-8")
+    found = _git(root, "check-ignore", "-z", "--stdin", literal=False, given=asked, passes=(0, 1))
+    return [entry for entry in found.decode("utf-8").split("\0") if entry]
+
+
+def _git(
+    root: Path,
+    *args: str,
+    literal: bool = True,
+    given: bytes | None = None,
+    passes: Collection[int] = (0,),
+) -> bytes:
+    """What git prints of `args`, run at `root`, handed `given` on its input: a path read as
+    it is written, unless the command takes no such word (`literal`). Raises GitFailed where
+    it exits with no code of `passes`."""
+    words = ["--literal-pathspecs"] if literal else []
     try:
-        proc = subprocess.run(argv, cwd=root, capture_output=True, check=False)
+        proc = subprocess.run(
+            ["git", *words, *args], cwd=root, input=given, capture_output=True, check=False
+        )
     except OSError as exc:
         raise GitFailed(f"git could not be run ({exc})") from exc
-    if proc.returncode != 0:
+    if proc.returncode not in passes:
         detail = [line for line in proc.stderr.decode("utf-8", "replace").splitlines() if line]
-        raise GitFailed(detail[-1] if detail else f"git ls-files exited {proc.returncode}")
-    listed = {entry for entry in proc.stdout.decode("utf-8").split("\0") if entry}
-    return sorted(rel for rel in listed if _plain_file(root / rel))
+        raise GitFailed(detail[-1] if detail else f"git {args[0]} exited {proc.returncode}")
+    return proc.stdout
 
 
 def _in_repository(root: Path) -> bool:

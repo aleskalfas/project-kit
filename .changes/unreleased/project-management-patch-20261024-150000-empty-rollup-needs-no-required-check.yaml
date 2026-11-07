@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `done-work` and `merge-pr` no longer pass a head that no check has
+  reported on, wherever the base branch requires checks (#1965). GitHub
+  answers an empty `statusCheckRollup` for a project that runs no checks,
+  and also for a head just pushed, before its checks start. With a rollup
+  of no checks, the CI-status gate now reads the checks the PR's base
+  branch requires, from its branch protection and its rulesets. Where the
+  base requires none, the rollup passes, and the run says
+  `ci-status: green (no check reported, and <base> requires none)`.
+  Otherwise it is refused as a pending check, exit 1, naming each required
+  check as `EXPECTED`, or why the required checks could not be read.
+  `--bypass-ci` overrides it with its audit comment, as for any pending
+  check.

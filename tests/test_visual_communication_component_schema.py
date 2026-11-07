@@ -99,6 +99,11 @@ def test_each_property_of_words_takes_the_engines_words(prop: str) -> None:
     assert words["enum"] == list(engine.WORDS[prop])
 
 
+def test_a_text_takes_the_engines_facts() -> None:
+    assert DEFS["text"]["properties"]["fact"]["enum"] == list(engine.FACTS)
+    assert DEFS["text"]["oneOf"] == [{"required": ["content"]}, {"required": ["fact"]}]
+
+
 def test_a_part_is_exactly_one_kind_of_the_engines() -> None:
     assert [one["required"] for one in DEFS["part"]["oneOf"]] == [[kind] for kind in engine.KINDS]
 
@@ -129,6 +134,7 @@ def test_the_shipped_and_fixture_components_hold_the_schema_and_the_engine(path:
         ("parts.label.text.text-anchor", {"by": "emphasis", "normal": "start", "strong": "end"}),
         ("states", {"done": {"colour": "success"}, "idle": {}}),
         ("options.at", {"item": "tags"}),
+        *(("parts.stamp.text.fact", word) for word in engine.FACTS),
     ],
 )
 def test_the_format_takes_each_way_of_writing_a_value(path: str, value: Any) -> None:
@@ -149,6 +155,14 @@ REFUSED: list[tuple[str, str, Any]] = [
     ("a text's height, which its measured text owns", "parts.label.height", "=0"),
     ("a box without its size", "parts.box.height", ...),
     ("a text without its style", "parts.label.text.style", ...),
+    ("a text that names neither a field nor a fact", "parts.label.text.content", ...),
+    ("a text that names a field and a fact", "parts.label.text.fact", "version"),
+    ("a word no fact takes", "parts.stamp.text.fact", "number"),
+    (
+        "a fact chosen by a switch",
+        "parts.stamp.text.fact",
+        {"by": "emphasis", "normal": "version", "strong": "date"},
+    ),
     ("a property its primitive does not take", "parts.label.text.rx", "=@space.1"),
     ("a length that is no formula", "parts.box.width", 120),
     ("a formula's switch on no option", "values.pad", {"normal": "=@space.1"}),
@@ -176,6 +190,77 @@ def test_the_schema_refuses_what_the_engine_refuses(case: str, path: str, value:
     data = changed(path, value)
     assert problems(data) != [], case
     assert engine_issues(data) != [], case
+
+
+# --- a switch and a `when` by a size (DEC-021 point 3) ------------------------------------------
+
+
+class _Device:
+    """The size axis `device`, as the foundations will declare it."""
+
+    modes = ("desktop", "tablet", "phone")
+    default = "desktop"
+
+
+def sized_issues(data: Any) -> list[tuple[str, str, str]]:
+    """What the engine finds in a component when it reads it where the size axis `device`
+    is one a piece can name."""
+    sizes = engine.Sizes({"device": _Device()})
+    return engine.Component("lab/x", data, engine.Context(FakeEnv(), "en", sizes=sizes)).issues
+
+
+BY_SIZE: list[tuple[str, Any]] = [
+    ("parts.label.x", {"by": ":device", "desktop": "=pad", "phone": "=@space.1"}),
+    ("parts.box.box.fill", {"by": ":device", "desktop": "surface", "phone": None}),
+    (
+        "values.pad",
+        {
+            "by": ":device",
+            "desktop": {"by": "emphasis", "normal": "=@space.1", "strong": "=@space.2"},
+            "tablet": "=@space.1",
+        },
+    ),
+    ("parts.label.text.text-anchor", {"by": ":device", "desktop": "start", "phone": "end"}),
+    ("parts.label.when", {"by": ":device", "desktop": True, "phone": "tags"}),
+    ("parts.label.when", {"by": ":device", "desktop": {"emphasis": ["strong"]}, "phone": False}),
+]
+
+
+@pytest.mark.parametrize(("path", "value"), BY_SIZE)
+def test_the_format_takes_a_switch_and_a_when_by_a_size(path: str, value: Any) -> None:
+    data = changed(path, value)
+    assert problems(data) == []
+    assert sized_issues(data) == []
+
+
+REFUSED_BY_SIZE: list[tuple[str, str, Any]] = [
+    ("a `when` by a size alone", "parts.label.when", {"by": ":device"}),
+    (
+        "a `when` by a size that switches again",
+        "parts.label.when",
+        {"by": ":device", "desktop": {"by": ":device", "desktop": True}},
+    ),
+    ("a branch of a `when` that is no `when`", "parts.label.when", {"by": ":device", "desktop": 3}),
+    (
+        "a `when` that switches on an option",
+        "parts.label.when",
+        {"by": "emphasis", "normal": True, "strong": False},
+    ),
+    (
+        "a switch by a name that is no marked name",
+        "parts.label.x",
+        {"by": "::device", "desktop": "=pad"},
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("case", "path", "value"), REFUSED_BY_SIZE, ids=[case for case, _, _ in REFUSED_BY_SIZE]
+)
+def test_the_schema_refuses_a_size_the_engine_refuses(case: str, path: str, value: Any) -> None:
+    data = changed(path, value)
+    assert problems(data) != [], case
+    assert sized_issues(data) != [], case
 
 
 def repeat(**more: Any) -> dict[str, Any]:

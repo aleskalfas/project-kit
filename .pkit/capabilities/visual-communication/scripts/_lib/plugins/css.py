@@ -1,8 +1,10 @@
 """The CSS code writer: a brand's resolved values as CSS custom properties, spelling form 1
-(visual-communication DEC-004 point 4, DEC-005 points 7 to 9).
+(visual-communication DEC-004 point 4, DEC-005 points 7 to 9, DEC-021 point 8).
 
-It reads the values document, version 1 (`_lib.values`), and the brand's axes, and writes
-one style sheet. Its declaration, `css_declaration.py`, says what it takes.
+It reads the values document, version 1 (`_lib.values`), and the brand's value axes, and
+writes one style sheet. Its declaration, `css_declaration.py`, says what it takes. It spells
+no size axis: the command hands it a brand's values at the default of each, and reports
+each token a size changes as a loss. Nothing in the sheet answers a window's width.
 
 **Names, form 1.** One custom property for each exported token path: `--`, then, with a
 `prefix`, the prefix and `--`, then the path's segments joined by `--`. A segment's own
@@ -152,7 +154,8 @@ def _axes(axes: Mapping[str, Mapping[str, Any]]) -> dict[str, _Axis]:
         if spec.get("kind") not in DECLARATION["axis-kinds"]:
             raise CssError(
                 f"the axis `{name}` is a {spec.get('kind')} axis; form 1 spells only "
-                f"{_listed(DECLARATION['axis-kinds'])} axes"
+                f"{_listed(DECLARATION['axis-kinds'])} axes, and is handed a brand's values "
+                f"at the default of every other axis"
             )
         read[name] = _Axis(modes=tuple(spec["modes"]), default=spec["default"])
     return read
@@ -286,10 +289,9 @@ def _number(value: Any) -> str:
 def _quoted(family: str) -> str:
     """A family name as a CSS string: `"` and `\\` escaped, and a control character as its
     code point."""
-    # The SVG renderer's `css_string` (`plugins/svg.py`) writes a name the same way, and
-    # escapes more for a style element. It is kept apart so that this writer's output and
-    # version do not move: a change to how either writes a CSS string is weighed for the
-    # other too.
+    # The canvas's `css_string` (`_lib/canvas.py`) writes a name the same way, and escapes
+    # more for a style element. It is kept apart so that this writer's output and version
+    # do not move: a change to how either writes a CSS string is weighed for the other too.
     out = []
     for char in family:
         if char in ('"', "\\"):

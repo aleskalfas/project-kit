@@ -511,7 +511,9 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
     lead = "- **Each `updated` document needs its sentence, and the sentence must match.**"
     (item,) = [line for line in _answers_check() if line.startswith(lead)]
     for words in (
-        "Read that section as the commands that write the list read it",
+        "Read that section as the project-management commands read it",
+        "The description carries no list of the answers",
+        "read each sentence from that section alone",
         '"Where the sentences live" of `.pkit/capabilities/project-management/README.md`',
         "starts in the line's first column with the document in a code span",
         f"The form to write is ``{answers.SENTENCE_FORM}``.",

@@ -110,7 +110,7 @@ TERM-batch-plan:
           - .pkit/capabilities/project-management/agents/project-manager/project-manager.md
         record:
           - project-management:DEC-029
-          - project-management:DEC-054#3
+          - project-management:DEC-054#5
           - project-management:DEC-061#6
 TERM-builder-agent:
   name: builder agent
@@ -198,6 +198,20 @@ TERM-clone:
           - project-management:DEC-059#6
           - COR-001
           - COR-010
+TERM-clone-key:
+  name: clone key
+  noun-forms: [clone keys]
+  status: active
+  definition: "generated identifier that tells one working copy apart from another under one account, kept in a file it never commits"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
+        record:
+          - project-management:DEC-058#5
+          - project-management:DEC-035#1
+          - project-management:DEC-059#6
 TERM-close-trigger:
   name: close trigger
   noun-forms: [close triggers]
@@ -211,6 +225,24 @@ TERM-close-trigger:
           - .pkit/capabilities/project-management/scripts/_lib/milestone.py
         record:
           - project-management:DEC-016
+TERM-completed-close:
+  name: completed close
+  noun-forms: [completed closes]
+  status: active
+  definition: "end of a Task whose work was no pull request, which a person authorises once every checkbox is ticked, naming where the result lives"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/close-issue.py
+          - .pkit/capabilities/project-management/schemas/workflow.yaml
+        record:
+          - project-management:DEC-006
+          - project-management:DEC-007
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
 TERM-epic:
   name: EPIC
   noun-forms: [EPICs]
@@ -238,7 +270,7 @@ TERM-fixer:
   name: fixer
   noun-forms: [fixers]
   status: active
-  definition: "agent declared for one artefact type, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that artefact type"
+  definition: "agent declared for artefact types, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of those artefact types"
   pkit:
     friction:
       anchors:
@@ -260,6 +292,18 @@ TERM-fixer:
           - COR-062#1
           - COR-001
           - COR-010
+TERM-foundation:
+  name: foundation
+  noun-forms: [foundations]
+  status: active
+  definition: "first part of new work, filed as one Feature, whose Tasks settle the choices its slices would share before they are planned"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/skills/pm/batch-plan.md
+        record:
+          - project-management:DEC-060
 TERM-instance:
   name: instance
   noun-forms: [instances]
@@ -342,6 +386,20 @@ TERM-kind-of-work:
           - project-management:DEC-012
           - project-management:DEC-011
           - project-management:DEC-059#7
+TERM-lifecycle-hook:
+  name: lifecycle hook
+  noun-forms: [lifecycle hooks]
+  status: active
+  definition: "step a project declares in a file of its own for one of project-management's commands, which the command runs after its own writes succeed"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/hooks.py
+        record:
+          - project-management:DEC-024
+          - COR-001
+          - COR-010
 TERM-merge-gate:
   name: merge gate
   status: active
@@ -388,6 +446,20 @@ TERM-milestone-category:
           - project-management:DEC-016
           - COR-001
           - COR-010
+TERM-organizer-seat:
+  name: organizer seat
+  noun-forms: [organizer seats]
+  status: active
+  definition: "topology's one place, if any, whose clone may release any other place by force, a privilege the reviewed topology grants"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/schemas/topology.schema.json
+        record:
+          - project-management:DEC-059#2
+          - project-management:DEC-059#5
 TERM-owner:
   name: owner
   noun-forms: [owners]
@@ -569,6 +641,7 @@ TERM-task:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+          - project-management:DEC-006
           - COR-009#1
           - COR-009#2
           - COR-009#3
@@ -648,6 +721,20 @@ TERM-verdict:
           - COR-009#3
           - COR-009#5
           - COR-050#6
+TERM-wont-do-close:
+  name: won't-do close
+  noun-forms: [won't-do closes]
+  status: active
+  definition: "ending of an issue in Todo or Backlog whose work is dropped, authorised by a person with a reason, every checkbox ticked or removed"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/close-issue.py
+          - .pkit/capabilities/project-management/schemas/workflow.yaml
+        record:
+          - project-management:DEC-006
+          - project-management:DEC-007
 TERM-workstream:
   name: workstream
   noun-forms: [workstreams]
@@ -824,6 +911,18 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#clone).
 - **Linked worktree:** a further working tree of a clone. Whether a linked worktree reads its clone's identity is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
 - **Git's clone:** the same working copy, by git's name for it. The term adds what the [system](../core/glossary.md#term-system--system) keeps in the copy: a number, a key and a seat.
 
+## TERM-clone-key — clone key
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#clone-key).
+
+**Example:** the [clone](#term-clone--clone) that takes the [seat](#term-seat--seat) `api-worker` generates its clone key. The seat's [state issue](#term-state-issue--state-issue) names that clone key, and the clone's commands read it there before they write.
+
+**Distinctions:**
+
+- **Clone:** the working copy itself. The clone key is one thing a clone keeps, beside its number and its seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+- **A seat's number:** the number a clone takes with a seat, which passes to the next clone that holds that seat. A clone key stays with its clone (DEC-059 points [6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and [9](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+- **A state issue's key:** the name of the data a state issue holds, such as a seat's name. A clone key names a clone, and no data ([DEC-058 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#2-a-state-issue-holds-one-piece-of-state-named-by-its-key)).
+
 ## TERM-close-trigger — close trigger
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#close-trigger).
@@ -834,6 +933,16 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 - **Due date:** the date GitHub keeps on the Milestone. It ends the Milestone only where the close trigger is `date-based` or `either` ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 - **The cascade's close of a parent:** the close of an [issue](#term-issue--issue) whose children are all done. A Milestone is no issue, and closes by its own trigger (DEC-016).
+
+## TERM-completed-close — completed close
+
+**Example:** #1712 is an audit, with nothing to merge. Once its [checkboxes](#term-checkbox--checkbox) are ticked, `pkit pm close-issue 1712 --mode=completed --result "#1801"` ends it, and its close comment names #1801 as where the result lives.
+
+**Distinctions:**
+
+- **Won't-do close:** the end of dropped work. A completed close ends finished work, so it brings each [issue](#term-issue--issue) above that is behind up to In Progress ([DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+- **A close through a merge:** a [Task](#term-task--task) whose [pull request](../core/glossary.md#term-pull-request--pull-request) merges closes through that merge, and takes no completed close (DEC-006).
+- **Close trigger:** the line on a [Milestone](#term-milestone--milestone) that says when the Milestone closes. A completed close ends a Task, and no Milestone takes one ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 ## TERM-epic — EPIC
 
@@ -870,6 +979,17 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 - **Reviewer:** reports on a [change](../core/glossary.md#term-change--change) before it merges. A fixer works after a merge, on what the [default branch](../core/glossary.md#term-default-branch--default-branch) left out of date.
 - **Answer:** the statement that settles an [artefact](../core/glossary.md#term-artefact--artefact). A fixer only proposes one, which waits until a person, or the delegate they named, decides it ([DEC-056 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
 - **An agent a person starts:** a person may start any agent by hand, in a session of their own. Only a granted fixer starts through the command ([DEC-056 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
+
+## TERM-foundation — foundation
+
+Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#foundation).
+
+**Example:** the slices of a new product would each choose a web framework. So a first [batch plan](#term-batch-plan--batch-plan) files an [EPIC](#term-epic--epic) and a [Feature](#term-feature--feature), #1900, whose body lists that choice. One [Task](#term-task--task) under #1900 holds the record of it, and the next builds one thin slice end to end. Once #1900 closes, a second batch plan files the slices.
+
+**Distinctions:**
+
+- **Feature:** an [issue](#term-issue--issue) that claims one coherent piece of functionality. A foundation is filed as one, and what it settles is the choices its body lists ([DEC-060 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#2-the-foundation-is-one-feature-built-one-task-at-a-time)).
+- **A settled choice:** one an accepted record decides, or merged code shows a pattern for. Work whose shared choices are all settled plans no foundation ([DEC-060 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#1-a-choice-that-tasks-would-share-and-nothing-settles-calls-for-a-foundation)).
 
 ## TERM-instance — instance
 
@@ -932,6 +1052,17 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 - **Workstream:** the long-lived area an issue belongs to, the value of another axis. A scope may name [workstreams](#term-workstream--workstream) and kinds of work alike ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 - **A discipline:** a sort of work, such as design, that no kind of work carries yet. No record decides how a Task carries one (DEC-059 point 7).
 
+## TERM-lifecycle-hook — lifecycle hook
+
+**Example:** a [project](../core/glossary.md#term-project--project)'s `hooks.yaml` lists a lifecycle hook of the kind `set-board-field` under `after_create_issue`. Once `create-issue` files the [issue](#term-issue--issue) #1712 and adds it to the board, the hook sets #1712's `Workstream` field to `Spyre`.
+
+**Distinctions:**
+
+- **Issue lifecycle:** the [process](../core/glossary.md#term-process--process) that takes an issue from Todo to Done. A lifecycle hook is no move of it. It runs after a command of project-management files, moves or closes an issue, or opens or merges a [pull request](../core/glossary.md#term-pull-request--pull-request) ([DEC-024](../../../.pkit/capabilities/project-management/decisions/DEC-024-lifecycle-hooks.md)).
+- **Cascade:** the moves that bring the issues above a moved issue forward, which [project-management DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) decides for every project. A lifecycle hook runs only where a project declares it (DEC-024).
+- **Permission hook:** the core's word for an [adapter](../core/glossary.md#term-adapter--adapter)'s script that has its [harness](../core/glossary.md#term-harness--harness) ask the permission code before each tool call. It shares only the word.
+- **GitHub Action:** a workflow GitHub runs by itself, later, when something happens in the repository, such as an issue opened. A lifecycle hook runs within the command, before the command ends (DEC-024).
+
 ## TERM-merge-gate — merge gate
 
 Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge.md#merge-gate).
@@ -942,7 +1073,7 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 - **Branch protection:** GitHub's own protection of a branch, which the hosting service holds. The merge gate is project-management's, and it runs before the merge is asked for ([DEC-003](../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md) and [DEC-028](../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - **Authorisation to merge:** the person's go-ahead for the pull request at its head. A gate that passes gives no [authorisation](#term-authorisation--authorisation), and an authorisation passes no gate ([DEC-055 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
-- **Change check:** the core's comparison of a head with its [base](../core/glossary.md#term-base--base). The landing command runs it to list the answers a [change](../core/glossary.md#term-change--change) wrote, and the merge gate judges none of them (DEC-055 point 3).
+- **Change check:** the core's comparison of a head with its [base](../core/glossary.md#term-base--base). The landing command runs it to derive a [change](../core/glossary.md#term-change--change)'s answers ([DEC-065 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#2-the-answers-are-derived-from-the-change-check)), and the merge gate judges none of them (DEC-055 point 3).
 
 ## TERM-milestone — Milestone
 
@@ -966,6 +1097,17 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 - **Close trigger:** the line on one [Milestone](#term-milestone--milestone) that says when it closes. The category gives a default, and the Milestone's own line overrides it ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 - **Workstream:** a long-lived area that classifies issues. A category classifies Milestones, by their titles (DEC-016).
+
+## TERM-organizer-seat — organizer seat
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#organizer-seat).
+
+**Example:** the [topology](#term-topology--topology) marks the [seat](#term-seat--seat) `planner` as its organizer seat. The [clone](#term-clone--clone) of the seat `api-worker` is gone for good, so the clone of `planner` releases `api-worker` by force, with a reason.
+
+**Distinctions:**
+
+- **Seat:** any place in a topology. An organizer seat is a seat with one privilege more ([DEC-059 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)).
+- **A person's release by force:** a person in any clone may release a seat by force too, whichever seat that clone holds ([DEC-059 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
 
 ## TERM-owner — owner
 
@@ -1149,6 +1291,16 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 - **Finding:** a statement inside a verdict, tagged `[block]`, `[person]` or `[advisory]`. A `[block]` [finding](../core/glossary.md#term-finding--finding) makes the verdict request changes, and only the first line counts at the gate (DEC-028).
 - **A free comment:** one posted with `comment-pr`. That command refuses a body whose first line would read as a verdict ([DEC-047 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-047-freeform-comment-verb.md#5-the-freeform-comment-may-not-impersonate-a-structured-one)).
 - **A person's approval:** in the `human` review mode, a person's approving review counts in a verdict's place ([DEC-027](../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md)).
+
+## TERM-wont-do-close — won't-do close
+
+**Example:** #1712 stands in Backlog, and nobody wants it any more. `pkit pm close-issue 1712 --reason "superseded by #1801"` ends it, and its close comment records that reason.
+
+**Distinctions:**
+
+- **Completed close:** the end of finished work. A won't-do close ends dropped work, so it moves no [issue](#term-issue--issue) above ([DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+- **Not planned:** what GitHub records for a won't-do close, so every reader of it takes the work as dropped (DEC-006).
+- **Close trigger:** the line on a [Milestone](#term-milestone--milestone) that says when the Milestone closes. A won't-do close ends an issue, and no Milestone takes one ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 ## TERM-workstream — workstream
 
