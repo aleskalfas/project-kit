@@ -1407,3 +1407,127 @@ def test_without_pools_a_forced_close_reports_no_pool(cm, monkeypatch, capsys) -
     _wire(monkeypatch, cm, repo)
     assert _close(monkeypatch, cm, "--force") == 0
     assert "in no pool" not in capsys.readouterr().err
+
+
+# --- a topology the close cannot read in full (#2265) -------------------------------
+#
+# The close reads no pool, and takes each milestone's `Pool:` line to stand, as a
+# write of a Task's milestone does (DEC-061 point 6), so no Task enters another
+# pool's milestone without the consent prompt naming it.
+
+_UNREAD = "this code cannot read the topology of the default branch in full"
+
+
+def _unread(monkeypatch, cm, closing_pool: str | None, *, next_pool: str, later_pool: str):
+    """As `_pooled`, in a topology this code cannot read in full."""
+    repo, moves = _pooled(monkeypatch, cm, closing_pool, next_pool=next_pool, later_pool=later_pool)
+    monkeypatch.setattr(cm.pools, "declared_pools", lambda _root: (None, _UNREAD))
+    return repo, moves
+
+
+@pytest.mark.parametrize(
+    ("closing_pool", "next_pool", "said"),
+    [
+        pytest.param("alpha", "bravo", "the pool bravo", id="another-pool"),
+        pytest.param(None, "alpha", "the pool alpha", id="into-a-pool"),
+        pytest.param("alpha", "", "no pool", id="out-of-its-pool"),
+    ],
+)
+def test_where_the_next_numbered_s_line_names_another_pool_nothing_is_moved_or_closed(
+    cm, monkeypatch, capsys, closing_pool, next_pool, said
+) -> None:
+    """Sprint 9 shares the closing milestone's line, yet whether it comes next in
+    the pool depends on what the unread topology declares: the person names it."""
+    repo, moves = _unread(monkeypatch, cm, closing_pool, next_pool=next_pool, later_pool="alpha")
+
+    assert _close(monkeypatch, cm) == 1
+
+    assert repo.writes() == [] and moves == []
+    assert repo.milestones[6]["state"] == "open"
+    err = capsys.readouterr().err
+    assert f"[warn] {_UNREAD}, so the close reads no pool and takes each milestone's" in err
+    assert (
+        "the pools could not be read, and the `Pool:` line of the next-numbered open milestone "
+        f"of its category, #7 Sprint 7: Polish, puts it in {said}, another pool than this "
+        "milestone's line names"
+    ) in err
+    assert "close-milestone 6 --target <number|title>" in err
+
+
+@pytest.mark.parametrize(
+    ("closing_pool", "next_pool"),
+    [pytest.param("alpha", "alpha", id="one-pool"), pytest.param(None, "", id="no-pool")],
+)
+def test_where_the_next_numbered_s_line_names_the_same_pool_the_close_rolls_to_it(
+    cm, monkeypatch, closing_pool, next_pool
+) -> None:
+    """Sprint 7 is then the next of the closing milestone's pool, whatever the
+    topology declares, so the prompt names no pool."""
+    repo, moves = _unread(monkeypatch, cm, closing_pool, next_pool=next_pool, later_pool="bravo")
+    monkeypatch.setattr(sys, "stdin", _Terminal())
+    asked: list[str] = []
+    monkeypatch.setattr("builtins.input", lambda q: asked.append(q) or "y")
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6"])
+
+    assert cm.main() == 0
+
+    assert asked == [
+        "Close this milestone and roll 2 open child issue(s) forward to #7 Sprint 7: Polish? [y/N] "
+    ]
+    assert {target for _, target, _ in moves} == {7}
+    assert "rolled forward to #7 Sprint 7: Polish" in _audit(repo)
+
+
+@pytest.mark.parametrize(
+    ("named", "flags"),
+    [
+        pytest.param("", ("--target", "7"), id="by-target"),
+        pytest.param("\nRollforward target: #7", (), id="by-its-line"),
+    ],
+)
+@pytest.mark.parametrize(("reply", "moved"), [("y", {7}), ("n", set())])
+def test_a_named_target_in_another_pool_by_its_line_is_named_in_the_consent_prompt(
+    cm, monkeypatch, capsys, named, flags, reply, moved
+) -> None:
+    repo, moves = _unread(monkeypatch, cm, "alpha", next_pool="bravo", later_pool="alpha")
+    repo.milestones[6]["description"] += named
+    monkeypatch.setattr(sys, "stdin", _Terminal())
+    asked: list[str] = []
+    monkeypatch.setattr("builtins.input", lambda q: asked.append(q) or reply)
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6", *flags])
+
+    assert cm.main() == 0
+
+    assert asked == [
+        "Close this milestone and roll 2 open child issue(s) forward to #7 Sprint 7: Polish, "
+        "by its `Pool:` line in the pool bravo, another pool than this milestone's "
+        "(the pools could not be read)? [y/N] "
+    ]
+    assert {target for _, target, _ in moves} == moved
+    assert repo.milestones[6]["state"] == ("closed" if moved else "open")
+    assert "the target is by its `Pool:` line in the pool bravo" in capsys.readouterr().out
+
+
+def test_a_named_target_in_the_closing_milestone_s_pool_by_its_line_names_no_pool(
+    cm, monkeypatch
+) -> None:
+    _, moves = _unread(monkeypatch, cm, "alpha", next_pool="bravo", later_pool="alpha")
+    monkeypatch.setattr(sys, "stdin", _Terminal())
+    asked: list[str] = []
+    monkeypatch.setattr("builtins.input", lambda q: asked.append(q) or "y")
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6", "--target", "9"])
+
+    assert cm.main() == 0
+
+    assert asked == [
+        "Close this milestone and roll 2 open child issue(s) forward to #9 Sprint 9: Later? [y/N] "
+    ]
+    assert {target for _, target, _ in moves} == {9}
+
+
+def test_over_an_unread_topology_a_forced_close_only_warns(cm, monkeypatch, capsys) -> None:
+    repo, moves = _unread(monkeypatch, cm, "alpha", next_pool="alpha", later_pool="alpha")
+    repo.milestones[6]["description"] = "Close trigger: content-based\nPool: alpha"
+    assert _close(monkeypatch, cm, "--force") == 0
+    assert moves == []
+    assert f"[warn] {_UNREAD}, so the close reads no pool.\n" in capsys.readouterr().err
