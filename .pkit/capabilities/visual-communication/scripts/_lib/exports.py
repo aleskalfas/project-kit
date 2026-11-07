@@ -574,7 +574,7 @@ def _drawn(
     piece = project.piece
     files: dict[str, bytes] = {}
     for form in piece.exports:
-        for language, key, drawn in pl.drawn(project, results, RENDERERS[form]):
+        for language, (key,), drawn in pl.drawn(project, results, RENDERERS[form]):
             if not drawn.pages:
                 raise pl.Refused(
                     f"`{piece.name}` has no page in `{language}`, so the export would hold no "

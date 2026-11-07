@@ -20,7 +20,9 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
   computes one scene for each language and each key over the size axes the piece names
   (DEC-005 point 6), each reading the brand's roles at its key (`ProjectEnv.at`), and draws
-  each combination from the scene of its key (`drawn`).
+  each combination from the scene of its key (`drawn`). A format that holds modes takes the
+  combinations of one file in one call, grouped by the signal pairs its renderer declares
+  (`files_of`, DEC-023 points 1 and 2).
 - **A library version checked alone** is read through `LibraryEnv`, an `Env` that no
   piece or brand stands behind: components from a combination of library versions, and
   roles from their declarations alone (DEC-008 point 1, DEC-010 point 9).
@@ -1058,33 +1060,88 @@ def drawn(
     results: Sequence[tuple[str, SceneResult]],
     renderer: str,
     keys: Sequence[str] | None = None,
-) -> Iterator[tuple[str, str, Any]]:
-    """Each combination the piece names, or each of `keys`, drawn by the renderer `renderer`
-    from the scene of `results` in its language that serves it, the one of its key over the
-    size axes, in the order of the piece's languages and of the keys: the language, the key,
-    and what the renderer gives (`render`, the renderers' entry of the seam). A combination
-    whose scene `results` does not hold is not drawn."""
+    *,
+    form: str | None = None,
+) -> Iterator[tuple[str, tuple[str, ...], Any]]:
+    """Each file the renderer `renderer` draws in the format `form`, its own name by default, of
+    the combinations the piece names, or of those that serve one of `keys`, from the scene of
+    `results` in its language that serves it, the one of its key over the size axes, in the
+    order of the piece's languages and of the keys: the language, the keys the file holds, the
+    first naming it, and what the renderer gives (`render`, the renderers' entry of the seam).
+    A combination whose scene `results` does not hold is not drawn.
+
+    A format the renderer's declaration names under `holds-modes` takes its keys in one call
+    for each file, grouped by the signal pairs it names there (`files_of`, DEC-023 points 1
+    and 2), each key with its combination, colours and pictures. A file holds every key its
+    group gives it, whichever `keys` asks for. Any other format's renderer is handed one key at
+    a time."""
+    declared = seam.declaration(renderer, seam.RENDERER)
     implementation = seam.implementation(renderer)
+    pairs = declared.get("holds-modes", {}).get(renderer if form is None else form)
+    asked = project.keys if keys is None else list(keys)
+    combinations = dict(zip(project.keys, project.combinations, strict=True))
+    if pairs is None:
+        groups = [(key,) for key in asked]
+    else:
+        held = files_of(project.combinations, project.brand.axes, pairs)
+        groups = [group for group in held if any(key in asked for key in group)]
     document = project.values()
     scenes = {
         (language, result.scene.size_key): result.scene.to_dict() for language, result in results
     }
     for language in dict.fromkeys(language for language, _ in results):
-        for key in project.keys if keys is None else keys:
-            scene = scenes.get((language, project.size_key(key)))
+        for group in groups:
+            scene = scenes.get((language, project.size_key(group[0])))
             if scene is None:
                 continue
-            yield (
-                language,
-                key,
-                implementation.render(
+            if pairs is None:
+                made = implementation.render(
                     scene,
-                    key=key,
-                    colours=colours_at(document, key),
+                    key=group[0],
+                    colours=colours_at(document, group[0]),
                     font_file=project.brand.font_file,
-                    pictures=project.env.pictures_at(key),
-                ),
-            )
+                    pictures=project.env.pictures_at(group[0]),
+                )
+            else:
+                made = implementation.render(
+                    scene,
+                    form=renderer if form is None else form,
+                    keys={key: combinations[key] for key in group},
+                    colours={key: colours_at(document, key) for key in group},
+                    font_file=project.brand.font_file,
+                    pictures={key: project.env.pictures_at(key) for key in group},
+                )
+            yield language, group, made
+
+
+def files_of(
+    combinations: Sequence[Mapping[str, str]],
+    axes: Mapping[str, tokens.Axis],
+    pairs: Mapping[str, Mapping[str, Any]],
+) -> list[tuple[str, ...]]:
+    """The keys of `combinations`, grouped by the file of a format that holds modes and reads the
+    signal pairs `pairs`, as a renderer's declaration names them (DEC-023 point 1). Combinations
+    share a file where they differ only in modes that `pairs` pairs with a reader's signal, on
+    axes of kind `value`. So a file serves one key over the size axes, and any other mode takes
+    a file of its own. Each file's keys come in key order, the first naming it, and the files
+    in the order of their first keys."""
+    shared: dict[tuple[tuple[str, str | None], ...], list[str]] = {}
+    for combination in combinations:
+        mark = tuple(
+            (axis, None if _paired(axis, mode, axes, pairs) else mode)
+            for axis, mode in sorted(combination.items())
+        )
+        shared.setdefault(mark, []).append(keys.key_of(combination, axes))
+    held = [tuple(sorted(group, key=keys.key_order)) for group in shared.values()]
+    return sorted(held, key=lambda group: keys.key_order(group[0]))
+
+
+def _paired(
+    axis: str, mode: str, axes: Mapping[str, tokens.Axis], pairs: Mapping[str, Mapping[str, Any]]
+) -> bool:
+    """Whether `mode` of `axis` pairs with a reader's signal: the axis is a value axis, and the
+    pairs name the mode. A size axis is the whole page's, so it never shares a file."""
+    return axes[axis].kind != "size" and mode in pairs.get(axis, {}).get("pairs", {})
 
 
 def preview_files(

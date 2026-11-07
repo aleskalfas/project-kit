@@ -21,6 +21,7 @@ reads:
   paths:
     - .pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md
     - .pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-023-html-page-modes.md
     - .pkit/capabilities/visual-communication/outputs.md
     - .pkit/capabilities/visual-communication/checks.md
     - .pkit/capabilities/visual-communication/components.md
@@ -57,6 +58,7 @@ You own **no** paths. You write nothing in the repository.
 
 - [visual-communication:DEC-015-viewing-step-and-reviewer], `.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md`: the step and your first form. Point 7 is yours.
 - [visual-communication:DEC-020-html-page-drawing], `.pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md`: how the step draws the HTML renderer's pages through a browser. Points 5, 6 and 8 bear on what you read.
+- [visual-communication:DEC-023-html-page-modes], `.pkit/capabilities/visual-communication/decisions/DEC-023-html-page-modes.md`: how one page file holds the modes a reader's system picks, and how the step draws each. Points 6 to 8 bear on what you read.
 - `.pkit/capabilities/visual-communication/outputs.md`, "The viewing step": what a run writes, what its report says, how far an image can be trusted, and what a stop leaves.
 - `.pkit/capabilities/visual-communication/checks.md`: what the check measures, and so what you need not measure again.
 - `.pkit/capabilities/visual-communication/components.md`, "Trace ids": the ids your findings name.
@@ -69,13 +71,13 @@ You own **no** paths. You write nothing in the repository.
 The step writes in a folder of `.pkit/capabilities/visual-communication/project/local/look/` for each renderer, unless your dispatcher names another folder:
 
 - **`<piece>/`** holds the SVG renderer's pages, which resvg drew.
-- **`<piece>.html/`** holds the HTML renderer's pages, which a browser drew, and each page file they were drawn from. You read the images, not the page file.
+- **`<piece>.html/`** holds the HTML renderer's pages, which a browser drew, and each page file they were drawn from. A page file holds every mode of its size, and is named by the first key it serves. So an image's key need not be its page file's. You read the images, not the page file.
 
 Read all of these, and judge a page by its image above all:
 
 - **The images,** `<piece>.<language>.<key>.png`, with the page's number before `.png` in a piece of more than one page.
 - **The frames,** `<piece>.<language>.<key>.frames.json`, the same way. They give each element's trace id, its type and its box in the image's pixels, and the lock the image was drawn under.
-- **The report,** `report.json`. It names the renderer and the tool that drew, and every image the run drew, so take your list of images from it. It says whether each image lies on white, and holds the lists `dropped`, `losses` and `drawn-otherwise`. Through a browser it holds `words` and `refused` too, and `stopped`, which says whether the browser drew.
+- **The report,** `report.json`. It names the renderer and the tool that drew, and every image the run drew, so take your list of images from it. It says whether each image lies on white, or, through a browser, on the browser's own ground. It holds the lists `dropped`, `losses` and `drawn-otherwise`. Through a browser it holds `words` and `refused` too, and `stopped`, which says whether the browser drew.
 - **The piece,** its folder under the location's `pieces/`: `piece.yaml`, the content of each language, any component of its own, and `findings.yaml`, which holds what the check found.
 - **The brand** the piece names, under the location's `libraries/`: its tokens say which family each typography role takes.
 
@@ -114,6 +116,7 @@ A *note* is anything else worth a look: a page that feels crowded, a rhythm that
 Some things look wrong and are not faults:
 
 - **A page on white.** Where `on-white` is true, the page draws no ground of its own, and the white is the image's, which the piece never set. A text over nothing that is faint on that white may read well where the piece is placed. Make that a note at most, and say so.
+- **A page on the browser's ground.** Where `on-browser-ground` is true, the page draws no ground of its own. The image lies on the ground of the browser that drew it, in the mode drawn, not on white. That ground differs between browsers, and no check reads it. A text over nothing that fades on it may read on another browser's, or fade there too. Make that a note, and name the mode.
 - **A run measured in two families.** An entry of `drawn-otherwise` that names `families` comes from resvg. resvg may set the whole run on a line in one family, where a browser sets only the characters the first family lacks. A font that differs in that run alone is a note.
 - **A request refused.** Each entry of `refused` is a request the page file made, which the browser refused. Name each one as a note, with its address. A page file should ask for nothing.
 - **An accepted loss.** Where `accepted` is true, a person accepted it in the piece, for a reason `piece.yaml` gives. Make it a note, with that reason. A loss not accepted that left a part out is a fault of the first kind.

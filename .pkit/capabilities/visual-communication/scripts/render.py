@@ -255,7 +255,7 @@ def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[
     `lost`."""
     name = project.piece.name
     previews: dict[str, str] = {}
-    for language, key, drawn in pl.drawn(project, results, "svg"):
+    for language, (key,), drawn in pl.drawn(project, results, "svg"):
         previews.update(pl.preview_files(name, language, key, drawn.pages))
         lost.extend(loss for loss in drawn.losses if loss not in lost)
     return previews
