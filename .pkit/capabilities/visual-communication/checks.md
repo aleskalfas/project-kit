@@ -240,7 +240,7 @@ These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash
 | `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails, but on a final piece | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned draft, change the lock by hand, or unpin it and render it. No render moves a published piece's lock, so set it back to a draft and render it ([the lock](files.md#the-lock)). |
 | `lock-not-released` | A final or a published piece's lock names a version not yet released (DEC-003 point 9). The message names the piece, the library and the version. A draft's lock may name one, pinned or not. | by the version and the piece's state, below | `<piece>/piece.yaml#lock` | As below. |
 
-**At a final piece's lock.** The piece's state forbids a move of its lock, and no state leads out of final. So a finding there fails only where something other than a move mends it (DEC-002 point 7). One only a move would mend states a fact, and its fix says a copy of the piece takes it up again.
+**At a final piece's lock.** The piece's state forbids a move of its lock, and no state leads out of final. So a finding there fails only where something other than a move mends it (DEC-002 point 7). One only a move would mend states a fact. Its fix names `pkit visual take-up`, which takes the piece up again as a new draft ([the lock](files.md#the-lock)).
 
 | Label | Level on a final piece | What mends it |
 |---|---|---|
@@ -313,7 +313,7 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names the version its folder holds, `<version>/`, since the file cannot give it. So it asks for attention where the others do. | fails |
 | `brand-kind`, `brand-dtcg` | The library is not a brand, or names a DTCG version other than `2025.10`. Stops the brand. | fails |
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
-| `brand-axis` | A modifier is no shared axis, lacks a context for one of the axis's modes, or has another default than the axis. Stops the brand. | fails |
+| `brand-axis` | A modifier is no shared axis, gives a mode the axis lacks, gives no context for its default, or defaults to another mode. Stops the brand. | fails |
 | `tokens-unreadable`, `tokens-shape`, `token-name`, `token-type`, `token-value`, `token-shared-group` | A token file cannot be read, or holds a key, a name, a type or a value format 1 does not read, or a brand's own token in a group of the shared roles. Stops the brand. | fails |
 | `role-missing`, `role-type` | The brand gives a shared role no value, or a value of another type, in some combination. Stops the brand. | fails |
 | `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, to a role of a library the brand does not name or to one with no value under it, or lead to a token of another type. Stops the brand. | fails |
@@ -425,7 +425,7 @@ Written code, its declaration and its record are described in [What is made from
 | `code-name` | A declaration's file name is not a name. Rename the file. | fails | `<location>/code/<name>.yaml` |
 | `code-out` | `out` names no file the code may go to. Name a file of the project's tree. | fails | the declaration, `#out` |
 | `code-unchecked` | The code cannot be checked, as when the brand at the declaration's lock cannot be read. Mend the declaration, then write the code. | fails | the declaration |
-| `code-loss` | The writer has no form for a token, which it leaves out, and the declaration does not accept the loss. Accept it under `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or have the code read the value another way. | asks for attention | the declaration, `#<token path>` |
+| `code-loss` | The writer has no form for a token, which it leaves out, or writes a token a size changes at the size axis's default. The declaration does not accept the loss. Accept it under `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or have the code read the value another way. | asks for attention | the declaration, `#<token path>` |
 | `code-not-written` | Neither the code nor its record is present. | states a fact | the declaration |
 | `code-record-missing` | The code has no record beside it. | fails | the code's file |
 | `code-missing` | The record names code that is missing. | fails | `<out>.record.yaml` |
@@ -458,7 +458,7 @@ The check holds a piece's [current copy](outputs.md#the-current-copy) to what it
 | Label | What it means | Where it points | What to do |
 |---|---|---|---|
 | `handed-out-none` | The piece's `state` is `final`, and its record of exports names no version handed out, or it has no record. | `<piece>/piece.yaml#state` | Run `pkit visual mark-final <piece> <version>`, which takes such a piece, or set the state back. |
-| `handed-out-state` | The record names a version handed out, and the piece's `state` is another. | `<piece>/piece.yaml#state` | Set it back to `final`. Copy the piece for new work. |
+| `handed-out-state` | The record names a version handed out, and the piece's `state` is another. | `<piece>/piece.yaml#state` | Set it back to `final`. For new work, run `pkit visual take-up <piece> <name>` ([the lock](files.md#the-lock)). |
 | `handed-out-lock` | The record names a version handed out, and the piece's lock is not the one that version was made under, read from its fingerprint. A hand or a merge may leave this. | `<piece>/piece.yaml#lock` | Write back the lock the fix names, which is no move of it. |
 | `handed-out-unreadable` | The record names a version handed out, and gives no lock or no file of it. It keeps no list of numbered versions, no such version or no file of it, or a fingerprint that gives no lock. The message says which. The files it names are still read. | `<piece>/exports.yaml#handed-out` | Restore what the record kept of that version from the repository's history. |
 | `handed-out-file-missing` | A file of the version handed out is missing from `handed-out/`. The message names the version. | the file | Restore it from the repository's history, as it was handed out. |
@@ -469,7 +469,7 @@ The check reads no other file of an export. It checks the binding of a piece's `
 
 ## The findings record
 
-`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. Commit it, so the check reads it on a fresh clone.
+`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. `pkit visual upgrade` writes it too, under the lock it moves ([the lock](files.md#the-lock)). Commit it, so the check reads it on a fresh clone.
 
 It holds the scene findings, the losses among them. The findings on files, libraries, locks, brands, notations, content, produced pictures and written code are not in it: the check works them out at every run. Its fields:
 

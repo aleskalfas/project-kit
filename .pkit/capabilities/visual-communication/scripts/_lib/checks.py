@@ -195,9 +195,6 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
 
-#: What a finding on a final piece says where only a move of its lock would mend it.
-NO_MOVE = "no move reaches a final piece's lock: a copy of the piece takes it up again"
-
 #: The findings on what a piece's state owes of its current copy (DEC-017 point 6).
 PUBLISHED_NO_FORMAT = "published-no-format"
 COPY_NONE = "current-copy-none"
@@ -920,6 +917,16 @@ def _code_findings(root: Path, location_path: str) -> list[Finding]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
+def no_move(piece: str) -> str:
+    """What a finding on the final piece `piece` says where only a move of its lock would mend
+    it: no move reaches that lock, and the command that copies the piece takes it up again
+    (DEC-017 points 5 and 8)."""
+    return (
+        f"no move reaches a final piece's lock: {copies.take_up_command(piece)} takes it up again "
+        f"as a new draft"
+    )
+
+
 def _lock_fix(piece: pl.Piece, mend: str) -> str:
     """What mends a fault at a piece's lock, by who moves that lock (DEC-003 point 8): a
     draft's render, and nothing else. Nothing moves a final piece's, and no state leads out
@@ -964,7 +971,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     def moved(code: str, message: str) -> Finding:
         """A finding only a move of the lock would mend."""
         if final:
-            return Finding(code, FACT, message, file=file, where="lock", fix=NO_MOVE)
+            return Finding(code, FACT, message, file=file, where="lock", fix=no_move(piece.name))
         return fails(code, message)
 
     lock = piece.lock
@@ -1084,7 +1091,7 @@ def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> F
     if not final:
         return dataclasses.replace(finding, fix=_lock_fix(piece, ""))
     if source is None:
-        return dataclasses.replace(finding, level=FACT, fix=NO_MOVE)
+        return dataclasses.replace(finding, level=FACT, fix=no_move(piece.name))
     return dataclasses.replace(
         finding,
         level=ATTENTION,
@@ -1343,7 +1350,10 @@ def _other_state(piece: pl.Piece, number: int) -> Finding:
         f"`{piece.name}` is {piece.state}",
         file=piece.file(pl.PIECE_FILE),
         where="state",
-        fix=f"set its state back to {copies.FINAL}, and copy the piece for new work",
+        fix=(
+            f"set its state back to {copies.FINAL}, and for new work run "
+            f"{copies.take_up_command(piece.name)}, which takes it up again as a new draft"
+        ),
     )
 
 

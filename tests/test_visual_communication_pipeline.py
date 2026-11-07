@@ -403,13 +403,10 @@ def test_a_lock_that_cannot_be_spliced_as_text_is_refused() -> None:
         pl.lock_text(text, {"foundations": "1.0.0"})
 
 
-def test_writing_the_lock_it_holds_writes_nothing(tmp_path: Path) -> None:
+def test_the_lock_it_holds_gives_no_new_bytes(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
-    path = root / PIECE_FOLDER / "piece.yaml"
-    before = path.stat().st_mtime_ns
-    assert pl.write_lock(piece_of(root), LOCK) is False
-    assert path.stat().st_mtime_ns == before
-    assert pl.write_lock(piece_of(root), {**LOCK, "tests": "1.0.0"}) is False
+    assert pl.locked(piece_of(root), LOCK) is None
+    assert pl.locked(piece_of(root), {**LOCK, "tests": "1.0.0"}) is None
 
 
 # --- the Env ------------------------------------------------------------------------------------
@@ -721,6 +718,29 @@ def test_a_switch_by_a_value_axis_is_refused_at_each_size_alike(
     assert [[f.code for f in each] for each in found] == [["size-switch"], ["size-switch"]]
     assert found[0][0].message == found[1][0].message
     assert "the size axes: `:device`" in found[0][0].message
+
+
+def test_under_a_brand_that_gives_no_size_a_pattern_draws_the_shape_of_the_default(
+    tmp_path: Path,
+) -> None:
+    """The foundations declare `device` and the brand gives no size (DEC-021 point 2), so the
+    piece names none and has one key. Its pattern reads the axis's default there, and its
+    switches by the size are no fault (DEC-021 point 3)."""
+    root = flipping(tmp_path, modes={})
+    resolver = root / "visual/libraries/test-brand/1.0.0/test-brand.resolver.json"
+    data = json.loads(resolver.read_text(encoding="utf-8"))
+    del data["modifiers"]["device"]
+    data["resolutionOrder"].remove({"$ref": "#/modifiers/device"})
+    resolver.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    project = project_of(root)
+
+    [(_, made)] = project.scenes()
+
+    assert "device" not in project.brand.axes
+    assert project.keys == ["default"]
+    assert made.findings == []
+    assert made.scene.find("figure/body/across[plan]") is not None
+    assert made.scene.find("figure/body/down") is None
 
 
 # --- a notation's concepts ----------------------------------------------------------------------

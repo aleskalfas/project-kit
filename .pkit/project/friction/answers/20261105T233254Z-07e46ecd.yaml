@@ -1,0 +1,92 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-05T23:34:26Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
+        outcome: unchanged
+        reason: "`EXEMPT_VERBS` is the list behind the new sentence. It exempts eleven verbs from the first check, `bootstrap` and `migrate` among them. Others of the eleven write too, such as `self-test` and the three that write the fixers' grant list. The sentence says \"some\" and \"such as\", so it claims no complete set, and what it says is what the gate does. This file holds the first check alone, so the sentence asks no change of it."
+      - anchor:
+          kind: path
+          value: .pkit/capabilities/project-management/scripts/_lib/membership.py
+        outcome: unchanged
+        reason: It holds the predicate, never the list of commands that call it. The new sentence exempts commands from the first check alone, so REQ-041 asks the second of every command that writes, as the base did. Some that write never call it, such as `bootstrap`, `migrate`, `back-fill` and `self-test`. That gap lies in those commands, not here, and it stood before this change, which neither widens nor closes it.
+      - anchor:
+          kind: path
+          value: tests/test_pm_bootstrap_gate.py
+        outcome: unchanged
+        reason: Its test of the exemption list pins all eleven verbs, `bootstrap` and `migrate` among them, so a sentence that gives two of them as examples asks for no new test.
+      - anchor:
+          kind: path
+          value: tests/test_pm_membership.py
+        outcome: unchanged
+        reason: It tests how the predicate decides, in open mode and closed, and never which commands call it. An exemption from the first check leaves that as it was.
+      - anchor:
+          kind: record
+          value: ADR-061#3
+        outcome: unchanged
+        reason: Point 3 has landing a pull request work on GitHub only, through `gh`. The new sentence says that some commands skip the first check, and nothing of landing, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-009
+        outcome: unchanged
+        reason: It sets the conventions of a pull request, and REQ-041 anchors it as a record behind the developer. Which commands are exempt from the first check is none of its subject, so it stands.
+      - anchor:
+          kind: record
+          value: COR-050#3
+        outcome: unchanged
+        reason: Point 3 decides what a revalidation is and who writes it. An exemption from the first check changes no answer, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-050#6
+        outcome: unchanged
+        reason: Point 6 decides how the two friction checks judge a change. Exempting some commands from project-management's first check leaves those checks as they were.
+      - anchor:
+          kind: record
+          value: COR-050#9
+        outcome: unchanged
+        reason: Point 9 derives debt from git. Which commands skip the first check bears on that derivation in no way, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-051#4
+        outcome: unchanged
+        reason: Point 4 decides a rule's statuses and its gate. The new sentence names no rule, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-066#1
+        outcome: unchanged
+        reason: Point 1 keeps a proposal inside its change. Which commands skip the first check bears on no proposal, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-066#2
+        outcome: unchanged
+        reason: Point 2 gives a check of its own that refuses to land a proposal. REQ-041's first check is not that check, and the new sentence names no proposal, so the point stands.
+      - anchor:
+          kind: record
+          value: PRJ-002#D1
+        outcome: unchanged
+        reason: D1 has a pull request declare a surface change and never apply a version. It names no gate of project-management, so an exemption from the first check leaves it standing.
+      - anchor:
+          kind: record
+          value: PRJ-002#D2
+        outcome: unchanged
+        reason: D2 makes a bump's segment a person's judgement of surface impact. Which commands skip the first check bears on no segment, so it stands.
+      - anchor:
+          kind: record
+          value: project-management:DEC-017
+        outcome: unchanged
+        reason: It has `bootstrap` make the state the prerequisites check, and `migrate` refuse on a failed pre-check of its own, so the two examples follow what it decides. It makes the pre-check the first step of every operation, and the code exempts more commands than these two. The new sentence now says so rather than claiming two, and asks no change of the record.
+      - anchor:
+          kind: record
+          value: project-management:DEC-021
+        outcome: unchanged
+        reason: "It has each operation that changes outside state check the member list, and exempts none. The new sentence exempts commands from the first check alone, so REQ-041 asks the second of every command that writes, as the record and the base do, and nothing it asks goes against the record. The code falls short of both: commands such as `bootstrap`, `migrate`, `back-fill` and `self-test` write and run no membership check. That gap stood before this change, which neither widens nor closes it."

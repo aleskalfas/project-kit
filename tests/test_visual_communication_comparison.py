@@ -882,8 +882,8 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
             density={"kind": "size", "modes": ["compact", "roomy"], "default": "roomy"}
         ),
         None,
-        ["shared axis `density`: is new (DEC-004 point 5)"],
-        None,
+        [],
+        "shared axis `density`: is new (DEC-004 point 5)",
     ),
     "a pair's level lowered": (
         lambda d: put(d["pairs"][0], "level", "large-text"),
@@ -1038,6 +1038,87 @@ def test_a_brands_changed_value_is_no_break(tmp_path: Path) -> None:
     tokens["palette"]["white"]["$value"] = {"colorSpace": "srgb", "components": [0.99, 0.99, 0.99]}
     palette.write_text(json.dumps(tokens), encoding="utf-8")
     was = brand_location(tmp_path / "earlier", "1.0.0", None, None)
+    version = libraries.Version.parse
+
+    found = comparison.compare(
+        full_read.read(was, "test-brand", version("1.0.0")),
+        full_read.read(now, "test-brand", version("1.1.0")),
+    )
+
+    assert (found.breaks, found.additions) == ((), ())
+
+
+def device(data: Any) -> None:
+    """The size axis `device`, beside the foundations' value axes (DEC-021 point 1)."""
+    data["axes"]["device"] = {
+        "kind": "size",
+        "modes": ["desktop", "tablet", "phone"],
+        "default": "desktop",
+    }
+
+
+def vary(held: Any, version: str, axis: str, contexts: Mapping[str, Any] | None) -> None:
+    """The test brand at `version` made to vary `axis` by `contexts`, each a list of
+    sources, or to leave it out where `contexts` is None."""
+    resolver = (
+        held.root / LOCATION / "libraries" / "test-brand" / version / "test-brand.resolver.json"
+    )
+    document = json.loads(resolver.read_text(encoding="utf-8"))
+    order = document["resolutionOrder"]
+    if contexts is None:
+        del document["modifiers"][axis]
+        order.remove({"$ref": f"#/modifiers/{axis}"})
+    else:
+        default = next(iter(contexts))
+        if axis not in document["modifiers"]:
+            order.append({"$ref": f"#/modifiers/{axis}"})
+        document["modifiers"][axis] = {"contexts": dict(contexts), "default": default}
+    resolver.write_text(json.dumps(document), encoding="utf-8")
+
+
+def compared_sizes(tmp: Path, earlier: list[str] | None, later: list[str] | None) -> Any:
+    """The test brand 1.0.0 compared with 1.1.0, both over foundations that declare
+    `device`, each giving the sizes named, or none where None."""
+    was = brand_location(tmp / "earlier", "1.0.0", device, None)
+    now = brand_location(tmp / "later", "1.1.0", device, None)
+    for held, version, sizes in ((was, "1.0.0", earlier), (now, "1.1.0", later)):
+        if sizes is not None:
+            vary(held, version, "device", {size: [] for size in sizes})
+    version = libraries.Version.parse
+    return comparison.compare(
+        full_read.read(was, "test-brand", version("1.0.0")),
+        full_read.read(now, "test-brand", version("1.1.0")),
+    )
+
+
+def test_a_size_a_brand_comes_to_give_is_an_addition_and_one_it_ceases_to_give_breaks(
+    tmp_path: Path,
+) -> None:
+    came = compared_sizes(tmp_path / "came", None, ["desktop", "phone"])
+    more = compared_sizes(tmp_path / "more", ["desktop"], ["desktop", "phone"])
+    ceased = compared_sizes(tmp_path / "ceased", ["desktop", "phone"], None)
+    fewer = compared_sizes(tmp_path / "fewer", ["desktop", "phone"], ["desktop"])
+    none = compared_sizes(tmp_path / "none", None, None)
+
+    assert (said(came.breaks), said(came.additions)) == (
+        [],
+        ["axis `device`: is new (DEC-004 point 5)"],
+    )
+    assert (said(more.breaks), said(more.additions)) == (
+        [],
+        ["axis `device`, mode `phone`: is new (DEC-004 point 5)"],
+    )
+    assert said(ceased.breaks) == ["axis `device`: is removed (DEC-004 point 5)"]
+    assert said(fewer.breaks) == ["axis `device`, mode `phone`: is removed (DEC-004 point 5)"]
+    assert (none.breaks, none.additions) == ((), ())
+
+
+def test_a_value_mode_a_brand_ceases_to_give_is_no_break(tmp_path: Path) -> None:
+    """The later version gives the contrast at `standard` alone: `high` takes its values at
+    the default, a changed value, and the brand still has the mode."""
+    was = brand_location(tmp_path / "earlier", "1.0.0", None, None)
+    now = brand_location(tmp_path / "later", "1.1.0", None, None)
+    vary(now, "1.1.0", "contrast", {"standard": []})
     version = libraries.Version.parse
 
     found = comparison.compare(

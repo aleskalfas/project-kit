@@ -11,8 +11,8 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
   the piece names itself: its top's library, its brand, its notations and every library
   its content uses; `libraries.move_lock` adds what they build on, judging each whole
-  combination it reaches with `Fit`. `write_lock` writes a
-  lock into `piece.yaml` as text, every other byte kept.
+  combination it reaches with `Fit`. `locked` gives the bytes of `piece.yaml` with a
+  lock written in as text, every other byte kept.
 - **A project** (`Project`) is a piece under one lock: the scope of the locked versions,
   the foundations' declarations and the own roles of each component library the lock
   names (DEC-008 point 1), and the brand read against it, over its base at the version
@@ -47,7 +47,7 @@ from typing import Any
 from _lib import copies, keys, layout, notations, records, tokens, values
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
-from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
+from _lib.files import FileError, read_bound, refuse_links, without_binding
 from _lib.fingerprint import COPY_PLACE
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
 from _lib.location import files as listed_files
@@ -349,16 +349,6 @@ def locked(piece: Piece, lock: Mapping[str, str]) -> bytes | None:
     path = piece.folder / PIECE_FILE
     writable(piece.root, path)
     return lock_text(path.read_bytes().decode("utf-8"), lock).encode("utf-8")
-
-
-def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
-    """Write `lock` into the piece's `piece.yaml` (`locked`); False, writing nothing,
-    when it holds that lock already. Raises Refused, writing nothing."""
-    data = locked(piece, lock)
-    if data is None:
-        return False
-    write_whole(piece.folder / PIECE_FILE, data)
-    return True
 
 
 # --- a piece under one lock ---------------------------------------------------------------------
