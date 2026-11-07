@@ -294,7 +294,7 @@ def test_a_combination_the_record_does_not_map_makes_the_picture_stale(tmp_path:
     )
     piece = pl.read_piece(root, "visual", PIECE)
     project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
-    project.scenes()
+    project.scenes(facts=project.piece.stand_ins)
     stale = exports.stale_outputs(project)
     assert "the combination `contrast.high` has no variant" in stale["square"]
 

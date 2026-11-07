@@ -236,7 +236,8 @@ Draws a piece in each of its languages and each combination of modes it names.
 - **Writes `findings.yaml`** beside `piece.yaml` ([The findings record](checks.md#the-findings-record)).
 - **Draws the previews** with the SVG renderer, and replaces the piece's previews from before ([Previews](outputs.md#previews)).
 - **Prints** the lock, the facts it states, each finding, and each loss the renderer reports that the piece does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
-- **Of a final piece,** it writes no `findings.yaml`, and one left from before stays ([The findings record](checks.md#the-findings-record)). It still draws the previews and prints what it finds. Where the piece shows a version's number or its date, it says a stand-in shows ([The facts of an export](components.md#the-facts-of-an-export)).
+- **Prints after `preview:`** each stand-in a preview shows, with why ([The facts of an export](components.md#the-facts-of-an-export)). It also prints what a fact's real text finds in a preview, which no `findings.yaml` keeps.
+- **Of a final piece,** it writes no `findings.yaml`, and one left from before stays ([The findings record](checks.md#the-findings-record)). It still draws the previews and prints what it finds.
 - **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual check [<piece>]`
@@ -288,7 +289,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 
 - **Draws** every page in the source language, unless flags pick others.
 - **Writes** each image and its frames, and one report, in the clone's local folder, replacing what an earlier run left there ([What a run writes](outputs.md#what-a-run-writes)).
-- **Prints** the lock and what the report says ([What the report says](outputs.md#what-the-report-says)).
+- **Prints** the lock and what the report says ([What the report says](outputs.md#what-the-report-says)), then each stand-in an image shows, with why ([The viewing step](outputs.md#the-viewing-step)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
 - **Exits** 0 when it drew, whatever the report says; 1 when it refused, with `look/<piece>/` left as it was, or a write failed ([Commands](#commands)).
@@ -312,9 +313,9 @@ Draws each of a piece's pages under two locks, and prints each page that differs
   - A draft, only with versions named, which may be versions not yet released.
   - A final piece, with none named. Its two locks are one.
 - **`--back` looks back, at a change.** The base is where your branch left the default branch, or the branch `--base <ref>` names. The before is the lock of the version that wrote the copy at that commit, or the lock held there where no version did. The after is the lock the piece holds now. A piece the base does not hold has no before, and the command says so.
-- **Draws** both sides with today's engine, from the piece's files and [produced pictures](outputs.md#produced-pictures) as they lie, and it runs no program. Both sides fill what a piece shows of its export in one way, so a number the piece shows does not differ.
+- **Draws** both sides with today's engine, from the piece's files and [produced pictures](outputs.md#produced-pictures) as they lie, and it runs no program. Both sides fill what a piece shows of its export in one way, as a preview does, so a number the piece shows does not differ ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Writes** each page in `before/` and `after/`, under `before-after/<piece>/` in [the clone's local folder](files.md#the-clones-local-folder), each file named as its [preview](outputs.md#previews). It replaces what an earlier run left there, and writes nothing else.
-- **Prints** each lock, each page that differs, and each picture that is stale or missing. It says where the two locks are one, and where the engine's release differs from the one the copy's version recorded.
+- **Prints** each lock, each page that differs, and each picture that is stale or missing. It says where the two locks are one, and where the engine's release differs from the one the copy's version recorded. Last, it prints each stand-in the sides show, with why.
 - **Goes on** past a drawing it cannot make, such as where a library version left the project. It says why, and draws the other side.
 - **Refuses** a piece with no lock yet, a draft with no version named, and a final piece with one. It refuses a version a move cannot take, and a base that resolves to nothing.
 - **Exits** 0 when it drew a side or said why not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.

@@ -30,8 +30,11 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    exported_up_to,
+    filled,
     on_devices,
     parts_project,
+    stamped,
     two_steps,
     write_content,
     write_picture,
@@ -48,7 +51,7 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-look, pages, svg, seam, framing, viewing, viewing_tool = load(
+look, pages, svg, seam, framing, viewing, viewing_tool, pl = load(
     "visual-communication",
     "look.py",
     "pages.py",
@@ -57,6 +60,7 @@ look, pages, svg, seam, framing, viewing, viewing_tool = load(
     "framing",
     "viewing",
     "viewing_tool",
+    "pipeline",
 )
 
 LOCK = ["foundations 1.0.0", "test-brand 1.0.0", "tests 1.0.0"]
@@ -1097,6 +1101,45 @@ def test_a_page_the_tool_cannot_draw_refuses_with_nothing_written(
         "`pkit visual check flow` names what the piece still owes\n"
     )
     assert not folder_of(flow).exists()
+
+
+# --- what fills an export's facts (DEC-016 point 5) ---------------------------------------------
+
+
+def test_a_look_fills_this_clones_next_number_as_a_preview_does(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [facts.version for facts in taken] == ["v42"]
+    assert "stand-in" not in shown.stdout
+
+
+def test_a_final_pieces_look_takes_the_stand_ins_and_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "date", state="final")
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
+    assert (
+        "look: a final piece has no next export, so a stand-in shows: `date` at `figure/body/date`"
+        in shown.stdout.splitlines()
+    )
+
+
+def test_the_pages_listed_are_computed_as_a_preview_fills_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    assert run_pages(root, PIECE).returncode == 0
+    assert [facts.version for facts in taken] == ["v42"]
 
 
 # --- `pkit visual pages` ------------------------------------------------------------------------

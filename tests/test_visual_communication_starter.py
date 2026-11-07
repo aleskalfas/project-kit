@@ -244,7 +244,7 @@ def scenes(projects: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, An
     """The scene of each reference piece in each language, by piece and language."""
     computed = {}
     for name, drawn in projects.items():
-        for language, result in drawn.scenes():
+        for language, result in drawn.scenes(facts=drawn.piece.stand_ins):
             assert result.findings == [], (name, language, result.findings)
             computed[(name, language)] = result.scene.to_dict()
     return computed
@@ -795,7 +795,7 @@ def thick_bars(location: Path, tmp_path_factory: pytest.TempPathFactory) -> list
     piece = pl.read_piece(root, "visual", "card")
     drawn = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
     computed = []
-    for _, result in drawn.scenes():
+    for _, result in drawn.scenes(facts=drawn.piece.stand_ins):
         assert result.findings == []
         computed.append(result.scene.to_dict())
     return computed

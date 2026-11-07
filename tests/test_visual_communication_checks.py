@@ -43,6 +43,8 @@ from tests.test_visual_communication_pipeline import (
     TESTS,
     add_device,
     drawing_project,
+    exported_up_to,
+    filled,
     list_drawing_libraries,
     on_devices,
     parts_project,
@@ -786,6 +788,19 @@ def test_a_released_version_that_changed_fails_as_the_projects_to_restore(
     assert levels["library-name"] == ("fails", "")
 
 
+def test_the_checks_scenes_take_the_stand_ins_whatever_the_clone_holds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check computes a piece with no findings record with the stand-ins, so its answer
+    turns on no clone's next number and no day (DEC-016 point 5)."""
+    root = drawing_project(tmp_path, picture=False)
+    write_content(root, body={"use": "tests/stamp", "shows": "number"})
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    checks.check(root, only=PIECE)
+    assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
+
+
 def overflowing_stamp(root: Path, use: str) -> list[tuple[Any, str]]:
     """What the check says of the stand-in the piece's stamp shows, too wide for its text."""
     write_content(root, body={"use": use, "shows": "narrow"})
@@ -1146,7 +1161,8 @@ def test_a_renderers_losses_are_known_from_its_declaration_before_it_runs() -> N
 def test_the_svg_renderer_loses_nothing_of_the_skeleton_piece(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
     write_picture(root, framing)
-    [(_, result)] = project_of(root).scenes()
+    project = project_of(root)
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
     assert checks.losses(result.scene.to_dict(), svg_declaration.DECLARATION) == []
 
 
@@ -1900,7 +1916,7 @@ def test_a_deck_of_a_cover_and_slides_in_two_languages_draws_each_page_in_its_la
     project = project_of(deck_project(tmp_path))
 
     assert checks.content_findings(project) == []
-    scenes = dict(project.scenes())
+    scenes = dict(project.scenes(facts=project.piece.stand_ins))
     assert list(scenes) == ["en", "cs"]
     for language, result in scenes.items():
         assert result.findings == [], language

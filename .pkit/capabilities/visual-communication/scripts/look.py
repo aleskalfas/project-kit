@@ -14,9 +14,11 @@ local folder, for a person or an agent to read (DEC-015).
 
 It reads the piece's own file with its lock, computes the scenes under that lock and never
 moves it. It runs no helper and no producer, draws a produced picture as it stands, keeps
-no finding, takes no number and records no location. Each image lies beside its frames and
-one report, in `.pkit/capabilities/visual-communication/project/local/look/<piece>/`, and a
-run replaces what an earlier run left there. The report says what the images cannot show as
+no finding, takes no number and records no location. Its images show what a preview fills,
+and it says where one shows a stand-in, with why (`exports.preview_filling`). Each image
+lies beside its frames and one report, in
+`.pkit/capabilities/visual-communication/project/local/look/<piece>/`, and a run replaces
+what an earlier run left there. The report says what the images cannot show as
 the renderer set it: each loss, each text or run the tool dropped, and each run it may draw
 otherwise. See `_lib/viewing.py`.
 
@@ -47,7 +49,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import files, location, viewing
+from _lib import exports, files, location, viewing
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -107,17 +109,22 @@ def _look(root: Path, args: argparse.Namespace) -> int:
         pages=args.page,
     )
     pl.writable(root, root / viewing.FOLDER / args.piece / viewing.REPORT)
-    results = viewing.scenes(project, wanted.languages, wanted.keys)
+    filling = exports.preview_filling(project.piece)
+    results = viewing.scenes(project, wanted.languages, wanted.keys, facts=filling.facts)
     viewed = viewing.view(project, results, wanted)
     folder = viewing.write(root, args.piece, viewed)
-    _print(folder, viewed.report)
+    _print(folder, viewed.report, filling.said(exports.shown_stand_ins(results)))
     return 0
 
 
-def _print(folder: str, report: Mapping[str, Any]) -> None:
+def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
+    """What a run prints: the report, and `stand_ins`, what it says of a stand-in an image
+    shows, where one does."""
     lock = report["lock"]
     print(f"look: {len(report['images'])} image(s) in {folder}")
     print(f"lock: {', '.join(f'{library} {lock[library]}' for library in sorted(lock))}")
+    if stand_ins:
+        print(f"look: {stand_ins}")
     for image in report["images"]:
         if image["on-white"]:
             print(f"on white: {_at(image)} draws no ground of its own")

@@ -13,6 +13,10 @@
   `<piece>.v<N>.<language>.<key>.<n>.<format>`. The files lie in the clone's local exports
   folder, never committed; no export overwrites another, and a file a failed run left
   there refuses no later run.
+- **What a preview fills** (`preview_filling`). The facts of the next export on this clone:
+  its next number and the date of the run. A final piece, which takes no export, and a
+  record of exports that cannot be read give none, so those take the stand-ins and say why
+  (DEC-016 point 5).
 - **No stale output.** A run stops on a produced picture whose record no longer verifies,
   naming what changed, unless the person names it to be used as it is; it stops on a
   picture that is missing whatever is named. Naming an output the piece does not declare
@@ -119,7 +123,7 @@ def file_name(
     as for the file of each page of a piece of more than one page. A file that holds every
     page, as a PDF does, names none."""
     numbered = "" if page is None else f".{page}"
-    return f"{piece}.v{number}.{language}.{key}{numbered}.{form}"
+    return f"{piece}.{version_text(number)}.{language}.{key}{numbered}.{form}"
 
 
 def recorded(piece: pl.Piece) -> dict[str, Any]:
@@ -209,7 +213,7 @@ def plan(
             f"`{piece.name}`, which declares {declared}"
         )
     try:
-        results = project.scenes()
+        results = project.scenes(facts=piece.stand_ins)
     except MissingFont as exc:
         raise pl.Refused(f"the scenes of `{piece.name}` cannot be drawn: {exc}") from exc
     shown = shown_stand_ins(results)
@@ -295,6 +299,57 @@ def shown_stand_ins(results: Sequence[tuple[str, SceneResult]]) -> list[str]:
             for trace in traces
         }
     )
+
+
+#: Why a final piece's preview takes the stand-ins (DEC-017 point 3).
+NO_NEXT_EXPORT = "a final piece has no next export"
+
+
+@dataclass(frozen=True)
+class Filling:
+    """What fills the facts of the scenes a person looks at: `facts`, and, where they are the
+    stand-ins, why, in words. `why` is empty where they are what the piece's next export
+    would fill (DEC-016 point 5)."""
+
+    facts: layout.Facts
+    why: str = ""
+
+    def said(self, shown: Collection[str]) -> str:
+        """What a run says of the stand-ins its scenes show, `shown` each element that shows
+        a fact a stand-in fills (`shown_stand_ins`): why they show, and each such element;
+        empty where this filling takes none, or no element shows one."""
+        if not self.why or not shown:
+            return ""
+        return f"{self.why}, so a stand-in shows: {'; '.join(sorted(shown))}"
+
+
+def preview_filling(piece: pl.Piece, now: datetime | None = None) -> Filling:
+    """What a preview of `piece` fills its facts with: what its next export on this clone
+    would, its next number and the date of `now`, by default this run's (DEC-016 point 5).
+    Where the record of exports cannot be read, as one that conflicts on a merge, there is no
+    next number, and a final piece has no next export (DEC-017 point 3). Each takes the
+    stand-ins, and says why. The record is read first, since one that cannot be read makes
+    the piece final."""
+    try:
+        versions = recorded_versions(piece, recorded(piece))
+    except pl.Refused as exc:
+        said = str(exc).replace(f"{piece.root}/", "")
+        return Filling(piece.stand_ins, f"no next number can be read ({said})")
+    if piece.final:
+        return Filling(piece.stand_ins, NO_NEXT_EXPORT)
+    when = now or datetime.now(timezone.utc)
+    shown = layout.Facts(version_text(next_number(piece, versions)), date_text(when), piece.state)
+    return Filling(shown)
+
+
+def version_text(number: int) -> str:
+    """A version's number as a scene shows it, and an exported file's name writes it."""
+    return f"v{number}"
+
+
+def date_text(when: datetime) -> str:
+    """A version's date as a scene shows it, in every language (DEC-016 point 5)."""
+    return when.strftime("%Y-%m-%d")
 
 
 def next_number(piece: pl.Piece, versions: Sequence[Mapping[str, Any]]) -> int:

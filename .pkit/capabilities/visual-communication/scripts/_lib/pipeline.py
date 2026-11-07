@@ -149,6 +149,12 @@ class Piece:
         return str(self.data.get("state", ""))
 
     @property
+    def stand_ins(self) -> layout.Facts:
+        """What fills the facts of every scene a shared answer rests on, such as the check's:
+        its state, and the stand-in for a version's number and its date (DEC-016 point 5)."""
+        return layout.stand_ins(self.state)
+
+    @property
     def pinned(self) -> bool:
         """Whether its lock is pinned, which is read of a draft alone (DEC-003 point 8)."""
         return self.state == DRAFT and self.data.get("pinned") is True
@@ -450,15 +456,19 @@ class Project:
         return self._size_keys[key]
 
     def scenes(
-        self, languages: Sequence[str] | None = None, keys: Sequence[str] | None = None
+        self,
+        languages: Sequence[str] | None = None,
+        keys: Sequence[str] | None = None,
+        *,
+        facts: layout.Facts,
     ) -> list[tuple[str, SceneResult]]:
         """One scene for each language, or each of `languages`, and each key over the size
         axes the piece names, or each that serves one of the combinations `keys`, in the
         piece's order of languages, then in key order. Each scene's root names its key, and
-        it reads each role at that key (`ProjectEnv.at`). Each takes the piece's language
-        and state, and the stand-in for a version's number and its date (DEC-016 point 5).
+        it reads each role at that key (`ProjectEnv.at`). Each takes its language, and
+        `facts` fills the rest of its export's facts: the caller says what, and none takes
+        one by default (DEC-016 point 5). A shared answer takes the piece's `stand_ins`.
         Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
-        facts = layout.stand_ins(self.piece.state)
         served = None if keys is None else {self.size_key(key) for key in keys}
         sizes = [size for size in self.size_keys if served is None or size in served]
         return [

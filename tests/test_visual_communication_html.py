@@ -1130,7 +1130,7 @@ def test_a_piece_the_engine_computes_is_drawn_with_every_text_it_holds(
 ) -> None:
     importable(monkeypatch, html)
     project = project_of(drawing_project(tmp_path, picture=False))
-    results = project.scenes()
+    results = project.scenes(facts=project.piece.stand_ins)
 
     drawn = list(pl.drawn(project, results, "html"))
 

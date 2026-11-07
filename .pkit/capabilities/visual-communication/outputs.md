@@ -82,6 +82,7 @@ pkit:
         - visual-communication:DEC-015#5
         - visual-communication:DEC-015#6
         - visual-communication:DEC-016#3
+        - visual-communication:DEC-016#5
         - visual-communication:DEC-017#3
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
@@ -96,6 +97,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#options
         - .pkit/capabilities/visual-communication/components.md#parts
         - .pkit/capabilities/visual-communication/components.md#primitives
+        - .pkit/capabilities/visual-communication/components.md#the-facts-of-an-export
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
@@ -194,7 +196,7 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 
 ### Previews
 
-A *preview* is a render for a person to look at, which `pkit visual render` draws. It takes no version number, and is never an export (DEC-006 point 7). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`. The scenes `pkit visual add` draws both ways take the same names ([The clone's local folder](files.md#the-clones-local-folder)).
+A *preview* is a render for a person to look at, which `pkit visual render` draws. It uses up no version number, and is never an export (DEC-006 point 7). Where a component shows a version's number or its date, a preview shows them as this clone's next export would, where it can ([The facts of an export](components.md#the-facts-of-an-export)). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`. The scenes `pkit visual add` draws both ways take the same names ([The clone's local folder](files.md#the-clones-local-folder)).
 
 ### What the SVG renderer loses
 
@@ -592,6 +594,7 @@ The check reads this code as it reads any written code (*Written code* in *What 
 The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw. It draws what the SVG renderer draws, and needs no network.
 
 - **No render, and no export.** It moves no lock and keeps no findings. It takes no number, writes no `exports.yaml` and records no location.
+- **An export's facts** show as in a [preview](#previews). Where an image shows a stand-in, the command says so, and why, after what the report says.
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
 - **It runs no program.** No helper or producer runs. A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss.
 - **What it draws.** By default, every page in the piece's source language, in the first key in [key order](files.md#keys-of-combinations). That is the combination of defaults wherever the piece names it. `--page`, `--language` and `--key` pick others. `--every-language` and `--every-key` take them all.
