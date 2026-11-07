@@ -131,7 +131,8 @@ def _look(root: Path, args: argparse.Namespace) -> int:
     )
     folder = viewing.folder_of(args.piece, wanted.renderer)
     pl.writable(root, root / folder / viewing.REPORT)
-    viewed = viewing.view(project, viewing.scenes(project, wanted.languages), wanted)
+    results = viewing.scenes(project, wanted.languages, wanted.keys)
+    viewed = viewing.view(project, results, wanted)
     written = viewing.write(root, folder, viewed)
     if viewed.stopped:
         _print_stop(written, viewed.report)

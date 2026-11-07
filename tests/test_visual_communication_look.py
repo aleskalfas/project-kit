@@ -31,10 +31,14 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
     OUTPUT,
+    PHONE,
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    on_devices,
     parts_project,
+    two_steps,
+    write_content,
     write_picture,
 )
 from tests.test_visual_communication_starter import PIECES, STARTER, TEST_NOTATION, UNRELEASED
@@ -607,6 +611,32 @@ def test_what_the_piece_does_not_have_is_refused_with_nothing_written(
     assert shown.returncode == 1
     assert said in shown.stderr
     assert written(root) == before
+
+
+def test_a_piece_on_a_size_axis_has_an_image_for_each_key_drawn_from_its_size_s_scene(
+    tmp_path: Path,
+) -> None:
+    dark = "colour-scheme.dark"
+    keys = ["default", dark, PHONE, f"{dark}+{PHONE}"]
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    shown = run_look(root, PIECE, "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    images = report_of(root)["images"]
+    assert [image["key"] for image in images] == keys
+    shapes = {
+        image["key"]: image["pixels"]["width"] / image["pixels"]["height"] for image in images
+    }
+    assert shapes["default"] == shapes[dark] > shapes[PHONE] == shapes[f"{dark}+{PHONE}"]
+
+    def frames(key: str) -> list[Any]:
+        data = (folder_of(root) / f"flow.en.{key}.frames.json").read_text(encoding="utf-8")
+        return json.loads(data)["elements"]
+
+    assert frames(PHONE) == frames(f"{dark}+{PHONE}") != frames("default")
+    assert run_look(root, PIECE, "--key", PHONE).returncode == 0
+    assert [image["key"] for image in report_of(root)["images"]] == [PHONE]
 
 
 def test_the_default_key_is_the_combination_of_defaults_wherever_the_piece_names_it(
@@ -1374,6 +1404,28 @@ def test_the_browser_reads_the_page_file_as_the_renderer_wrote_it(
         assert call["folder"] == root / viewing.LOCAL
 
 
+def test_a_piece_on_a_size_axis_is_read_through_a_browser_at_each_key_from_its_size_s_scene(
+    tmp_path: Path, browser: Browser
+) -> None:
+    dark = "colour-scheme.dark"
+    keys = ["default", dark, PHONE, f"{dark}+{PHONE}"]
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    assert [call["name"] for call in browser.calls] == [f"{PIECE}.en.{key}.html" for key in keys]
+    widths = {key: call["pages"][0].width for key, call in zip(keys, browser.calls, strict=True)}
+    assert widths["default"] == widths[dark] > widths[PHONE] == widths[f"{dark}+{PHONE}"]
+    for key, call in zip(keys, browser.calls, strict=True):
+        assert call["bytes"] == page_file_of(root, PIECE, "en", key)
+    assert [image["key"] for image in html_report(root)["images"]] == keys
+    assert run_look(root, PIECE, "--renderer", "html", "--key", PHONE).returncode == 0
+    assert browser.calls[-1]["pages"][0].width == widths[PHONE]
+    assert [image["key"] for image in html_report(root)["images"]] == [PHONE]
+
+
 def test_the_pages_handed_to_the_browser_are_the_scenes_with_each_texts_spans(
     tmp_path: Path, browser: Browser
 ) -> None:
@@ -1840,6 +1892,15 @@ def test_it_reads_through_the_html_renderer_by_default_a_piece_that_declares_it(
     monkeypatch.setattr(pages.viewing, "renderer_of", lambda piece: "html")
     shown = run_pages(root, "--json", "tag")
     assert json.loads(shown.stdout)["renderer"] == "html"
+
+
+def test_it_lists_each_key_of_a_piece_on_a_size_axis(tmp_path: Path) -> None:
+    root = on_devices(tmp_path, languages=["en", "cs"])
+    write_content(root, "cs", body=two_steps("Naplánovat."))
+    listed = json.loads(run_pages(root, "--json", PIECE).stdout)
+    assert listed["keys"] == ["default", PHONE]
+    assert listed["drawn-by-default"] == {"language": "en", "key": "default"}
+    assert listed["pages"] == {"en": ["figure"], "cs": ["figure"]}
 
 
 def test_it_only_reads(tmp_path: Path) -> None:

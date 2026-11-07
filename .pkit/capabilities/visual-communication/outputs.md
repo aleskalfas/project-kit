@@ -14,6 +14,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
+        - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing_tool.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing_browser.py
@@ -86,6 +87,7 @@ pkit:
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-019#2
         - visual-communication:DEC-020#1
         - visual-communication:DEC-020#2
         - visual-communication:DEC-020#3
@@ -277,7 +279,7 @@ An *export* is a set of files a piece is handed out as. Each export run is one *
 A published piece keeps a *current copy*, an unnumbered copy of each file of an export. A page links to it, since a link cannot follow a number (DEC-006 point 7).
 
 - **Where:** `current-copy/`, in the piece's folder, committed with the piece, unless the piece names a place.
-- **When.** Each export of a published piece writes it, in the same change as the numbered files. A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
+- **When.** Each export of a published piece writes it, in the same change as the numbered files. So does the export run of `pkit visual upgrade`, under the same rules ([The lock](files.md#the-lock)). A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
 - **Replaced whole.** A run replaces the folder whole, so a file the new version does not write goes. The folder holds nothing else (DEC-017 point 7).
 - **A file's name** is its version's with the number left out: `flow.v3.en.colour-scheme.dark.svg` gives `flow.en.colour-scheme.dark.svg`.
 - **A file's bytes** are its version's, so the two keep one hash, the SHA-256 of the whole file.
@@ -287,7 +289,7 @@ A published piece keeps a *current copy*, an unnumbered copy of each file of an 
 
 ### The record of exports
 
-`exports.yaml` lies in the piece's folder. `pkit visual export` rewrites it, and nobody edits it. It holds one entry for each version, the oldest first. Here it is with its fingerprint left out:
+`exports.yaml` lies in the piece's folder. `pkit visual export` and `pkit visual upgrade` rewrite it, and nobody edits it. It holds one entry for each version, the oldest first. Here it is with its fingerprint left out:
 
 ```yaml
 pkit_schema: visual-communication:exports
@@ -360,8 +362,7 @@ Each of these is found before the first write, so a refused run records no locat
 
 **A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
 
-- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock. The other is writing back that lock, which is no move of it.
-- **One runs today.** `pkit visual upgrade` is still to come ([project-kit#2572](https://github.com/aleskalfas/project-kit/issues/2572)). Until it comes, only writing back that lock gets past the gate, which fails closed.
+- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock ([The lock](files.md#the-lock)). The other is writing back that lock, which is no move of it.
 - **It reads the record, not the files,** so removing the copy changes nothing.
 - **No copy of its own.** Where the record holds no current copy of the piece's own, the export runs.
 - **A fingerprint it cannot read** refuses, and names the record.

@@ -123,11 +123,14 @@ def opened(root: Path, name: str) -> pl.Project:
         raise pl.Refused(f"the brand of `{name}` cannot be read: {said}") from exc
 
 
-def scenes(project: pl.Project, languages: Sequence[str]) -> list[tuple[str, SceneResult]]:
-    """The scenes of `languages`, computed under the lock. Raises Refused where a font
+def scenes(
+    project: pl.Project, languages: Sequence[str], keys: Sequence[str] | None = None
+) -> list[tuple[str, SceneResult]]:
+    """The scenes of `languages`, computed under the lock: one for each key over the size
+    axes, or each that serves one of the combinations `keys`. Raises Refused where a font
     cannot measure the text."""
     try:
-        return project.scenes(languages)
+        return project.scenes(languages, keys)
     except MissingFont as exc:
         raise pl.Refused(f"`{project.piece.name}` cannot be drawn: {exc}") from exc
 
@@ -274,7 +277,10 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     the browser's profile (DEC-020 point 5). Raises Refused for a page the scene does not
     hold, or that cannot be drawn."""
     shown = {
-        language: (scene := result.scene.to_dict(), _numbers(scene, wanted.pages))
+        (language, result.scene.size_key): (
+            scene := result.scene.to_dict(),
+            _numbers(scene, wanted.pages),
+        )
         for language, result in results
     }
     local = project.root / LOCAL
@@ -284,15 +290,16 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     made = _Made(project, SVG)
     with tempfile.TemporaryDirectory(prefix="faces-", dir=local) as faces:
         for language, key, drawn in pl.drawn(project, results, SVG, wanted.keys):
-            scene, numbers = shown[language]
+            scene, numbers = shown[language, project.size_key(key)]
             for number in numbers:
                 made.add(scene, language, key, number, drawn, Path(faces))
             made.lost(scene, language, key, numbers, drawn.losses)
     return made.viewed()
 
 
-#: Each language's scene, and the numbers of the pages a run draws of it.
-_Shown = Mapping[str, tuple[Mapping[str, Any], list[int]]]
+#: Each scene, by its language and its key over the size axes, and the numbers of the pages
+#: a run draws of it.
+_Shown = Mapping[tuple[str, str], tuple[Mapping[str, Any], list[int]]]
 
 
 @dataclass(frozen=True)
@@ -318,7 +325,7 @@ def _through_a_browser(
     made = _Made(project, HTML)
     planned = []
     for language, key, drawn in pl.drawn(project, results, HTML, wanted.keys):
-        scene, numbers = shown[language]
+        scene, numbers = shown[language, project.size_key(key)]
         every = pages_of(scene)
         scale = device_scale([every[number - 1] for number in numbers])
         for number in numbers:

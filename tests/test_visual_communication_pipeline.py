@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 from collections.abc import Mapping
 from pathlib import Path
@@ -402,13 +403,10 @@ def test_a_lock_that_cannot_be_spliced_as_text_is_refused() -> None:
         pl.lock_text(text, {"foundations": "1.0.0"})
 
 
-def test_writing_the_lock_it_holds_writes_nothing(tmp_path: Path) -> None:
+def test_the_lock_it_holds_gives_no_new_bytes(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
-    path = root / PIECE_FOLDER / "piece.yaml"
-    before = path.stat().st_mtime_ns
-    assert pl.write_lock(piece_of(root), LOCK) is False
-    assert path.stat().st_mtime_ns == before
-    assert pl.write_lock(piece_of(root), {**LOCK, "tests": "1.0.0"}) is False
+    assert pl.locked(piece_of(root), LOCK) is None
+    assert pl.locked(piece_of(root), {**LOCK, "tests": "1.0.0"}) is None
 
 
 # --- the Env ------------------------------------------------------------------------------------
@@ -474,6 +472,158 @@ def test_a_lock_naming_a_version_not_held_is_refused(tmp_path: Path) -> None:
     root = drawing_project(tmp_path, lock={**LOCK, "test-brand": "2.0.0"})
     with pytest.raises(pl.Refused, match=r"names test-brand@2\.0\.0, which the project does not"):
         project_of(root)
+
+
+# --- a piece on a size axis (DEC-004 points 2 and 3, DEC-005 point 6) ---------------------------
+
+#: The size axis the size tests add to the foundations they hold. No shipped brand declares
+#: one, so each test adds it to its own copy.
+DEVICE = "device: {kind: size, modes: [desktop, phone], default: desktop}"
+
+#: The key of the phone, the mode of `device` that is not its default.
+PHONE = "device.phone"
+
+#: What the test brand gives a phone, unless a test says otherwise: a figure half as wide,
+#: and half the space inside a card.
+NARROW: dict[str, Any] = {
+    "size": {"$type": "dimension", "figure": {"$value": {"value": 480, "unit": "px"}}},
+    "space": {"$type": "dimension", "2": {"$value": {"value": 4, "unit": "px"}}},
+}
+
+#: A step's head that fits a desktop's card on one line, and wraps in a phone's.
+WRAPS = "Plan the work, then check it with the whole team."
+
+#: A word wider than a phone's card, which a desktop's card holds.
+PHONE_WIDE = "Supercalifragilisticexpialidocious"
+
+#: A word wider than a card on either device.
+EVERY_WIDE = PHONE_WIDE * 3
+
+
+def add_device(root: Path, phone: Mapping[str, Any] = NARROW) -> None:
+    """The size axis `device` on the foundations the project holds, which the test brand
+    varies: its mode `phone` gives the tokens of `phone`, from a token file of its own."""
+    roles = root / "visual/libraries/foundations/1.0.0/roles.yaml"
+    text = roles.read_text(encoding="utf-8")
+    roles.write_text(text.replace("axes:\n", f"axes:\n  {DEVICE}\n", 1), encoding="utf-8")
+    brand = root / "visual/libraries/test-brand/1.0.0"
+    write(brand / "tokens" / "phone.tokens.json", json.dumps(phone, indent=2))
+    resolver = brand / "test-brand.resolver.json"
+    data = json.loads(resolver.read_text(encoding="utf-8"))
+    phone_file = [{"$ref": "tokens/phone.tokens.json"}]
+    data["modifiers"]["device"] = {
+        "contexts": {"desktop": [], "phone": phone_file},
+        "default": "desktop",
+    }
+    data["resolutionOrder"].append({"$ref": "#/modifiers/device"})
+    resolver.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def on_devices(tmp_path: Path, head: str = "Plan the work.", **fields: Any) -> Path:
+    """The drawing project without its picture, drawn on both devices unless `fields` name
+    its modes, the axis `device` added."""
+    fields.setdefault("modes", {"device": ["desktop", "phone"]})
+    root = drawing_project(tmp_path, picture=False, head=head, **fields)
+    add_device(root)
+    return root
+
+
+def two_steps(head: str) -> dict[str, Any]:
+    """The body of the drawing project without its picture, its first step's head `head`."""
+    return {"use": "tests/steps", "steps": content(head)["body"]["steps"][:2]}
+
+
+def test_a_piece_on_a_size_axis_has_a_scene_for_each_language_and_size_key(
+    tmp_path: Path,
+) -> None:
+    root = on_devices(tmp_path, languages=["en", "cs"])
+    write_content(root, "cs", body=two_steps("Naplánovat."))
+    project = project_of(root)
+    assert project.keys == project.size_keys == ["default", PHONE]
+    scenes = project.scenes()
+    assert [(language, made.scene.to_dict()["size-key"]) for language, made in scenes] == [
+        ("en", "default"),
+        ("en", PHONE),
+        ("cs", "default"),
+        ("cs", PHONE),
+    ]
+    assert all(made.findings == [] for _, made in scenes)
+    asked = project.scenes(["cs"], [PHONE])
+    assert [(language, made.scene.size_key) for language, made in asked] == [("cs", PHONE)]
+
+
+def test_each_scene_reads_the_roles_at_its_key_and_a_text_takes_the_height_it_needs(
+    tmp_path: Path,
+) -> None:
+    root = on_devices(tmp_path, head=WRAPS)
+    [(_, desktop), (_, phone)] = project_of(root).scenes()
+
+    def found(trace: str) -> tuple[Any, Any]:
+        """The element at `trace` in the desktop's scene, then in the phone's."""
+        both = desktop.scene.find(trace), phone.scene.find(trace)
+        assert None not in both
+        return both
+
+    top, head = found("figure"), found("figure/body/steps[plan]/head")
+    assert [each.properties["width"] for each in top] == [960.0, 480.0]
+    assert top[0].sources["width"] == top[1].sources["width"] == "role:size.figure"
+    assert [each.properties["x"] for each in head] == [8.0, 4.0]
+    assert head[0].sources["x"] == "role:space.2"
+    assert head[0].properties["width"] > head[1].properties["width"]
+    [one], lines = head[0].properties["lines"], head[1].properties["lines"]
+    assert len(lines) > 1
+    texts = [each.properties for each in head]
+    assert [text["measured-height"] for text in texts] == [
+        text["line-height"] * len(text["lines"]) for text in texts
+    ]
+    assert head[1].properties["height"] == texts[1]["measured-height"]
+    card = found("figure/body/steps[plan]")
+    assert card[1].properties["height"] > card[0].properties["height"]
+    assert one["text"] == WRAPS
+
+
+def test_a_piece_on_a_size_and_a_value_axis_draws_four_combinations_from_two_scenes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    project = project_of(root)
+    dark = "colour-scheme.dark"
+    assert project.keys == ["default", dark, PHONE, f"{dark}+{PHONE}"]
+    results = project.scenes()
+    assert [made.scene.size_key for _, made in results] == ["default", PHONE]
+    drawn = {key: made.pages[0].svg for _, key, made in pl.drawn(project, results, "svg")}
+    assert list(drawn) == project.keys
+    widths = {key: re.findall(r'<svg [^>]*width="([0-9.]+)"', text) for key, text in drawn.items()}
+    assert widths == {"default": ["960"], dark: ["960"], PHONE: ["480"], f"{dark}+{PHONE}": ["480"]}
+    document = project.values()
+    for key, text in drawn.items():
+        assert f'data-key="{key}"' in text
+        assert hex_of(pl.colours_at(document, key)["background"]) in text
+    assert hex_of(pl.colours_at(document, dark)["background"]) != hex_of(
+        pl.colours_at(document, "default")["background"]
+    )
+
+
+def test_a_piece_on_no_size_axis_is_computed_and_drawn_as_it_was(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A brand's size axis that the piece names no mode of changes no byte of its scenes or
+    its previews."""
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path)
+    write_picture(root, framing)
+
+    def computed() -> tuple[list[str], dict[str, str]]:
+        scenes = [json.dumps(made.scene.to_dict()) for _, made in project_of(root).scenes()]
+        return scenes, previews_of(root)
+
+    before = computed()
+    add_device(root)
+    assert project_of(root).size_keys == ["default"]
+    assert computed() == before
 
 
 # --- a notation's concepts ----------------------------------------------------------------------

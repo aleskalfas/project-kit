@@ -41,7 +41,8 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8).
 
 **Scene findings** (`scene_findings`): what computing a piece's scenes finds, in every
-language: the engine's own (overflow, a component that gets less than it asks for, two
+language and at every key over the size axes, a finding that differs by key naming the key
+it holds at: the engine's own (overflow, a component that gets less than it asks for, two
 owners of a value, a loop, a missing exposed part or point, a page inside a page, a
 concept the piece's notations do not hold), a produced picture that is missing, contrast
 as drawn, a colour role the brand lacks, each loss of the renderers that draw the piece
@@ -2273,7 +2274,12 @@ def scene_findings(
 ) -> list[Finding]:
     """What computing a piece's scenes found, each finding once, in a fixed order; files
     relative to the piece's folder, or to a library version's folder where the finding
-    lies in one (the findings record keeps them so)."""
+    lies in one (the findings record keeps them so).
+
+    Each scene is computed at one key over the size axes, and contrast is measured on it in
+    each combination it serves. A finding the scenes of every key find alike is reported
+    once, as it reads. Any other is reported for each key whose scenes find it, its message
+    opening with that key, so a finding takes no field for its size."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2281,12 +2287,16 @@ def scene_findings(
         for path, token in document["tokens"].items()
         if token["type"] == "color"
     }
-    found: list[Finding] = []
+    by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
+        size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
+    }
     for language, result in results:
+        size = result.scene.size_key
+        served = [key for key in project.keys if project.size_key(key) == size]
         content = pl.content_file(language)
-        found.extend(_placed(finding, content, project) for finding in result.findings)
+        found = [_placed(finding, content, project) for finding in result.findings]
         scene = result.scene.to_dict()
-        found.extend(drawn_contrast(scene, colours, project.keys))
+        found.extend(drawn_contrast(scene, colours, served))
         found.extend(_unknown_colours(scene, colours))
         for renderer in renderers(piece):
             declared = seam.declaration(renderer, seam.RENDERER)
@@ -2294,11 +2304,16 @@ def scene_findings(
                 if not accepted(loss, piece.accepted_losses):
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
-    unique = {}
-    for finding in found:
-        unique.setdefault(
-            (finding.code, finding.file, finding.where, finding.message, finding.library), finding
-        )
+        for finding in found:
+            by_size[size].setdefault(_mark(finding), finding)
+    unique: dict[tuple[str, str, str, str, str], Finding] = {}
+    for size, found_at in by_size.items():
+        for mark, finding in found_at.items():
+            if all(mark in other for other in by_size.values()):
+                unique.setdefault(mark, finding)
+            else:
+                sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
+                unique.setdefault(_mark(sized), sized)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
 
 

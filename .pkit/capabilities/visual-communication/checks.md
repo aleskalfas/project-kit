@@ -45,6 +45,7 @@ pkit:
         - visual-communication:DEC-003#6
         - visual-communication:DEC-003#9
         - visual-communication:DEC-004
+        - visual-communication:DEC-005#6
         - visual-communication:DEC-005#7
         - visual-communication:DEC-005#9
         - visual-communication:DEC-005#13
@@ -84,6 +85,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
         - .pkit/capabilities/visual-communication/components.md#errors
         - .pkit/capabilities/visual-communication/components.md#fields
+        - .pkit/capabilities/visual-communication/components.md#how-the-engine-computes-a-scene
         - .pkit/capabilities/visual-communication/components.md#layouts
         - .pkit/capabilities/visual-communication/components.md#lists
         - .pkit/capabilities/visual-communication/components.md#placing-a-component-use-and-slot
@@ -337,12 +339,18 @@ The check reads each notation a piece names, once for each notation version and 
 
 ### Scenes
 
-Computing a piece's scenes, one for each language, finds these (DEC-005 point 14). `pkit visual render` keeps them in the findings record, and the check reads them from it or computes them ([the findings record](#the-findings-record)). Each points at the file a person edits to mend it:
+Computing a piece's scenes, one for each language and each key over the size axes ([how the engine computes a scene](components.md#how-the-engine-computes-a-scene)), finds these (DEC-005 point 14). `pkit visual render` keeps them in the findings record, and the check reads them from it or computes them ([the findings record](#the-findings-record)). Each points at the file a person edits to mend it:
 
 - **A finding in a component** points at that component's file: a library's in the locked version, `<version>/components/<component>.yaml`, and the piece's own at `<piece>/components/<component>.yaml`.
 - **A finding in what a component's part gave** the component it places, or left out, points at the file of the component whose part it is.
 - **A finding in what the content gave** points at the content file, `<piece>/content.<language>.yaml`, a value a part passed on from the content included.
 - **A finding only the lock shows** points at the lock, `<piece>/piece.yaml#lock`, and names no version ([What each run judges](#what-each-run-judges)). One is a part that reads a library's role with no value, where neither the brand nor a base below it names the library.
+
+**A finding at some sizes.** A finding that the scenes of every key over the size axes find alike is reported once, as it reads. Any other is reported for each key whose scenes find it, and its message opens with that key. Its label and its location stay as they are. For example, on a size axis `device`, whose mode `phone` narrows the page:
+
+- **A text that overflows on a phone alone** is one finding, whose message opens with `` `device.phone`: ``.
+- **A word wider than its text on every device** is a finding for each key, since the message names the text's width at that key.
+- **`contrast-drawn`** is measured in each combination on the scene of its key. Its message names the combination, so it never reads alike at two keys.
 
 Each fails, unless its row says otherwise.
 
@@ -456,7 +464,7 @@ The check reads no other file of an export. It checks the binding of a piece's `
 
 ## The findings record
 
-`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. Commit it, so the check reads it on a fresh clone.
+`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. `pkit visual upgrade` writes it too, under the lock it moves ([the lock](files.md#the-lock)). Commit it, so the check reads it on a fresh clone.
 
 It holds the scene findings, the losses among them. The findings on files, libraries, locks, brands, notations, content, produced pictures and written code are not in it: the check works them out at every run. Its fields:
 

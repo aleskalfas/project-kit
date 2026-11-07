@@ -20,11 +20,14 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/pages.py
         - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
+        - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/looks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/rendering.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -43,6 +46,7 @@ pkit:
         - visual-communication:DEC-015#4
         - visual-communication:DEC-015#5
         - visual-communication:DEC-015#7
+        - visual-communication:DEC-019#1
         - visual-communication:DEC-019#5
         - visual-communication:DEC-019#7
         - visual-communication:DEC-020#5
@@ -178,7 +182,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce`, `export` and `mark-final` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)). Through a browser it holds the page files and the browser's profile there in the same way ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce`, `export`, `mark-final` and `upgrade` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)). Through a browser it holds the page files and the browser's profile there in the same way ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
 
 ### `pkit visual status`
 
@@ -322,6 +326,24 @@ Draws each of a piece's pages under two locks, and prints each page that differs
 - **Goes on** past a drawing it cannot make, such as where a library version left the project. It says why, and draws the other side.
 - **Refuses** a piece with no lock yet, a draft with no version named, and a final piece with one. It refuses a version a move cannot take, and a base that resolves to nothing.
 - **Exits** 0 when it drew a side or said why not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
+
+### `pkit visual upgrade <piece>`
+
+Proposes a move of a published piece's lock, as a diff in the working tree ([The lock](files.md#the-lock)).
+
+- **Takes** a published piece, and reads the lock its `piece.yaml` holds, whoever wrote it. It refuses any other piece, and names what moves that lock.
+- **Moves the lock** to the newest released versions that fit, within the lock's majors. It prints each newer version it did not take, with why.
+- **`<library>@<version>` names versions instead,** in the form `pkit visual add` takes, and may repeat. The run then moves what you name, and only what that needs.
+- **Looks ahead** as [`pkit visual before-after --ahead`](#pkit-visual-before-after-piece) does, and prints each page that differs. The drawing lies in [the clone's local folder](files.md#the-clones-local-folder).
+- **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.
+- **Commits nothing,** and makes no branch. Land the diff as you land any change, or discard it.
+- **Says so and writes nothing** where nothing moves.
+- **Stops** on an edit since the copy and on a stale picture, and prints the line that goes on. `--edited <input>` names an input that changed, and `--use-stale <output>` a picture to use as it is. Each may repeat.
+- **Says** where no file of the copy stood, so the change shows only an after, and names each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
+- **Names** each finding that fails under the moved lock, and stops on none of them.
+- **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.
+- **Refuses** what the search refuses, a fingerprint it cannot read, and whatever refuses an export but a lock that differs ([What refuses an export](outputs.md#what-refuses-an-export)).
+- **Exits** 0 when it proposed the move, found nothing to move, or ended a dry run; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
 
 ### `pkit visual write-code <name>`
 
