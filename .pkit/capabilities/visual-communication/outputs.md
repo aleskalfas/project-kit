@@ -16,6 +16,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing_tool.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/viewing_browser.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
@@ -89,6 +90,10 @@ pkit:
         - visual-communication:DEC-020#2
         - visual-communication:DEC-020#3
         - visual-communication:DEC-020#4
+        - visual-communication:DEC-020#5
+        - visual-communication:DEC-020#6
+        - visual-communication:DEC-020#7
+        - visual-communication:DEC-020#8
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -102,6 +107,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#shapes
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#the-browser
 ---
 
 # What is made from a piece
@@ -231,7 +237,7 @@ While it draws, the renderer reports three losses of its own:
 
 ## The HTML renderer
 
-The `html` renderer draws a scene as one *page file*: one language's pages, at one key, in one web document. Writing it takes no browser. No format or command reaches this renderer yet, so a piece cannot ask for its file ([Exports](#exports)).
+The `html` renderer draws a scene as one *page file*: one language's pages, at one key, in one web document. Writing it takes no browser. No format reaches this renderer yet, so a piece cannot ask for its file as an export ([Exports](#exports)). The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
 
 - **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
@@ -588,45 +594,88 @@ The check reads this code as it reads any written code (*Written code* in *What 
 
 ## The viewing step
 
-The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw. It draws what the SVG renderer draws, and needs no network.
+The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw.
 
 - **No render, and no export.** It moves no lock and keeps no findings. It takes no number, writes no `exports.yaml` and records no location.
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
-- **It runs no program.** No helper or producer runs. A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss.
+- **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss.
+- **Which renderer.** It reads a piece that declares `html` through [the HTML renderer](#the-html-renderer), and any other piece through [the SVG renderer](#the-svg-renderer). `--renderer svg` or `--renderer html` names one.
 - **What it draws.** By default, every page in the piece's source language, in the first key in [key order](files.md#keys-of-combinations). That is the combination of defaults wherever the piece names it. `--page`, `--language` and `--key` pick others. `--every-language` and `--every-key` take them all.
 - **The size.** An image takes 1568 pixels on its long edge, or more where the page's smallest text would land under 10 pixels.
 - **The ground.** Where a page draws no ground of its own, its image lies on white, which the piece never set. Judge a text over nothing knowing this.
-- **The fonts.** It draws from the fonts the page embeds, never one on the machine.
-- **No promise about pixels.** An image may change with the tool, its version or the machine. It shows this tool's drawing, not a browser's (DEC-015 point 6).
+- **No promise about pixels.** An image may change with the tool, its version or the machine (DEC-015 point 6).
+
+### The SVG renderer's pages
+
+resvg draws them, with no network. It draws from the fonts the page embeds, never one on the machine. An image shows resvg's drawing, not a browser's.
+
+### The HTML renderer's pages
+
+A browser draws them. No other format needs one, and the capability installs none.
+
+- **Which browser.** A browser of the Chromium family: the first found where Chrome and Chromium install themselves, or the one the project names ([The browser](files.md#the-browser)).
+- **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, so a page's image may be larger than its own text needs.
+- **What an image shows.** One browser's drawing, which stands for no other browser. The report names that browser and its version.
+- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window and printing. Open the page file in your own browsers to see those.
+- **The fonts.** The browser reads the faces the file embeds. A span it draws in a font of the machine is reported.
+- **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops.
+- **Its profile** lies in a throwaway folder of the clone's local folder, which the run removes, even one that stops. The browser may write files of its own elsewhere, such as a crash report.
+- **A sandbox** may stop the browser. Draw these pages in a session outside it.
+
+### When the browser stops
+
+A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8).
+
+- **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
+- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
+- **How to go on.** The command exits 3, and names the SVG renderer as a way to go on. Those images show the layout, never the page file.
 
 ### What a run writes
 
-A run writes in `.pkit/capabilities/visual-communication/project/local/look/<piece>/`, local to the clone ([The clone's local folder](files.md#the-clones-local-folder)). It replaces what an earlier run left there, so the folder never mixes two runs.
+A run writes in its renderer's folder, local to the clone ([The clone's local folder](files.md#the-clones-local-folder)). Both lie in `.pkit/capabilities/visual-communication/project/local/look/`.
+
+- **`<piece>/`** holds the SVG renderer's pages.
+- **`<piece>.html/`** holds the HTML renderer's. No piece's name holds a `.`, so no piece takes this name.
+
+A run replaces what an earlier run left in its own folder, so a folder never mixes two runs. It leaves the other renderer's folder where it lies.
 
 | File | What it holds |
 |---|---|
 | `<piece>.<language>.<key>.png` | one page drawn. A piece of more than one page adds the page's number, from 1, to this name and the next: `<piece>.<language>.<key>.<n>.png` |
 | `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids) |
+| `<piece>.<language>.<key>.html` | through the HTML renderer, the page file the images were drawn from, with every page of that language and key. Open it in your own browser. It is no export, and is never committed |
 | `report.json` | [What the report says](#what-the-report-says) |
 
 ### What the report says
 
-`report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the tool and its version, and four lists. Each entry but an image's names the language, key and page it lies on.
+`report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
 - **`images`:** each image, with its frames' file and its pixels. `on-white` is true where the page draws no ground of its own.
-- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here.
+- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`.
 - **`losses`:** each [loss](#the-loss-report) the renderer reports. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
-- **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. The tool may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks.
+- **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. resvg may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks. Through the HTML renderer, an entry is a span with `why`:
+  - `no face`: the file holds no face of its family at its weight, with that family and weight;
+  - `font of the machine`: the browser drew it, even in part, in a font of the machine, with each such font.
+
+Through the HTML renderer the report holds these too:
+
+- **`tool`:** the browser's name, its version and its program. `stands-for` says that each image stands for that browser alone.
+- **`page-files`:** each page file, with its language and key.
+- **`words`:** each text whose spans differ between the scene and the page file, in their words, order or number, with each side's spans. The page file lost part of that text.
+- **`refused`:** each request the page made, which the browser refused. A page file asks for nothing, so each request is a fault of the file.
+- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then whether a sandbox stopped it, and how to go on.
 
 ### What refuses a run
 
-A refused run leaves `look/<piece>/` as it was. The fonts it held in a temporary folder of the local folder are gone, and that folder itself may remain. Any fault that stops a piece being drawn refuses a run, such as:
+A refused run leaves its renderer's folder as it was. The fonts it held in a temporary folder of the local folder are gone, and that folder itself may remain. Any fault that stops a piece being drawn refuses a run, through either renderer, before the browser is asked. Among them:
 
 - a piece with no lock, naming the render that writes one, or, for a final piece, the lock to write back ([The lock](files.md#the-lock));
 - a lock that does not hold, naming why;
 - a page, a language or a key the piece does not have, naming those it has;
+- a renderer other than `svg` and `html`;
 - a brand that cannot be read;
 - a font with no file, or a character no font holds;
-- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced.
+- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;
+- through the HTML renderer, a `browser` in the configuration that names no path ([The browser](files.md#the-browser)).
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.

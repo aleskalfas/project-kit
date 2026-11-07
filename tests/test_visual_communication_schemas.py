@@ -327,6 +327,16 @@ def test_the_configuration_refuses_a_location_the_rules_refuse(location: str) ->
     assert refused({**instance("config"), "location": location}, "config") != []
 
 
+@pytest.mark.parametrize("browser", ["/opt/chromium/chrome", "~/browsers/chrome", "tools/chrome"])
+def test_the_configuration_takes_the_path_of_a_browser(browser: str) -> None:
+    assert refused({**instance("config"), "browser": browser}, "config") == []
+
+
+@pytest.mark.parametrize("browser", ["", 3, None, ["chrome"]])
+def test_the_configuration_refuses_a_browser_that_names_no_path(browser: object) -> None:
+    assert refused({**instance("config"), "browser": browser}, "config") != []
+
+
 @pytest.mark.parametrize(
     "value", ["no", "No", "YES", "y", "off", "true", "null", "Null", "NULL", "1a", "a.b", ""]
 )
