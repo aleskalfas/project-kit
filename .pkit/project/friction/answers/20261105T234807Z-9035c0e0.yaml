@@ -1,0 +1,37 @@
+answers:
+  - artefact: .pkit/capabilities/demo-recording/README.md
+    read:
+      - 20261105T205735Z-53dde51c.yaml
+      - moved-04bca1569ad8.yaml
+    revalidated:
+      at: 2026-11-05T23:48:07Z
+      outcome: unchanged
+      unchanged-because: The README describes the shape of a bundle, names the record-config schema as the shape of record.yaml, and says nothing of how the script reads a value. Its one rule on quoted values is about a storyboard's front matter, read by storyboard_frontmatter, which this change leaves alone. A value that now reads without its comment or its quotes is what that schema's string fields already mean, so the README stays true.
+  - artefact: tech-docs/analysis/demo-recording/glossary.md#TERM-after-record-hook
+    read:
+      - 20261105T205735Z-53dde51c.yaml
+      - moved-1a7ee76052dc.yaml
+    revalidated:
+      at: 2026-11-05T23:48:10Z
+      outcome: unchanged
+      unchanged-because: The term says a hook is listed under hooks.after_record and runs only once a recording's video is saved. The change alters how yaml_get_scalar and yaml_get_window_bounds read cwd, recordings_dir, the fonts and the bounds, and leaves yaml_get_hook_scripts and do_stop as they were, so the term still holds.
+  - artefact: tech-docs/analysis/demo-recording/glossary.md#TERM-demo-bundle
+    read:
+      - 20261105T205735Z-53dde51c.yaml
+      - moved-36c510f41736.yaml
+    revalidated:
+      at: 2026-11-05T23:48:14Z
+      outcome: unchanged
+      unchanged-because: "The term names what a bundle holds: record.yaml, its storyboards, a hooks folder and the recordings folder its first recording creates. The change alters how a value of record.yaml is read, so a trailing comment on recordings_dir no longer names a different folder. What a bundle holds is the same, and the term asks no edit."
+  - artefact: tech-docs/analysis/demo-recording/use-case-model/use-cases/010-record-demos/UC-035-record-demo.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T205735Z-53dde51c.yaml
+    revalidated:
+      at: 2026-11-05T23:48:17Z
+      outcome: unchanged
+      unchanged-because: "Step 6 says the system reads the working directory and the bounds of two windows from the configuration, and step 7 opens the windows at those bounds in that directory. With a trailing comment on those lines the script used to read something else, and it now reads what the file says. Variant 6a still holds: a cwd with only a comment reads as lacking, and stops with the quoted message. So the use case needs no edit."

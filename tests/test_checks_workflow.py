@@ -14,17 +14,17 @@ the run full, and answers `full`; on any other event this tree's decider only sa
 why the run is full. Its shell runs here for real, against a stub `uv`. Only a
 pull request runs the short form, by the workflow's own gate.
 
-The parts (#2308, ADR-078):
+The parts (#2308, #2715, ADR-078):
 
 - **the deciding job** decides, pins the base and names the form, and nothing else.
   It alone may read runs and pull requests, and of the steps that run the project's
   code only its deciding step holds the token. The base it pins, and the form it
   names, run here for real on each event;
-- **the remainder's job** runs `--rest` or `--short` by the form, and the changeset
-  guard on a pull request; **the slices** run only in the full form. Each part
-  reads the pinned base and the pull request's head, times itself, names its
-  failures and says that it passed, last (`scripts/ci_parts.py run`, run here
-  against a stub aggregator);
+- **the quick checks' job** runs `--quick` in both forms, and the changeset guard on
+  a pull request; **the remainder's job** runs `--rest` or `--short` by the form;
+  **the slices** run only in the full form. Each part reads the pinned base and the
+  pull request's head, times itself, names its failures and says that it passed,
+  last (`scripts/ci_parts.py run`, run here against a stub aggregator);
 - **`checks`** runs last, whatever became of the parts, and its two steps hold the
   two forms under the names the decider reads (`scripts/short_check.py`). Its
   verdict (`scripts/ci_parts.py verdict`) runs here for each outcome of each part,
@@ -32,7 +32,7 @@ The parts (#2308, ADR-078):
 - **only a new head cancels**, and a run on `main` or in the merge queue takes a
   group of its own; each job but `checks` stops after 30 minutes, `checks` after 5;
 - **the reviewers start** on a job this workflow names: the check project-kit's
-  configuration names to start the review is the remainder's (#2638).
+  configuration names to start the review is the quick checks' (#2638, #2715).
 
 `test_short_check.py` holds the decision.
 """
@@ -65,7 +65,7 @@ PM_CONFIG = (
 #: The jobs of the workflow, the slices among them, and the parts `checks` judges.
 SLICES = 2
 SLICE_JOBS = [f"slice-{i}" for i in range(1, SLICES + 1)]
-JOBS = ["decide", "rest", *SLICE_JOBS, "checks"]
+JOBS = ["decide", "quick", "rest", *SLICE_JOBS, "checks"]
 EVENTS = ["pull_request", "merge_group", "push"]
 
 PINNED_BASE = "${{ needs.decide.outputs.base }}"
@@ -221,13 +221,14 @@ def test_every_part_reads_the_pinned_base_and_the_pull_request_s_own_head(workfl
     """One base for every part, the one the deciding job pinned, and the change's own
     head beside it, as the change checks read them (ADR-068 point 6)."""
     parts = [
+        _by_id(_job(workflow, "quick"), "quick"),
         _by_id(_job(workflow, "rest"), "rest"),
         _by_id(_job(workflow, "rest"), "short"),
         *(_by_id(_job(workflow, name), "part") for name in SLICE_JOBS),
     ]
     for step in parts:
         assert step["env"] == {"PKIT_CHECK_BASE": PINNED_BASE, "PKIT_CHECK_HEAD": PR_HEAD}
-    guard = _by_id(_job(workflow, "rest"), "guard")
+    guard = _by_id(_job(workflow, "quick"), "guard")
     assert guard["env"]["PKIT_CHECK_BASE"] == PINNED_BASE
     assert _job(workflow, "decide")["outputs"]["base"] == "${{ steps.base.outputs.sha }}"
 
@@ -495,6 +496,8 @@ def test_the_two_forms_exclude_each_other_and_only_a_pull_request_runs_the_short
 ) -> None:
     """The event gate is the workflow's, outside the decider: a decider that said
     `short` on a push to `main` or a queued merge would still leave the run full."""
+    quick = _job(workflow, "quick")
+    assert "if" not in quick and "if" not in _by_id(quick, "quick")
     rest = _job(workflow, "rest")
     assert _by_id(rest, "rest")["if"] == FULL_FORM
     assert _by_id(rest, "short")["if"] == SHORT_FORM
@@ -506,6 +509,9 @@ def test_the_two_forms_exclude_each_other_and_only_a_pull_request_runs_the_short
 
 
 def test_each_part_runs_its_part_of_the_aggregator(workflow) -> None:
+    assert _by_id(_job(workflow, "quick"), "quick")["run"] == (
+        "python scripts/ci_parts.py run --quick"
+    )
     rest = _job(workflow, "rest")
     assert _by_id(rest, "rest")["run"] == "python scripts/ci_parts.py run --rest"
     assert _by_id(rest, "short")["run"] == "python scripts/ci_parts.py run --short"
@@ -540,11 +546,18 @@ def test_each_slice_hands_on_its_report_and_keeps_its_times(workflow) -> None:
         assert keep["with"]["path"] == "${{ runner.temp }}/test-reports/parallel/"
 
 
-def test_the_remainder_hands_on_one_attestation_and_the_guard_s(workflow) -> None:
+def test_the_remainder_hands_on_one_attestation(workflow) -> None:
     """Two attestations side by side would match neither form."""
     assert _job(workflow, "rest")["outputs"] == {
         "passed": "${{ steps.rest.outputs.passed }}${{ steps.short.outputs.passed }}",
         "seconds": "${{ steps.rest.outputs.seconds || steps.short.outputs.seconds }}",
+    }
+
+
+def test_the_quick_checks_hand_on_their_attestation_and_the_guard_s(workflow) -> None:
+    assert _job(workflow, "quick")["outputs"] == {
+        "passed": "${{ steps.quick.outputs.passed }}",
+        "seconds": "${{ steps.quick.outputs.seconds }}",
         "guard": "${{ steps.guard.outputs.passed }}",
     }
 
@@ -552,7 +565,8 @@ def test_the_remainder_hands_on_one_attestation_and_the_guard_s(workflow) -> Non
 def test_the_changeset_guard_keeps_to_pull_requests_runs_in_both_forms_and_says_it_passed(
     workflow,
 ) -> None:
-    guard = _by_id(_job(workflow, "rest"), "guard")
+    guard = _by_id(_job(workflow, "quick"), "guard")
+    assert not any(step.get("id") == "guard" for step in _job(workflow, "rest")["steps"])
     assert guard["name"].startswith("Changeset guard")
     assert guard["if"] == (
         "${{ !cancelled() && github.event_name == 'pull_request' "
@@ -610,12 +624,14 @@ def _slice(index: int, *, share: int = 50, digest: str = DIGEST) -> dict[str, An
 def _needs(event: str, form: str = "full") -> dict[str, Any]:
     guard = {"guard": ci_parts.GUARD} if event == "pull_request" else {}
     rest = "check.sh --rest" if form == "full" else "check.sh --short"
+    quick = {"passed": "check.sh --quick", "seconds": "150", **guard}
     needs: dict[str, Any] = {
         "decide": {
             "result": "success",
             "outputs": {"form": form, "mode": form, "outcome": "success", "base": "b" * 40},
         },
-        "rest": {"result": "success", "outputs": {"passed": rest, "seconds": "390", **guard}},
+        "quick": {"result": "success", "outputs": quick},
+        "rest": {"result": "success", "outputs": {"passed": rest, "seconds": "390"}},
     }
     if form == "full":
         needs |= {name: _slice(i) for i, name in enumerate(SLICE_JOBS, 1)}
@@ -637,6 +653,7 @@ def test_a_full_run_whose_parts_all_said_they_passed_passes_and_shows_each_part_
     assert found.passed, found.summary
     assert "### `checks`: the full run, passed" in found.summary
     assert "| slice 1 of 2 | `success` | 12 min 34 s | ran 50 |" in found.summary
+    assert "| the quick checks | `success` | 2 min 30 s | `check.sh --quick` |" in found.summary
     assert "| the remainder | `success` | 6 min 30 s | `check.sh --rest` |" in found.summary
     assert ("the changeset guard" in found.summary) == (event == "pull_request")
     assert "The slices agree" in found.summary
@@ -647,6 +664,7 @@ def test_a_short_check_on_a_pull_request_passes_without_the_slices() -> None:
 
     assert found.passed, found.summary
     assert "the short check, passed" in found.summary
+    assert "| the quick checks | `success` | 2 min 30 s | `check.sh --quick` |" in found.summary
 
 
 @pytest.mark.parametrize("event", ["merge_group", "push"])
@@ -657,7 +675,7 @@ def test_only_a_pull_request_may_take_the_short_form(event: str) -> None:
     assert "only a pull request may take the short form" in found.summary
 
 
-PARTS = ["decide", "rest", *SLICE_JOBS]
+PARTS = ["decide", "quick", "rest", *SLICE_JOBS]
 
 
 @pytest.mark.parametrize("event", EVENTS)
@@ -676,7 +694,7 @@ def test_a_part_that_did_not_end_in_success_fails_the_full_run(
     assert not _verdict("full", needs, event).passed
 
 
-@pytest.mark.parametrize("part", ["decide", "rest"])
+@pytest.mark.parametrize("part", ["decide", "quick", "rest"])
 @pytest.mark.parametrize("result", ["failure", "cancelled", "skipped", None])
 def test_a_part_that_did_not_end_in_success_fails_the_short_check(
     part: str, result: str | None
@@ -695,6 +713,7 @@ def test_a_part_that_did_not_end_in_success_fails_the_short_check(
     ("part", "output"),
     [
         ("decide", "form"),
+        ("quick", "passed"),
         ("rest", "passed"),
         *((name, key) for name in SLICE_JOBS for key in ("passed", "digest", "collected", "share")),
     ],
@@ -711,7 +730,7 @@ def test_a_missing_output_fails_the_full_run(event: str, part: str, output: str)
 @pytest.mark.parametrize(("form"), ["full", "short"])
 def test_a_pull_request_whose_changeset_guard_said_nothing_fails(form: str) -> None:
     needs = _needs("pull_request", form)
-    del needs["rest"]["outputs"]["guard"]
+    del needs["quick"]["outputs"]["guard"]
 
     found = _verdict(form, needs, "pull_request")
 
@@ -723,7 +742,7 @@ def test_a_pull_request_whose_changeset_guard_said_nothing_fails(form: str) -> N
 def test_the_changeset_guard_is_a_pull_request_s_alone(event: str) -> None:
     needs = _needs(event)
 
-    assert "guard" not in needs["rest"]["outputs"]
+    assert "guard" not in needs["quick"]["outputs"]
     assert _verdict("full", needs, event).passed
 
 
@@ -734,6 +753,9 @@ def test_the_changeset_guard_is_a_pull_request_s_alone(event: str) -> None:
         ("rest", "passed", "check.sh --short"),
         ("rest", "passed", "check.sh --rest" + "check.sh --short"),
         ("rest", "passed", "passed"),
+        ("rest", "passed", "check.sh --quick"),
+        ("quick", "passed", "check.sh --rest"),
+        ("quick", "passed", "check.sh --short"),
         ("slice-1", "passed", f"check.sh --shard 2/2 {DIGEST}"),
         ("slice-2", "passed", f"check.sh --shard 2/3 {DIGEST}"),
         ("slice-1", "passed", f"check.sh --shard 1/2 sha256:{'e' * 64}"),
@@ -744,6 +766,9 @@ def test_the_changeset_guard_is_a_pull_request_s_alone(event: str) -> None:
         "the-remainder-ran-the-short-check",
         "both-forms-ran",
         "no-attestation",
+        "the-quick-checks-for-the-remainder",
+        "the-remainder-for-the-quick-checks",
+        "the-short-check-for-the-quick-checks",
         "another-slice",
         "another-count",
         "another-digest",
@@ -769,6 +794,18 @@ def test_a_short_check_that_attests_the_other_form_fails(said: str, named: str) 
     needs = _needs("pull_request", "short")
     needs["rest"]["outputs"]["passed"] = said
     needs["decide"]["outputs"]["form"] = named
+
+    assert not _verdict("short", needs, "pull_request").passed
+
+
+@pytest.mark.parametrize(
+    "said", ["", "check.sh --rest", "check.sh --short"], ids=["nothing", "the-rest", "the-short"]
+)
+def test_a_short_check_whose_quick_checks_attest_another_step_fails(said: str) -> None:
+    """The short check repeats their lines, but the job that starts the review must
+    itself have run them."""
+    needs = _needs("pull_request", "short")
+    needs["quick"]["outputs"]["passed"] = said
 
     assert not _verdict("short", needs, "pull_request").passed
 
@@ -817,7 +854,7 @@ def test_a_deciding_job_that_named_no_form_fails_and_checks_says_the_run_is_full
     form's step runs and fails (ADR-078 point 4)."""
     needs = _needs("pull_request")
     needs["decide"] = {"result": "failure", "outputs": {}}
-    for name in ["rest", *SLICE_JOBS]:
+    for name in ["quick", "rest", *SLICE_JOBS]:
         needs[name] = {"result": "skipped", "outputs": {}}
 
     found = _verdict("full", needs, "pull_request")
@@ -1027,14 +1064,42 @@ def test_a_report_value_out_of_its_form_is_handed_on_empty(
 OUTPUT_KEYS = {"passed", "seconds", "digest", "collected", "share", "listed", "unlisted"}
 
 
-@pytest.mark.parametrize("which", ["--rest", "--short"])
-def test_the_remainder_says_which_form_it_ran_last(tmp_path: Path, which: str) -> None:
+@pytest.mark.parametrize("which", ["--quick", "--rest", "--short"])
+def test_the_quick_checks_and_the_remainder_say_what_they_ran_last(
+    tmp_path: Path, which: str
+) -> None:
     part = Part(tmp_path)
 
     assert part.run(which) == 0
 
     assert part.outputs()[-1] == ("passed", f"check.sh {which}")
     assert [key for key, _ in part.outputs()] == ["seconds", "passed"]
+
+
+@pytest.mark.parametrize(
+    ("which", "title"),
+    [
+        ("--quick", "the quick checks: every line but the test step and the console fences"),
+        ("--rest", "the remainder: the console fences and the tests marked serial"),
+    ],
+)
+def test_a_part_s_summary_says_what_the_part_is(tmp_path: Path, which: str, title: str) -> None:
+    part = Part(tmp_path)
+
+    assert part.run(which) == 0
+
+    assert f"### `check.sh {which}`, {title}: passed" in part.summary.read_text()
+
+
+def test_the_quick_checks_name_each_failing_line(tmp_path: Path) -> None:
+    part = Part(tmp_path)
+
+    assert part.run("--quick", STUB_STATUS="1", STUB_FAILED="validate prose") == 1
+
+    assert "passed" not in dict(part.outputs())
+    summary = part.summary.read_text()
+    assert "- `validate`\n- `prose`" in summary
+    assert "Run it again: `./scripts/check.sh --quick`." in summary
 
 
 def test_the_remainder_names_each_failing_line_and_each_failing_test(tmp_path: Path) -> None:
@@ -1053,10 +1118,10 @@ def test_the_remainder_names_each_failing_line_and_each_failing_test(tmp_path: P
     assert "Run it again: `./scripts/check.sh --rest`." in summary
 
 
-def test_the_check_that_starts_the_reviewers_is_the_remainders(
+def test_the_check_that_starts_the_reviewers_is_the_quick_checks(
     workflow: dict[str, Any],
 ) -> None:
     """A name no check bears never passes, so a job renamed here would leave the
     reviewers waiting for every check, with nothing to say so (#2638)."""
     config = YAML(typ="safe").load(PM_CONFIG.read_text(encoding="utf-8"))
-    assert config["review"]["agents"]["start_after_checks"] == [_job(workflow, "rest")["name"]]
+    assert config["review"]["agents"]["start_after_checks"] == [_job(workflow, "quick")["name"]]

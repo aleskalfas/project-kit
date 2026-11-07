@@ -21,7 +21,9 @@ from tests.visual_communication_project import (
     TEST_PARTS,
 )
 
-files, reading, seam = load("visual-communication", "files", "reading", "plugins.seam")
+current_copy, files, reading, seam = load(
+    "visual-communication", "current_copy", "files", "reading", "plugins.seam"
+)
 
 COMPANIONS = sorted(SCHEMAS.glob("*.schema.json"))
 
@@ -31,8 +33,22 @@ def instance(kind: str) -> dict[str, Any]:
     return reading.read_yaml(SCHEMAS / f"{kind}.yaml")
 
 
+def exports_in(state: str) -> dict[str, Any]:
+    """The record of exports' instance, its one version made in `state`."""
+    record = instance("exports")
+    (version,) = record["versions"]
+    recorded = {**version["recorded"], "state": state}
+    return {**record, "versions": [{**version, "recorded": recorded}]}
+
+
 def refused(data: Any, kind: str) -> list[str]:
     return files.shape_problems(data, kind)
+
+
+def exports_with_copy(**fields: Any) -> dict[str, Any]:
+    """The record of exports' instance, its current copy's `fields` replaced."""
+    record = instance("exports")
+    return {**record, "current-copy": {**record["current-copy"], **fields}}
 
 
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
@@ -108,8 +124,107 @@ def test_content_takes_names_at_its_top_and_the_reserved_keys_alone() -> None:
 # --- what format 1 refuses ----------------------------------------------------------------------
 
 
-def test_a_piece_is_a_draft_in_format_1() -> None:
-    assert refused({**instance("piece"), "state": "final"}, "piece") != []
+@pytest.mark.parametrize("state", ["draft", "final", "published"])
+def test_format_1_takes_each_state_of_a_piece_and_the_record_of_exports_keeps_it(
+    state: str,
+) -> None:
+    assert refused({**instance("piece"), "state": state}, "piece") == []
+    assert refused(exports_in(state), "exports") == []
+
+
+def test_format_1_takes_no_other_state() -> None:
+    assert refused({**instance("piece"), "state": "retired"}, "piece") != []
+    assert refused(exports_in("retired"), "exports") != []
+
+
+def test_the_record_of_exports_may_name_the_version_handed_out() -> None:
+    record = instance("exports")
+    assert record["handed-out"] == 1
+    assert refused(record, "exports") == []
+    assert (
+        refused({key: value for key, value in record.items() if key != "handed-out"}, "exports")
+        == []
+    )
+    assert refused({**record, "handed-out": 0}, "exports") != []
+    assert refused({**record, "handed-out": "1"}, "exports") != []
+
+
+def test_the_record_of_exports_may_name_who_wrote_a_current_copy() -> None:
+    record = instance("exports")
+    assert refused(record, "exports") == []
+    assert (
+        refused({key: value for key, value in record.items() if key != "current-copy"}, "exports")
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "current-copy/flow.en.default.svg",
+        "current-copy/flow.en.colour-scheme.dark.2.svg",
+        "current-copy/flow.pt-br.default.pdf",
+        "docs/images/flow.en.default.svg",
+        "docs/flow.en.colour-scheme.dark.2.svg",
+        "current-copy/nested/flow.en.default.svg",
+    ],
+)
+def test_a_current_copys_file_lies_in_its_folder_or_at_a_place_with_no_number(path: str) -> None:
+    assert refused(exports_with_copy(files={path: "0" * 64}), "exports") == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "flow.en.default.svg",
+        "current-copy/flow.v1.en.default.svg",
+        "current-copy/../flow.en.default.svg",
+        "../docs/flow.en.default.svg",
+        "/docs/flow.en.default.svg",
+        ".pkit/docs/flow.en.default.svg",
+        "docs/.hidden/flow.en.default.svg",
+        "docs//flow.en.default.svg",
+        "docs\\images/flow.en.default.svg",
+    ],
+)
+def test_a_current_copys_file_lies_nowhere_else_and_carries_no_number(path: str) -> None:
+    assert refused(exports_with_copy(files={path: "0" * 64}), "exports") != []
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        pytest.param({"piece": "../outside"}, id="a-piece-of-no-name"),
+        pytest.param({"version": 0}, id="a-version-of-no-number"),
+        pytest.param({"files": {}}, id="no-file"),
+        pytest.param({"written": "2026"}, id="another-field"),
+    ],
+)
+def test_the_record_refuses_a_current_copy_of_another_shape(fields: dict[str, Any]) -> None:
+    assert refused(exports_with_copy(**fields), "exports") != []
+
+
+def test_a_piece_may_name_the_place_of_its_current_copy() -> None:
+    piece = instance("piece")
+    assert "copy-place" in piece
+    assert refused(piece, "piece") == []
+    assert (
+        refused({key: value for key, value in piece.items() if key != "copy-place"}, "piece") == []
+    )
+
+
+@pytest.mark.parametrize(
+    "place",
+    ["", ".", "..", "../docs", "/docs", ".pkit/docs", "docs/.hidden", "docs/", "a//b", "a\\b", 3],
+)
+def test_a_place_is_a_path_within_the_repository(place: Any) -> None:
+    assert refused({**instance("piece"), "copy-place": place}, "piece") != []
+
+
+def test_the_schema_holds_the_pattern_the_code_holds_of_a_current_copys_path() -> None:
+    schema = json.loads((SCHEMAS / "exports.schema.json").read_text(encoding="utf-8"))
+    held = schema["properties"]["current-copy"]["properties"]["files"]["propertyNames"]
+    assert held["pattern"] == current_copy.PATH
 
 
 def test_a_brand_names_its_dtcg_version_and_a_component_library_none() -> None:
@@ -188,6 +303,23 @@ def _replaced(listed: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any]:
     copy = json.loads(json.dumps(listed))
     copy["libraries"]["brand"]["versions"]["1.0.0"] = entry
     return copy
+
+
+def _with_input(entry: dict[str, Any]) -> dict[str, Any]:
+    """The reference record of exports, its first version's first input replaced."""
+    record = json.loads(json.dumps(instance("exports")))
+    record["versions"][0]["fingerprint"]["inputs"][0] = entry
+    return record
+
+
+def test_an_input_may_name_the_fields_it_read_a_file_without() -> None:
+    digest = "0" * 64
+    named = {"file": "piece.yaml", "without": ["pinned", "state"], "sha256": digest}
+    assert refused(instance("exports"), "exports") == []
+    assert refused(_with_input(named), "exports") == []
+    assert refused(_with_input({**named, "without": []}), "exports") != []
+    assert refused(_with_input({**named, "without": "state"}), "exports") != []
+    assert refused(_with_input({**named, "keys": ["exports"]}), "exports") != []
 
 
 @pytest.mark.parametrize("location", [".pkit/x", "", ".", "../out", "/abs", "a//b", "a/.git"])

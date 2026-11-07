@@ -278,7 +278,10 @@ def test_a_whole_record_anchor_still_changes_with_any_edit(timeline: Timeline) -
     _start(timeline, anchors={"record": ["PRJ-900", "PRJ-900#2"]})
     changed = _change(timeline, rationale="Another reason this way.")
     assert _change_check(timeline) == [("friction", "PRJ-900")]
-    assert _repository(timeline) == [("stale", "PRJ-900", changed)]
+    assert _repository(timeline) == [
+        ("stale", "PRJ-900", changed),
+        ("whole-and-parts", "PRJ-900", None),  # the whole anchor flags what the point does
+    ]
 
 
 # --- the explanation ----------------------------------------------------------------

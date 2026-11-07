@@ -1,0 +1,21 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check --all` warns of an artefact that anchors a record or a
+  document whole beside anchors on its parts (#2659). Whatever flags a part
+  anchor also flags the whole anchor, so the part anchors ask nothing the whole
+  anchor does not. The new finding kind, `whole-and-parts`, names the whole
+  anchor and the anchors on parts beside it. It reads HEAD alone, with no
+  history and no number. The whole anchor is a record or artefact anchor that
+  names a record or a document whole, or a path anchor on that single file. The
+  anchors on its parts name a record's live points, a document's sections or its
+  lead. A glob and a value of a registered kind are left out. The finding is
+  reported only and owes no answer, and an artefact that owes no answer has
+  none. Its message gives both moves and what each costs: removing the part
+  anchors loses no ask, and removing the whole anchor misses a change outside
+  those parts. `pkit friction explain` shows it with what clears it. The JSON
+  documents of `check --all` and `explain` add one key to each finding: `parts`,
+  the anchors on parts a `whole-and-parts` finding names, `null` for any other
+  finding. Their `schema_version` stays 1.

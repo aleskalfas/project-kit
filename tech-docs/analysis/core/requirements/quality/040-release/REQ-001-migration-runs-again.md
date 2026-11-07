@@ -19,6 +19,7 @@ pkit:
         - tests/test_pm_workflow_migrations_after_the_copy.py
         - tests/test_migration_96_rules_area.py
         - tests/test_software_analysis_migration_rule_set.py
+        - tests/test_software_analysis_migration_obligation.py
         - tests/test_software_analysis_templates.py
       record:
         - COR-010

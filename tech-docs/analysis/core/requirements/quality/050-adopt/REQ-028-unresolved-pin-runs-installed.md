@@ -28,4 +28,6 @@ pkit:
 
 **Rationale:** The operator runs each [project](../../../glossary.md#term-project--project) at its [version pin](../../../glossary.md#term-version-pin--version-pin), and needs the command to run when the pinned [release](../../../glossary.md#term-release--release) cannot be fetched, such as offline. [ADR-039 D2](../../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#d2--graceful-degradation-is-mandatory) makes this mandatory: "a degraded-but-running command beats a broken one". The warning tells the operator plainly that the [system](../../../glossary.md#term-system--system) fell back, since the output may not match the pinned [methodology](../../../glossary.md#term-methodology--methodology).
 
+The operator needs that warning once for each command they run, so a `pkit` that the fallen-back command starts does not repeat it. It goes to standard error, since it is no data of the command's.
+
 A command run this way keeps its own checks. So `pkit upgrade` refuses under the fallback, and [sync](../../../glossary.md#term-sync--sync) stops where its guard finds another [version](../../../glossary.md#term-version--version) than the project records ([ADR-065 point 9](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#9-a-pinned-projects-upgrade-runs-under-the-code-of-its-pin-or-of-a-newer-release)).

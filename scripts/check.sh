@@ -5,11 +5,12 @@
 # AND by CI (.github/workflows/checks.yml), so the gate can't drift between the
 # two. Add a check here once and both pick it up.
 #
-# The hook runs it whole, on one machine. CI runs a full run as three parts side
+# The hook runs it whole, on one machine. CI runs a full run as four parts side
 # by side, which this script defines (ADR-078): two slices of the suite's
-# parallel pass, `--shard 1/2` and `--shard 2/2`, and the remainder, `--rest`.
-# A job before them decides the form and pins the base, and one job named
-# `checks` passes only when every part said that it passed.
+# parallel pass, `--shard 1/2` and `--shard 2/2`, the quick checks, `--quick`,
+# and the remainder, `--rest`. A job before them decides the form and pins the
+# base, and one job named `checks` passes only when every part said that it
+# passed.
 #
 # The code's own checks come first: ruff's lint (`ruff check`) and layout
 # (`ruff format --check`) under the house style `pyproject.toml` settles
@@ -85,7 +86,10 @@
 #     balance them (`tests/slices.py`). A slice whose share holds no test fails.
 #     It ends by printing its report: the digest of the tests collected, how
 #     many they are, and how many its share held.
-#   - `--rest`, the remainder, runs every other line, with the tests marked
+#   - `--quick`, the quick checks, runs every line but the test step and the
+#     console fences. They end within a few minutes, and the reviewers start on
+#     them. A line joins them unless it is a test or takes minutes.
+#   - `--rest`, the remainder, runs the console fences, with the tests marked
 #     `serial` in one process in the test step's place.
 #
 # Where $PKIT_TEST_REPORTS names a folder, each pass of pytest writes there what
@@ -97,7 +101,7 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 usage() {
-  echo "usage: scripts/check.sh [--short | --rest | --shard i/N]" >&2
+  echo "usage: scripts/check.sh [--short | --quick | --rest | --shard i/N]" >&2
   exit 2
 }
 
@@ -106,6 +110,7 @@ shard=""
 case "$#:${1:-}" in
   0:) ;;
   1:--short) form=short ;;
+  1:--quick) form=quick ;;
   1:--rest) form=rest ;;
   2:--shard)
     shard="$2"
@@ -115,6 +120,15 @@ case "$#:${1:-}" in
     ;;
   *) usage ;;
 esac
+
+# The two kinds of line a part chooses among (ADR-078 point 1). Every other form
+# runs both, so a line added with either joins the short check and the hook's run.
+quick_line() {
+  if [ "${form}" != rest ]; then run "$@"; fi
+}
+slow_line() {
+  if [ "${form}" != quick ]; then run "$@"; fi
+}
 
 # The diff-scoped checks (migration coverage, record numbering, friction, the
 # prose lint, analysis numbers and pointers, doc check) and the type check's guard on its
@@ -263,30 +277,31 @@ run_answer_tests() {
 # The query commands `pkit validate` runs offline are provisioned by `pkit sync`
 # (the lifecycle README, "How dependencies are provisioned before an offline
 # run") — which CI runs on checkout, and a clone runs once — not by this gate.
-# A slice runs its test step alone; every other form runs every line.
+# A slice runs its test step alone; every other form runs its lines of the rest.
 if [ "${form}" = shard ]; then
   run "tests (slice ${shard} of the parallel pass)" run_slice
 else
-  run "lint"               uv run ruff check .
-  run "format"             uv run ruff format --check .
-  run "types"              uv run python scripts/pyright_ratchet.py
+  quick_line "lint"               uv run ruff check .
+  quick_line "format"             uv run ruff format --check .
+  quick_line "types"              uv run python scripts/pyright_ratchet.py
   case "${form}" in
     short) run "tests (the short check: only those marked answers)" run_answer_tests ;;
     rest)  run "tests (the remainder: only those marked serial)" serial_pass ;;
+    quick) ;;
     *)     run "tests"     run_tests ;;
   esac
-  run "validate"           uv run pkit validate
-  run "deployed agents"    uv run python scripts/check_deployed_agents.py
-  run "console fences"     uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py
-  run "contents lists"     uv run python scripts/page_contents.py
-  run "migrations check"   uv run pkit migrations check-diff
-  run "record numbering"   uv run pkit decisions check-diff
-  run "friction check"     uv run pkit friction check
-  run "prose lint"         uv run python scripts/prose_lint.py
-  run "analysis numbers"   uv run pkit analysis check-numbers
-  run "analysis pointers"  uv run pkit analysis check-pointers
-  run "doc check"          uv run pkit pm check-doc-mapping
-  run "changelog lint"     uv run pkit release lint
+  quick_line "validate"           uv run pkit validate
+  quick_line "deployed agents"    uv run python scripts/check_deployed_agents.py
+  slow_line  "console fences"     uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py
+  quick_line "contents lists"     uv run python scripts/page_contents.py
+  quick_line "migrations check"   uv run pkit migrations check-diff
+  quick_line "record numbering"   uv run pkit decisions check-diff
+  quick_line "friction check"     uv run pkit friction check
+  quick_line "prose lint"         uv run python scripts/prose_lint.py
+  quick_line "analysis numbers"   uv run pkit analysis check-numbers
+  quick_line "analysis pointers"  uv run pkit analysis check-pointers
+  quick_line "doc check"          uv run pkit pm check-doc-mapping
+  quick_line "changelog lint"     uv run pkit release lint
 fi
 
 echo
@@ -296,7 +311,8 @@ if [ "${fail}" -ne 0 ]; then
 fi
 case "${form}" in
   short) echo "✓ all checks passed (the short check: the test suite was skipped, ADR-067)" ;;
-  rest)  echo "✓ all checks passed (the remainder: every line but the suite's parallel pass)" ;;
+  quick) echo "✓ all checks passed (the quick checks: every line but the test step and the console fences)" ;;
+  rest)  echo "✓ all checks passed (the remainder: the console fences and the tests marked serial)" ;;
   shard) echo "✓ all checks passed (slice ${shard} of the suite's parallel pass)" ;;
   *)     echo "✓ all checks passed" ;;
 esac

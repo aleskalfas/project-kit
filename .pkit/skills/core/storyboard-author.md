@@ -14,6 +14,7 @@ reads:
     - COR-008
   paths:
     - .pkit/agents/README.md
+    - .pkit/agents/storyboards.md
     - .pkit/decisions/README.md
 ---
 
@@ -89,7 +90,7 @@ The command stamps the file with:
 
 Do not edit the `consumers:` frontmatter at first stamp — the command fills it correctly. Edit it only when the storyboard genuinely gains a second consumer (rare today; when it happens, add an additional `{kind, name, namespace}` entry, and verify each named consumer's `storyboards:` declares this file back).
 
-The agent declares the storyboard back in its `storyboards:` by the bare sibling filename the command stamped (`storyboard.md` or `<slug>.storyboard.md`) and cites that name in its body; the deploy rewrites it to the source path in the deployed copy (`.pkit/agents/README.md`, "Storyboards"). `pkit refs validate` checks both sides, for a capability's agent as for one in `.pkit/agents/`.
+The agent declares the storyboard back in its `storyboards:` by the bare sibling filename the command stamped (`storyboard.md` or `<slug>.storyboard.md`) and cites that name in its body; the deploy rewrites it to the source path in the deployed copy (`.pkit/agents/storyboards.md`, "Frontmatter declaration"). `pkit refs validate` checks both sides, for a capability's agent as for one in `.pkit/agents/`.
 
 ### 5. Draft the framing
 

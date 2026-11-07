@@ -69,6 +69,7 @@ A worker takes ready work and builds it up to its merge (DEC-059 point 2). Each 
 5. **Open its pull request:** `pkit pm open-pr <N> --draft --body-file <file>`, then `pkit pm review-work <N>`. `review-work` checks the body, makes the pull request ready and moves the Task to Review. Never pass `--force` or `--bypass-owner` to either: each override is the person's.
    - **A refusal of the body:** mend the body with `pkit pm edit-pr <PR> --body-file <file>`, and run `review-work` again.
    - **A refusal by the clash guard, or of your seat:** stop the loop, and tell the person.
+   - **A stop on a head that needs a person** ([project-management:DEC-067-heads-that-start-programs] point 3): a second run changes nothing, so stop the loop, and ask the person to run `review-work <N>` at a terminal.
    - **Exit 3,** GitHub failed: run the command once more. Any other refusal, of either command, ends the loop with what it printed.
 6. **Take the next Task.** Leave the clone clean, with everything committed and pushed, since the next `start-work` cuts its branch here. Then go back to 1, which reads your pull requests again before the next Task.
 

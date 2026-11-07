@@ -35,7 +35,7 @@ Each reader that needs a change's answers derives them from the change check, at
 
 - **Anyone else** runs `pkit pm show-pr <N> --field answers`, the view. It changes no branch, and fetches the base and any head the clone lacks. It derives the answers as the landing command does, and prints what that command prints (point 4), with one limit: it never checks a head out to start that head's programs.
   - **What that costs.** The change check reads every anchor of every artefact on each run. So on a project where any anchor needs a program the head holds, the check refuses on every change away from a clean checkout at the head, and the view prints no answer. It says why, and that a run from such a checkout reads them.
-  - **That run.** It starts the head's programs under the reader's account. So a reader makes it only on a head they trust, and an agent only on its person's word.
+  - **That run.** It starts the head's programs under the reader's account, and at such a checkout the command is the head's own (per [project-management:DEC-067-heads-that-start-programs]). So a reader makes it only on a head they trust, and an agent only on its person's word.
   - **Anything else.** Where the view cannot derive the answers for any other reason, it says why and prints nothing more.
 - **"The list" in a record that stands.** Where a passage of DEC-055, or of [project-management:DEC-064-base-merge-named], speaks of the list of answers, it is the change check's list the landing command derives.
 
@@ -47,7 +47,7 @@ The command that makes the pull request ready and requests reviewers derives the
 - **What it cannot read stops it:** a description it cannot read, or a change check it cannot run at the head. Neither draws a refusal.
 - **Under `--force`,** a change check it cannot run refuses nothing, and a warning says the sentences went unchecked.
 - **A sentence on a document the change check does not mark `updated`** draws a warning naming the edit that removes it, as DEC-055 point 3 has it.
-- **The other commands.** The command that opens the pull request derives the answers at the pushed head, and warns of a missing sentence and of one on a document not marked `updated`. The command that edits the description derives nothing, and warns of neither. Each warns of an item in the sentences' section that it cannot read.
+- **The other commands.** The command that opens the pull request derives the answers at the pushed head, and warns of a missing sentence and of one on a document not marked `updated`. It takes no temporary checkout, so a refusal there costs a warning line (per DEC-067). The command that edits the description derives nothing, and warns of neither. Each warns of an item in the sentences' section that it cannot read.
 
 ### 4. What the landing command prints
 
@@ -80,7 +80,7 @@ What guards the answers themselves stays, as DEC-055 point 3 has it, since it gu
 - **An agent's relay.** A person who directs an agent is told what the agent passes on, the case DEC-055's Context feared. The printout's words are the command's, and the view gives them first-hand where it can derive them (point 2).
 - **No record of what was told.** The printout goes where the run's output goes, and nothing keeps it. The answer files that land hold what was answered, not what was shown.
 - **A reader with no clone** reads the sentences alone, since the view runs the change check. So does a reader away from the head, on a project whose anchors need the head's programs. Either may read the answer files the change adds in its diff on the host.
-- **The landing command still starts the head's programs.** It and the move to review take the checkout the view refuses, a fork's head included. Whoever runs them starts that head's programs. [project-kit#2697](https://github.com/aleskalfas/project-kit/issues/2697) decides what a head must be for that to happen.
+- **The landing command still starts a head's programs.** It and the move to review take the checkout the view refuses, but run only a head that passes DEC-067's test or that a person named (per that record). Whoever runs them starts that head's programs.
 
 ## Rationale
 

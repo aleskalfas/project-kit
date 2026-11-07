@@ -23,6 +23,7 @@ pkit:
         - src/project_kit/friction_check.py
         - src/project_kit/friction_repository.py
       record:
+        - ADR-080#5
         - COR-050#1
         - COR-050#2
         - COR-050#3
@@ -69,7 +70,7 @@ pkit:
 **Variants:**
 
 - **1a.** The document lies in no declared [place](../../../glossary.md#term-place--place), so nothing reads its anchors. `pkit friction artefacts` lists the places. The developer adds the document's path to `friction.places`, and the path rejoins at step 1.
-- **1b.** Nothing the repository holds makes the document true, such as a person's part in the work. A person accepts a reason for having no anchors, word for word, before it is written as `unanchored-because` (COR-050 points [1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts) and [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A delegate a person named may decide it instead ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)). The use case ends.
+- **1b.** Nothing the repository holds makes the document true, such as a person's part in the work. A person accepts a reason for having no anchors, word for word, before it is written as `unanchored-because` (COR-050 points [1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts) and [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A [delegate](../../../glossary.md#term-delegate--delegate) a person named may decide it instead ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)). The use case ends.
 - **1c.** The document already carries anchors, and the developer changes the list. The [change check](../../../glossary.md#term-change-check--change-check) asks the document for a [revalidation answer](../../../glossary.md#term-revalidation-answer--revalidation-answer) in the same [change](../../../glossary.md#term-change--change) ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)), and the path goes on at step 2.
 - **1d.** A [stamp](../../../glossary.md#term-stamp--stamp) writes the anchors, such as the command an installed [capability](../../../glossary.md#term-capability--capability) offers to create an [artefact](../../../glossary.md#term-artefact--artefact) of its kind. The path goes on at step 2.
 - **1e.** A capability, not the [backbone](../../../glossary.md#term-backbone--backbone), resolves an [anchor](../../../glossary.md#term-anchor--anchor) the developer lists, through a [query command](../../../glossary.md#term-query-command--query-command) the capability registers. The check asks that command which files the anchor stands on, offline and within thirty seconds ([COR-050 point 2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors), [REQ-006](../../../requirements/quality/REQ-006-command-time-bound.md) and [REQ-007](../../../requirements/constraints/REQ-007-offline-same-answer.md)). A command that gives no result leaves the anchor `no-answer`, never read as unchanged ([REQ-004](../../../requirements/quality/REQ-004-missing-answer-never-clean.md)). The path goes on at step 2.
@@ -81,6 +82,10 @@ pkit:
 - **3a.** An anchor of the document names a kind no installed [component](../../../glossary.md#term-component--component) registers. The check reports an `unresolved-kind`. The developer installs the capability that registers that kind, or removes the anchor.
 - **3b.** An artefact anchor names an id that two artefacts share. The check warns of it as `shared-id`, and never fails on it ([COR-050 point 7](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors)). The warning names the artefacts that share the id, and the one the anchor stands on. The developer gives them ids no two share, or names a document by its path, and the path rejoins at step 2.
 - **5a.** An anchor asks the document for an [answer](../../../glossary.md#term-answer--answer) too often, alone or with the document's other anchors. `pkit friction check --all` warns of it as `over-broad`, and never fails on it ([COR-050 point 7](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors)).
+- **5b.** The document anchors a [decision record](../../../glossary.md#term-decision-record--decision-record) or another document whole, and parts of that target too. `pkit friction check --all` warns of the document as `whole-and-parts`, and that [finding](../../../glossary.md#term-finding--finding) owes no answer ([ADR-080 point 5](../../../../../architecture/decisions/ADR-080-over-broad-anchor-flags.md#5-a-whole-anchor-beside-anchors-on-its-parts)). The developer takes one of these moves:
+  - Removes the anchors on the target's parts.
+  - Removes the whole anchor, where the document rests on those parts alone.
+  - Keeps both.
 
 **Postconditions:** The document carries anchors naming what makes it true. The [change check](../../../glossary.md#term-change-check--change-check) asks it for an [answer](../../../glossary.md#term-answer--answer) in each [change](../../../glossary.md#term-change--change) that modifies what one of them names.
 

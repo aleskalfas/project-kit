@@ -26,6 +26,8 @@ pkit:
         - COR-047
         - COR-051
         - COR-058
+        - COR-066#1
+        - COR-068#7
         - COR-070#2
         - ADR-076#2
         - PRJ-011
@@ -56,13 +58,13 @@ Some questions are too large for a decision record at first, and the work that m
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions, and states harness requirements. A harness meets each harness requirement or not. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads an instruction file into each session, and the instruction file includes the operational rules.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions, and states harness requirements. How far a harness meets each harness requirement is graded. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads an instruction file into each session, and the instruction file includes the operational rules.
   class System["System"]
   class Harness["Harness"]
   class HarnessRequirement["Harness requirement"]
   HarnessRequirement : observation point
   class InstructionFile["Instruction file"]
-  InstructionFile : includes
+  InstructionFile : lines that pull in other files
   class Methodology["Methodology"]
   class DecisionRecord["Decision record"]
   DecisionRecord : id
@@ -87,7 +89,7 @@ classDiagram
   AcceptanceGate ..> DecisionRecord : admits only accepted
   AcceptanceGate ..> Rule : admits only accepted
   Methodology --> HarnessRequirement : states
-  Harness ..> HarnessRequirement : meets or not
+  Harness ..> HarnessRequirement : is graded against
   Harness --> InstructionFile : loads into each session
   InstructionFile ..> OperationalRule : includes
 ```
@@ -95,7 +97,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a choice comes to bind work
-  accDescr: A question too large to decide at once is explored in an active scratchpad note. The note may produce a proposed decision record, and retires as done, or is dropped. A choice among alternatives is written as a proposed decision record. Once accepted in review, it passes the acceptance gate, so work may build on it, and a rule's origin may cite it. A rule passes the gate once it is accepted too. Decision records keep the reasons for operational rules, which the harness's include loads into each session, where work is held to them.
+  accDescr: A question too large to decide at once is explored in an active scratchpad note. The note may produce a proposed decision record, and retires as done, or is dropped. A choice among alternatives is written as a proposed decision record. Once accepted in review, it passes the acceptance gate, so work may build on it, and a rule's origin may cite it. A rule passes the gate once it is accepted too. Decision records keep the reasons for operational rules, which a line of the instruction file loads into each session, where work is held to them.
   Q([A question too large to decide at once]) --> N[Scratchpad note: active]
   N -->|produces| P
   N -->|other documents hold its content| ND[Scratchpad note: done]
@@ -142,13 +144,13 @@ A harness is an external tool that hosts working sessions and runs the tool call
 
 **Attributes:**
 
-- its include: the line in its [instruction file](../glossary.md#term-instruction-file--instruction-file) that pulls another file into each session, as `@.pkit/rules/core.md` does
+- a line in its [instruction file](../glossary.md#term-instruction-file--instruction-file) that pulls another file into each session, as `@.pkit/rules/core.md` does
 
 **Relations:**
 
-- Its include loads the [operational rules](../glossary.md#term-operational-rule--operational-rule) into each session it hosts.
+- A line in its instruction file loads the [operational rules](../glossary.md#term-operational-rule--operational-rule) into each session it hosts.
 - It is no part of the [system](../glossary.md#term-system--system).
-- The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement), which a harness meets or not ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary)).
+- The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement). How far a harness meets each is graded ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **States:** None.
 
@@ -187,23 +189,23 @@ Defined in [TERM-instruction-file](../glossary.md#term-instruction-file--instruc
 
 **Why:** None.
 
-An instruction file is the document a [harness](../glossary.md#term-harness--harness) loads into each session it hosts, such as Claude Code's `CLAUDE.md`. Through its includes, every session takes in the [operational rules](../glossary.md#term-operational-rule--operational-rule). A repository's own instructions follow the includes.
+An instruction file is the document a [harness](../glossary.md#term-harness--harness) loads into each session it hosts, such as Claude Code's `CLAUDE.md`. Through lines that pull in other files, every session takes in the [operational rules](../glossary.md#term-operational-rule--operational-rule). A repository's own instructions follow those lines.
 
 **Attributes:**
 
-- its includes, each a line that pulls another file into the session, such as `@.pkit/rules/core.md` ([ADR-076 point 2](../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it))
+- its lines that pull other files into the session, such as `@.pkit/rules/core.md` ([ADR-076 point 2](../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it))
 
 **Relations:**
 
 - A harness loads it into each session, from the session's start ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
-- Its includes load the [methodology](../glossary.md#term-methodology--methodology)'s operational rules first, and the repository's own after them (ADR-076 point 2).
+- Its lines that pull in other files load the [methodology](../glossary.md#term-methodology--methodology)'s operational rules first, and the repository's own after them (ADR-076 point 2).
 
 **States:** None.
 
 **Always true:**
 
-- An include it needs is kept present, inserted wherever it is absent (COR-070 point 2).
-- Nothing that keeps its includes present removes or rewrites the text the repository wrote there (COR-070 point 2).
+- A line it needs to pull in a file is kept present, inserted wherever it is absent (COR-070 point 2).
+- Nothing that keeps such a line present removes or rewrites the text the repository wrote there (COR-070 point 2).
 
 ## Decision record
 
@@ -215,7 +217,7 @@ A decision record is a document that states one choice among alternatives, with 
 
 **Attributes:**
 
-- an id: its namespace's prefix and a number, such as [COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)
+- an id: its [namespace](../glossary.md#term-namespace--namespace)'s prefix and a number, such as [COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)
 - a status: `proposed`, `accepted` or `superseded`
 - its sections: the context, the decision, the reasons and what follows from it
 
@@ -258,19 +260,19 @@ A point is one numbered or labelled part of a decision record's Decision. Once t
 - It belongs to one decision record, inside that record's Decision (COR-058 point 1).
 - A retired point names the points that took its text, where any did (COR-058 points [4](../../../../.pkit/decisions/core/COR-058-record-points.md#4-a-retired-point-leaves-an-entry-and-a-stub) and [5](../../../../.pkit/decisions/core/COR-058-record-points.md#5-successors-are-points-of-the-same-record)).
 
-**States:** A point written as a heading is live until it is retired, by being dropped, split or merged. A stub then stays where it stood, and its id stays in the record's front matter (COR-058 point 4).
+**States:** A point written as a heading is live until no point continues its claim, when it is retired. A stub then stays where it stood, and its id stays in the decision record's front matter (COR-058 point 4).
 
 ```mermaid
 stateDiagram-v2
   accTitle: The states of a point written as a heading
-  accDescr: A point is live until it is dropped, split or merged, and then retired. A retired point never returns.
+  accDescr: A point is live until no point continues its claim, and then retired. A retired point never returns.
   [*] --> live
-  live --> retired : it is dropped, split or merged
+  live --> retired : no point continues its claim
 ```
 
 **Always true:**
 
-- In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included ([COR-058 point 3](../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)).
+- In a decision record whose points are headings, no point is renumbered, and no id is used again, a retired one included ([COR-058 point 3](../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)).
 - In such a record, a new point takes the next unused number (COR-058 point 3).
 
 ## Scratchpad note
@@ -370,7 +372,7 @@ Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operati
 
 **Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014).
 
-An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include.
+An operational rule is an instruction that every session loads through a line in the [harness](../glossary.md#term-harness--harness)'s [instruction file](../glossary.md#term-instruction-file--instruction-file).
 
 **Attributes:**
 
@@ -379,7 +381,7 @@ An operational rule is an instruction that every session loads through the [harn
 
 **Relations:**
 
-- The harness's include loads it into each session.
+- A line in the harness's instruction file loads it into each session.
 
 **States:** In a plain file, none. Elsewhere, those that [VIEW-artefacts-and-friction](070-artefacts-and-friction.md) states.
 
@@ -516,6 +518,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Decision record:**
 
+- [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
 - [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)

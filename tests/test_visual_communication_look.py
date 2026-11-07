@@ -829,6 +829,18 @@ def test_a_page_with_no_size_refuses_naming_the_check_with_nothing_written(tmp_p
     assert written(root) == before
 
 
+def test_a_final_page_with_no_size_refuses_naming_no_check(tmp_path: Path) -> None:
+    """The check reads no picture of a final piece, so it could name nothing the piece owes."""
+    root = drawing_project(tmp_path, state="final")
+    before = written(root)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the tool cannot draw page figure of `flow`: the page measures 960 by 0 px\n"
+    )
+    assert written(root) == before
+
+
 def test_a_page_of_no_width_and_no_height_refuses_naming_the_check(tmp_path: Path) -> None:
     """A page 0 by 0 reaches the same refusal, not a division by its long edge."""
     root = drawing_project(tmp_path)
@@ -941,7 +953,10 @@ def test_a_piece_with_no_lock_is_refused_naming_render_its_files_left_as_they_we
     tmp_path: Path,
 ) -> None:
     root = drawing_project(tmp_path, lock=None)
-    (root / PIECE_FOLDER / "exports.yaml").write_text("versions: []\n", encoding="utf-8")
+    (root / PIECE_FOLDER / "exports.yaml").write_text(
+        "pkit_schema: visual-communication:exports\nschema_version: 1\nversions: []\n",
+        encoding="utf-8",
+    )
     before = written(root)
     shown = run_look(root, PIECE)
     assert shown.returncode == 1
@@ -950,6 +965,60 @@ def test_a_piece_with_no_lock_is_refused_naming_render_its_files_left_as_they_we
         "error: the lock of visual/pieces/flow/piece.yaml cannot be drawn"
     )
     assert written(root) == before
+
+
+@pytest.mark.parametrize(
+    ("state", "fix"),
+    [
+        pytest.param(
+            "final",
+            "write back the lock of the version handed out, which is no move of it",
+            id="final",
+        ),
+        pytest.param(
+            "published",
+            "the piece is published, so no render moves its lock: set it back to a draft and "
+            "run `pkit visual render flow`",
+            id="published",
+        ),
+    ],
+)
+def test_a_lock_no_render_moves_is_refused_and_told_of_its_state_and_of_no_pin(
+    tmp_path: Path, state: str, fix: str
+) -> None:
+    root = drawing_project(tmp_path, state=state, pinned=True, lock=None)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: the lock of visual/pieces/flow/piece.yaml cannot be drawn: the piece has no "
+        f"lock yet, so its scenes cannot be drawn — {fix}\n"
+    )
+
+
+@pytest.mark.parametrize("state", ["final", "published"])
+def test_a_version_not_yet_released_stops_no_drawing(tmp_path: Path, state: str) -> None:
+    root = drawing_project(tmp_path, state=state, released=False, picture=False)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert (folder_of(root) / viewing.REPORT).is_file()
+
+
+def test_a_published_lock_that_does_not_hold_still_stops_the_drawing(tmp_path: Path) -> None:
+    lock = {"foundations": "1.0.0", "test-brand": "1.0.0", "tests": "1.2.0"}
+    root = drawing_project(tmp_path, state="published", released=False, picture=False, lock=lock)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert "tests@1.2.0, which the project does not hold" in shown.stderr
+    assert "not yet released" not in shown.stderr
+
+
+def test_a_library_a_final_pieces_content_uses_still_stops_the_drawing(tmp_path: Path) -> None:
+    root = drawing_project(
+        tmp_path, state="final", picture=False, lock={"foundations": "1.0.0", "test-brand": "1.0.0"}
+    )
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert "the lock does not name `tests`, which the piece uses" in shown.stderr
 
 
 def test_a_piece_the_location_lacks_is_refused(flow: Path) -> None:

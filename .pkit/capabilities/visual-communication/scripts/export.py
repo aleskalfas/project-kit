@@ -27,13 +27,28 @@ It stops on a produced picture that is stale, naming what changed, unless `--use
 names it; the record keeps each picture used while stale, and the version of each picture
 the export used. `--use-stale` naming an output the piece does not declare is refused; one
 that is not stale is used as it is, and the command says so. It stops on a picture that is
-missing, and on a piece with no lock yet, which `pkit visual render` writes.
+missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
+final piece takes no export, whatever else holds of it, final by its state or by a version
+handed out, or where its record of exports cannot be read (DEC-017 point 3).
+
+A published piece's run also writes its current copy, an unnumbered copy of each file of
+the version, in the piece's `current-copy/`, replacing that folder whole, and `exports.yaml`
+names the version that wrote it. A piece that names a place under `copy-place` takes the
+copy there instead: the run refuses a place the rules refuse, and any file at a path it
+writes but one of the piece's own copy, with the hash the record keeps (DEC-017 point 8). It
+removes nothing there: it names each file of the last copy it did not write again, which
+stays where it lies (DEC-017 point 7). A piece in any other state writes none. It refuses a
+published piece whose lock differs from the lock of the version that wrote its current copy,
+and names both ways past (DEC-017 point 5): the gate reads the record, not the files, and
+holds only this command, so it lies here, outside what `exports.plan` and `exports.write`
+share with the run that proposes a move of the lock.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
 refuse runs before that first write, so a refused export writes nothing, the location
-included. It writes the files, then `exports.yaml`, as one change: a write that fails
-removes the files the run wrote, and leaves the record and the configuration as they were.
+included. It writes the files, the current copy, then `exports.yaml`, as one change: a
+write that fails removes the files the run wrote, and leaves the current copy, the record
+and the configuration as they were.
 
 Usage:
   pkit visual export <piece> [--use-stale <output>]... [--location <path>]
@@ -53,7 +68,16 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, exports, files, libraries, location, tokens
+from _lib import (
+    checks,
+    current_copy,
+    exports,
+    files,
+    fingerprint,
+    libraries,
+    location,
+    tokens,
+)
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -89,6 +113,11 @@ def main() -> int:
 def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
+    if piece.final:
+        raise pl.Refused(
+            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export"
+        )
+    _refuse_a_lock_that_differs(piece)
     held = libraries.Held(root, where.path)
     faults = checks.lock_findings(held, piece)
     if faults:
@@ -107,12 +136,46 @@ def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> i
         print(said)
     for file in planned.files:
         print(f"export: {exports.FOLDER}/{name}/{file}")
+    if planned.copy is not None:
+        for path in planned.copy.entry["files"]:
+            print(f"current copy: {current_copy.rooted(piece, path)}")
+    for path in planned.left_behind:
+        print(f"left behind: {path}: the run did not write it again, and only a person removes it")
     for output in planned.used_stale:
         print(f"used while stale: {output}")
     for output in planned.not_stale:
         print(f"not stale, so used as it is: {output}")
     print(f"export: version {planned.number} recorded in {piece.file(pl.EXPORTS_FILE)}")
     return 0
+
+
+def _refuse_a_lock_that_differs(piece: pl.Piece) -> None:
+    """Raise Refused where the piece is published and its lock differs from the lock of the
+    version that wrote its current copy, or that lock cannot be read (DEC-017 point 5). It
+    reads the record, not the files, and compares nothing where the record holds no current
+    copy of the piece's own."""
+    if not current_copy.keeps(piece):
+        return
+    record = exports.recorded(piece)
+    entry = current_copy.own(piece, record)
+    if entry is None:
+        return
+    versions = exports.recorded_versions(piece, record)
+    wrote = f"version {entry['version']}, which wrote the piece's current copy"
+    try:
+        lock = current_copy.written_lock(entry, versions)
+    except fingerprint.UnreadableFingerprint as exc:
+        raise pl.Refused(
+            f"{piece.file(pl.EXPORTS_FILE)} gives no lock of {wrote}: {exc}. Mend it before the "
+            f"next export"
+        ) from exc
+    if lock != piece.lock:
+        said = ", ".join(f"{library}@{version}" for library, version in sorted(lock.items()))
+        raise pl.Refused(
+            f"the lock of {piece.file(pl.PIECE_FILE)} differs from the lock of {wrote}: {said}. "
+            f"Run `pkit visual upgrade {piece.name}` to propose a move of the lock, or write "
+            f"that lock back, which is no move of it"
+        )
 
 
 if __name__ == "__main__":

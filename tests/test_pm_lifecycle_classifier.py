@@ -275,7 +275,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
     cap = root / ".pkit" / "capabilities" / "project-management"
     shutil.copytree(CAP_SRC / "schemas", cap / "schemas")
-    shutil.copytree(CAP_SCRIPTS, cap / "scripts")
+    shutil.copytree(CAP_SCRIPTS, cap / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(CAP_SRC / "package.yaml", cap / "package.yaml")
     (cap / "project").mkdir()
     (cap / "project" / "config.yaml").write_text(_VALID_CONFIG, encoding="utf-8")

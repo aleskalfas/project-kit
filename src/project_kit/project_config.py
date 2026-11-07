@@ -65,6 +65,9 @@ EDITOR_DIRECTIVE = "# yaml-language-server: $schema=../schemas/backbone/config.s
 # The schema kind under `.pkit/schemas/backbone/` (ADR-056 point 1).
 CONFIG_SCHEMA_KIND = "config"
 
+#: The key that turns the landing check's refusal on (COR-066 point 4; ADR-081 point 5).
+REFUSE_PROPOSALS_KEY = "decisions.refuse-proposals"
+
 
 def project_config_path(target_root: Path) -> Path:
     return target_root / PROJECT_CONFIG_RELPATH

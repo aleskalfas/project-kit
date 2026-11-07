@@ -23,7 +23,7 @@ pkit:
         - tests/README.md
         - src/project_kit/router.py
         - .pkit/rules/project.md
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", "COR-066#5", PRJ-001, PRJ-009, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "project-management:DEC-053", "project-management:DEC-065", "software-engineering:DEC-002#1", "living-docs:DEC-002", "doc-examples:DEC-001"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", "COR-066#5", PRJ-001, PRJ-009, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "ADR-080#5", "project-management:DEC-053", "project-management:DEC-065", "software-engineering:DEC-002#1", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
         - RS-OPS-020
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
@@ -57,15 +57,16 @@ The same aggregator runs in two places, so the gate can't drift:
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
 - **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on clean Linux runners for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
 
-**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as three parts side by side, each a job on a runner of its own, and the aggregator defines them:
+**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as four parts side by side, each a job on a runner of its own, and the aggregator defines them:
 - **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs its share of the suite's parallel pass, cut where a committed table of measured test times balances the two.
-- **the remainder,** `./scripts/check.sh --rest`: every other line, with the tests marked `serial`.
+- **the quick checks,** `./scripts/check.sh --quick`: every line but the test step and the console fences. They end within a few minutes, and the reviewers start on them.
+- **the remainder,** `./scripts/check.sh --rest`: the console fences, with the tests marked `serial`.
 
 A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
 
 Each part names its own failures in its job's summary, and a slice names each failing test and how to run the slice again. Run any part by hand with the same argument. The hook runs the aggregator whole, so it runs what the parts run. [`tests/README.md`](tests/README.md), "Running the suite", says how the suite is cut and how the table of times is kept.
 
-**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
+**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, beside the quick checks, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
 - **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the answer files the change adds, where its answers to friction live (COR-062 point 1). A merge of the base counts only for what differs from git's merge of it.
 
@@ -109,7 +110,7 @@ The findings go to **one tracking issue**, its body rewritten in place when they
 The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except four kinds, which the body lists without holding the issue open:
 
 - a deferral, which is itself an answer, listed with its reason
-- a `left-out` finding, which owes nothing
+- a finding the check reports as owing nothing: a `left-out` finding, or a `whole-and-parts` anchor (ADR-080 point 5)
 - two revalidations of one artefact answered apart, debt that no change owes, counted in the headline apart from what needs an answer (COR-062 point 7, ADR-068 point 6)
 - an over-broad anchor, listed in a section of its own: its count moves as the window of commits slides with no anchor changed, and nothing records a person's judgement that an anchor is fine, so it would hold the issue open for good (ADR-055 point 5)
 

@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual check` holds a published piece to the version that wrote its
+  current copy (#2762). It fails a stale copy, naming what changed, and a piece
+  with no whole copy of its own or no format. It names the export that makes the
+  copy again, and where the lock differs, both ways past that export's refusal.
+  These findings stand beside a finding at the lock. A copy made over a stale
+  output asks for attention, naming the output. A draft with a file of its
+  current copy standing asks for attention, whatever the file holds. A final
+  piece raises none of these. A published piece that was never exported now
+  fails until its first export.

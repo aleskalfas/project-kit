@@ -89,7 +89,7 @@ pkit:
 
 **Main path:**
 
-1. The developer picks the record's namespace by its scope ([COR-025](../../../../../../.pkit/decisions/core/COR-025-adr-decision-space.md)). The namespace is `project` for how the [project](../../../glossary.md#term-project--project) works, and it is `adr` for what the project builds and why. It is a [capability](../../../glossary.md#term-capability--capability)'s name for a decision inside a capability the project authors.
+1. The developer picks the record's [namespace](../../../glossary.md#term-namespace--namespace) by its scope ([COR-025](../../../../../../.pkit/decisions/core/COR-025-adr-decision-space.md)). The namespace is `project` for how the [project](../../../glossary.md#term-project--project) works, and it is `adr` for what the project builds and why. It is a [capability](../../../glossary.md#term-capability--capability)'s name for a decision inside a capability the project authors.
 2. The developer runs `pkit new decision <namespace> <slug>`, or an AI agent runs it through the `decision-author` [skill](../../../glossary.md#term-skill--skill).
 3. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
@@ -105,7 +105,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** In the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), the namespace may be `core`, for a principle that fits any [project](../../../glossary.md#term-project--project). The [system](../../../glossary.md#term-system--system) stamps a core record in `.pkit/decisions/core/`, which [UC-041](UC-041-keep-core-records-true.md) keeps fit for any project.
+- **1a.** In the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), the [namespace](../../../glossary.md#term-namespace--namespace) may be `core`, for a principle that fits any [project](../../../glossary.md#term-project--project). The [system](../../../glossary.md#term-system--system) stamps a core record in `.pkit/decisions/core/`, which [UC-041](UC-041-keep-core-records-true.md) keeps fit for any project.
 - **1b.** The decision refines an accepted record, and overturns nothing it decides. The developer edits the record in place, with no revision marker, and stamps nothing. A new [point](../../../glossary.md#term-point--point) takes the next unused number, and no point is renumbered ([COR-058 point 3](../../../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)). The path goes on at step 7.
 - **1c.** On the path of 1b, a point is dropped, split or merged so that no point continues its claim. Its id goes into `retired-points`, with the points that took its text, and a one-line stub stays where it stood ([COR-058 point 4](../../../../../../.pkit/decisions/core/COR-058-record-points.md#4-a-retired-point-leaves-an-entry-and-a-stub)).
 - **1d.** The decision overturns an accepted record. The new record sets `supersedes:` to the old record's id, and its Implications name the edit to the old one. The path goes on at step 2, and that edit follows the new record's acceptance, in the same [change](../../../glossary.md#term-change--change) (variant 9c). A record overturned only in part stays accepted, its top line reading *Partially superseded by …*.
@@ -135,7 +135,7 @@ pkit:
 - **9b.** On the path of 1b or 1c, the developer commits the edit, and the record stays accepted.
 - **9c.** On the path of 1d or 1e, the merge authoriser accepts the new record in its change ([UC-040](UC-040-accept-through-review.md)). The developer then makes, in the project's own records, the edits its Implications name, in commits after the acceptance. The merge authoriser is shown each edit, which `pkit decisions check-diff` lists (step 8), and reads it before the change lands ([COR-066 point 5](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#5-a-new-record-lands-with-its-edits)). The use case ends.
 
-**Postconditions:** A new record lies in its namespace's folder, numbered past every record the [default branch](../../../glossary.md#term-default-branch--default-branch) holds there. Each of its points stands under an id it keeps for good. It stays `proposed` until the merge authoriser accepts it, and a refined record stays accepted.
+**Postconditions:** A new record lies in its [namespace](../../../glossary.md#term-namespace--namespace)'s folder, numbered past every record the [default branch](../../../glossary.md#term-default-branch--default-branch) holds there. Each of its points stands under an id it keeps for good. It stays `proposed` until the merge authoriser accepts it, and a refined record stays accepted.
 
 **Minimal guarantees:**
 

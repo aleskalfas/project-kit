@@ -3,9 +3,9 @@ id: REQ-016
 title: "The permission code needs only the operating system's `python3` and its standard library"
 status: active
 statement: "The permission code under `.pkit/permissions/` needs only the operating system's `python3` and its standard library."
-measure: "Under the operating system's `python3`, with no package outside its standard library importable, the code loads the permission model. It decides each call as it does where `ruamel.yaml` is importable."
+measure: "Under the operating system's `python3`, with no package outside its standard library importable, the permission code loads the permission model. It decides each call as it does where `ruamel.yaml` is importable."
 applies-to: "The permission code under `.pkit/permissions/`, on every machine that runs it. The backbone's `pkit permissions` commands import it, and so does an adapter's permission hook."
-obligation: v1:sha256:c1272e657711c38109154340a62d310378f0bb4b176b4ed6ba4b52372597ee9d
+obligation: v1:sha256:7a2b92017163ce0240c77ff1cf6763be92beb5a2629b86aa8ba1a19955991220
 actors:
   - ACT-operator
 refines: []
@@ -26,9 +26,9 @@ pkit:
 
 # REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library
 
-**Verified by:** Tests load the [permission model](../../../glossary.md#term-permission-model--permission-model) and decide calls with `ruamel.yaml` made unimportable, and find the same results as with it. No test checks that the code imports nothing else outside the standard library.
+**Verified by:** Tests load the [permission model](../../../glossary.md#term-permission-model--permission-model) and decide calls with `ruamel.yaml` made unimportable, and find the same results as with it. No test checks that the [permission code](../../../glossary.md#term-permission-code--permission-code) imports nothing else outside the standard library.
 
-**Imposed by:** [ADR-014 point 1](../../../../../architecture/decisions/ADR-014-macos-sandbox-platform-stance.md#1-enforcement-runs-in-box--the-permission-hook-is-a-zero-dependency-python3-script). An [adapter](../../../glossary.md#term-adapter--adapter)'s [permission hook](../../../glossary.md#term-permission-hook--permission-hook) imports this code, and decides each call with the same loader and the same decision as the `pkit permissions` commands. So the code needs no more than the interpreter the hook runs under.
+**Imposed by:** [ADR-014 point 1](../../../../../architecture/decisions/ADR-014-macos-sandbox-platform-stance.md#1-enforcement-runs-in-box--the-permission-hook-is-a-zero-dependency-python3-script). An [adapter](../../../glossary.md#term-adapter--adapter)'s [permission hook](../../../glossary.md#term-permission-hook--permission-hook) imports the [permission code](../../../glossary.md#term-permission-code--permission-code), and decides each call with the same loader and the same decision as the `pkit permissions` commands. So the code needs no more than the interpreter the hook runs under.
 
 [ADR-014](../../../../../architecture/decisions/ADR-014-macos-sandbox-platform-stance.md) gives the example of `claude-code` on macOS. There `uv` cannot run inside the operating system's [sandbox](../../../glossary.md#term-sandbox--sandbox), while the operating system's `python3` exists in every such sandbox. So the hook runs under the operating system's `python3`, and the code reads YAML through a parser of its own where `ruamel.yaml` is missing.
 

@@ -3,7 +3,9 @@ change to the versions its lock names (visual-communication DEC-003 point 8, DEC
 DEC-013 point 5).
 
 - **A side** (`Side`) is what one set of versions gives: each preview of a piece's scenes, or
-  the code of a declaration; where they give none, why.
+  the code of a declaration; where they give none, why. A piece's side also says which
+  produced pictures it drew stale or could not find (`drawing`), which it draws as they lie
+  and never makes again (DEC-019 point 5).
 - **Each side is read from a location of its own,** which it builds in the clone's local
   folder (`_built`): the piece or the declaration, the location's fonts, and each version the
   lock names, as the project holds it or, for a version `sources` gives, as the capability
@@ -13,6 +15,8 @@ DEC-013 point 5).
   number gives the same lock on each side, with `sources` on one (`drawing`, `writing`). A
   lock that moves gives the two locks. `keep` lays a piece's two sides out under `FOLDER`,
   each file named as its preview.
+- **The command that asks for it by name** takes a piece's two sides through the same calls
+  (`looks`, DEC-019 point 5).
 - **What a run of `pkit visual add` shows** (`shown`), of each lock that holds a copy it left:
   the piece's scenes drawn both ways, or the difference in the code its writer writes. A side
   that cannot be read stops nothing: the run says why, and goes on.
@@ -28,7 +32,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from _lib import code, copies, tokens
+from _lib import code, copies, exports, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change, FileError, refuse_links
@@ -55,10 +59,13 @@ _FAULTS = (pl.Refused, tokens.TokenError, MissingFont, code.CodeRefused)
 
 @dataclass(frozen=True)
 class Side:
-    """What one set of versions gives: each file's name and text; where it gives none, why."""
+    """What one set of versions gives: each file's name and text; where it gives none, why;
+    and each produced picture a piece's side read that is stale or missing, with what
+    changed or why it is missing."""
 
     files: Mapping[str, str] = field(default_factory=dict)
     why: str = ""
+    stale: Mapping[str, Sequence[str]] = field(default_factory=dict)
 
 
 def drawing(
@@ -69,11 +76,12 @@ def drawing(
     sources: Sequence[copies.Source] = (),
 ) -> Side:
     """The previews of the piece `name` under `lock`, each of `sources` in place of the
-    project's copy of its version. A scene that holds no page is a side that cannot be drawn
+    project's copy of its version, and each picture they read that is stale or missing
+    (`_stale`). A scene that holds no page is a side that cannot be drawn
     (`_refuse_no_page`)."""
     own = _files(root, f"{location}/{pl.PIECES}/{name}", f"{location}/{pl.FONTS}")
 
-    def previews(built: Path) -> dict[str, str]:
+    def previews(built: Path) -> Side:
         piece = pl.read_piece(built, location, name)
         project = pl.Project(piece, lock, Held(built, location, walked=True))
         results = project.scenes()
@@ -81,7 +89,7 @@ def drawing(
         found: dict[str, str] = {}
         for language, key, drawn in pl.drawn(project, results, "svg"):
             found.update(pl.preview_files(name, language, key, drawn.pages))
-        return found
+        return Side(found, stale=_stale(project, built))
 
     return _read(root, {**own, **_version_files(root, location, lock, sources)}, previews)
 
@@ -98,10 +106,10 @@ def writing(
     file = code.file_of(location, name)
     own = {file: root / file, **_files(root, f"{location}/{pl.FONTS}")}
 
-    def written(built: Path) -> dict[str, str]:
+    def written(built: Path) -> Side:
         declaration = replace(code.read(built, location, name), lock=dict(lock))
         planned = code.plan(built, location, declaration, Held(built, location, walked=True))
-        return {declaration.out: code.text_of(planned)}
+        return Side({declaration.out: code.text_of(planned)})
 
     return _read(root, {**own, **_version_files(root, location, lock, sources)}, written)
 
@@ -128,6 +136,13 @@ def differing(before: Side, after: Side) -> list[str]:
     """Each file the two sides do not hold alike, in name order."""
     every = sorted({*before.files, *after.files})
     return [file for file in every if before.files.get(file) != after.files.get(file)]
+
+
+def both_ways(name: str, before: Side, after: Side) -> str:
+    """The two sides of the piece `name`, as `keep` lays them out, in words."""
+    count, total = len(differing(before, after)), len({*before.files, *after.files})
+    verb = "differs" if count == 1 else "differ"
+    return f"drawn both ways in {FOLDER}/{name}/: {count} of {total} files {verb}"
 
 
 def shown(
@@ -160,9 +175,7 @@ def _piece(
         keep(change, lock.name, before, after)
     except pl.Refused as exc:
         return (f"no before-and-after: {exc}",)
-    count, total = len(differing(before, after)), len({*before.files, *after.files})
-    verb = "differs" if count == 1 else "differ"
-    return (f"drawn both ways in {FOLDER}/{lock.name}/: {count} of {total} files {verb}",)
+    return (both_ways(lock.name, before, after),)
 
 
 def _declaration(
@@ -204,6 +217,21 @@ def _why(before: Side, after: Side) -> str:
         if side.why
     ]
     return "; ".join(said)
+
+
+def _stale(project: pl.Project, built: Path) -> dict[str, list[str]]:
+    """Each produced picture the project's scenes read that is stale under its lock, with
+    what changed, and each that is missing, with why. A picture's inputs are read under the
+    lock of the piece's own file, so that file takes the side's first, in the location
+    `built`, which is the side's alone. Git ignores that location, so they are read
+    through the project's own `Held`, which lists its files as they lie."""
+    if project.env.records:
+        pl.write_lock(project.piece, project.lock)
+    stale = {
+        output: [change.replace(f"{built}/", "") for change in changes]
+        for output, changes in exports.stale_outputs(project, project.held).items()
+    }
+    return {**stale, **{output: [why] for output, why in project.env.missing.items()}}
 
 
 def _refuse_no_page(results: Sequence[tuple[str, SceneResult]]) -> None:
@@ -256,13 +284,13 @@ def _spells_version(library: str, version: str) -> bool:
     return is_name(library)
 
 
-def _read(root: Path, files: Mapping[str, Path], read: Callable[[Path], dict[str, str]]) -> Side:
+def _read(root: Path, files: Mapping[str, Path], read: Callable[[Path], Side]) -> Side:
     """What `read` gives of a location holding `files`, or why it gives nothing, the location
     named as the project's. Nothing of the location is left."""
     try:
         with _built(root, files) as built:
             try:
-                return Side(read(built))
+                return read(built)
             except _FAULTS as exc:
                 return Side(why=str(exc).replace(f"{built}/", ""))
     except (FileError, OSError) as exc:

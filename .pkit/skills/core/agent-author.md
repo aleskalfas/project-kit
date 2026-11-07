@@ -16,6 +16,8 @@ reads:
     - COR-026
   paths:
     - .pkit/agents/README.md
+    - .pkit/agents/hooks.md
+    - .pkit/agents/storyboards.md
     - .pkit/decisions/README.md
     - .pkit/agents/project/overlay.yaml
 ---
@@ -111,14 +113,14 @@ For each section:
 - **Description (frontmatter)** — single sentence; what the agent does and when to invoke it. This surfaces in the harness's agent picker; the first 1,500 chars compete with every other agent's description for the model's attention. Lead with the load-bearing keywords.
 - **`## When to invoke this agent`** — bullet list of trigger conditions. Concrete; an author scanning the list should know whether their situation matches.
 - **`## Files you own`** — the paths whose modification is this agent's responsibility. Per the bidirectional reference-graph rule (COR-013), every path here must also appear in frontmatter `owns:`. Use `<category-name>` placeholders for adopter-specific paths; declare each in `reads.patterns` so the deploy-time substitution covers them. A path written only through a mutating command the agent runs — a friction writer, a stamp — is not listed: name the command and the conditions for running it in the body, or point at the skill that does (COR-013).
-- **`## Key documents to read`** — paths, record IDs (`COR-NNN`, `PRJ-NNN`), and hook contracts the agent consults at task time. Every entry here must also appear in `reads.{paths,records}` in frontmatter; the validator walks both directions. For scripted-scenario agents (per COR-016), the agent's storyboards belong here too — declared in frontmatter `storyboards:` by their bare sibling filename (`storyboard.md`), cited by that same name in the body, and load-bearing on it. The deploy rewrites the sibling name to the storyboard's source path in the deployed copy, so the source stays portable and the deployed agent still finds it (`.pkit/agents/README.md`, "Storyboards").
+- **`## Key documents to read`** — paths, record IDs (`COR-NNN`, `PRJ-NNN`), and hook contracts the agent consults at task time. Every entry here must also appear in `reads.{paths,records}` in frontmatter; the validator walks both directions. For scripted-scenario agents (per COR-016), the agent's storyboards belong here too — declared in frontmatter `storyboards:` by their bare sibling filename (`storyboard.md`), cited by that same name in the body, and load-bearing on it. The deploy rewrites the sibling name to the storyboard's source path in the deployed copy, so the source stays portable and the deployed agent still finds it (`.pkit/agents/storyboards.md`, "Frontmatter declaration").
 - **`## How you work`** — the agent's procedure or principles. For *judgment-driven* agents (no storyboards), numbered steps if the role follows a fixed sequence; principles + examples if the role is more judgement-bearing. For *scripted-scenario* agents (with `storyboards:` declared), the body is much thinner: it states that the agent's scripted behavior is documented in its declared storyboards, instructs the runtime to load them at session start via the `Read` tool, and may summarize at a high level what scenarios the agent drives — but does **not** restate or sketch the scenarios. The storyboard is the source; the agent body's job is to point at it. Cite authority by record ID rather than restating it (`per COR-005` not "per the skill/command pairing rule").
 - **`## Intermediate files`** — stamped finished: the one sentence every shipped agent carries, sending its intermediate files to the agent workspace (`.agent-workspace/`, the core rules' workspace rule), written with the file tools. Leave the wording as stamped, identical across agents.
 - **A reviewer** — an agent that judges work and returns a verdict or findings — is read-only on what it judges, not on everything: say so with that scope wherever the description or body claims read-only. If it can execute (a shell among its `tools`), add the `## What read-only covers` section just before `## Intermediate files`, copied word for word from a shipped reviewer; it sends every working file of a review — a dumped diff, a reproduction, captured output — to the agent workspace. `.pkit/agents/README.md`'s "Reviewers" paragraph has the rule.
 
 ### 7. Declare hooks (if any)
 
-If the agent invokes external operations (settings changes, work-tracker writes, deploys), declare each as a hook in frontmatter `needs:` rather than hard-coding a shell command in the body. See `.pkit/agents/README.md` → "Hooks" for the naming and signature contract.
+If the agent invokes external operations (settings changes, work-tracker writes, deploys), declare each as a hook in frontmatter `needs:` rather than hard-coding a shell command in the body. See `.pkit/agents/hooks.md` for the naming and signature contract.
 
 Two-segment hooks (`<topic>.<operation>`) are portable across bundles. Three-segment hooks (`<topic>.<provider>.<operation>`) lock the agent to a specific provider; only use these when the operation genuinely has no portable equivalent.
 
