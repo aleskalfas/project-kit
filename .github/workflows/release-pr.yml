@@ -67,18 +67,6 @@ jobs:
         if: steps.plan.outputs.empty == 'true'
         run: echo "No pending changesets move a version — nothing to release."
 
-      # Deterministic release branch from the computed backbone version (falls
-      # back to the run id for a component-only release with no backbone move).
-      - name: Derive the release branch name
-        id: branch
-        if: steps.plan.outputs.empty != 'true'
-        run: |
-          if [ -n "${{ steps.plan.outputs.version }}" ]; then
-            echo "name=release/v${{ steps.plan.outputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=release/${{ github.run_id }}" >> "$GITHUB_OUTPUT"
-          fi
-
       # Idempotency: if a release PR is already open (any head under release/),
       # do not open a second one — a human is already reviewing it.
       - name: Skip if a release PR is already open
@@ -92,8 +80,27 @@ jobs:
             echo "A release PR is already open — skipping."
           fi
 
+      # The release branch, from the computed backbone version: release/v<version>,
+      # or release/<run id> for a component-only release with no backbone move.
+      # Where origin already holds release/v<version> — a run that failed after
+      # its push left it, with no PR open from it, as the step above found — the
+      # branch is release/v<version>-<run id>, so the push does not fail on it.
+      # `pkit release merge` takes any head under release/ (scripts/release_pr.py).
+      - name: Derive the release branch name
+        id: branch
+        if: steps.plan.outputs.empty != 'true' && steps.existing.outputs.count == '0'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          name="$(uv run python scripts/release_pr.py branch --version "${VERSION}" --run-id "${RUN_ID}")"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+
       - name: Apply the release and open the PR
         if: steps.plan.outputs.empty != 'true' && steps.existing.outputs.count == '0'
+        env:
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
           set -euo pipefail
           branch="${{ steps.branch.outputs.name }}"
@@ -109,34 +116,24 @@ jobs:
           # release-tag.yml (PRJ-004 / .pkit/release/README.md).
           uv run pkit release apply --yes
 
+          # PR body, built before the push, so a body that cannot be built leaves
+          # no branch behind: the computed bumps, each with the requires_backbone
+          # floor, the requires_capabilities floors and the upper bounds on
+          # capabilities a changeset declared for it (the lines `pkit release
+          # plan` prints), any migration-dir prediction warnings (#465), and the
+          # freshly generated changelog entry (the top block of CHANGELOG.md) for
+          # review. Where that entry would take the body past the 65,536
+          # characters GitHub keeps in a PR's description, a link to CHANGELOG.md
+          # on the release branch takes its place, and the bumps and warnings stay
+          # whole (scripts/release_pr.py). A range on a capability that excludes
+          # a dependency's version never reaches here: the plan step refuses it
+          # (PRJ-002 D4).
+          body="${RUNNER_TEMP}/pr-body.md"
+          uv run python scripts/release_pr.py body --plan "${plan}" --branch "${branch}" --repository-url "${REPOSITORY_URL}" > "${body}"
+
           title="chore(release): v${version:-$(date -u +%Y-%m-%d)}"
           git add -A
           git commit -m "${title}"
           git push --set-upstream origin "${branch}"
-
-          # PR body: the computed bumps, each with the requires_backbone floor, the
-          # requires_capabilities floors and the upper bounds on capabilities a
-          # changeset declared for it (the lines `pkit release plan` prints), any
-          # migration-dir prediction warnings (#465), and the freshly generated
-          # changelog entry (the top block of CHANGELOG.md) for review. A range on
-          # a capability that excludes a dependency's version never reaches here:
-          # the plan step refuses it (PRJ-002 D4).
-          body="${RUNNER_TEMP}/pr-body.md"
-          {
-            echo "Automated release PR — review the version bumps and changelog, then merge."
-            echo "Merging tags the backbone version post-merge (release-tag.yml). Do not squash away the version bump."
-            echo
-            echo "## Version bumps"
-            jq -r '.releases[] | "- \(.component): \(.old_version) → \(.new_version) (\(.segment))", (.requires_backbone_floor.lines[]? | "  - \(.)"), (.requires_capabilities_floors[]?.lines[]? | "  - \(.)"), (.requires_capabilities_bounds[]?.lines[]? | "  - \(.)")' "${plan}"
-            warnings="$(jq -r '.migration_warnings[]?' "${plan}")"
-            if [ -n "${warnings}" ]; then
-              echo
-              echo "## Migration-dir warnings (see #465)"
-              printf '%s\n' "${warnings}" | sed 's/^/- /'
-            fi
-            echo
-            echo "## Generated changelog"
-            awk '/^## / { if (seen++) exit } seen' CHANGELOG.md
-          } > "${body}"
 
           gh pr create --base main --head "${branch}" --title "${title}" --body-file "${body}"
