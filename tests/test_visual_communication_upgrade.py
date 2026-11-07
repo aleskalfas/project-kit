@@ -23,6 +23,8 @@ from tests.test_visual_communication_pipeline import (
     changed_tests,
     drawing_project,
     every_file,
+    exported_up_to,
+    filled,
     list_drawing_libraries,
     write_picture,
 )
@@ -49,6 +51,7 @@ from tests.visual_communication_writes import FULL, failing
     fingerprint,
     reading,
     files,
+    pl,
 ) = load(
     "visual-communication",
     "upgrade.py",
@@ -63,6 +66,7 @@ from tests.visual_communication_writes import FULL, failing
     "fingerprint",
     "reading",
     "files",
+    "pipeline",
 )
 
 RECORD = f"{PIECE_FOLDER}/exports.yaml"
@@ -311,6 +315,20 @@ def test_the_run_leaves_the_findings_record_of_a_render_under_the_moved_lock(
     assert data["pkit_schema"] == "visual-communication:findings"
     inputs = data["key"]["inputs"]
     assert {entry["version"] for entry in inputs if entry.get("library") == "tests"} == {"1.1.0"}
+
+
+def test_its_export_its_findings_and_its_drawing_take_the_stand_ins(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Its export takes the stand-ins, as `pkit visual export` does, and refuses a piece that
+    shows a version's number or its date, so its drawing takes them too (DEC-016 point 5)."""
+    root = published(tmp_path)
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    lines(root)
+    stand_ins = pl.read_piece_file(root, "visual", PIECE).stand_ins
+    assert len(taken) == 3
+    assert all(facts == stand_ins for facts in taken)
 
 
 def test_it_draws_no_preview_and_keeps_its_look_ahead_in_the_local_folder(tmp_path: Path) -> None:

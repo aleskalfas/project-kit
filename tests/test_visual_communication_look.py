@@ -30,8 +30,11 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    exported_up_to,
+    filled,
     on_devices,
     parts_project,
+    stamped,
     two_steps,
     write_content,
     write_picture,
@@ -48,7 +51,7 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-look, pages, svg, seam, framing, viewing, viewing_tool = load(
+look, pages, svg, seam, framing, viewing, viewing_tool, pl = load(
     "visual-communication",
     "look.py",
     "pages.py",
@@ -57,6 +60,7 @@ look, pages, svg, seam, framing, viewing, viewing_tool = load(
     "framing",
     "viewing",
     "viewing_tool",
+    "pipeline",
 )
 
 LOCK = ["foundations 1.0.0", "test-brand 1.0.0", "tests 1.0.0"]
@@ -85,6 +89,14 @@ def folder_of(root: Path, piece: str = PIECE) -> Path:
 
 def report_of(root: Path, piece: str = PIECE) -> dict[str, Any]:
     return json.loads((folder_of(root, piece) / viewing.REPORT).read_text(encoding="utf-8"))
+
+
+def on_white(root: Path) -> None:
+    """The brand's background made clear, so a page draws no ground of its own."""
+    tokens = root / BRAND_TOKENS
+    held = json.loads(tokens.read_text(encoding="utf-8"))
+    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
+    tokens.write_text(json.dumps(held), encoding="utf-8")
 
 
 def written(root: Path) -> dict[str, bytes]:
@@ -727,10 +739,7 @@ def test_the_report_says_which_page_lies_on_white(flow: Path) -> None:
     assert run_look(flow, PIECE).returncode == 0
     [image] = report_of(flow)["images"]
     assert image["on-white"] is False
-    tokens = flow / BRAND_TOKENS
-    held = json.loads(tokens.read_text(encoding="utf-8"))
-    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
-    tokens.write_text(json.dumps(held), encoding="utf-8")
+    on_white(flow)
     shown = run_look(flow, PIECE)
     assert shown.returncode == 0, shown.stderr
     [image] = report_of(flow)["images"]
@@ -1097,6 +1106,48 @@ def test_a_page_the_tool_cannot_draw_refuses_with_nothing_written(
         "`pkit visual check flow` names what the piece still owes\n"
     )
     assert not folder_of(flow).exists()
+
+
+# --- what fills an export's facts (DEC-016 point 5) ---------------------------------------------
+
+
+def test_a_look_fills_this_clones_next_number_as_a_preview_does(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [facts.version for facts in taken] == ["v42"]
+    assert "stand-in" not in shown.stdout
+
+
+def test_a_final_pieces_look_takes_the_stand_ins_and_says_so_after_the_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "date", state="final")
+    on_white(root)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
+    *_, reported, said, report = shown.stdout.splitlines()
+    assert reported.startswith("on white: ")
+    assert said == (
+        "look: a final piece has no next export, so a stand-in shows: `date` at `figure/body/date`"
+    )
+    assert report.startswith("report: ")
+
+
+def test_the_pages_listed_are_computed_as_a_preview_fills_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    assert run_pages(root, PIECE).returncode == 0
+    assert [facts.version for facts in taken] == ["v42"]
 
 
 # --- `pkit visual pages` ------------------------------------------------------------------------
