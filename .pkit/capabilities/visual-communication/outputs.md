@@ -595,8 +595,8 @@ The check reads this code as it reads any written code (*Written code* in *What 
 
 The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw. It draws what the SVG renderer draws, and needs no network.
 
-- **No render, and no export.** It moves no lock and keeps no findings. It takes no number, writes no `exports.yaml` and records no location.
-- **An export's facts** show as in a [preview](#previews). Where an image shows a stand-in, the command says so, and why, after what the report says.
+- **No render, and no export.** It moves no lock and keeps no findings. It uses up no version number, writes no `exports.yaml` and records no location.
+- **An export's facts** show as in a [preview](#previews): a number shown is the next export's, which the run leaves for it. Where an image shows a stand-in, the command says so, and why, after what the report says ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
 - **It runs no program.** No helper or producer runs. A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss.
 - **What it draws.** By default, every page in the piece's source language, in the first key in [key order](files.md#keys-of-combinations). That is the combination of defaults wherever the piece names it. `--page`, `--language` and `--key` pick others. `--every-language` and `--every-key` take them all.
