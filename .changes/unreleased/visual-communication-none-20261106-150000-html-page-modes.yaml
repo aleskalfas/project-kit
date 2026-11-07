@@ -1,6 +1,10 @@
 component: visual-communication
 kind: none
 body: >
-  Design-ahead: a proposed record decides how an HTML page holds its modes and
-  how a reader switches them (#2738). It moves no surface: nothing is built, and
-  an adopter can observe nothing new until later Tasks build what it decides.
+  DEC-023, accepted, decides how an HTML page holds its modes and how a reader
+  switches them (#2738): one file for each language and size holds the modes a
+  reader's system names, follows that system while open, and holds no control
+  and no script. Six accepted records say what it decides of them. The record
+  designs ahead: the renderer, the viewing step and the `html` format build it
+  in later pull requests, so no command, path or file format changes, and no
+  surface moves yet.
