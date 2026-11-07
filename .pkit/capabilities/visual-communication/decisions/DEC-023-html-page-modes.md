@@ -1,5 +1,5 @@
 ---
-id: DEC-022
+id: DEC-023
 title: One HTML file holds a page's modes at its size, and follows the reader's system
 status: proposed
 date: 2026-11-06
