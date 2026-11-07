@@ -22,6 +22,7 @@ from tests.visual_communication_project import (
     TEST_EDITION,
     TEST_PARTS,
     bound,
+    capability_version,
     copy_library,
     importable,
     project,
@@ -112,7 +113,7 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
         "programs": {},
         "machine": record["recorded"]["machine"],
         "time": "2026-11-02T10:30:00Z",
-        "capability": "0.1.0",
+        "capability": capability_version(),
     }
     text = (root / "web/brand.css.record.yaml").read_text(encoding="utf-8")
     assert text.startswith("# The record of the code `pkit visual write-code brand-css` writes")

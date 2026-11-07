@@ -22,7 +22,7 @@ from ruamel.yaml import YAML
 from tests import visual_communication_producer as producer
 from tests.in_process import load
 from tests.visual_communication_producer import LOCK, OUTPUT, PIECE, producing_project
-from tests.visual_communication_project import CONFIG, write_piece, yaml_text
+from tests.visual_communication_project import CONFIG, capability_version, write_piece, yaml_text
 
 framing, seam, location, files, findings_module = load(
     "visual-communication", "framing", "plugins.seam", "location", "files", "findings"
@@ -174,7 +174,7 @@ def test_a_run_keeps_each_variant_and_a_record_the_schema_holds(tmp_path: Path) 
     }
     assert record["recorded"]["plugins"] == {"square": "1.0.0"}
     assert record["recorded"]["programs"] == {}
-    assert record["recorded"]["capability"] == "0.1.0"
+    assert record["recorded"]["capability"] == capability_version()
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
     assert found(root) == []
 

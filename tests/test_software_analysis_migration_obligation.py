@@ -22,7 +22,14 @@ from ruamel.yaml import YAML
 
 from project_kit import migrations
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.analysis_repo import CONSTRAINTS, QUALITY, fingerprint, installed, requirement
+from tests.analysis_repo import (
+    CONSTRAINTS,
+    QUALITY,
+    fingerprint,
+    installed,
+    release_reaches,
+    requirement,
+)
 from tests.test_software_analysis_check import check, errors
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -158,9 +165,10 @@ def test_the_migration_never_fails_the_upgrade_when_the_plan_cannot_be_read(
 
 def test_the_migration_lies_where_the_fingerprint_first_ships() -> None:
     """A project installed at or after the version that first writes the field never runs
-    it: its stamp and its command write the field. That is the capability's next release,
-    1.0.0, so the package still records the release before it, or that release."""
+    it: its stamp and its command write the field. That is the capability's 1.0.0, so the
+    migration lies there, under a version the capability's release reaches, or no upgrade
+    runs it."""
     package = YAML(typ="safe").load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     assert "obligation" in package["commands"]
     assert MIGRATION.parent.name == "1.0.0"
-    assert Version(package["component"]["version"]) <= Version("1.0.0")
+    assert Version(MIGRATION.parent.name) <= Version(release_reaches())
