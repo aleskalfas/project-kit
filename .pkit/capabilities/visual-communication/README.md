@@ -54,6 +54,8 @@ pkit:
         - visual-communication:DEC-019#5
         - visual-communication:DEC-019#7
         - visual-communication:DEC-019#10
+        - visual-communication:DEC-020#5
+        - visual-communication:DEC-020#8
         - COR-017
         - COR-031
         - COR-054#3
@@ -78,6 +80,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
+        - .pkit/capabilities/visual-communication/files.md#the-browser
         - .pkit/capabilities/visual-communication/files.md#a-version-that-lies-behind
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-patterns-by-the-question-they-answer
@@ -108,6 +111,8 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-a-run-writes
         - .pkit/capabilities/visual-communication/outputs.md#what-the-report-says
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
+        - .pkit/capabilities/visual-communication/outputs.md#the-html-renderers-pages
+        - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
         - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
@@ -133,7 +138,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)).
 - **The starter library,** under `libraries/starter/`: patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists them by the question each answers ([The starter](libraries/starter/README.md)). `pkit visual add starter` brings it in, and its version is not released yet either.
 - **The neutral brand,** under `libraries/neutral/`: a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). `pkit visual add neutral` brings it in, and its version is not released yet either.
-- **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes, and which no command reaches yet; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
+- **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes, and whose pages `pkit visual look` draws through a browser; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
@@ -183,7 +188,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce`, `export`, `mark-final`, `take-up`, `upgrade` and `prune` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced or removed, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce`, `export`, `mark-final`, `take-up`, `upgrade` and `prune` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced or removed, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)). Through a browser it holds the page files and the browser's profile there in the same way ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
 
 ### `pkit visual status`
 
@@ -306,19 +311,22 @@ Takes a final piece up again, as a new piece copied from it: a draft with its lo
 Draws a piece's pages as images, for a person or an agent to read ([The viewing step](outputs.md#the-viewing-step)).
 
 - **Draws** every page in the source language, unless flags pick others.
-- **Writes** each image and its frames, and one report, in the clone's local folder, replacing what an earlier run left there ([What a run writes](outputs.md#what-a-run-writes)).
-- **Prints** the lock and what the report says ([What the report says](outputs.md#what-the-report-says)), then each stand-in an image shows, with why ([The viewing step](outputs.md#the-viewing-step)).
+- **Reads** a piece that declares `html` through the HTML renderer, and any other through the SVG renderer. `--renderer svg` or `--renderer html` names one.
+- **Needs a browser** for the HTML renderer's pages, which no other format needs. The capability installs none ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
+- **Writes** each image and its frames, and one report, in its renderer's folder, replacing what an earlier run left there. Through the HTML renderer it writes each page file too ([What a run writes](outputs.md#what-a-run-writes)).
+- **Prints** the lock, the renderer and what the report says ([What the report says](outputs.md#what-the-report-says)), then each stand-in an image shows, with why ([The viewing step](outputs.md#the-viewing-step)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
-- **Exits** 0 when it drew, whatever the report says; 1 when it refused, with `look/<piece>/` left as it was, or a write failed ([Commands](#commands)).
+- **Exits** 0 when it drew, whatever the report says. It exits 1 when it refused, with its renderer's folder left as it was, or when a write failed ([Commands](#commands)). It exits 2 on a usage error. It exits 3 when the browser stopped, leaving the page files and a report, and no image ([When the browser stops](outputs.md#when-the-browser-stops)).
 
 ### `pkit visual pages <piece>`
 
 Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
-- **Prints** the piece's languages and keys, what it draws by default, each page by its number and trace id, and the tool. `--json` prints it as one document.
+- **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document.
+- **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none.
 - **Writes** nothing.
-- **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold.
+- **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
 
 ### `pkit visual before-after <piece>`
 
@@ -383,9 +391,11 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 To use it:
 
-1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages and modes you want read. The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images, with the piece and the brand, and the frames and the report beside them. It changes nothing.
+1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. The reviewer runs no command, so it sees only what that run drew.
+2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
 3. **Read its report.** It opens with the pages, languages and modes it looked at, and names what it did not see. What it did not see is not looked at, never clean.
+
+Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)).
 
 Each finding names the page, and the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)). A finding is one of two kinds:
 
@@ -404,4 +414,4 @@ use the same form.
 
 ## Dependencies
 
-No other capability. The commands run their scripts through `uv`, with the Python packages each script pins; `pkit sync` installs those of the check, so `pkit validate` runs it offline. It installs those of `pkit visual pages` too, which pins every package `pkit visual look` does, so that command draws with no network.
+No other capability. The commands run their scripts through `uv`, with the Python packages each script pins; `pkit sync` installs those of the check, so `pkit validate` runs it offline. It installs those of `pkit visual pages` too, which pins every package `pkit visual look` does, so that command draws with no network. The HTML renderer's pages need a browser of the Chromium family besides, which the capability does not install ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
