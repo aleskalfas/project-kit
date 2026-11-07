@@ -19,7 +19,7 @@ pkit:
       record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
       artefact:
         - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
-      source: [claude-code-hooks]
+      source: [claude-code-hooks, working-run-probe]
 ---
 
 # Claude Code adapter
