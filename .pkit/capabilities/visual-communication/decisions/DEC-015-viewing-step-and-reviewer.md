@@ -36,7 +36,7 @@ What was not measured, where any failure reopens the tool (Implications):
 
 ### 2. Each tool lies behind one module of its own
 
-- **Behind one module of its own** (refinement per [visual-communication:DEC-020-html-page-drawing]). Each tool lies behind one module of the capability. That module takes what the renderer drew, a page or a page file, with the regions of it to draw (refinement per [visual-communication:DEC-022-web-site-and-parts]), and gives images and what the tool dropped. Nothing else of the step calls the tool. Reading the SVG renderer's pages is how resvg works, not what the step is.
+- **Behind one module of its own** (refinement per [visual-communication:DEC-020-html-page-drawing]). Each tool lies behind one module of the capability. That module takes what the renderer drew, a page or a page file, with the regions of it to draw (refinement per [visual-communication:DEC-022-web-site-and-parts]), and gives images and what the tool dropped. Nothing else of the step calls the tool. Reading the SVG renderer's pages is how resvg works, not what the step is. The browser's module also takes the reader's signals to set (refinement per [visual-communication:DEC-023-html-page-modes] point 6).
 - **resvg is pinned, and in the command's own process** (refinement per [visual-communication:DEC-020-html-page-drawing]). The wheel is pinned exactly, as the capability's scripts pin their packages, and runs as a library. So drawing with it needs no other runtime and no network ([visual-communication:DEC-002-files-and-validation] point 8). It calls no outside program to draw.
 - **The page's faces, for resvg** (refinement per [visual-communication:DEC-020-html-page-drawing]). resvg ignores `@font-face`. So the step takes each face from the page's `@font-face` rules, and hands it over under the family and the weight its rule names. resvg reads no font of the machine (DEC-004 point 9). The faces are transient files, in a temporary folder inside the clone's local folder, which the run removes.
 - **What resvg draws otherwise** (refinement per [visual-communication:DEC-020-html-page-drawing]). resvg's fallback may draw a run measured in more than one family otherwise than a browser does (Context). A face a browser could not read may still draw in resvg.
@@ -63,7 +63,7 @@ The step reports what it cannot show as the renderer set it, in a report beside 
 - **The size.** Each image is large enough that a page's smallest text reads. The number is left to the command (#2674).
 - **A tall page in bands** (refinement per [visual-communication:DEC-022-web-site-and-parts]). A page too tall for one such image is drawn in *bands*, strips of its height each as wide as the page, as DEC-022 point 7 says.
 - **Frames.** Beside each image lies each element's frame, in the image's pixels, with its trace id (DEC-005 point 5). So a finding names the element, and through it the field.
-- **The ground.** Where a page draws no ground of its own, its image lies on white, which the piece never set. A text over nothing is judged knowing this.
+- **The ground.** Where a page draws no ground of its own, its image lies on white, which the piece never set. An image of the HTML renderer's page lies instead on the browser's own ground in the mode it is drawn in (refinement per [visual-communication:DEC-023-html-page-modes] point 7). A text over nothing is judged knowing this.
 
 ### 6. It promises nothing about pixels
 

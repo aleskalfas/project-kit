@@ -49,7 +49,7 @@ A *key* names a combination of modes over a set of axes. A scene's key spans its
 - **Axes come in the order of their names,** so no order is declared, kept or broken.
 - **So a key stays the same when an axis with a default is added.** Every combination that existed takes the new axis's default, which the key leaves out.
 - **Everything that names a combination uses its key:** a scene, an export and a name in code.
-- **A picture's variant takes the first key it serves.** A *variant* is one version of a picture made while preparing, which serves one or more combinations. It takes the first of their keys: the one that holds the fewest axes, and among those the first in the order of its spelling. The reserved key holds none, so it comes first. Adding an axis with a default adds only keys that hold one axis more than a key that existed, so a variant's key stays the same too.
+- **A picture's variant takes the first key it serves.** A *variant* is one version of a picture made while preparing, which serves one or more combinations. It takes the first of their keys: the one that holds the fewest axes, and among those the first in the order of its spelling. The reserved key holds none, so it comes first. Adding an axis with a default adds only keys that hold one axis more than a key that existed, so a variant's key stays the same too. A file that holds several combinations takes its key the same way (refinement per [visual-communication:DEC-023-html-page-modes]).
 
 ### 4. One naming rule turns a brand's names into names in code
 
