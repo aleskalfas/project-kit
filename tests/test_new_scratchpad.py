@@ -1,4 +1,5 @@
-"""Tests for scratchpad stamping and state transitions (per COR-012)."""
+"""Tests for scratchpad stamping, state transitions and the `scratchpad` member of
+`pkit validate` (per COR-012)."""
 
 from __future__ import annotations
 
@@ -159,3 +160,64 @@ def test_transition_to_dropped_dry_run_does_not_modify(kit_target: Path) -> None
     _src, dst = scratchpads.transition_to_dropped(kit_target, slug="my-note", dry_run=True)
     assert src_target.is_file()
     assert not dst.exists()
+
+
+# --- outcome: a note lies in one state folder (COR-012) -------------
+
+
+def _note(kit_target: Path, state: str, name: str) -> None:
+    folder = kit_target / ".pkit" / "scratchpad" / state
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / name).write_text("---\nstarted: 2026-05-12\n---\n\n# A note\n", encoding="utf-8")
+
+
+def test_outcome_passes_when_each_slug_is_in_one_state(kit_target: Path) -> None:
+    _note(kit_target, "active", "2026-05-12-open-question.md")
+    _note(kit_target, "done", "2026-04-01-settled-question.md")
+    _note(kit_target, "dropped", "2026-03-01-failed-idea.md")
+    outcome = scratchpads.outcome(kit_target)
+    assert outcome.findings == ()
+    assert outcome.summary == ("3 scratchpad note(s) checked; 0 error(s).",)
+
+
+def test_outcome_reports_a_slug_in_more_than_one_state_once_naming_every_file(
+    kit_target: Path,
+) -> None:
+    _note(kit_target, "active", "2026-09-30-review-load.md")
+    _note(kit_target, "reported", "2026-10-02-review-load.md")
+    _note(kit_target, "done", "2026-09-30-review-load.md")
+    _note(kit_target, "done", "2026-05-12-other-note.md")
+    outcome = scratchpads.outcome(kit_target)
+    [finding] = outcome.findings
+    assert finding.severity.fails
+    assert finding.location == ".pkit/scratchpad :: review-load"
+    assert finding.message.startswith(
+        "slug 'review-load' is in 3 state folders: "
+        ".pkit/scratchpad/active/2026-09-30-review-load.md, "
+        ".pkit/scratchpad/reported/2026-10-02-review-load.md, "
+        ".pkit/scratchpad/done/2026-09-30-review-load.md. "
+    )
+    assert "(COR-012)" in finding.message
+    assert outcome.summary == ("4 scratchpad note(s) checked; 1 error(s).",)
+
+
+def test_outcome_leaves_two_notes_of_one_slug_in_one_folder_alone(kit_target: Path) -> None:
+    _note(kit_target, "active", "2026-05-12-cache-layer.md")
+    _note(kit_target, "active", "2026-06-01-cache-layer.md")
+    assert scratchpads.outcome(kit_target).findings == ()
+
+
+def test_outcome_compares_whole_slugs_and_reads_only_md_files(kit_target: Path) -> None:
+    _note(kit_target, "active", "2026-06-03-layer.md")
+    _note(kit_target, "done", "2026-06-03-cache-layer.md")  # ends in `-layer`, another slug
+    _note(kit_target, "done", "2026-06-03-layer.tsv")  # not a note
+    (kit_target / ".pkit" / "scratchpad" / "dropped" / "2026-06-03-layer.md").mkdir()
+    outcome = scratchpads.outcome(kit_target)
+    assert outcome.findings == ()
+    assert outcome.summary == ("2 scratchpad note(s) checked; 0 error(s).",)
+
+
+def test_outcome_without_a_scratchpad_area_checks_nothing(tmp_path: Path) -> None:
+    outcome = scratchpads.outcome(tmp_path)
+    assert outcome.findings == ()
+    assert outcome.summary == ("0 scratchpad note(s) checked; 0 error(s).",)

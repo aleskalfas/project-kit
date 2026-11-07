@@ -318,6 +318,12 @@ def _data(root: Path) -> Outcome:
     return data_validate.outcome(root)
 
 
+def _scratchpad(root: Path) -> Outcome:
+    from project_kit import scratchpads
+
+    return scratchpads.outcome(root)
+
+
 _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("manifests", _manifests, "the backbone manifest and the component registry"),
     ("schemas", _schemas, "every schema pair, pointered instance and backbone file schema"),
@@ -336,6 +342,7 @@ _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("refs", _refs, "the reference graph across agents, skills and hooks"),
     ("process", _process, "every process definition resolves, its states in one detection mode"),
     ("data", _data, "adopter data files bound to a capability schema"),
+    ("scratchpad", _scratchpad, "each scratchpad note lies in one state folder"),
 )
 
 BACKBONE_VALIDATORS: tuple[Validator, ...] = tuple(
