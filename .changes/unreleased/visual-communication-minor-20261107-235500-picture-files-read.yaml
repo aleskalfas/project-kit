@@ -15,6 +15,7 @@ body: >
   `picture-encoding`, each with its fix. Bytes that are not what the extension
   says fail as `picture-extension`, and a file cut short or damaged as
   `picture-unreadable`. Each finding lies in the brand's version. `pkit visual
-  release` reads each picture file the version holds, named or not, and refuses
-  one that fails. It breaks nothing an adopter holds, since no release has
+  release` reads each file directly in the version's `pictures/` under a bare
+  name, the names a part can give, named or not, and refuses one that fails. It
+  breaks nothing an adopter holds, since no release has
   shipped a picture role yet.
