@@ -19,10 +19,12 @@ analyses:
     # (software-analysis DEC-003 point 8; RS-ANA-005 in ANA).
     areas:
       010-develop: "Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions."
-      020-set-up: "Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits."
+      020-set-up: "Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities and rules, and the same merge checks."
       030-change: "Record a project's decisions and rules, and check, answer and land each change to it, so what the project states stays true as it changes."
       040-release: "Release the backbone and each component on its own version, so projects can move to it and pin it."
-      050-adopt: "Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix."
+      050-adopt: "Put the system on a machine and into another project, run each project at the version it pins, and keep it current."
+      060-report: "Report what goes wrong with the system, and link each report to its fix, so the adopter who filed it can follow it."
+      070-work-within-limits: "Work within the system's limits, the permission model and the agent workspace, so AI agents work on their own and nothing crosses those limits unseen."
   - component: project-management
     folder: project-management
     # The record that states what project-management is for (software-analysis

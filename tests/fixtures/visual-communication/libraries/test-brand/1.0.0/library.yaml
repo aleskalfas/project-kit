@@ -3,7 +3,8 @@ schema_version: 1
 
 # The brand the capability's tests draw with (DEC-004 Implications): a base brand in the
 # DTCG format 2025.10, varying the foundations' two value axes. No project locks it.
-# Its fonts are Source Sans Pro, committed unchanged with their licence in fonts/.
+# Its fonts are Source Sans Pro, and Source Code Pro for code, committed unchanged with
+# their licences in fonts/.
 name: test-brand
 version: 1.0.0
 kind: brand

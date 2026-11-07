@@ -85,6 +85,9 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/rule-sets/README.md": (
         "the folder's signpost; the rules README is the page that describes the set"
     ),
+    ".pkit/capabilities/visual-communication/libraries/README.md": (
+        "maintainer-facing: the rule a change to a shipped library's version declares"
+    ),
 }
 
 # The trees of the code-to-doc mapping's retired rules (#1010), which the
@@ -135,6 +138,20 @@ def _user_root_pages() -> list[str]:
     """The pages inside the user root, `docs/`: the guides (ADR-069 point 1). The
     root is living-docs' default place, so they are pages without being declared."""
     return sorted(path.relative_to(REPO).as_posix() for path in (REPO / "docs").rglob("*.md"))
+
+
+def _internal_root_pages() -> list[str]:
+    """The pages inside the internal root, `tech-docs/`: each document there that
+    declares a page kind, which with the root makes it a page (living-docs' pages
+    reference, "A page's fields"), with no place declared for it. The records, the
+    rule sets and the analysis beside them declare no kind."""
+    pages = []
+    for path in (REPO / "tech-docs").rglob("*.md"):
+        front, _body = split_front_matter(path.read_text(encoding="utf-8"))
+        fields = YAML(typ="safe").load(front) if front is not None else None
+        if isinstance(fields, dict) and "kind" in fields:
+            pages.append(path.relative_to(REPO).as_posix())
+    return sorted(pages)
 
 
 def _living_docs_config() -> dict:
@@ -325,19 +342,22 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    # Every place is a page (#1010), and so is every guide in the user root, each
-    # reader resolved against the readers point. software-analysis contributes one
-    # reader per actor of pkit's own analysis (#1001), under the `act-` prefix: the
-    # eight core actors (#1344), the planner (#1710) and the three agents of
-    # parallel work (#2096), beside living-docs' own two.
+    # Every place is a page (#1010), and so is every guide in the user root and every
+    # page in the internal root (#2641), each reader resolved against the readers
+    # point. software-analysis contributes one reader per actor of pkit's own
+    # analysis (#1001), under the `act-` prefix: the eight core actors (#1344), the
+    # planner (#1710) and the three agents of parallel work (#2096), beside
+    # living-docs' own two.
     assert "docs/permissions/README.md" in _user_root_pages()
+    assert "tech-docs/coding-conventions.md" in _internal_root_pages()
+    pages = len(_project_places()) + len(_user_root_pages()) + len(_internal_root_pages())
     assert summary[4] == (
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
         "act-lead-agent, act-merge-authoriser, act-methodology-maintainer, "
         "act-operator, act-planner, act-planning-agent, act-worker-agent, "
         "maintainer, user; "
-        f"{len(_project_places()) + len(_user_root_pages())} page reader(s) checked."
+        f"{pages} page reader(s) checked."
     )
 
 

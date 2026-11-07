@@ -1,7 +1,8 @@
 """`pkit visual produce <piece> <output>` (visual-communication DEC-006 points 1 to 5): the
 command around the framing (`test_visual_communication_framing.py`), run in this process
 with the producer kept for the tests registered, and once as a process of its own, where
-no test registers it, so the command refuses it as unknown (DEC-005 point 12)."""
+no test registers it, so the command refuses it as unknown (DEC-005 point 12); and what a
+write that fails leaves."""
 
 from __future__ import annotations
 
@@ -16,11 +17,13 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.visual_communication_producer import OUTPUT, PIECE, producing_project
 from tests.visual_communication_project import CAPABILITY, CONFIG
+from tests.visual_communication_writes import FULL, failing
 
 script, seam = load("visual-communication", "produce.py", "plugins.seam")
 
 SCRIPT = CAPABILITY / "scripts" / "produce.py"
 PRODUCED = f"visual/pieces/{PIECE}/produced/{OUTPUT}"
+HANDOVER = f".pkit/capabilities/visual-communication/project/local/handover/{PIECE}"
 
 
 @pytest.fixture(autouse=True)
@@ -103,11 +106,87 @@ def test_a_refusal_exits_1_and_writes_nothing(tmp_path: Path) -> None:
     assert not (root / PRODUCED).exists()
 
 
+def set_state(root: Path, state: str) -> None:
+    piece = root / "visual" / "pieces" / PIECE / "piece.yaml"
+    piece.write_text(
+        piece.read_text(encoding="utf-8").replace("state: draft", f"state: {state}"),
+        encoding="utf-8",
+    )
+
+
+def test_a_published_piece_with_no_lock_is_told_to_go_back_to_a_draft(tmp_path: Path) -> None:
+    root = producing_project(tmp_path, lock=None)
+    set_state(root, "published")
+    shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the piece `flow` is published and has no lock: set it back to a draft for its "
+        "first render, then produce\n"
+    )
+    assert not (root / PRODUCED).exists()
+
+
+def test_a_final_piece_takes_no_run_and_nothing_is_written(tmp_path: Path) -> None:
+    root = producing_project(tmp_path)
+    set_state(root, "final")
+    shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == (
+        "error: the piece `flow` is final (its state says so), and a final piece takes no "
+        "producer's run: making its pictures again would change it\n"
+    )
+    assert not (root / PRODUCED).exists()
+    assert not (root / HANDOVER).exists()
+    assert not (root / CONFIG).exists()
+
+
 def test_a_location_refused_is_named(tmp_path: Path) -> None:
     root = producing_project(tmp_path)
     shown = run(root, PIECE, OUTPUT, "--location", ".pkit/art")
     assert shown.returncode == 1
     assert "lies under `.pkit/`" in shown.stderr
+
+
+# --- what a failed run leaves -------------------------------------------------------------------
+
+
+def produced(root: Path) -> dict[str, bytes]:
+    """Every file of the output's folder, with its bytes."""
+    folder = root / PRODUCED
+    return {path.name: path.read_bytes() for path in sorted(folder.iterdir())}
+
+
+@pytest.mark.parametrize("file", ["record.yaml", "default.png"])
+def test_a_write_that_fails_leaves_the_variants_and_their_record_as_they_were(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    root = producing_project(tmp_path, modes={"colour-scheme": ["dark"]})
+    assert run(root, PIECE, OUTPUT).returncode == 0
+    piece = root / "visual" / "pieces" / PIECE / "piece.yaml"
+    text = piece.read_text(encoding="utf-8").replace("- dark", "- light")
+    piece.write_text(text.replace("64", "32"), encoding="utf-8")
+    before = produced(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == f"error: {PRODUCED}/{file} could not be written: {FULL}\n"
+    assert produced(root) == before
+    assert run(root, PIECE, OUTPUT).returncode == 0
+    assert sorted(produced(root)) == ["default.png", "record.yaml"]
+
+
+def test_a_failed_first_run_records_no_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = producing_project(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"record.yaml"})
+        assert run(root, PIECE, OUTPUT).returncode == 1
+    assert not (root / CONFIG).exists()
+    assert not (root / "visual" / "pieces" / PIECE / "produced").exists()
 
 
 @pytest.mark.process(

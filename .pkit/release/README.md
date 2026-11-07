@@ -12,6 +12,8 @@ pkit:
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
       record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
@@ -538,6 +540,11 @@ before anything is written.
 In project-kit's own source no capability has a manifest (ADR-059), so the
 `version:` line `apply` writes in a capability's `package.yaml` is the version
 `pkit validate` reads for it.
+
+The release of a library the visual-communication capability ships reads
+this step's work too (`pkit visual release <library> --shipped`): the
+capability's `CHANGELOG.md` entry, the change that wrote it, and the version in
+its `package.yaml`.
 
 ### A replay may restore a removed default
 

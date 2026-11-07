@@ -26,6 +26,32 @@ Gates per DEC-026:
     (`_lib/issue_position`, shared with start-work, #1242); move-issue reads
     it itself when it moves.
   - PR title is Conventional Commits.
+  - Which heads may start programs (DEC-067): the PR's head takes the test before
+    any temporary checkout (`_lib.head_programs`). Two open PRs that share the
+    branch's name stop the run, naming both (exit 2). A head from elsewhere starts
+    nothing, and its change check runs from git objects alone. Where that needs a
+    resolver, the person at a terminal can name the head for this run. Off a
+    terminal, or under `--yes`, the run stops (exit 2). `--force` asks nothing, moves
+    on with its warning and starts nothing, and no flag starts a program.
+  - The author's sentences (DEC-065 point 3): each document the change check
+    marks `updated` at the PR's head needs a sentence on what changed in it,
+    under the description's `## What changed in each updated document`. The
+    check is run at the PR's head on every move (`friction_answers.checked`, the
+    head fetched first where this clone lacks it), since the description carries
+    no list of the answers. The description is read, a draft's or a ready PR's,
+    before the PR is made ready, reviewers are requested or the issue moves.
+    Refused at validate-at-ready's severity, hard-reject, naming each such
+    document, the form a sentence takes and each item there that is not read as
+    one. Each sentence that reads as a closing reference is refused the same way:
+    the host would close an issue with it at merge (DEC-065 point 5). Each sentence
+    on a document the check does not mark `updated` gets a warning naming the edit
+    that removes it, as open-pr and land-work give it. A
+    check that cannot be run at the head stops the run (exit 2), and so does a
+    description that cannot be read (exit 3): nothing is refused on either.
+    Under `--force`, a check that cannot be run refuses nothing, with a warning,
+    and a refusal is printed and overridden, and the audit comment below names
+    either. open-pr warns of a missing sentence; edit-pr derives nothing and
+    warns of none.
   - The clash guard (DEC-035 point 6), with an instance id set or a seat of
     a topology held: an issue another instance owns is refused before any PR
     is opened or made ready and before reviewers are requested, at
@@ -46,6 +72,19 @@ Side-effects:
   - Flips an existing draft PR to ready via `gh pr ready` if present.
   - Reviewer assignment (v1 ships with simple --reviewer override path;
     full DEC-027 mode resolution lands in Phase D).
+  - Under `--force`, one audit comment on the PR names who gave the override
+    and each refusal it passed, a change check it could not run at the head
+    among them (DEC-046 point 2). Its first lines are the audit template's
+    (`_lib.audit.render_audit_comment`), and it goes through `post_audit_once`,
+    so a retry of the same override at the same head posts no second one. It
+    lands before the PR is made ready, reviewers are requested or the issue
+    moves; on a PR this run opens, as soon as the PR exists. One that cannot be
+    posted stops the run. At `audit.projection: off` none is posted (DEC-049
+    point 2), and the override shows in the output only.
+  - A document's path, the words of a description and what the change check
+    said at the head are the head's text. Each character a terminal would act
+    on is written as its escape wherever a line shows them (`_said`), and the
+    comment quotes them in code spans with no `<!--` (`_quoted`).
   - Composes over `move-issue.py --to review`. If that move still fails
     after the PR was opened or flipped ready (a network error, or a state
     that changed since the check so the move is no longer legal), the run
@@ -55,14 +94,17 @@ Side-effects:
 Exit codes:
   0  PR ready + issue in Review (moved there, or already there)
   1  membership or foreign-repo refusal / PR body not ready for review
-     (validate-at-ready; --force overrides) / the clash guard refused an
-     issue another instance owns / this clone's seat could not be confirmed
+     (validate-at-ready, an updated document with no sentence, or a sentence that
+     reads as a closing reference; --force overrides) / the clash guard refused an
+     issue another instance owns /
+     this clone's seat could not be confirmed
   2  usage error / gate failure / illegal transition / issue not found /
      where the board carries the state, a card whose Status does not place
-     the issue
-  3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
-     could not make it ready, or the board carrying the state could not be
-     read
+     the issue / the change check could not be run at the PR's head
+  3  gh failure: `gh pr create` could not open the PR, the PR's description
+     could not be read, `gh pr ready` could not make it ready, the audit comment
+     of a --force could not be posted, or the board carrying the state could
+     not be read
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -72,6 +114,7 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -84,16 +127,30 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    friction_answers,
+    head_programs,
     instance_claims,
     issue_branch,
     issue_position,
+    pr_head,
     pr_validation,
     session_guard,
 )
 from _lib import lifecycle_inference as infer
+from _lib.audit import (
+    PROJECTION_OFF,
+    audit_key,
+    audit_projection,
+    render_audit_comment,
+    short_sha,
+)
+from _lib.audit_log import code
+from _lib.comment import post_audit_once
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    Identity,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -106,8 +163,71 @@ from _lib.review_mode import (
 )
 
 TARGET_STATE = "review"
+#: What to do about a refused body when no PR is open yet.
+FILL_FIRST = (
+    "fill the body first (create-draft → edit-pr → review-work), or use open-pr --body-file"
+)
+#: The label of a finding on the author's sentences, as edit-pr's validation names it.
+SENTENCES_LABEL = "body.sentences"
 
 
+#: The exit where the change check could not be run at the PR's head.
+EXIT_UNDERIVED = 2
+
+#: The `_lib.audit.audit_key` writer name of the audit comment a `--force` leaves.
+FORCE_AUDIT_WRITER = "review-work-force"
+#: How a line names a stop that is no finding: a script precondition (DEC-046
+#: point 2), here a change check that could not be run at the PR's head. It blocks
+#: nothing, since only `--force` goes on past that stop.
+PRECONDITION = "precondition"
+#: What `--force` passes and its audit comment names. A warning refuses nothing.
+OVERRIDDEN = (*pr_validation.BLOCKING_SEVERITIES, PRECONDITION)
+
+
+@dataclass(frozen=True)
+class _Description:
+    """A PR's description, with the PR's number, its head, its base branch and the
+    branch it is opened from as GitHub names them, and whether it comes from a
+    fork: what the author's sentences are checked against, and where the head is
+    fetched from. A body review-work composes for a PR not opened yet has none of
+    them."""
+
+    body: str
+    number: int | None = None
+    head: str = ""
+    base: str = ""
+    branch: str = ""
+    cross_repository: bool = False
+    #: The host's word on where the head lies (`isCrossRepository`), as the reading
+    #: that named the head gave it: only False places it in the base's repository.
+    placed: object = None
+    #: The repository the head comes from, as the host names it.
+    repository: str = ""
+
+
+@dataclass(frozen=True)
+class _Move:
+    """What a move needs to keep to DEC-067 at the PR's head: the issue, whose build
+    records the test reads, and whether the person at a terminal may be asked. A run
+    off a terminal, `--yes` and `--force` ask nobody (DEC-067 points 3 and 4)."""
+
+    issue: int
+    capability_root: Path
+    config: dict
+    may_ask: bool = False
+
+
+@dataclass(frozen=True)
+class _Underived:
+    """Why the change check could not be run at the PR's head. `needs_person` says it
+    needs a resolver of a head from elsewhere nobody named: a second run changes
+    nothing, where any other failure may pass."""
+
+    why: str
+    needs_person: bool = False
+
+
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -154,7 +274,11 @@ def main() -> int:
         action="store_true",
         help=(
             "Take a PR to ready-for-review despite hard-reject body-validation "
-            "findings (empty required section / checkbox / missing Doc impact). "
+            "findings (empty required section / checkbox / missing Doc impact / an "
+            "updated document with no sentence on what changed in it) or a change "
+            "check that cannot be run at its head. It starts no program of the head. "
+            "One audit comment on the PR names who gave the override and each refusal "
+            "it passed. "
             "Drafts stay exempt; you normally fill a draft first (create-draft → "
             "edit-pr → review-work) or use open-pr --body-file."
         ),
@@ -328,7 +452,21 @@ def main() -> int:
     # (DEC-031 empty checkbox → hard-reject; DEC-015 Doc impact). Drafts are
     # exempt; --force overrides. An empty body cannot go ready — fill a draft
     # first (create-draft → edit-pr → review-work), or use open-pr --body-file.
-    existing_pr = _find_pr_for_branch(branch, config)
+    # A description that gives no sentence on what changed in a document the
+    # change check marks updated at the PR's head is refused too, a PR already
+    # ready included, before reviewers are requested or the issue moves (DEC-065
+    # point 3).
+    try:
+        existing_pr = _find_pr_for_branch(branch, config)
+    except head_programs.TwoOpen as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    move = _Move(
+        args.issue_number,
+        capability_root,
+        config,
+        may_ask=sys.stdin.isatty() and not args.yes and not args.force,
+    )
     pr_number: int | None = None
     # What this run changed on the PR, named if the composed move then fails.
     opened_url: str | None = None
@@ -337,7 +475,11 @@ def main() -> int:
         # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
         body = f"Closes #{args.issue_number}"
-        if not _ready_body_ok(body, classification, capability_root, args.force):
+        # The body composed here has no sentences and no `## Doc impact`, so
+        # validate-at-ready refuses it unless --force passes it, which would pass a
+        # missing sentence too: no answers are derived for it.
+        findings = _ready_findings(body, classification, capability_root)
+        if not _body_ok(findings, args.force, next_step=FILL_FIRST):
             return 1
         url = _gh_pr_create_ready(branch, base, title, body, config)
         if url is None:
@@ -346,19 +488,45 @@ def main() -> int:
         pr_number = int(m.group(1)) if m else None
         opened_url = url
         print(f"  opened ready PR: {url}")
+        # The first moment the PR exists, so the one write this comment follows.
+        if not _force_audited(
+            pr_number, findings, "", capability_root, invoker, config, opened_url=url
+        ):
+            return 3
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
         pr_number = existing_pr.get("number")
-        if not _ready_body_ok(
-            _gh_pr_body(pr_number, config), classification, capability_root, args.force
-        ):
+        description = _gh_pr_description(pr_number, config)
+        if description is None:
+            return 3
+        sentences = _sentence_findings(description, move, force=args.force)
+        if sentences is None:
+            return EXIT_UNDERIVED
+        findings = _ready_findings(description.body, classification, capability_root) + sentences
+        if not _body_ok(findings, args.force, next_step=_edit_step(args.issue_number, pr_number)):
             return 1
+        if not _force_audited(
+            pr_number, findings, description.head, capability_root, invoker, config
+        ):
+            return 3
         if not _gh_pr_ready(pr_number, config):
             return 3
         flipped = True
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
+        description = _gh_pr_description(pr_number, config)
+        if description is None:
+            return 3
+        sentences = _sentence_findings(description, move, force=args.force)
+        if sentences is None:
+            return EXIT_UNDERIVED
+        if not _body_ok(sentences, args.force, next_step=_edit_step(args.issue_number, pr_number)):
+            return 1
+        if not _force_audited(
+            pr_number, sentences, description.head, capability_root, invoker, config
+        ):
+            return 3
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
     # Reviewer assignment per DEC-027 mode resolution.
@@ -546,12 +714,9 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
         return None
     try:
         prs = json.loads(proc.stdout)
-        for pr in prs:
-            if pr.get("headRefName") == branch and pr.get("state") == "OPEN":
-                return pr
-    except (ValueError, KeyError):
-        pass
-    return None
+    except ValueError:
+        return None
+    return dict(head_programs.one_open(prs, branch) or {}) or None
 
 
 def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: dict) -> str | None:
@@ -566,13 +731,17 @@ def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: d
     return proc.stdout.strip()
 
 
-def _ready_body_ok(body: str, classification: dict, capability_root: Path, force: bool) -> bool:
-    """Validate-at-ready (#569): True iff `body` may go ready-for-review.
+def _ready_findings(
+    body: str, classification: dict, capability_root: Path
+) -> list[pr_validation.Finding]:
+    """Validate-at-ready (#569): each finding that keeps `body` from going
+    ready-for-review.
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
     hard-reject). Title/closing-label checks are skipped (review-work composes the
-    title). On a blocking finding: print it and return False, or True under
-    ``force``. Merge remains the backstop; drafts never reach here.
+    title). The findings on the author's sentences join these
+    (`_sentence_findings`), so one refusal names every blocking finding. Merge
+    remains the backstop; drafts never reach here.
     """
     findings = pr_validation.validate_pr(
         pr_title="",
@@ -584,40 +753,341 @@ def _ready_body_ok(body: str, classification: dict, capability_root: Path, force
         capability_root=capability_root,
         phase=PHASE_TRANSITION,
     )
-    blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
-    if not blocking:
-        return True
+    return [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
+
+
+def _sentence_findings(
+    description: _Description, move: _Move, *, force: bool = False
+) -> list[pr_validation.Finding] | None:
+    """A hard-reject finding for each document the change check marks `updated` at
+    the PR's head that the PR's description gives no sentence on what changed in it
+    (DEC-065 point 3), named with the form a sentence takes, and for each sentence
+    that reads as a closing reference (DEC-065 point 5). Each item under the
+    sentences heading that is not read as one follows a missing sentence, as a
+    warning: it is likely the sentence, in another form. Nothing where every such
+    document has a sentence and none reads so.
+
+    The answers are derived at the PR's head on every move (`_unsaid_at_head`); the
+    description carries none. None, with what failed printed, where they cannot be
+    derived there: nothing is refused on answers nobody read. Under ``force`` no
+    missing sentence is refused then either, with a warning saying so, and the stop
+    it passed joins the findings, for its audit comment to name (`PRECONDITION`). A
+    closing reference is refused still, since the description alone shows one."""
+    unsaid, underived = _unsaid_at_head(description, move)
+    stop = _underived_findings(underived, move, force) if underived else []
+    if stop is None:
+        return None
+    refused = [
+        pr_validation.Finding(
+            pr_validation.SEVERITY_HARD_REJECT,
+            SENTENCES_LABEL,
+            message,
+        )
+        for message in (
+            *(friction_answers.unsaid_message(location) for location in unsaid),
+            *(
+                friction_answers.closing_message(*found)
+                for found in friction_answers.closing_references(
+                    friction_answers.sentences(description.body)
+                )
+            ),
+        )
+    ]
+    unread = [
+        pr_validation.Finding(
+            pr_validation.SEVERITY_WARNING,
+            SENTENCES_LABEL,
+            friction_answers.unread_warning(item),
+        )
+        for item in (friction_answers.unread(description.body) if unsaid else ())
+    ]
+    return stop + refused + unread
+
+
+def _unsaid_at_head(description: _Description, move: _Move) -> tuple[list[str], _Underived | None]:
+    """Each document the change check marks `updated` at the PR's head that the
+    description gives no sentence for, in the check's order, and why the check could
+    not be run there, None where it ran. Each sentence on a document the check does
+    not mark `updated` gets a warning, as open-pr and land-work give it: no reviewer
+    checks it. Only the answers are read, not the friction settings
+    (`friction_answers.checked`), and the head is fetched first where this clone
+    lacks it. The head takes the test first: only one that passes, or that the person
+    at this terminal names, reaches a temporary checkout (DEC-067)."""
+    body = description.body
+    head, number = description.head, description.number
+    problem = ""
+    if not head or number is None:
+        problem = f"GitHub named no head for PR #{number}"
+    elif not description.base:
+        problem = f"GitHub named no base branch for PR #{number}"
+    else:
+        source = (
+            pr_head.pull_request_source(
+                description.branch,
+                number,
+                cross_repository=description.cross_repository,
+                base=description.base,
+            )
+            if description.branch or description.cross_repository
+            else None
+        )
+        derived = _checked_at_head(description, move, source)
+        if derived.document is not None:
+            said = friction_answers.sentences(body)
+            for location in friction_answers.unlisted(derived.document, said):
+                warning = friction_answers.unlisted_warning(location, head, number)
+                print(f"  [warn] {friction_answers.shown(warning)}", file=sys.stderr)
+            return friction_answers.unsaid(derived.document, said), None
+        if derived.needs_checkout:
+            # The refusal's own words would send the reader to a checkout of the head.
+            return [], _Underived(
+                f"the change check at PR #{number}'s head {_commit(head)} needs a resolver, a "
+                "program this run may not start",
+                needs_person=True,
+            )
+        problem = derived.problem or "the change check gave no document"
+    return [], _Underived(
+        f"the change check at PR #{number}'s head {_commit(head)} could not be run ({problem})"
+    )
+
+
+def _checked_at_head(
+    description: _Description, move: _Move, source: pr_head.Source | None
+) -> friction_answers.Derivation:
+    """The change check at the PR's head, from a temporary checkout only where the
+    head passes the test of DEC-067, or the person at this terminal names it when the
+    check needs a resolver."""
+    head, base = description.head, description.base
+    standing = head_programs.take_test(
+        head,
+        description.placed,
+        issue=move.issue,
+        base=base,
+        source=source,
+        capability_root=move.capability_root,
+        config=move.config,
+    )
+    derived = friction_answers.checked(head, base, source=source, from_checkout=standing.may_start)
+    if not derived.needs_checkout or not move.may_ask or description.number is None:
+        return derived
+    named = head_programs.ask(
+        standing,
+        command="review-work",
+        number=description.number,
+        source_repository=description.repository,
+        capability_root=move.capability_root,
+        config=move.config,
+    )
+    return friction_answers.checked(head, base, source=source) if named.may_start else derived
+
+
+def _underived_findings(
+    underived: _Underived, move: _Move, force: bool
+) -> list[pr_validation.Finding] | None:
+    """What a change check that could not be run at the PR's head, `underived`, comes
+    to. None, with the stop printed. Under ``force``, a warning saying the sentences
+    went unchecked, and the stop as a `PRECONDITION` for the audit comment. Neither
+    starts a program: on a check that needs a resolver of a head from elsewhere, the
+    stop says that a second run changes nothing and how a person goes on."""
+    said = friction_answers.shown(underived.why)
+    if force:
+        print(
+            f"  [warn] {said}; under --force, no sentence on what changed is checked, "
+            "and the move goes on.",
+            file=sys.stderr,
+        )
+        return [pr_validation.Finding(PRECONDITION, SENTENCES_LABEL, underived.why)]
+    again = (
+        f"A second run changes nothing: a person at a terminal can run `review-work "
+        f"{move.issue}` and name the head, and --force moves on with the sentences unchecked, "
+        "starting nothing."
+        if underived.needs_person
+        else "Run review-work again once it can be run."
+    )
     print(
-        "[refused] PR body is not ready for review (validate-at-ready, #569):",
+        f"error: {said}, so which documents need a sentence cannot be told. Nothing was "
+        f"made ready, no reviewer requested and the issue not moved. {again}",
         file=sys.stderr,
     )
-    for f in blocking:
-        print(f"  - [{f.severity}] {f.label}: {f.detail}", file=sys.stderr)
+    return None
+
+
+def _commit(oid: str) -> str:
+    """A head as a line names it: its short form, or that none is named."""
+    return oid[: friction_answers.SHORT] or "a head it does not name"
+
+
+def _edit_step(issue_number: int, pr_number: int | None) -> str:
+    """What to do about a refused description of PR `pr_number`: write it with
+    edit-pr, then run review-work again."""
+    return (
+        f"write the description with `edit-pr {pr_number} --body-file <file>`, then run "
+        f"`review-work {issue_number}` again"
+    )
+
+
+def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: str) -> bool:
+    """True iff no finding of `findings` blocks; otherwise print them all, with
+    `next_step`, and return False, or True under ``force``. The findings are
+    validate-at-ready's (#569) and the author's sentences' (DEC-065 point 3)."""
+    if not pr_validation.has_blocking(findings):
+        return True
+    print("[refused] PR body is not ready for review:", file=sys.stderr)
+    for f in findings:
+        print(f"  - {_said(f)}", file=sys.stderr)
     if force:
         print("  → proceeding under --force.", file=sys.stderr)
         return True
-    print(
-        "  → fill the body first (create-draft → edit-pr → review-work), or use "
-        "open-pr --body-file; --force overrides.",
-        file=sys.stderr,
-    )
+    print(f"  → {next_step}; --force overrides.", file=sys.stderr)
     return False
 
 
-def _gh_pr_body(pr_number: int | None, config: dict) -> str:
-    """The current body of a PR (for validating a draft before flip → ready)."""
+def _said(finding: pr_validation.Finding) -> str:
+    """`finding` as a line says it, each character a terminal would act on written
+    as its escape: a finding can carry the head's text, so a document's path or the
+    words of a description never move the cursor or start a line of their own."""
+    return friction_answers.shown(f"[{finding.severity}] {finding.label}: {finding.detail}")
+
+
+def _quoted(finding: pr_validation.Finding) -> str:
+    """`finding` as its audit comment quotes it: `_said`, in a code span, where a
+    mention, a link and an HTML comment are not live. A `<!--` is written as its
+    escape too, since some readers of a PR's comments find their marker anywhere in
+    the text, a code span included."""
+    return code(_said(finding).replace("<!--", "\\x3c!--"))
+
+
+def _force_audit_body(
+    quoted: list[str], head: str, key: str, capability_root: Path, invoker: Identity
+) -> str:
+    """The audit comment of a `--force`: the template's line, which names who gave
+    the override, then each refusal it passed, `quoted`, below it, where `_lib.audit`
+    has a writer add what the template has no field for, then the idempotency `key`.
+    `head` is the PR's head, empty for a PR this run opens. The template's reason is
+    the run's own words: a head's text in it could fill a placeholder."""
+    at_head = f" at PR head {short_sha(head)}" if head else ""
+    reason = f"`review-work --force` passed each refusal below{at_head}."
+    return "\n".join(
+        [
+            render_audit_comment(capability_root, invoker, reason),
+            "",
+            *(f"- {refusal}" for refusal in quoted),
+            "",
+            key,
+        ]
+    )
+
+
+def _force_audited(
+    pr_number: int | None,
+    findings: list[pr_validation.Finding],
+    head: str,
+    capability_root: Path,
+    invoker: Identity,
+    config: dict,
+    *,
+    opened_url: str | None = None,
+) -> bool:
+    """Post the one audit comment of what `--force` passed of `findings`, and say
+    whether the run may go on. True where the comment is on the PR, posted now or by
+    an earlier try of the same override at the same head (`post_audit_once`), where
+    `--force` passed nothing, and where `audit.projection` is `off`, which posts none
+    (DEC-049 point 2). False, with why printed, where it cannot be posted. `opened_url`
+    is a PR this run has just opened."""
+    quoted = [_quoted(f) for f in findings if f.severity in OVERRIDDEN]
+    if not quoted or audit_projection(config) == PROJECTION_OFF:
+        return True
+    # Hashed from the escaped words: raw, a lone surrogate in a description cannot encode.
+    key = audit_key(FORCE_AUDIT_WRITER, head, *quoted)
+    posted = post_audit_once(
+        "pr",
+        pr_number,
+        key,
+        _force_audit_body(quoted, head, key, capability_root, invoker),
+        config,
+        run=gh_run,
+        present_note="--force audit comment already present; idempotent skip",
+        posted_note="--force audit comment posted",
+    )
+    if not posted:
+        print(_unaudited(pr_number, opened_url), file=sys.stderr)
+    return posted
+
+
+def _unaudited(pr_number: int | None, opened_url: str | None) -> str:
+    """What a run says where the audit comment of its `--force` could not be posted.
+    On a PR it opened, a second run is no way to the comment: only a PR going ready has
+    its body validated, so that run finds nothing to override."""
+    if opened_url is None:
+        return (
+            f"error: the audit comment of this --force could not be posted on PR #{pr_number}; "
+            "nothing was made ready, no reviewer requested and the issue not moved. Run "
+            "review-work --force again once it can be posted."
+        )
+    what, undo = _left_behind(
+        pr_number=pr_number, opened_url=opened_url, flipped=False, reviewers=[]
+    )[0]
+    return (
+        f"error: the audit comment of this --force could not be posted on {what}; no reviewer "
+        "was requested and the issue not moved. A second run would not read those findings "
+        f"again, since the PR is ready: undo it with `{undo}` and run again, or say on the PR "
+        "what --force passed."
+    )
+
+
+#: What review-work reads of a PR: its description, the head and base the author's
+#: sentences are checked against, and where that head is fetched from.
+_DESCRIPTION_FIELDS = (
+    "body,headRefOid,baseRefName,headRefName,isCrossRepository,headRepository,headRepositoryOwner"
+)
+
+
+def _gh_pr_description(pr_number: int | None, config: dict) -> _Description | None:
+    """The current description of a PR, with its head and base: a draft's,
+    validated before the flip → ready, or a ready one's, whose sentences are
+    checked before the move. None, with what failed printed, when it cannot be
+    read: a description unread is never read as one that gives every sentence."""
     if pr_number is None:
-        return ""
+        print("error: cannot read the PR's description — no PR number resolved.", file=sys.stderr)
+        return None
     try:
-        proc = gh_run(["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False)
-    except FileNotFoundError:
-        return ""
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", _DESCRIPTION_FIELDS],
+            config,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        return _unread_body(pr_number, f"`gh` could not be run ({exc})")
     if proc.returncode != 0:
-        return ""
+        return _unread_body(
+            pr_number, (proc.stderr or "").strip() or f"gh exited {proc.returncode}"
+        )
     try:
-        return str((json.loads(proc.stdout) or {}).get("body") or "")
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return ""
+        return _unread_body(pr_number, "gh's answer is not JSON")
+    if not isinstance(data, dict):
+        return _unread_body(pr_number, "gh's answer names no pull request")
+    return _Description(
+        str(data.get("body") or ""),
+        number=pr_number,
+        head=str(data.get("headRefOid") or ""),
+        base=str(data.get("baseRefName") or ""),
+        branch=str(data.get("headRefName") or ""),
+        cross_repository=bool(data.get("isCrossRepository")),
+        placed=data.get("isCrossRepository"),
+        repository=head_programs.repository(data),
+    )
+
+
+def _unread_body(pr_number: int, why: str) -> None:
+    """Say that PR `pr_number`'s description could not be read, and why."""
+    print(
+        f"error: PR #{pr_number}'s description could not be read ({why}); nothing was made "
+        "ready, no reviewer requested and the issue not moved. Run review-work again once it "
+        "can be read.",
+        file=sys.stderr,
+    )
 
 
 def _gh_pr_ready(pr_number: int | None, config: dict) -> bool:

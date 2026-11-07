@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The project-management capability fetches a commit this clone lacks one way,
+  through `_lib/pr_head.py` (#2663). The fetch never prompts for credentials and brings
+  no tags, so a command that fetches a pull request's head can no longer wait
+  on a password prompt. For a pull request from a fork whose head this clone
+  lacks, `land-work` now fetches that head before it compares the local branch
+  with it. It fetches by the ref the base repository keeps for the pull
+  request, on the base's remote. It used to stop and name a fetch from the
+  fork's branch, which this clone may have no remote for.

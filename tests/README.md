@@ -8,10 +8,8 @@ other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 **While you build, run the tests of what you changed.** The full suite — some
 21 300 tests — is the pre-push hook's and CI's to run, not a builder's (the
 project's rules, `.pkit/rules/project.md`): run the test modules for the files
-you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
-`uv run pkit validate`, `uv run pkit friction check`,
-`uv run pkit migrations check-diff`, `uv run pkit decisions check-diff` and
-`uv run pkit release check`.
+you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates
+[CONTRIBUTING.md](../CONTRIBUTING.md), "Running checks", lists.
 
 **CI skips the suite where only answers changed.** On a pull request whose only
 changes since its most recent full run, which passed, are answers, CI runs the
@@ -40,15 +38,18 @@ suite in one process. The two passes by hand:
 A plain `uv run pytest -q` still runs everything in one process, the `serial`
 tests included.
 
-**CI splits a full run across three machines** (ADR-078). The hook runs the
-aggregator whole, on one machine. CI runs it as three parts side by side, each
+**CI splits a full run across four machines** (ADR-078). The hook runs the
+aggregator whole, on one machine. CI runs it as four parts side by side, each
 a job of its own, which the aggregator defines:
 
 - **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs
   its share of the parallel pass, in parallel workers, and nothing else;
-- **the remainder,** `./scripts/check.sh --rest`: every other line of the
-  aggregator, with the tests marked `serial` in the test step's place. No other
-  worker shares its machine, as the mark asks.
+- **the quick checks,** `./scripts/check.sh --quick`: every line of the
+  aggregator but the test step and the console fences. They end within a few
+  minutes;
+- **the remainder,** `./scripts/check.sh --rest`: the console fences, with the
+  tests marked `serial` in the test step's place. No other worker shares its
+  machine, as the mark asks.
 
 **How the suite is cut.** A slice reads the tests left after the `serial` mark's
 filter, in the order pytest collects them. It cuts them into runs of
@@ -63,6 +64,11 @@ in.
 - **The same cut in every slice.** It reads only the tests and the table, both
   fixed by the commit, so a slice run again by hand runs the same tests, with the
   same tests around them. A failing slice's summary says how.
+- **The same tests on every machine.** A folder lists its files in an order its
+  machine sets, and two of CI's runners list them differently. So a test
+  parametrized over a folder's files sorts them first.
+  `tests/test_collection_order.py` collects the suite with every listing sorted
+  and with every listing reversed, and fails where the two differ (#2668).
 - **What a slice reports.** It ends by printing its report: a digest of the tests
   collected, in order, with the table and the count of slices, how many tests it
   collected, and how many its share held. `checks` fails unless the slices report
@@ -84,6 +90,14 @@ never a contributor's machine.
   run, `test-times-<i>-of-<N>`. `--run <id>` names another run. Review it like any
   change. No run writes the table, so a pull request's run cannot change what
   later runs read.
+- **Which run:** each slice's times come from that slice's own runner, and one
+  runner can take half as long again as another. So a run whose runners differ
+  bakes that difference into the cut, and the slices of later runs end further
+  apart. The command says how far apart the run's runners were. It reads that from
+  the test time each slice summed, since the cut gave the slices equal shares. Over
+  a tenth apart, run `git restore tests/test_times.json` and name another run. By
+  #2677's estimate, tables from runs 3%, 15% and 39% apart leave the slices 27, 69
+  and 172 s apart on equal runners.
 
 **The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
 in every run: in a local run's output, and in the log of each slice's step in

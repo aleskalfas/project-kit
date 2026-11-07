@@ -1,0 +1,38 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  Which items belong together: groups of items side by side in one row, each drawn by
+  the group block, a box that holds its items under the group's head. Each group is as
+  wide as the others and as tall as the tallest.
+
+fields:
+  type: object
+  required: [groups]
+  properties:
+    groups:
+      type: array
+      minItems: 1
+      description: >-
+        The groups, each with the fields of the component that draws it, the group's own
+        items among them.
+      items: {type: object}
+    group:
+      type: object
+      description: >-
+        The component that draws each group that names none, with words for its options:
+        the group block unless the content names another.
+
+lists:
+  groups: {component: group}
+
+parts:
+  groups:
+    repeat: groups
+    draw: starter/group
+    width: "=:width"
+    row: {gap: "=@starter.gap", sizes: equal, align-items: stretch}
+
+preferred:
+  height: "=groups.bottom"

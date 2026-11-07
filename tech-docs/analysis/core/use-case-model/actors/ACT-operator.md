@@ -19,6 +19,9 @@ pkit:
         - COR-039
         - PRJ-004
         - ADR-063
+        - PRJ-006
+        - ADR-032
+        - ADR-039#D2
       artefact:
         - CONTRIBUTING.md#running-checks
 ---
@@ -33,5 +36,5 @@ The person at the controls of a machine. The operator is per machine and per clo
   - <!-- pkit:not-the-term -->answer what the [methodology](../../glossary.md#term-methodology--methodology) gates
 - **Occasions:** every working day, in every clone.
 - **Context:** the machine, its credentials and [sandbox](../../glossary.md#term-sandbox--sandbox), and the judgement the gates ask for.
-- **Core:** the permission model, its [sandbox](../../glossary.md#term-sandbox--sandbox) and the cross-repository gate are the operator's controls.
+- **Core:** the [permission model](../../glossary.md#term-permission-model--permission-model), its [sandbox](../../glossary.md#term-sandbox--sandbox) and the [cross-repository guard](../../glossary.md#term-cross-repository-guard--cross-repository-guard) are the operator's controls.
 - **Note:** the operator is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator.

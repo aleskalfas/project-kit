@@ -49,6 +49,9 @@ What a **prose line** is: a line of the body that fenced code and an HTML commen
 do not hide, read as the headings are. A comment that opens and closes within the
 line stays in it. What a page mentions is read from these lines (`mentions`).
 
+What a section's **slug** is: the name an artefact anchor gives it, made from its
+heading's text by the backbone's rule (`heading_slug`, COR-050 point 2).
+
 This module imports nothing of the capability's library, so it reads alone.
 """
 
@@ -369,6 +372,17 @@ def _comparable(text: str) -> str:
     """A heading's text as sections compare it: case, runs of white space and
     trailing punctuation ignored."""
     return _TRAILING.sub("", " ".join(text.split())).casefold()
+
+
+def heading_slug(title: str) -> str:
+    """A heading's slug, as COR-050 point 2 makes it and an artefact anchor names a
+    section by it: its title in lower case, with every character but letters, digits,
+    spaces and hyphens dropped, and each space made a hyphen. The rule is the
+    backbone's own (`project_kit.document_parts.heading_slug`), which a capability's
+    script never imports, so a test holds this copy equal to it. A title made only of
+    other characters has an empty slug, which names no section."""
+    kept = (ch for ch in title.lower() if ch.isalpha() or ch.isdigit() or ch in " -")
+    return "".join(kept).replace(" ", "-")
 
 
 def departures(found: Sequence[Heading], structure: Structure) -> list[Departure]:

@@ -11,16 +11,38 @@ roles:
   text-secondary: {type: color}
   accent: {type: color}
   line: {type: color}
+  family.neutral.fill: {type: color}
+  family.neutral.line: {type: color}
+  family.neutral.text: {type: color}
+  family.blue.fill: {type: color}
+  family.blue.line: {type: color}
+  family.blue.text: {type: color}
+  family.green.fill: {type: color}
+  family.green.line: {type: color}
+  family.green.text: {type: color}
+  family.orange.fill: {type: color}
+  family.orange.line: {type: color}
+  family.orange.text: {type: color}
+  family.purple.fill: {type: color}
+  family.purple.line: {type: color}
+  family.purple.text: {type: color}
+  family.red.fill: {type: color}
+  family.red.line: {type: color}
+  family.red.text: {type: color}
   space.1: {type: dimension}
   space.2: {type: dimension}
   space.3: {type: dimension}
   space.4: {type: dimension}
   stroke.thin: {type: dimension}
+  stroke.thick: {type: dimension}
   size.figure: {type: dimension}
+  size.slide: {type: dimension}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}
   type.heading: {type: typography}
+  type.strong: {type: typography}
+  type.code: {type: typography}
 
 # The shared axes (DEC-004 point 2). Both change colours alone, so every mode of either
 # is drawn from one scene.
@@ -28,10 +50,26 @@ axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}
 
-# The colour families a notation maps its concepts to (DEC-004 point 10): none yet.
-families: {}
+# The colour families a notation maps its concepts to (DEC-004 point 10), and a component
+# paints with as `:colour.<member>`: each paints one thing, its line, its fill and the
+# text on that fill, with shared roles of its own. They bound how many concepts one piece
+# tells apart by colour.
+families:
+  neutral: {fill: family.neutral.fill, line: family.neutral.line, text: family.neutral.text}
+  blue: {fill: family.blue.fill, line: family.blue.line, text: family.blue.text}
+  green: {fill: family.green.fill, line: family.green.line, text: family.green.text}
+  orange: {fill: family.orange.fill, line: family.orange.line, text: family.orange.text}
+  purple: {fill: family.purple.fill, line: family.purple.line, text: family.purple.text}
+  red: {fill: family.red.fill, line: family.red.line, text: family.red.text}
 
 # The pairs of shared colour roles that must contrast in every combination (DEC-004
-# point 8), at WCAG's levels: `text` 4.5, `large-text` and `marks` 3.
+# point 8), at WCAG's levels: `text` 4.5, `large-text` and `marks` 3. Each family's text
+# contrasts with its fill.
 pairs:
   - {text: text-primary, under: background, level: text}
+  - {text: family.neutral.text, under: family.neutral.fill, level: text}
+  - {text: family.blue.text, under: family.blue.fill, level: text}
+  - {text: family.green.text, under: family.green.fill, level: text}
+  - {text: family.orange.text, under: family.orange.fill, level: text}
+  - {text: family.purple.text, under: family.purple.fill, level: text}
+  - {text: family.red.text, under: family.red.fill, level: text}

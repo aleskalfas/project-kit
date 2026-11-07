@@ -1,0 +1,19 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter gains three patterns and three blocks, each experimental (#2565,
+  DEC-007). `groups` sets groups of items side by side, each drawn by the new
+  block `group`. `network` sets items in two columns or three, with ties
+  between them, whose key paths reach the items of a pattern in a column, such
+  as a group's. `panels` sets views side by side, each any component, a
+  pattern included, with one more across the width under them. Each panel
+  takes a share of the row by its arrangement field `span`, `normal` or
+  `wide`. The block `code` shows a terminal's lines or a file's text in a
+  monospace type, each line as written. Its text is a field of runs, its
+  words `plain`, `prompt`, `command` and `comment`. The block `aside` holds a
+  head, a command in a code block, and a text, beside a bar. The starter gains
+  the role `starter.type.code`, which defaults to `type.code`. The foundations
+  gain `type.code`, a shared role with no default, which every brand now gives
+  a value. The starter's README covers each new component.

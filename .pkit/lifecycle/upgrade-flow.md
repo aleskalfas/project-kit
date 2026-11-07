@@ -311,7 +311,7 @@ Both entry points run the same direction split, and compare a range through one 
 
 ### Mandatory process connections (COR-053 point 6)
 
-A capability's generated `depends-on` entries may carry a mandatory mark (the process area README, "depends_on"). The mark means the upstream process definition must exist, offered at an equal interface version when the entry names one. The lifecycle is the mark's **one reader**, and it reads the mark from package metadata only, never by parsing process definitions. Validation keeps the list fresh against them ([`manifest.md`, "The connection, documentation and friction blocks"](manifest.md#the-connection-documentation-and-friction-blocks)).
+A capability's generated `depends-on` entries may carry a mandatory mark (the process area's connections page, "depends_on"). The mark means the upstream process definition must exist, offered at an equal interface version when the entry names one. The lifecycle is the mark's **one reader**, and it reads the mark from package metadata only, never by parsing process definitions. Validation keeps the list fresh against them ([`manifest.md`, "The connection, documentation and friction blocks"](manifest.md#the-connection-documentation-and-friction-blocks)).
 
 It judges through the wiring resolver ([`manifest.md`, "How the wiring is resolved"](manifest.md#how-the-wiring-is-resolved)), over the wiring the operation would leave. That wiring is the installed set with the capability in place of any installed copy, or without it. So a mark refuses exactly when `pkit validate` would then report it unmet.
 

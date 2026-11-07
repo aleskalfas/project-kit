@@ -28,14 +28,14 @@ The capability's design work ([project-kit#2424](https://github.com/aleskalfas/p
 - **Each role is a token,** at the path its name gives, of the type its declaration gives.
 - **A value may alias another token.** A chain of aliases ends in a value, never in a loop.
 - **What the format cannot say goes in its own extension point,** under one name the capability keeps for itself. Examples are a picture given as a value, how a font is measured, and whether an axis changes values or sizes. So a brand's files stay valid DTCG, and other tools read them.
-- **The modes are one Resolver document.** It holds the brand's token files as sets, each axis as a modifier, each mode as one of its contexts, a default for each axis, and the order in which sources win.
+- **The modes are one Resolver document** (refinement per [visual-communication:DEC-021-size-and-shape]). It holds the brand's token files as sets, each axis the brand varies as a modifier with a default, each mode it gives as one of its contexts, and the order in which sources win.
 - **The brand's library file** names the version of the DTCG format its tokens follow, 2025.10 first, and holds its open roles (point 6). The engine keeps reading every DTCG version a released brand may name, since a library copy is never rewritten.
 - **A brand's own form,** its layouts and the parts no shared component has, is made of components. They take the format every component has, and are read with the brand's name (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 4).
 
 ### 2. Modes lie on axes, and each axis changes values or sizes
 
 An *axis* is one way a brand's values vary apart from the others, such as the colour scheme, the contrast or the device. A *mode* is one value on one axis, such as dark on the colour scheme. A *combination* takes one mode on each axis.
-- **The foundations name the shared axes** and their common modes, as they name the shared roles. So a piece that names a mode keeps it when its brand is switched. A brand has the shared axes it needs, and may add axes of its own. An axis with one mode is not declared.
+- **The foundations name the shared axes** and their common modes, as they name the shared roles (refinement per [visual-communication:DEC-021-size-and-shape]). A brand has every shared value axis whole. A mode it does not give takes its values at the axis's default, and a brand built on another keeps its base's there. So a piece that names a mode of a value axis keeps it when its brand is switched. A brand has a shared size axis, and its modes, only where it or its base gives them ([visual-communication:DEC-021-size-and-shape] point 2). A piece that names a size its brand lacks fails. A brand adds no mode to a shared axis, and may add axes of its own. An axis with one mode is not declared.
 - **A value axis** changes only values that move nothing, such as colours and pictures. The capability's schema for a brand names those kinds of value, member by member for a token made of several. Every mode of a value axis is drawn from one scene, so a page can switch between them while open.
 - **A size axis** may change any value, sizes, spacing, the type scale and fonts among them. Each combination of its modes needs a scene of its own.
 - **Fonts for a group of renderers are one size axis.** A *font profile* is the set of fonts a brand gives a group of renderers. The profiles are the modes of a shared axis, and the default profile measures and draws the brand's own font files. Which profile a renderer draws in is the record of the engine and its plugins' ([visual-communication:DEC-005-engine-and-plugins] point 10).
@@ -68,8 +68,8 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
   - removing or renaming an axis or a mode, or changing an axis's default
   - turning a value axis into a size axis, or the reverse
   - for a base, taking a role off its open roles (point 6)
-  - for the foundations, a new shared role with no default (point 7), or a new shared axis, whose name may meet a brand's own axis
-- **Not breaking:** a new role with a default, a new mode, a newly opened role, or a brand's own new axis with a default. Nor is a changed value, an alias pointed elsewhere included. A piece meets a changed value only when a person moves its lock. A base's new mode gives a brand built on it combinations its values were not tuned for, which that brand's checks then cover.
+  - for the foundations, a new shared role with no default (point 7), or, once a brand can hold an axis of its own, a new shared axis, whose name may meet that axis (refinement per [visual-communication:DEC-021-size-and-shape])
+- **Not breaking:** a new role with a default, a new mode, a newly opened role, or a brand's own new axis with a default. Nor is a new shared axis with a default while no brand can hold an axis of its own, or a brand that comes to give a size (refinement per [visual-communication:DEC-021-size-and-shape]). Nor is a changed value, an alias pointed elsewhere included. A piece meets a changed value only when a person moves its lock. A base's new mode gives a brand built on it combinations its values were not tuned for, which that brand's checks then cover.
 
 ### 6. A brand may build on one other brand, within the roles its base declares open
 
@@ -90,13 +90,13 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **A component token's default aliases a role, never a value.** So a component library holds no raw value, and no brand has to give the token a value.
 - **A shared role the foundations add after their first version** carries a default that aliases an older role. Every brand already released still gives it a value.
 - **A base may open a component token alone,** so a brand built on it restyles that one part without changing the shared role everywhere. A component declares one only where a brand needs to differ.
-- **How far a brand reaches into a component.** A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
+- **How far a brand reaches into a component** (refinement per [visual-communication:DEC-009-layout-defaults]). A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
 
 ### 8. Pairs of colours that must contrast
 
 - **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles.
 - **Checked in every combination of the axes that change a colour.**
-- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
+- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. It measures each run of a text, a span set in one style, against the fill under that run, at the run's own size and weight (refinement per [visual-communication:DEC-012-text-runs]). Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
 
 ### 9. Fonts come from committed files, and a missing font refuses the render
 
@@ -134,7 +134,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why axes, and why each changes values or sizes.** Combinations are the product of the modes on each axis, so a file for each combination copies values, as the prototype's did. Adobe's Spectrum keeps such axes as separate switches. A value axis moves nothing, so one scene serves all its modes. A size axis may change anything, so a look tuned for children may change both colours and sizes on one axis. Font profiles change sizes for a group of renderers, so they need no mechanism of their own.
 
-**Why a key leaves defaults out, names each axis, and sorts by name.** If a key held every axis, adding one would rename every picture, export and name in code. Naming the axis beside its mode keeps one axis's new mode from meeting another's. Sorting by name leaves no order to change. A variant takes the key with the fewest axes for the same reason: ordered by spelling alone, a new axis whose name sorts first would hand a variant one of its new keys. A shared axis the foundations add could meet a brand's own axis of that name, so it waits for a major release, which a lock moves on purpose.
+**Why a key leaves defaults out, names each axis, and sorts by name.** If a key held every axis, adding one would rename every picture, export and name in code. Naming the axis beside its mode keeps one axis's new mode from meeting another's. Sorting by name leaves no order to change. A variant takes the key with the fewest axes for the same reason: ordered by spelling alone, a new axis whose name sorts first would hand a variant one of its new keys. A shared axis the foundations add could meet a brand's own axis of that name. So once a brand can hold its own axes, a new shared axis waits for a major release, which a lock moves on purpose (refinement per [visual-communication:DEC-021-size-and-shape]).
 
 **Why exported names are public, and the rest private.** A piece has its lock and its before-and-after. A game's runtime has neither, so a renamed token breaks it silently. A palette left private can be reshaped without a major release. Opening a token later breaks nothing, while closing one does.
 

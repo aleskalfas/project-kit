@@ -1,13 +1,13 @@
 """The parts of the required check in CI, and the verdict of `checks` over them (ADR-078).
 
-`.github/workflows/checks.yml` runs a full run of the aggregator as three parts side
-by side, each a job of its own: two slices of the suite's parallel pass, and the
-remainder. A job before them decides the form and pins the base. In the short form
-the remainder's job runs the short check, and no slice starts. One job named
-`checks` runs last and judges them all.
+`.github/workflows/checks.yml` runs a full run of the aggregator as four parts side
+by side, each a job of its own: two slices of the suite's parallel pass, the quick
+checks and the remainder. A job before them decides the form and pins the base. In
+the short form the remainder's job runs the short check beside the quick checks, and
+no slice starts. One job named `checks` runs last and judges them all.
 
 **A part,** `run`, runs `scripts/check.sh` with the part's argument, `--shard i/N`,
-`--rest` or `--short`, and then:
+`--quick`, `--rest` or `--short`, and then:
 
 - **times itself,** and hands the time on as the output `seconds`;
 - **names its failures** in its job's summary: each failing line of the
@@ -18,19 +18,20 @@ the remainder's job runs the short check, and no slice starts. One job named
   `listed` and `unlisted`. Its share is the number of tests pytest reported on;
 - **says that it passed,** as the output `passed`, last and only once the part
   passed. The output names what it attests: `check.sh --shard i/N <digest>`,
-  `check.sh --rest` or `check.sh --short`.
+  `check.sh --quick`, `check.sh --rest` or `check.sh --short`.
 
 **The verdict,** `verdict full|short`, is the step of `checks` that holds that form.
 It reads every job's outcome and outputs from `$PKIT_NEEDS`, the workflow's
 `needs` context as JSON, and passes only where every part the form requires ended
 in success and said that it passed:
 
-- **full:** the deciding job named a form, the remainder attests `--rest`, and each
-  slice attests its own slice and digest. The slices agree: one digest, one number
-  collected, and shares that add up to it;
-- **short:** a pull request's deciding job named the short form, and the remainder
-  attests `--short`. The slices are not required;
-- **on a pull request,** in both forms, the changeset guard also said it passed.
+- **full:** the deciding job named a form, the quick checks attest `--quick`, the
+  remainder attests `--rest`, and each slice attests its own slice and digest. The
+  slices agree: one digest, one number collected, and shares that add up to it;
+- **short:** a pull request's deciding job named the short form, the quick checks
+  attest `--quick`, and the remainder attests `--short`. The slices are not required;
+- **on a pull request,** in both forms, the changeset guard also said it passed, in
+  the quick checks' job.
 
 Its summary says which form ran, lists each part with how it ended and how long it
 took, and whether the slices agree. It warns where the slices collected a tenth
@@ -66,7 +67,7 @@ FULL, SHORT = "full", "short"
 PULL_REQUEST = "pull_request"
 
 #: The jobs of the workflow, by their ids. The slices are `slice-1` to `slice-N`.
-DECIDE, REST = "decide", "rest"
+DECIDE, QUICK, REST = "decide", "quick", "rest"
 SLICE = "slice-{}"
 
 #: What the changeset guard's output says once it passed.
@@ -154,8 +155,10 @@ def part_summary(
     if part[0] == "--shard":
         index, count = (int(n) for n in part[1].split("/"))
         title = f"{slice_name(index, count)} of the suite's parallel pass"
+    elif part[0] == "--quick":
+        title = "the quick checks: every line but the test step and the console fences"
     elif part[0] == "--rest":
-        title = "the remainder: every line but the suite's parallel pass"
+        title = "the remainder: the console fences and the tests marked serial"
     else:
         title = "the short check: the aggregator without its test suite"
     ended = "passed" if passed else "did not pass"
@@ -281,6 +284,11 @@ def verdict(form: str, slices: int, needs: Mapping[str, Any], event: str) -> Ver
             _judge(wrong, name, part, expected if _DIGEST.fullmatch(digest) else None)
         _agree(wrong, warned, found)
 
+    quick = job(needs, QUICK)
+    said = quick.outputs.get("passed", "")
+    rows.append(("the quick checks", quick.result, _took(quick), _code(said) if said else ""))
+    _judge(wrong, "the quick checks", quick, attests(["--quick"]))
+
     rest = job(needs, REST)
     part_arg = "--rest" if form == FULL else "--short"
     said = rest.outputs.get("passed", "")
@@ -288,8 +296,8 @@ def verdict(form: str, slices: int, needs: Mapping[str, Any], event: str) -> Ver
     _judge(wrong, "the remainder", rest, attests([part_arg]))
 
     if event == PULL_REQUEST:
-        guard = rest.outputs.get("guard", "")
-        rows.append(("the changeset guard", rest.result, "", _code(guard) if guard else ""))
+        guard = quick.outputs.get("guard", "")
+        rows.append(("the changeset guard", quick.result, "", _code(guard) if guard else ""))
         if guard != GUARD:
             wrong.append(f"the changeset guard did not say it passed (it said {_code(guard)})")
 
@@ -402,6 +410,7 @@ def main(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None
     run = commands.add_parser("run", help="run one part of the aggregator")
     which = run.add_mutually_exclusive_group(required=True)
     which.add_argument("--shard", metavar="i/N")
+    which.add_argument("--quick", action="store_true")
     which.add_argument("--rest", action="store_true")
     which.add_argument("--short", action="store_true")
     judge = commands.add_parser("verdict", help="the verdict of checks, in one form")
@@ -416,7 +425,7 @@ def main(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None
                 parser.error(f"--shard is i/N, with 1 <= i <= N, not {args.shard!r}")
             part = ["--shard", args.shard]
         else:
-            part = ["--rest"] if args.rest else ["--short"]
+            part = ["--quick"] if args.quick else ["--rest"] if args.rest else ["--short"]
         return run_part(part, env)
 
     if args.form == FULL and args.slices < 1:

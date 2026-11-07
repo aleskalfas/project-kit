@@ -1,0 +1,34 @@
+answers:
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+    revalidated:
+      at: 2026-11-06T02:45:08Z
+      outcome: unchanged
+      unchanged-because: "Read against DEC-003 point 8's four new sentences and point 9's new fact. One run's diff is variant 6b's change of its own, its copy's two sides show the figure before and after, and the figure moves only once that diff lands, so step 4 and the rest of 6b hold. A move with no copy standing shows only an after, and the first guarantee still holds: DEC-019 point 6 reads such a page as showing a dead image, which holds no figure to move. Two statements do not hold, and this revalidation keeps their deferrals: the sentence of Sources on marking final, and variant 6b with its sentence of Sources on a later major, which DEC-019's Implications charge the change that builds outdated with mending. The Tasks of open Feature #2572 mend both."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Sources, on variant 6b and the guarantees, still say a published piece's lock moves only through a change a person reviews. DEC-003 point 8 now makes marking that piece final the one exception, so that sentence is out of date. No piece can be published or final yet, and the sentence is mended by the Task of open Feature #2572 that builds marking final."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#9
+          reason: "DEC-003 point 9 now says the fact names the command that proposes the move only within the lock's majors. Of a later major it says a person takes that version on purpose, by naming it. Variant 6b and its sentence of Sources say the system names that command for any new library version, so both are false of a later major, and hold within the lock's majors. DEC-019's Implications charge the change that builds outdated with mending them, and that Task of open Feature #2572 does."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-006#7
+          reason: "Step 4's copy and variant 6b hold against point 7's edits: the export's gate backs the guarantee that a figure takes a new library version only through a change that shows it before and after. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-006#8
+          reason: "Variant 6a's stale copy still fails, and the new findings on a published piece ask for the copy step 4 uses. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."

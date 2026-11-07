@@ -602,23 +602,26 @@ def listing(root: Path) -> Listing:
     size, modification and change times and inode, a folder's mode. The git directory
     is left out with what it holds. A folder holding a `.git` of its own, another
     repository, is listed but not what it holds, so a new one is seen. A linked
-    worktree's `.git` file is listed."""
+    worktree's `.git` file is listed.
+
+    It runs after every command, over every path of the repository, so it works in
+    plain strings: a `Path` for each path took most of its time."""
     found: Listing = {}
-    for folder, folders, files in os.walk(root):
-        here = Path(folder)
+    top = os.fspath(root)
+    start = len(top) + 1
+    for folder, folders, files in os.walk(top):
         listed = [name for name in folders if name != GIT_DIR]
-        folders[:] = [name for name in listed if not (here / name / GIT_DIR).exists()]
+        folders[:] = [name for name in listed if not os.path.exists(f"{folder}/{name}/{GIT_DIR}")]
         for name in (*listed, *files):
-            path = here / name
-            relative = path.relative_to(root).as_posix()
+            path = f"{folder}/{name}"
             try:
-                status = path.lstat()
+                status = os.lstat(path)
             except FileNotFoundError:
                 continue
             if stat.S_ISDIR(status.st_mode):
-                found[relative] = (status.st_mode,)
+                found[path[start:]] = (status.st_mode,)
             else:
-                found[relative] = (
+                found[path[start:]] = (
                     status.st_mode,
                     status.st_size,
                     status.st_mtime_ns,

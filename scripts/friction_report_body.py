@@ -3,27 +3,39 @@
 `.github/workflows/friction-report.yml` runs the whole-repository friction check
 (COR-050 point 6) on `main` and hands its machine-readable document, `pkit
 friction check --all --json`, to this script. It renders that document as one
-Markdown body and counts the findings that need an answer;
-`scripts/friction_tracking_issue.py` publishes both. It is a function of the
+Markdown body, counts the findings that need an answer and says whether a prune is
+due; `scripts/friction_tracking_issue.py` publishes all three. It is a function of the
 document: it runs no check, reads no repository and talks to no tracker. It is
 project-kit's own pipeline tooling, no part of what project-kit ships (ADR-055
 point 5).
 
-- **What needs an answer** is every finding but three kinds (`NO_ANSWER_NEEDED`).
-  A deferral, `deferred`, is itself an answer (COR-050 point 5), and the check
-  reports `left-out` as owing nothing. Two revalidations made apart,
-  `answered-apart`, are debt that no change owes, reported only until the next
-  revalidation on the artefact judges them together (COR-062 point 7, ADR-068
-  point 6). Deferrals, each with its reason, and the revalidations answered
-  apart are listed in sections of their own, and the headline counts the latter
-  apart from what needs an answer. The two measures (point 8) are rendered and
-  never counted: they say what remains to anchor.
+- **What needs an answer** is every finding but ADR-055 point 5's four kinds
+  (`NO_ANSWER_NEEDED`). A deferral, `deferred`, is itself an answer (COR-050 point
+  5), and the check reports `left-out` and `whole-and-parts` as owing nothing. Two
+  revalidations made apart, `answered-apart`, are debt that no change owes, reported
+  only until the next revalidation on the artefact judges them together (COR-062 point 7, ADR-068
+  point 6). An `over-broad` anchor is reported only (COR-050 point 12). Its count
+  moves as the window of commits slides, with no anchor changed, and nothing records a
+  person's judgement that an anchor is fine, so it would hold the issue open for good
+  (ADR-055 point 5, ADR-080). Deferrals, each with its reason,
+  the revalidations answered apart and the over-broad anchors are listed in
+  sections of their own, a `whole-and-parts` anchor beside `left-out` as reported, nothing
+  owed, and the headline counts the revalidations answered
+  apart separately from what needs an answer. The two measures (point 8) are rendered
+  and never counted: they say what remains to anchor.
+- **A prune is due** once `pkit friction prune` would remove `PRUNE_DUE` answer files
+  or more (ADR-068 point 4). It is no finding, needs no answer and leaves the body as
+  it is. The publication says so apart, and the publisher gives it an issue of its own.
 - **The same findings, the same body.** The body is a function of the findings
   and the measures — no age, no run time, no HEAD — so a publisher that compares
   bodies changes nothing when nothing changed. A finding says since when by the
   UTC day of its origin, the day the check's own message names. An over-broad
   anchor is told in this module's words, not the check's, whose message counts
-  the tracked files and so moves with most pushes.
+  the recent commits it flagged its artefact in and so moves with most pushes.
+  The over-broad anchors are grouped as the check's own view groups them, by the
+  `bar` each crossed (ADR-080 point 3): an anchor over the first bar is an entry
+  of its own, and the anchors the second bar names on one artefact are one entry,
+  the largest share first. A document that gives no `bar` lists each apart.
 - **Inert text.** What the document carries — paths, anchors, messages, deferral
   reasons, commit subjects, dates — is set in code spans, so a reason naming
   `@someone` or `#123` notifies and links nobody, and none of it can break the
@@ -31,8 +43,9 @@ point 5).
   (`caf\\xe9.md`).
 - **Within a body's size.** Trackers cap a body (GitHub at 65 536 characters).
   While the body exceeds `BUDGET`, its lists are shortened by whole entries: the
-  measures first, then the deferrals, what was answered apart and what owes
-  nothing, and the findings that need an answer last. Each shortened list ends
+  measures and the over-broad anchors first, then the deferrals, what was
+  answered apart and what owes nothing, and the findings that need an answer
+  last. Each shortened list ends
   with how many entries it does not show, and the body says how many in all.
 - **A document it cannot fully read is refused** (`Unreadable`): text that is no
   JSON object, another check's document, a `schema_version` other than
@@ -82,12 +95,17 @@ DEFERRED = "deferred"
 LEFT_OUT = "left-out"
 OVER_BROAD = "over-broad"
 ANSWERED_APART = "answered-apart"
+WHOLE_AND_PARTS = "whole-and-parts"
 
 #: The kinds that need no answer: a deferral is one (COR-050 point 5), the check
-#: reports `left-out` as owing nothing (the CLI reference, "Friction checks"), and
-#: revalidations answered apart are debt reported only, which no change owes
-#: (COR-062 point 7).
-NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT, ANSWERED_APART})
+#: reports `left-out` and `whole-and-parts` as owing nothing (the CLI reference,
+#: "Friction checks"; ADR-080 point 5), revalidations answered apart are debt reported
+#: only, which no change owes (COR-062 point 7), and an over-broad anchor is reported
+#: only, its count moving with no anchor changed (COR-050 point 12; ADR-055 point 5).
+NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT, ANSWERED_APART, OVER_BROAD, WHOLE_AND_PARTS})
+
+#: How many answer files a prune would remove make it due (ADR-068 point 4).
+PRUNE_DUE = 100
 
 #: The size a body keeps within: GitHub caps an issue body at 65 536 characters,
 #: and the publisher adds lines of its own.
@@ -114,19 +132,43 @@ DORMANT = (
     "demanded (COR-050 point 15)."
 )
 OTHER = (
-    "Dead anchors, anchors of a kind nothing resolves, over-broad anchors, anchors on an id "
-    "two artefacts share, what does not read — a file's front matter, or `friction.exclude` "
-    "at a revalidation point — and artefacts a shallow clone could not judge."
+    "Dead anchors, anchors of a kind nothing resolves, anchors on an id two artefacts share, "
+    "what does not read — a file's front matter, or `friction.exclude` at a revalidation "
+    "point — and artefacts a shallow clone could not judge."
 )
 APART = (
     "Two revalidations of one artefact, neither of which read the other: nobody has judged "
     "their combined state. No change owes an answer for it. The next revalidation on the "
     "artefact reads both and judges them together (COR-062 point 7)."
 )
-#: What the body says of an over-broad anchor, in place of the check's message.
-OVER_BROAD_SAID = (
-    "matches most of the tracked files, so most changes would make it a revalidation: "
-    "narrow it (`pkit friction check --all` gives the count)"
+#: The bars an over-broad finding names in the document's `bar`: the first, the
+#: anchor's own, and the second, the artefact's, whose anchors are one entry.
+FLAGS = "flags"
+ASKS = "asks"
+#: What the body says of an over-broad entry, in place of the check's message: by the
+#: bar it crossed, or, from a document that gives none, of either.
+OVER_BROAD_SAID = {
+    FLAGS: (
+        "flagged its artefact in most of the recent commits (`pkit friction check --all` "
+        "gives the count, and what to anchor instead)"
+    ),
+    ASKS: (
+        "the anchors behind most of the many recent commits that asked the artefact for a "
+        "revalidation that left it as it was, the largest share first (`pkit friction check "
+        "--all` gives the counts, and what to anchor instead)"
+    ),
+    None: (
+        "flagged its artefact in most of the recent commits, or is among the anchors behind "
+        "most of the many recent commits that asked its artefact for a revalidation that "
+        "left it as it was (`pkit friction check --all` gives the counts, and what to anchor "
+        "instead)"
+    ),
+}
+OVER_BROAD_LEAD = (
+    "Anchors that ask their artefacts for an answer more often than ADR-080's bars allow. No "
+    "change owes an answer for one. Narrow one where something names less, remove one its "
+    "artefact does not rest on, or split what it stands on or its artefact, and revalidate "
+    "the artefact."
 )
 WHOLE = "`pkit friction check --all` lists them all"
 
@@ -174,11 +216,24 @@ def needing_answer(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     return [f for f in _findings(document) if f["kind"] not in NO_ANSWER_NEEDED]
 
 
+def prune_due(document: Mapping[str, Any]) -> bool:
+    """Whether `pkit friction prune` would remove `PRUNE_DUE` answer files or more. The
+    document's `answers` came without a version change (the CLI reference, "Friction
+    checks"), so one without them reads, and says no prune is due."""
+    answers = document.get("answers")
+    if not isinstance(answers, Mapping):
+        return False
+    prunable = cast("Mapping[str, Any]", answers).get("prunable")
+    return isinstance(prunable, list) and len(cast("list[Any]", prunable)) >= PRUNE_DUE
+
+
 def publication(document: Mapping[str, Any]) -> dict[str, Any]:
-    """What the publisher reads: how many findings need an answer, and the body."""
+    """What the publisher reads: how many findings need an answer, whether a prune is
+    due, and the body."""
     return {
         "schema_version": PUBLICATION_VERSION,
         "needs_answer": len(needing_answer(document)),
+        "prune_due": prune_due(document),
         "body": body(document),
     }
 
@@ -210,30 +265,40 @@ def render(document: Mapping[str, Any], limits: Mapping[str, int | None] | None 
     other = [f for f in answer if f["kind"] != STALE]
     deferred = [f for f in findings if f["kind"] == DEFERRED]
     apart = [f for f in findings if f["kind"] == ANSWERED_APART]
-    left_out = [f for f in findings if f["kind"] == LEFT_OUT]
+    owing_nothing = [f for f in findings if f["kind"] in (LEFT_OUT, WHOLE_AND_PARTS)]
+    broad = [f for f in findings if f["kind"] == OVER_BROAD]
     sections: list[str] = []
-    for title, lead, found, show_kind, group in (
-        ("Stale: an anchor changed after the revalidation point", None, stale, False, ANSWER),
-        ("Other findings that need an answer", OTHER, other, True, ANSWER),
+    for title, lead, entries, group in (
+        (
+            "Stale: an anchor changed after the revalidation point",
+            None,
+            [_finding(f, False) for f in stale],
+            ANSWER,
+        ),
+        ("Other findings that need an answer", OTHER, [_finding(f, True) for f in other], ANSWER),
         (
             "Deferred: answered with a reason, and holding nothing open",
             None,
-            deferred,
-            False,
+            [_finding(f, False) for f in deferred],
             LISTED,
         ),
         (
             "Answered apart: debt, reported only and holding nothing open",
             APART,
-            apart,
-            False,
+            [_finding(f, False) for f in apart],
             LISTED,
         ),
-        ("Reported, nothing owed", None, left_out, True, LISTED),
+        ("Reported, nothing owed", None, [_finding(f, True) for f in owing_nothing], LISTED),
+        (
+            "Over-broad: reported, holding nothing open",
+            OVER_BROAD_LEAD,
+            _over_broad(broad),
+            MEASURES,
+        ),
     ):
-        if found:
+        if entries:
             sections += [f"### {title}", "", *([lead, ""] if lead else [])]
-            sections += cut([_finding(f, show_kind) for f in found], group)
+            sections += cut(entries, group)
             sections.append("")
     sections += ["### Measures: reported, never failed (COR-050 point 8)", ""]
     sections += _measures(cast("Mapping[str, Any]", document["measures"]), cut)
@@ -283,24 +348,54 @@ def _headline(stale: Sequence[Any], other: Sequence[Any], apart: Sequence[Any]) 
 
 def _finding(finding: Mapping[str, Any], show_kind: bool) -> str:
     """One finding: where, which anchor, since when — then what the check says of it."""
-    head = [_code(str(finding.get("location") or finding.get("artefact") or "?"))]
+    head = [_where(finding)]
     if show_kind:
         head.append(_code(str(finding["kind"])))
-    anchor = finding.get("anchor")
-    if isinstance(anchor, Mapping):
-        named = cast("Mapping[str, Any]", anchor)
-        head.append(_code(f"{named.get('kind')}:{named.get('value')}"))
+    head += _anchor(finding)
     origin = finding.get("origin")
     if isinstance(origin, Mapping):
         date = cast("Mapping[str, Any]", origin).get("date")
         if isinstance(date, str):
             head.append(f"since {_code(_day(date))}")
-    said = (
-        OVER_BROAD_SAID
-        if finding["kind"] == OVER_BROAD
-        else _code(str(finding.get("message") or ""))
-    )
-    return f"- {' · '.join(head)}\n  {said}"
+    return f"- {' · '.join(head)}\n  {_code(str(finding.get('message') or ''))}"
+
+
+def _over_broad(findings: Sequence[Mapping[str, Any]]) -> list[str]:
+    """The over-broad findings, an entry each, but the second bar's on one artefact: one
+    entry, naming its anchors in the document's order, the largest share first (ADR-080
+    point 3). Each is told in this module's words, by the bar it crossed."""
+    runs: list[list[Mapping[str, Any]]] = []
+    for finding in findings:
+        last = runs[-1][-1] if runs else None
+        if (
+            last is not None
+            and finding.get("bar") == ASKS
+            and last.get("bar") == ASKS
+            and last.get("location") == finding.get("location")
+        ):
+            runs[-1].append(finding)
+        else:
+            runs.append([finding])
+    entries: list[str] = []
+    for run in runs:
+        head = [_where(run[0]), *(anchor for f in run for anchor in _anchor(f))]
+        bar = run[0].get("bar")
+        said = OVER_BROAD_SAID.get(bar if isinstance(bar, str) else None, OVER_BROAD_SAID[None])
+        entries.append(f"- {' · '.join(head)}\n  {said}")
+    return entries
+
+
+def _where(finding: Mapping[str, Any]) -> str:
+    return _code(str(finding.get("location") or finding.get("artefact") or "?"))
+
+
+def _anchor(finding: Mapping[str, Any]) -> list[str]:
+    """The finding's anchor, as the writers take it, or nothing where it names none."""
+    anchor = finding.get("anchor")
+    if not isinstance(anchor, Mapping):
+        return []
+    named = cast("Mapping[str, Any]", anchor)
+    return [_code(f"{named.get('kind')}:{named.get('value')}")]
 
 
 def _day(date: str) -> str:
@@ -408,7 +503,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--json",
         action="store_true",
-        help="Print the publication {schema_version, needs_answer, body}.",
+        help="Print the publication {schema_version, needs_answer, prune_due, body}.",
     )
     args = parser.parse_args(argv)
     source = "standard input" if args.document == "-" else args.document

@@ -22,6 +22,19 @@ pkit:
         - living-docs:DEC-001#6
         - living-docs:DEC-001#8
         - COR-050#3
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
 ---
 
 # REQ-022 · Functional · The living-docs agent proposes each edit, and applies none

@@ -29,14 +29,16 @@ the same functions:
     harness then grants it every tool), or holds a tool that changes existing
     files or starts agents (`CHANGING_TOOLS`, `STARTING_TOOLS`). A tool that
     writes new files stays, for its workspace.
-- **The grant list** (`answers_of`, `record`, `answers_at`, `grant_change`):
-  each agent the person was asked about, the types it was granted and the types
-  it was refused. A type has at most one answer for an agent. `record` writes
-  answers into the project configuration as text, every byte outside the
-  `fixers` block kept, and reads the file back before it writes. `answers_at`
-  reads the list at a commit, from git objects, and `grant_change` is each
-  grant and refusal a change adds or removes, which the landing command lists
-  before it stops ready, asks or merges.
+- **The grant list** (`answers_of`, `record`, `answers_at`, `grant_change`,
+  `change_between`): each agent the person was asked about, the types it was
+  granted and the types it was refused. A type has at most one answer for an
+  agent. `record` writes answers into the project configuration as text, every
+  byte outside the `fixers` block kept, and reads the file back before it
+  writes. `answers_at` reads the list at a commit, from git objects, and
+  `grant_change` is each grant and refusal a change adds or removes.
+  `change_between` is that change between two commits, which the landing
+  command lists before it stops ready, asks or merges, and `show-pr --field
+  answers` lists with it.
 - **The question** (`questions`, `question_text`, `grant_line`, `ask`): one
   question for each agent, about the types of its entries that pass the checks
   and have no answer. Its words are built from the declaration: the
@@ -565,6 +567,44 @@ def grant_change(before: Answers, after: Answers) -> tuple[GrantChange, ...]:
             if now is not None:
                 out.append(GrantChange(agent, artefact_type, True, now))
     return tuple(sorted(out))
+
+
+@dataclass(frozen=True)
+class ChangeUnread:
+    """Why the grant list's change cannot be read, and whether the fault is at the
+    head, which the pull request can mend."""
+
+    why: str
+    at_head: bool = False
+
+
+def change_between(
+    merge_base: str, oid: str, capability_root: Path
+) -> tuple[GrantChange, ...] | ChangeUnread:
+    """The grant list's change from `merge_base` to `oid`, or why it cannot be read.
+    A configuration the change does not touch makes no change, and is not read."""
+    if not merge_base:
+        return ChangeUnread("the change check named no commit the head left its base at")
+    root = capability_root.parents[2]
+    path = (capability_root / CONFIG_RELATIVE).relative_to(root).as_posix()
+    same = subprocess.run(
+        ["git", "diff", "--quiet", merge_base, oid, "--", path],
+        capture_output=True,
+        check=False,
+    )
+    if same.returncode == 0:
+        return ()
+    try:
+        before = answers_at(merge_base, path)
+    except (Unreadable, Malformed) as exc:
+        return ChangeUnread(f"where the head left its base, {merge_base[:7]}: {exc}")
+    try:
+        after = answers_at(oid, path)
+    except Malformed as exc:
+        return ChangeUnread(str(exc), at_head=True)
+    except Unreadable as exc:
+        return ChangeUnread(str(exc))
+    return grant_change(before, after)
 
 
 def answers_of(config: Mapping[str, Any]) -> Answers:

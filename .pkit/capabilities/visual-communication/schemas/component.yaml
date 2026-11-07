@@ -1,7 +1,8 @@
 # A component of a library (visual-communication DEC-001 points 4 and 6, DEC-005 points
 # 1 to 3): its status and purpose, the fields of content it takes (a fixed subset of JSON
 # Schema 2020-12), and how it is drawn. The engine reads its options, states, colour,
-# values, preferred size, parts, exposed parts and points, and layouts.
+# values, preferred size, parts, the fields of the lists it repeats over, exposed parts
+# and points, and layouts.
 #
 # The body below is the reference instance.
 
@@ -46,6 +47,11 @@ parts:
     x: "=pad"
     y: "=pad"
     width: "=:width - 2 * pad"
+  stamp:
+    text: {fact: version, style: type.body, fill: text-secondary}
+    x: "=pad"
+    y: "=label.bottom"
+    width: "=:width - 2 * pad"
 exposes: [label]
 preferred:
-  height: "=label.bottom + pad"
+  height: "=stamp.bottom + pad"

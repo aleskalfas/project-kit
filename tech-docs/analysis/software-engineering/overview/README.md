@@ -1,6 +1,6 @@
 # Overview of the analysis of software-engineering
 
-<!-- pkit:overview reads=5 fingerprint=sha256:15b55349f30aabd2cc8fba9e9f21cce39f706f43929a3f328fcacf620cf1a004 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:7482bd10daefaea26da60472776047cc0a02730a1cbb6b429a6d7a94f9b1f8fc -->
 
 [software-engineering exists so code that agents write follows a project's own conventions, and code is reviewed before it merges](../../../../.pkit/capabilities/software-engineering/decisions/DEC-003-purpose.md).
 
@@ -41,7 +41,7 @@ Review each change before it merges, so no merge rests on code or an answer that
 | --- | --- | --- |
 | core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-build](#010-build), [020-review](#020-review) |
 | core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-build](#010-build), [020-review](#020-review) |
-| core:ACT-merge-authoriser — Merge authoriser | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [020-review](#020-review) |
+| core:ACT-merge-authoriser — Merge authoriser | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-build](#010-build), [020-review](#020-review) |
 
 ### Concepts
 

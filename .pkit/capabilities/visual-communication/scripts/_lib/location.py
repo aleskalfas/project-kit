@@ -19,18 +19,21 @@ pieces (DEC-002 points 1 and 2).
   refused too, by reading and writing commands alike, rather than read as no location.
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
-Outside a git repository, the folder is walked. A link is never listed.
+Outside a git repository, the folder is walked. A link is never listed. What a commit holds
+is read from git alone (`files_at`, `file_at`). Whether a path is one git keeps is git's word
+too (`ignored`).
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from _lib import config_text
-from _lib.files import is_of_format
+from _lib.files import Change, is_of_format
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
 
@@ -214,17 +217,25 @@ def for_writing(root: Path, given: str | None = None, cwd: Path | None = None) -
     )
 
 
-def record(root: Path, location: str) -> str:
-    """Record `location` in the configuration, every other byte kept, and say what was
-    recorded and where to change it (COR-049 point 5). Raises LocationRefused."""
+def record(change: Change, where: ForWriting) -> str | None:
+    """Add to `change`, as its next step, the write that records the location `where`
+    names in the configuration, every other byte kept, where the command records it; and
+    return what the command says once the change is taken, naming where to change it
+    (COR-049 point 5), or None. Writes nothing, so a command learns before its first write
+    that it cannot record the location. Raises LocationRefused."""
+    if not where.record:
+        return None
     try:
-        config_text.record(root, KEY, location)
+        text = config_text.recording(change.root, KEY, where.path)
     except config_text.ConfigRefused as exc:
         raise LocationRefused(str(exc)) from exc
-    origin = " (the default, at the repository's top)" if location == DEFAULT else ""
+    if text is None:
+        return None
+    change.write(change.root / CONFIG, text.encode("utf-8"))
+    origin = " (the default, at the repository's top)" if where.path == DEFAULT else ""
     return (
-        f"recorded the location `{location}`{origin} in {CONFIG}; to move the work, move the "
-        f"folder and change the `{KEY}:` line there"
+        f"recorded the location `{where.path}`{origin} in {CONFIG}; to move the work, move "
+        f"the folder and change the `{KEY}:` line there"
     )
 
 
@@ -253,27 +264,57 @@ def files(root: Path, folder: str) -> list[str]:
     untracked but not ignored; walked outside a git repository. In path order, without
     links, and without a tracked file the working tree no longer holds."""
     if not _in_repository(root):
-        return _walked(root, folder)
-    argv = [
-        "git",
-        "--literal-pathspecs",
-        "ls-files",
-        "-z",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--",
-        folder,
-    ]
+        return walked(root, folder)
+    found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", folder)
+    listed = {entry for entry in found.decode("utf-8").split("\0") if entry}
+    return sorted(rel for rel in listed if _plain_file(root / rel))
+
+
+def files_at(root: Path, commit: str, folder: str) -> list[str]:
+    """The files under `folder` at `commit`, relative to `root`, in path order: none where
+    that commit holds no such folder. Raises GitFailed."""
+    found = _git(root, "ls-tree", "-r", "-z", "--name-only", commit, "--", folder)
+    return sorted(entry for entry in found.decode("utf-8").split("\0") if entry)
+
+
+def file_at(root: Path, commit: str, rel: str) -> bytes:
+    """The bytes of the file `rel`, relative to `root`, at `commit`. Raises GitFailed where
+    that commit holds no such file."""
+    return _git(root, "cat-file", "blob", f"{commit}:./{rel}")
+
+
+def ignored(root: Path, paths: Iterable[str]) -> list[str]:
+    """Those of `paths`, relative to `root`, that git ignores, whether or not a file lies
+    there, so a commit would leave a file written there out: a tracked file is not one, and
+    outside a git repository none is. Raises GitFailed."""
+    if not _in_repository(root):
+        return []
+    asked = "\0".join(paths).encode("utf-8")
+    found = _git(root, "check-ignore", "-z", "--stdin", literal=False, given=asked, passes=(0, 1))
+    return [entry for entry in found.decode("utf-8").split("\0") if entry]
+
+
+def _git(
+    root: Path,
+    *args: str,
+    literal: bool = True,
+    given: bytes | None = None,
+    passes: Collection[int] = (0,),
+) -> bytes:
+    """What git prints of `args`, run at `root`, handed `given` on its input: a path read as
+    it is written, unless the command takes no such word (`literal`). Raises GitFailed where
+    it exits with no code of `passes`."""
+    words = ["--literal-pathspecs"] if literal else []
     try:
-        proc = subprocess.run(argv, cwd=root, capture_output=True, check=False)
+        proc = subprocess.run(
+            ["git", *words, *args], cwd=root, input=given, capture_output=True, check=False
+        )
     except OSError as exc:
         raise GitFailed(f"git could not be run ({exc})") from exc
-    if proc.returncode != 0:
+    if proc.returncode not in passes:
         detail = [line for line in proc.stderr.decode("utf-8", "replace").splitlines() if line]
-        raise GitFailed(detail[-1] if detail else f"git ls-files exited {proc.returncode}")
-    listed = {entry for entry in proc.stdout.decode("utf-8").split("\0") if entry}
-    return sorted(rel for rel in listed if _plain_file(root / rel))
+        raise GitFailed(detail[-1] if detail else f"git {args[0]} exited {proc.returncode}")
+    return proc.stdout
 
 
 def _in_repository(root: Path) -> bool:
@@ -284,7 +325,9 @@ def _plain_file(path: Path) -> bool:
     return path.is_file() and not path.is_symlink()
 
 
-def _walked(root: Path, folder: str) -> list[str]:
+def walked(root: Path, folder: str) -> list[str]:
+    """The files under `folder`, relative to `root`, as they lie, whatever git ignores: in
+    path order, and without links."""
     top = root / folder
     if not top.is_dir() or top.is_symlink():
         return []

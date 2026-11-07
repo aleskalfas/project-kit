@@ -1,0 +1,17 @@
+pkit_schema: visual-communication:roles
+schema_version: 1
+
+# The own roles of the test library (DEC-008 point 1): its ink and paper follow the shared
+# text and background, its note follows its ink, its gap the second spacing. Its warning
+# has no default. At its defaults, its ink on its paper rests on the foundations' text on
+# background (point 6); its warning on its paper is judged only at a brand that gives the
+# warning a value.
+roles:
+  test-parts.ink: {type: color, default: '{text-primary}'}
+  test-parts.paper: {type: color, default: '{background}'}
+  test-parts.note: {type: color, default: '{test-parts.ink}'}
+  test-parts.gap: {type: dimension, default: '{space.2}'}
+  test-parts.warning: {type: color}
+pairs:
+  - {text: test-parts.ink, under: test-parts.paper, level: text}
+  - {text: test-parts.warning, under: test-parts.paper, level: large-text}

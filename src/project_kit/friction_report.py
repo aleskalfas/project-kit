@@ -444,6 +444,9 @@ class ExplainedFinding:
             "anchor": _anchor_json(self.finding.anchor),
             "origin": None if self.finding.origin is None else self.finding.origin.as_json(),
             "message": self.finding.message,
+            "bar": self.finding.bar,
+            "share": self.finding.share,
+            "parts": self.finding.parts_json,
             "commits": [commit.as_json() for commit in self.commits],
             "clears": self.clears,
             "answers": [answer.as_json() for answer in self.answers],
@@ -675,14 +678,23 @@ def _explained(
         )
     elif kind is _Kind.OVER_BROAD and anchor is not None:
         clears = (
-            f"narrow {_label(anchor)} in the block, then revalidate (a changed anchor list "
-            f"needs a revalidation)"
+            f"replace {_label(anchor)} in the block by the kind of narrower anchor its finding "
+            f"suggests, where one names less, then revalidate (a changed anchor list needs a "
+            f"revalidation)"
         )
     elif kind is _Kind.SHARED_ID and anchor is not None:
         clears = (
             f"give the artefacts that share its id ids no two share; or, where {_label(anchor)} "
             f"means a document, name the document by its path in the block, then revalidate (a "
             f"changed anchor list needs a revalidation)"
+        )
+    elif kind is _Kind.WHOLE_AND_PARTS and anchor is not None:
+        clears = (
+            f"nothing is owed; remove the anchors on its parts from the block, which loses no "
+            f"flag and no ask but gives up a deferral or revisit of one part, the report when a "
+            f"part goes and the narrower explanation, or remove {_label(anchor)} where the "
+            f"artefact rests on those parts alone, which misses a change outside them; then "
+            f"revalidate (a changed anchor list needs a revalidation)"
         )
     elif kind is _Kind.UNREACHABLE:
         clears = "fetch the full history (`git fetch --unshallow`) and run again"
@@ -804,6 +816,15 @@ _COMMITS_LABEL = {
     _Kind.LEFT_OUT: "left out in, oldest first",
     _Kind.DEAD_ANCHOR: "where its files went, oldest first",
 }
+
+#: What clears the second bar's one finding on the artefact (ADR-080 point 3): the
+#: advice for the artefact as a whole, and the revalidation a changed anchor list needs.
+_ASKED_CLEARS = f"{fr.ASKED_ADVICE}; then revalidate (a changed anchor list needs a revalidation)"
+
+
+def _finding_of(explained: ExplainedFinding) -> fr.RepositoryFinding:
+    return explained.finding
+
 
 _ANCHOR_GLOSS = {
     "current": "unchanged since the revalidation point",
@@ -931,8 +952,15 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
         return lines
     kind_width = max(len(f.finding.kind.value) for f in explanation.findings)
     diffs: dict[Anchor, tuple[str, ...]] = {a.anchor: a.diff for a in explanation.anchors if a.diff}
-    for explained in explanation.findings:
+    for run in fr.over_broad_runs(explanation.findings, _finding_of):
+        explained = run[0]
         finding = explained.finding
+        if finding.asked:  # the second bar's findings, one for the artefact (ADR-080 point 3)
+            message, under = fr.asked_lines([e.finding for e in run])
+            lines.append(f"  {finding.kind.value:{kind_width}}  {_cell(None)}  {message}")
+            lines.extend(f"      {line}" for line in under)
+            lines.append(f"    clears it — {_ASKED_CLEARS}")
+            continue
         message = finding.message
         if finding.kind is _Kind.DEFERRED and finding.origin is not None:
             message += f", {_age(now, finding.origin.date)}"

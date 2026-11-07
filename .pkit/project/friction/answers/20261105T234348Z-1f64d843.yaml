@@ -1,0 +1,15 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-05T23:43:48Z
+      outcome: unchanged
+      unchanged-because: UC-062 now states at step 8 that land-work prints what the change makes accepted, and at step 13 that it runs pkit decisions check-landing and refuses the merge while that command fails, each under a Not built yet box. This journey's steps stop at UC-062's title and what it needs from UC-061, and its postconditions name the merge gate's approvals, so none of it reads either addition.

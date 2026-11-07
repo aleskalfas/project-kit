@@ -1,0 +1,28 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - moved-ed2838c951d1.yaml
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/docs_roots.py
+        outcome: unchanged
+        reason: The statement, measure and applies-to word a documentation location as a path recorded for documents, and what derives from a root as a folder, as COR-049 has only folders derive from it. So the obligation is the same and this target still stands.
+      - anchor:
+          kind: path
+          value: tests/test_docs_roots.py
+        outcome: unchanged
+        reason: The statement, measure and applies-to word a documentation location as a path recorded for documents, and what derives from a root as a folder, as COR-049 has only folders derive from it. So the obligation is the same and this target still stands.
+      - anchor:
+          kind: record
+          value: COR-049#5
+        outcome: unchanged
+        reason: The statement, measure and applies-to word a documentation location as a path recorded for documents, and what derives from a root as a folder, as COR-049 has only folders derive from it. So the obligation is the same and this target still stands.
+      - anchor:
+          kind: record
+          value: COR-049#6
+        outcome: unchanged
+        reason: The statement, measure and applies-to word a documentation location as a path recorded for documents, and what derives from a root as a folder, as COR-049 has only folders derive from it. So the obligation is the same and this target still stands.

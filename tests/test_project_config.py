@@ -268,6 +268,15 @@ def test_config_set_writes_with_yes(make_adopter_repo: MakeAdopterRepo) -> None:
     assert text.startswith(pc.EDITOR_DIRECTIVE + "\n")
 
 
+def test_config_set_writes_the_refusals_key_as_a_boolean(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    result = _run(pc.REFUSE_PROPOSALS_KEY, "true", "--yes")
+    assert result.exit_code == 0, result.output
+    assert pc.read_config(repo.root) == {"decisions": {"refuse-proposals": True}}
+
+
 def test_config_set_refuses_non_interactively_without_yes(
     make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:

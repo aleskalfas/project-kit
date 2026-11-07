@@ -747,7 +747,9 @@ def test_logging_off_full_lifecycle_writes_no_journal_and_same_verdicts(
     # setting), once with it off. Live detection decides everything, so every
     # verdict matches; only the journal differs.
     logged = tmp_path_factory.mktemp("logged")
-    shutil.copytree(fixture_repo, logged, dirs_exist_ok=True)
+    shutil.copytree(
+        fixture_repo, logged, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__")
+    )
     set_journal_logging(fixture_repo, enabled=False)
 
     unlogged_verdicts = _lifecycle_verdicts(fixture_repo)

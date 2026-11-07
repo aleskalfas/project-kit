@@ -1,0 +1,183 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T22:50:36Z
+      outcome: unchanged
+      unchanged-because: "DEC-055 point 3 now says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The entry cites point 3 only for an authorisation to merge staying the person's, which that sentence does not touch: the override is of a refusal to go ready for review, and gives no authorisation."
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T22:50:42Z
+      outcome: unchanged
+      unchanged-because: DEC-055 point 3 now says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The view cites point 3 for an authorisation covering the head it names and staying the person's, and that sentence touches neither. Its audit comment section says what a comment records at the default setting and names no `--force`, as it named none while `edit-issue --force` already left one. So the sentence makes nothing there untrue, and the view's one line on `--force`, that only it overrides a check taking no bypass, stands.
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T032927Z-451d90fd.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T22:50:46Z
+      outcome: unchanged
+      unchanged-because: DEC-055 point 3 now says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The view cites point 3 for each `[person]` finding shown whole and for a gate that passes giving no authorisation to merge, and that sentence touches neither. The comment opens with the audit marker and carries no verdict marker, so the view's line that only a comment with the marker counts as a verdict stands.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T211250Z-f74ab866.yaml
+      - 20261029T214542Z-efb6f11b.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T22:50:52Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces and this change. The answer to DEC-065's change (6c703c63) found that the requirement cites DEC-055 point 3 only for the authorisation to merge staying the person's, which DEC-065 leaves standing. The answer to the edit of COR-066 point 2 (0a8bab69) found that point 2's check only refuses a merge and stands in for no authorisation. Neither commit changed the requirement, and they hold together, since neither a list taken out of the description nor what a check reads gives an authorisation. This change's edit of DEC-055 point 3 says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. That override gives no authorisation to merge, and the move to Review it comes before is agent-autonomous in `workflow.yaml`, so no move a person holds is made on it, and the requirement stands.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T22:50:56Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces and this change. The answer to DEC-065's change (6c703c63) updated the use case: its assumption on what the merge authoriser is told and step 5 now cite DEC-065, and it anchors DEC-065 points 1, 2 and 4. The answer to the edit of COR-066 point 2 (0a8bab69) found that the trigger and step 1 read the pull request's head for friction's change check, which is not point 2's check. They touch different lines and rest on nothing of one another, so both hold. This change's edit of DEC-055 point 3 says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The reviewer here reads the answers from the change check's list and the sentences from the description, never a comment, so steps 2 and 5 stand, and an override that passed a missing sentence still meets variant 5a."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+    revalidated:
+      at: 2026-11-05T22:50:59Z
+      outcome: unchanged
+      unchanged-because: Judged with the four answers it replaces and this change. The answer to the over-broad warning's change (2ce909e8) found that the same-module rule of `batch-plan.md`, the review rounds parallel landings cost, and each merge judged by the change check held. The answer to the change on Tasks that share a file (d2872d86) then removed the anchor on `batch-plan.md` and the open question on those review rounds, so of that finding only the merge judged by the change check still has a place here, and it stands in step 6 and the second guarantee. The answer to DEC-065's change (6c703c63) only named the default branch and the worker in step 4. The answer to SAN 2.0.0's change (90d45a35) added the Operator with its anchors, and reworded variant 6a. These touch different lines and rest on nothing of one another. This change's edit of DEC-055 point 3 says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The use case cites point 3 for the head the merge authoriser authorises and for the later head, which that sentence leaves alone. It starts with the Task already in Review and names no `--force`, so its steps and guarantees stand.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T22:51:03Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces and this change. The answer to the over-broad warning's change (0fa72585) found that COR-050 point 7 adds only a warning, which owes no answer, so the answers the engineer writes and those it leaves to a person are as the reference says. The answer to DEC-065's change (6c703c63) updated the reference: sentences are read as the project-management commands read them, `pkit pm show-pr <PR> --field answers` prints what the landing command tells, and the person is told what changed in each updated document. They touch different passages, and a warning changes nothing of what is read or told, so both hold. This change's edit of DEC-055 point 3 says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The reference cites point 3 for who checks the answers and what the person who authorises the merge is told, and names no `--force`, so it stands."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T091216Z-b5483b71.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T22:51:07Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces and this change. The answer to the over-broad warning's change (2ce909e8) found that UC-001 lost only an aside the guide never said, and that COR-050 point 7 adds only a warning, so the agent's build task and the answers it writes and leaves to you are as the guide says. The answer to DEC-065's change (6c703c63) updated the guide: the landing command shows what changed in each updated document and each answer the check did not ask for, and `pkit pm show-pr <PR> --field answers` prints what it tells. They touch different passages, and neither the aside nor the warning changes what the landing command shows, so both hold. This change's edit of DEC-055 point 3 says the `--force` override of `review-work`'s refusal leaves an audit comment, where it said the override left no trace. The guide names no `--force` and tells its reader to write the sentences, so nothing it says changes."

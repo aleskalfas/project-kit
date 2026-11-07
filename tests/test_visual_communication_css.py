@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
-from tests.visual_communication_project import CAPABILITY, FOUNDATIONS, TEST_BRAND
+from tests.visual_communication_project import CAPABILITY, FOUNDATIONS, TEST_BRAND, TEST_PARTS
 
 css, css_declaration, seam, values, tokens, keys = load(
     "visual-communication",
@@ -42,14 +42,34 @@ REFERENCE = {
 :root {
   --accent: #0969da;
   --background: #ffffff;
+  --family--blue--fill: #ddf4ff;
+  --family--blue--line: #0969da;
+  --family--blue--text: #033d8b;
+  --family--green--fill: #dafbe1;
+  --family--green--line: #1a7f37;
+  --family--green--text: #044f1e;
+  --family--neutral--fill: #f6f8fa;
+  --family--neutral--line: #d0d7de;
+  --family--neutral--text: #1f2328;
+  --family--orange--fill: #fff1e5;
+  --family--orange--line: #bc4c00;
+  --family--orange--text: #762c00;
+  --family--purple--fill: #fbefff;
+  --family--purple--line: #8250df;
+  --family--purple--text: #512a97;
+  --family--red--fill: #ffebe9;
+  --family--red--line: #cf222e;
+  --family--red--text: #82071e;
   --font--body: "Source Sans Pro";
   --font--heading: "Source Sans Pro Semibold";
   --line: #d0d7de;
   --size--figure: 960px;
+  --size--slide: 1280px;
   --space--1: 4px;
   --space--2: 8px;
   --space--3: 16px;
   --space--4: 32px;
+  --stroke--thick: 2px;
   --stroke--thin: 1px;
   --surface: #f6f8fa;
   --text-primary: #1f2328;
@@ -59,6 +79,24 @@ REFERENCE = {
 [data-colour-scheme="light"] {
   --accent: #0969da;
   --background: #ffffff;
+  --family--blue--fill: #ddf4ff;
+  --family--blue--line: #0969da;
+  --family--blue--text: #033d8b;
+  --family--green--fill: #dafbe1;
+  --family--green--line: #1a7f37;
+  --family--green--text: #044f1e;
+  --family--neutral--fill: #f6f8fa;
+  --family--neutral--line: #d0d7de;
+  --family--neutral--text: #1f2328;
+  --family--orange--fill: #fff1e5;
+  --family--orange--line: #bc4c00;
+  --family--orange--text: #762c00;
+  --family--purple--fill: #fbefff;
+  --family--purple--line: #8250df;
+  --family--purple--text: #512a97;
+  --family--red--fill: #ffebe9;
+  --family--red--line: #cf222e;
+  --family--red--text: #82071e;
   --line: #d0d7de;
   --surface: #f6f8fa;
   --text-primary: #1f2328;
@@ -68,6 +106,24 @@ REFERENCE = {
 [data-colour-scheme="dark"] {
   --accent: #4493f8;
   --background: #0d1117;
+  --family--blue--fill: #0c2d6b;
+  --family--blue--line: #4493f8;
+  --family--blue--text: #a5d6ff;
+  --family--green--fill: #033a16;
+  --family--green--line: #2ea043;
+  --family--green--text: #7ee787;
+  --family--neutral--fill: #161b22;
+  --family--neutral--line: #30363d;
+  --family--neutral--text: #e6edf3;
+  --family--orange--fill: #5a1e02;
+  --family--orange--line: #db6d28;
+  --family--orange--text: #ffc680;
+  --family--purple--fill: #3c1e70;
+  --family--purple--line: #a371f7;
+  --family--purple--text: #e2c5ff;
+  --family--red--fill: #67060c;
+  --family--red--line: #f85149;
+  --family--red--text: #ffc1ba;
   --line: #30363d;
   --surface: #161b22;
   --text-primary: #e6edf3;
@@ -76,6 +132,13 @@ REFERENCE = {
 
 [data-contrast="high"] {
   --background: #ffffff;
+  --family--blue--text: #000000;
+  --family--green--text: #000000;
+  --family--neutral--line: #000000;
+  --family--neutral--text: #000000;
+  --family--orange--text: #000000;
+  --family--purple--text: #000000;
+  --family--red--text: #000000;
   --line: #000000;
   --text-primary: #000000;
   --text-secondary: #1f2328;
@@ -83,6 +146,13 @@ REFERENCE = {
 
 [data-colour-scheme="dark"][data-contrast="high"] {
   --background: #000000;
+  --family--blue--text: #ffffff;
+  --family--green--text: #ffffff;
+  --family--neutral--line: #ffffff;
+  --family--neutral--text: #ffffff;
+  --family--orange--text: #ffffff;
+  --family--purple--text: #ffffff;
+  --family--red--text: #ffffff;
   --line: #ffffff;
   --text-primary: #ffffff;
   --text-secondary: #e6edf3;
@@ -383,8 +453,10 @@ def test_one_document_gives_one_style_sheet(brand: Any) -> None:
 def test_it_refuses_a_size_axis_another_form_or_document_and_missing_combinations(
     brand: Any,
 ) -> None:
+    """A size axis never reaches the writer: the command hands it a brand's values at the
+    default of each size (DEC-021 point 8), so one handed to it is refused."""
     doc, axes = written_document(brand), axes_of(brand)
-    with pytest.raises(css.CssError, match="size axis"):
+    with pytest.raises(css.CssError, match=r"size axis; .* at the default of every other axis"):
         css.write(doc, {**axes, "contrast": {**axes["contrast"], "kind": "size"}})
     with pytest.raises(css.CssError, match="form 2"):
         css.write(doc, axes, form=2)
@@ -410,3 +482,23 @@ def test_its_declaration_is_plain_data_the_seam_ships_as_a_code_writer() -> None
     assert found["programs"] == [] and found["services"] == []
     assert "css" in seam.names(seam.CODE_WRITER)
     assert found["version"] == css.VERSION
+
+
+# --- a library's own roles (DEC-008 point 5) ---------------------------------------------------
+
+
+def test_the_roles_of_a_library_locked_with_the_brand_are_written_at_their_defaults() -> None:
+    scope = tokens.read_scope({"foundations": FOUNDATIONS, "test-parts": TEST_PARTS})
+    brand = tokens.read_brand(TEST_BRAND, scope)
+    doc = values.document(brand, brand.combinations(), {**LOCK, "test-parts": "1.0.0"})
+    assert doc["version"] == 1
+    doc["tokens"] = {p: t for p, t in doc["tokens"].items() if t["type"] in css.KINDS}
+    sheet = css.write(doc, axes_of(brand))
+    root = parsed(sheet)[0].declarations
+    assert root["--test-parts--note"] == root["--text-primary"]
+    assert root["--test-parts--gap"] == "8px"
+    assert "--test-parts--warning" not in sheet
+    assert_switches(sheet, doc, axes_of(brand))
+    plain = css.write(written_document(brand), axes_of(brand))
+    assert plain != sheet
+    assert css.VERSION == "1.0.0"

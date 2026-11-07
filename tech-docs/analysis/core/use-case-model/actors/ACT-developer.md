@@ -2,18 +2,18 @@
 id: ACT-developer
 name: Developer
 status: active
-summary: "The person who builds: decisions, rules, notes, code and its documentation, one change at a time."
+summary: "The person who builds: decisions, rules, scratchpad notes, code and its documentation, one change at a time."
 needs:
   - Record my decisions beside the methodology's, and build only on accepted ones.
   - Author and extend my project's rule sets without editing the ones that ship with the system.
   - Think a question too big for a decision through in a scratchpad note, and retire the note once it has produced something.
-  - Say what each of my documents rests on, so a change there reaches me.
+  - Say what each of my documents rests on, so a change that edits any of that reaches me.
   - Answer what my change made stale, letting an agent write the answers my change owes and a reviewer other than that agent check them.
   - Know before I push that my change passes the checks my project gates its merges on.
   - Have a substantive draft challenged before I adopt it, and have my diff checked against the methodology's conventions before I commit it.
   - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
-  - Turn recurring work into my project's own skill or agent, designing its dialogue as a storyboard first.
-  - Declare what my change means for the next release, in changesets naming what it moves, the backbone or a component, and the segment I judge.
+  - Turn recurring work into my project's own skill or agent definition, designing its dialogue as a storyboard first.
+  - "Declare what my change means for the next release: changesets naming what it moves, the backbone or a component, and the bump segment I judge."
   - Resolve what the default branch left out of date, knowing for each debt the change it came from.
 pkit:
   friction:
@@ -26,13 +26,19 @@ pkit:
         - COR-050#3
         - COR-050#6
         - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-012
+        - COR-016
+        - COR-024
 ---
 
 # ACT-developer — Developer
 
-The person who builds: decisions, rules, notes, code and its documentation, one change at a time.
+The person who builds: decisions, rules, scratchpad notes, code and its documentation, one change at a time.
 
 - **Occasions:** for every [change](../../glossary.md#term-change--change), and again when some work recurs often enough to deserve tooling of its own.
 - **Context:** the [change](../../glossary.md#term-change--change). They direct agents to make it.
-- **Core:** whatever tracks the work, every [change](../../glossary.md#term-change--change) passes the [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) and the [friction](../../glossary.md#term-friction--friction) check, and lands as [COR-009](../../../../../.pkit/decisions/core/COR-009-pr-workflow.md) sets out. That the [backbone](../../glossary.md#term-backbone--backbone) itself lands [pull requests](../../glossary.md#term-pull-request--pull-request) is provisional ([ADR-061 point 3](../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#3-github-only-through-gh-labelled-provisionally), raised as #1222).
+- **Core:** whatever tracks the work, every [change](../../glossary.md#term-change--change) passes the [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) and the [change check](../../glossary.md#term-change-check--change-check), and lands as [COR-009](../../../../../.pkit/decisions/core/COR-009-pr-workflow.md) sets out. That the [backbone](../../glossary.md#term-backbone--backbone) itself lands [pull requests](../../glossary.md#term-pull-request--pull-request) is provisional ([ADR-061 point 3](../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#3-github-only-through-gh-labelled-provisionally), raised as #1222).
 - **Note:** a work tracker's view of the developer (project-management's "Implementer") comes with that [capability](../../glossary.md#term-capability--capability).

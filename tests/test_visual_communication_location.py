@@ -13,7 +13,7 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import CONFIG, bound, project, write, yaml_text
 
-location, config_text = load("visual-communication", "location", "config_text")
+location, config_text, files = load("visual-communication", "location", "config_text", "files")
 
 BINDING = "pkit_schema: visual-communication:config\nschema_version: 1\n"
 
@@ -190,11 +190,25 @@ def test_a_writing_command_never_moves_the_recorded_location(tmp_path: Path) -> 
 
 def test_recording_creates_the_configuration_and_says_where_to_change_it(tmp_path: Path) -> None:
     root = project(tmp_path)
-    said = location.record(root, "visual")
+    change = files.Change(root)
+    said = location.record(change, location.ForWriting("visual", record=True))
+    assert not (root / CONFIG).exists()
+    change.commit()
+    assert said is not None
     assert "recorded the location `visual` (the default" in said
     assert CONFIG in said
     assert (root / CONFIG).read_text(encoding="utf-8") == f"{BINDING}\nlocation: visual\n"
     assert location.configured(root) == "visual"
+
+
+def test_a_location_recorded_already_writes_nothing(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    change = files.Change(root)
+    assert location.record(change, location.ForWriting("visual", record=False)) is None
+    change.commit()
+    assert not (root / CONFIG).exists()
+    config(root, f"{BINDING}location: visual\n")
+    assert location.record(change, location.ForWriting("visual", record=True)) is None
 
 
 # --- the configuration's text -------------------------------------------------------------------
@@ -270,11 +284,13 @@ def test_a_configuration_that_does_not_parse_is_refused() -> None:
         config_text.with_key("a: [\n", "location", "art")
 
 
-def test_record_writes_once_and_reads_back(tmp_path: Path) -> None:
+def test_recording_gives_the_text_once_and_writes_nothing(tmp_path: Path) -> None:
     root = project(tmp_path)
-    assert config_text.record(root, "location", "art")
-    assert not config_text.record(root, "location", "art")
-    assert (root / CONFIG).read_text(encoding="utf-8") == f"{BINDING}\nlocation: art\n"
+    text = config_text.recording(root, "location", "art")
+    assert text == f"{BINDING}\nlocation: art\n"
+    assert not (root / CONFIG).exists()
+    config(root, text)
+    assert config_text.recording(root, "location", "art") is None
 
 
 def test_a_configuration_reached_through_a_link_is_refused(tmp_path: Path) -> None:
@@ -285,7 +301,7 @@ def test_a_configuration_reached_through_a_link_is_refused(tmp_path: Path) -> No
         elsewhere, target_is_directory=True
     )
     with pytest.raises(config_text.ConfigRefused, match="through the link"):
-        config_text.record(root, "location", "art")
+        config_text.recording(root, "location", "art")
 
 
 # --- the files of a folder ----------------------------------------------------------------------
@@ -299,6 +315,58 @@ def test_outside_a_repository_the_folder_is_walked_without_links(tmp_path: Path)
     (root / "visual" / "dir-link").symlink_to(root / "visual" / "a", target_is_directory=True)
     assert location.files(root, "visual") == ["visual/a/c.yaml", "visual/b.yaml"]
     assert location.files(root, "missing") == []
+
+
+def test_a_commit_is_read_as_it_stood_whatever_the_working_tree_holds(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    write(root / "visual" / "a" / "kept.yaml", "then\n")
+    write(root / "visual" / "[x].yaml", "")
+    write(root / "visualise" / "other.yaml", "")
+    git(root, "add", ".")
+    identity = ("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false")
+    git(root, *identity, "commit", "-q", "-m", "held")
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    write(root / "visual" / "a" / "kept.yaml", "now\n")
+    write(root / "visual" / "new.yaml", "")
+    assert location.files_at(root, commit, "visual") == ["visual/[x].yaml", "visual/a/kept.yaml"]
+    assert location.files_at(root, commit, "missing") == []
+    assert location.file_at(root, commit, "visual/a/kept.yaml") == b"then\n"
+    with pytest.raises(location.GitFailed):
+        location.file_at(root, commit, "visual/new.yaml")
+
+
+def test_git_says_which_paths_it_ignores_whether_or_not_a_file_lies_there(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "docs/out/\n*.png\n")
+    write(root / "docs" / "out" / "held.svg", "")
+    assert location.ignored(
+        root, ["docs/out/held.svg", "docs/out/none.svg", "docs/in/a.svg", "docs/in/a.png"]
+    ) == ["docs/out/held.svg", "docs/out/none.svg", "docs/in/a.png"]
+    assert location.ignored(root, ["docs/in/a.svg"]) == []
+
+
+def test_a_tracked_file_is_one_git_keeps_in_a_folder_it_ignores(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "docs/\n")
+    write(root / "docs" / "kept.svg", "")
+    git(root, "add", "-f", "docs/kept.svg")
+    assert location.ignored(root, ["docs/kept.svg", "docs/other.svg"]) == ["docs/other.svg"]
+
+
+def test_outside_a_repository_git_ignores_nothing(tmp_path: Path) -> None:
+    assert location.ignored(project(tmp_path), ["docs/a.svg"]) == []
+
+
+def test_a_path_git_cannot_read_fails(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    with pytest.raises(location.GitFailed, match="outside repository"):
+        location.ignored(root, ["../outside.svg"])
 
 
 def test_in_a_repository_the_files_are_listed_as_git_sees_them(tmp_path: Path) -> None:

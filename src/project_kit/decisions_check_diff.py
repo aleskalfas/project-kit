@@ -105,13 +105,20 @@ are read from git objects. Where the ADR folder is, and which records the
 project receives by sync, is read from the working tree either way. The JSON
 document (`as_json`) gives the findings and the list, for a component that
 shows the list, such as a landing command.
+
+**Which record is which across a change** is this module's one home (ADR-057
+point 2), and the landing check calls it too. `read_records` reads what a state
+holds and names each record file it cannot read, which the numbering check
+leaves to validation. `pair_records` pairs a record at its path, else by its
+id-space and id. `adr_folder_at` gives the ADR folder at a state, with why it may
+not read, and `accepted_change` reads how an accepted record's points changed.
 """
 
 from __future__ import annotations
 
 import json
 from collections import Counter
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
@@ -121,12 +128,14 @@ import click
 
 from project_kit import (
     cli_render,
+    decisions,
     decisions_validate,
     document_parts,
     lifecycle_ownership,
     record_points,
     working_tree,
 )
+from project_kit import friction_discovery as fd
 from project_kit.friction_git import SHORT, CommitTree
 from project_kit.record_points import ListForm, ListPoint, PointHeading, RecordPoints
 from project_kit.validators import Finding, Severity
@@ -277,7 +286,7 @@ def check(
     adr = decisions_validate.adr_folder(target_root)
     at_fork = _read(CommitTree(target_root, fork), adr)
     at_tip = _read(CommitTree(target_root, tip), adr) if tip != fork else at_fork
-    pairs = _pair(head, at_fork)
+    pairs = pair_records(head, at_fork)
     compared = [
         record
         for rel, record in sorted(head.items())
@@ -293,7 +302,7 @@ def check(
             if before is None:
                 own += _taken_record(record, at_fork, at_tip, head, base)
         found += sorted(own, key=_by_id)  # stable: one id's findings keep their order
-        altered = _accepted_change(record, before) if before is not None else None
+        altered = accepted_change(record, before) if before is not None else None
         if altered is not None:
             changed.append(altered)
     paired = {before.rel for before in pairs.values()}
@@ -308,27 +317,58 @@ def check(
 # --- reading and pairing -----------------------------------------------------------
 
 
-def _read(tree: _Tree, adr: str | None) -> dict[str, Record]:
-    """Every record `tree` holds, by path. A file that is not UTF-8 is left out, as
-    validation's id pass reports it."""
+@dataclass(frozen=True)
+class RecordsRead:
+    """What a state holds of records: each by path, and each record file that could not be
+    read as text, by path, with why."""
+
+    records: dict[str, Record]
+    unreadable: dict[str, str]
+
+
+def read_records(
+    tree: _Tree, *adrs: str | None, only: Collection[str] | None = None
+) -> RecordsRead:
+    """Every record `tree` holds, by path, the ADR folder being any of `adrs`, of `only`
+    those paths where given. A file that is not text is named, not read."""
     spaces: dict[str, str] = {}
-    for rel in tree.files():
-        space = decisions_validate.record_space(rel, adr)
+    for rel in tree.files() if only is None else only:
+        space = next(
+            (found for adr in adrs if (found := decisions_validate.record_space(rel, adr))), None
+        )
         if space is not None:
             spaces[rel] = space
     records: dict[str, Record] = {}
-    for rel, raw in tree.read_bytes(sorted(spaces)).items():
+    unreadable: dict[str, str] = {}
+    held = frozenset(tree.files())
+    for rel, raw in tree.read_bytes(sorted(rel for rel in spaces if rel in held)).items():
         if raw is None:
+            unreadable[rel] = "it is a link, not a file"
             continue
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError:
+            unreadable[rel] = "it is not UTF-8 text"
             continue
         records[rel] = Record(rel, spaces[rel], decisions_validate.record_id_of(text), text)
-    return records
+    return RecordsRead(records, unreadable)
 
 
-def _pair(head: Mapping[str, Record], other: Mapping[str, Record]) -> dict[str, Record]:
+def _read(tree: _Tree, adr: str | None) -> dict[str, Record]:
+    """Every record `tree` holds, by path. A file that is not UTF-8 is left out, as
+    validation's id pass reports it."""
+    return read_records(tree, adr).records
+
+
+def adr_folder_at(target_root: Path, tree: fd.RepositoryTree) -> tuple[str | None, str | None]:
+    """The folder of the ADR id-space at the state `tree` holds, read forgivingly from
+    that state's overlay, `None` where it names none, and why the overlay does not read,
+    where it may name one."""
+    overlay, unread = fd.read_mapping_at(target_root, tree, decisions.OVERLAY_RELPATH)
+    return decisions.adr_folder_named(overlay), unread or decisions.adr_folder_unread(overlay)
+
+
+def pair_records(head: Mapping[str, Record], other: Mapping[str, Record]) -> dict[str, Record]:
     """For each head record, its record in `other`: at its path, else the one record of
     `other` with its id-space and id that no head record holds at its own path."""
     pairs = {rel: other[rel] for rel in head if rel in other}
@@ -792,7 +832,7 @@ def _next_record_id(record: Record, *states: Mapping[str, Record]) -> str:
 # --- the accepted records the change alters ---------------------------------------------
 
 
-def _accepted_change(record: Record, before: Record) -> ChangedRecord | None:
+def accepted_change(record: Record, before: Record) -> ChangedRecord | None:
     """What the change does to a record accepted at the branch point: each point the head
     adds, alters, retires or removes, each field every point stands on that changed, and
     whether the text its points stand on, or its other text, changed. None for a record not
@@ -949,22 +989,24 @@ def as_json(report: Report | None, head: str | None) -> dict[str, Any]:
             }
             for finding in report.findings
         ],
-        "accepted_changes": [
-            {
-                "path": changed.rel,
-                "record": changed.name,
-                "points": [
-                    {"id": point.id, "change": point.change, "title": point.title}
-                    for point in changed.points
-                ],
-                "fields": list(changed.fields),
-                "shared_text": changed.shared,
-                "other_text": changed.other,
-                "list_form": changed.list_form,
-                "removed": changed.removed,
-            }
-            for changed in report.changed
+        "accepted_changes": [changed_entry(changed) for changed in report.changed],
+    }
+
+
+def changed_entry(changed: ChangedRecord) -> dict[str, Any]:
+    """An accepted record's edits as the JSON documents give them."""
+    return {
+        "path": changed.rel,
+        "record": changed.name,
+        "points": [
+            {"id": point.id, "change": point.change, "title": point.title}
+            for point in changed.points
         ],
+        "fields": list(changed.fields),
+        "shared_text": changed.shared,
+        "other_text": changed.other,
+        "list_form": changed.list_form,
+        "removed": changed.removed,
     }
 
 

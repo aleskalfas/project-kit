@@ -4,24 +4,32 @@
 - **The declaration** is `code/<name>.yaml` in the location (format `code`): the code
   writer, the form of its spelling, the brand, a lock of the brand and what it builds on,
   where the code goes (`out`), and optionally a `prefix` and the losses a person
-  accepted. Its name is the file's name.
+  accepted. Its name is the file's name. A writer whose declaration says `prefix: False`
+  keeps each token path as the brand exports it, and a declaration naming one is refused.
 - **Where the code goes.** `out` is a file of the project's tree. It is refused outside
   the repository, under `.pkit/`, under a hidden folder, reached through a link, as a
-  folder, in the location's library folder, whose copies no command writes (DEC-002 point
-  9), and in its folder of declarations, where the record would read as one. Its record
-  lies beside it, `<out>.record.yaml` (format `code-record`). The CRLF line endings a
-  checkout may give the code are read as the LF it was written with, by the check and by a
-  run alike (`as_written`), so a run leaves such code as it is.
+  folder, in the location's library folder, whose copies only the command that brings a
+  shipped library in writes (DEC-002 point 9, DEC-013 point 5), and in its folder of
+  declarations, where the record would read as one. Its record lies beside it,
+  `<out>.record.yaml` (format `code-record`). The CRLF line endings a checkout may give the
+  code are read as the LF it was written with, by the check and by a run alike
+  (`as_written`), so a run leaves such code as it is.
 - **The lock is the declaration's,** which a person moves on purpose (DEC-005 point 7).
   The command reads the brand at the versions it names, and never moves it.
-- **A run** resolves every token the brand exports in every combination of its axes
-  (the values document, version 1), and knows its losses before the writer runs: each
-  token of a type the writer's declaration has no form for is left out, and reported
-  unless the declaration accepts it. The writer gets the rest. The command writes the
-  code, then its record: the fingerprint, form 1, over the declaration file, each value
-  written in each combination, and the writer's version (`fingerprint.code_record_inputs`);
-  the hash of the code; and what is only recorded. Where the record verifies and the code
-  is what it would write, nothing is written.
+- **A run** resolves every token the brand exports, and every other role of the
+  component libraries the lock names at the brand's value or its default (DEC-008 point
+  5), in every combination of the brand's axes whose kind the writer's declaration spells,
+  each other axis at its default (the values document, version 1). It knows its losses
+  before the writer runs: each token of a type the writer's declaration has no form for
+  is left out, and each other token an axis of another kind changes, such as a size, is
+  written at that axis's default (DEC-021 point 8). Each is reported unless the
+  declaration accepts it. The writer gets the rest. The command writes the code, then its
+  record: the fingerprint, form 1, over the declaration file, each value written in each
+  combination, and the writer's version (`fingerprint.code_record_inputs`); the hash of
+  the code; and what is only recorded. It writes the two as one change: where a write
+  fails, both are as they were before the run, or each file the run could not put back is
+  named, so the check never reads new code beside its old record as code edited by hand.
+  Where the record verifies and the code is what it would write, nothing is written.
 - **The findings** (DEC-006 points 4 and 8): a record missing beside the code, or naming
   code that is missing, fails; code stale by a value or by its declaration fails, and so
   does code that differs from what was written; code stale only by its writer's version
@@ -35,26 +43,26 @@ Reads the location's files; imports a code writer only when it runs.
 
 from __future__ import annotations
 
-import io
 import platform
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, libraries, tokens, values
+from _lib import fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
+    Change,
     FileError,
     binding_problem,
     read_bound,
     schema_of,
     shape_problems,
-    write_whole,
 )
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
+from _lib.libraries import FOUNDATIONS
 from _lib.names import is_name
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, read_yaml, sha256
@@ -64,9 +72,6 @@ FOLDER = "code"
 
 #: What follows `out` in the name of the record beside the code.
 RECORD_SUFFIX = ".record.yaml"
-
-#: The library whose `roles.yaml` declares the shared roles and axes a brand gives values.
-FOUNDATIONS = "foundations"
 
 #: Who acts on a finding that asks for attention.
 WHO = "the project, which keeps the declaration"
@@ -109,9 +114,12 @@ class Plan:
     """What a run of the writer is handed, and what its record compares.
 
     - `writer`: the code writer's declaration (`seam`).
-    - `axes`: each axis of the brand, `{kind, modes, default}`, its modes in declared order.
-    - `document`: the values document the writer gets: the tokens it has a form for.
-    - `losses`: each token left out, whether a person accepted it or not.
+    - `axes`: each axis of the brand of a kind the writer spells, `{kind, modes, default}`,
+      its modes in declared order. Every other axis is taken at its default.
+    - `document`: the values document the writer gets: the tokens it has a form for, in
+      each combination of those axes.
+    - `losses`: each token left out, or written at the default of an axis the writer does
+      not spell, whether a person accepted it or not.
     - `sources`: what the record's input set is worked out from, but the writer.
     """
 
@@ -211,7 +219,7 @@ def out_problem(root: Path, location: str, out: str) -> str | None:
     if found is not None:
         return found
     for folder, why in (
-        (libraries.FOLDER, "lies in the library folder, whose copies no command writes"),
+        (libraries.FOLDER, "lies in the library folder, whose copies `pkit visual add` writes"),
         (FOLDER, "lies in the folder of declarations, where its record would read as one"),
         # The location's folder of pieces (`pipeline.PIECES`, not imported: a command that
         # writes code measures no text).
@@ -270,9 +278,12 @@ def _parsed(name: str, rel: str, data: Mapping[str, Any]) -> Declaration | None:
 # --- a run --------------------------------------------------------------------------------------
 
 
-def plan(root: Path, location: str, declaration: Declaration) -> Plan:
+def plan(
+    root: Path, location: str, declaration: Declaration, held: libraries.Held | None = None
+) -> Plan:
     """What the declaration's writer would be handed now, its losses and its record's
-    sources: the brand read at the versions the lock names. Raises CodeRefused."""
+    sources: the brand read at the versions the lock names, of what the location holds, or
+    of `held` where given. Raises CodeRefused."""
     try:
         writer = seam.declaration(declaration.writer, seam.CODE_WRITER)
     except seam.PluginError as exc:
@@ -283,30 +294,43 @@ def plan(root: Path, location: str, declaration: Declaration) -> Plan:
             f"{declaration.file}: the {writer['name']} writer {writer['version']} writes "
             f"form {forms}, not form {declaration.form}"
         )
-    brand = _brand(root, location, declaration)
+    if declaration.prefix is not None and not writer.get("prefix", True):
+        raise CodeRefused(
+            f"{declaration.file}: the {writer['name']} writer takes no `prefix`, since a token "
+            f"path stays as the brand exports it: remove `prefix: {declaration.prefix}`"
+        )
+    brand = _brand(root, location, declaration, held)
+    spells = writer.get("axis-kinds", ())
+    ordered = sorted(brand.axes.values(), key=lambda axis: axis.name)
     axes = {
         axis.name: {"kind": axis.kind, "modes": list(axis.modes), "default": axis.default}
-        for axis in sorted(brand.axes.values(), key=lambda axis: axis.name)
+        for axis in ordered
+        if axis.kind in spells
     }
-    for name, axis in axes.items():
-        if axis["kind"] not in writer.get("axis-kinds", ()):
-            raise CodeRefused(
-                f"the brand {brand.name} {brand.version} has the {axis['kind']} axis `{name}`, "
-                f"which form {declaration.form} of the {writer['name']} writer does not spell"
-            )
-    document = values.document(brand, brand.combinations(), declaration.lock)
+    at_default = [axis for axis in ordered if axis.kind not in spells]
+    combinations = keys.combinations(
+        {name: axis["modes"] for name, axis in axes.items()}, brand.axes
+    )
+    document = values.document(brand, combinations, declaration.lock)
     kinds = writer.get("kinds", ())
     written = {path: token for path, token in document["tokens"].items() if token["type"] in kinds}
+    form = f"form {declaration.form} of the {writer['name']} writer"
     losses = tuple(
         seam.Loss(
-            writer["name"],
-            path,
-            seam.LEFT_OUT,
-            f"form {declaration.form} of the {writer['name']} writer has no form for a "
-            f"{token['type']} value",
+            writer["name"], path, seam.LEFT_OUT, f"{form} has no form for a {token['type']} value"
         )
         for path, token in document["tokens"].items()
         if path not in written
+    ) + tuple(
+        seam.Loss(
+            writer["name"],
+            path,
+            seam.APPROXIMATED,
+            f"{form} spells no {' or '.join(sorted({axis.kind for axis in by}))} axis, so it "
+            f"writes the value at "
+            + " and ".join(f"`{axis.name}`'s default, `{axis.default}`" for axis in by),
+        )
+        for path, by in _changed_by(brand, written, at_default).items()
     )
     sources = {
         "name": declaration.name,
@@ -327,19 +351,47 @@ def plan(root: Path, location: str, declaration: Declaration) -> Plan:
     )
 
 
-def write(root: Path, location: str, name: str, *, now: datetime | None = None) -> Written:
-    """Write the code the declaration `name` asks for, and its record; or nothing, where
-    the record verifies and the code is what the writer writes now. Raises CodeRefused."""
-    declaration = read(root, location, name)
-    planned = plan(root, location, declaration)
+def _changed_by(
+    brand: tokens.Brand, paths: Collection[str], axes: Iterable[tokens.Axis]
+) -> dict[str, list[tokens.Axis]]:
+    """Each of `paths` that one of `axes` changes, in path order, with the axes that change
+    it: in some combination of the brand's axes, its value differs from its value with that
+    axis at its default."""
+    found: dict[str, list[tokens.Axis]] = {}
+    for axis in axes:
+        changed = {
+            path
+            for combination in brand.combinations()
+            if combination[axis.name] != axis.default
+            for path in paths
+            if brand.resolve(path, combination)
+            != brand.resolve(path, {**combination, axis.name: axis.default})
+        }
+        for path in changed:
+            found.setdefault(path, []).append(axis)
+    return dict(sorted(found.items()))
+
+
+def text_of(planned: Plan) -> str:
+    """The code the declaration's writer writes of `planned`. Raises CodeRefused."""
+    declaration = planned.declaration
     implementation = seam.implementation(declaration.writer)
     try:
-        text = implementation.write(
+        return implementation.write(
             planned.document, planned.axes, form=declaration.form, prefix=declaration.prefix
         )
     except ValueError as exc:
         raise CodeRefused(f"the {declaration.writer} writer refused: {exc}") from exc
-    data = text.encode("utf-8")
+
+
+def write(root: Path, location: str, name: str, *, now: datetime | None = None) -> Written:
+    """Write the code the declaration `name` asks for, and its record, as one change; or
+    nothing, where the record verifies and the code is what the writer writes now. Raises
+    CodeRefused; WriteFailed where a write fails, the code and its record then as they
+    were before the run, or named."""
+    declaration = read(root, location, name)
+    planned = plan(root, location, declaration)
+    data = text_of(planned).encode("utf-8")
     taken = fingerprint.fingerprint(planned.inputs)
     code, record = root / declaration.out, root / declaration.record
     unaccepted = tuple(planned.unaccepted)
@@ -359,16 +411,22 @@ def write(root: Path, location: str, name: str, *, now: datetime | None = None) 
         },
     }
     record_text = _record_text(declaration, kept)
-    code.parent.mkdir(parents=True, exist_ok=True)
-    write_whole(code, data)
-    write_whole(record, record_text.encode("utf-8"))
+    change = Change(root)
+    change.write(code, data)
+    change.write(record, record_text.encode("utf-8"))
+    change.commit()
     return Written(declaration.out, declaration.record, changed=True, losses=unaccepted)
 
 
-def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
-    """The declaration's brand, read at the versions its lock names, against the shared
-    roles of the foundations it locks. Raises CodeRefused."""
-    held = libraries.Held(root, location)
+def _brand(
+    root: Path, location: str, declaration: Declaration, held: libraries.Held | None
+) -> tokens.Brand:
+    """The declaration's brand, read at the versions its lock names, over its base when it
+    builds on one, against the roles of the libraries the lock names: the shared roles of
+    the foundations it locks, and the own roles of each component library it locks, which
+    the code then holds at the brand's values or their defaults (DEC-008 point 5). Raises
+    CodeRefused."""
+    held = libraries.Held(root, location) if held is None else held
     reached = _check_lock(held, declaration)
     brand_version = libraries.Version.parse(declaration.lock[declaration.brand])
     if held.library(declaration.brand, brand_version).kind != "brand":
@@ -380,19 +438,18 @@ def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
             f"{declaration.file}: the brand {declaration.brand} builds on no `{FOUNDATIONS}`, "
             f"which declares the roles it gives values"
         )
-    version = libraries.Version.parse(declaration.lock[FOUNDATIONS])
-    folder = held.folders[FOUNDATIONS][version]
+    folders = {
+        name: held.folders[name][libraries.Version.parse(version)]
+        for name, version in declaration.lock.items()
+    }
     try:
-        shared = tokens.read_declarations(
-            folder / "roles.yaml",
-            library=f"{FOUNDATIONS}@{version}",
-            shown=(folder / "roles.yaml").relative_to(root).as_posix(),
-        )
+        scope = tokens.read_scope(folders, root=root)
         return tokens.read_brand(
-            held.folders[declaration.brand][brand_version],
-            shared,
+            folders[declaration.brand],
+            scope,
             fonts=root / location / "fonts",
             root=root,
+            locked=folders,
         )
     except tokens.TokenError as exc:
         raise CodeRefused(
@@ -402,10 +459,13 @@ def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
 
 def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
     """The libraries the code needs, the brand and every library it builds on, once the
-    lock is checked to name each at a version the project holds and the capability reads,
-    fitting together. Raises CodeRefused, naming the first fault."""
+    lock is checked to name each, and every other library it names, at a version the
+    project holds and the capability reads, fitting together: the code holds the roles of
+    each library the lock names (DEC-008 point 5). Raises CodeRefused, naming the first
+    fault."""
     lock, file = declaration.lock, declaration.file
-    pending, seen = [declaration.brand], set()
+    pending, seen = [declaration.brand, *sorted(lock)], set()
+    found: dict[str, libraries.Library] = {}
     needs: list[tuple[libraries.Library, libraries.BuildsOn]] = []
     while pending:
         name = pending.pop(0)
@@ -431,7 +491,7 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
             raise CodeRefused(
                 f"{file}: the lock names {name}@{version}, which cannot be read: {why}"
             )
-        library = held.library(name, version)
+        library = found[name] = held.library(name, version)
         for need in library.builds_on:
             needs.append((library, need))
             pending.append(need.name)
@@ -442,7 +502,13 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
                 f"{file}: the lock does not fit: {library.label} builds on `{need.name}` "
                 f"{need.major}, but the lock names {need.name}@{locked}"
             )
-    return seen
+    reached, todo = set(), [declaration.brand]
+    while todo:
+        name = todo.pop()
+        if name not in reached:
+            reached.add(name)
+            todo.extend(need.name for need in found[name].builds_on)
+    return reached
 
 
 def as_written(code: Path) -> bytes:
@@ -457,13 +523,11 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
     if not (code.is_file() and record.is_file()):
         return False
     try:
-        kept = read_yaml(record)
-    except ReadError:
+        kept = records.read(record, "code-record")
+    except records.RecordError:
         return False
     return (
-        isinstance(kept, Mapping)
-        and binding_problem(kept, "code-record") is None
-        and kept.get("fingerprint") == taken
+        kept.get("fingerprint") == taken
         and kept.get("sha256") == sha256(data)
         and as_written(code) == data
     )
@@ -472,25 +536,11 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
 def _record_text(declaration: Declaration, record: Mapping[str, Any]) -> str:
     """The record as YAML, its time quoted, read back to be sure it holds what was meant.
     Raises CodeRefused otherwise."""
-    from ruamel.yaml import YAML
-    from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-    shown = {
-        **record,
-        "recorded": {
-            **record["recorded"],
-            "time": SingleQuotedScalarString(record["recorded"]["time"]),
-        },
-    }
-    dumper = YAML()
-    dumper.indent(mapping=2, sequence=4, offset=2)
-    dumper.width = 4096
-    stream = io.StringIO()
-    dumper.dump(shown, stream)
-    text = (
-        f"# The record of the code `{declaration.command}` writes to {declaration.out}: "
-        f"write it again, never edit it.\n{stream.getvalue()}"
+    comment = (
+        f"The record of the code `{declaration.command}` writes to {declaration.out}: "
+        f"write it again, never edit it."
     )
+    text = records.text(records.quoted_time(record), [comment], apart=False)
     if load_yaml(text, declaration.record) != record:
         raise CodeRefused(f"the record {declaration.record} does not read back as it was meant")
     return text

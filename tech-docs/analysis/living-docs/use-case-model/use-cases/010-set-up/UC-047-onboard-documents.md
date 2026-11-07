@@ -18,6 +18,7 @@ pkit:
       record:
         - living-docs:DEC-001#1
         - living-docs:DEC-001#2
+        - living-docs:DEC-001#3
         - living-docs:DEC-001#4
         - living-docs:DEC-001#8
         - project-management:DEC-053
@@ -28,6 +29,14 @@ pkit:
         - COR-050#6
         - COR-050#8
         - COR-050#14
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - REQ-022
 ---
@@ -46,7 +55,7 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
 - The [backbone configuration](../../../../core/glossary.md#term-backbone-configuration--backbone-configuration) names the [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root), and declares the places that hold the project's documents, as `core:UC-021` describes ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
-- The project declares the surface its documentation ought to cover, so the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures what no [page](../../../glossary.md#term-page--page) anchors (COR-050 points [8](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures) and [14](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
+- The project's [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) names what its documentation ought to cover, so the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures what no [page](../../../glossary.md#term-page--page) anchors (COR-050 points [8](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures) and [14](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
 - Where a work-tracking [capability](../../../../core/glossary.md#term-capability--capability) keeps a mapping from code to documents, it gives the mapping through its documentation-check [data point](../../../../core/glossary.md#term-data-point--data-point) ([project-management DEC-053](../../../../../../.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md)). Without one, the agent has no mapping to read.
 - A page new in a [change](../../../../core/glossary.md#term-change--change) counts as revalidated there. A change that alters the anchors of a document with front matter asks it for an [answer](../../../../core/glossary.md#term-answer--answer) in the same change ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 - Nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path, but its Write and its Bash reach any file (COR-013).
@@ -58,7 +67,7 @@ pkit:
 1. The adopter assigns each [place](../../../../core/glossary.md#term-place--place) outside every [documentation root](../../../../core/glossary.md#term-documentation-root--documentation-root) that holds documents to a [documentation space](../../../glossary.md#term-documentation-space--documentation-space), under `places` in `.pkit/capabilities/living-docs/project/config.yaml` ([DEC-001 point 1](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 2. The adopter runs `pkit living-docs validate`.
 3. The [system](../../../../core/glossary.md#term-system--system) lists the [unclassified documents](../../../glossary.md#term-unclassified-document--unclassified-document), and the pages left unanchored apart from those accepted with a reason (DEC-001 points [4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and [8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)). It exits 0.
-4. The adopter asks the `living-docs` agent to onboard the documentation.
+4. The adopter asks the `living-docs` agent for the [onboarding](../../../glossary.md#term-onboarding--onboarding) of the documentation.
 5. The agent gathers its evidence:
    - [validation](../../../../core/glossary.md#term-validation--validation)'s [findings](../../../../core/glossary.md#term-finding--finding)
    - the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check)'s measures
@@ -89,9 +98,9 @@ pkit:
 - **8b.** The adopter rejects the plan outright. The agent drafts nothing, the plan stays in the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace), and the use case ends.
 - **9a.** The plan turns rules of a mapping into page anchors. Retiring the mapping is a separate [change](../../../../core/glossary.md#term-change--change) for whoever owns it, so the agent drafts no [proposal](../../../glossary.md#term-proposal--proposal) for it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - **10a.** A proposal adds anchors to a document that has front matter already. The adopter answers for it in the same [pull request](../../../../core/glossary.md#term-pull-request--pull-request), as `core:UC-002` describes, and the path goes on at step 11.
-- **11a.** [Unclassified documents](../../../glossary.md#term-unclassified-document--unclassified-document) or pages left unanchored remain, or the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) still measures surface that no page anchors. The path rejoins at step 4.
+- **11a.** [Unclassified documents](../../../glossary.md#term-unclassified-document--unclassified-document) or pages left unanchored remain, or the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) still measures [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) that no page anchors. The path rejoins at step 4.
 
-**Postconditions:** Each document in the [documentation spaces](../../../glossary.md#term-documentation-space--documentation-space)' places is a [page](../../../glossary.md#term-page--page) of a space, or left out of the spaces' rules on purpose. Each page carries anchors, or a reason for none that a person accepted, and the declared surface is covered ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+**Postconditions:** Each document in the [documentation spaces](../../../glossary.md#term-documentation-space--documentation-space)' places is a [page](../../../glossary.md#term-page--page) of a space, or left out of the spaces' rules on purpose. Each page names its [reader](../../../glossary.md#term-reader--reader) and its [page kind](../../../glossary.md#term-page-kind--page-kind) (DEC-001 points [3](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require) and [4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)). Each page carries anchors, or a reason for none that a person accepted, and the [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) is covered ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 
 **Minimal guarantees:**
 

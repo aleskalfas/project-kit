@@ -2,8 +2,8 @@
 
 The backbone validates a class of files it does not author: the configuration
 file, rule-set files, project filler files, and the methodology's block inside
-an artefact's front matter (the schemas README, "Backbone file schemas and the
-methodology's front-matter container"). Their schemas are propagated files
+an artefact's front matter (the schemas reference's page on backbone files,
+`.pkit/schemas/backbone-files.md`). Their schemas are propagated files
 under `.pkit/schemas/backbone/`, read from the tree of the project being
 validated and never from a copy in the binary (ADR-056 point 1). This module
 is where that class is loaded and where its shared rendering lives:

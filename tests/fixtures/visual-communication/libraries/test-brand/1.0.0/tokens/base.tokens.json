@@ -26,6 +26,61 @@
     },
     "strong-paper": {
       "$value": "{palette.white}"
+    },
+    "blue": {
+      "fill": {
+        "$value": "{palette.blue.50}"
+      },
+      "line": {
+        "$value": "{palette.blue.600}"
+      },
+      "text": {
+        "$value": "{palette.blue.800}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{palette.green.50}"
+      },
+      "line": {
+        "$value": "{palette.green.600}"
+      },
+      "text": {
+        "$value": "{palette.green.800}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{palette.orange.50}"
+      },
+      "line": {
+        "$value": "{palette.orange.600}"
+      },
+      "text": {
+        "$value": "{palette.orange.800}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{palette.purple.50}"
+      },
+      "line": {
+        "$value": "{palette.purple.600}"
+      },
+      "text": {
+        "$value": "{palette.purple.800}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{palette.red.50}"
+      },
+      "line": {
+        "$value": "{palette.red.600}"
+      },
+      "text": {
+        "$value": "{palette.red.800}"
+      }
     }
   },
   "background": {
@@ -51,6 +106,76 @@
   "line": {
     "$type": "color",
     "$value": "{scheme.rule}"
+  },
+  "family": {
+    "$description": "The members of the foundations' colour families: the neutral family paints with the surface, the line and the primary text, and each hue with what the colour scheme gives it.",
+    "$type": "color",
+    "neutral": {
+      "fill": {
+        "$value": "{surface}"
+      },
+      "line": {
+        "$value": "{line}"
+      },
+      "text": {
+        "$value": "{text-primary}"
+      }
+    },
+    "blue": {
+      "fill": {
+        "$value": "{scheme.blue.fill}"
+      },
+      "line": {
+        "$value": "{scheme.blue.line}"
+      },
+      "text": {
+        "$value": "{scheme.blue.text}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{scheme.green.fill}"
+      },
+      "line": {
+        "$value": "{scheme.green.line}"
+      },
+      "text": {
+        "$value": "{scheme.green.text}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{scheme.orange.fill}"
+      },
+      "line": {
+        "$value": "{scheme.orange.line}"
+      },
+      "text": {
+        "$value": "{scheme.orange.text}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{scheme.purple.fill}"
+      },
+      "line": {
+        "$value": "{scheme.purple.line}"
+      },
+      "text": {
+        "$value": "{scheme.purple.text}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{scheme.red.fill}"
+      },
+      "line": {
+        "$value": "{scheme.red.line}"
+      },
+      "text": {
+        "$value": "{scheme.red.text}"
+      }
+    }
   },
   "space": {
     "$type": "dimension",
@@ -87,6 +212,13 @@
         "value": 960,
         "unit": "px"
       }
+    },
+    "slide": {
+      "$description": "The width of a slide.",
+      "$value": {
+        "value": 1280,
+        "unit": "px"
+      }
     }
   },
   "stroke": {
@@ -94,6 +226,13 @@
     "thin": {
       "$value": {
         "value": 1,
+        "unit": "px"
+      }
+    },
+    "thick": {
+      "$description": "A line drawn on its own, such as a connector, whose arrowheads it sizes.",
+      "$value": {
+        "value": 2,
         "unit": "px"
       }
     }
@@ -121,6 +260,24 @@
         "pkit.visual-communication": {
           "files": {
             "Source Sans Pro Semibold": "fonts/SourceSansPro-Semibold.otf"
+          },
+          "measure": "file"
+        }
+      }
+    }
+  },
+  "typeface": {
+    "$description": "The families the brand's types take beside the shared ones; private.",
+    "$type": "fontFamily",
+    "code": {
+      "$description": "A monospace family, for the type of code.",
+      "$value": [
+        "Source Code Pro"
+      ],
+      "$extensions": {
+        "pkit.visual-communication": {
+          "files": {
+            "Source Code Pro": "fonts/SourceCodePro-Regular.ttf"
           },
           "measure": "file"
         }
@@ -157,6 +314,38 @@
           "unit": "px"
         },
         "lineHeight": 1.2
+      }
+    },
+    "strong": {
+      "$description": "A strong phrase in the body's text: the body's size and line height, in the heading's semibold family.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 16,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.4
+      }
+    },
+    "code": {
+      "$description": "Code, as a terminal or a file shows it: Source Code Pro, a monospace family, a little smaller than the body's text.",
+      "$value": {
+        "fontFamily": "{typeface.code}",
+        "fontSize": {
+          "value": 14,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.5
       }
     }
   }

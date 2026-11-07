@@ -29,7 +29,7 @@ pkit:
 
 Documentation serves two audiences who should not meet each other's material. Users need what the [system](../../core/glossary.md#term-system--system) does and how to use it, and maintainers need why, from where and by which rules. Documentation earns trust only where its [readers](../glossary.md#term-reader--reader) can rely on it: true against something checkable, each fact in one home, and written for them ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-A [documentation space](../glossary.md#term-documentation-space--documentation-space) gathers the pages for one audience, and its [space definition](../glossary.md#term-space-definition--space-definition) holds the rules they follow. Each [page](../glossary.md#term-page--page) names its [page kind](../glossary.md#term-page-kind--page-kind) and its reader, and anchors what makes it true, a [captured source](../glossary.md#term-captured-source--captured-source) among them. A file of a space's places that is neither a page nor another owner's is an [unclassified document](../glossary.md#term-unclassified-document--unclassified-document), until onboarding classifies it.
+A [documentation space](../glossary.md#term-documentation-space--documentation-space) gathers the pages for one audience, and its [space definition](../glossary.md#term-space-definition--space-definition) holds the rules they follow. Each [page](../glossary.md#term-page--page) names its [page kind](../glossary.md#term-page-kind--page-kind) and its reader, and anchors what makes it true, a [captured source](../glossary.md#term-captured-source--captured-source) among them. A file of a space's places that is neither a page nor another owner's is an [unclassified document](../glossary.md#term-unclassified-document--unclassified-document), until [onboarding](../glossary.md#term-onboarding--onboarding) classifies it.
 
 ```mermaid
 classDiagram
@@ -41,7 +41,7 @@ classDiagram
   DocumentationSpace : entry point
   DocumentationSpace : places
   class SpaceDefinition["Space definition"]
-  SpaceDefinition : pin on LDOC
+  SpaceDefinition : inheritance pin on LDOC
   SpaceDefinition : scope
   SpaceDefinition : own rules
   class Page
@@ -121,7 +121,7 @@ A space definition is the rule set that says which rules a documentation space's
 
 **Attributes:**
 
-- its pin on `LDOC`, whose major decides when a new major of `LDOC` starts binding through it ([DEC-001 point 2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content))
+- its [inheritance pin](../../core/glossary.md#term-inheritance-pin--inheritance-pin) on `LDOC`, whose major decides when a new major of `LDOC` starts binding through it ([DEC-001 point 2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content))
 - its scope, which selects the documentation space's pages (DEC-001 point 2)
 - the space's own rules, such as the user space's [rule](../../core/glossary.md#term-rule--rule) that [reader](../glossary.md#term-reader--reader) paths stay unbroken ([DEC-001 point 3](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require))
 
@@ -135,7 +135,7 @@ A space definition is the rule set that says which rules a documentation space's
 **Always true:**
 
 - It inherits `LDOC`, and adds the documentation space's own rules to it (DEC-001 point 2).
-- It lies in the technical space, in a location living-docs declares, so a space's readers never meet it (DEC-001 point 2).
+- It lies in the technical space, in a [documentation location](../glossary.md#term-documentation-location--documentation-location) living-docs declares, so a space's readers never meet it (DEC-001 point 2).
 - A space definition with no scope selects no page itself (DEC-001 point 2).
 
 ## Page
@@ -144,7 +144,7 @@ Defined in [TERM-page](../glossary.md#term-page--page).
 
 **Why:** A statement nothing grounds cannot be judged true or false, which is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can settle ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-A page is a document in a [documentation space](../glossary.md#term-documentation-space--documentation-space)'s places that names its [page kind](../glossary.md#term-page-kind--page-kind) in its front matter. It is written for the [reader](../glossary.md#term-reader--reader) it names there, and its anchors name what makes its statements true. A document is a page where its [place](../../core/glossary.md#term-place--place) gives the page type and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every root, with no type, is a page too.
+A page is a document in a [documentation root](../../core/glossary.md#term-documentation-root--documentation-root), or a [place](../../core/glossary.md#term-place--place) assigned to a [documentation space](../glossary.md#term-documentation-space--documentation-space), that names its [page kind](../glossary.md#term-page-kind--page-kind). It is written for the [reader](../glossary.md#term-reader--reader) it names in its front matter, and its anchors name what makes its statements true. A document is a page where its place gives the page type and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every root, with no type, is a page too.
 
 **Attributes:**
 
@@ -160,7 +160,7 @@ A page is a document in a [documentation space](../glossary.md#term-documentatio
 - It may anchor captured sources (DEC-001 point 4).
 - `LDOC`'s rules and its space's own bind on it where a [space definition](../glossary.md#term-space-definition--space-definition)'s scope selects it (DEC-001 points [2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content) and [3](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require)).
 
-**States:** A page with no anchor and no accepted reason for none is unanchored, which onboarding clears (DEC-001 point 8). Once something its anchors name changes, [friction](../../core/glossary.md#term-friction--friction) flags it until an [answer](../../core/glossary.md#term-answer--answer) settles it (DEC-001 point 4).
+**States:** A page with no anchor and no accepted reason for none is unanchored, which [onboarding](../glossary.md#term-onboarding--onboarding) clears (DEC-001 point 8). Once something its anchors name changes, [friction](../../core/glossary.md#term-friction--friction) flags it until an [answer](../../core/glossary.md#term-answer--answer) settles it (DEC-001 point 4).
 
 **Always true:**
 
@@ -244,7 +244,7 @@ A captured source is a file the project keeps for one text outside the repositor
 
 - Its file holds what identifies the text and the version read, and nothing else (DEC-001 point 4).
 - Nothing fetches the text it names (DEC-001 point 4).
-- A name no file captures is a dead anchor (DEC-001 point 4).
+- A name no file captures is a [dead anchor](../../core/glossary.md#term-dead-anchor--dead-anchor) (DEC-001 point 4).
 
 ## Unclassified document
 
@@ -256,7 +256,7 @@ An unclassified document is a file in a [documentation space](../glossary.md#ter
 
 **Attributes:** None.
 
-**Relations:** It lies in a documentation space's places. Onboarding classifies it as a page of some space, or as something the spaces' rules do not govern ([DEC-001 point 4](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
+**Relations:** It lies in a documentation space's places. [Onboarding](../glossary.md#term-onboarding--onboarding) classifies it as a page of some space, or as something the spaces' rules do not govern ([DEC-001 point 4](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 
 **States:** It stays unclassified until onboarding makes it a page, or leaves it outside the documentation spaces' rules (DEC-001 points 4 and [8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 
@@ -284,6 +284,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md)
 - [JRN-014 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-014-adopt-on-documented-project.md)
 - [JRN-015 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-015-publish-page-for-reader.md)
+- [REQ-023 · Quality · A refused stamp puts back what it wrote, or names what it could not](../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)
 
 **Page:**
 

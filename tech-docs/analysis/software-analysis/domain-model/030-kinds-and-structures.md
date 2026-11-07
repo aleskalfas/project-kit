@@ -1,6 +1,6 @@
 ---
 id: VIEW-kinds-and-structures
-title: Kinds and their structures
+title: Kinds and their declared structures
 status: active
 explains:
   - TERM-artefact-kind
@@ -26,13 +26,13 @@ pkit:
         - TERM-candidate
 ---
 
-# VIEW-kinds-and-structures — Kinds and their structures
+# VIEW-kinds-and-structures — Kinds and their declared structures
 
 A part left out of an [artefact](../../core/glossary.md#term-artefact--artefact) reads the same as a part forgotten. A template that writers copy drifts from any other statement of its shape ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). So each [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) declares its parts once, as data, in its [declared structure](../glossary.md#term-declared-structure--declared-structure), and the [stamp](../../core/glossary.md#term-stamp--stamp) writes each part holding its [hint](../glossary.md#term-hint--hint). A [project](../../core/glossary.md#term-project--project) reviews the shipped parts on a [candidate](../glossary.md#term-candidate--candidate) of its own, and adds parts of its own by a [tightening](../glossary.md#term-tightening--tightening).
 
 ```mermaid
 classDiagram
-  accTitle: Kinds and their structures
+  accTitle: Kinds and their declared structures
   accDescr: Each artefact kind declares one declared structure, which gives each of its parts a hint. A tightening adds to one declared structure and names the project's rule. A candidate is of one artefact kind, or is a revalidation record.
   class ArtefactKind["Artefact kind"]
   ArtefactKind : schema
@@ -166,14 +166,14 @@ A tightening is a group of a project's own edits to one [artefact kind](../gloss
 
 Defined in [TERM-candidate](../glossary.md#term-candidate--candidate).
 
-**Why:** The shipped parts are a starting point a [project](../../core/glossary.md#term-project--project) reviews, never a default it skips, and only its own examples show whether they suit it. On a brownfield project, the code, the documents and the decisions are the ground truth, and a person confirms what is drawn from them ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** The shipped parts are a starting point a [project](../../core/glossary.md#term-project--project) reviews, never a default it skips, and only its own examples show whether they suit it. On a project that has code, documents and decisions already, those are the ground truth, and a person confirms what is drawn from them ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](../../core/glossary.md#term-artefact--artefact) or a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) written as a draft, which is not committed until a person accepts it. A project fills one with a real case of its own, to judge its kind's parts. On a brownfield project, candidates are derived from what exists, and a person confirms each.
+A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](../../core/glossary.md#term-artefact--artefact) or a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) written as a draft, which is not committed until a person accepts it. A project fills one with a real case of its own, to judge its kind's parts. On a project that has code, documents and decisions already, candidates are derived from them, and a person confirms each.
 
 **Attributes:**
 
 - its [artefact kind](../glossary.md#term-artefact-kind--artefact-kind), or the revalidation record's kind, and what is filled in its parts ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
-- on a brownfield project, what it was drawn from: the code, a document or a decision ([DEC-001 point 9](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding))
+- where it is derived from what a project has already, what it was drawn from: the code, a document or a decision ([DEC-001 point 9](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding))
 
 **Relations:**
 

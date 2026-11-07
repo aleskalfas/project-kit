@@ -24,7 +24,11 @@ import importlib
 from dataclasses import dataclass
 from typing import Any
 
-SEAM_VERSION = 1
+#: 2 since a scene's text holds paragraphs of runs, each with its own role, paint and fonts,
+#: and each line its own baseline and spans (visual-communication DEC-012). 3 since a line
+#: may hold arrowheads, and a tie's connector the points of its route and the elements its
+#: ends meet (visual-communication DEC-011).
+SEAM_VERSION = 3
 
 RENDERER = "renderer"
 PRODUCER = "producer"

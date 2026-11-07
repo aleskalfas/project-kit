@@ -118,6 +118,13 @@ def test_one_variant_serves_each_distinct_set_of_the_values_read(tmp_path: Path)
     }
 
 
+def test_a_plan_reads_the_libraries_of_a_lock_it_is_given(tmp_path: Path) -> None:
+    root = producing_project(tmp_path)
+    assert framing.plan(root, "visual", PIECE, OUTPUT).inputs
+    with pytest.raises(framing.Refused, match=r"9\.9\.9"):
+        framing.plan(root, "visual", PIECE, OUTPUT, lock={"test-brand": "9.9.9"})
+
+
 def test_the_hand_over_holds_the_roles_read_alone_with_the_inputs_and_variants(
     tmp_path: Path,
 ) -> None:
@@ -378,7 +385,7 @@ def test_a_point_outside_the_pixels_is_refused(tmp_path: Path) -> None:
             {"points": {}, "programs": {"blender": "4.2"}},
             "it called `blender`, which its declaration does not name under `programs`",
         ),
-        ({"points": {}, "frames": {}}, "returned `frames`, which seam 1 does not read"),
+        ({"points": {}, "frames": {}}, "returned `frames`, which seam 3 does not read"),
         ({"points": {}, "losses": {}}, "its `losses` is not a list"),
         (
             {"points": {}, "losses": [{"plugin": "square", "what": "line", "did": "lost"}]},
@@ -716,6 +723,23 @@ def test_a_produced_folder_the_piece_does_not_declare_asks_for_attention(tmp_pat
     undeclared = coded(root)["produced-undeclared"]
     assert undeclared.level == findings_module.ATTENTION
     assert undeclared.file == f"{PIECE_FOLDER}/produced/old"
+
+
+def test_a_final_piece_refuses_a_run_and_what_only_reads_its_picture_still_runs(
+    tmp_path: Path,
+) -> None:
+    root = producing_project(tmp_path)
+    produce(root)
+    record = (root / RECORD).read_bytes()
+    piece = root / PIECE_FOLDER / "piece.yaml"
+    piece.write_text(
+        piece.read_text(encoding="utf-8").replace("state: draft", "state: final"), encoding="utf-8"
+    )
+    with pytest.raises(framing.Refused, match="a final piece takes no producer's run"):
+        produce(root)
+    assert (root / RECORD).read_bytes() == record
+    assert framing.plan(root, "visual", PIECE, OUTPUT).output == OUTPUT
+    assert framing.findings(root, "visual", PIECE) == []
 
 
 def test_a_piece_that_declares_nothing_produced_has_no_findings(tmp_path: Path) -> None:

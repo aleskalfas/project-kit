@@ -1,0 +1,477 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+    revalidated:
+      at: 2026-11-07T12:46:42Z
+      outcome: unchanged
+      unchanged-because: DEC-021's edits come to judge a tie's end at each key the piece names (DEC-003 point 8, DEC-011 point 4) and name a size as a third way to choose (DEC-010 point 3). They give a brand every shared value axis whole, and a shared size axis only where it or its base gives one, and count a new shared axis as an addition while no brand can hold its own (DEC-004 points 1, 2 and 5, and its Rationale). This page, as main holds it, says what the commands do today. The foundations declare no size axis, a brand varies an axis through a modifier with a context for each mode, a release counts a new axis as breaking, and the search for a lock places a piece once, under the one key format 1 has. Each still holds of the code. The Task of the size axis (#2795) changes Axes and modes, roles.yaml and What a release compares, and the Task that changes a shape by size, which DEC-021's Implications name, changes the lock's search.
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T122117Z-378d78a7.yaml
+    revalidated:
+      at: 2026-11-07T12:46:44Z
+      outcome: unchanged
+      unchanged-because: "DEC-021's edits add the mode of a size axis a piece can name, read by a marked name such as `:device`, as a way a component chooses, an input to how items are arranged and a property's source (DEC-005 points 1, 2 and 5, DEC-010 point 3). They judge a tie's end at each key (DEC-011 point 4), and give a brand a shared size axis only where it or its base gives one (DEC-004 point 2). This page says what the engine does today: a switch and a `when` read an option or a filled field, a name the engine lacks is refused, a scene is computed at the size key `default` since format 1 has no size axis, and Sources lists what a scene writes. Each still holds of the code. The Task that changes a shape by size, which DEC-021's Implications name, builds `:device` and changes this page, and #2790 changes its passage on the size key."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+    revalidated:
+      at: 2026-11-07T12:46:45Z
+      outcome: unchanged
+      unchanged-because: "DEC-021's edits add a size axis among a property's sources (DEC-005 point 5), and judge a tie's end at each key the piece names, two parts holding apart under sizes as under options (DEC-011 point 4 and its Rationale). This page, as main holds it, says what each renderer, code writer and the viewing step take from a scene: seam 3 with a tie's connector and the elements its ends meet, and each file named by its key. No renderer reads a property's source, and a connector is drawn as the scene holds it, so both edits leave what the page says as it was. The CSS and JSON writers' passages change with the Task of the size axis (#2795)."
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+    revalidated:
+      at: 2026-11-07T12:46:47Z
+      outcome: unchanged
+      unchanged-because: "DEC-021's edits add the size a piece is drawn at to what decides how items are arranged (DEC-005 point 2), name it a third way to choose beside an option and a filled field (DEC-010 point 3), and add each mode of a size axis a component names to its reference renders (DEC-007 point 3). This README gives each starter component's job, form and options, and `span`, its one arrangement field. None of them reads a size, since the foundations declare no size axis and format 1 has no marked name for one, so what it says still holds. The web parts #2791 adds to the starter are the first to follow a size."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-07T12:46:49Z
+      outcome: unchanged
+      unchanged-because: DEC-004 point 2 comes to give a brand every shared value axis whole and a shared size axis only where it or its base gives one, with no mode of its own on a shared axis, while a piece that names a size its brand lacks fails. The definition, a switch of a brand along which its modes lie, such as its colour scheme or the device, holds of both kinds. The example's four axes of a game platform's brand hold, since a brand may still add axes of its own. The distinction between an axis of colours and one of sizes holds, and the device is a size axis, as DEC-021's `device` is.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-07T12:46:50Z
+      outcome: unchanged
+      unchanged-because: DEC-004 point 1 comes to hold in a brand's Resolver document each axis the brand varies as a modifier with a default, and each mode it gives as a context. The definition, a library that holds the values pieces are drawn in, the example of one talk drawn in two brands, and the distinctions from a theme and from a mode say nothing of how that document lists axes and modes, so they hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+    revalidated:
+      at: 2026-11-07T12:46:52Z
+      outcome: unchanged
+      unchanged-because: "DEC-003 point 8's edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, for versions to fit together. The definition and example of a draft, its lock moving at each drawing to the newest versions within its majors unless a person pinned it, and the distinction 'Pinned' hold: the edit narrows which versions fit, and changes nothing of who moves the lock. This revalidation keeps the deferral on the distinction 'Published', for the cases it names, until the Tasks of open Feature #2572 mend that line."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "The definition and example of a draft hold. The distinction 'Published' still says a published piece's lock moves only through a change that shows it before and after. DEC-003 point 8 now makes marking that piece final one exception. A move none of whose copy's files stand, which shows only an after, is a second. So that line is out of date on both. No piece can be published or final yet, and the line is mended by the Tasks of open Feature #2572 that build marking final and the proposed move."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:46:53Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 8's edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, for versions to fit together. That narrows the versions a draft's render may move to. A final piece's lock never moves, and the edit changes nothing of who moves a lock. The definition, a piece handed out with a lock that never moves and its exports kept, the example of a talk once given, and the distinctions from pinned and from published hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-07T12:46:55Z
+      outcome: unchanged
+      unchanged-because: "DEC-004 point 2 comes to give a brand every mode of each shared value axis, a mode it does not give taking its values at the axis's default, and a mode of a shared size axis only where it or its base gives one. The definition, one setting on one axis of a brand with the values that differ in it, holds: a mode a brand gives holds those values, and one it does not give differs in none. The example of light and dark and the distinctions from a theme, from light or dark and from a reader's mode stay as they were."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+    revalidated:
+      at: 2026-11-07T12:46:57Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 8's edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, for versions to fit together. That narrows the versions an unpinned draft's render may move to. A pinned lock moves only when a person moves it, so the definition, the example of a talk's copy given again, and the distinctions from final and from a version pin hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:46:58Z
+      outcome: unchanged
+      unchanged-because: "DEC-003 point 8's edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, for versions to fit together. It narrows which versions fit, and changes nothing of who moves a published piece's lock or how, so the example of a figure a page shows and the distinction from final hold against it. This revalidation keeps the deferral on the definition, for the cases it names, until the Tasks of open Feature #2572 mend it."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "DEC-003 point 8 now holds two cases this term's definition misses. Marking a published piece final moves its lock otherwise, back to the lock of the version named. A move none of whose copy's files stand shows only an after, so that reviewed change does not show the piece before. The definition says the lock moves only through a reviewed change showing the piece before and after, so it is out of date on both. The example, on a figure a page shows, and the distinction from final hold. No piece can be published or final yet, and the definition is mended by the Tasks of open Feature #2572 that build marking final and the proposed move."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:00Z
+      outcome: unchanged
+      unchanged-because: Step 4 rests on a new draft's first lock taking the newest library versions the project holds, and variant 1b on a final piece's copy starting as a draft with its lock pinned, both of DEC-003 point 8. Its edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which narrows only which versions fit together, so both still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+      - 20261106T024508Z-5f0b1c44.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261106T030639Z-cb240e44.yaml
+    revalidated:
+      at: 2026-11-07T12:47:02Z
+      outcome: unchanged
+      unchanged-because: "DEC-003 point 8's edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which leaves steps 1 and 2's new draft as stated. DEC-004 point 2 comes to give a brand every shared value axis whole, so steps 3 and 5's figure in each mode of the colour scheme, one drawing switched while open, holds. DEC-005 point 5's edit adds a size axis among a property's sources, and leaves variant 2a's diagram, a page alone and part of a page inside a slide, as it was. This revalidation keeps the deferrals on DEC-003 points 8 and 9 and DEC-006 points 7 and 8, until the Tasks of open Feature #2572 mend what each names."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Sources, on variant 6b and the guarantees, still say a published piece's lock moves only through a change a person reviews, with the piece before and after. DEC-003 point 8 now makes marking that piece final the one exception, and says a move none of whose copy's files stand shows only an after, so that sentence and variant 6b's words on the figure before and after are out of date. No piece can be published or final yet. The Tasks of open Feature #2572 that build marking final and the proposal mend them, as DEC-017's and DEC-019's Implications respectively charge."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#9
+          reason: "DEC-003 point 9 now says the fact names the command that proposes the move only within the lock's majors, for a version the installed capability reads. Of a later major it says a person takes that version on purpose, by naming it. Variant 6b and its sentence of Sources say the system names that command for any new library version, so both are false of a later major and of a version the capability cannot read, and hold of the rest. DEC-019's Implications charge the change that builds outdated with mending them, and that Task of open Feature #2572 does."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-006#7
+          reason: "Step 4's copy and variant 6b hold against point 7's edits: the export's gate backs the guarantee that a figure takes a new library version only through a change that shows it before and after. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-006#8
+          reason: "Variant 6a's stale copy still fails, and the new findings on a published piece ask for the copy step 4 uses. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:04Z
+      outcome: unchanged
+      unchanged-because: Variant 5a rests on a final view's lock never moving, which DEC-003 point 8 states as before. Its edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which narrows only which versions a draft may move to. Variant 5b's move to a new version of the notation stays a move like any piece's.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:05Z
+      outcome: unchanged
+      unchanged-because: Steps 1 and 3 have a local component repeat, line up and size its parts with the engine's tools. The edits to DEC-005 points 1 and 2 add the mode of a size axis a piece can name, read by its marked name, as one more declared choice and one more input to how items are arranged. They add no comparison and no tool a script would be needed for, so the steps hold, and variant 1a's script still does only what data cannot say. Variant 4c's lock moved after a before-and-after stays as DEC-003 point 8 states it, whose edit narrows only which versions fit at each size.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T030639Z-cb240e44.yaml
+    revalidated:
+      at: 2026-11-07T12:47:07Z
+      outcome: unchanged
+      unchanged-because: "Variants 4a to 4c and the first guarantee rest on a piece's state saying who moves its lock (DEC-003 point 8). Its edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which narrows only the versions an unpinned draft moves to at its next drawing, as variant 4c has it. A final piece still stays where it was. This revalidation keeps the deferral on variant 4a, for the move that shows only an after, until the Task of open Feature #2572 that builds the proposal mends it."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Variant 4a says the system proposes the move as a change of its own, with the piece before and after. DEC-003 point 8 now says a move none of whose copy's files stand shows only an after, so the variant is false of such a move, as UC-109's variant 6b and the glossary's definition of published are. No piece can be published yet, and the Task of open Feature #2572 that builds the proposal mends it, as DEC-019's Implications charge."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md
+    read:
+      - 20261103T140411Z-459661c4.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+    revalidated:
+      at: 2026-11-07T12:47:09Z
+      outcome: unchanged
+      unchanged-because: Step 2 and variant 4a rest on a brand holding how it draws the layouts of the kinds of piece it serves, which DEC-004 point 1's bullet on a brand's own form states as before. Its edit touches only the Resolver document, which comes to hold each axis the brand varies and each mode it gives, so the steps hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md
+    revalidated:
+      at: 2026-11-07T12:47:10Z
+      outcome: unchanged
+      unchanged-because: DEC-004 points 1 and 2 come to hold in the Resolver document each axis a brand varies and each mode it gives. They give the brand every shared value axis whole and a shared size axis only where it or its base gives one, and let it add no mode to a shared axis. Steps 1, 2 and 4 keep a brand's values as tokens and give the values that differ in each mode, which holds of each mode a brand gives. Steps 3 and 5 name the axes a brand varies, their modes, defaults and kind, and a brand may still add axes of its own, so they hold. The Task of the size axis (#2795), whose use case is steps 3 to 5, declares the shared size axis and lets a brand give some of its modes.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:12Z
+      outcome: unchanged
+      unchanged-because: Variant 5a rests on no lock fitting two majors of one library, which DEC-003 point 8 states as before. Its edit adds a second bar to fitting, that a tie's end found under the lock stay found at any combination of sizes the piece names, so the variant holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-07T12:47:14Z
+      outcome: unchanged
+      unchanged-because: Step 2 rests on the names a brand exports being public. DEC-004 point 5's edits count a new shared axis as breaking only once a brand can hold its own, and a brand that comes to give a size as no break. They leave public each token, axis, mode and key the brand exports, so the code written for each mode, under one naming rule, holds, as do variant 1a's values by key.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+    revalidated:
+      at: 2026-11-07T12:47:15Z
+      outcome: unchanged
+      unchanged-because: "Step 6, variants 6a, 6b and 6e and the second guarantee rest on a piece's lock naming one version of each library, its state saying who moves it (DEC-003 point 8). Its edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which narrows only the versions an unpinned draft moves to at its next drawing. A final piece's lock still never moves. This revalidation keeps the deferral on variant 6b, for the move that shows only an after, until the Task of open Feature #2572 that builds the proposal mends it."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Variant 6b says the system proposes the move with the piece before and after. DEC-003 point 8 now says a move none of whose copy's files stand shows only an after, so the variant is false of such a move, as the glossary's definition of published is. No piece can be published yet, and the Task of open Feature #2572 that builds the proposal mends it, as DEC-019's Implications charge."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:17Z
+      outcome: unchanged
+      unchanged-because: Step 2 draws a library component once with each value of each option and each run style of each field of runs. DEC-007 point 3's edit adds a render of each mode of a size axis the component names, which asks something only of a component that reads a size. None can until the Task that changes a shape by size, which DEC-021's Implications name, builds `:device`, so step 2 and its summary of the bar hold. Variant 4a's move after a before-and-after, and a final piece that keeps its local component, stay as DEC-003 point 8 states them, whose edit narrows only which versions fit at each size.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-011-move-component-into-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:19Z
+      outcome: unchanged
+      unchanged-because: Step 3's hand-over rests on a copy of a final piece starting as a draft with its lock pinned, which moves only when a person moves it (DEC-003 point 8). Its edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which narrows only which versions fit together, so the hand-over holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-07T12:47:20Z
+      outcome: unchanged
+      unchanged-because: DEC-004 point 2 comes to say a piece keeps a mode of a value axis when its brand is switched, a mode the new brand does not give taking its values at the axis's default, and that a piece that names a size its brand lacks fails. Steps 1 to 3 and variants 1a and 1c switch a brand, or a mode of a value axis such as the colour scheme, and hold. Variant 1b lays a piece out again for a mode of an axis that alters sizes, which holds of a brand that gives that mode. No piece can name a size until the foundations declare one, so no switch meets the new failure. The Task of the size axis (#2795), whose use case is variant 1b, declares the axis and says what a piece meets then.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+    revalidated:
+      at: 2026-11-07T12:47:22Z
+      outcome: unchanged
+      unchanged-because: Variant 4a rests on a person marking a piece final, its exports kept as its freeze, which DEC-003 point 8 states as before. Its edit asks that a tie's end found under the lock stay found at any combination of sizes the piece names, which concerns only which versions fit together. Step 2 and variant 2c rest on a slot or a field the kind marks declaring pages, and on a PDF's structure. The edit to DEC-005 point 5 adds a size axis among a property's sources, and leaves both as they were.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T122117Z-378d78a7.yaml
+    revalidated:
+      at: 2026-11-07T12:47:24Z
+      outcome: unchanged
+      unchanged-because: "DEC-004 points 1, 2 and 5 come to have a brand give only the modes it varies, a value mode it does not give taking the axis's default, a shared size axis only where it or its base gives one, and a new shared axis count as an addition while no brand can hold its own. This page, as main holds it, says what the check reports today: `brand-axis` refuses a modifier that lacks a context for a mode of its axis, `base-axis` a base's axis varied otherwise, and `piece-unreadable` a mode the brand lacks, over the two value axes the foundations declare. Each still holds of the check. The Task of the size axis (#2795) narrows what a brand has, which changes `brand-axis`."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+    revalidated:
+      at: 2026-11-07T12:47:26Z
+      outcome: unchanged
+      unchanged-because: "DEC-007 point 3 comes to add, to a component's reference renders, each mode of a size axis it names, drawn once. This page, as main holds it, says each starter component is experimental, and lists the libraries and plugins the capability ships. None of them names a size, since the foundations declare no size axis, so what it says holds. The web parts #2791 adds to the starter are the first components drawn at each size."

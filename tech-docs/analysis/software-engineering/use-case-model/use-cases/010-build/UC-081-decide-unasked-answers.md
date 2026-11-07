@@ -28,6 +28,19 @@ pkit:
         - COR-017
         - COR-031
         - COR-047
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - project-management:DEC-032#D1
 ---
 
 # UC-081 — Decide each answer my change was not asked for
@@ -44,9 +57,10 @@ pkit:
 
 - The project has software-engineering installed, or registered in place where software-engineering is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The adapter deploys software-engineering's `software-engineer` and `docs-reviewer` agent definitions ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 - The change check flags each answer the change was not asked for, "not asked for by this change". The whole-repository check reports each debt (COR-050 points [6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks) and [12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- project-management's merge gate decides which reviewers a pull request needs, so a pull request may need no `docs-reviewer` ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)).
 - A dispatched agent's hand-off reaches the agent that dispatched it whole, as `core:UC-029` describes ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)).
 - The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
-- The developer, or another agent the developer directs, writes each answer the developer accepted, as `core:UC-002` describes (COR-050 point 3 and core rule 20).
+- The developer, or another agent the developer directs, writes each answer the developer accepted, as `core:UC-002` describes (COR-050 point 3 and [RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)).
 
 **Trigger:** While making a change, as [UC-001](UC-001-build-under-conventions.md) describes, the `software-engineer` agent finds an answer the change check did not ask of the change.
 
@@ -54,7 +68,7 @@ pkit:
 
 1. The agent finds an answer the change check did not ask of the change (COR-050 points [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [16](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)). It may be:
    - an answer on an artefact the change check did not ask about, or for a debt the whole-repository check reports
-   - a revisit entry for a target the change asks no revisit of, or one whose outcome alone changed
+   - a revisit entry for a link target the change asks no revisit of, or one whose outcome alone changed
    - a reason for having no anchors
 2. The agent writes none of these answers (`software-engineer.md`).
 3. The agent names each in its hand-off, for the developer, or the delegate a person named, to decide (`software-engineer.md`).

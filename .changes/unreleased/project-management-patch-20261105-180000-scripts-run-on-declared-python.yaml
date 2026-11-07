@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The capability's scripts run on Python 3.10, the oldest Python they declare
+  (#2600). `_lib/drift.py` imported `datetime.UTC`, which Python 3.11 added, so
+  each script that imports it failed at import on 3.10; it now uses
+  `timezone.utc`.
