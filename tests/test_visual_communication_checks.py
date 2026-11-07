@@ -225,7 +225,7 @@ def test_a_lock_finding_fails_on_a_piece_that_is_not_final_and_names_its_states_
             {"foundations": "1.0.0", "tests": "1.0.0"},
             "lock-incomplete",
             "fact",
-            checks.NO_MOVE,
+            checks.no_move(PIECE),
             id="left-out",
         ),
     ],
@@ -242,7 +242,7 @@ def test_a_library_a_locked_version_builds_on_is_a_fact_on_a_final_piece(tmp_pat
     root = drawing_project(tmp_path, lock=lock, state="final", picture=False)
     found = lock_found(root)
     assert {code for code, _, _ in found} == {"lock-incomplete"}
-    assert {(level, fix) for _, level, fix in found} == {("fact", checks.NO_MOVE)}
+    assert {(level, fix) for _, level, fix in found} == {("fact", checks.no_move(PIECE))}
 
 
 def extra_library(root: Path, *, released: bool, **fields: Any) -> dict[str, str]:
@@ -264,7 +264,7 @@ def locked(root: Path, lock: dict[str, str]) -> None:
 @pytest.mark.parametrize(
     ("fields", "level", "fix"),
     [
-        pytest.param({"state": "final"}, "fact", checks.NO_MOVE, id="final"),
+        pytest.param({"state": "final"}, "fact", checks.no_move(PIECE), id="final"),
         pytest.param({"state": "published"}, "fails", PUBLISHED_FIX, id="published"),
         pytest.param({}, "fails", DRAFT_FIX, id="draft"),
         pytest.param({"pinned": True}, "fails", PINNED_FIX, id="pinned"),
@@ -315,7 +315,7 @@ def test_a_fault_in_a_version_the_project_holds_as_released_is_a_fact_on_a_final
 ) -> None:
     root = drawing_project(tmp_path, state="final", picture=False)
     faulty_library(root, released=True)
-    assert lock_found(root) == [("lock-unreadable", "fact", checks.NO_MOVE)]
+    assert lock_found(root) == [("lock-unreadable", "fact", checks.no_move(PIECE))]
 
 
 def test_a_fault_in_a_released_version_that_changed_fails_on_a_final_piece(tmp_path: Path) -> None:
@@ -448,7 +448,7 @@ def test_a_shipped_copy_of_a_number_no_longer_shipped_states_a_fact_on_a_final_p
     building(capability, "1.1.0")
     root = drawing_project(tmp_path, state="final", picture=False)
     not_released(root, "foundations")
-    assert lock_found(root) == [("lock-not-released", "fact", checks.NO_MOVE)]
+    assert lock_found(root) == [("lock-not-released", "fact", checks.no_move(PIECE))]
 
 
 @pytest.mark.parametrize("version", ["1.0.0", "1.1.0"], ids=["being-built", "not-shipped"])

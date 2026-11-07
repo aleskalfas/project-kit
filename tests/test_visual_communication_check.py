@@ -923,7 +923,8 @@ def test_a_version_handed_out_with_another_state_fails_and_setting_it_back_mends
             "location": f"{PIECE_FILE}#state",
             "message": (
                 f"{RECORD} hands out version 1, and the state of `flow` is {state} — set its "
-                "state back to final, and copy the piece for new work"
+                "state back to final, and for new work run `pkit visual take-up flow <name>`, "
+                "which takes it up again as a new draft"
             ),
             "label": "handed-out-state",
         }
