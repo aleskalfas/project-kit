@@ -122,6 +122,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
+        - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
 ---
 

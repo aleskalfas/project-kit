@@ -17,7 +17,7 @@ pkit:
         - .pkit/cli/README.md#scratchpad-list
         - .pkit/cli/README.md#report-bug--report-feedback--report-change-request
         - .pkit/cli/README.md#report-submit-id
-        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
 ---
 
 # Scratchpad notes
@@ -55,7 +55,7 @@ Each note is the file `<state>/<YYYY-MM-DD>-<slug>.md` ("File name" below).
 
 - <a id="adopter-relevance"></a>**The notes are the project's.** Sync updates this README, and never reads or writes a note (COR-012).
 - **Only `.md` files are notes.** A command moves a note's own file and nothing beside it, and `pkit scratchpad list` lists `.md` files only.
-- **`active/`, `done/` and `dropped/`** are seed paths. The first install and each transition of the backbone create each one that is missing, with an empty `.gitkeep` ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)).
+- **`active/`, `done/` and `dropped/`** are seed paths. The first install and each transition of the backbone create each one that is missing, with an empty `.gitkeep` ([the lifecycle reference, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)).
 - **`reported/` is lazy.** It is created when the first note enters it, and removed when a retirement empties it (COR-043 point 2).
 - **`.report-drafts/`** holds each report that `pkit report feedback --yes`, or the `bug` or `change-request` verb, stages until `pkit report submit` posts it. The folder keeps itself out of git ([the CLI reference, "report submit"](../cli/README.md#report-submit-id)).
 
