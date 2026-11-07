@@ -1,10 +1,11 @@
 """Numbered exports of a piece, and their record (visual-communication DEC-006 point 7).
 
 - **What a run makes.** Each format the piece declares under `exports`, in each of its
-  languages and each combination of modes it names, drawn from the scene by the renderer
-  of that format (`RENDERERS`). `svg` makes one file for each page, language and
-  combination; `pdf` one file for each language and combination, which holds every page
-  in order (`DOCUMENTS`). A piece with no page in one of its languages is refused.
+  languages and each combination of modes it names, drawn from the scene of its key over
+  the size axes by the renderer of that format (`RENDERERS`). `svg` makes one file for
+  each page, language and combination; `pdf` one file for each language and combination,
+  which holds every page in order (`DOCUMENTS`). A piece with no page in one of its
+  languages is refused.
 - **A number for each run.** Version `N` is one more than the highest the piece's
   `exports.yaml` records or a file in the piece's exports folder carries, shared by every
   file the run makes; each file is named `<piece>.v<N>.<language>.<key>.<format>`, and a
