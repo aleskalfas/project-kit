@@ -386,6 +386,20 @@ TERM-kind-of-work:
           - project-management:DEC-012
           - project-management:DEC-011
           - project-management:DEC-059#7
+TERM-lifecycle-hook:
+  name: lifecycle hook
+  noun-forms: [lifecycle hooks]
+  status: active
+  definition: "step a project declares in a file of its own for one of project-management's commands, which the command runs after its own writes succeed"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/hooks.py
+        record:
+          - project-management:DEC-024
+          - COR-001
+          - COR-010
 TERM-merge-gate:
   name: merge gate
   status: active
@@ -1037,6 +1051,17 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 - **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. An EPIC, a Feature and an Umbrella always take the kind of work `feature` ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 - **Workstream:** the long-lived area an issue belongs to, the value of another axis. A scope may name [workstreams](#term-workstream--workstream) and kinds of work alike ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 - **A discipline:** a sort of work, such as design, that no kind of work carries yet. No record decides how a Task carries one (DEC-059 point 7).
+
+## TERM-lifecycle-hook — lifecycle hook
+
+**Example:** a [project](../core/glossary.md#term-project--project)'s `hooks.yaml` lists a lifecycle hook of the kind `set-board-field` under `after_create_issue`. Once `create-issue` files the [issue](#term-issue--issue) #1712 and adds it to the board, the hook sets #1712's `Workstream` field to `Spyre`.
+
+**Distinctions:**
+
+- **Issue lifecycle:** the [process](../core/glossary.md#term-process--process) that takes an issue from Todo to Done. A lifecycle hook is no move of it. It runs after a command of project-management files, moves or closes an issue, or opens or merges a [pull request](../core/glossary.md#term-pull-request--pull-request) ([DEC-024](../../../.pkit/capabilities/project-management/decisions/DEC-024-lifecycle-hooks.md)).
+- **Cascade:** the moves that bring the issues above a moved issue forward, which [project-management DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) decides for every project. A lifecycle hook runs only where a project declares it (DEC-024).
+- **Permission hook:** the core's word for an [adapter](../core/glossary.md#term-adapter--adapter)'s script that has its [harness](../core/glossary.md#term-harness--harness) ask the permission code before each tool call. It shares only the word.
+- **GitHub Action:** a workflow GitHub runs by itself, later, when something happens in the repository, such as an issue opened. A lifecycle hook runs within the command, before the command ends (DEC-024).
 
 ## TERM-merge-gate — merge gate
 
