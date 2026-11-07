@@ -629,6 +629,100 @@ def test_a_piece_on_no_size_axis_is_computed_and_drawn_as_it_was(
     assert computed() == before
 
 
+# --- a shape that follows a size (DEC-021 points 3 to 5) ---------------------------------------
+
+#: Yes on a desktop and no on a phone, and the other way round.
+ON_DESKTOP = {"by": ":device", "desktop": True, "phone": False}
+ON_PHONE = {"by": ":device", "desktop": False, "phone": True}
+
+#: The piece's own pattern: its steps along a row on a desktop and down a column on a
+#: phone, both drawn by the `tests` library's card, and a note below them on a desktop
+#: alone, which a desktop places a space further in.
+FLIP = bound(
+    "component",
+    status="experimental",
+    about="The steps of a flow along a row on a desktop and down a column on a phone.",
+    fields={
+        "type": "object",
+        "required": ["steps"],
+        "properties": {
+            "steps": {"type": "array", "items": {"type": "object"}},
+            "note": {"type": "string", "x-pkit-prose": True},
+        },
+    },
+    parts={
+        "across": {
+            "repeat": "steps",
+            "draw": "tests/card",
+            "when": ON_DESKTOP,
+            "width": "=:width",
+            "row": {"gap": "=@space.2", "sizes": "equal", "align-items": "stretch"},
+        },
+        "down": {
+            "repeat": "steps",
+            "draw": "tests/card",
+            "when": ON_PHONE,
+            "width": "=:width",
+            "column": {"gap": "=@space.2"},
+        },
+        "note": {
+            "text": {"content": "note", "style": "type.body", "fill": "text-primary"},
+            "when": {"by": ":device", "desktop": "note", "phone": False},
+            "x": {"by": ":device", "desktop": "=@space.2", "phone": "=@space.1"},
+            "y": "=across.bottom + down.bottom",
+            "width": "=:width - 2 * @space.2",
+        },
+    },
+    preferred={"height": "=note.bottom"},
+)
+
+
+def flipping(tmp_path: Path, **fields: Any) -> Path:
+    """The drawing project on both devices unless `fields` name its modes, its body the
+    piece's own pattern `FLIP`, its steps the drawing's first two, and its note."""
+    root = on_devices(tmp_path, **fields)
+    write(root / PIECE_FOLDER / "components" / "flip.yaml", yaml_text(FLIP))
+    steps = content()["body"]["steps"][:2]
+    write_content(root, body={"use": "piece/flip", "steps": steps, "note": "Read it."})
+    return root
+
+
+def test_a_pieces_own_pattern_lays_its_steps_along_a_row_on_a_desktop_and_down_a_phone(
+    tmp_path: Path,
+) -> None:
+    [(_, desktop), (_, phone)] = project_of(flipping(tmp_path)).scenes()
+
+    assert desktop.findings == phone.findings == []
+    across = [desktop.scene.find(f"figure/body/across[{step}]") for step in ("plan", "build")]
+    down = [phone.scene.find(f"figure/body/down[{step}]") for step in ("plan", "build")]
+    assert None not in across and None not in down
+    assert [each.properties["y"] for each in across if each] == [0.0, 0.0]
+    assert [each.properties["x"] for each in down if each] == [0.0, 0.0]
+    assert across[1] and across[1].properties["x"] > 0
+    assert down[1] and down[1].properties["y"] > 0
+    note = desktop.scene.find("figure/body/note")
+    assert note is not None and note.sources["x"] == "size:device"
+    assert phone.scene.find("figure/body/note") is None
+    assert phone.scene.find("figure/body/across") is None
+
+
+def test_a_switch_by_a_value_axis_is_refused_at_each_size_alike(
+    tmp_path: Path,
+) -> None:
+    """A switch by a size reads the foundations' size axes, whatever the piece names; one
+    that reads a value axis is refused, at each key alike."""
+    root = flipping(tmp_path)
+    changed = json.loads(json.dumps(FLIP))
+    changed["parts"]["note"]["x"] = {"by": ":colour-scheme", "light": "=@space.2"}
+    write(root / PIECE_FOLDER / "components" / "flip.yaml", yaml_text(changed))
+
+    found = [made.findings for _, made in project_of(root).scenes()]
+
+    assert [[f.code for f in each] for each in found] == [["size-switch"], ["size-switch"]]
+    assert found[0][0].message == found[1][0].message
+    assert "the size axes: `:device`" in found[0][0].message
+
+
 # --- a notation's concepts ----------------------------------------------------------------------
 
 #: A pattern of the piece's own: the parts of a system in a row, each drawn by a node in
@@ -1184,6 +1278,87 @@ def test_each_file_a_version_holds_is_read_once_across_the_combinations_judged(
 def test_a_piece_with_no_lock_yet_has_no_fit_to_judge(tmp_path: Path) -> None:
     root = lab_project(tmp_path, ROW, None, {"1.0.0": False}, {"1.0.0": {}})
     assert pl.fit(piece_of(root), pl.Held(root, "visual")) is None
+
+
+def frame_on_a_phone(root: Path, version: str) -> None:
+    """The blocks' frame at `version` draws its cards on a phone alone: the net's cards are
+    drawn twice there, by the net and by its frame."""
+    path = root / f"visual/libraries/{BLOCKS}/{version}/components/frame.yaml"
+    frame = reading.read_yaml(path)
+    frame["parts"]["cards"]["when"] = ON_PHONE
+    write(path, yaml_text(frame))
+
+
+def test_versions_that_lose_an_end_at_one_size_do_not_fit_and_name_the_size(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+        modes={"device": ["desktop", "phone"]},
+    )
+    add_device(root)
+    frame_on_a_phone(root, "1.1.0")
+
+    found = judged(root, "1.1.0", "1.0.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == [
+        ("end", f"the end `from` of the tie `body.links[ab]` would not be found at `{PHONE}`"),
+        ("end", f"the end `to` of the tie `body.links[ab]` would not be found at `{PHONE}`"),
+    ]
+    assert judged(root, "1.0.0", "1.0.0") == []
+
+
+def test_versions_that_lose_an_end_at_every_size_say_it_as_a_piece_of_one_size_does(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+        modes={"device": ["desktop", "phone"]},
+    )
+    add_device(root)
+
+    found = judged(root, "1.1.0", "1.0.0")
+
+    assert [misfit.said for misfit in found] == [
+        "the end `from` of the tie `body.links[ab]` would not be found",
+        "the end `to` of the tie `body.links[ab]` would not be found",
+    ]
+
+
+def test_the_lock_search_reads_the_foundations_declarations_once_for_each_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {}, "1.1.0": {"frame": True}},
+        modes={"device": ["desktop", "phone"]},
+    )
+    add_device(root)
+    read: list[Path] = []
+    reader = pl.tokens.read_declarations
+
+    def counted(path: Path, **given: Any) -> Any:
+        read.append(path)
+        return reader(path, **given)
+
+    monkeypatch.setattr(pl.tokens, "read_declarations", counted)
+    fit = pl.fit(piece_of(root), pl.Held(root, "visual"))
+    for blocks in ("1.0.0", "1.1.0"):
+        for patterns in ("1.0.0", "1.1.0"):
+            judged(root, blocks, patterns, fit)
+
+    assert read == [root / "visual/libraries/foundations/1.0.0/roles.yaml"]
 
 
 # --- a side of a before-and-after (DEC-003 point 8, DEC-013 point 5) ----------------------------

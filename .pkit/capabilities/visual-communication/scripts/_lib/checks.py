@@ -44,9 +44,11 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
 language and at every key over the size axes, a finding that differs by key naming the key
 it holds at: the engine's own (overflow, a component that gets less than it asks for, two
 owners of a value, a loop, a missing exposed part or point, a page inside a page, a
-concept the piece's notations do not hold), a produced picture that is missing, contrast
-as drawn, a colour role the brand lacks, each loss of the renderers that draw the piece
-that nobody accepted, and the components it uses that are experimental or deprecated. A
+concept the piece's notations do not hold, a switch or a `when` by a size that reads no
+size axis a piece can name), a produced picture that is missing, contrast as drawn, a
+colour role the brand lacks, each loss of the renderers that draw the piece that nobody
+accepted, the components it uses that are experimental or deprecated, and content drawn at
+one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7). A
 render keeps them in the piece's `findings.yaml`, keyed by a fingerprint of every file
 they were computed from. The check reads that record while its key verifies, and computes
 the scenes now otherwise. It computes no more once the validator's bound
@@ -2279,7 +2281,8 @@ def scene_findings(
     Each scene is computed at one key over the size axes, and contrast is measured on it in
     each combination it serves. A finding the scenes of every key find alike is reported
     once, as it reads. Any other is reported for each key whose scenes find it, its message
-    opening with that key, so a finding takes no field for its size."""
+    opening with that key, so a finding takes no field for its size. Content a scene draws
+    at one key and not at another is stated at the key that hides it (`_hidden`)."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2290,12 +2293,17 @@ def scene_findings(
     by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
         size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
     }
-    for language, result in results:
+    scenes = [(language, result, result.scene.to_dict()) for language, result in results]
+    shown = {
+        (language, result.scene.size_key): _content_shown(scene)
+        for language, result, scene in scenes
+    }
+    for language, result, scene in scenes:
         size = result.scene.size_key
         served = [key for key in project.keys if project.size_key(key) == size]
         content = pl.content_file(language)
         found = [_placed(finding, content, project) for finding in result.findings]
-        scene = result.scene.to_dict()
+        found.extend(_hidden(language, size, shown))
         found.extend(drawn_contrast(scene, colours, served))
         found.extend(_unknown_colours(scene, colours))
         for renderer in renderers(piece):
@@ -2315,6 +2323,61 @@ def scene_findings(
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
+
+
+#: The fact of content a piece draws at one key over the size axes and not at another
+#: (DEC-021 points 5 and 7).
+SIZE_HIDDEN = "size-hidden"
+
+
+def _hidden(language: str, size: str, shown: Mapping[tuple[str, str], set[str]]) -> list[Finding]:
+    """Content the scenes of `language` draw at another key over the size axes and not at
+    `size`, by its key path, each a fact in the content file, so a reviewer sees what a
+    reader at that size does not get (DEC-021 point 5). `shown` holds the key paths each
+    scene draws, by its language and its key. A path below another that is hidden too is
+    left out: the one above names it."""
+    here = shown[language, size]
+    elsewhere: dict[str, list[str]] = {}
+    for (other_language, other), paths in shown.items():
+        if other_language == language and other != size:
+            for path in paths - here:
+                elsewhere.setdefault(path, []).append(other)
+    return [
+        Finding(
+            SIZE_HIDDEN,
+            FACT,
+            f"`{path}` is drawn at {', '.join(f'`{key}`' for key in at)}, and not at this size",
+            file=pl.content_file(language),
+            where=path,
+        )
+        for path, at in sorted(elsewhere.items())
+        if not any(_below(path, other) for other in elsewhere)
+    ]
+
+
+def _below(path: str, other: str) -> bool:
+    """Whether the key path `path` lies below `other`: a key, an item or a run of it."""
+    return path.startswith(other) and path[len(other) : len(other) + 1] in (".", "[", "#")
+
+
+def _content_shown(value: Any) -> set[str]:
+    """The key path of each value of the content a scene draws: each source a property, or
+    a run, names in the content."""
+    found: set[str] = set()
+    if isinstance(value, Mapping):
+        for key, each in value.items():
+            if key == "sources" and isinstance(each, Mapping):
+                found.update(
+                    source[len(layout.CONTENT) :]
+                    for source in each.values()
+                    if isinstance(source, str) and source.startswith(layout.CONTENT)
+                )
+            else:
+                found |= _content_shown(each)
+    elif isinstance(value, list):
+        for each in value:
+            found |= _content_shown(each)
+    return found
 
 
 def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:

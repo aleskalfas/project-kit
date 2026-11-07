@@ -192,6 +192,77 @@ def test_the_schema_refuses_what_the_engine_refuses(case: str, path: str, value:
     assert engine_issues(data) != [], case
 
 
+# --- a switch and a `when` by a size (DEC-021 point 3) ------------------------------------------
+
+
+class _Device:
+    """The size axis `device`, as the foundations will declare it."""
+
+    modes = ("desktop", "tablet", "phone")
+    default = "desktop"
+
+
+def sized_issues(data: Any) -> list[tuple[str, str, str]]:
+    """What the engine finds in a component when it reads it where the size axis `device`
+    is one a piece can name."""
+    sizes = engine.Sizes({"device": _Device()})
+    return engine.Component("lab/x", data, engine.Context(FakeEnv(), "en", sizes=sizes)).issues
+
+
+BY_SIZE: list[tuple[str, Any]] = [
+    ("parts.label.x", {"by": ":device", "desktop": "=pad", "phone": "=@space.1"}),
+    ("parts.box.box.fill", {"by": ":device", "desktop": "surface", "phone": None}),
+    (
+        "values.pad",
+        {
+            "by": ":device",
+            "desktop": {"by": "emphasis", "normal": "=@space.1", "strong": "=@space.2"},
+            "tablet": "=@space.1",
+        },
+    ),
+    ("parts.label.text.text-anchor", {"by": ":device", "desktop": "start", "phone": "end"}),
+    ("parts.label.when", {"by": ":device", "desktop": True, "phone": "tags"}),
+    ("parts.label.when", {"by": ":device", "desktop": {"emphasis": ["strong"]}, "phone": False}),
+]
+
+
+@pytest.mark.parametrize(("path", "value"), BY_SIZE)
+def test_the_format_takes_a_switch_and_a_when_by_a_size(path: str, value: Any) -> None:
+    data = changed(path, value)
+    assert problems(data) == []
+    assert sized_issues(data) == []
+
+
+REFUSED_BY_SIZE: list[tuple[str, str, Any]] = [
+    ("a `when` by a size alone", "parts.label.when", {"by": ":device"}),
+    (
+        "a `when` by a size that switches again",
+        "parts.label.when",
+        {"by": ":device", "desktop": {"by": ":device", "desktop": True}},
+    ),
+    ("a branch of a `when` that is no `when`", "parts.label.when", {"by": ":device", "desktop": 3}),
+    (
+        "a `when` that switches on an option",
+        "parts.label.when",
+        {"by": "emphasis", "normal": True, "strong": False},
+    ),
+    (
+        "a switch by a name that is no marked name",
+        "parts.label.x",
+        {"by": "::device", "desktop": "=pad"},
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("case", "path", "value"), REFUSED_BY_SIZE, ids=[case for case, _, _ in REFUSED_BY_SIZE]
+)
+def test_the_schema_refuses_a_size_the_engine_refuses(case: str, path: str, value: Any) -> None:
+    data = changed(path, value)
+    assert problems(data) != [], case
+    assert sized_issues(data) != [], case
+
+
 def repeat(**more: Any) -> dict[str, Any]:
     part = {"repeat": "tags", "draw": "lab/tag", "width": "=:width", "row": {"gap": "=@space.1"}}
     return {**part, **more}

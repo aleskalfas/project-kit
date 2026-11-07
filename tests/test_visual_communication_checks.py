@@ -43,6 +43,7 @@ from tests.test_visual_communication_pipeline import (
     TESTS,
     add_device,
     drawing_project,
+    flipping,
     list_drawing_libraries,
     on_devices,
     parts_project,
@@ -1060,6 +1061,22 @@ def test_a_finding_that_reads_otherwise_at_each_size_is_reported_for_each(tmp_pa
     widths = [message.split("is wider than the text's width ")[1] for message in found]
     assert [message.split(": ")[0] for message in found] == ["`default`", f"`{PHONE}`"]
     assert widths[0] != widths[1]
+
+
+def test_content_a_size_hides_is_a_fact_at_that_size_alone(tmp_path: Path) -> None:
+    """The note is drawn on a desktop alone, and the steps at both sizes, by another part
+    at each: the note alone is stated, at the phone's key (DEC-021 point 5)."""
+    found = checks.computed(project_of(flipping(tmp_path)))
+    [hidden] = [f for f in found if f.code == "size-hidden"]
+    assert (hidden.level, hidden.file, hidden.where) == ("fact", "content.en.yaml", "body.note")
+    assert hidden.message == f"`{PHONE}`: `body.note` is drawn at `default`, and not at this size"
+    assert {f.code for f in found} == {"size-hidden", "component-experimental"}
+
+
+def test_a_piece_on_one_size_states_no_hidden_content(tmp_path: Path) -> None:
+    project = project_of(flipping(tmp_path, modes={"device": ["phone"]}))
+    assert project.size_keys == [PHONE]
+    assert [f for f in checks.computed(project) if f.code == "size-hidden"] == []
 
 
 def test_contrast_is_judged_in_each_combination_from_the_scene_that_serves_it(

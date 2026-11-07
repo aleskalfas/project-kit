@@ -1046,3 +1046,63 @@ def test_a_brands_changed_value_is_no_break(tmp_path: Path) -> None:
     )
 
     assert (found.breaks, found.additions) == ((), ())
+
+
+# --- a shape that follows a size (DEC-021 points 3 and 7) ---------------------------------------
+
+#: The size axis a test adds to its copy of the foundations.
+DEVICE = {"kind": "size", "modes": ["desktop", "phone"], "default": "desktop"}
+
+
+def with_device(data: Any) -> None:
+    data["axes"]["device"] = dict(DEVICE)
+
+
+def following_a_size(spec: Any) -> None:
+    """The card's title narrows on a phone, and its tags are drawn on a desktop alone."""
+    card(spec)["parts"]["title"]["width"] = {
+        "by": ":device",
+        "desktop": "=:width",
+        "phone": "=:width * 0.5",
+    }
+    card(spec)["parts"]["tags"]["when"] = {"by": ":device", "desktop": True, "phone": False}
+
+
+@pytest.mark.parametrize("device", [True, False], ids=["the-axis", "no-axis"])
+def test_a_version_read_in_full_reads_a_switch_by_a_size_against_its_foundations(
+    tmp_path: Path, device: bool
+) -> None:
+    """A library checked alone places nothing: it reads the switch against the size axes of
+    the foundations it is read with, as a piece does."""
+    root = project(tmp_path)
+    foundations(root, change=with_device if device else None)
+    spec = copy.deepcopy(PARTS)
+    following_a_size(spec)
+    write_parts(root, "1.0.0", spec)
+
+    read = full_read.read(libraries.Held(root, LOCATION), "parts", libraries.Version.parse("1.0.0"))
+    found = [finding for finding in read.findings if finding.code == "size-switch"]
+
+    if device:
+        assert found == []
+        return
+    assert [(f.where, f.library, f.extra) for f in found] == [
+        ("parts.title.width", "parts@1.0.0", {"component": "parts/card"}),
+        ("parts.tags.when", "parts@1.0.0", {"component": "parts/card"}),
+    ]
+    assert all("(the size axes: none)" in finding.message for finding in found)
+
+
+def test_a_shape_that_follows_a_size_changes_how_a_piece_looks_and_needs_a_patch(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    foundations(root, change=with_device)
+    spec = copy.deepcopy(PARTS)
+    following_a_size(spec)
+    write_parts(root, "1.0.0", PARTS)
+    write_parts(root, "1.1.0", spec)
+
+    found = compared(root, "parts", "1.0.0", "1.1.0")
+
+    assert (found.breaks, found.additions, found.segment) == ((), (), "patch")
