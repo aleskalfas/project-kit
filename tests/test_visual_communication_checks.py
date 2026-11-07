@@ -45,6 +45,7 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     exported_up_to,
     filled,
+    flipping,
     list_drawing_libraries,
     on_devices,
     parts_project,
@@ -227,7 +228,7 @@ def test_a_lock_finding_fails_on_a_piece_that_is_not_final_and_names_its_states_
             {"foundations": "1.0.0", "tests": "1.0.0"},
             "lock-incomplete",
             "fact",
-            checks.NO_MOVE,
+            checks.no_move(PIECE),
             id="left-out",
         ),
     ],
@@ -244,7 +245,7 @@ def test_a_library_a_locked_version_builds_on_is_a_fact_on_a_final_piece(tmp_pat
     root = drawing_project(tmp_path, lock=lock, state="final", picture=False)
     found = lock_found(root)
     assert {code for code, _, _ in found} == {"lock-incomplete"}
-    assert {(level, fix) for _, level, fix in found} == {("fact", checks.NO_MOVE)}
+    assert {(level, fix) for _, level, fix in found} == {("fact", checks.no_move(PIECE))}
 
 
 def extra_library(root: Path, *, released: bool, **fields: Any) -> dict[str, str]:
@@ -266,7 +267,7 @@ def locked(root: Path, lock: dict[str, str]) -> None:
 @pytest.mark.parametrize(
     ("fields", "level", "fix"),
     [
-        pytest.param({"state": "final"}, "fact", checks.NO_MOVE, id="final"),
+        pytest.param({"state": "final"}, "fact", checks.no_move(PIECE), id="final"),
         pytest.param({"state": "published"}, "fails", PUBLISHED_FIX, id="published"),
         pytest.param({}, "fails", DRAFT_FIX, id="draft"),
         pytest.param({"pinned": True}, "fails", PINNED_FIX, id="pinned"),
@@ -317,7 +318,7 @@ def test_a_fault_in_a_version_the_project_holds_as_released_is_a_fact_on_a_final
 ) -> None:
     root = drawing_project(tmp_path, state="final", picture=False)
     faulty_library(root, released=True)
-    assert lock_found(root) == [("lock-unreadable", "fact", checks.NO_MOVE)]
+    assert lock_found(root) == [("lock-unreadable", "fact", checks.no_move(PIECE))]
 
 
 def test_a_fault_in_a_released_version_that_changed_fails_on_a_final_piece(tmp_path: Path) -> None:
@@ -450,7 +451,7 @@ def test_a_shipped_copy_of_a_number_no_longer_shipped_states_a_fact_on_a_final_p
     building(capability, "1.1.0")
     root = drawing_project(tmp_path, state="final", picture=False)
     not_released(root, "foundations")
-    assert lock_found(root) == [("lock-not-released", "fact", checks.NO_MOVE)]
+    assert lock_found(root) == [("lock-not-released", "fact", checks.no_move(PIECE))]
 
 
 @pytest.mark.parametrize("version", ["1.0.0", "1.1.0"], ids=["being-built", "not-shipped"])
@@ -1075,6 +1076,22 @@ def test_a_finding_that_reads_otherwise_at_each_size_is_reported_for_each(tmp_pa
     widths = [message.split("is wider than the text's width ")[1] for message in found]
     assert [message.split(": ")[0] for message in found] == ["`default`", f"`{PHONE}`"]
     assert widths[0] != widths[1]
+
+
+def test_content_a_size_hides_is_a_fact_at_that_size_alone(tmp_path: Path) -> None:
+    """The note is drawn on a desktop alone, and the steps at both sizes, by another part
+    at each: the note alone is stated, at the phone's key (DEC-021 point 5)."""
+    found = checks.computed(project_of(flipping(tmp_path)))
+    [hidden] = [f for f in found if f.code == "size-hidden"]
+    assert (hidden.level, hidden.file, hidden.where) == ("fact", "content.en.yaml", "body.note")
+    assert hidden.message == f"`{PHONE}`: `body.note` is drawn at `default`, and not at this size"
+    assert {f.code for f in found} == {"size-hidden", "component-experimental"}
+
+
+def test_a_piece_on_one_size_states_no_hidden_content(tmp_path: Path) -> None:
+    project = project_of(flipping(tmp_path, modes={"device": ["phone"]}))
+    assert project.size_keys == [PHONE]
+    assert [f for f in checks.computed(project) if f.code == "size-hidden"] == []
 
 
 def test_contrast_is_judged_in_each_combination_from_the_scene_that_serves_it(

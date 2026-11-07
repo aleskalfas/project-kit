@@ -83,7 +83,7 @@ A component reads the size the piece is drawn at, whatever room its placer gives
 ### 8. Written code
 
 - **The CSS writer** writes a brand's value axes at the default size, and reports as a loss each token a size changes. Nothing answers a window's width, since a page that reflows live stays out.
-- **A page file holds one size** ([visual-communication:DEC-020-html-page-drawing] point 4). How it takes its values at that key is [project-kit#2738](https://github.com/aleskalfas/project-kit/issues/2738)'s.
+- **A page file holds one size** ([visual-communication:DEC-020-html-page-drawing] point 4). It takes each mode's values at that key, as [visual-communication:DEC-023-html-page-modes] point 3 says.
 - **The JSON writer's document** gains the keys of a brand's size axes, and its form stays.
 
 ### 9. The axis lands after the foundations' first release

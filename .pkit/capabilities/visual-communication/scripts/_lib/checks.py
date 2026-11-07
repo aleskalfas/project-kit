@@ -44,9 +44,11 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
 language and at every key over the size axes, a finding that differs by key naming the key
 it holds at: the engine's own (overflow, a component that gets less than it asks for, two
 owners of a value, a loop, a missing exposed part or point, a page inside a page, a
-concept the piece's notations do not hold), a produced picture that is missing, contrast
-as drawn, a colour role the brand lacks, each loss of the renderers that draw the piece
-that nobody accepted, and the components it uses that are experimental or deprecated. A
+concept the piece's notations do not hold, a switch or a `when` by a size that reads no
+size axis a piece can name), a produced picture that is missing, contrast as drawn, a
+colour role the brand lacks, each loss of the renderers that draw the piece that nobody
+accepted, the components it uses that are experimental or deprecated, and content drawn at
+one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7). A
 render keeps them in the piece's `findings.yaml`, keyed by a fingerprint of every file
 they were computed from. The check reads that record while its key verifies, and computes
 the scenes now otherwise. It computes no more once the validator's bound
@@ -192,9 +194,6 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: The finding on a version not yet released under a final or a published piece's lock. It
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
-
-#: What a finding on a final piece says where only a move of its lock would mend it.
-NO_MOVE = "no move reaches a final piece's lock: a copy of the piece takes it up again"
 
 #: The findings on what a piece's state owes of its current copy (DEC-017 point 6).
 PUBLISHED_NO_FORMAT = "published-no-format"
@@ -918,6 +917,16 @@ def _code_findings(root: Path, location_path: str) -> list[Finding]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
+def no_move(piece: str) -> str:
+    """What a finding on the final piece `piece` says where only a move of its lock would mend
+    it: no move reaches that lock, and the command that copies the piece takes it up again
+    (DEC-017 points 5 and 8)."""
+    return (
+        f"no move reaches a final piece's lock: {copies.take_up_command(piece)} takes it up again "
+        f"as a new draft"
+    )
+
+
 def _lock_fix(piece: pl.Piece, mend: str) -> str:
     """What mends a fault at a piece's lock, by who moves that lock (DEC-003 point 8): a
     draft's render, and nothing else. Nothing moves a final piece's, and no state leads out
@@ -962,7 +971,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     def moved(code: str, message: str) -> Finding:
         """A finding only a move of the lock would mend."""
         if final:
-            return Finding(code, FACT, message, file=file, where="lock", fix=NO_MOVE)
+            return Finding(code, FACT, message, file=file, where="lock", fix=no_move(piece.name))
         return fails(code, message)
 
     lock = piece.lock
@@ -1082,7 +1091,7 @@ def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> F
     if not final:
         return dataclasses.replace(finding, fix=_lock_fix(piece, ""))
     if source is None:
-        return dataclasses.replace(finding, level=FACT, fix=NO_MOVE)
+        return dataclasses.replace(finding, level=FACT, fix=no_move(piece.name))
     return dataclasses.replace(
         finding,
         level=ATTENTION,
@@ -1341,7 +1350,10 @@ def _other_state(piece: pl.Piece, number: int) -> Finding:
         f"`{piece.name}` is {piece.state}",
         file=piece.file(pl.PIECE_FILE),
         where="state",
-        fix=f"set its state back to {copies.FINAL}, and copy the piece for new work",
+        fix=(
+            f"set its state back to {copies.FINAL}, and for new work run "
+            f"{copies.take_up_command(piece.name)}, which takes it up again as a new draft"
+        ),
     )
 
 
@@ -2279,7 +2291,8 @@ def scene_findings(
     Each scene is computed at one key over the size axes, and contrast is measured on it in
     each combination it serves. A finding the scenes of every key find alike is reported
     once, as it reads. Any other is reported for each key whose scenes find it, its message
-    opening with that key, so a finding takes no field for its size."""
+    opening with that key, so a finding takes no field for its size. Content a scene draws
+    at one key and not at another is stated at the key that hides it (`_hidden`)."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2290,12 +2303,17 @@ def scene_findings(
     by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
         size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
     }
-    for language, result in results:
+    scenes = [(language, result, result.scene.to_dict()) for language, result in results]
+    shown = {
+        (language, result.scene.size_key): _content_shown(scene)
+        for language, result, scene in scenes
+    }
+    for language, result, scene in scenes:
         size = result.scene.size_key
         served = [key for key in project.keys if project.size_key(key) == size]
         content = pl.content_file(language)
         found = [_placed(finding, content, project) for finding in result.findings]
-        scene = result.scene.to_dict()
+        found.extend(_hidden(language, size, shown))
         found.extend(drawn_contrast(scene, colours, served))
         found.extend(_unknown_colours(scene, colours))
         for renderer in renderers(piece):
@@ -2315,6 +2333,61 @@ def scene_findings(
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
+
+
+#: The fact of content a piece draws at one key over the size axes and not at another
+#: (DEC-021 points 5 and 7).
+SIZE_HIDDEN = "size-hidden"
+
+
+def _hidden(language: str, size: str, shown: Mapping[tuple[str, str], set[str]]) -> list[Finding]:
+    """Content the scenes of `language` draw at another key over the size axes and not at
+    `size`, by its key path, each a fact in the content file, so a reviewer sees what a
+    reader at that size does not get (DEC-021 point 5). `shown` holds the key paths each
+    scene draws, by its language and its key. A path below another that is hidden too is
+    left out: the one above names it."""
+    here = shown[language, size]
+    elsewhere: dict[str, list[str]] = {}
+    for (other_language, other), paths in shown.items():
+        if other_language == language and other != size:
+            for path in paths - here:
+                elsewhere.setdefault(path, []).append(other)
+    return [
+        Finding(
+            SIZE_HIDDEN,
+            FACT,
+            f"`{path}` is drawn at {', '.join(f'`{key}`' for key in at)}, and not at this size",
+            file=pl.content_file(language),
+            where=path,
+        )
+        for path, at in sorted(elsewhere.items())
+        if not any(_below(path, other) for other in elsewhere)
+    ]
+
+
+def _below(path: str, other: str) -> bool:
+    """Whether the key path `path` lies below `other`: a key, an item or a run of it."""
+    return path.startswith(other) and path[len(other) : len(other) + 1] in (".", "[", "#")
+
+
+def _content_shown(value: Any) -> set[str]:
+    """The key path of each value of the content a scene draws: each source a property, or
+    a run, names in the content."""
+    found: set[str] = set()
+    if isinstance(value, Mapping):
+        for key, each in value.items():
+            if key == "sources" and isinstance(each, Mapping):
+                found.update(
+                    source[len(layout.CONTENT) :]
+                    for source in each.values()
+                    if isinstance(source, str) and source.startswith(layout.CONTENT)
+                )
+            else:
+                found |= _content_shown(each)
+    elif isinstance(value, list):
+        for each in value:
+            found |= _content_shown(each)
+    return found
 
 
 def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:

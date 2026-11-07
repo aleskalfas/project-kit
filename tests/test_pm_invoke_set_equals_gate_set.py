@@ -332,6 +332,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         timeout=None,
         effort=None,
         *,
+        folder=None,
         base=None,
         head="HEAD",
         sha="",

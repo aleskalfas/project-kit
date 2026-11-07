@@ -80,7 +80,8 @@ DEC-012).
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
 
 A part may carry `when`: a field the content fills, a field of runs where one of its
-runs holds text, or `{<option>: [<word>, ...]}`. A missing part has zero size at its
+runs holds text, `{<option>: [<word>, ...]}`, or a switch on a size (below) whose each
+branch is `true`, `false`, or one of those. A missing part has zero size at its
 place. Its place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula. A line has `x1 y1 x2 y2`; or, in a component
 that takes ends, `connect: straight` or `connect: corners`, the connector tool, which
@@ -101,6 +102,15 @@ that changes the instance's family replaces it too. Content's `override: {<part>
 <role>}` points a part's paint at another role, each run's included. `:index` and
 `:count` are an item's place among the items its list draws, from 1, and how many it
 draws.
+
+**A size** reaches a component by a marked name, `:<axis>`: a switch or a `when` by it
+reads the mode of that size axis the scene's key holds, else the axis's default (DEC-021
+point 3). Such a switch names the axis's default, which takes each mode it leaves out, so
+a new mode draws as the default does. The axis is one of the size axes a piece can name,
+which the context holds (`Sizes`), and a mode it names is one of the axis's. A part a
+size hides is a missing part. Two parts that repeat over one list, whose `when`s by a
+size each say yes or no, say yes exactly once at each mode, so each item is drawn once
+at every size (point 4). A value a size chose names the axis as its source, `size:<axis>`.
 
 **Ties.** Once every instance is built, and before any value is computed, `find_ends`
 finds each tie's two ends (DEC-011 points 3 and 4). An end's key path starts in the
@@ -131,6 +141,7 @@ that brand's own finding says what it owes, and the part takes none.
 
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Callable, Collection, Iterator, Mapping
 from dataclasses import dataclass, field
@@ -140,7 +151,7 @@ from _lib import formula as fm
 from _lib import names
 from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, UnvaluedRole
 from _lib.findings import FAILS, Finding
-from _lib.keys import key_order
+from _lib.keys import AxisLike, key_order
 from _lib.text import Broken, Faces, Run, Style, break_runs
 
 PRIMITIVES = ("box", "ellipse", "text", "line", "image")
@@ -244,6 +255,19 @@ GIVEN_BY_FIELD = ("concept", "state", "override")
 
 #: The key of a switch, which no option takes as a word.
 SWITCH = "by"
+
+#: The mark of a name the engine hands a component, such as `:width`. A switch or a `when`
+#: by `:<axis>` reads the mode of that size axis (DEC-021 point 3).
+MARKED = ":"
+
+#: The start of the source of a value a switch by a size axis chose (DEC-021 point 7).
+SIZE = "size:"
+
+#: The finding on a switch or a `when` by a marked name that reads no size axis a piece
+#: can name, names a mode the axis lacks, or leaves out its default; and on two parts over
+#: one list that do not draw each item once at every size (DEC-021 point 7).
+SIZE_SWITCH = "size-switch"
+SIZE_REPEAT = "size-repeat"
 
 #: The key by which a page of a top whose layouts are its pages' forms names its layout,
 #: which the format fixes on such a page alone (DEC-010 point 5).
@@ -582,6 +606,51 @@ def _leaves(value: Any) -> list[Any]:
     return [value]
 
 
+def _by_size(value: Any) -> bool:
+    """Whether `value` is a switch by a size, whose `by` is a marked name (DEC-021 point
+    3)."""
+    by = value.get(SWITCH) if isinstance(value, Mapping) else None
+    return isinstance(by, str) and by.startswith(MARKED)
+
+
+def _says_yes_or_no(when: Any) -> bool:
+    """Whether `when` is a switch by a size each of whose branches says yes or no."""
+    return _by_size(when) and all(
+        isinstance(branch, bool) for key, branch in when.items() if key != SWITCH
+    )
+
+
+def _says_yes(when: Mapping[str, Any], modes: Mapping[str, str], axes: Mapping[str, Any]) -> bool:
+    """Whether a `when` by a size that says yes or no says yes where its axis takes the mode
+    `modes` gives it: the branch of that mode, else of the axis's default."""
+    axis = str(when[SWITCH])[len(MARKED) :]
+    mode = modes[axis]
+    return when.get(mode, when.get(axes[axis].default)) is True
+
+
+def source_of_choice(chosen: Any) -> str:
+    """The source of a value a switch chose: the size axis it reads, `size:<axis>`, or the
+    option it names, `option:<name>` (DEC-005 point 5, DEC-021 point 7)."""
+    if isinstance(chosen, str) and chosen.startswith(MARKED):
+        return f"{SIZE}{chosen[len(MARKED) :]}"
+    return f"option:{chosen}"
+
+
+@dataclass(frozen=True)
+class Sizes:
+    """The size axes a piece can name, as one scene reads them (DEC-021 point 3): each by
+    its name, with its modes and its default, as the foundations declare it, and the mode
+    of each that the scene's key holds, an axis the key leaves out at its default. A
+    context that knows no size axis reads none, and a switch by a size is refused there."""
+
+    axes: Mapping[str, AxisLike] = field(default_factory=dict)
+    modes: Mapping[str, str] = field(default_factory=dict)
+
+    def mode(self, axis: str) -> str:
+        """The mode the scene reads on `axis`, one of `axes`."""
+        return self.modes.get(axis, self.axes[axis].default)
+
+
 # --- components ---------------------------------------------------------------------------
 
 
@@ -741,6 +810,7 @@ class Component:
                     f"the option `{option.name}` names an item of `{option.items}`, "
                     "over which not exactly one part repeats",
                 )
+        self._read_size_repeats()
         if self.top:
             self._read_layouts(data)
         elif any(isinstance(s, Mapping) and PAGES in s for s in self.fields.values()):
@@ -1056,7 +1126,16 @@ class Component:
             )
         return True
 
-    def _read_when(self, where: str, when: Any) -> None:
+    def _read_when(self, where: str, when: Any, *, branch: bool = False) -> None:
+        """A part's `when`: a field, an option's words, or a switch by a size whose each
+        branch is `true`, `false` or one of those, never a switch again (DEC-021 point 3).
+        `branch` reads one branch of such a switch."""
+        if _by_size(when) and not branch:
+            axis = self._size_axis(where, when[SWITCH], "`when` switches")
+            for mode in self._size_branches(where, when, axis):
+                if not isinstance(when[mode], bool):
+                    self._read_when(f"{where}.{mode}", when[mode], branch=True)
+            return
         if isinstance(when, str):
             if when not in self.fields:
                 self._shape(where, f"`when` names no field `{when}`")
@@ -1070,7 +1149,48 @@ class Component:
             elif not all(word in option.words for word in listed):
                 self._shape(where, f"`when` names a word the option `{name}` lacks")
             return
-        self._shape(where, "`when` takes a field, or `{<option>: [<word>, ...]}`")
+        if branch:
+            self._shape(
+                where,
+                "a branch of a `when` by a size takes `true`, `false`, a field, or "
+                "`{<option>: [<word>, ...]}`",
+            )
+            return
+        self._shape(
+            where,
+            "`when` takes a field, `{<option>: [<word>, ...]}`, or a switch on a size, "
+            "`{by: :<axis>, <mode>: ...}`",
+        )
+
+    def _read_size_repeats(self) -> None:
+        """Two parts or more that repeat over one list, whose `when`s by a size each say yes
+        or no in every branch: at each combination of the modes of the axes they read,
+        exactly one of them says yes, so each item is drawn once at every size (DEC-021
+        points 4 and 7). A `when` that reads no size axis is reported already."""
+        over: dict[str, list[Part]] = {}
+        for part in self.parts.values():
+            listed, when = part.spec.get("repeat"), part.spec.get("when")
+            if part.kind == "repeat" and isinstance(listed, str) and _says_yes_or_no(when):
+                over.setdefault(listed, []).append(part)
+        known = self._ctx.sizes.axes
+        for listed, parts in over.items():
+            read = sorted({str(part.spec["when"][SWITCH])[len(MARKED) :] for part in parts})
+            if len(parts) < 2 or any(axis not in known for axis in read):
+                continue
+            for modes in itertools.product(*(known[axis].modes for axis in read)):
+                at = dict(zip(read, modes, strict=True))
+                said = [part.name for part in parts if _says_yes(part.spec["when"], at, known)]
+                if len(said) == 1:
+                    continue
+                shown = " and ".join(f"`{mode}` of `{axis}`" for axis, mode in at.items())
+                self._issue(
+                    SIZE_REPEAT,
+                    f"parts.{parts[0].name}.when",
+                    f"the parts {', '.join(f'`{p.name}`' for p in parts)} repeat over "
+                    f"`{listed}`, and at {shown} {len(said)} of their `when`s say yes: "
+                    "exactly one says yes at each mode, so each item is drawn once",
+                )
+                break
 
     def _read_layouts(self, data: Mapping[str, Any]) -> None:
         layouts = data.get("layouts")
@@ -1299,6 +1419,14 @@ class Component:
             check(where, value)
             return
         by = value[SWITCH]
+        if _by_size(value):
+            axis = self._size_axis(where, by, "switches")
+            for mode in self._size_branches(where, value, axis):
+                if not (nothing and value[mode] is None):
+                    self._switched(
+                        f"{where}.{mode}", value[mode], check, nothing=nothing, runs=runs
+                    )
+            return
         if isinstance(by, str) and by in self.runs:
             if by != runs:
                 self._shape(
@@ -1325,6 +1453,48 @@ class Component:
         for word in words:
             if word in value and not (nothing and value[word] is None):
                 self._switched(f"{where}.{word}", value[word], check, nothing=nothing, runs=runs)
+
+    def _size_axis(self, where: str, by: str, what: str) -> AxisLike | None:
+        """The size axis that the marked name `by`, `:<axis>`, of a switch or a `when` reads
+        (DEC-021 point 3); None where it reads none a piece can name, a value axis or a name
+        the engine holds included, which is reported."""
+        axis = self._ctx.sizes.axes.get(by[len(MARKED) :])
+        if axis is None:
+            known = ", ".join(f"`{MARKED}{name}`" for name in sorted(self._ctx.sizes.axes))
+            self._issue(
+                SIZE_SWITCH,
+                where,
+                f"{what} on `{by}`, which reads no size axis a piece can name (the size axes: "
+                f"{known or 'none'})",
+            )
+        return axis
+
+    def _size_branches(
+        self, where: str, value: Mapping[str, Any], axis: AxisLike | None
+    ) -> list[str]:
+        """The branches of a switch by a size that name a mode of its axis, each read in
+        turn. The switch names the axis's default, which takes each mode it leaves out, and
+        names no other word (DEC-021 point 3); none where it reads no size axis."""
+        if axis is None:
+            return []
+        by = value[SWITCH]
+        branches = [str(key) for key in value if key != SWITCH]
+        if axis.default not in branches:
+            self._issue(
+                SIZE_SWITCH,
+                where,
+                f"the switch on `{by}` names no branch for `{axis.default}`, the axis's "
+                "default, which takes each mode it leaves out",
+            )
+        for branch in branches:
+            if branch not in axis.modes:
+                self._issue(
+                    SIZE_SWITCH,
+                    f"{where}.{branch}",
+                    f"the switch on `{by}` names `{branch}`, which is no mode of the axis "
+                    f"(its modes: {', '.join(axis.modes)})",
+                )
+        return [branch for branch in branches if branch in axis.modes]
 
     def _number(self, where: str, value: Any, expected: int | None) -> None:
         self._switched(where, value, lambda at, text: self._formula(at, text, expected))
@@ -1502,14 +1672,18 @@ def stand_ins(state: str) -> Facts:
 
 class Context:
     """What computing one scene shares: the environment, its language, what fills the facts
-    of its export, the faces, the components read, the findings, and the cells being
-    computed. A context that computes no scene takes the stand-ins and no state: what it
-    judges reads no text."""
+    of its export, the size axes a piece can name with the mode of each at the scene's key
+    (`Sizes`), the faces, the components read, the findings, and the cells being computed.
+    A context that computes no scene takes the stand-ins and no state: what it judges reads
+    no text. One given no sizes knows no size axis."""
 
-    def __init__(self, env: Env, language: str, facts: Facts | None = None) -> None:
+    def __init__(
+        self, env: Env, language: str, facts: Facts | None = None, sizes: Sizes | None = None
+    ) -> None:
         self.env = env
         self.language = language
         self.facts = facts if facts is not None else stand_ins("")
+        self.sizes = sizes if sizes is not None else Sizes()
         self.faces = Faces(env.font_file)
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
@@ -1524,6 +1698,16 @@ class Context:
     def fact(self, word: str) -> str:
         """The text of the fact `word`, one of `FACTS`."""
         return self.language if word == "language" else getattr(self.facts, word)
+
+    def size_branch(self, switch: Mapping[str, Any]) -> str | None:
+        """The branch a switch by a size takes in this scene (DEC-021 point 3): the mode the
+        scene's key holds on its axis, where the switch names it, else the axis's default.
+        None where it reads no size axis, which was reported when its component was read."""
+        axis = str(switch[SWITCH])[len(MARKED) :]
+        if axis not in self.sizes.axes:
+            return None
+        mode = self.sizes.mode(axis)
+        return mode if mode in switch else self.sizes.axes[axis].default
 
     def finding(self, code: str, message: str, *, where: str, use: str = "") -> Finding:
         """A finding that fails, at `where`: in the file of the component `use`, which it
@@ -2047,13 +2231,17 @@ class Instance:
 
     def pick(self, where: str, value: Any, run: str | None = None) -> tuple[str, Any, str | None]:
         """A value through its switches: the key path of the branch taken, the value, and
-        the option, or the field of runs, that chose it. A switch on a field's run styles
-        takes `run`, the word of the run drawn, else the field's first word."""
+        the option, the field of runs, or the marked name of the size axis, that chose it.
+        A switch on a field's run styles takes `run`, the word of the run drawn, else the
+        field's first word. A switch by a size takes the branch of the scene's mode
+        (`Context.size_branch`)."""
         chosen = None
         while isinstance(value, Mapping) and SWITCH in value:
             chosen = value[SWITCH]
             words = self.component.runs.get(chosen) if isinstance(chosen, str) else None
-            if words is not None:
+            if _by_size(value):
+                word = self.ctx.size_branch(value)
+            elif words is not None:
                 word = run if run in words else words[0]
             else:
                 word = self.options.get(chosen)
@@ -2061,9 +2249,15 @@ class Instance:
         return where, value, chosen
 
     def _when(self, part: Part) -> bool:
+        """Whether the part is drawn: no `when`, or a `when` that holds. A `when` by a size
+        holds by the branch of the scene's mode: `true`, `false`, or the `when` it gives."""
         when = part.spec.get("when")
         if when is None:
             return True
+        if _by_size(when):
+            when = when.get(self.ctx.size_branch(when))
+            if isinstance(when, bool):
+                return when
         if isinstance(when, str):
             return _filled(self.given.get(when), runs=when in self.component.runs)
         if isinstance(when, Mapping) and len(when) == 1:
@@ -2351,7 +2545,9 @@ class Instance:
         for theirs, raw in (spec.get("options") or {}).items():
             _, word, chosen = self.pick(f"parts.{node.part.name}.options.{theirs}", raw)
             given[theirs] = word
-            sources[theirs] = f"option:{chosen}" if chosen else f"default:{self.component.use}"
+            sources[theirs] = (
+                source_of_choice(chosen) if chosen else f"default:{self.component.use}"
+            )
         node.child = Instance(
             self.ctx, component, given, trace=trace, content_path=None, paths=paths,
             sources=sources, parent=self, part=node.part.name, chain=(*self.chain, use),
@@ -2657,7 +2853,7 @@ class Instance:
         reads, or the component's own default."""
         _, value, chosen = self.pick(where, raw)
         if chosen:
-            return f"option:{chosen}"
+            return source_of_choice(chosen)
         only = _ONLY_ROLE.match(value) if isinstance(value, str) else None
         return f"role:{only.group(1)}" if only else f"default:{self.component.use}"
 
@@ -3289,7 +3485,7 @@ class Instance:
         if chosen and chosen in self.component.runs and run is not None:
             source = run.word_source
         else:
-            source = f"option:{chosen}" if chosen else f"default:{self.component.use}"
+            source = source_of_choice(chosen) if chosen else f"default:{self.component.use}"
         if not value.startswith(FAMILY):
             return value, source
         family = run.family if run is not None else self.family

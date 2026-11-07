@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A brand has only the sizes it gives, and may give some modes of an axis (#2795).
+  A modifier of its Resolver document now gives the modes it varies, the axis's
+  default among them; a value mode it leaves out takes its values at the default,
+  or its base's, so a new mode of the foundations reads no brand as broken. A
+  brand has a shared size axis only where a modifier varies it, and a brand built
+  on another has its base's sizes. `pkit visual write-code` writes a brand that
+  gives a size: the CSS writer at each size's default, reporting each token a size
+  changes as approximated, and the JSON writer with the keys of each size. A new
+  shared axis is an addition to the release's comparison, and a size a brand
+  ceases to give breaks it. A brand that gives no size reads, draws and is written
+  as before.

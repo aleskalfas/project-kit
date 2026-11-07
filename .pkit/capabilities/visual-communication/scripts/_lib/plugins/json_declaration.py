@@ -12,7 +12,8 @@ declaration of written code meets no loss, without importing the writer.
 - `kinds`: every DTCG type the document can hold, `typography` included. The command hands
   a writer only the types named here, and the writer writes the document unchanged.
 - `axis-kinds`: every kind of axis, since a combination is a key of the document whichever
-  kind of axis it lies on. The command refuses a brand with an axis of a kind not named.
+  kind of axis it lies on. So the document holds the keys of each size a brand gives
+  (DEC-021 point 8), and the command takes no axis at its default for it.
 - `prefix`: False, since a token path stays as the brand exports it. The command refuses a
   declaration of written code that names one.
 - `programs`, `services`: what it needs beyond the project's files: none.

@@ -1,0 +1,9 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-022 decides what a web page is (#2793): a page of a new top, `site`, as
+  wide as its size and as tall as its content, with its parts in the starter
+  and a tall page read in bands. Two accepted records, DEC-007 and DEC-015, say
+  what it decides of them. The record designs ahead: the top, the web parts and
+  the bands land in later pull requests, so no command, path or file format
+  changes, and no surface moves yet.

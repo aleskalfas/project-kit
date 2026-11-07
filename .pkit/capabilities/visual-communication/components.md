@@ -67,6 +67,8 @@ pkit:
         - visual-communication:DEC-012#4
         - visual-communication:DEC-016#5
         - visual-communication:DEC-017#3
+        - visual-communication:DEC-021#5
+        - visual-communication:DEC-021#7
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -227,7 +229,7 @@ An option takes a value from what the component declares, never a free number or
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
-- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. A part not drawn has zero size, at its place.
+- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
 
 The figure draws its caption only when the content gives one:
 
@@ -256,6 +258,19 @@ A text part may show a fact of the export it is drawn for, where it would show a
 ### Switches
 
 A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+
+**A switch on a size,** `{by: ":<axis>", <mode>: <value>, ...}`, chooses by the mode of a size axis. It names the axis after `:`, as a formula reads `:width`. It serves wherever a switch on an option does, and as a `when` ([Parts](#parts)). `tests/steps` could space its steps closer on a phone:
+
+```yaml
+values:
+  gap: {by: ":device", desktop: "=@space.2", phone: "=@space.1"}
+```
+
+- **What it reads.** The mode the scene's key holds, else the axis's default. So a piece that names no size draws the default's branch ([How the engine computes a scene](#how-the-engine-computes-a-scene)).
+- **The default is named, and takes what is left out.** The switch names the axis's default. A mode it leaves out takes that branch, so `tablet` above takes `desktop`'s. A new mode draws as the default does until a component names it.
+- **Only a size axis a piece can name.** The foundations declare it ([`roles.yaml`](files.md#rolesyaml)). A value axis is refused, since one scene serves each of its modes.
+- **The size is the page's.** A component reads the size the piece is drawn at, whatever room its placer gives it. It answers to its slot only by formulas on `:width`.
+- **What is refused,** at any depth: a marked name that reads no size axis a piece can name, and a branch that is no mode. So is a switch with no branch for the axis's default.
 
 **A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
 
@@ -464,6 +479,31 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
 - **Over a list of ties,** the part takes neither `row` nor `column`. Each tie lies in the part's whole frame, by default the component's, and is drawn between its ends ([Ties and connectors](#ties-and-connectors)). A tie whose component takes no ends is left out.
 
+**A list that changes direction** has two `repeat` parts over it, a `row` and a `column`, each with a `when` by a size ([Switches](#switches)). At each mode, exactly one of them says yes, so each item is drawn once. `tests/steps` could lay its steps down a phone:
+
+```yaml
+parts:
+  across:
+    repeat: steps
+    when: {by: ":device", desktop: true, phone: false}
+    draw: tests/card
+    width: "=:width"
+    row: {gap: "=gap", sizes: equal, align-items: stretch}
+  down:
+    repeat: steps
+    when: {by: ":device", desktop: false, phone: true}
+    draw: tests/card
+    width: "=:width"
+    column: {gap: "=gap"}
+preferred:
+  height: "=across.height + down.height"
+```
+
+- **At `tablet`,** which neither part names, both take their `desktop` branch, so the steps lie in a row.
+- **What it costs.** No option names an item of the list, as of any list two parts repeat over ([Options](#options)). An item's trace id names the part that draws it, so it differs by size ([Trace ids](#trace-ids)). A formula that reads the list's frame reads both parts, and the hidden one has zero size.
+- **An item a size hides** is missing at that size. A formula that reads it fails there, and so does a tie that ends at it ([Ties and connectors](#ties-and-connectors)). Content drawn at one size and not at another is stated as a fact (*checks*).
+- **What is refused** when the component is read: two such parts whose `when`s say yes or no, unless exactly one says yes at each mode.
+
 ### Ties and connectors
 
 A *tie* is an item that its pattern draws as a connector between two other items, its *ends* (DEC-011 point 1). The pattern declares the list of ties and its two end fields under `lists`, and draws it with a `repeat` part of its own ([Lists](#lists)). Content names each end by a key path ([content files](files.md#content-files)).
@@ -522,6 +562,7 @@ The *scene* is every element's final frame, values and source, for one language 
 
 - **A size axis** is an axis of kind `size` ([`roles.yaml`](files.md#rolesyaml)). A scene's key names the modes of the size axes alone ([Keys of combinations](files.md#keys-of-combinations)).
 - **Each scene reads each role at its key.** So a frame, a width or a text's lines may differ from one size to another.
+- **And each switch on a size at its key.** So a part drawn at one size may be hidden at another, and a list may change direction ([Switches](#switches)).
 - **A piece drawn only in each size axis's default** has one scene for each language, at the key `default`.
 
 A scene is computed, never committed. Under one release of the capability, the same files and facts give the same scene on every machine.
@@ -607,6 +648,7 @@ Each drawn property names its source in `sources`:
 - **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes. A value an item takes from its list's component field names that field, such as `content:body.kind.tone`. A run of a list of runs is named by its place among its field's runs, as an item with no id: `content:body.say#2`. The run's style comes from `<its source>.style` where it names one, and its family from `<its source>.concept`.
 - **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, whether a stand-in or real text fills it ([The facts of an export](#the-facts-of-an-export)).
 - **`option:<name>`:** a value a switch on that option chose.
+- **`size:<axis>`:** a value a switch on that size axis chose, such as `size:device`.
 - **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes.
 - **`engine`:** a value the engine computed, such as a text's measured height or an item's frame, or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
