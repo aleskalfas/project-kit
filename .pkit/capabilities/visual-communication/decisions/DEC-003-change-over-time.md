@@ -94,7 +94,7 @@ A piece's lock names one version of each library it uses, those they build on in
 - **Released versions only.** A final or published piece locks only released versions.
 - **One version of each library.** Where the libraries a piece uses build on two majors of one library, no lock fits them all, and the piece cannot use them together.
 - **No key claimed twice on an item** (refinement per [visual-communication:DEC-010-list-item-fields]). Versions under which an item of a piece carries a key that both its component and its list declare do not fit together for that piece. As for an end, only a clash the item does not show under the piece's lock counts.
-- **No end of a tie lost** (refinement per [visual-communication:DEC-011-tie-ends]). Versions under which an end of a piece's tie, found under its lock, would not be found, its item drawn other than once or off the tie's page, do not fit together for that piece.
+- **No end of a tie lost** (refinement per [visual-communication:DEC-011-tie-ends] and [visual-communication:DEC-021-size-and-shape]). Versions under which an end of a piece's tie, found under its lock at any combination of sizes the piece names, would not be found there, its item drawn other than once or off the tie's page, do not fit together for that piece.
 
 ### 9. The severities of these checks
 
