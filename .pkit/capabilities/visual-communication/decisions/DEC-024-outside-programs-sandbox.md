@@ -1,7 +1,7 @@
 ---
 id: DEC-024
 title: An outside program keeps its own sandbox on, and leaves the session's sandbox only through a tool agents cannot change
-status: proposed
+status: accepted
 date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
