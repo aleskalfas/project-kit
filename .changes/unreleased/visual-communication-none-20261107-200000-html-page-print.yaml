@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-026 is proposed: a printed HTML page file puts each page whole on a
+  sheet of its own, every page at one scale, on the reader's sheet. The file
+  asks to print its pages in their own colours and picks no mode for print
+  (#2824). The record designs ahead: no command, file, flag or format
+  changes, so no surface moves.
