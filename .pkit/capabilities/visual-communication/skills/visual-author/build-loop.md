@@ -41,7 +41,7 @@ A finding in a library version that the project does not correct asks for attent
 
 ## 3. Read
 
-`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`. It moves no lock, keeps no finding, and replaces what an earlier run left there ([The viewing step](../../outputs.md#the-viewing-step)).
+`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no finding, and replaces what an earlier run left there ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **Which pages to draw:**
 
@@ -58,7 +58,8 @@ A finding in a library version that the project does not correct asks for attent
 | `dropped` | The tool drew nothing of a text or a run. | Read it as a part missing from the page, even where the image looks whole. Find the element by its frame, and mend what lost it. If you cannot, report it. |
 | `losses` | What the renderer left out, accepted or not. | Treat one the piece does not accept as `loss` in step 4. |
 | `drawn-otherwise` | A run measured in more than one family, which the tool may set in one of them. | Trust the image less on that line. |
-| `on-white`, on an image | The page draws no ground of its own, so its white is not the piece's. | Judge a text over nothing knowing this. |
+| `on-white`, on an image | Through the SVG renderer, the page draws no ground of its own, so its white is not the piece's. | Judge a text over nothing knowing this. |
+| `on-browser-ground`, on an image | Through the HTML renderer, the page draws no ground of its own. It lies on the browser's own ground in the mode drawn, which differs between browsers. | Judge a text over nothing knowing this, in each mode. No check reads that ground. |
 
 **What an image cannot prove** ([visual-communication:DEC-015-viewing-step-and-reviewer] point 6):
 

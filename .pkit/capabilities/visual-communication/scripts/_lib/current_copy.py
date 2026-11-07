@@ -78,7 +78,7 @@ _A_FOLDER = r"[^/.\\][^/\\]*(/[^/.\\][^/\\]*)*"
 #: A file's path in that entry, the pattern the schema of the record of exports holds.
 PATH = (
     rf"^{_A_FOLDER}/{_A_NAME}\.{_A_LANGUAGE}\.(default|{_A_MODE}(\+{_A_MODE})*)"
-    r"((\.[1-9][0-9]*)?\.svg|\.pdf)$"
+    r"((\.[1-9][0-9]*)?\.svg|\.pdf|\.html)$"
 )
 
 _PATH = re.compile(PATH)
