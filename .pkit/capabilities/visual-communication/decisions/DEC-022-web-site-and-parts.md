@@ -1,7 +1,7 @@
 ---
 id: DEC-022
 title: A web page is a page of a site, as wide as its size and as tall as its content
-status: proposed
+status: accepted
 date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
