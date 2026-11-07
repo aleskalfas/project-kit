@@ -328,7 +328,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
 - **Exits** 0 when it drew, whatever the report says. It exits 1 when it refused, with its renderer's folder left as it was, or when a write failed ([Commands](#commands)). It exits 2 on a usage error. It exits 3 when the browser stopped, leaving the page files and a report, and no image ([When the browser stops](outputs.md#when-the-browser-stops)).
-- **Names the ways on** where it stops, in this order: a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages.
+- **Names the ways on** where it stops ([When the browser stops](outputs.md#when-the-browser-stops)): a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages.
 
 ### `pkit visual pages <piece>`
 
