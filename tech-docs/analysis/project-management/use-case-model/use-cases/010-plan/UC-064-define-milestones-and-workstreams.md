@@ -27,6 +27,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/close-milestone.py
         - .pkit/capabilities/project-management/scripts/set-pool.py
         - .pkit/capabilities/project-management/scripts/_lib/milestone.py
+        - .pkit/capabilities/project-management/scripts/_lib/pools.py
         - .pkit/capabilities/project-management/scripts/edit-issue.py
         - .pkit/capabilities/project-management/scripts/add-workstream.py
         - .pkit/capabilities/project-management/scripts/edit-workstream.py
@@ -47,6 +48,7 @@ pkit:
         - project-management:DEC-061#2
         - project-management:DEC-061#6
         - project-management:DEC-061#7
+        - project-management:DEC-061#9
         - COR-017
         - COR-021
         - COR-039
