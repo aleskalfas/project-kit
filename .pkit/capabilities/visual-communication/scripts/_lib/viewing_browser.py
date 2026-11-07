@@ -1,5 +1,5 @@
 """The viewing step's browser: a page file as images, and what the browser dropped
-(visual-communication DEC-020 points 6 to 9, DEC-015 point 2).
+(visual-communication DEC-020 points 6 to 9, DEC-015 point 2, DEC-024 points 1 and 4).
 
 This module alone calls the browser. It reads the HTML renderer's page files. It stands on the
 standard library and on the marks the renderer's declaration holds, so every other format
@@ -31,9 +31,11 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   `CLOSE_SECONDS`. A browser that hangs counts as one that stopped, at its close too, and is
   ended: its own process group, which only its start made, and no other process.
 - **A stop.** `Stopped` says where `find` looked, or the program started and what that said.
-  It gives no image: a drawing is all its pages or none.
-- **Its own sandbox.** No flag here touches it, until what the permission model adds for an
-  outside program is settled (#2775).
+  It gives no image: a drawing is all its pages or none. From those words it tells a sandbox
+  that stopped the browser apart from a browser run as root, which refuses to start with its
+  own sandbox on.
+- **Its own sandbox.** No flag here turns off or weakens the sandbox of any of the browser's
+  processes, merges them into one, or lets a page read past its own file (`FLAGS`).
 - **Its profile** lies in a throwaway folder under the one the caller names, removed even on
   a stop, with the planted page and what the browser said.
 
@@ -84,7 +86,8 @@ PLACES: Mapping[str, tuple[str, ...]] = {
 }
 NAMES = ("google-chrome-stable", "google-chrome", "chromium", "chromium-browser")
 
-#: What each start asks of the browser, beside its profile, its window and its scale.
+#: What each start asks of the browser, beside its profile, its window and its scale. None
+#: touches its own sandbox (DEC-024 point 1).
 FLAGS = (
     "--headless",
     "--remote-debugging-pipe",
@@ -119,6 +122,10 @@ SAID_LENGTH = 2000
 #: What a browser says where a sandbox stopped it: its own that could not start, or one around
 #: it that refused the local socket every start binds.
 SANDBOX = re.compile(r"sandbox|SingletonSocket: Operation not permitted", re.IGNORECASE)
+
+#: What Chrome says where it runs as root, and so refuses to start with its own sandbox on, as
+#: a container may run it. Its words name its sandbox, so they are read before `SANDBOX`.
+AS_ROOT = re.compile(r"Running as root without --no-sandbox is not supported")
 
 #: What reading an answer of another form than the protocol's raises.
 UNREADABLE = (AttributeError, KeyError, IndexError, TypeError, ValueError, struct.error)
@@ -202,7 +209,8 @@ ALONE_MARK = "data-pkit-alone"
 
 class Stopped(Exception):
     """What stopped a drawing: `what`, where `find` looked, or the program started and what
-    it said. `sandbox` is whether a sandbox stopped it, as far as those words tell."""
+    it said. As far as those words tell, `as_root` is whether the browser ran as root and so
+    refused its own sandbox, and `sandbox` whether a sandbox stopped it otherwise."""
 
     def __init__(
         self, what: str, *, looked: Sequence[str] = (), program: str = "", said: str = ""
@@ -212,7 +220,8 @@ class Stopped(Exception):
         self.looked = tuple(looked)
         self.program = program
         self.said = said
-        self.sandbox = bool(SANDBOX.search(said))
+        self.as_root = bool(AS_ROOT.search(said))
+        self.sandbox = not self.as_root and bool(SANDBOX.search(said))
 
     def __str__(self) -> str:
         parts = [self.what]

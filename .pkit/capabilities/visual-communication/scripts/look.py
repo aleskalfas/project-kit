@@ -47,7 +47,8 @@ Exit codes:
   2  usage error
   3  stopped: no browser ran, or one stopped part way, or its first read failed. The HTML
      renderer's folder holds the page files and a report that says what stopped it, and no
-     image
+     image. It names the ways on: a build pipeline's drawings, the same look run by a person
+     outside any sandbox, and the SVG renderer's pages (DEC-024 point 4)
 """
 
 from __future__ import annotations
@@ -177,8 +178,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
 
 
 def _print_stop(folder: str, report: Mapping[str, Any]) -> None:
-    """A stop, on standard error: what stopped the browser, what the folder holds, and how to
-    go on (DEC-020 point 8)."""
+    """A stop, on standard error: what stopped the browser, what the folder holds, the ways on
+    in their order, and what an agent does (DEC-020 point 8, DEC-024 points 4 and 6)."""
     stop = report["stopped"]
     said = [stop["what"]]
     if stop["looked"]:
@@ -188,17 +189,22 @@ def _print_stop(folder: str, report: Mapping[str, Any]) -> None:
     if stop["said"]:
         said.append(f"it said: {stop['said']}")
     print(f"stopped: {'; '.join(said)}", file=sys.stderr)
-    if stop["sandbox"]:
+    if stop["as-root"]:
         print(
-            "stopped: a sandbox stopped the browser; draw the pages in a session outside it",
+            "stopped: the browser runs as root, where it refuses to start with its own sandbox "
+            "on, and the step never turns that sandbox off",
             file=sys.stderr,
         )
+    elif stop["sandbox"]:
+        print("stopped: a sandbox stopped the browser", file=sys.stderr)
     print(
         f"stopped: no image; the page files and {viewing.REPORT} lie in {folder}",
         file=sys.stderr,
     )
     _print_lock_and_renderer(report, sys.stderr)
-    print(f"go on: {stop['go-on']}", file=sys.stderr)
+    for way in stop["go-on"]:
+        print(f"go on: {way}", file=sys.stderr)
+    print(f"for an agent: {stop['for-an-agent']}", file=sys.stderr)
 
 
 def _print_lock_and_renderer(report: Mapping[str, Any], to: Any = None) -> None:
