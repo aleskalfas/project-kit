@@ -123,8 +123,6 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
     lock = report["lock"]
     print(f"look: {len(report['images'])} image(s) in {folder}")
     print(f"lock: {', '.join(f'{library} {lock[library]}' for library in sorted(lock))}")
-    if stand_ins:
-        print(f"look: {stand_ins}")
     for image in report["images"]:
         if image["on-white"]:
             print(f"on white: {_at(image)} draws no ground of its own")
@@ -143,6 +141,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
             f"drawn otherwise: {_at(each)}: `{each['element']}` is measured in {families}, and "
             f"the tool may set the whole run on a line in one of them"
         )
+    if stand_ins:
+        print(f"look: {stand_ins}")
     print(f"report: {folder}{viewing.REPORT}")
 
 
