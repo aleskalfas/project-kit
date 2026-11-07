@@ -15,6 +15,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/take-up.py
+        - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
@@ -41,6 +42,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
         - .pkit/capabilities/visual-communication/scripts/_lib/taking_up.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/pruning.py
         - .pkit/capabilities/visual-communication/scripts/_lib/rendering.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
@@ -127,6 +129,9 @@ pkit:
         - visual-communication:DEC-019#4
         - visual-communication:DEC-019#6
         - visual-communication:DEC-019#7
+        - visual-communication:DEC-019#9
+        - visual-communication:DEC-019#10
+        - visual-communication:DEC-019#11
         - visual-communication:DEC-021#2
 ---
 
@@ -181,11 +186,12 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). A version leaves the library folder by a person's hand, or through `pkit visual prune`, which removes only a version that lies behind ([A version that lies behind](#a-version-that-lies-behind)). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
-| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies, and lists as released each copy it replaces with a released version; `pkit visual release` lists as released each version it releases |
+| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies, and lists as released each copy it replaces with a released version; `pkit visual release` lists as released each version it releases; `pkit visual prune` takes out the entry of each version it removes |
+| `libraries/<library>/<version>/`, a version's folder | each file's own | the library's owner; `pkit visual add` copies a version the capability ships, whole; `pkit visual prune` removes a version that lies behind, whole |
 | `libraries/<library>/<version>/library.yaml` | `library` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships; `pkit visual release` writes the release a version needs |
 | `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
@@ -204,6 +210,34 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `fonts/<file>` | none | a person, who commits the font |
 
 The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, a current copy, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
+
+### A version that lies behind
+
+`pkit visual prune` removes each library version that lies behind, with its entry in the list (DEC-019 point 9). A version lies behind where all of these hold:
+
+- **No lock names it.** That is a piece's lock in any state, written code's, or the lock of the version that wrote a piece's current copy (*The current copy* in *What is made from a piece*).
+- **No lock that moves can still reach it.** A draft's lock moves, pinned or not, and so do a published piece's and written code's. Each of them that names the version's major names a newer version, or none names that major.
+- **A final piece's lock** never moves, and an export's is only read. So each keeps only what it names.
+- **A newer version of its major serves in its place.** The installed capability reads it, and it is released where the version is.
+- **It holds no unreleased work.** It is no version of the project's own library not yet released.
+
+So the command spares each of these, though no lock names it:
+
+- a version the list does not name, since it cannot tell what the version holds;
+- a version of the project's own not yet released. A copy of a shipped version not yet released goes where it lies behind;
+- a version above a lock that moves, in that lock's major, since the lock may still move to it;
+- a library's last version, since nothing newer stands. Taking a library out of the project is a person's act;
+- the newest version of each major that the installed capability reads. A piece's first lock takes it, and so does a library whose `builds-on` names that major ([`library.yaml`](#libraryyaml));
+- the newest release of each major, which the library's next release is compared with ([What a release compares](#what-a-release-compares)).
+
+So in a major that no lock that moves names, only the newest version stays. The command reads no further:
+
+- **A version only a kept export names goes.** The command names each such export. Marking one final leaves a finding until the version is back ([The lock](#the-lock)).
+- **The working tree alone.** A lock on another branch that names a removed version fails the check once merged. Restoring the version mends it.
+- **No version by name.** To remove a version it spares, take out its folder and its entry by hand. The check then reads what that leaves.
+- **A way back.** A version removed comes back from version control, once committed. A shipped one comes back through `pkit visual add` too.
+
+It removes each folder whole, then takes each entry out of the list as text ([The list, `libraries.yaml`](#the-list-librariesyaml)). It stages nothing, so the removal is a diff to review. Land it as a change of its own, after any proposed move of a lock lands, since a look back may draw its before from a version it removes.
 
 ### The clone's local folder
 
@@ -443,18 +477,20 @@ libraries:
 - **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
-Two commands write the list:
+Three commands write the list:
 
 - **`pkit visual add`** lists each shipped version it copies. A released version takes `released: true` and the hash the library's record keeps, copied as it is. The version being built takes `released: false`, with no hash. A copy not yet released that the command replaces with a released version is listed released, with its hash. Where the location holds no list, the command writes one whole, under a comment that says what the file is.
 - **`pkit visual release`** lists a version of the project's own library released: `released: true`, with the version's `hash`.
+- **`pkit visual prune`** takes out the entry of each version it removes ([A version that lies behind](#a-version-that-lies-behind)).
 
 Where the list is there already, each command writes it as text:
 
 - **A new entry goes last:** a library the list does not name yet under `libraries`, a new version under its library's `versions`. Where that mapping's entries lie on the lines below its key, the entry is written as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, the entry is written in flow before the closing brace.
 - **An entry listed released is written again in its place,** in the style it had. It stays on its own lines, or in flow where the list writes it so, as in `{1.0.0: {released: false}}`. A comment on its key's line stays.
+- **An entry taken out loses its lines:** the line that opens it, and each line below that its value takes, with the comments among them. Its library's `versions` must be written as a block mapping, one version on a line of its own.
 - **Every other byte of the file stays:** comments, order, line endings and a byte-order mark.
-- **Where the result would not read back as the list with that entry,** the command refuses: write `libraries`, and the library's `versions`, as block mappings.
-- **Where a key on the way is written in quotes,** such as `'1.0.0':`, the refusal names that key instead, to be written without them. The keys on the way are `libraries`, the library's name, `versions`, and the version of an entry listed released.
+- **Where the result would not read back as the list with that entry, or without it,** the command refuses: write `libraries`, and the library's `versions`, as block mappings.
+- **Where a key on the way is written in quotes,** such as `'1.0.0':`, the refusal names that key instead, to be written without them. The keys on the way are `libraries`, the library's name, `versions`, and the version of an entry listed released or taken out.
 
 ### `library.yaml`
 

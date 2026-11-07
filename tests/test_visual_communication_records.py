@@ -1,7 +1,7 @@
 """The records the commands keep, each read and written one way (`_lib/records.py`): a
 record's value, read with one error; a record written whole under its comment, its time
-quoted; one key written into a file, and one taken out of a file's top, every other byte
-kept."""
+quoted; one key written into a file, and one entry taken out of a file, at its top or below
+it, every other byte kept."""
 
 from __future__ import annotations
 
@@ -236,3 +236,58 @@ def test_an_entry_the_top_does_not_hold_or_the_text_cannot_lose_is_refused() -> 
         records.without_entry("{state: final, copy-place: docs/img}\n", "copy-place")
     with pytest.raises(records.RecordError, match=r"^write `copy-place:` at the top of the file"):
         records.without_entry("copy-place: &place docs/img\nshown: *place\n", "copy-place")
+
+
+# --- one entry taken out of a mapping below the top ---------------------------------------------
+
+LIST = (
+    "# The list.\n"
+    "libraries:\n"
+    "  tests:\n"
+    "    source: {kind: project}\n"
+    "    versions:\n"
+    "      1.0.0:  # the first\n"
+    "        released: true\n"
+    "        hash: {form: 1}\n"
+    "      # the second, kept\n"
+    "      1.1.0: {released: true}\n"
+    "      1.2.0:\n"
+    "        released: false\n"
+    "  foundations:\n"
+    "    versions: {1.0.0: {released: false}}\n"
+)
+VERSIONS = ["libraries", "tests", "versions"]
+
+
+def test_an_entry_below_the_top_is_taken_out_with_its_lines_every_other_byte_kept() -> None:
+    assert records.without_entry(LIST, "1.0.0", VERSIONS, each="version") == LIST.replace(
+        "      1.0.0:  # the first\n        released: true\n        hash: {form: 1}\n", ""
+    )
+    assert records.without_entry(LIST, "1.1.0", VERSIONS, each="version") == LIST.replace(
+        "      1.1.0: {released: true}\n", ""
+    )
+    crlf = records.BOM + LIST.replace("\n", "\r\n")
+    assert records.without_entry(crlf, "1.2.0", VERSIONS, each="version") == crlf.replace(
+        "      1.2.0:\r\n        released: false\r\n", ""
+    )
+
+
+def test_an_entry_below_the_top_that_cannot_go_as_text_is_refused() -> None:
+    with pytest.raises(records.RecordError, match=r"^`libraries.tests.versions` holds no `2.0.0`$"):
+        records.without_entry(LIST, "2.0.0", VERSIONS, each="version")
+    with pytest.raises(
+        records.RecordError,
+        match=r"^`libraries.foundations.versions` holds no version but `1.0.0`, so it keeps it$",
+    ):
+        records.without_entry(
+            LIST, "1.0.0", ["libraries", "foundations", "versions"], each="version"
+        )
+    flow = "v: {1.0.0: {released: false}, 1.1.0: {released: false}}\n"
+    with pytest.raises(
+        records.RecordError, match=r"^write `v` as a block mapping, one version an entry$"
+    ):
+        records.without_entry(flow, "1.0.0", ["v"], each="version")
+    with pytest.raises(records.RecordError, match=r"^write the key `1\.0\.0` without quotes$"):
+        records.without_entry(
+            "v:\n  '1.0.0': {released: false}\n  1.1.0: {}\n", "1.0.0", ["v"], each="version"
+        )
