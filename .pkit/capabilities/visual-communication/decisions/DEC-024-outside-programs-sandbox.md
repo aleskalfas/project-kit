@@ -1,5 +1,5 @@
 ---
-id: DEC-022
+id: DEC-024
 title: An outside program keeps its own sandbox, and the capability asks the permission model for no grant and no way out
 status: proposed
 date: 2026-11-07
