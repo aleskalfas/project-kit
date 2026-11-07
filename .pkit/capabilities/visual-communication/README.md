@@ -21,6 +21,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
+        - .pkit/capabilities/visual-communication/scripts/outdated.py
         - .pkit/capabilities/visual-communication/scripts/take-up.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
@@ -51,6 +52,7 @@ pkit:
         - visual-communication:DEC-019#1
         - visual-communication:DEC-019#5
         - visual-communication:DEC-019#7
+        - visual-communication:DEC-019#8
         - COR-017
         - COR-031
         - COR-054#3
@@ -350,6 +352,18 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 - **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.
 - **Refuses** what the search refuses, a fingerprint it cannot read, and whatever refuses an export but a lock that differs ([What refuses an export](outputs.md#what-refuses-an-export)).
 - **Exits** 0 when it proposed the move, found nothing to move, or ended a dry run; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
+
+### `pkit visual outdated`
+
+Lists what each lock a person moves could still take, across majors ([The lock](files.md#the-lock)).
+
+- **Takes** each lock a person moves: a published piece's, a pinned draft's and written code's. An unpinned draft's render moves its own lock, and a final piece's never moves, so both are left out.
+- **Names,** for each library a lock names, the version the lock names and the newest that fits within its major. A published piece's lock takes released versions alone, and a lock a hand moves takes every version.
+- **Names each other newer version,** with why a move would not take it: a later major, a clash, a lost end, or a version the installed capability cannot read.
+- **Says** what moves each lock that is behind: [`pkit visual upgrade`](#pkit-visual-upgrade-piece) for a published piece, and a hand for a pinned draft or written code.
+- **Says so** where no lock is behind, and names each lock it could not judge, with why.
+- **Writes** nothing, and needs no network.
+- **Exits** 0 when it listed the locks, whatever is behind; 1 when the location cannot be read ([Commands](#commands)).
 
 ### `pkit visual write-code <name>`
 

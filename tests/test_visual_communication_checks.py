@@ -42,6 +42,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE_FOLDER,
     TESTS,
     add_device,
+    changed_tests,
     drawing_project,
     flipping,
     list_drawing_libraries,
@@ -467,6 +468,102 @@ def test_a_version_the_project_does_not_list_is_not_yet_released(tmp_path: Path)
     locked(root, extra_library(root, released=True))
     list_drawing_libraries(root, released=True)
     assert [code for code, _, _ in lock_found(root)] == ["lock-not-released"]
+
+
+# --- a published lock behind a newer released version (DEC-003 point 9) -------------------------
+
+OUTDATED = "`pkit visual outdated` says whether a move takes it, and why not"
+WITHIN = (
+    "the published piece `flow` locks tests@1.0.0, behind tests@1.1.0, a released version of "
+    "its major",
+    f"run `pkit visual upgrade flow`, which proposes the move; {OUTDATED}",
+)
+LATER = (
+    "the published piece `flow` locks tests@1.0.0, behind tests@2.0.0, a released version of a "
+    "later major",
+    f"a later major is taken on purpose, by naming it: `pkit visual upgrade flow tests@2.0.0`; "
+    f"{OUTDATED}",
+)
+
+
+def with_tests_at(root: Path, *versions: str, released: bool = True, needs: str = "") -> None:
+    """The `tests` library at each of `versions` too, every version listed released with its
+    hash, but each of `versions` where `released` is false; `needs` is the release each needs,
+    where given."""
+    for version in versions:
+        library = changed_tests(root / "visual/libraries/tests" / version, version) / "library.yaml"
+        if needs:
+            text = library.read_text(encoding="utf-8")
+            library.write_text(text.replace("needs-release: 0.1.0", f"needs-release: {needs}"))
+    list_drawing_libraries(root, released=True)
+    if not released:
+        path = root / "visual/libraries/libraries.yaml"
+        data = reading.read_yaml(path)
+        for version in versions:
+            data["libraries"]["tests"]["versions"][version] = {"released": False}
+        write(path, yaml_text(data))
+
+
+def behind(root: Path) -> list[tuple[str, str, str, str, str]]:
+    """Each fact the check of the piece states that its lock is behind: the label, the level,
+    the file, the message and the fix."""
+    report = checks.check(root, only=PIECE)
+    return [
+        (f.code, level, f.file, f.message, f.fix)
+        for f, level in report.judged
+        if f.code == checks.LOCK_BEHIND
+    ]
+
+
+@pytest.mark.parametrize(
+    ("versions", "said"),
+    [
+        pytest.param(("1.1.0",), [WITHIN], id="its-major"),
+        pytest.param(("2.0.0",), [LATER], id="a-later-major"),
+        pytest.param(("1.0.1", "1.1.0", "2.0.0"), [WITHIN, LATER], id="the-newest-of-each"),
+    ],
+)
+def test_a_published_lock_behind_states_a_fact_naming_the_move_and_fails_nothing(
+    tmp_path: Path, versions: tuple[str, ...], said: list[tuple[str, str]]
+) -> None:
+    root = drawing_project(tmp_path, state="published", picture=False)
+    with_tests_at(root, *versions)
+    assert behind(root) == [
+        (checks.LOCK_BEHIND, "fact", PIECE_FILE, message, fix) for message, fix in said
+    ]
+    assert [
+        f.where for f, _ in checks.check(root, only=PIECE).judged if f.code == checks.LOCK_BEHIND
+    ] == ["lock"] * len(said)
+
+
+@pytest.mark.parametrize(
+    ("fields", "versions", "given"),
+    [
+        pytest.param({"state": "published"}, (), {}, id="at-the-newest"),
+        pytest.param({"state": "published"}, ("1.1.0",), {"released": False}, id="not-released"),
+        pytest.param({"state": "published"}, ("1.1.0",), {"needs": "9.0.0"}, id="unreadable"),
+        pytest.param({}, ("1.1.0", "2.0.0"), {}, id="draft"),
+        pytest.param({"pinned": True}, ("1.1.0", "2.0.0"), {}, id="pinned"),
+        pytest.param({"state": "final"}, ("1.1.0", "2.0.0"), {}, id="final"),
+    ],
+)
+def test_no_fact_of_a_lock_behind_where_none_is_or_the_state_moves_its_lock_otherwise(
+    tmp_path: Path, fields: dict[str, Any], versions: tuple[str, ...], given: dict[str, Any]
+) -> None:
+    root = drawing_project(tmp_path, picture=False, **fields)
+    with_tests_at(root, *versions, **given)
+    assert behind(root) == []
+
+
+def test_the_fact_of_a_lock_behind_stands_beside_a_lock_finding(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, state="published", picture=False)
+    with_tests_at(root, "1.1.0")
+    data = reading.read_yaml(root / "visual/libraries/libraries.yaml")
+    data["libraries"]["test-brand"]["versions"]["1.0.0"] = {"released": False}
+    write(root / "visual/libraries/libraries.yaml", yaml_text(data))
+    found = [(f.code, level) for f, level in checks.check(root, only=PIECE).judged]
+    assert ("lock-not-released", "fails") in found
+    assert (checks.LOCK_BEHIND, "fact") in found
 
 
 # --- a final piece ------------------------------------------------------------------------------
