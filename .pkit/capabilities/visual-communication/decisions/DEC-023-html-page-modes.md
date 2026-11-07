@@ -1,7 +1,7 @@
 ---
 id: DEC-023
 title: One HTML file holds a page's modes at its size, and follows the reader's system
-status: proposed
+status: accepted
 date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
