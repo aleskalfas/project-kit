@@ -1,0 +1,183 @@
+answers:
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T224232Z-29552d89.yaml
+    revalidated:
+      at: 2026-11-06T01:35:02Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-06T01:35:12Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch two more answers came to stand beside this change's, made apart from each other. 20261105T224140Z-08730f0d found that json code gets the code findings css code gets, and that code.py's refusal of a prefix reaches the check as code-unchecked, whose row says to mend the declaration. 20261106T002156Z-812bc5cd found that DEC-002 point 7, DEC-003 point 9, DEC-005 point 13 and DEC-006 point 8 gained what DEC-017 decides of a final or published piece. None of that is built, and format 1's state takes draft alone, so 'at each render' and 'The check reports no finding on exports' stay true of what the capability does. Together they ask nothing of each other, since written code is judged by its declaration, and DEC-017 speaks of pieces and names no written code. Both keep the viewing step as it was: it keeps no finding, and the check reads nothing it writes. Nor do they reach what this change's earlier answer judged. The copy findings read a copy by its source on the list, so neutral falls under them. Copy-not-shipped's row covers a number the capability ships and has not released, and font-missing reaches neutral's fonts as any brand's. A copy replaced under a named lock changes files of a version the lock names, so the findings key stops verifying and the scenes are computed again. The stand-ins leave the findings key, the input identities and the input sets true. Here the CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. So only an error still fails pkit validate, and a run still bounds each member."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+    revalidated:
+      at: 2026-11-06T01:35:17Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch three more answers came to stand beside this change's, made apart from each other, each on its own passage. 20261105T223507Z-f2a91f5d found the starter's entry true: it names card as a block and links the manual, whose new sentences on a top bar and on space.2 change no summary here. 20261105T224140Z-08730f0d updated the plugins' entry to four plugins, with the JSON code writer and a link to its section, and anchored that section. 20261105T224232Z-29552d89 found the pkit visual look section true: a line's spans now go to the tool apart and one sentence under drawn-otherwise is reworded, and the section states neither. None reaches another's passage, so all three stand together. This README also says graphic-design-reviewer is the capability's agent, deployed by the adapter as any agent is, and links the agents reference's Deploy mechanics for it. Here that section becomes a reference, in numbered steps and lists, and keeps its address. It still has the deploy list each capability's agents folder beside core's and the project's, resolve a source's front matter through the overlay, and write the copy to .claude/agents. The reviewer's definition changed one sentence on drawn-otherwise, still names no overlay category, and pkit agents reports it deployable. Its Dispatching item now links the adapter's Harness support, and says what it said. The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. So what this README says of the reviewer's deployment, and of the check as a member of pkit validate, holds."
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T235651Z-829c1f38.yaml
+    revalidated:
+      at: 2026-11-06T01:35:20Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's friction sections gained the whole-and-parts finding and the parts key, and 20261105T215309Z-ce6c0935 found that this page's summary of the check lists no kinds they make untrue, and that the block's schema is untouched. Here the CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This page says pkit validate runs each schema through a member of its registry, naming the configuration, packages, rule-sets, connections and friction members, and those rows are as they were. The two edits sit in different sections of the reference, and neither reaches what the other judged, so the page holds against both.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+    revalidated:
+      at: 2026-11-06T01:35:25Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's validate section and its friction pointers came to name the process and schemas pages. Its friction sections and COR-050 point 7 came to change the over-broad warning and what an excluded artefact shows. The documents the agent reads gained bar, share and parts on a finding, and a whole-and-parts finding that owes nothing, and stayed at version 1, so it reads them by the same keys, as 20261105T224638Z-004832b8 found. The validation reference's What it reports gained a bullet on links and citations read, which this page does not state. DEC-056 changed only citations, so what the agent is told of a run the project granted, that it only proposes friction fixes, stands beside those findings, which touch neither. Here the adapter's section on deploy-agents.sh changes one pointer, to the agents reference's storyboards.md, Frontmatter declaration. This page says that pkit sync deploys the living-docs agent and that the adapter's deploy-agents.sh writes .claude/agents/living-docs.md, and both still hold. The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. That row and the friction sections sit apart, so neither reaches what the other judged, and what the agent reads and proposes is as it was.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+    revalidated:
+      at: 2026-11-06T01:35:29Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. The answers this replaces were made apart, on changes that touch different things. COR-050 point 7 and the CLI sections this README rests on changed the over-broad warning and what an excluded artefact shows, and gained the whole-and-parts finding, which leaves a page's state alone. The documents it reads gained bar, share and parts and stayed at version 1, so the documentation check reads its stale pages and surface as before, as 20261105T224638Z-004832b8 found. DEC-053 point 2 changed only where a page's answers are read, and DEC-056 only two citations, so a page's answer in the diff still meets its obligation, as the README's doc-check and fixers contributions say. Those findings touch neither. Here the CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before, so pkit validate still reports an anchor under friction and names the commit a member read. That row and the friction sections sit apart, so neither reaches what the other judged.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+    revalidated:
+      at: 2026-11-06T01:35:35Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch the CLI reference's friction check changed only its two pointers for a place's links and derived links, and COR-050 point 7 added only a warning of over-broad anchors, so what the change check asks and how it reads a link are as they were. A pull request's description came to carry no list of the answers (project-management DEC-065), docs-reviewer came to read each sentence from the sentences' section alone, and this README was updated to say so and to say what the person is told. review-work refusing an updated document with no sentence, land-work's holds on a missing sentence and on one no reviewer checks, its stops on a head behind its base, and DEC-064's rule on when a branch takes in its base leave that check, an authorisation's cover and the links as written. Taken with the warning, they leave the answers the engineer writes for its change, and those it leaves to a person, as the README says. Two answers landed since, made apart. 20261105T213757Z-6263a527 judged the section this README links gaining the checks that start the review: land-work still runs the same review as one of its steps, through review-pr at the pinned head. 20261105T225036Z-926c13c5 judged DEC-055 point 3's edit, that the --force override of review-work's refusal leaves an audit comment: this README cites that point for who checks the answers and what the person is told, and names no --force. One moves when the review starts, and the other what an override leaves on the pull request. So neither reaches what the other judged, and the README holds against both. Here the agents README becomes a reference. Its Adopter overlay still has the project's overlay name each category's paths, its Diagnosing + repairing the overlay still has reconcile append a commented stub for an optional category, its Body conventions still keep a reviewer's working files in the workspace, and The rule-set reviewer still stands in the stack. This README also says an agent's text keeps its placeholder, as the reference now says, so it holds."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+    revalidated:
+      at: 2026-11-06T01:35:40Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch ACT-developer and ACT-merge-authoriser changed only their wording and citations. UC-001, UC-080 and UC-081 came to leave a finding marked for a person to the merge authoriser, to say a blocking verdict withholds approval, and to name the link target and the revisit entry by the core's terms, as this guide teaches the findings. UC-001 also lost variant 2a's aside that project-kit names no conventions corpus, which the guide never said. A pull request's description came to carry no list of the answers (project-management DEC-065), UC-080 and docs-reviewer came to read each sentence as the commands read it, and this guide was updated to say what the landing command shows and that show-pr's answers field prints it. review-work refusing an updated document with no sentence, land-work's holds and its stops on a head behind its base, DEC-064's rule on when a branch takes in its base, and COR-050 point 7's warning of over-broad anchors contradict nothing it says. Two answers landed since, made apart. 20261105T213757Z-6263a527 judged the section this guide links gaining the checks that start the review: the guide says land-work runs the same review as one of its steps and to land once the reviewers approve, and a merge still needs every check passed and every verdict fresh. 20261105T225036Z-926c13c5 judged DEC-055 point 3's edit, that the --force override of review-work's refusal leaves an audit comment: the guide names no --force and tells its reader to write the sentences. One moves when the review starts, and the other what an override leaves on the pull request. So neither reaches what the other judged, and the guide holds against both. Here the agents reference's Adopter overlay and Diagnosing + repairing the overlay are rewritten as a reference, and this change gives the guide an anchor on its pkit agents section, which its proof's mention of pkit agents rests on, leaving its text as it was. Its statements on the overlay, the agents report, the agent's build task, the answers it writes and leaves to you, and the panel still hold."

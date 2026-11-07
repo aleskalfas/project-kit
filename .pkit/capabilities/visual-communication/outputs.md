@@ -13,6 +13,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/mark-final.py
+        - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing_tool.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -20,6 +22,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/framing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
@@ -36,6 +39,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/html.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/html_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/json.py
@@ -81,6 +86,11 @@ pkit:
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-019#2
+        - visual-communication:DEC-020#1
+        - visual-communication:DEC-020#2
+        - visual-communication:DEC-020#3
+        - visual-communication:DEC-020#4
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -106,6 +116,7 @@ Plugins make what the capability gives out. A renderer draws a piece's scenes as
 - [Plugins](#plugins)
 - [The SVG renderer](#the-svg-renderer)
 - [The PDF renderer](#the-pdf-renderer)
+- [The HTML renderer](#the-html-renderer)
 - [Exports](#exports)
 - [Produced pictures](#produced-pictures)
 - [Written code](#written-code)
@@ -124,6 +135,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 - the `svg` renderer, at version 1.0.1
 - the `pdf` renderer, at version 1.0.0
+- the `html` renderer, at version 1.0.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -131,7 +143,7 @@ No producer ships yet.
 
 Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, the kinds of axis it spells, and whether it takes a `prefix`.
 
-Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG and PDF renderers and the CSS and JSON code writers call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
+Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG, PDF and HTML renderers and the CSS and JSON code writers call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
 
 ### Versions
 
@@ -219,6 +231,33 @@ While it draws, the renderer reports three losses of its own:
 - **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
 - **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
 
+## The HTML renderer
+
+The `html` renderer draws a scene as one *page file*: one language's pages, at one key, in one web document. Writing it takes no browser. No format or command reaches this renderer yet, so a piece cannot ask for its file ([Exports](#exports)).
+
+- **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
+- **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
+- **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths.
+- **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
+- **Pages** follow each other down the document in the scene's order, each in the middle of the window. Each keeps its own size. The file sets no colour around them.
+- **The head** declares the file's encoding, UTF-8, its language and its viewport.
+- **What the file holds.** A file asks for nothing. Its pictures lie inside it as PNG data. Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour, and every page reaches it.
+- **Names and words.** A family's name is written as the SVG renderer writes it. Whatever else a brand or a piece names is escaped. So none of it can end the file's `<style>` element or start another element.
+- **Marks.** A page takes `data-page` and a text `data-text`, each holding its trace id. A shape keeps `data-id`. A layer takes `data-layer`, a line `data-line`, and the part of a run on one line `data-span`. A line opens with an empty `data-strut`, which places its baseline. The `<html>` element names the piece, the key, and the renderer with its version: `data-piece`, `data-key`, `data-renderer`.
+- **The same bytes.** The same scene and values give the same file.
+
+### What the HTML renderer declares
+
+The renderer draws in the default font profile, and it declares each primitive and property the SVG renderer declares. It calls no outside program and reaches no service. Under `pages`, its declaration names each choice a scene leaves open (DEC-001 point 2). They are how pages lie, the gap between two of them, 24 px, and how a page scales.
+
+### What the HTML renderer does not carry yet
+
+The file carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2740](https://github.com/aleskalfas/project-kit/issues/2740)).
+
+### What the HTML renderer loses
+
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer. While it draws, the renderer reports that renderer's three losses, under its own name ([What the SVG renderer loses](#what-the-svg-renderer-loses)). A run whose role has no colour is written `transparent`. It never takes the browser's own colour.
+
 ## Exports
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
@@ -227,14 +266,14 @@ An *export* is a set of files a piece is handed out as. Each export run is one *
 - **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`.
-- **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, and a published piece's [current copy](#the-current-copy), but for a copy at a place it names.
+- **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), but for a copy at a place it names, and the files of the version handed out ([The lock](files.md#the-lock)).
 
 ### The current copy
 
 A published piece keeps a *current copy*, an unnumbered copy of each file of an export. A page links to it, since a link cannot follow a number (DEC-006 point 7).
 
 - **Where:** `current-copy/`, in the piece's folder, committed with the piece, unless the piece names a place.
-- **When.** Each export of a published piece writes it, in the same change as the numbered files. A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
+- **When.** Each export of a published piece writes it, in the same change as the numbered files. So does the export run of `pkit visual upgrade`, under the same rules ([The lock](files.md#the-lock)). A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
 - **Replaced whole.** A run replaces the folder whole, so a file the new version does not write goes. The folder holds nothing else (DEC-017 point 7).
 - **A file's name** is its version's with the number left out: `flow.v3.en.colour-scheme.dark.svg` gives `flow.en.colour-scheme.dark.svg`.
 - **A file's bytes** are its version's, so the two keep one hash, the SHA-256 of the whole file.
@@ -244,7 +283,7 @@ A published piece keeps a *current copy*, an unnumbered copy of each file of an 
 
 ### The record of exports
 
-`exports.yaml` lies in the piece's folder. `pkit visual export` rewrites it, and nobody edits it. It holds one entry for each version, the oldest first. Here it is with its fingerprint left out:
+`exports.yaml` lies in the piece's folder. `pkit visual export` and `pkit visual upgrade` rewrite it, and nobody edits it. It holds one entry for each version, the oldest first. Here it is with its fingerprint left out:
 
 ```yaml
 pkit_schema: visual-communication:exports
@@ -263,6 +302,12 @@ versions:
 | `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
 | `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
+
+`pkit visual mark-final` ends the record with one line, which names the version handed out ([The lock](files.md#the-lock)):
+
+```yaml
+handed-out: 1
+```
 
 Once a published piece is exported, the record also says who wrote its [current copy](#the-current-copy), above `versions`. An export in another state keeps these lines as they stand.
 
@@ -311,8 +356,7 @@ Each of these is found before the first write, so a refused run records no locat
 
 **A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
 
-- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock. The other is writing back that lock, which is no move of it.
-- **One runs today.** `pkit visual upgrade` is still to come ([project-kit#2572](https://github.com/aleskalfas/project-kit/issues/2572)). Until it comes, only writing back that lock gets past the gate, which fails closed.
+- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock ([The lock](files.md#the-lock)). The other is writing back that lock, which is no move of it.
 - **It reads the record, not the files,** so removing the copy changes nothing.
 - **No copy of its own.** Where the record holds no current copy of the piece's own, the export runs.
 - **A fingerprint it cannot read** refuses, and names the record.

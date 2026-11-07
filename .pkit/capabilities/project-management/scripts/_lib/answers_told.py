@@ -18,7 +18,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from _lib import fixers, friction_answers
+from _lib import fixers, friction_answers, pr_head
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,7 @@ def at_head(
     capability_root: Path,
     read_body: Callable[[], str],
     *,
-    source: friction_answers.Source | None = None,
+    source: pr_head.Source | None = None,
     from_checkout: bool = True,
 ) -> AnswersTold:
     """The answers derived at commit `head` against the branch `base`, the grant

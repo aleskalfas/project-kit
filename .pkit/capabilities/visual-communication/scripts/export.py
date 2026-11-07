@@ -28,7 +28,8 @@ names it; the record keeps each picture used while stale, and the version of eac
 the export used. `--use-stale` naming an output the piece does not declare is refused; one
 that is not stale is used as it is, and the command says so. It stops on a picture that is
 missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
-final piece takes no export, whatever else holds of it (DEC-017 point 3).
+final piece takes no export, whatever else holds of it, final by its state or by a version
+handed out, or where its record of exports cannot be read (DEC-017 point 3).
 
 A published piece's run also writes its current copy, an unnumbered copy of each file of
 the version, in the piece's `current-copy/`, replacing that folder whole, and `exports.yaml`
@@ -39,7 +40,7 @@ removes nothing there: it names each file of the last copy it did not write agai
 stays where it lies (DEC-017 point 7). A piece in any other state writes none. It refuses a
 published piece whose lock differs from the lock of the version that wrote its current copy,
 and names both ways past (DEC-017 point 5): the gate reads the record, not the files, and
-holds only this command, so it lies here, outside what `exports.plan` and `exports.write`
+holds only this command, so it lies here, outside what `exports.plan` and `exports.add`
 share with the run that proposes a move of the lock.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
@@ -67,17 +68,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import (
-    checks,
-    copies,
-    current_copy,
-    exports,
-    files,
-    fingerprint,
-    libraries,
-    location,
-    tokens,
-)
+from _lib import current_copy, exports, files, fingerprint, libraries, location, rendering
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -113,37 +104,20 @@ def main() -> int:
 def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
-    if copies.final(piece.data):
-        raise pl.Refused(f"the piece `{name}` is final, and a final piece takes no export")
+    if piece.final:
+        raise pl.Refused(
+            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export"
+        )
     _refuse_a_lock_that_differs(piece)
-    held = libraries.Held(root, where.path)
-    faults = checks.lock_findings(held, piece)
-    if faults:
-        said = "; ".join(checks.said(finding) for finding in faults)
-        raise pl.Refused(f"the lock of {piece.file(pl.PIECE_FILE)} cannot be exported: {said}")
-    try:
-        project = pl.Project(piece, piece.lock, held)
-    except tokens.TokenError as exc:
-        said = "; ".join(finding.message for finding in exc.findings)
-        raise pl.Refused(f"the brand of `{name}` cannot be read: {said}") from exc
+    project = rendering.exportable(piece, libraries.Held(root, where.path))
     planned = exports.plan(project, use_stale=use_stale)
     change = files.Change(root)
     said = location.record(change, where)
     exports.write(planned, change)
     if said is not None:
         print(said)
-    for file in planned.files:
-        print(f"export: {exports.FOLDER}/{name}/{file}")
-    if planned.copy is not None:
-        for path in planned.copy.entry["files"]:
-            print(f"current copy: {current_copy.rooted(piece, path)}")
-    for path in planned.left_behind:
-        print(f"left behind: {path}: the run did not write it again, and only a person removes it")
-    for output in planned.used_stale:
-        print(f"used while stale: {output}")
-    for output in planned.not_stale:
-        print(f"not stale, so used as it is: {output}")
-    print(f"export: version {planned.number} recorded in {piece.file(pl.EXPORTS_FILE)}")
+    for line in exports.report(planned):
+        print(line)
     return 0
 
 

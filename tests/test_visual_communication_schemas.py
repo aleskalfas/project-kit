@@ -137,6 +137,18 @@ def test_format_1_takes_no_other_state() -> None:
     assert refused(exports_in("retired"), "exports") != []
 
 
+def test_the_record_of_exports_may_name_the_version_handed_out() -> None:
+    record = instance("exports")
+    assert record["handed-out"] == 1
+    assert refused(record, "exports") == []
+    assert (
+        refused({key: value for key, value in record.items() if key != "handed-out"}, "exports")
+        == []
+    )
+    assert refused({**record, "handed-out": 0}, "exports") != []
+    assert refused({**record, "handed-out": "1"}, "exports") != []
+
+
 def test_the_record_of_exports_may_name_who_wrote_a_current_copy() -> None:
     record = instance("exports")
     assert refused(record, "exports") == []

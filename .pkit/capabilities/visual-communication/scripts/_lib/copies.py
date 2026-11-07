@@ -32,13 +32,14 @@ point 5, DEC-013 points 5 and 6).
   A version the list names whose folder is missing is a copy that no longer holds its
   files: it is brought in as a copy of its kind is, a released one restored, one not
   released replaced, under the same locks.
-- **The locks** (`locks`): each piece's, read from its `piece.yaml` alone, its `lock`,
-  `pinned` and `state`, so a fault in its content stops nothing; and each declaration's of
-  written code. A draft's lock that is not pinned follows its libraries, moving at each
-  render, and a final piece's no longer draws, so neither holds a copy (DEC-013 point 5). A
-  pinned draft's, a published piece's and written code's move only on purpose (DEC-003
-  point 8, DEC-005 point 7). `pinned` is read of a draft alone. A lock the command cannot
-  read counts as one that moves only on purpose, and may name any copy of the library.
+- **The locks** (`locks`): each piece's, read from its `piece.yaml`, its `lock`, `pinned`
+  and `state`, and from its record of exports, whether it is final, so a fault in its
+  content stops nothing; and each declaration's of written code. A draft's lock that is
+  not pinned follows its libraries, moving at each render, and a final piece's no longer
+  draws, so neither holds a copy (DEC-013 point 5). A pinned draft's, a published piece's
+  and written code's move only on purpose (DEC-003 point 8, DEC-005 point 7). `pinned` is
+  read of a draft alone. A lock the command cannot read counts as one that moves only on
+  purpose, and may name any copy of the library.
 
 Every check that can refuse runs in `plan`, before the first write. `write` writes the plan
 as one change (`files.Change`): each folder copied, or replaced whole, then the list, every
@@ -87,6 +88,11 @@ PIECES = "pieces"
 
 #: A piece's file that holds its lock.
 PIECE_FILE = "piece.yaml"
+
+#: A piece's record of exports (`pipeline.EXPORTS_FILE`), and its field that names the version
+#: handed out (DEC-017 point 2).
+EXPORTS_FILE = "exports.yaml"
+HANDED_OUT_FIELD = "handed-out"
 
 #: The folder of the location that holds the declarations of written code (`code.FOLDER`).
 DECLARATIONS = "code"
@@ -749,28 +755,60 @@ def locks(root: Path, location: str, library: str) -> list[Lock]:
     return found
 
 
-def final(piece: Mapping[str, Any]) -> bool:
-    """Whether a piece, by what its `piece.yaml` holds, is final to every command: no render
-    moves its lock, and an export and a producer's run refuse it (DEC-017 point 3). This is
-    the one place that says so."""
-    return piece.get("state") == FINAL
+def handed_out(folder: Path) -> int | None:
+    """The version handed out that the record of exports in a piece's `folder` names; None
+    where it names none, or the piece has no record. Raises records.RecordError where the
+    record cannot be read, or the field holds no version's number (DEC-017 point 2)."""
+    path = folder / EXPORTS_FILE
+    if not path.exists() and not path.is_symlink():
+        return None
+    record = records.read(path, "exports")
+    if HANDED_OUT_FIELD not in record:
+        return None
+    named = record[HANDED_OUT_FIELD]
+    if not isinstance(named, int) or isinstance(named, bool) or named < 1:
+        raise records.RecordError(f"{path}: `{HANDED_OUT_FIELD}` holds no version's number")
+    return named
 
 
-def lock_stays(piece: Mapping[str, Any]) -> bool:
-    """Whether no render moves a piece's lock, whatever its `pinned` says: it is final or
-    published (DEC-003 point 8)."""
-    return final(piece) or piece.get("state") == PUBLISHED
+def why_final(piece: Mapping[str, Any], folder: Path) -> str:
+    """Why a piece is final to every command, in words; empty where it is not: no render moves
+    its lock or keeps its findings, and an export and a producer's run refuse it (DEC-017
+    point 3). `piece` is what its `piece.yaml` holds, and `folder` its folder. It is final by
+    its state, or by a version handed out that its record of exports names. Where that record
+    cannot be read, it is taken as final. This is the one place that says so."""
+    if piece.get("state") == FINAL:
+        return "its state says so"
+    try:
+        version = handed_out(folder)
+    except records.RecordError as exc:
+        why = str(exc).removeprefix(f"{folder / EXPORTS_FILE}: ")
+        return f"its record of exports cannot be read: {why}"
+    return "" if version is None else f"its record of exports hands out version {version}"
 
 
-def no_lock(piece: Mapping[str, Any]) -> str:
+def final(piece: Mapping[str, Any], folder: Path) -> bool:
+    """Whether a piece is final to every command (`why_final`). A command that holds a
+    `pipeline.Piece` asks it, which reads the record of exports once."""
+    return bool(why_final(piece, folder))
+
+
+def lock_stays(piece: Mapping[str, Any], is_final: bool) -> bool:
+    """Whether no render moves a piece's lock, whatever its `pinned` says: it is final, as
+    `is_final` says, or published (DEC-003 point 8)."""
+    return is_final or piece.get("state") == PUBLISHED
+
+
+def no_lock(is_final: bool) -> str:
     """What a piece whose lock no render moves (`lock_stays`) needs where it has no lock: a
     published piece goes back to a draft, and no state leads out of final (DEC-017 point 5)."""
-    return WRITE_BACK if final(piece) else FIRST_RENDER
+    return WRITE_BACK if is_final else FIRST_RENDER
 
 
 def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
-    """A piece's lock, from its `piece.yaml` alone: its `lock`, `state` and, of a draft,
-    `pinned`."""
+    """A piece's lock, from its `piece.yaml`: its `lock`, `state` and, of a draft, `pinned`.
+    Its record of exports says whether it is final, and one that cannot be read makes it so
+    (`why_final`), so that lock follows."""
     data, why = _bound(root / file, "piece")
     if data is not None:
         state, pinned = data.get("state"), data.get("pinned", False)
@@ -782,7 +820,7 @@ def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
             versions, why = _versions(data, library)
             if versions is not None:
                 draft = state == DRAFT
-                follows = final(data) or (draft and not pinned)
+                follows = final(data, (root / file).parent) or (draft and not pinned)
                 called = f"{'pinned ' if pinned else ''}draft" if draft else f"{state} piece"
                 return Lock(PIECE, name, file, follows, versions, called=called)
     return Lock(PIECE, name, file, False, None, why)

@@ -23,6 +23,7 @@ pkit:
         - COR-059#4
         - ADR-065#4
         - ADR-065#6
+        - COR-061#3
       artefact:
         - ACT-adopter
 ---
@@ -31,4 +32,4 @@ pkit:
 
 **Verified by:** A test runs `pkit upgrade` with no terminal over a new name collision, with `--force` passed, and finds every file as it was. Tests of the [dependency gates](../../../glossary.md#term-dependency-gate--dependency-gate) find that a warning refuses without `--force`. A test finds that `pkit capabilities upgrade` refuses a new name collision without `--interactive`. Tests of the questions find that with nobody to reply none runs, and each one's line is printed.
 
-**Rationale:** The adopter's own files sit beside the [methodology](../../../glossary.md#term-methodology--methodology)'s, and a [version transition](../../../glossary.md#term-version-transition--version-transition) must never choose for the adopter which of two colliding [artefacts](../../../glossary.md#term-artefact--artefact) stays. [COR-059 point 4](../../../../../../.pkit/decisions/core/COR-059-version-transition.md#4-one-consent-covers-a-transitions-parts) lets one [consent](../../../glossary.md#term-consent--consent), choosing the target, cover a transition's parts. Some choices keep the consent their own records set, and each is given by a person's reply or an explicit override. None is ever taken silently.
+**Rationale:** The adopter's own files sit beside the [methodology](../../../glossary.md#term-methodology--methodology)'s, and a [version transition](../../../glossary.md#term-version-transition--version-transition) must never choose for the adopter which colliding [skill](../../../glossary.md#term-skill--skill) or [agent definition](../../../glossary.md#term-agent-definition--agent-definition) stays. [COR-059 point 4](../../../../../../.pkit/decisions/core/COR-059-version-transition.md#4-one-consent-covers-a-transitions-parts) lets one [consent](../../../glossary.md#term-consent--consent), choosing the target, cover a transition's parts. Some choices keep the consent their own records set, and each is given by a person's reply or an explicit override. None is ever taken silently.

@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual upgrade <piece>` proposes a move of a published piece's lock
+  (DEC-019 points 1 to 4, 6 and 7): one run leaves in the working tree the
+  moved lock, a new version in `exports.yaml`, the current copy and the
+  findings record, and a person lands that diff or discards it. It moves within
+  the lock's majors among released versions that fit, or to the versions named
+  in the form `pkit visual add` takes. An edit since the copy stops it unless
+  `--edited <input>` names the input, and a stale picture stops it unless
+  `--use-stale <output>` names the output. It runs no program, and `--dry-run`
+  says what it would write. The refusals of `pkit visual export` and the check
+  that name it now name a command that runs.

@@ -41,7 +41,8 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8).
 
 **Scene findings** (`scene_findings`): what computing a piece's scenes finds, in every
-language: the engine's own (overflow, a component that gets less than it asks for, two
+language and at every key over the size axes, a finding that differs by key naming the key
+it holds at: the engine's own (overflow, a component that gets less than it asks for, two
 owners of a value, a loop, a missing exposed part or point, a page inside a page, a
 concept the piece's notations do not hold), a produced picture that is missing, contrast
 as drawn, a colour role the brand lacks, each loss of the renderers that draw the piece
@@ -52,13 +53,24 @@ the scenes now otherwise. It computes no more once the validator's bound
 (`PKIT_COMMAND_DEADLINE`) is near: each piece left fails as not checked, naming
 `pkit visual render <piece>`.
 
-**A final piece** is read by its own file and its lock, and no more (DEC-002 point 7,
-DEC-017 point 4): each other pass reads a piece through today's capability, so a stricter
-release could fail what was handed out, and its mend would change nothing handed out. The
-binding of each of its files is read with every other file's. Its lock is held to what it
-names, a version that no longer matches what was released included, and not to its
-content, which goes unread. A finding at its lock fails only where something other than a
-move of the lock mends it (`lock_findings`), since its state forbids the move.
+**A final piece** is read by its own file, its lock and the version handed out, and no more
+(DEC-002 point 7, DEC-017 point 4): each other pass reads a piece through today's capability,
+so a stricter release could fail what was handed out, and its mend would change nothing handed
+out. The binding of each of its files is read with every other file's. Its lock is held to what
+it names, a version that no longer matches what was released included, and not to its content,
+which goes unread. A finding at its lock fails only where something other than a move of the
+lock mends it (`lock_findings`), since its state forbids the move.
+
+**What a final piece owes of the version handed out** (`handed_out_findings`, DEC-006 point 8,
+DEC-017 point 6) is read from its record of exports and its files, whatever its lock shows. A
+piece is final by its state or by that record, so each is held to the other: each of these
+fails, in a file the project can correct:
+
+- a file of the version that is missing, or holds another hash than the record's;
+- `state: final` with no version handed out;
+- a version handed out with another state, or another lock than the one read from it;
+- a version whose lock or files cannot be read from the record;
+- a record that cannot be read, which reads the piece as final and is held to no version.
 
 **What a state owes of a current copy** (`_copy`, DEC-006 point 8, DEC-017 points 5 to 7) is
 read from the record of exports, whichever way the piece came to its state, and the record's
@@ -112,6 +124,7 @@ from _lib import (
     layout,
     location,
     names,
+    records,
     tokens,
 )
 from _lib import pipeline as pl
@@ -153,7 +166,7 @@ from _lib.libraries import (
     readable,
 )
 from _lib.plugins import seam
-from _lib.reading import ReadError, read_yaml
+from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
 from _lib.scene import SceneResult
 from _lib.shipped import read as read_shipped
@@ -192,6 +205,16 @@ COPY_STALE = "current-copy-stale"
 COPY_UNREADABLE = "current-copy-unreadable"
 COPY_OVER_STALE = "current-copy-over-stale"
 COPY_STANDING = "current-copy-standing"
+
+#: The findings on what a final piece owes of the version handed out (DEC-017 point 6), and on
+#: a record of exports that cannot be read, which makes a piece final (DEC-017 point 3).
+HANDED_OUT_NONE = "handed-out-none"
+HANDED_OUT_STATE = "handed-out-state"
+HANDED_OUT_LOCK = "handed-out-lock"
+HANDED_OUT_UNREADABLE = "handed-out-unreadable"
+HANDED_OUT_FILE_MISSING = "handed-out-file-missing"
+HANDED_OUT_FILE_CHANGED = "handed-out-file-changed"
+EXPORTS_UNREADABLE = "exports-unreadable"
 
 #: The properties of a scene element that are no property it draws.
 _STRUCTURE = ("type", "id", "sources", "children")
@@ -421,7 +444,7 @@ class _Run:
         rel = f"{self.location}/{pl.PIECES}/{name}"
         try:
             piece = pl.read_piece_file(self.root, self.location, name)
-            if copies.final(piece.data):
+            if piece.final:
                 self._final(piece)
                 return
             piece = pl.read_piece(self.root, self.location, name)
@@ -461,8 +484,9 @@ class _Run:
         """What the piece's state owes of its current copy (DEC-006 point 8, DEC-017 point 6).
         `_piece` runs this after its reads and before a lock finding stops the piece, so a
         fault at the lock hides no stale copy, and a lock that differs reads as a change to
-        what the copy was made from. A record it cannot read leaves the copy unjudged, which
-        fails, unless the binding pass names the file."""
+        what the copy was made from. A record that keeps no list of its versions, or a copy of
+        no shape, leaves the copy unjudged, which fails. A record that cannot be read at all
+        never comes here: it makes the piece final (`handed_out_findings`)."""
         published = current_copy.keeps(piece)
         if published and not piece.exports:
             self.add(_no_format(piece))
@@ -471,9 +495,7 @@ class _Run:
             versions = exports.recorded_versions(piece, record)
             entry = current_copy.own(piece, record, self.pieces)
         except pl.Refused as exc:
-            file = piece.file(pl.EXPORTS_FILE)
-            if file not in self.unbound:
-                self.add(Finding(COPY_UNREADABLE, FAILS, str(exc), file=file))
+            self.add(Finding(COPY_UNREADABLE, FAILS, str(exc), file=piece.file(pl.EXPORTS_FILE)))
             return
         if published:
             self.found.extend(published_findings(self.held, piece, entry, versions))
@@ -481,22 +503,16 @@ class _Run:
             self.found.extend(standing_findings(piece, entry))
 
     def _final(self, piece: pl.Piece) -> None:
-        """A final piece, read from its own file alone: its lock as it stands, and no more
-        (DEC-002 point 7, DEC-017 point 4). `piece` holds no contents, so no lock is held to
-        them. Only a run over the location reads `Held.findings`, so this reads each version
-        the lock names against what was released, and `_once` keeps the finding to one. A
-        version the list does not mark released, or cannot, has nothing to compare."""
+        """A final piece, read from its own file alone: its lock as it stands, and what it owes
+        of the version handed out, whatever that lock shows, and no more (DEC-002 point 7,
+        DEC-017 point 4). `piece` holds no contents, so no lock is held to them. Only a run over
+        the location reads `Held.findings`, so this reads each version the lock names against
+        what was released, and `_once` keeps the finding to one."""
         self.counts["final"] += 1
         self.found.extend(lock_findings(self.held, piece))
-        for name, text in sorted(piece.lock.items()):
-            try:
-                version = Version.parse(text)
-            except ValueError:
-                continue  # `lock-version`
-            if version in self.held.folders.get(name, {}) and self.held.released(name, version):
-                changes = self.held.hash_changes(name, version)
-                if changes:
-                    self._once(self.held.changed(name, version, changes, self.compared.restored))
+        for finding in changed_versions(self.held, piece.lock, self.compared.restored):
+            self._once(finding)
+        self.found.extend(handed_out_findings(piece))
 
     def _lock_found(self, piece: pl.Piece, found: Sequence[Finding]) -> None:
         """What the libraries a piece locks show under its lock: the own roles of each
@@ -909,9 +925,9 @@ def _lock_fix(piece: pl.Piece, mend: str) -> str:
     published piece's, so it says what `pkit visual render` says of such a piece, and only a
     draft reads its pin."""
     render = pl.render_command(piece.name)
-    if copies.final(piece.data):
+    if piece.final:
         return mend
-    if copies.lock_stays(piece.data):
+    if piece.lock_stays:
         return (
             f"the piece is {piece.state}, so no render moves its lock: set it back to a draft "
             f"and run {render}"
@@ -938,7 +954,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     - `lock-incomplete`, `lock-majors`: only a move mends them, so each states a fact.
     - `lock-not-released` takes the level `_not_released` gives it."""
     file = piece.file(pl.PIECE_FILE)
-    final = copies.final(piece.data)
+    final = piece.final
 
     def fails(code: str, message: str, mend: str = "") -> Finding:
         return Finding(code, FAILS, message, file=file, where="lock", fix=_lock_fix(piece, mend))
@@ -980,7 +996,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
                 found.append(fails("lock-unreadable", said, mend))
             continue
         read[name] = held.library(name, version)
-        if copies.lock_stays(piece.data) and not held.released(name, version):
+        if piece.lock_stays and not held.released(name, version):
             found.append(_not_released(held, piece, name, version))
     for name in pl.needed(piece):
         if name not in lock:
@@ -1013,6 +1029,25 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     return found
 
 
+def changed_versions(
+    held: Held, lock: Mapping[str, str], restored: Collection[str] = ()
+) -> list[Finding]:
+    """The finding on each version `lock` names that no longer matches what was released
+    (`Held.changed`, which takes `restored`). A version the project does not hold, or the
+    list does not mark released, has nothing to compare."""
+    found = []
+    for name, text in sorted(lock.items()):
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            continue  # `lock-version`
+        if version in held.folders.get(name, {}) and held.released(name, version):
+            changes = held.hash_changes(name, version)
+            if changes:
+                found.append(held.changed(name, version, changes, restored))
+    return found
+
+
 def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> Finding:
     """The finding on a version not yet released that a final or a published piece's lock
     names, naming the piece, the library and the version (DEC-003 points 8 and 9). It fails,
@@ -1026,7 +1061,7 @@ def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> F
     - a copy of a number the capability does not ship: no release, so on a final piece it
       states a fact, and `copy-not-shipped` keeps asking (DEC-013 point 5)."""
     label = f"{name}@{version}"
-    final = copies.final(piece.data)
+    final = piece.final
     finding = Finding(
         LOCK_NOT_RELEASED,
         FAILS,
@@ -1159,12 +1194,16 @@ def _made_again(piece: pl.Piece, number: int, lock: Mapping[str, str]) -> str:
     refusal (DEC-017 point 5)."""
     if piece.lock == lock:
         return _export(piece)
-    named = ", ".join(f"{library}@{version}" for library, version in sorted(lock.items()))
     return (
-        f"write back the lock of version {number}, {named}, which is no move of it, and "
-        f"{_export(piece)}; or run `pkit visual upgrade {piece.name}` to propose a move of the "
-        f"lock"
+        f"{_write_back(number, lock)}, and {_export(piece)}; or run `pkit visual upgrade "
+        f"{piece.name}` to propose a move of the lock"
     )
+
+
+def _write_back(number: int, lock: Mapping[str, str]) -> str:
+    """What puts back `lock`, the one the version `number` was made under."""
+    named = ", ".join(f"{library}@{version}" for library, version in sorted(lock.items()))
+    return f"write back the lock of version {number}, {named}, which is no move of it"
 
 
 def _file_findings(piece: pl.Piece, entry: Mapping[str, Any], fix: str) -> list[Finding]:
@@ -1213,6 +1252,126 @@ def standing_findings(piece: pl.Piece, entry: Mapping[str, Any]) -> list[Finding
                     who=AUTHOR,
                 )
             )
+    return found
+
+
+# --- what a final piece owes of the version handed out ------------------------------------------
+
+
+def handed_out_findings(piece: pl.Piece) -> list[Finding]:
+    """What a final piece owes of the version handed out, read from its record of exports and
+    its files, whatever its lock shows (DEC-006 point 8, DEC-017 points 4 and 6). A record that
+    cannot be read names no version to hold it to, and `state: final` with none has no version
+    to read. Otherwise the piece's state and lock are held to the version, and each of the
+    version's files to its hash. What cannot be read of the version leaves the rest read."""
+    try:
+        number = copies.handed_out(piece.folder)
+    except records.RecordError:
+        return [_exports_unreadable(piece)]
+    if number is None:
+        return [_none_handed_out(piece)]
+    record = piece.file(pl.EXPORTS_FILE)
+
+    def unreadable(said: str) -> Finding:
+        return Finding(
+            HANDED_OUT_UNREADABLE,
+            FAILS,
+            said,
+            file=record,
+            where=copies.HANDED_OUT_FIELD,
+            fix=f"restore what {record} kept of version {number} from the repository's history",
+        )
+
+    found = [] if piece.state == copies.FINAL else [_other_state(piece, number)]
+    try:
+        versions = exports.recorded_versions(piece, exports.recorded(piece))
+    except pl.Refused as exc:
+        return [*found, unreadable(str(exc))]
+    kept = next((each for each in versions if each["version"] == number), None)
+    if kept is None:
+        return [*found, unreadable(f"{record} hands out version {number}, and keeps no such one")]
+    try:
+        lock = current_copy.version_lock(kept)
+    except fingerprint.UnreadableFingerprint as exc:
+        found.append(unreadable(f"{record} gives no lock of version {number}, handed out: {exc}"))
+    else:
+        if piece.lock != lock:
+            found.append(_other_lock(piece, number, lock))
+    files = kept.get("files")
+    if not isinstance(files, Mapping) or not files:
+        return [*found, unreadable(f"{record} names no file of version {number}, handed out")]
+    return [*found, *_handed_out_files(piece, number, files)]
+
+
+def _exports_unreadable(piece: pl.Piece) -> Finding:
+    """The finding that says why a piece whose record of exports cannot be read reads as final
+    (DEC-017 point 3). It stands beside any finding of the binding pass, which says what is
+    wrong with the file and not what follows for the piece. `why_final` is given no state, so
+    the record alone answers, whatever the piece's own file says."""
+    why = copies.why_final({}, piece.folder)
+    return Finding(
+        EXPORTS_UNREADABLE,
+        FAILS,
+        f"the piece `{piece.name}` reads as final, held to no version handed out: {why}",
+        file=piece.file(pl.EXPORTS_FILE),
+        fix="mend the record, and each command reads the piece by its state again",
+    )
+
+
+def _none_handed_out(piece: pl.Piece) -> Finding:
+    """The finding on `state: final` with no version handed out (DEC-017 point 6)."""
+    return Finding(
+        HANDED_OUT_NONE,
+        FAILS,
+        f"the piece `{piece.name}` is final, and {piece.file(pl.EXPORTS_FILE)} names no version "
+        f"handed out",
+        file=piece.file(pl.PIECE_FILE),
+        where="state",
+        fix=f"run `pkit visual mark-final {piece.name} <version>`, which takes such a piece, or "
+        f"set its state back",
+    )
+
+
+def _other_state(piece: pl.Piece, number: int) -> Finding:
+    """The finding on a version handed out with another state (DEC-017 point 6)."""
+    return Finding(
+        HANDED_OUT_STATE,
+        FAILS,
+        f"{piece.file(pl.EXPORTS_FILE)} hands out version {number}, and the state of "
+        f"`{piece.name}` is {piece.state}",
+        file=piece.file(pl.PIECE_FILE),
+        where="state",
+        fix=f"set its state back to {copies.FINAL}, and copy the piece for new work",
+    )
+
+
+def _other_lock(piece: pl.Piece, number: int, lock: Mapping[str, str]) -> Finding:
+    """The finding on a version handed out with another lock than `lock`, the one it was made
+    under (DEC-017 point 6)."""
+    return Finding(
+        HANDED_OUT_LOCK,
+        FAILS,
+        f"the lock of `{piece.name}` is not the one version {number}, handed out, was made under",
+        file=piece.file(pl.PIECE_FILE),
+        where="lock",
+        fix=_write_back(number, lock),
+    )
+
+
+def _handed_out_files(piece: pl.Piece, number: int, files: Mapping[str, Any]) -> list[Finding]:
+    """Each of `files`, the file of the version `number` by its name with its hash, that is
+    missing from the folder of files handed out, or holds another hash (DEC-006 point 8)."""
+    fix = "restore it from the repository's history, as it was handed out"
+    found = []
+    for name, kept in files.items():
+        file = piece.file(f"{fingerprint.HANDED_OUT}/{name}")
+        data = _held(piece.root / file)
+        if data is None:
+            said = f"a file of version {number} of `{piece.name}`, handed out, is missing"
+            found.append(Finding(HANDED_OUT_FILE_MISSING, FAILS, said, file=file, fix=fix))
+        elif sha256(data) != kept:
+            said = f"a file of version {number} of `{piece.name}`, handed out, has changed"
+            found.append(Finding(HANDED_OUT_FILE_CHANGED, FAILS, said, file=file, fix=fix))
     return found
 
 
@@ -2115,7 +2274,12 @@ def scene_findings(
 ) -> list[Finding]:
     """What computing a piece's scenes found, each finding once, in a fixed order; files
     relative to the piece's folder, or to a library version's folder where the finding
-    lies in one (the findings record keeps them so)."""
+    lies in one (the findings record keeps them so).
+
+    Each scene is computed at one key over the size axes, and contrast is measured on it in
+    each combination it serves. A finding the scenes of every key find alike is reported
+    once, as it reads. Any other is reported for each key whose scenes find it, its message
+    opening with that key, so a finding takes no field for its size."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2123,12 +2287,16 @@ def scene_findings(
         for path, token in document["tokens"].items()
         if token["type"] == "color"
     }
-    found: list[Finding] = []
+    by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
+        size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
+    }
     for language, result in results:
+        size = result.scene.size_key
+        served = [key for key in project.keys if project.size_key(key) == size]
         content = pl.content_file(language)
-        found.extend(_placed(finding, content, project) for finding in result.findings)
+        found = [_placed(finding, content, project) for finding in result.findings]
         scene = result.scene.to_dict()
-        found.extend(drawn_contrast(scene, colours, project.keys))
+        found.extend(drawn_contrast(scene, colours, served))
         found.extend(_unknown_colours(scene, colours))
         for renderer in renderers(piece):
             declared = seam.declaration(renderer, seam.RENDERER)
@@ -2136,11 +2304,16 @@ def scene_findings(
                 if not accepted(loss, piece.accepted_losses):
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
-    unique = {}
-    for finding in found:
-        unique.setdefault(
-            (finding.code, finding.file, finding.where, finding.message, finding.library), finding
-        )
+        for finding in found:
+            by_size[size].setdefault(_mark(finding), finding)
+    unique: dict[tuple[str, str, str, str, str], Finding] = {}
+    for size, found_at in by_size.items():
+        for mark, finding in found_at.items():
+            if all(mark in other for other in by_size.values()):
+                unique.setdefault(mark, finding)
+            else:
+                sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
+                unique.setdefault(_mark(sized), sized)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
 
 

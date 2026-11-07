@@ -63,6 +63,19 @@ def test_a_key_that_would_not_read_back_is_refused_naming_what_a_line_holds() ->
         records.with_mapping(original, "names", {"a": "x"}, each="name")
 
 
+def test_an_entry_of_the_files_top_ends_the_file_every_other_byte_kept() -> None:
+    original = records.BOM + "a: 1\r\n# The end.\r\n"
+    assert records.with_entry(original, [], "b", 2, each="field") == original + "b: 2\r\n"
+    assert records.with_entry("a: 1", [], "b", 2, each="field") == "a: 1\nb: 2\n"
+
+
+def test_an_entry_the_files_top_holds_or_cannot_take_is_refused() -> None:
+    with pytest.raises(records.RecordError, match="the file holds `a` already"):
+        records.with_entry("a: 1\n", [], "a", 2, each="field")
+    with pytest.raises(records.RecordError, match="write the file as a block mapping"):
+        records.with_entry("{a: 1}\n", [], "b", 2, each="field")
+
+
 def test_an_entry_is_added_last_to_a_block_mapping_at_its_indent() -> None:
     original = records.BOM + "a:\r\n    b:  # kept\r\n        c: 1\r\n\r\n# The end.\r\n"
     assert records.with_entry(original, ["a"], "d", {"e": [1]}, each="item") == (

@@ -25,6 +25,7 @@ point 5).
   other side is still drawn.
 - **What it says** (`report`). Each lock, what the search states, a release that differs
   from the one the copy's version recorded, each stale picture, and each page that differs.
+  A run that keeps no drawing says only what it found.
 """
 
 from __future__ import annotations
@@ -94,7 +95,7 @@ def ahead(piece: pl.Piece, held: Held, names: Sequence[str]) -> Look:
     `<library>@<version>`, or with none what a run would propose. Raises Refused where the
     piece takes none, or the search refuses."""
     _refuse_no_lock(piece)
-    if copies.final(piece.data):
+    if piece.final:
         if names:
             raise pl.Refused(
                 f"the piece `{piece.name}` is final, so no version moves its lock: take the look "
@@ -233,11 +234,8 @@ def _refuse_no_lock(piece: pl.Piece) -> None:
     """Raise Refused where the piece has no lock yet, naming what writes one."""
     if piece.lock:
         return
-    way = (
-        copies.FIRST_RENDER
-        if copies.lock_stays(piece.data)
-        else f"run {pl.render_command(piece.name)} first"
-    )
+    stays = piece.lock_stays
+    way = copies.no_lock(piece.final) if stays else f"run {pl.render_command(piece.name)} first"
     raise pl.Refused(f"the piece `{piece.name}` has no lock yet, so no look draws it: {way}")
 
 
@@ -277,12 +275,13 @@ def _side(look: Look, lock: Mapping[str, str]) -> Side:
     return before_after.drawing(piece.root, piece.location, piece.name, lock)
 
 
-def report(look: Look, before: Side, after: Side) -> Iterator[str]:
-    """What the command prints of a look and its two drawings, a line each."""
+def report(look: Look, before: Side, after: Side, *, kept: bool = True) -> Iterator[str]:
+    """What the command prints of a look and its two drawings, a line each. With `kept` false
+    the drawings were not kept, so it names no folder."""
     name, lock = look.piece.name, look.before.lock
     if lock is not None:
-        yield f"before: {look.before.said}: {_versions(lock)}"
-    yield f"after: {look.after_said}: {_versions(look.after)}"
+        yield f"before: {look.before.said}: {versions_said(lock)}"
+    yield f"after: {look.after_said}: {versions_said(look.after)}"
     if lock == look.after:
         yield "the two locks are one"
     yield from _release(look)
@@ -293,11 +292,12 @@ def report(look: Look, before: Side, after: Side) -> Iterator[str]:
     elif before.why or after.why:
         yield from (f"no {side}: {why}" for side, why in _whys(before, after))
         drawn, folder = (after, before_after.AFTER) if before.why else (before, before_after.BEFORE)
-        if drawn.files:
+        if drawn.files and kept:
             where = f"{before_after.FOLDER}/{name}/{folder}/"
             yield f"drawn in {where}: {len(drawn.files)} files, and nothing to compare them with"
     else:
-        yield before_after.both_ways(name, before, after)
+        if kept:
+            yield before_after.both_ways(name, before, after)
         yield from (f"differs: {file}" for file in before_after.differing(before, after))
 
 
@@ -330,6 +330,6 @@ def _stale(before: Side, after: Side) -> Iterator[str]:
         yield f"stale, {' and '.join(named)}: `{output}`: {'; '.join(changes)}"
 
 
-def _versions(lock: Mapping[str, str]) -> str:
+def versions_said(lock: Mapping[str, str]) -> str:
     """A lock in words."""
     return ", ".join(f"{library} {lock[library]}" for library in sorted(lock))

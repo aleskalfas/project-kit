@@ -278,30 +278,39 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
 
 def _refuse_final(root: Path, location: str, piece: str) -> None:
     """Refuse a piece that is final, before anything else is read of it. Raises Refused."""
-    if copies.final(_piece(root, _piece_folder(root, location, piece), piece)):
+    folder = _piece_folder(root, location, piece)
+    why = copies.why_final(_piece(root, folder, piece), folder)
+    if why:
         raise Refused(
-            f"the piece `{piece}` is final, and a final piece takes no producer's run: making "
-            f"its pictures again would change it"
+            f"the piece `{piece}` is final ({why}), and a final piece takes no producer's run: "
+            f"making its pictures again would change it"
         )
 
 
 def plan(
-    root: Path, location: str, piece: str, output: str, held: libraries.Held | None = None
+    root: Path,
+    location: str,
+    piece: str,
+    output: str,
+    held: libraries.Held | None = None,
+    lock: Mapping[str, str] | None = None,
 ) -> Plan:
     """Read, from the files as they are now, what a run of the producer that the piece
     `piece` declares for `output` reads. The library versions come from `held` where it
-    is given, as for a location git ignores, and otherwise as git lists them. Raises
-    Refused."""
+    is given, as for a location git ignores, and otherwise as git lists them. They are those
+    of `lock` where it is given, as for a lock not yet written, and otherwise of the lock the
+    piece's file holds. Raises Refused."""
     folder = _piece_folder(root, location, piece)
     data = _piece(root, folder, piece)
     declaration = _declaration(data, piece, output)
     plugin = producer(declaration.producer)
-    lock = data.get("lock")
+    lock = data.get("lock") if lock is None else lock
     if not isinstance(lock, Mapping) or not lock:
-        if copies.lock_stays(data):
+        final = copies.final(data, folder)
+        if copies.lock_stays(data, final):
             raise Refused(
                 f"the piece `{piece}` is {data['state']} and has no lock: "
-                f"{copies.no_lock(data)}, then produce"
+                f"{copies.no_lock(final)}, then produce"
             )
         raise Refused(
             f"the piece `{piece}` has no lock yet: run `{RENDER} {piece}` first, which writes "

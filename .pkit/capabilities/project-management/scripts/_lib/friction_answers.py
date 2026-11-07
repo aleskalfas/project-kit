@@ -20,9 +20,9 @@ says what a reader takes from them:
   or why they could not be read, which is never a pass. `checked(head, base)`
   is the same run of the change check without the settings, for a reader that
   needs only the answers. Given the pull request's `Source`, either first
-  fetches a head this clone lacks (`fetch_head`), from its branch, or for a
-  pull request from a fork from the ref its base repository keeps for it, on
-  the base's remote (`base_remote`). With `from_checkout=False`, either keeps the
+  fetches a head this clone lacks (`_lib.pr_head.fetch_head`), from its branch,
+  or for a pull request from a fork from the ref its base repository keeps for
+  it, on the base's remote. With `from_checkout=False`, either keeps the
   backbone's refusal to run an anchor's resolver away from the head, and starts
   no program the head holds (`Derivation.needs_checkout`).
 - `written(base)` runs the same check as the project's gate runs it, from the
@@ -128,9 +128,10 @@ from typing import Any, NamedTuple
 # sys.path) — as `pr_validation` does, which imports this module.
 try:
     import default_branch  # type: ignore[import-not-found]
+    import pr_head  # type: ignore[import-not-found]
     import provenance  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
-    from _lib import default_branch, provenance  # type: ignore[no-redef]
+    from _lib import default_branch, pr_head, provenance  # type: ignore[no-redef]
 # The one start of a `pkit` call, the package's first, so every module a run loads
 # shares it, whichever form loaded them.
 try:
@@ -176,7 +177,8 @@ TIMEOUT = 600
 #: environment both runs of the check add: routing off (the module docstring).
 PKIT = ("pkit",)
 UNROUTED = {"PKIT_NO_ROUTE": "1"}
-SHORT = 7
+#: How many characters of a commit's id a line names, as `_lib.pr_head` names it.
+SHORT = pr_head.SHORT
 #: The kind of the backbone's refusal to run an anchor's resolver from a working
 #: tree that is not the commit `--head` names, as `--json` states it in the
 #: document's `refused` (the CLI README, "Friction checks", `--head`): the one
@@ -360,84 +362,8 @@ class Derivation:
         return bool(_mapping((self.document or {}).get("base")).get("outdated"))
 
 
-@dataclass(frozen=True)
-class Source:
-    """Where a pull request's head is fetched from, where this clone lacks it: a
-    remote, and a ref in the repository it names. For a pull request from the base's
-    own repository, the remote its branch is pushed to and the branch. For one from a
-    fork, the base's remote, as `_refresh_base` resolves it, and the ref the base
-    repository keeps for the pull request: the fork is a repository this clone may
-    name no remote for."""
-
-    remote: str
-    ref: str
-
-
-def pull_request_source(
-    branch: str, number: int, *, cross_repository: bool, base: str, remote: str | None = None
-) -> Source:
-    """The `Source` of pull request `number`, opened from `branch` into the branch
-    `base`. From a fork: the base's remote (`base_remote`) and `refs/pull/<number>/head`.
-    Otherwise: `remote`, else the remote the branch is pushed to (`branch_remote`), and
-    the branch."""
-    if cross_repository:
-        return Source(base_remote(base), f"refs/pull/{number}/head")
-    return Source(remote or branch_remote(branch), f"refs/heads/{branch}")
-
-
-def base_remote(base: str) -> str:
-    """The remote the branch `base` is fetched from, as `_refresh_base` resolves it,
-    and `origin` where it resolves to no remote's branch, as `branch_remote` falls
-    back."""
-    try:
-        found = default_branch.check_base(base)
-    except default_branch.Unanswered:
-        return "origin"
-    remote = _remote_branch(found)
-    return remote[0] if remote is not None else "origin"
-
-
-def _remote_branch(found: default_branch.Base) -> tuple[str, str] | None:
-    """The remote and the branch of a base the backbone resolved to a remote-tracking
-    reference, or None for any other base."""
-    if found.resolved != "remote":
-        return None
-    remote, slash, branch = found.ref.partition("/")
-    return (remote, branch) if slash and remote and branch else None
-
-
-def branch_remote(branch: str) -> str:
-    """The remote `branch` is pushed to — its push remote, else the remote it
-    tracks — and `origin` when it names none, as start-work resolves a branch
-    (COR-054 point 2)."""
-    for atom in ("push:remotename", "upstream:remotename"):
-        remote = _git("for-each-ref", f"--format=%({atom})", f"refs/heads/{branch}").stdout
-        if remote.strip() and remote.strip() != ".":
-            return remote.strip()
-    return "origin"
-
-
-def has_commit(oid: str) -> bool:
-    """Whether this clone holds commit `oid`."""
-    return _git("cat-file", "-e", f"{oid}^{{commit}}").returncode == 0
-
-
-def fetch_head(head: str, source: Source) -> str | None:
-    """Fetch commit `head` from `source` where this clone lacks it: why it is still
-    missing, or None."""
-    if has_commit(head):
-        return None
-    proc = _git("fetch", "--quiet", source.remote, source.ref)
-    if has_commit(head):
-        return None
-    said = (proc.stderr or "").strip().splitlines()
-    return f"the head {head[:SHORT]} is not in this clone, and fetching {source.ref} from " + (
-        f"{source.remote} failed: {said[-1]}" if said else f"{source.remote} did not bring it"
-    )
-
-
 def derive(
-    head: str, base: str, *, source: Source | None = None, from_checkout: bool = True
+    head: str, base: str, *, source: pr_head.Source | None = None, from_checkout: bool = True
 ) -> Derivation:
     """The change check's document for commit `head` against the branch `base` —
     the pull request's, named always — as `checked` gives it, and the friction
@@ -455,7 +381,7 @@ def derive(
 
 
 def checked(
-    head: str, base: str, *, source: Source | None = None, from_checkout: bool = True
+    head: str, base: str, *, source: pr_head.Source | None = None, from_checkout: bool = True
 ) -> Derivation:
     """The change check's document for commit `head` against the branch `base`, the
     base fetched first where it is a remote's, and `head` from `source` where this
@@ -476,7 +402,7 @@ def checked(
     derivation says so (`needs_checkout`)."""
     problem = _refresh_base(base)
     if problem is None and source is not None:
-        problem = fetch_head(head, source)
+        problem = pr_head.fetch_head(head, source)
     if problem is not None:
         return Derivation(head, problem=problem)
     found = _run_check(head, base, cwd=None)
@@ -510,7 +436,7 @@ def _refresh_base(base: str) -> str | None:
         return str(exc)
     if found.resolved != "remote":
         return None
-    named = _remote_branch(found)
+    named = pr_head.remote_branch(found)
     if named is None:
         return f"the base {found.ref} names no remote's branch to fetch"
     remote, branch = named

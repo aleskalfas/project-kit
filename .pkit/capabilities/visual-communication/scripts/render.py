@@ -22,15 +22,20 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
   end, each library it moved below the version the lock named, and a search that stopped
   at its bound and kept the lock, each a fact at the lock (DEC-010 point 9, DEC-011 point
   8). The findings record keeps none: its key covers only the versions the lock names.
-- **Computes every scene:** one for each language the piece lists. A font with no file,
-  or a character no family measures, refuses the render before anything is laid out.
+- **Computes every scene:** one for each language the piece lists and each key over the
+  size axes it names. A font with no file, or a character no family measures, refuses the
+  render before anything is laid out.
 - **Writes the piece's findings record,** `findings.yaml`, keyed by a fingerprint of every
-  file the scenes were computed from: what the check reads while the key verifies.
+  file the scenes were computed from: what the check reads while the key verifies. A final
+  piece's render writes none, since the check reads none, and a record left from before
+  stays (DEC-017 point 3).
 - **Draws the previews** with the SVG renderer, one file for each page, language and
   combination of modes the piece names, under
   `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, local to the
   clone and never committed.
-- **Prints** what the renderer loses that the piece does not accept, and the findings.
+- **Prints** what the renderer loses that the piece does not accept, and the findings. Of
+  a final piece it also prints each stand-in a preview shows: it has no next export to fill
+  (DEC-016 point 5, DEC-017 point 3).
 
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
@@ -56,14 +61,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, copies, files, fingerprint, libraries, location, records, tokens
+from _lib import checks, copies, exports, files, libraries, location, rendering, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.findings import FACT, Finding
@@ -76,13 +80,6 @@ Results = Sequence[tuple[str, SceneResult]]
 
 #: Where the previews of each piece lie, relative to the project root.
 PREVIEWS = f"{LOCAL}/previews"
-
-#: The comment that opens the findings record, a line each.
-HEADER = (
-    "The findings record of the piece (visual-communication DEC-005 point 13): what",
-    "computing its scenes found, keyed by a fingerprint of every file they were computed",
-    "from. `pkit visual render` rewrites it; commit it, so the check reads it.",
-)
 
 
 def main() -> int:
@@ -131,16 +128,13 @@ def _render(root: Path, name: str, given: str | None) -> int:
     change = files.Change(root)
     said = location.record(change, where)
     locked = pl.locked(piece, lock)
-    written = {piece.folder / pl.PIECE_FILE: locked} if locked is not None else {}
-    sources = pl.findings_key_sources(root, held, piece, lock, sorted(project.env.fonts_read))
-    record = {
-        "pkit_schema": "visual-communication:findings",
-        "schema_version": 1,
-        "key": _key({**sources, "written": written}),
-        "findings": [checks.record_entry(finding) for finding in found],
-    }
+    # No check reads a final piece's record, so its render keeps none, and one left stays.
+    record = None if piece.final else rendering.record(project, found, locked)
     folder = root / PREVIEWS / name
-    for path in (piece.folder / pl.FINDINGS_FILE, *(folder / file for file in previews)):
+    for path in (
+        *(() if record is None else (piece.folder / pl.FINDINGS_FILE,)),
+        *(folder / file for file in previews),
+    ):
         pl.writable(root, path)
     # The previews first, the old ones removed once the new are in place; the records last.
     for file, text in previews.items():
@@ -151,7 +145,8 @@ def _render(root: Path, name: str, given: str | None) -> int:
                 change.remove(old)
     if locked is not None:
         change.write(piece.folder / pl.PIECE_FILE, locked)
-    change.write(piece.folder / pl.FINDINGS_FILE, records.text(record, HEADER).encode("utf-8"))
+    if record is not None:
+        change.write(piece.folder / pl.FINDINGS_FILE, rendering.record_text(record))
     change.commit()
     if said is not None:
         print(said)
@@ -159,12 +154,18 @@ def _render(root: Path, name: str, given: str | None) -> int:
         print(f"lock: {', '.join(f'{lib} {lock[lib]}' for lib in sorted(lock))}")
     _print(_stated(piece, moved))
     print(f"previews: {len(previews)} file(s) in {PREVIEWS}/{name}/")
+    if piece.final:
+        for shown in exports.shown_stand_ins(results):
+            print(f"preview: a final piece has no next export, so a stand-in shows: {shown}")
     for loss in lost:
         if not checks.accepted(loss, piece.accepted_losses):
             print(f"loss: {checks.loss_finding(loss).message}")
     _print(project.brand.findings)
     _print(checks.rooted(finding, piece) for finding in found if finding.code != "loss")
-    print(f"findings: {len(found)} kept in {piece.file(pl.FINDINGS_FILE)}")
+    if record is None:
+        print(f"findings: {len(found)} kept in no record: `{name}` is final ({piece.why_final})")
+    else:
+        print(f"findings: {len(found)} kept in {piece.file(pl.FINDINGS_FILE)}")
     return 0
 
 
@@ -173,12 +174,13 @@ def _moved(piece: pl.Piece, held: libraries.Held) -> libraries.Moved:
     piece's, `pinned` set or not: `move_lock` checks it as a pinned draft's, and a refusal
     says the piece's state. Such a piece with no lock has no pin to take off, so that
     refusal says what to do instead. Raises Refused."""
-    stays = copies.lock_stays(piece.data)
+    stays = piece.lock_stays
     shown = piece.file(pl.PIECE_FILE)
     if stays:
-        shown += f": the piece is {piece.state}, so no render moves its lock"
+        state = copies.FINAL if piece.final else piece.state
+        shown += f": the piece is {state}, so no render moves its lock"
         if not piece.lock:
-            raise pl.Refused(f"{shown}: {copies.no_lock(piece.data)}")
+            raise pl.Refused(f"{shown}: {copies.no_lock(piece.final)}")
     try:
         return libraries.move_lock(
             held,
@@ -214,16 +216,6 @@ def _stated(piece: pl.Piece, moved: libraries.Moved) -> list[Finding]:
     if moved.kept:
         found.append(Finding("lock-kept", FACT, moved.kept, file=file, where="lock"))
     return found
-
-
-def _key(sources: Mapping[str, Any]) -> dict[str, Any]:
-    """The findings record's key over the files as the render leaves them: `sources` gives,
-    under `written`, the bytes of each file the render writes. Raises Refused where one of
-    them cannot be read under form 1."""
-    try:
-        return fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))
-    except fingerprint.FingerprintError as exc:
-        raise pl.Refused(f"the findings record's key cannot be taken: {exc}") from exc
 
 
 def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[str, str]:

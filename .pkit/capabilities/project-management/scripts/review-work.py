@@ -132,6 +132,7 @@ from _lib import (
     instance_claims,
     issue_branch,
     issue_position,
+    pr_head,
     pr_validation,
     session_guard,
 )
@@ -821,7 +822,7 @@ def _unsaid_at_head(description: _Description, move: _Move) -> tuple[list[str], 
         problem = f"GitHub named no base branch for PR #{number}"
     else:
         source = (
-            friction_answers.pull_request_source(
+            pr_head.pull_request_source(
                 description.branch,
                 number,
                 cross_repository=description.cross_repository,
@@ -851,7 +852,7 @@ def _unsaid_at_head(description: _Description, move: _Move) -> tuple[list[str], 
 
 
 def _checked_at_head(
-    description: _Description, move: _Move, source: friction_answers.Source | None
+    description: _Description, move: _Move, source: pr_head.Source | None
 ) -> friction_answers.Derivation:
     """The change check at the PR's head, from a temporary checkout only where the
     head passes the test of DEC-067, or the person at this terminal names it when the

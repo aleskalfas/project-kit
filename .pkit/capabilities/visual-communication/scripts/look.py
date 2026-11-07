@@ -107,7 +107,8 @@ def _look(root: Path, args: argparse.Namespace) -> int:
         pages=args.page,
     )
     pl.writable(root, root / viewing.FOLDER / args.piece / viewing.REPORT)
-    viewed = viewing.view(project, viewing.scenes(project, wanted.languages), wanted)
+    results = viewing.scenes(project, wanted.languages, wanted.keys)
+    viewed = viewing.view(project, results, wanted)
     folder = viewing.write(root, args.piece, viewed)
     _print(folder, viewed.report)
     return 0

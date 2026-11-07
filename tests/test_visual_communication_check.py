@@ -3,8 +3,9 @@ validator of `pkit validate`, under the query contract — `--json` prints the f
 document and exits 0; without it, it exits 1 when a finding fails. Its findings are
 `test_visual_communication_checks.py`'s; here, the command: the findings record read while
 its key verifies, the validation's bound, the time it takes, one run through `pkit
-validate`'s runner as a process of its own, and what a state owes of a current copy, read
-after each state's real export (DEC-006 point 8, DEC-017 points 5 to 7)."""
+validate`'s runner as a process of its own, what a state owes of a current copy, read after
+each state's real export, and what a final piece owes of the version handed out, read after a
+real mark (DEC-006 point 8, DEC-017 points 3 to 7)."""
 
 from __future__ import annotations
 
@@ -26,22 +27,26 @@ from tests.adopter_repo import MakeAdopterRepo
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
     LOCK,
+    PHONE,
+    PHONE_WIDE,
     PIECE,
     PIECE_FOLDER,
     drawing_project,
     lay_out_drawing,
     list_drawing_libraries,
+    on_devices,
     write_content,
     write_picture,
 )
 from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import importable, yaml_text
 
-check, render, export, svg, seam, framing, fingerprint, reading = load(
+check, render, export, mark_final, svg, seam, framing, fingerprint, reading = load(
     "visual-communication",
     "check.py",
     "render.py",
     "export.py",
+    "mark-final.py",
     "plugins.svg",
     "plugins.seam",
     "framing",
@@ -154,6 +159,18 @@ def test_a_record_that_no_longer_verifies_is_not_believed(tmp_path: Path) -> Non
     ]
 
 
+def test_a_finding_at_one_size_reads_the_same_from_the_record_as_computed(tmp_path: Path) -> None:
+    root = on_devices(tmp_path, head=PHONE_WIDE)
+    computed = [f for f in document(root)["findings"] if f["label"] == "text-overflow"]
+    assert run_main(render, PIECE, cwd=root).returncode == 0
+    found = document(root)
+    assert "the scenes of 1 read from their findings record" in found["summary"][0]
+    [overflow] = [f for f in found["findings"] if f["label"] == "text-overflow"]
+    assert [overflow] == computed
+    assert overflow["severity"] == "error"
+    assert overflow["message"].startswith(f"`{PHONE}`: figure/body/steps[plan]/head: ")
+
+
 def test_past_the_validations_bound_a_piece_without_a_record_fails_as_not_checked(
     tmp_path: Path,
 ) -> None:
@@ -170,8 +187,13 @@ def test_past_the_validations_bound_a_piece_without_a_record_fails_as_not_checke
 
 
 def test_a_final_piece_with_only_a_fact_at_its_lock_exits_0(tmp_path: Path) -> None:
-    lock = {"foundations": "1.0.0", "tests": "1.0.0"}
-    root = drawing_project(tmp_path, state="final", picture=False, lock=lock)
+    root = marked(tmp_path)
+    path = root / "visual/libraries/tests/1.0.0/library.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("version: 1.0.0", "version: 1.0.1"),
+        encoding="utf-8",
+    )
+    list_drawing_libraries(root, released=True)
     shown = run(root, PIECE)
     assert shown.returncode == 0, shown.stdout
     lines = shown.stdout.splitlines()
@@ -179,7 +201,7 @@ def test_a_final_piece_with_only_a_fact_at_its_lock_exits_0(tmp_path: Path) -> N
         "the piece `flow` in `visual`: the scenes of 0 read from their findings record, of 0 "
         "computed now, of 0 not checked, of 1 left out as final."
     )
-    assert any("[lock-incomplete]" in line and line.startswith("  info") for line in lines)
+    assert any("[lock-unreadable]" in line and line.startswith("  info") for line in lines)
 
 
 def test_it_checks_the_skeleton_piece_within_a_few_seconds(tmp_path: Path) -> None:
@@ -249,6 +271,19 @@ WAYS_PAST_THE_GATE = (
 
 def exported(root: Path, *args: str) -> Path:
     shown = run_main(export, PIECE, *args, cwd=root)
+    assert shown.returncode == 0, shown.stderr
+    return root
+
+
+def marked(tmp_path: Path) -> Path:
+    """The skeleton piece, showing no produced picture, exported under libraries listed
+    released, and its first version marked final."""
+    root = exported(drawing_project(tmp_path, picture=False, released=True))
+    return mark(root)
+
+
+def mark(root: Path) -> Path:
+    shown = run_main(mark_final, PIECE, "1", cwd=root)
     assert shown.returncode == 0, shown.stderr
     return root
 
@@ -729,7 +764,7 @@ def test_a_current_copy_of_no_shape_fails_as_the_record_cannot_be_read(
     assert "keeps a `current-copy` that names no piece, version and files" in finding["message"]
 
 
-def test_a_record_the_binding_pass_names_takes_no_finding_of_its_own(tmp_path: Path) -> None:
+def test_a_record_that_cannot_be_read_takes_no_finding_on_the_copy(tmp_path: Path) -> None:
     root = published(tmp_path)
     (root / RECORD).write_text("versions: [\n", encoding="utf-8")
     labels = [finding["label"] for finding in document(root)["findings"]]
@@ -746,3 +781,331 @@ def test_a_version_the_record_no_longer_keeps_gives_no_lock_and_fails(tmp_path: 
         f"{RECORD} gives no lock of version 7, which wrote the current copy: no fingerprint is "
         f"kept — mend {RECORD}, then {EXPORT_AGAIN}"
     )
+
+
+# --- what a final piece owes of the version handed out ------------------------------------------
+
+HANDED_OUT_LIGHT = f"{PIECE_FOLDER}/handed-out/flow.v1.en.default.svg"
+HANDED_OUT_DARK = f"{PIECE_FOLDER}/handed-out/flow.v1.en.colour-scheme.dark.svg"
+AT_THE_FIELD = f"{RECORD}#handed-out"
+RESTORE_THE_FILE = "restore it from the repository's history, as it was handed out"
+RESTORE_THE_RECORD = f"restore what {RECORD} kept of version 1 from the repository's history"
+WRITE_BACK = (
+    "write back the lock of version 1, foundations@1.0.0, test-brand@1.0.0, tests@1.0.0, which "
+    "is no move of it"
+)
+CONFLICT = "pkit_schema: visual-communication:exports\n<<<<<<< HEAD\nversions: []\n"
+LEFT_OUT = "of 1 left out as final."
+
+#: A run over the location, and a run on the piece alone.
+EACH_RUN = pytest.mark.parametrize("args", [(), (PIECE,)], ids=["location", "alone"])
+
+
+def held_to(root: Path, *args: str) -> list[dict[str, str]]:
+    """Each finding on what a final piece owes of the version handed out, in the run's order."""
+    return [
+        finding
+        for finding in document(root, *args)["findings"]
+        if finding["label"].startswith(("handed-out-", "exports-"))
+    ]
+
+
+def edit_exports(root: Path, **fields: Any) -> None:
+    """Set top-level fields of the record of exports by hand, `handed_out` for its field."""
+    path = root / RECORD
+    record = reading.read_yaml(path)
+    record.update({name.replace("_", "-"): value for name, value in fields.items()})
+    path.write_text(yaml_text(record), encoding="utf-8")
+
+
+def edit_version(root: Path, **fields: Any) -> None:
+    """Set fields of the record's first version by hand."""
+    versions = reading.read_yaml(root / RECORD)["versions"]
+    versions[0].update(fields)
+    edit_exports(root, versions=versions)
+
+
+def write_lock_back(root: Path) -> None:
+    set_fields(root, lock=LOCK)
+
+
+def take_the_lock_out(root: Path) -> None:
+    path = root / PIECE_FILE
+    data = reading.read_yaml(path)
+    del data["lock"]
+    path.write_text(yaml_text(data), encoding="utf-8")
+
+
+@EACH_RUN
+def test_a_piece_marked_final_owes_nothing_and_is_left_out_as_final(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    assert held_to(root, *args) == []
+    assert document(root, *args)["summary"][0].endswith(LEFT_OUT)
+    assert run(root, *args).returncode == 0
+
+
+@EACH_RUN
+def test_a_file_handed_out_that_is_missing_fails_naming_it_and_the_version(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    (root / HANDED_OUT_LIGHT).unlink()
+    assert held_to(root, *args) == [
+        {
+            "severity": "error",
+            "location": HANDED_OUT_LIGHT,
+            "message": (
+                f"a file of version 1 of `flow`, handed out, is missing — {RESTORE_THE_FILE}"
+            ),
+            "label": "handed-out-file-missing",
+        }
+    ]
+    assert run(root, *args).returncode == 1
+
+
+@EACH_RUN
+def test_a_file_handed_out_that_changed_fails_naming_it_and_the_version(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    (root / HANDED_OUT_DARK).write_bytes(b"changed")
+    assert held_to(root, *args) == [
+        {
+            "severity": "error",
+            "location": HANDED_OUT_DARK,
+            "message": (
+                f"a file of version 1 of `flow`, handed out, has changed — {RESTORE_THE_FILE}"
+            ),
+            "label": "handed-out-file-changed",
+        }
+    ]
+    assert run(root, *args).returncode == 1
+
+
+@EACH_RUN
+def test_state_final_with_no_version_handed_out_fails_and_the_command_mends_it(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    root = exported(drawing_project(tmp_path, picture=False, released=True))
+    set_fields(root, state="final")
+    assert held_to(root, *args) == [
+        {
+            "severity": "error",
+            "location": f"{PIECE_FILE}#state",
+            "message": (
+                f"the piece `flow` is final, and {RECORD} names no version handed out — run "
+                "`pkit visual mark-final flow <version>`, which takes such a piece, or set its "
+                "state back"
+            ),
+            "label": "handed-out-none",
+        }
+    ]
+    assert held_to(mark(root), *args) == []
+
+
+def test_state_final_with_no_record_of_exports_fails_as_with_no_version(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, state="final", picture=False)
+    assert said(held_to(root)) == [("handed-out-none", "error", f"{PIECE_FILE}#state")]
+
+
+@EACH_RUN
+@pytest.mark.parametrize("state", ["draft", "published"])
+def test_a_version_handed_out_with_another_state_fails_and_setting_it_back_mends_it(
+    tmp_path: Path, state: str, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    set_fields(root, state=state)
+    assert held_to(root, *args) == [
+        {
+            "severity": "error",
+            "location": f"{PIECE_FILE}#state",
+            "message": (
+                f"{RECORD} hands out version 1, and the state of `flow` is {state} — set its "
+                "state back to final, and copy the piece for new work"
+            ),
+            "label": "handed-out-state",
+        }
+    ]
+    assert document(root, *args)["summary"][0].endswith(LEFT_OUT)
+    set_fields(root, state="final")
+    assert held_to(root, *args) == []
+
+
+def test_a_piece_final_by_the_field_alone_is_read_by_its_files_and_lock(tmp_path: Path) -> None:
+    root = marked(tmp_path)
+    set_fields(root, state="draft")
+    write_content(root, body={"use": "later/steps", "steps": []})
+    labels = [finding["label"] for finding in document(root, PIECE)["findings"]]
+    assert labels == ["handed-out-state"]
+
+
+@EACH_RUN
+def test_a_version_handed_out_with_another_lock_fails_naming_the_lock_to_write_back(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    newer_tests(root, released=True)
+    move_lock(root, "1.1.0")
+    assert held_to(root, *args) == [
+        {
+            "severity": "error",
+            "location": f"{PIECE_FILE}#lock",
+            "message": (
+                f"the lock of `flow` is not the one version 1, handed out, was made under — "
+                f"{WRITE_BACK}"
+            ),
+            "label": "handed-out-lock",
+        }
+    ]
+    write_lock_back(root)
+    assert held_to(root, *args) == []
+
+
+@EACH_RUN
+def test_a_fingerprint_it_cannot_read_is_a_finding_naming_the_record(
+    tmp_path: Path, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    kept = reading.read_yaml(root / RECORD)["versions"][0]["fingerprint"]
+    edit_version(root, fingerprint={**kept, "value": "0" * 64})
+    assert held_to(root, *args) == [
+        {
+            "severity": "error",
+            "location": AT_THE_FIELD,
+            "message": (
+                f"{RECORD} gives no lock of version 1, handed out: the fingerprint's value does "
+                f"not match its own inputs: it was edited — {RESTORE_THE_RECORD}"
+            ),
+            "label": "handed-out-unreadable",
+        }
+    ]
+    assert run(root, *args).returncode == 1
+
+
+def test_a_fingerprint_it_cannot_read_leaves_the_version_s_files_read(tmp_path: Path) -> None:
+    root = marked(tmp_path)
+    edit_version(root, fingerprint={})
+    (root / HANDED_OUT_LIGHT).unlink()
+    assert [each["label"] for each in held_to(root)] == [
+        "handed-out-unreadable",
+        "handed-out-file-missing",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        pytest.param(
+            {"handed_out": 7},
+            f"{RECORD} hands out version 7, and keeps no such one",
+            id="no-such-version",
+        ),
+        pytest.param(
+            {"versions": "none"},
+            f"{RECORD} keeps no list of numbered versions",
+            id="no-list",
+        ),
+    ],
+)
+def test_a_version_the_record_does_not_keep_fails_at_the_record(
+    tmp_path: Path, fields: dict[str, Any], message: str
+) -> None:
+    root = marked(tmp_path)
+    edit_exports(root, **fields)
+    [finding] = held_to(root)
+    assert (finding["label"], finding["location"]) == ("handed-out-unreadable", AT_THE_FIELD)
+    assert finding["message"].startswith(f"{message} — ")
+
+
+def test_a_version_that_names_no_file_fails_at_the_record(tmp_path: Path) -> None:
+    root = marked(tmp_path)
+    edit_version(root, files={})
+    [finding] = held_to(root)
+    assert (finding["label"], finding["location"]) == ("handed-out-unreadable", AT_THE_FIELD)
+    assert finding["message"] == (
+        f"{RECORD} names no file of version 1, handed out — {RESTORE_THE_RECORD}"
+    )
+
+
+@EACH_RUN
+@pytest.mark.parametrize(
+    ("spoil", "label"),
+    [
+        pytest.param(
+            lambda root: shutil.rmtree(root / "visual/libraries/tests/1.0.0"),
+            "lock-not-held",
+            id="not-held",
+        ),
+        pytest.param(take_the_lock_out, "lock-missing", id="no-lock"),
+        pytest.param(
+            lambda root: set_fields(root, lock={**LOCK, "tests": "one"}),
+            "lock-version",
+            id="no-version",
+        ),
+    ],
+)
+def test_a_lock_finding_stops_no_check_of_the_files_handed_out(
+    tmp_path: Path, spoil: Any, label: str, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    spoil(root)
+    (root / HANDED_OUT_LIGHT).unlink()
+    labels = [finding["label"] for finding in document(root, *args)["findings"]]
+    assert label in labels
+    assert "handed-out-file-missing" in labels
+
+
+def test_no_lock_on_a_marked_piece_names_the_lock_to_write_back(tmp_path: Path) -> None:
+    root = marked(tmp_path)
+    take_the_lock_out(root)
+    [finding] = held_to(root)
+    assert finding["label"] == "handed-out-lock"
+    assert finding["message"].endswith(WRITE_BACK)
+
+
+@EACH_RUN
+@pytest.mark.parametrize("state", ["draft", "published", "final"])
+def test_a_record_that_conflicts_on_a_merge_reads_the_piece_as_final_and_says_why(
+    tmp_path: Path, state: str, args: tuple[str, ...]
+) -> None:
+    root = marked(tmp_path)
+    set_fields(root, state=state)
+    (root / RECORD).write_text(CONFLICT, encoding="utf-8")
+    (root / HANDED_OUT_LIGHT).unlink()
+    found = document(root, *args)
+    [finding] = held_to(root, *args)
+    assert (finding["label"], finding["severity"]) == ("exports-unreadable", "error")
+    assert finding["location"] == RECORD
+    assert finding["message"].startswith(
+        "the piece `flow` reads as final, held to no version handed out: its record of exports "
+        "cannot be read: "
+    )
+    assert finding["message"].endswith(
+        " — mend the record, and each command reads the piece by its state again"
+    )
+    assert str(root) not in finding["message"]
+    assert "file-unreadable" in [each["label"] for each in found["findings"]]
+    assert found["summary"][0].endswith(LEFT_OUT)
+    assert run(root, *args).returncode == 1
+
+
+def test_a_published_piece_whose_record_cannot_be_read_owes_nothing_of_its_copy(
+    tmp_path: Path,
+) -> None:
+    root = published(tmp_path)
+    (root / RECORD).write_text(CONFLICT, encoding="utf-8")
+    (root / LIGHT).unlink()
+    assert owed(root) == []
+    assert said(held_to(root)) == [("exports-unreadable", "error", RECORD)]
+
+
+def test_a_record_read_as_a_file_that_names_no_number_alone_says_why(tmp_path: Path) -> None:
+    """No pass over the bindings names this record, so the finding here is all the check says
+    of it."""
+    root = marked(tmp_path)
+    edit_exports(root, handed_out="first")
+    [finding] = document(root, PIECE)["findings"]
+    assert finding["label"] == "exports-unreadable"
+    assert "`handed-out` holds no version's number" in finding["message"]

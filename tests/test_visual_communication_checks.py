@@ -33,12 +33,18 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load
 from tests.test_visual_communication_add import release
 from tests.test_visual_communication_pipeline import (
+    EVERY_WIDE,
     LOCK,
+    NARROW,
+    PHONE,
+    PHONE_WIDE,
     PIECE,
     PIECE_FOLDER,
     TESTS,
+    add_device,
     drawing_project,
     list_drawing_libraries,
+    on_devices,
     parts_project,
     released_entry,
     system_project,
@@ -433,7 +439,7 @@ def test_a_shipped_copy_of_a_number_being_built_asks_for_attention_on_a_final_pi
     assert finding.fix == (
         "once the capability releases foundations@1.0.0, run `pkit visual add foundations`"
     )
-    assert not report.failed()
+    assert [f.code for f, lv in report.judged if lv == "fails"] == [checks.HANDED_OUT_NONE]
 
 
 def test_a_shipped_copy_of_a_number_no_longer_shipped_states_a_fact_on_a_final_piece(
@@ -476,9 +482,11 @@ def made_final(root: Path) -> Path:
 
 
 def piece_labels(root: Path, *, only: str | None = None) -> set[str]:
-    """Each label the check raises in the piece's folder."""
+    """Each label the check raises in the piece's folder, but the one a piece set final by hand
+    takes for its version handed out, which `test_visual_communication_check.py` holds."""
     report = checks.check(root, only=only)
-    return {f.code for f, _ in report.judged if f.file.startswith(f"{PIECE_FOLDER}/")}
+    found = {f.code for f, _ in report.judged if f.file.startswith(f"{PIECE_FOLDER}/")}
+    return found - {checks.HANDED_OUT_NONE}
 
 
 FINAL_SUMMARY = (
@@ -1025,6 +1033,52 @@ def test_a_text_over_a_picture_or_over_nothing_is_not_measured() -> None:
     picture = {"type": "image", "id": "figure/pic", "x": 0, "y": 0, "width": 400, "height": 100}
     assert checks.drawn_contrast(page(picture, text("figure/t", "pale")), COLOURS, KEYS) == []
     assert checks.drawn_contrast(page(text("figure/t", "pale")), COLOURS, KEYS) == []
+
+
+# --- a piece on a size axis ---------------------------------------------------------------------
+
+HEAD = "figure/body/steps[plan]/head"
+
+
+def test_a_text_that_overflows_at_one_size_is_one_finding_that_opens_with_its_key(
+    tmp_path: Path,
+) -> None:
+    root = on_devices(tmp_path, head=PHONE_WIDE)
+    found = checks.computed(project_of(root))
+    [overflow] = [f for f in found if f.code == "text-overflow"]
+    assert (overflow.file, overflow.where) == ("content.en.yaml", HEAD)
+    assert overflow.message.startswith(f"`{PHONE}`: {HEAD}: a word of ")
+    # A finding the same at both sizes reads as on a piece of one size.
+    statuses = [f.message for f in found if f.code == "component-experimental"]
+    assert statuses
+    assert all(message.startswith("the piece uses `") for message in statuses)
+
+
+def test_a_finding_that_reads_otherwise_at_each_size_is_reported_for_each(tmp_path: Path) -> None:
+    root = on_devices(tmp_path, head=EVERY_WIDE)
+    found = [f.message for f in checks.computed(project_of(root)) if f.code == "text-overflow"]
+    widths = [message.split("is wider than the text's width ")[1] for message in found]
+    assert [message.split(": ")[0] for message in found] == ["`default`", f"`{PHONE}`"]
+    assert widths[0] != widths[1]
+
+
+def test_contrast_is_judged_in_each_combination_from_the_scene_that_serves_it(
+    tmp_path: Path,
+) -> None:
+    dark = "colour-scheme.dark"
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]},
+    )
+    # A phone paints a step's head in the colour of a rule, too pale on its card.
+    pale = {"text-primary": {"$type": "color", "$value": "{scheme.rule}"}}
+    add_device(root, {**NARROW, **pale})
+    found = [f for f in checks.computed(project_of(root)) if f.code == "contrast-drawn"]
+    assert found
+    named = {f.message.split("in the combination `")[1].split("`")[0] for f in found}
+    assert named == {PHONE, f"{dark}+{PHONE}"}
+    assert all(f.message.startswith(f"`{PHONE}`: `text-primary` on `") for f in found)
 
 
 # --- losses -------------------------------------------------------------------------------------

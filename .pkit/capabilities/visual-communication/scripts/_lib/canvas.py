@@ -12,9 +12,14 @@ replaces only what differs from SVG, each in a method of its own:
 - **The font faces:** `_font_faces`, which writes those of a page. A text records what it
   draws in each, whichever writes them.
 - **A span's placing:** `_span_place`. Where the engine's widths start a span stays here.
+- **A text as a whole:** `_text`, for a renderer that writes no SVG text. It reads a text
+  through `_text_lines`, which keeps its baselines, the run of each span, and what each face
+  draws, whichever writes them.
 
 The rest is how a scene is projected, whatever writes it: a stroke's inset, a text's
-anchoring, its baselines and the placing of its lines.
+anchoring, its baselines and the placing of its lines. What a subclass in another module
+writes with lies here too: `number`, `attribute_text`, `font_families`, `css_string`, and
+`find`, which finds a page in the tree.
 
 The canvas is no plugin. It lies outside `plugins/`, so the seam never reads it as one, and a
 renderer hands it its declaration, which names the renderer in each page and each loss and
@@ -76,6 +81,9 @@ NORMAL = 400
 #: How much of a width lies before the place an anchor holds it at.
 ANCHORED = {"middle": 0.5, "end": 1.0}
 
+#: The spans of a line, each with the run it is part of.
+Spans = list[tuple[Mapping[str, Any], Mapping[str, Any]]]
+
 logging.getLogger("fontTools.subset").setLevel(logging.ERROR)
 
 
@@ -86,12 +94,13 @@ def colour_text(value: Mapping[str, Any]) -> tuple[str, float]:
     return f"#{channels}", float(value.get("alpha", 1))
 
 
-def number(value: Any) -> str:
-    """A number as SVG holds it: to 1/100, with no trailing zero and no negative zero."""
-    rounded = round(float(value), 2) + 0.0
+def number(value: Any, places: int = 2) -> str:
+    """A number as SVG holds it: to `places` decimals, 1/100 where none are given, with no
+    trailing zero and no negative zero."""
+    rounded = round(float(value), places) + 0.0
     if rounded == int(rounded):
         return str(int(rounded))
-    return f"{rounded:.2f}".rstrip("0")
+    return f"{rounded:.{places}f}".rstrip("0")
 
 
 def css_string(name: str) -> str:
@@ -122,18 +131,29 @@ def _plain(char: str) -> bool:
     )
 
 
-def _families(run: Mapping[str, Any]) -> str:
+def font_families(run: Mapping[str, Any]) -> str:
     """A run's font families, as the value of `font-family`."""
     return ", ".join(css_string(family) for family in run.get("font-family", []))
 
 
-def _attributes(pairs: list[tuple[str, Any]]) -> str:
+def attribute_text(pairs: list[tuple[str, Any]]) -> str:
     return " ".join(f'{name}="{_attribute(value)}"' for name, value in pairs if value is not None)
 
 
 def _attribute(value: Any) -> str:
     """A value as the text of an attribute between double quotes."""
     return escape(str(value), quote=False).replace('"', "&quot;")
+
+
+def find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
+    """The element of the trace id `trace`, in the tree under `elements`."""
+    stack = list(reversed(elements))
+    while stack:
+        element = stack.pop()
+        if element.get("id") == trace:
+            return element
+        stack.extend(reversed(element.get("children", [])))
+    return None
 
 
 class Canvas:
@@ -173,7 +193,7 @@ class Canvas:
         body = "".join(self._element(child) for child in element.get("children", []))
         width, height = number(element["width"]), number(element["height"])
         renderer = f"{self.declaration['name']} {self.declaration['version']}"
-        head = _attributes(
+        head = attribute_text(
             [
                 ("xmlns", "http://www.w3.org/2000/svg"),
                 ("width", width),
@@ -186,7 +206,7 @@ class Canvas:
                 ("data-renderer", renderer),
             ]
         )
-        group = _attributes(
+        group = attribute_text(
             [
                 ("data-id", element["id"]),
                 ("data-component", element.get("component")),
@@ -211,7 +231,7 @@ class Canvas:
         inner = "".join(self._element(child) for child in element.get("children", []))
         x, y = float(element.get("x", 0)), float(element.get("y", 0))
         moved = f"translate({number(x)},{number(y)})" if x or y else None
-        attributes = _attributes(
+        attributes = attribute_text(
             [
                 ("data-id", element["id"]),
                 ("data-component", element.get("component")),
@@ -255,7 +275,7 @@ class Canvas:
         width = max(float(element["width"]) - 2 * inset, 0.0)
         height = max(float(element["height"]) - 2 * inset, 0.0)
         rx = element.get("rx")
-        attributes = _attributes(
+        attributes = attribute_text(
             [
                 ("data-id", element["id"]),
                 ("x", number(x)),
@@ -271,7 +291,7 @@ class Canvas:
 
     def _ellipse(self, element: Mapping[str, Any]) -> str:
         width, height = float(element["width"]), float(element["height"])
-        attributes = _attributes(
+        attributes = attribute_text(
             [
                 ("data-id", element["id"]),
                 ("cx", number(float(element["x"]) + width / 2)),
@@ -304,7 +324,7 @@ class Canvas:
             if points
             else [(end, number(element[end])) for end in ENDS_OF_LINE]
         )
-        attributes = _attributes(
+        attributes = attribute_text(
             [
                 ("data-id", element["id"]),
                 *((f"data-{which}", attached[which]["id"]) for which in ENDS if which in attached),
@@ -339,35 +359,25 @@ class Canvas:
         anchor = element.get("text-anchor", "start")
         before = ANCHORED.get(anchor, 0.0)
         at = x + before * width
-        y = float(element["y"])
-        step = float(element["line-height"])
         paragraphs = element.get("paragraphs") or [[{}]]
         first = paragraphs[0][0] if paragraphs[0] else {}
-        for runs in paragraphs:
-            for run in runs:
-                for face in run.get("fonts", []):
-                    self._faces.setdefault(self._face(face, run), set())
         lines = []
-        for index, line in enumerate(element.get("lines", [])):
-            runs = paragraphs[line.get("paragraph", 0)]
+        for baseline, line, spans in self._text_lines(element, float(element["y"])):
             pen = at - before * float(line["width"])
             drawn = []
-            for span in line.get("spans", []):
-                run = runs[span["run"]]
-                for face in run.get("fonts", []):
-                    self._faces[self._face(face, run)].update(span["text"])
+            for span, run in spans:
                 shown = escape(span["text"], quote=False)
                 look = [*self._span_place(line, pen), *self._look(element, run, first)]
-                drawn.append(f"<tspan {_attributes(look)}>{shown}</tspan>" if look else shown)
+                drawn.append(f"<tspan {attribute_text(look)}>{shown}</tspan>" if look else shown)
                 pen += float(span["width"])
-            place = [("x", number(at)), ("y", number(y + float(line["baseline"]) + index * step))]
-            lines.append(f"<tspan {_attributes(place)}>{''.join(drawn)}</tspan>")
+            place = [("x", number(at)), ("y", number(baseline))]
+            lines.append(f"<tspan {attribute_text(place)}>{''.join(drawn)}</tspan>")
         weight = first.get("font-weight")
-        attributes = _attributes(
+        attributes = attribute_text(
             [
                 ("data-id", element["id"]),
                 ("xml:space", "preserve"),
-                ("font-family", _families(first)),
+                ("font-family", font_families(first)),
                 ("font-size", number(first.get("font-size", 0))),
                 ("font-weight", weight if weight not in (None, NORMAL) else None),
                 ("text-anchor", anchor if anchor != "start" else None),
@@ -375,6 +385,27 @@ class Canvas:
             ]
         )
         return f"<text {attributes}>{''.join(lines)}</text>"
+
+    def _text_lines(
+        self, element: Mapping[str, Any], top: float
+    ) -> list[tuple[float, Mapping[str, Any], Spans]]:
+        """Each line of a text whose top lies at `top`: its baseline, the line, and each of
+        its spans with its run. Records what each span draws under the faces of its run."""
+        step = float(element["line-height"])
+        paragraphs = element.get("paragraphs") or [[{}]]
+        for runs in paragraphs:
+            for run in runs:
+                for face in run.get("fonts", []):
+                    self._faces.setdefault(self._face(face, run), set())
+        lines = []
+        for index, line in enumerate(element.get("lines", [])):
+            runs = paragraphs[line.get("paragraph", 0)]
+            spans = [(span, runs[span["run"]]) for span in line.get("spans", [])]
+            for span, run in spans:
+                for face in run.get("fonts", []):
+                    self._faces[self._face(face, run)].update(span["text"])
+            lines.append((top + float(line["baseline"]) + index * step, line, spans))
+        return lines
 
     def _span_place(self, line: Mapping[str, Any], pen: float) -> list[tuple[str, Any]]:
         """The attributes that place a span of `line`, which the engine's widths start at
@@ -399,7 +430,7 @@ class Canvas:
         if len(paint) == 2 and paint[1][1] is None:
             paint[1] = ("fill-opacity", "1")  # the text's own opacity is not the run's
         return [
-            ("font-family", _families(run)),
+            ("font-family", font_families(run)),
             ("font-size", number(run.get("font-size", 0))),
             ("font-weight", weight if weight is not None else NORMAL),
             *paint,
@@ -417,7 +448,7 @@ class Canvas:
             )
             return ""
         data = base64.b64encode(path.read_bytes()).decode("ascii")
-        attributes = _attributes(
+        attributes = attribute_text(
             [
                 ("data-id", element["id"]),
                 ("x", number(element["x"])),
@@ -439,7 +470,7 @@ class Canvas:
         markers = []
         for marker, (which, colour, alpha) in sorted(self._arrows.items()):
             tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
-            attributes = _attributes(
+            attributes = attribute_text(
                 [
                     ("id", marker),
                     ("viewBox", "0 0 10 10"),
@@ -450,7 +481,7 @@ class Canvas:
                     ("orient", "auto"),
                 ]
             )
-            fill = _attributes([("d", shape), ("fill", colour), ("fill-opacity", alpha)])
+            fill = attribute_text([("d", shape), ("fill", colour), ("fill-opacity", alpha)])
             markers.append(f"<marker {attributes}><path {fill}/></marker>")
         return "".join(markers)
 

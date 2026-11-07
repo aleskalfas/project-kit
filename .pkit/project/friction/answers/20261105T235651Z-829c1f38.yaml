@@ -1,0 +1,334 @@
+answers:
+  - artefact: .pkit/capabilities/evidence/README.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+    revalidated:
+      at: 2026-11-05T23:56:51Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This README says pkit refs validate covers claims about a project's own internals and resolves a capability's citations, and both still hold.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:00:23Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. The two answers this replaces were made apart: one on the shipped neutral brand and pkit visual add as a second writer of a brand's files, the other on that brand's files, the add change's update and the stand-ins DEC-005 and DEC-006 gained. Taken together they ask nothing of each other. The copy findings read a copy by its source on the list, so neutral falls under them, copy-not-shipped's row covers a number the capability ships and has not released, which is neutral's case, and font-missing reaches neutral's fonts as any brand's. A copy replaced under a named lock changes files of a version the lock names, so the findings key stops verifying and the scenes are computed again. The stand-ins are the second answer's alone, and the first speaks to nothing they touch, so the findings key, the input identities, the input sets and 'The check reports no finding on exports' stay true of both. Here the CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. So only an error still fails pkit validate, and a run still bounds each member."
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+    revalidated:
+      at: 2026-11-06T00:00:29Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. The two answers this replaces were made apart, on changes that touch different things. COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. The listing in run-examples.py builds the same list in plain strings, with the same fields, and leaves out the same git directories. So a page's anchors still flag it only when what they name changes, which the contract rests on, and 'The guards, and what the run confines' stands as written. Here the CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before, so pkit validate still runs the check as its member doc-examples:examples.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+    revalidated:
+      at: 2026-11-05T23:57:04Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This page says pkit validate runs each schema through a member of its registry, naming the configuration, packages, rule-sets, connections and friction members, and those rows are as they were.
+  - artefact: .pkit/schemas/data-binding.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T23:57:08Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This page says the data member runs both passes on every file a binding claims, and that row is as it was.
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T23:57:13Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This README says errors fail pkit validate, and that rule sets and version relations report under their headings, and those rows are as they were.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T23:57:18Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This page says pkit validate checks the friction block under friction, and that row is as it was.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T23:57:24Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This page says pkit validate applies the configuration's schema and reports a new major of the set a space inherits, and those rows are as they were.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T23:57:31Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This page says pkit validate runs the capability's check as its member living-docs:spaces and shows one report per page, and neither moved.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-06T00:00:34Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. The two answers this replaces were made apart, on changes that touch different things. COR-050 point 7 and the CLI sections this README rests on changed only the over-broad warning and what an excluded artefact shows, and the documents it reads gained bar and share on each finding and stayed at version 1, so the documentation check reads its stale pages and surface as before. DEC-053 point 2 changed only where a page's answers are read, and DEC-056 only two citations, so a page's answer in the diff still meets its obligation, as the README's doc-check and fixers contributions say. The warning touches neither. Here the CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before, so pkit validate still reports an anchor under friction and names the commit a member read.
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T23:57:42Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This README says a citation of a missing, superseded or withdrawn rule is a warning, which that row keeps, and says what pkit validate fails, which no change here touches.
+  - artefact: docs/schemas/README.md
+    read:
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T125441Z-87b370f0.yaml
+    revalidated:
+      at: 2026-11-05T23:57:48Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. This guide says pkit validate fails on a misspelt key and checks data files, and its fences show the same output, since no member changed.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+    revalidated:
+      at: 2026-11-05T23:57:52Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's process rows came to link the process area's pages, its schemas validate section came to name the schemas reference's page on backbone files, and project-management's read-only diagnostics gained show-pr's answers field and an example of it. This reference names show-pr only as the clean verb an agent's read is routed to, and that stands. Here the surface table's four hooks rows each link the agents reference's hooks.md, and the rows of new agent, new storyboard and refs validate link the agents pages, and the validate section's refs row links The reference graph. The refs validate row also says that a missing or retired operational rule only warns, as the validate section said already. Folders a sync writes links the same pages from its new agent and new storyboard items, and its permissions scaffold item and the refusal it rests on are as they were. No permissions command, flag or ignored path this reference rests on changed, so it holds.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+    revalidated:
+      at: 2026-11-05T23:57:57Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch this README became a reference for the AI agent, and the process and schema skills came to point to their references' pages. COR-066 gained point 5, and the decisions README's acceptance gate came to say that a new record's edits to accepted records follow its acceptance in its change. decision-author gained the steps that name those edits, show them and make them, and now reads COR-066 and COR-039. The CLI reference's process rows came to link the process area's pages. Here the agent-author and storyboard-author skills read and point to the agents reference's hooks.md and storyboards.md, and the CLI reference's four hooks rows link hooks.md. Beyond those, the rows of new agent, new storyboard and refs validate link the agents pages, and the validate section's refs row links The reference graph. The refs validate row also says that a missing or retired operational rule only warns, as the validate section said already. This README's checks are pkit validate's warnings on a skill's citations, whose drift stays a warning. What this reference states of a skill's layout, front matter, gates and deployment holds against both.
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+    revalidated:
+      at: 2026-11-05T23:58:04Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch ACT-operator came to call the gate the cross-repository guard, and UC-022, UC-023 and UC-026 changed only words, UC-023's steps 18 and 19 and a postcondition now naming a capability's loaded file by its term, with the same behaviour. The rules reference's Converting project.md into a loaded set came to send the reader to the schemas reference, its steps as they were, and the CLI reference's process rows came to link the process area's pages. Here the CLI reference's four hooks rows each link the agents reference's hooks.md, and the rows of new agent, new storyboard and refs validate link the agents pages, and the validate section's refs row links The reference graph. The refs validate row also says that a missing or retired operational rule only warns, as the validate section said already. That is what this guide's table says of a citation of a rule that is gone. What this guide says of a capability's rules, and each command, member and step it relies on, still hold.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+    revalidated:
+      at: 2026-11-05T23:58:11Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch COR-066 gained point 5: a new record's Implications name its edits to accepted records, and those edits follow its acceptance in its change. The decisions reference, decision-author, the architect, UC-037 and UC-040 came to say so, and this guide was updated with them. COR-066's check came to read what a change would land, and the guide's warning that nothing enforces COR-066 yet stays true while #2665 is open. ACT-developer, ACT-merge-authoriser and TERM-acceptance-gate changed only words, and the CLI reference's process rows came to link the process area's pages. Here the CLI reference's four hooks rows each link the agents reference's hooks.md, and the rows of new agent, new storyboard and refs validate link the agents pages, and the validate section's refs row links The reference graph. The refs validate row also says that a missing or retired operational rule only warns, as the validate section said already. The rows of new decision, decisions validate, decisions check-diff and refs records-for are as they were, so the guide holds."
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+    revalidated:
+      at: 2026-11-05T23:58:20Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch ACT-operator came to call the gate the cross-repository guard, and UC-027, UC-030 and UC-033 changed only words, every step as it was, UC-027 gaining a precondition from UC-022 and citing ADR-066 for the harness naming the dispatched agent. The CLI reference's process rows came to link the process area's pages, and its schemas validate section came to name the schemas reference's page on backbone files. Here the CLI reference's four hooks rows each link the agents reference's hooks.md, and the rows of new agent, new storyboard and refs validate link the agents pages, and the validate section's refs row links The reference graph. The refs validate row also says that a missing or retired operational rule only warns, as the validate section said already. No permissions command, flag or step changed, so the guide holds.
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T225848Z-3e84e405.yaml
+    revalidated:
+      at: 2026-11-05T23:58:25Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch this README came to say that graphic-design-reviewer is the capability's agent, deployed by the adapter as any agent is, and to link the agents reference's Deploy mechanics for it. Here that section becomes a reference, in numbered steps and lists, and keeps its address. It still has the deploy list each capability's agents folder beside core's and the project's, resolve a source's front matter through the overlay, and write the copy to .claude/agents. The reviewer's definition names no overlay category, and pkit agents reports it deployable. Its Dispatching item now links the adapter's Harness support, and says what it said. The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. So what this README says of the reviewer's deployment, and of the check as a member of pkit validate, holds.
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+    revalidated:
+      at: 2026-11-05T23:58:29Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch this README became the process area's entry page, and came to anchor the agents README's Write-carrying categories for the process-author agent's grant. Here that section is rewritten as a reference, in shorter sentences and lists. It still says process-authoring-targets is the one write-carrying category that ships, that it ships as an explicit empty list so the agent deploys owning nothing, and that the deploy refuses an entry resolving into content sync manages, naming its path, and skips the agent. The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. So what this README says of the agent's write authority, and of what validation reads of a process and its package, holds.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+    revalidated:
+      at: 2026-11-05T23:58:33Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's validate section and its friction pointers came to name the process and schemas pages. Its friction sections and COR-050 point 7 came to change the over-broad warning and what an excluded artefact shows, and the documents the agent reads gained bar and share on each finding and stayed at version 1, so it reads them as before. The validation reference's What it reports gained a bullet on links and citations read, which this page does not state. DEC-056 changed only citations, so what the agent is told of a run the project granted, that it only proposes friction fixes, stands beside the warning, which touches neither. Here the adapter's section on deploy-agents.sh changes one pointer, to the agents reference's storyboards.md, Frontmatter declaration. This page says that pkit sync deploys the living-docs agent and that the adapter's deploy-agents.sh writes .claude/agents/living-docs.md, and both still hold. The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. What the agent reads and proposes is as it was.
+  - artefact: docs/process/README.md
+    read:
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+    revalidated:
+      at: 2026-11-05T23:58:37Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch this guide is new, and anchors the agents README's Write-carrying categories for granting the process-author agent its files. Here that section is rewritten as a reference, in shorter sentences and lists. It still says process-authoring-targets ships as an explicit empty list, that the agent then deploys owning nothing, and that an install from before the category has no such key, so the agent is skipped until the key is written. The CLI reference's validate section changes only in its refs row, which now links the agents reference's The reference graph and grades findings as before. So the guide's account of the grant, and the fences that show pkit validate's last line, hold.
+  - artefact: .pkit/README.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+    revalidated:
+      at: 2026-11-05T23:58:42Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the skills, decisions, schemas and process READMEs each came to open as a reference for the AI agent, each still its folder's entry page, the schemas and process READMEs with three pages beside each. The decisions README's no-shared-files invariant still says the core and project pattern governs the other areas, as the signpost's start line says. Here the agents README becomes a reference for the AI agent, with hooks.md and storyboards.md beside it, and stays its folder's entry page. The signpost's lines on decisions/, skills/, agents/, schemas/ and process/ still hold. The CLI reference's Authoring commands keeps its address, and only links the agents pages from its parts on new agent and new storyboard, so the signpost's line that names it holds too.

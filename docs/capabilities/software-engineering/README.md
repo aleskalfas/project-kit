@@ -34,6 +34,7 @@ pkit:
         - .pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203
         - .pkit/agents/README.md#adopter-overlay
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
+        - .pkit/agents/README.md#pkit-agents
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run
         - .pkit/cli/README.md#friction-defer-artefact---anchor-anchor---reason-text---yes----dry-run
