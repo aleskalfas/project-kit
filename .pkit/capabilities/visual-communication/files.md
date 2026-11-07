@@ -32,6 +32,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
@@ -137,6 +138,7 @@ pkit:
         - visual-communication:DEC-021#2
         - visual-communication:DEC-025#2
         - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#5
         - visual-communication:DEC-025#9
         - visual-communication:DEC-025#10
 ---
@@ -152,6 +154,7 @@ Where a project's visual work lies, what each of its files holds, and who writes
 - [What the location holds](#what-the-location-holds)
 - [Names, ids and the binding](#names-ids-and-the-binding)
 - [A piece](#a-piece)
+- [Picture files](#picture-files)
 - [The library folder](#the-library-folder)
 - [Brands](#brands)
 - [Notations](#notations)
@@ -221,6 +224,7 @@ The table names the schema each file binds to (see [The binding](#the-binding)),
 | `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/<library>/<version>/pictures/<file>`, a picture file | none: a PNG or a JPEG ([Picture files](#picture-files)) | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` and `pkit visual upgrade` rewrite its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
@@ -289,6 +293,7 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 | concept | `<notation>/<concept>` | a concept of a notation, read with the notation; never a version |
 | version | `X.Y.Z`, X at least 1 | a library version |
 | release | `X.Y.Z` | a release of the capability |
+| bare name | `^[a-z][a-z0-9-]*`, then `.png`, `.jpg` or `.jpeg` | a picture file, by its file name alone ([Picture files](#picture-files)) |
 
 So a name holds no `.`, `/` or `#`, and starts with a letter, so YAML never reads it as a number. Nor is a name or an id a word that a YAML reader takes for a yes or a no, or for nothing, such as `no`, `on` or `null`, so either keeps its meaning wherever it is written unquoted, as a key or as a value. The schemas and the commands refuse the same words. The names that enter a token path or a key take the name shape, so a code writer can spell them in code (DEC-004 point 4).
 
@@ -475,6 +480,40 @@ caption: The flow.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
 Each key of a mapping that places a component must be a field or an option of that component, an arrangement field or an end field of its list where the mapping is an item, or a reserved key. A key that both an item's component and its list declare is read by neither (DEC-010 point 2, DEC-011 point 1). A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.
+
+## Picture files
+
+A *picture file* is a PNG or a JPEG file that a person puts in the `pictures/` folder of a library's version (DEC-025 point 2). A brand's picture role names one ([Picture roles](#picture-roles)). What the check and a release report of a picture file is under *Picture files* in *What the check reports*.
+
+### How a name finds its file
+
+- **By its bare name,** its file name alone, of the shape [Shapes](#shapes) gives. `.png` names a PNG, and `.jpg` or `.jpeg` a JPEG. A bare name holds no `/`, so it names a file of `pictures/` itself, never one in a folder within.
+- **By its exact name,** among the files of `pictures/` as the commands list them ([How a command finds it](#how-a-command-finds-it)). So `logo.png` never finds `Logo.png`, though some file systems hold the two as one file. A file git ignores is no picture, since no clone holds it.
+- **No symbolic link.** A name that finds one fails, since a link may lead out of the folder, or to a file another clone lacks.
+- **Its own bytes, committed.** A file git hands to a large-file store, by the attribute `filter=lfs`, is no picture. Nor is a store's pointer that lies in a picture's place. The engine reads no store.
+
+### The encodings read
+
+The capability reads a picture stored in a way that every output draws alike (DEC-025 point 5):
+
+- **A PNG** of 8 bits or fewer for each sample, of any colour type, a palette with transparency included.
+- **A JPEG** of 8 bits, in grey or in colour, baseline or progressive.
+- **What its bytes are.** Its first bytes say whether it is a PNG or a JPEG, and its extension must say the same.
+- **Its colour profile.** A picture may carry an ICC profile, in a PNG's `iCCP` chunk or in a JPEG's ICC segments. The profile is for the picture's own colours: grey for a grey picture, RGB for one in colour.
+
+Every other encoding is refused, with its fix:
+
+| Refused | Fix |
+|---|---|
+| A PNG of 16 bits for each sample, or an interlaced one | Save it at 8 bits for each sample, not interlaced. |
+| An animated PNG | Save its first frame as a still PNG. |
+| A JPEG in CMYK | Save it in RGB. |
+| A JPEG whose orientation tag turns or mirrors it | Save it upright, with no orientation tag that turns it. |
+| A picture whose colour profile is for other colours than its own | Save it with a colour profile for its own colours, or with none. |
+| A JPEG named `.png`, or a PNG named `.jpg` or `.jpeg` | Rename it by what it is, and name it so. Or save it as its extension says. |
+| Any other encoding, such as a JPEG of 12 bits | Save it as a PNG or a JPEG of 8 bits. |
+
+A file cut short or damaged cannot be read, and fails too. Save it again as a PNG or a JPEG of 8 bits.
 
 ## The library folder
 
@@ -762,8 +801,7 @@ A brand gives a picture role its value as an empty group at the role's path. DTC
 }
 ```
 
-- **The file** lies in the `pictures/` folder of the brand's version. Its bare name is lower-case letters, digits and hyphens, starting with a letter, then `.png`, `.jpg` or `.jpeg` (DEC-025 point 2).
-- **Found by its exact name,** so `logo.png` never finds `Logo.png`. A name the folder does not hold fails, and so does one that names a symbolic link (DEC-025 point 9).
+- **The file** lies in the `pictures/` folder of the brand's version, under its bare name. It is found and read as any picture file is ([Picture files](#picture-files)). Each finding on it lies in the brand's version (DEC-025 point 9).
 - **The group holds nothing else** but a `$description` and a `$deprecated`. It aliases nothing, and no token aliases it.
 - **It merges as a token's value does,** in the Resolver document's order of sources. So a value axis may give a dark mode its own logo. A brand built on a base keeps its base's logo, unless the base opens the role ([Open roles](#open-roles)).
 - **No brand owes one a value.** A brand that gives it none is not at fault. Its version states that once, as a fact, and no piece states it (DEC-025 point 9).

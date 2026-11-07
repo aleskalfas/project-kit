@@ -1,14 +1,15 @@
 """Brands and the foundations' declarations (DEC-004): the shipped foundations, the test
 brand resolved in every combination, the test edition resolved over the test brand, its
-base (point 6), the picture role a brand may give a file (DEC-025 point 4), and what a
-brand or a declarations file is refused for, each refusal built in the test's own folder
-from a copy of a valid one."""
+base (point 6), the picture role a brand may give a file, judged as any picture file is
+(DEC-025 points 2, 4, 5 and 9), and what a brand or a declarations file is refused for,
+each refusal built in the test's own folder from a copy of a valid one."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import shutil
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from tests.visual_communication_project import (
     TEST_BRAND,
     TEST_EDITION,
     TEST_PARTS,
+    TEST_PICTURES,
     bound,
     copy_library,
     project,
@@ -1383,9 +1385,6 @@ def test_a_pair_resting_on_a_pair_of_its_library_at_a_level_as_strict_holds(
 
 # --- picture roles (DEC-025 points 4, 9 and 10) -------------------------------------------------
 
-#: The first bytes of a PNG file: what a brand's picture holds, read by name alone here.
-PNG = b"\x89PNG\r\n\x1a\n"
-
 
 def picture(name: Any) -> dict[str, Any]:
     """A picture role's value: an empty group that names its file, by its bare name, in the
@@ -1399,12 +1398,14 @@ def giving_logo(folder: Path, value: Any, file: str = BASE) -> Path:
     return folder
 
 
-def holding(folder: Path, *names: str) -> Path:
-    """`folder`, a brand's version, holding each of `names` in its `pictures/`."""
+def holding(folder: Path, *names: str, source: str = "") -> Path:
+    """`folder`, a brand's version, holding each of `names` in its `pictures/`: a copy of the
+    test picture `source`, or of one the capability reads, of the kind its extension says."""
     for name in names:
         path = folder / "pictures" / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(PNG)
+        given = source or ("alpha.png" if name.endswith(".png") else "colour.jpg")
+        shutil.copyfile(TEST_PICTURES / given, path)
     return folder
 
 
@@ -1524,8 +1525,72 @@ def test_a_logo_that_names_a_file_its_version_does_not_hold_fails(
 def test_a_logo_that_names_a_symbolic_link_fails(tmp_path: Path, foundations: Any) -> None:
     folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "elsewhere.png")
     (folder / "pictures" / "logo.png").symlink_to("elsewhere.png")
-    read = tokens.read_brand(folder, foundations)
-    assert [f.code for f in read.findings] == ["picture-missing"]
+    read = tokens.read_brand(folder, foundations, root=tmp_path)
+    assert [(f.code, f.file, f.library) for f in read.findings] == [
+        ("picture-link", "test-brand/1.0.0/pictures/logo.png", "test-brand@1.0.0")
+    ]
+
+
+def test_a_logo_whose_name_differs_in_case_says_which_file_the_folder_holds(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "Logo.png")
+    [finding] = tokens.read_brand(folder, foundations).findings
+    assert finding.code == "picture-missing"
+    assert "it holds `Logo.png`, and a name finds a file by its exact case" in finding.message
+
+
+def test_a_logo_of_an_encoding_the_capability_refuses_fails_in_the_brands_version(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A brand's file is read as any picture file is (DEC-025 points 5 and 9): the brand
+    stays usable, exports the role, and the finding lies in its version."""
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    read = tokens.read_brand(
+        holding(folder, "logo.png", source="deep.png"), foundations, root=tmp_path
+    )
+    [finding] = read.findings
+    assert (finding.code, finding.level, finding.file, finding.where, finding.library) == (
+        "picture-encoding",
+        findings.FAILS,
+        "test-brand/1.0.0/pictures/logo.png",
+        "",
+        "test-brand@1.0.0",
+    )
+    assert finding.message == (
+        "`logo.png` is a PNG of 16 bits for each sample, which the capability does not read"
+    )
+    assert finding.fix == "save it at 8 bits for each sample, not interlaced"
+    assert "picture.logo" in read.roles
+    _, level = findings.as_read(finding, released=True)
+    assert level == findings.ATTENTION
+
+
+def test_a_logo_two_modes_name_is_judged_once(tmp_path: Path, foundations: Any) -> None:
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    giving_logo(folder, picture("logo.png"), DARK)
+    read = tokens.read_brand(holding(folder, "logo.png", source="interlaced.png"), foundations)
+    assert [f.code for f in read.findings] == ["picture-encoding"]
+
+
+def git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+
+def test_a_logo_git_ignores_finds_no_file(tmp_path: Path, foundations: Any) -> None:
+    """A name finds its file among the folder's files as version control lists them, so a
+    file the clone ignores is no picture (DEC-025 point 2)."""
+    git(tmp_path, "init", "-q")
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "logo.png")
+    assert tokens.read_brand(folder, foundations).findings == ()
+    (tmp_path / ".gitignore").write_text("logo.png\n", encoding="utf-8")
+    [finding] = tokens.read_brand(folder, foundations, root=tmp_path).findings
+    assert (finding.code, finding.file, finding.where) == (
+        "picture-missing",
+        "test-brand/1.0.0/tokens/base.tokens.json",
+        "picture.logo",
+    )
+    assert finding.message.endswith("the file lies there, and git ignores it, so no clone holds it")
 
 
 @pytest.mark.parametrize(

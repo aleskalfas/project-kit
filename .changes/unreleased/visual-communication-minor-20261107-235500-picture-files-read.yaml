@@ -1,0 +1,21 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A picture file is read and judged by its name, git's listing of its folder and
+  its encoding (#2855). The file a brand gives `picture.logo` is found by its
+  exact name among the files git lists in the version's `pictures/`, so a file
+  git ignores is none. A symbolic link fails as `picture-link`, and a file a
+  large-file store keeps, or its pointer, as `picture-stored`. The file is then
+  read: a PNG of 8 bits or fewer for each sample, and a JPEG of 8 bits, in grey
+  or in colour, baseline or progressive. A PNG of 16 bits, an interlaced or an
+  animated one, a JPEG in CMYK or of 12 bits, one an orientation tag turns, and
+  a colour profile for other colours than the picture's, fail as
+  `picture-encoding`, each with its fix. Bytes that are not what the extension
+  says fail as `picture-extension`, and a file cut short or damaged as
+  `picture-unreadable`. Each finding lies in the brand's version. `pkit visual
+  release` reads each file directly in the version's `pictures/` under a bare
+  name, the names a part can give, named or not, and refuses one that fails. It
+  breaks nothing an adopter holds, since no release has
+  shipped a picture role yet.
