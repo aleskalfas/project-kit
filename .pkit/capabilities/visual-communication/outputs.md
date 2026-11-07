@@ -53,6 +53,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
+        - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
       record:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
@@ -173,7 +174,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
-- **The seam's version** is 4. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call. Its loss in one of those keys names the key ([Modes](#modes)). What a producer and a code writer are handed and return is as version 1 had it.
+- **The seam's version** is 4. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). What a producer and a code writer are handed and return is as version 1 had it.
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
@@ -260,7 +261,7 @@ While it draws, the renderer reports three losses of its own:
 
 ## The HTML renderer
 
-The `html` renderer draws a scene as one *page file*: one language's pages, at one key over the size axes, in one web document. The file holds each mode a reader's system can pick ([Modes](#modes)). Writing it takes no browser. It draws the exports a piece declares as `html` ([Exports](#exports)); previews stay SVG. The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
+The `html` renderer draws a scene as one *page file*: the scene's pages in one web document. [Modes](#modes) says which keys a file serves, and how it holds their modes. Writing it takes no browser. It draws the exports a piece declares as `html` ([Exports](#exports)); previews stay SVG. The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
 
 - **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
@@ -275,9 +276,9 @@ The `html` renderer draws a scene as one *page file*: one language's pages, at o
 
 ### Modes
 
-A page file holds, for one language and one size, each mode a reader's signal names, such as `prefers-color-scheme: dark`. The reader's system or browser picks one, and an open page repaints.
+A page file holds each mode a reader's signal names, such as `prefers-color-scheme: dark`. The reader's system or browser picks one, and an open page repaints.
 
-- **Which keys share a file.** Keys that differ only in modes paired with a signal share one file ([What the HTML renderer declares](#what-the-html-renderer-declares)). So a file serves one key over the size axes.
+- **Which keys share a file.** In one language, keys that differ only in modes paired with a signal share one file ([What the HTML renderer declares](#what-the-html-renderer-declares)). So a file serves one language, and one key over the size axes: the file's size.
 - **A mode with no pair** takes a file of its own, drawn from the scene of its size.
 - **The file's key** is the first it serves, in [key order](files.md#keys-of-combinations). So a piece of light and dark takes the default key, and a piece of dark alone takes dark's.
 - **A paint is a custom property.** Each colour role the file paints is one property, in the CSS writer's spelling, such as `--ink`. Text and shapes read the same property, and a colour's alpha lies in its value.
@@ -305,10 +306,10 @@ The file carries no alternative text, no reading order and no structure such as 
 
 Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer. While it draws, the renderer reports that renderer's three losses, under its own name ([What the SVG renderer loses](#what-the-svg-renderer-loses)). A run whose role has no colour is written `transparent`. It never takes the browser's own colour.
 
-In a file of several keys, a loss that lies in one key alone names it, under `key` ([The loss report](#the-loss-report)):
+In a file of several keys, these losses lie in one key alone (`key` in [The loss report](#the-loss-report)):
 
 - **A role with no colour in one key** draws nothing in that key, and reports the loss there.
-- **A picture** whose variant in another key holds another picture is `approximated` in that key, since the page draws the first key's.
+- **A picture** whose variant in another key holds another picture is `approximated` in that key (*Pictures* in [Modes](#modes)).
 - **A picture with no variant for a key** is left out in that key.
 
 ## Exports
@@ -361,7 +362,7 @@ A version that let a version's number or its date through, though it does not fi
 
 ```yaml
 let-through:
-  - {fact: version, text: v1000, element: figure/body/number, component: tests/stamp, version: 1.0.0}
+  - {fact: version, text: v1, element: figure/body/narrow, component: tests/stamp, version: 1.0.0}
 ```
 
 | Field | What it holds |
