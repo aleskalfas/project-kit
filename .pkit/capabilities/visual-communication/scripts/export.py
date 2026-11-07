@@ -29,7 +29,8 @@ the export used. `--use-stale` naming an output the piece does not declare is re
 that is not stale is used as it is, and the command says so. It stops on a picture that is
 missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
 final piece takes no export, whatever else holds of it, final by its state or by a version
-handed out, or where its record of exports cannot be read (DEC-017 point 3).
+handed out, or where its record of exports cannot be read, and the refusal names
+`pkit visual take-up`, which copies it for new work (DEC-017 point 3).
 
 A published piece's run also writes its current copy, an unnumbered copy of each file of
 the version, in the piece's `current-copy/`, replacing that folder whole, and `exports.yaml`
@@ -68,7 +69,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import current_copy, exports, files, fingerprint, libraries, location, rendering
+from _lib import copies, current_copy, exports, files, fingerprint, libraries, location, rendering
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -106,7 +107,8 @@ def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> i
     piece = pl.read_piece(root, where.path, name)
     if piece.final:
         raise pl.Refused(
-            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export"
+            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export: "
+            f"run {copies.take_up_command(name)} to take it up again as a new draft"
         )
     _refuse_a_lock_that_differs(piece)
     project = rendering.exportable(piece, libraries.Held(root, where.path))
