@@ -9,6 +9,8 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
 - `values`, `preferred`, `exposes`; switches on an option; options of words, of an item,
   of an item's point; list fields, which may also be null;
 - the operators `row` and `column`: `gap`, `align-items`, `justify-content`, equal sizes;
+  a stretch an item passes on to the part it draws last, and through it, from a stretch
+  alone;
 - colour families, whose members the foundations map to roles; states and `override`;
   a concept's family, ahead of a list's, a component's and a container's;
 - formulas: dimensions checked when a component is read, `:index` and `:count` over the
@@ -343,6 +345,95 @@ def test_a_list_given_less_than_its_items_ask_for_is_a_finding() -> None:
     result = draw(ITEMS, components=listed("row", {}, width="=@space.4"))
 
     assert finding(result, "gets-less").where == "top/items"
+
+
+def stretching(**parts: Any) -> dict[str, dict[str, Any]]:
+    """A row of items, as tall as the tallest, and a slot `body` 128 px tall. A tile is a
+    box 16 px square that fills what it gets, and a tall one is 64 px tall. A stack holds a
+    tile, then a slot `foot` under it, and is as tall as both; `parts` replace or add to
+    its parts."""
+    tile = block({"b": box(width="=:width", height="=:height")})
+    tile["preferred"] = {"width": "=@space.3", "height": "=@space.3"}
+    tall = block({"b": box(width="=:width", height="=:height")})
+    tall["preferred"] = {"width": "=@space.3", "height": "=@space.4 * 2"}
+    stack = block(
+        {
+            "head": {"use": "lab/tile", "width": "=:width"},
+            "foot": {"slot": "foot", "y": "=head.bottom", "width": "=:width"},
+            **parts,
+        },
+        fields={"foot": {"type": "object"}},
+        preferred={"width": "=@space.3", "height": "=foot.bottom"},
+    )
+    row = top(
+        {
+            "items": {"repeat": "items", "draw": "lab/tile", "row": {"gap": "=@space.1"}},
+            "body": {"slot": "body", "y": "=items.bottom", "height": "=@space.4 * 4"},
+        },
+        fields={
+            "items": {"type": "array", "items": {"type": "object"}},
+            "body": {"type": "object"},
+        },
+        preferred={"width": "=@size.figure", "height": "=body.bottom"},
+    )
+    return lab(top=row, tile=tile, tall=tall, stack=stack)
+
+
+def beside_tall(stack: dict[str, Any]) -> dict[str, Any]:
+    """Content that lays `stack` in the row beside a tall tile, which makes the row 64 px
+    tall."""
+    return {"items": [{"id": "a", "use": "lab/stack", **stack}, {"id": "b", "use": "lab/tall"}]}
+
+
+TILE = {"use": "lab/tile"}
+
+
+def height_source(result: Any, trace: str) -> str:
+    element = result.scene.find(trace)
+    assert element is not None, f"no element {trace}"
+    return str(element.sources["height"])
+
+
+def test_an_item_stretched_across_its_row_passes_it_on_to_the_part_it_draws_last() -> None:
+    result = draw(beside_tall({"foot": TILE}), components=stretching())
+    nested = draw(
+        beside_tall({"foot": {"use": "lab/stack", "foot": TILE}}), components=stretching()
+    )
+
+    # The stack asks for 32 px and gets 64: its foot takes the other 32, and so ends where
+    # the tall tile ends.
+    assert result.findings == []
+    assert frame(result, "top/items[b]")[3] == 64.0
+    assert frame(result, "top/items[a]/head") == (0.0, 0.0, 16.0, 16.0)
+    assert frame(result, "top/items[a]/foot") == (0.0, 16.0, 16.0, 48.0)
+    assert frame(result, "top/items[a]/foot/b")[3] == 48.0
+    assert height_source(result, "top/items[a]/foot") == "engine"
+    # A stack in the foot takes the stretch, and passes it on to its own foot in turn.
+    assert nested.findings == []
+    assert frame(nested, "top/items[a]/foot") == (0.0, 16.0, 16.0, 48.0)
+    assert frame(nested, "top/items[a]/foot/foot") == (0.0, 16.0, 16.0, 32.0)
+
+
+def test_a_stretch_passes_only_to_the_last_part_drawn_and_only_from_a_stretch() -> None:
+    def foot(result: Any) -> tuple[float, float, float, float]:
+        return frame(result, "top/items[a]/foot")
+
+    followed = draw(beside_tall({"foot": TILE}), components=stretching(mark=box()))
+    sized = stretching()
+    sized["lab/stack"]["parts"]["foot"]["height"] = "=@space.3"
+    given = draw(beside_tall({"foot": TILE}), components=sized)
+    empty = draw(beside_tall({}), components=stretching())
+    alone = draw({"body": {"use": "lab/stack", "foot": TILE}}, components=stretching())
+
+    # A part drawn after the foot, or the foot's own height, keeps the foot as it asks.
+    assert foot(followed) == foot(given) == (0.0, 16.0, 16.0, 16.0)
+    assert height_source(followed, "top/items[a]/foot") == "default:lab/tile"
+    # With the foot empty, the head is the last part drawn, and takes the stretch.
+    assert frame(empty, "top/items[a]/head") == (0.0, 0.0, 16.0, 64.0)
+    # A slot that gives a stack more than it asks for stretches nothing within it.
+    assert frame(alone, "top/body")[3] == 128.0
+    assert frame(alone, "top/body/foot") == (0.0, 16.0, 16.0, 16.0)
+    assert [r.findings for r in (followed, given, empty, alone)] == [[], [], [], []]
 
 
 def test_a_formula_steps_into_a_list_by_first_last_and_id() -> None:

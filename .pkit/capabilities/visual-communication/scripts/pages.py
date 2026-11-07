@@ -10,13 +10,15 @@
 # ]
 # ///
 """visual-communication capability — pages: what `pkit visual look` can draw of a piece, and
-the tool that would draw it (DEC-015 points 2 and 5).
+the tools that would draw it (DEC-015 points 2 and 5, DEC-020 points 5 and 7).
 
 It lists the piece's languages, its keys and its pages in each language, by number and
-trace id, computed under the lock its `piece.yaml` holds. It reads the tool's version from
-the module that holds the tool, so it needs the wheel as `look` does. It only reads: being a
-query, `pkit sync` resolves this script's packages into uv's cache, and so `look` finds them
-there with no network.
+trace id, computed under the lock its `piece.yaml` holds. It says which renderer a run reads
+by default, and each renderer's tool. It reads resvg's version from the module that holds
+the tool, so it needs the wheel as `look` does. It finds the browser as a run would, and
+starts none, so it names the program and no version. It only reads: being a query, `pkit
+sync` resolves this script's packages into uv's cache, and so `look` finds them there with
+no network.
 
 Usage:
   pkit visual pages <piece>          the piece's languages, keys and pages
@@ -24,7 +26,8 @@ Usage:
 
 Exit codes:
   0  listed
-  1  refused: the piece, its lock, its brand or its fonts cannot be drawn
+  1  refused: the piece, its lock, its brand or its fonts cannot be drawn, or the
+     configuration cannot be read
 """
 
 from __future__ import annotations
@@ -81,20 +84,39 @@ def _listed(root: Path, name: str) -> dict[str, Any]:
             for language, result in viewing.scenes(project, languages, facts=facts)
             if result.scene.size_key == project.size_key(first)
         },
-        "tool": viewing_tool.TOOL,
+        "renderer": viewing.renderer_of(project.piece),
+        "tools": {
+            viewing.SVG: viewing_tool.TOOL,
+            viewing.HTML: viewing.browser_found(root),
+        },
     }
 
 
 def _print(listed: Mapping[str, Any]) -> None:
     default = listed["drawn-by-default"]
-    tool = listed["tool"]
     print(f"languages: {', '.join(listed['languages'])} (by default {default['language']})")
     print(f"keys: {', '.join(listed['keys'])} (by default {default['key']})")
     for language, pages in listed["pages"].items():
         print(f"pages in {language}:")
         for number, page in enumerate(pages, start=1):
             print(f"  {number}: {page}")
-    print(f"tool: {tool['name']} {tool['version']}, through resvg-py {tool['wheel']}")
+    print(f"renderer: {listed['renderer']} by default")
+    resvg, browser = listed["tools"][viewing.SVG], listed["tools"][viewing.HTML]
+    print(f"tool of svg: {resvg['name']} {resvg['version']}, through resvg-py {resvg['wheel']}")
+    print(f"tool of html: {_browser(browser)}")
+
+
+def _browser(found: Mapping[str, Any]) -> str:
+    """The browser a run would start, in words."""
+    if found["program"] is None:
+        named = (
+            "the browser the configuration names is no program that runs"
+            if found["named"]
+            else "no browser of the Chromium family was found"
+        )
+        return f"none, so a run stops: {named}; looked at: {', '.join(found['looked'])}"
+    where = "named in the configuration" if found["named"] else "the first found"
+    return f"a browser, {where}: {found['program']}"
 
 
 if __name__ == "__main__":

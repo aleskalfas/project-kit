@@ -1,5 +1,5 @@
 """The viewing step: a piece's drawn pages as images a person or an agent reads
-(visual-communication DEC-015).
+(visual-communication DEC-015, DEC-020 point 5).
 
 It is no plugin, no render and no export. It uses the seam from the engine's side, as
 render and export do, and adds nothing to it. Only a person or an agent reads what it
@@ -11,14 +11,24 @@ is read, and none is used up (DEC-016 point 5).
 - **Under the lock.** It reads the piece's own file with its lock and computes the scenes
   under it. A piece with no lock, or a lock that does not hold, is refused (`opened`). A
   version not yet released stops no drawing.
-- **What it draws.** The caller picks pages, languages and keys (`Asked`). By default it
-  draws every page in the source language, in the first key in the order a picture's
-  variant uses (`keys.variant_key`).
-- **The images.** `viewing_tool` draws each page, at `LONG_EDGE` pixels on its long edge,
-  or more where the page's smallest text would land under `SMALLEST_TEXT`.
-- **Beside them,** in `FOLDER/<piece>/` of the clone's local folder: each image's frames,
-  and one report of what the images cannot show as the renderer set it (DEC-015 point 3).
-- **A run replaces** what an earlier run left for the piece, as one change (`write`).
+- **What it draws.** The caller picks pages, languages, keys and the renderer (`Asked`). By
+  default it draws every page in the source language, in the first key in the order a
+  picture's variant uses (`keys.variant_key`), through the renderer `renderer_of` gives.
+- **The SVG renderer's pages.** `viewing_tool` draws each page, at `LONG_EDGE` pixels on its
+  long edge, or more where the page's smallest text would land under `SMALLEST_TEXT`.
+- **The HTML renderer's pages.** `viewing_browser` draws each page file as the renderer wrote
+  it, in one browser start, its pages at one device scale, the largest any of them asks. The
+  browser is the one the configuration names (`browser_named`), or else the first found
+  where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
+  and the module removes it.
+- **Beside them,** in the renderer's own folder of `FOLDER` (`folder_of`): each image's
+  frames, one report of what the images cannot show as the renderer set it (DEC-015 point
+  3), and for the HTML renderer each page file, for a person to open in their own browser.
+- **A stop.** Where no browser runs, or one stops part way, or its first read fails, the
+  run gives the page files and a report that says what stopped it, and no image (DEC-020
+  point 8). Every refusal comes before that.
+- **A run replaces** what an earlier run left in its renderer's folder, as one change
+  (`write`), and leaves the other renderer's folder where it lies.
 """
 
 from __future__ import annotations
@@ -31,11 +41,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib import checks, files, keys, layout, libraries, location, tokens, viewing_tool
+from _lib import (
+    checks,
+    files,
+    keys,
+    layout,
+    libraries,
+    location,
+    tokens,
+    viewing_browser,
+    viewing_tool,
+)
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.plugins import seam
-from _lib.root import LOCAL
+from _lib.reading import ReadError, read_yaml
+from _lib.root import CONFIG, LOCAL
 from _lib.scene import SceneResult
 
 #: Where the images of each piece lie, relative to the project root.
@@ -51,26 +72,42 @@ LONG_EDGE = 1568
 #: `LONG_EDGE` would set it smaller.
 SMALLEST_TEXT = 10.0
 
+#: The renderers a run reads a piece through: the SVG renderer's pages through resvg, and the
+#: HTML renderer's page files through a browser (DEC-020 point 5).
+SVG = "svg"
+HTML = "html"
+RENDERERS = (SVG, HTML)
+
+#: The configuration's key that names the browser the HTML renderer's pages are drawn
+#: through, in place of the first one found (DEC-020 point 7).
+BROWSER_KEY = "browser"
+
+#: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
+SCALE_PLACES = 3
+
 #: The scenes of a piece, by language.
 Results = Sequence[tuple[str, SceneResult]]
 
 
 @dataclass(frozen=True)
 class Asked:
-    """What a run draws: its languages and keys, and each page by its number or trace id,
-    every page where none is named."""
+    """What a run draws: its languages and keys, each page by its number or trace id, every
+    page where none is named, and the renderer it reads them through."""
 
     languages: tuple[str, ...]
     keys: tuple[str, ...]
     pages: tuple[str, ...] = ()
+    renderer: str = SVG
 
 
 @dataclass(frozen=True)
 class Viewed:
-    """What a run gives: each file of the piece's folder, by name, and its report."""
+    """What a run gives: each file of the renderer's folder, by name, and its report.
+    `stopped` is whether a browser drew nothing, so the files hold no image."""
 
     files: dict[str, bytes]
     report: dict[str, Any]
+    stopped: bool = False
 
 
 def opened(root: Path, name: str) -> pl.Project:
@@ -128,14 +165,80 @@ def asked(
     named_keys: Sequence[str] = (),
     every_key: bool = False,
     pages: Sequence[str] = (),
+    renderer: str | None = None,
 ) -> Asked:
     """What a caller's choices ask of `project`. Raises Refused for a language or a key the
-    piece does not name, naming those it does."""
+    piece does not name, naming those it does, and for a renderer the step does not read."""
     piece = project.piece
+    if renderer is not None and renderer not in RENDERERS:
+        raise pl.Refused(
+            f"the viewing step reads no renderer `{renderer}`: it reads "
+            f"{' and '.join(f'`{each}`' for each in RENDERERS)}"
+        )
     held = piece.languages
     chosen = _chosen(languages, held, "language", piece.name, every_language) or held[:1]
     named = _chosen(named_keys, project.keys, "key", piece.name, every_key)
-    return Asked(tuple(chosen), tuple(named or [first_key(project)]), tuple(pages))
+    return Asked(
+        tuple(chosen),
+        tuple(named or [first_key(project)]),
+        tuple(pages),
+        renderer or renderer_of(piece),
+    )
+
+
+def renderer_of(piece: pl.Piece) -> str:
+    """The renderer a run reads `piece` through by default: the HTML renderer where it declares
+    `html`, since a reviewer of a web page should see that page, and the SVG renderer
+    otherwise (DEC-020 point 5)."""
+    return HTML if HTML in piece.exports else SVG
+
+
+def folder_of(name: str, renderer: str) -> str:
+    """The folder of the piece `name`'s images through `renderer`, relative to the project
+    root: `<piece>/` for the SVG renderer's, and `<piece>.<renderer>/` beside it for another's,
+    a name no piece can take, since a piece's name holds no `.` (DEC-020 point 5)."""
+    return f"{FOLDER}/{name}" if renderer == SVG else f"{FOLDER}/{name}.{renderer}"
+
+
+def browser_named(root: Path) -> Path | None:
+    """The browser the configuration names under `BROWSER_KEY`, or None, where the step takes
+    the first it finds (DEC-020 point 7). No flag and no environment variable names one, so
+    the choice lies in a file the project reviews. A path that starts `~/` lies in the home
+    folder, and a relative one below the project root. Raises Refused where the configuration
+    cannot be read, or names no path there."""
+    target = root / CONFIG
+    if not target.is_file():
+        return None
+    try:
+        data = read_yaml(target)
+    except ReadError as exc:
+        raise pl.Refused(f"{CONFIG} cannot be read: {exc}") from exc
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise pl.Refused(f"{CONFIG} is not a mapping; fix it first")
+    if BROWSER_KEY not in data:
+        return None
+    value = data[BROWSER_KEY]
+    if not isinstance(value, str) or not value:
+        raise pl.Refused(
+            f"{CONFIG} records `{BROWSER_KEY}: {value!r}`, which names no program: write the "
+            f"path of the browser there, or remove the line"
+        )
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else root / path
+
+
+def browser_found(root: Path) -> dict[str, Any]:
+    """The browser a run would draw the HTML renderer's pages through: its program, or None,
+    whether the configuration names it, and where the step looked where it found none.
+    Starts nothing. Raises Refused where the configuration cannot be read."""
+    named = browser_named(root)
+    try:
+        program = viewing_browser.find(named)
+    except viewing_browser.Stopped as stop:
+        return {"program": None, "named": named is not None, "looked": list(stop.looked)}
+    return {"program": str(program), "named": named is not None, "looked": []}
 
 
 def _chosen(
@@ -184,9 +287,11 @@ def _numbers(scene: Mapping[str, Any], named: Sequence[str]) -> list[int]:
 
 
 def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
-    """The images, the frames and the report of a run. Writes only the page's faces, in a
-    temporary folder of the clone's local folder, which it removes (DEC-015 point 2). Raises
-    Refused for a page the scene does not hold, or that the tool cannot draw."""
+    """The images, the frames and the report of a run, through the renderer `wanted` names.
+    Writes only transient files, in a temporary folder of the clone's local folder, which it
+    removes: the SVG renderer's faces (DEC-015 point 2), or the HTML renderer's page files and
+    the browser's profile (DEC-020 point 5). Raises Refused for a page the scene does not
+    hold, or that cannot be drawn."""
     shown = {
         (language, result.scene.size_key): (
             scene := result.scene.to_dict(),
@@ -195,10 +300,12 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
         for language, result in results
     }
     local = project.root / LOCAL
+    if wanted.renderer == HTML:
+        return _through_a_browser(project, results, wanted, shown, local)
     local.mkdir(parents=True, exist_ok=True)
-    made = _Made(project)
+    made = _Made(project, SVG)
     with tempfile.TemporaryDirectory(prefix="faces-", dir=local) as faces:
-        for language, key, drawn in pl.drawn(project, results, "svg", wanted.keys):
+        for language, key, drawn in pl.drawn(project, results, SVG, wanted.keys):
             scene, numbers = shown[language, project.size_key(key)]
             for number in numbers:
                 made.add(scene, language, key, number, drawn, Path(faces))
@@ -206,16 +313,125 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     return made.viewed()
 
 
-class _Made:
-    """What a run has drawn so far."""
+#: Each scene, by its language and its key over the size axes, and the numbers of the pages
+#: a run draws of it.
+_Shown = Mapping[tuple[str, str], tuple[Mapping[str, Any], list[int]]]
 
-    def __init__(self, project: pl.Project) -> None:
+
+@dataclass(frozen=True)
+class _PageFile:
+    """A page file a run draws: its name, the renderer's bytes, its scene with the numbers of
+    the pages drawn of it, and the device scale they share."""
+
+    name: str
+    language: str
+    key: str
+    document: bytes
+    scene: Mapping[str, Any]
+    numbers: list[int]
+    scale: float
+
+
+def _through_a_browser(
+    project: pl.Project, results: Results, wanted: Asked, shown: _Shown, local: Path
+) -> Viewed:
+    """The HTML renderer's page files, each drawn as it was written, in one browser start
+    (DEC-020 points 5 and 8). Every refusal comes before a file is written. A stop gives the
+    page files and a report that says what stopped it, and no image."""
+    made = _Made(project, HTML)
+    planned = []
+    for language, key, drawn in pl.drawn(project, results, HTML, wanted.keys):
+        scene, numbers = shown[language, project.size_key(key)]
+        every = pages_of(scene)
+        scale = device_scale([every[number - 1] for number in numbers])
+        for number in numbers:
+            _refuse_a_size(project, every[number - 1], scale)
+        name = f"{project.piece.name}.{language}.{key}.html"
+        planned.append(_PageFile(name, language, key, drawn.document, scene, numbers, scale))
+        made.page_file(language, key, name, drawn.document)
+        made.lost(scene, language, key, numbers, drawn.losses)
+    named = browser_named(project.root)
+    local.mkdir(parents=True, exist_ok=True)
+    try:
+        program = viewing_browser.find(named)
+        with tempfile.TemporaryDirectory(prefix="page-files-", dir=local) as held:
+            drawings = [(each, _drawn(each, Path(held), program, local)) for each in planned]
+    except viewing_browser.Stopped as stop:
+        return made.stopped(stop)
+    for each, drawing in drawings:
+        made.through(each, drawing, program)
+    return made.viewed()
+
+
+def _drawn(planned: _PageFile, folder: Path, program: Path, local: Path) -> viewing_browser.Drawing:
+    """One page file through the browser `program`, written in `folder` under its own name
+    with the renderer's bytes, so the browser reads it as the renderer wrote it. The browser's
+    profile lies in `local`, which the module removes. Raises Stopped."""
+    file = folder / planned.name
+    file.write_bytes(planned.document)
+    pages = [browser_page(pages_of(planned.scene)[number - 1]) for number in planned.numbers]
+    return viewing_browser.draw(file, pages, planned.scale, program, local)
+
+
+def browser_page(page: Mapping[str, Any]) -> viewing_browser.Page:
+    """`page` as the browser's reads take it: its trace id and size, and each of its texts in
+    the tree's order, with the spans of each line."""
+    texts = tuple(
+        viewing_browser.Text(
+            element["id"],
+            tuple(
+                tuple(str(span["text"]) for span in line.get("spans", []))
+                for line in element.get("lines", [])
+            ),
+        )
+        for element in _elements(page)
+        if element.get("type") == "text"
+    )
+    return viewing_browser.Page(page["id"], float(page["width"]), float(page["height"]), texts)
+
+
+def _refuse_a_size(project: pl.Project, page: Mapping[str, Any], scale: float) -> None:
+    """Refuse a page with no size, or one past `viewing_tool.MOST_PIXELS` at `scale` device
+    pixels to a px, as the SVG renderer's pages are refused, before the browser is asked."""
+    width, height = float(page["width"]), float(page["height"])
+    if min(width, height) <= 0:
+        said = f"the page measures {width:g} by {height:g} px"
+    elif width * height * scale**2 > viewing_tool.MOST_PIXELS:
+        said = (
+            f"at {scale:g} device pixels to a px the page takes more than "
+            f"{viewing_tool.MOST_PIXELS}"
+        )
+    else:
+        return
+    raise _cannot_draw(project, page, "the browser", said)
+
+
+def _cannot_draw(project: pl.Project, page: Mapping[str, Any], tool: str, said: str) -> pl.Refused:
+    """The refusal of a page `tool` cannot draw, for the reason `said`."""
+    piece = project.piece.name
+    said = f"{tool} cannot draw page {page['id']} of `{piece}`: {said}"
+    # The check reads no picture of a final piece (DEC-017 point 4).
+    if not project.piece.final:
+        said += f". `pkit visual check {piece}` names what the piece still owes"
+    return pl.Refused(said)
+
+
+class _Made:
+    """What a run has drawn so far, through `renderer`."""
+
+    def __init__(self, project: pl.Project, renderer: str) -> None:
         self.project = project
+        self.renderer = renderer
         self.document = project.values()
         self.files: dict[str, bytes] = {}
+        self.tool: dict[str, Any] | None = viewing_tool.TOOL if renderer == SVG else None
+        self.stop: dict[str, Any] | None = None
+        self.page_files: list[dict[str, Any]] = []
         self.images: list[dict[str, Any]] = []
+        self.words: list[dict[str, Any]] = []
         self.dropped: list[dict[str, Any]] = []
         self.otherwise: list[dict[str, Any]] = []
+        self.refused: list[dict[str, Any]] = []
         self.losses: list[dict[str, Any]] = []
 
     def add(
@@ -227,9 +443,8 @@ class _Made:
         drawn: Any,
         faces: Path,
     ) -> None:
-        """One page of one language and key: its image and its frames, and what the report
-        says of it."""
-        piece = self.project.piece.name
+        """One page of the SVG renderer's, of one language and key: its image and its frames,
+        and what the report says of it."""
         page = pages_of(scene)[number - 1]
         at = {"language": language, "key": key, "page": page["id"]}
         try:
@@ -237,22 +452,107 @@ class _Made:
                 drawn.pages[number - 1].svg, long_edge(page), faces, line_widths(page)
             )
         except viewing_tool.ToolFailed as exc:
-            said = f"the tool cannot draw page {page['id']} of `{piece}`: {exc}"
-            # The check reads no picture of a final piece (DEC-017 point 4).
-            if not self.project.piece.final:
-                said += f". `pkit visual check {piece}` names what the piece still owes"
-            raise pl.Refused(said) from exc
-        total = len(drawn.pages)
-        stem = f"{piece}.{language}.{key}" + (f".{number}" if total > 1 else "")
-        self.files[f"{stem}.png"] = image.image
+            raise _cannot_draw(self.project, page, "the tool", str(exc)) from exc
+        self._image(scene, language, key, number, image.image, image.width, image.height)
+        self.dropped.extend(
+            {**at, "element": each.element, "text": each.text, "whole": each.whole}
+            for each in image.dropped
+        )
+        self.otherwise.extend({**at, **each} for each in drawn_otherwise(page))
+
+    def page_file(self, language: str, key: str, name: str, document: bytes) -> None:
+        """A page file the HTML renderer wrote, left beside the images as it was written."""
+        self.files[name] = document
+        self.page_files.append({"language": language, "key": key, "file": name})
+
+    def through(self, planned: _PageFile, drawing: viewing_browser.Drawing, program: Path) -> None:
+        """The pages of one page file a browser drew: each image and its frames, and what the
+        report says of them (DEC-020 point 6)."""
+        name, _, version = drawing.browser.partition("/")
+        self.tool = {"name": name, "version": version, "program": str(program)}
+        numbers = {pages_of(planned.scene)[number - 1]["id"]: number for number in planned.numbers}
+        for image in drawing.images:
+            self._image(
+                planned.scene,
+                planned.language,
+                planned.key,
+                numbers[image.page],
+                image.image,
+                image.width,
+                image.height,
+            )
+        where = {"language": planned.language, "key": planned.key}
+        read = drawing.read
+        self.words.extend(
+            {
+                **where,
+                "page": each.page,
+                "element": each.element,
+                "scene": [list(line) for line in each.scene],
+                "document": [[list(line) for line in held] for held in each.document],
+            }
+            for each in read.words
+        )
+        self.dropped.extend(
+            {
+                **where,
+                "page": each.page,
+                "element": each.element,
+                "text": each.text,
+                "why": each.why,
+            }
+            for each in read.dropped
+        )
+        self.otherwise.extend(
+            {
+                **where,
+                "page": each.page,
+                "element": each.element,
+                "text": each.text,
+                "why": viewing_browser.NO_FACE,
+                "family": each.family,
+                "weight": each.weight,
+            }
+            for each in read.no_face
+        )
+        self.otherwise.extend(
+            {
+                **where,
+                "page": each.page,
+                "element": each.element,
+                "text": each.text,
+                "why": viewing_browser.MACHINE_FONT,
+                "fonts": list(each.fonts),
+            }
+            for each in read.machine_fonts
+        )
+        self.refused.extend({**where, "url": url} for url in read.refused)
+
+    def _image(
+        self,
+        scene: Mapping[str, Any],
+        language: str,
+        key: str,
+        number: int,
+        image: bytes,
+        width: int,
+        height: int,
+    ) -> None:
+        """One page's image, its frames, and its entry in the report."""
+        piece = self.project.piece.name
+        every = pages_of(scene)
+        page = every[number - 1]
+        at = {"language": language, "key": key, "page": page["id"]}
+        stem = f"{piece}.{language}.{key}" + (f".{number}" if len(every) > 1 else "")
+        self.files[f"{stem}.png"] = image
         self.files[f"{stem}.frames.json"] = _json(
             {
                 **at,
                 "number": number,
                 "image": f"{stem}.png",
-                "pixels": {"width": image.width, "height": image.height},
+                "pixels": {"width": width, "height": height},
                 "lock": self.project.lock,
-                "elements": frames(page, image.width, image.height),
+                "elements": frames(page, width, height),
             }
         )
         self.images.append(
@@ -261,15 +561,10 @@ class _Made:
                 "number": number,
                 "image": f"{stem}.png",
                 "frames": f"{stem}.frames.json",
-                "pixels": {"width": image.width, "height": image.height},
+                "pixels": {"width": width, "height": height},
                 "on-white": not draws_ground(page, pl.colours_at(self.document, key)),
             }
         )
-        self.dropped.extend(
-            {**at, "element": each.element, "text": each.text, "whole": each.whole}
-            for each in image.dropped
-        )
-        self.otherwise.extend({**at, **each} for each in drawn_otherwise(page))
 
     def lost(
         self,
@@ -281,7 +576,7 @@ class _Made:
     ) -> None:
         """Each loss of the pages drawn, known before the renderer ran or reported as it
         drew, whether or not the piece accepts it (DEC-015 point 3)."""
-        declared = seam.declaration("svg", seam.RENDERER)
+        declared = seam.declaration(self.renderer, seam.RENDERER)
         pages = pages_of(scene)
         owners = {
             element["id"]: pages[number - 1]["id"]
@@ -304,24 +599,60 @@ class _Made:
                     }
                 )
 
+    def stopped(self, stop: viewing_browser.Stopped) -> Viewed:
+        """What a stop gives: the page files, and a report that says what stopped the browser,
+        what is missing and how to go on, and no image (DEC-020 point 8)."""
+        piece = self.project.piece.name
+        self.stop = {
+            "what": stop.what,
+            "looked": list(stop.looked),
+            "program": stop.program,
+            "said": stop.said,
+            "sandbox": stop.sandbox,
+            "go-on": (
+                f"`pkit visual look {piece} --renderer {SVG}` draws the same scenes through the "
+                f"SVG renderer and resvg, whose images show the layout, never this page"
+            ),
+        }
+        return self.viewed()
+
     def viewed(self) -> Viewed:
-        report = {
+        declared = seam.declaration(self.renderer, seam.RENDERER)
+        report: dict[str, Any] = {
             "piece": self.project.piece.name,
             "lock": self.project.lock,
-            "tool": viewing_tool.TOOL,
-            "images": self.images,
-            "dropped": self.dropped,
-            "losses": self.losses,
-            "drawn-otherwise": self.otherwise,
+            "renderer": {"name": self.renderer, "version": declared["version"]},
+            "tool": self.tool,
         }
-        return Viewed({**self.files, REPORT: _json(report)}, report)
+        if self.renderer == SVG:
+            report.update(
+                images=self.images,
+                dropped=self.dropped,
+                losses=self.losses,
+            )
+            report["drawn-otherwise"] = self.otherwise
+            return Viewed({**self.files, REPORT: _json(report)}, report)
+        if self.stop is None and self.tool is not None:
+            report["stands-for"] = (
+                f"each image shows how {self.tool['name']} {self.tool['version']} drew the page, "
+                f"and stands for no other browser"
+            )
+        report["stopped"] = self.stop
+        report["page-files"] = self.page_files
+        report.update(images=self.images, words=self.words, dropped=self.dropped)
+        report["losses"] = self.losses
+        report["drawn-otherwise"] = self.otherwise
+        report["refused"] = self.refused
+        return Viewed({**self.files, REPORT: _json(report)}, report, self.stop is not None)
 
 
-def long_edge(page: Mapping[str, Any]) -> int:
-    """How many pixels the long edge of `page`'s image takes (DEC-015 point 5)."""
+def scale(page: Mapping[str, Any]) -> float:
+    """How many pixels of its image a px of `page` takes: `LONG_EDGE` on its long edge, or more
+    where its smallest text would land under `SMALLEST_TEXT` (DEC-015 point 5). 1 for a page
+    with no size, which is refused, naming its measure."""
     edge = max(float(page["width"]), float(page["height"]))
     if edge <= 0:
-        return LONG_EDGE  # the tool refuses a page with no size, naming its measure
+        return 1.0
     sizes = [
         float(run["font-size"])
         for element in _elements(page)
@@ -329,10 +660,28 @@ def long_edge(page: Mapping[str, Any]) -> int:
         for run in paragraph
         if run.get("font-size")
     ]
-    scale = LONG_EDGE / edge
+    found = LONG_EDGE / edge
     if sizes:
-        scale = max(scale, SMALLEST_TEXT / min(sizes))
-    return math.ceil(edge * scale)
+        found = max(found, SMALLEST_TEXT / min(sizes))
+    return found
+
+
+def device_scale(pages: Sequence[Mapping[str, Any]]) -> float:
+    """The device scale one browser start draws `pages` at: the largest `scale` any of them
+    asks, since a browser's flag binds a whole start (DEC-020 point 5), rounded up to
+    `SCALE_PLACES` decimals."""
+    largest = max(scale(page) for page in pages)
+    places = 10**SCALE_PLACES
+    return math.ceil(round(largest * places, 6)) / places
+
+
+def long_edge(page: Mapping[str, Any]) -> int:
+    """How many pixels the long edge of `page`'s image takes through the SVG renderer (DEC-015
+    point 5)."""
+    edge = max(float(page["width"]), float(page["height"]))
+    if edge <= 0:
+        return LONG_EDGE  # the tool refuses a page with no size, naming its measure
+    return math.ceil(edge * scale(page))
 
 
 def line_widths(page: Mapping[str, Any]) -> dict[str, list[float]]:
@@ -403,18 +752,19 @@ def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
                     yield {"element": element["id"], "text": run.get("text"), "families": families}
 
 
-def write(root: Path, name: str, viewed: Viewed) -> str:
-    """Replace the piece's folder by what `viewed` holds, as one change, and give the folder,
-    relative to `root`. Raises Refused where it is reached through a link, and WriteFailed."""
-    folder = root / FOLDER / name
-    pl.writable(root, folder / REPORT)
+def write(root: Path, folder: str, viewed: Viewed) -> str:
+    """Replace `folder`, a renderer's folder relative to `root` (`folder_of`), by what `viewed`
+    holds, as one change, and give it. No other folder is touched. Raises Refused where it is
+    reached through a link, and WriteFailed."""
+    path = root / folder
+    pl.writable(root, path / REPORT)
     change = files.Change(root)
-    if folder.is_dir():
-        change.replace_folder(folder, viewed.files)
+    if path.is_dir():
+        change.replace_folder(path, viewed.files)
     else:
-        change.add_folder(folder, viewed.files)
+        change.add_folder(path, viewed.files)
     change.commit()
-    return f"{FOLDER}/{name}/"
+    return f"{folder}/"
 
 
 def _json(data: Mapping[str, Any]) -> bytes:

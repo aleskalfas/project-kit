@@ -1,7 +1,7 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
-points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
+points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-019 point 8).
 
 **File-level findings, every run:**
 
@@ -18,6 +18,9 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   final or a published piece's lock; and, read with the content, a key that both an item's
   component and its list declare, which fails where an item carries it and is stated as a
   fact where none does (DEC-010 points 2 and 9);
+- a published piece's lock behind a newer released version the installed capability reads,
+  a fact read from the lock and the list alone, outside the lock's findings, so it stops
+  nothing and refuses no export (`behind_findings`, DEC-003 point 9, DEC-019 point 8);
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
   major it names. A brand is read over its base, a component library's own roles are
@@ -164,6 +167,7 @@ from _lib.libraries import (
     MajorsConflict,
     Version,
     kind_within,
+    newer_than,
     newest_of_majors,
     readable,
 )
@@ -194,6 +198,14 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: The finding on a version not yet released under a final or a published piece's lock. It
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
+
+#: The fact that a published piece's lock is behind a newer released version the installed
+#: capability reads (DEC-003 point 9, DEC-019 point 8). It lies outside `lock_findings`, so it
+#: stops no other finding of the piece and refuses no export.
+LOCK_BEHIND = "lock-behind"
+
+#: What the fact that a lock is behind says of fit, which it does not judge.
+OUTDATED = "`pkit visual outdated` says whether a move takes it, and why not"
 
 #: The findings on what a piece's state owes of its current copy (DEC-017 point 6).
 PUBLISHED_NO_FORMAT = "published-no-format"
@@ -458,6 +470,7 @@ class _Run:
         lock = lock_findings(self.held, piece)
         self.found.extend(lock)
         self._copy(piece)
+        self.found.extend(behind_findings(self.held, piece))
         if lock:
             self.counts["unchecked"] += 1
             return
@@ -1113,6 +1126,36 @@ def _shipped_under(name: str, version: Version) -> copies.Source | None:
         return copies.under(library, version)
     except copies.CopyRefused:
         return None
+
+
+def behind_findings(held: Held, piece: pl.Piece) -> list[Finding]:
+    """The facts that a published piece's lock is behind a newer released version the
+    installed capability reads, of any major (`libraries.newer_than`, DEC-003 point 9,
+    DEC-019 point 8). Each library behind takes one for the newest such version of the lock's
+    major, which names the command that proposes the move, and one for the newest of a later
+    major, which a person takes on purpose, by naming it. Each names `pkit visual outdated`
+    for whether a move takes it. It is read from the lock and the list of libraries alone and
+    judges no fit, so it stays while a version stands that no default move takes. It fails
+    nothing, and no other state raises it: a final piece never comes here."""
+    if not current_copy.keeps(piece) or piece.final:
+        return []
+    file = piece.file(pl.PIECE_FILE)
+    upgrade = f"pkit visual upgrade {piece.name}"
+    found = []
+    for newer in newer_than(held, piece.lock):
+        lead = f"the published piece `{piece.name}` locks {newer.name}@{newer.locked}, behind"
+        if newer.within is not None:
+            said = f"{lead} {newer.name}@{newer.within}, a released version of its major"
+            fix = f"run `{upgrade}`, which proposes the move; {OUTDATED}"
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+        if newer.later is not None:
+            said = f"{lead} {newer.name}@{newer.later}, a released version of a later major"
+            fix = (
+                f"a later major is taken on purpose, by naming it: "
+                f"`{upgrade} {newer.name}@{newer.later}`; {OUTDATED}"
+            )
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+    return found
 
 
 # --- what a state owes of a current copy --------------------------------------------------------

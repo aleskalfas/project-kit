@@ -20,6 +20,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/config_text.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/names.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
@@ -132,6 +133,7 @@ pkit:
         - visual-communication:DEC-019#9
         - visual-communication:DEC-019#10
         - visual-communication:DEC-019#11
+        - visual-communication:DEC-020#7
         - visual-communication:DEC-021#2
         - visual-communication:DEC-025#2
         - visual-communication:DEC-025#4
@@ -162,7 +164,7 @@ The *location* is the one folder of the repository that holds the project's visu
 
 ### Where it is recorded
 
-The capability's configuration, `.pkit/capabilities/visual-communication/project/config.yaml`, records the location under the key `location`, as a path relative to the repository's top. In format 1 the configuration holds nothing else. A command records the location the first time it writes there, so a later change of the default moves no recorded location (DEC-002 point 1). A configuration as a command creates it:
+The capability's configuration, `.pkit/capabilities/visual-communication/project/config.yaml`, records the location under the key `location`, as a path relative to the repository's top. Beside it, the configuration may name a browser ([The browser](#the-browser)), and holds nothing else. A command records the location the first time it writes there, so a later change of the default moves no recorded location (DEC-002 point 1). A configuration as a command creates it:
 
 ```yaml
 pkit_schema: visual-communication:config
@@ -187,6 +189,18 @@ The *marker* tells that a folder holds the capability's work. It is the list of 
 A location is refused when it is the repository's top itself, lies outside the repository, lies under `.pkit/` or under any folder whose name starts with `.`, is reached through a symbolic link, or is a file. The configuration's path is refused when it is absolute, holds a `\`, or has an empty segment, such as a trailing `/`.
 
 The commands list the location's files as git sees them: tracked files, and untracked files that git does not ignore. A file git ignores is no part of the visual work. A symbolic link is never listed. Outside a git repository, the commands walk the folder.
+
+### The browser
+
+The configuration may name the browser of the viewing step, under the key `browser`, in place of the first browser it finds (DEC-020 point 7). Name a pinned build this way, for one:
+
+```yaml
+browser: ~/browsers/chromium/chrome
+```
+
+- **The path** names the program, not its folder. It is absolute, or starts `~/` in your home folder, or is relative to the repository's top.
+- **Only here.** No flag and no environment variable names a browser. A command starts that program with no prompt, so the choice lies in a file the project reviews.
+- **No command writes it.** Write the line by hand, and remove it to go back to the first browser found.
 
 ## What the location holds
 

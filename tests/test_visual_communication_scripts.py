@@ -104,3 +104,12 @@ def test_only_the_scripts_that_draw_pin_the_tool() -> None:
     """Every other command runs on a machine that never draws."""
     pinning = [path.name for path in SCRIPTS if f"{TOOL}==" in path.read_text(encoding="utf-8")]
     assert pinning == ["look.py", "pages.py"]
+
+
+def test_looks_stop_is_an_exit_of_its_own_named_in_its_header_and_its_help() -> None:
+    """A stop leaves the page files and a report, where a refusal leaves the folder as it was
+    (DEC-020 point 8), so neither 1 nor argparse's 2 says it."""
+    header = (CAPABILITY / "scripts" / "look.py").read_text(encoding="utf-8")
+    assert "\n  3  stopped: " in header
+    commands = YAML(typ="safe").load(CAPABILITY / "package.yaml")["commands"]
+    assert "; 3 when it stopped, " in commands["look"]["help"]

@@ -37,7 +37,7 @@ A command names a merge when it stops and gives the merge of the base to make, w
 
 ### 3. What names no merge
 
-- **The change check's report of an outdated base.** The change check reports a base that moved on, and fails nothing on it, since the fix is to update the branch and run again (COR-050 point 12). The check of the merge is that run again, with no new head: it judges the change with the base as it stands (DEC-055 point 6).
+- **The change check's report of an outdated base.** The change check reports a base that moved on, fails nothing on it, and names no remedy (COR-050 point 12). The check of the merge runs the change check again, with no new head: it judges the change with the base as it stands (DEC-055 point 6).
 - **A refusal a new head might cure, where the host does not read the branch as behind.** An example is a check the base came to require after the head was pushed. The landing command reports it as a failed request, as it reports any other.
 - **A check that fails on the host's merge, or the queue's, where the branch alone passes.** The base's changes then meet this change's. No command can tell a failure that taking in the base settles from one it does not, so none names the merge. The author judges it (point 4).
 
@@ -49,7 +49,7 @@ This capability's commands and skills tell the author of a pull request, an agen
 - **A named merge.** The landing command names the merge (point 1).
 - **A check that fails only on the host's merge or the queue's.** The author judges whether taking in the base settles it, and merges where they judge it does, or a person judges it and merges (point 3).
 
-The change check's report of an outdated base, and the merge or rebase it advises, name no merge (point 3). In a project with a topology, the author makes the merge into a worker's Task branch through the build command ([project-management:DEC-063-task-builder] point 1). A person may still merge it whenever they choose (point 5).
+The change check's report of an outdated base names no merge (point 3). In a project with a topology, the author makes the merge into a worker's Task branch through the build command ([project-management:DEC-063-task-builder] point 1). A person may still merge it whenever they choose (point 5).
 
 ### 5. A merge of the base a person makes
 
@@ -113,4 +113,4 @@ On a busy default branch every open pull request would pay both after every merg
 - The landing command reads whether the host reads the branch as behind with the checks on the head, unless the base merges through a queue (point 2). It names the merge there, and where the host refuses the merge of such a head. The capability README lists the cases.
 - The pm skill's landing step says where the author takes in the base (point 4).
 - In a project with a topology, a merge this record names is built through the build command, since the provenance check refuses a commit on a worker's Task branch that no recorded build produced (DEC-063 point 1). So the provenance check finds it among a build's commits.
-- The backbone's change check advises a merge or a rebase with its report of an outdated base, and COR-050 point 12 names updating the branch as the fix. #2662 has the backbone state the fact and leave the remedy to the workflow, and rewords COR-050 point 12 to match.
+- The backbone's report of an outdated base names no remedy (COR-050 point 12), so it advises no merge of the base.

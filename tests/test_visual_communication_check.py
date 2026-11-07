@@ -630,6 +630,29 @@ def test_a_stale_copy_stands_beside_a_lock_finding_that_leaves_the_lock_as_it_wa
     assert "`content.en.yaml` changed" in stale["message"]
 
 
+def test_a_published_piece_behind_exports_and_its_check_exits_0_stating_the_fact(
+    tmp_path: Path,
+) -> None:
+    """A lock behind a newer released version fails nothing, so no export is refused for it
+    (DEC-003 point 9)."""
+    root = drawing_project(tmp_path, state="published", picture=False)
+    newer_tests(root, released=True)
+    exported(root)
+    shown = run(root)
+    assert shown.returncode == 0, shown.stdout
+    [fact] = [line for line in shown.stdout.splitlines() if line.endswith("[lock-behind]")]
+    assert fact.split() == ["info", f"{PIECE_FOLDER}/piece.yaml#lock", "[lock-behind]"]
+
+
+def test_a_stale_copy_stands_beside_the_fact_of_a_lock_behind(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    newer_tests(root, released=True)
+    edit_content(root)
+    labels = [finding["label"] for finding in document(root)["findings"]]
+    assert "lock-behind" in labels
+    assert "current-copy-stale" in labels
+
+
 def test_every_rule_of_a_published_piece_stands_beside_a_lock_finding(tmp_path: Path) -> None:
     root = made_over_a_stale_output(tmp_path)
     (root / LIGHT).unlink()

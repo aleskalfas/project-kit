@@ -474,7 +474,7 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
 | `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
-| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
+| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
 
 - **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest.
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
@@ -503,7 +503,10 @@ preferred:
 - **At `tablet`,** which neither part names, both take their `desktop` branch, so the steps lie in a row.
 - **What it costs.** No option names an item of the list, as of any list two parts repeat over ([Options](#options)). An item's trace id names the part that draws it, so it differs by size ([Trace ids](#trace-ids)). A formula that reads the list's frame reads both parts, and the hidden one has zero size.
 - **An item a size hides** is missing at that size. A formula that reads it fails there, and so does a tie that ends at it ([Ties and connectors](#ties-and-connectors)). Content drawn at one size and not at another is stated as a fact (*checks*).
-- **What is refused** when the component is read: two such parts whose `when`s say yes or no, unless exactly one says yes at each mode.
+- **What is refused** when the component is read: parts over one list where not exactly one may be drawn at some mode. A list is judged where one of its parts has a `when` by a size, and then every part over it counts:
+  - **A part with no `when`** is drawn at every mode.
+  - **A `when` that names a field or an option's words** may draw its part at every mode, as the content or the option decides.
+  - **A `when` by a size** reads the mode's branch: `true` draws its part, and a field or an option's words may draw it.
 
 ### Ties and connectors
 
@@ -553,7 +556,11 @@ links:
 
 ### What an element asks for, and what it gets
 
-- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for. An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
+- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
+- **A stretch reaches the part drawn last.** An item that `stretch` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
+  - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
+  - **The size passed on names `engine` as its source** ([Sources](#sources)).
+  - **Only a stretch passes on.** A component that a part's formula gives more than it asks for keeps its parts as they ask.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
 
