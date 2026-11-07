@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  Design-ahead: a proposed record decides whether and how the viewing step
+  draws the HTML renderer's pages under forced colours (#2847). Where asked,
+  a second browser start would draw each key on the palettes a reader meets
+  it on, and name those images apart. Nothing is built yet, so no command,
+  file or check moves.
