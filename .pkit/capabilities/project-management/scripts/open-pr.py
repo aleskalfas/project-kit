@@ -94,6 +94,7 @@ from _lib import (
     default_branch,
     doc_impact,
     friction_answers,
+    pr_head,
     pr_validation,
     provenance,
     session_guard,
@@ -623,7 +624,7 @@ def _not_derived(why: str) -> _Answers:
 def _pushed_head(branch: str) -> tuple[str | None, str]:
     """The commit `branch`'s remote-tracking reference names — what the pull
     request opens at, not local HEAD, which may be ahead of it — or why none."""
-    remote = friction_answers.branch_remote(branch)
+    remote = pr_head.branch_remote(branch)
     oid = _git_out("rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/{branch}^{{commit}}")
     if not oid:
         return None, f"{remote}/{branch} names no commit — push the branch first"

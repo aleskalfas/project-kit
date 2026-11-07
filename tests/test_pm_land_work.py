@@ -861,6 +861,65 @@ def test_a_local_branch_behind_the_pr_and_another_checkout_are_noted(world, caps
     )
 
 
+def _pushed_by_a_fork(run: _Run, name: str) -> str:
+    """A new head of the PR from a fork, which this clone lacks: committed in another
+    clone and kept on the base's remote only as the ref it keeps for the PR."""
+    fork = run.work.parent / "fork"
+    _git(run.work.parent, "clone", "-q", "--branch", BRANCH, "origin.git", str(fork))
+    _git(fork, "config", "user.email", "octocat@example.com")
+    _git(fork, "config", "user.name", "Octo Cat")
+    sign_nothing(fork)
+    (fork / name).write_text(name, encoding="utf-8")
+    _git(fork, "add", name)
+    _git(fork, "commit", "-q", "-m", f"add {name}")
+    _git(fork, "push", "-q", "origin", f"HEAD:refs/pull/{PR}/head")
+    return _git(fork, "rev-parse", "HEAD")
+
+
+def test_a_fork_s_head_this_clone_lacks_is_fetched_by_the_ref_its_base_keeps(
+    world, capsys, monkeypatch
+) -> None:
+    """Beside a local branch at another commit, a fork's head this clone lacks is
+    fetched by the ref the base repository keeps for the PR, on the base's remote, and
+    the local branch is compared with it."""
+    run = world()
+    monkeypatch.setattr(run.land.pr_head, "base_remote", lambda _base: "origin")
+    run.github.cross_repository = True
+    run.github.head = _pushed_by_a_fork(run, "from-the-fork.txt")
+    run.github.checks[run.github.head] = [_GREEN]
+    assert not run.land.pr_head.has_commit(run.github.head)
+    _rc, out, err = run.authorised(capsys=capsys)
+    assert _steps(out)[0] == (
+        f"head: {_short(run.github.head)} (PR #{PR}, {BRANCH}); local {BRANCH} is "
+        "1 commit behind it"
+    ), out + err
+
+
+@pytest.mark.parametrize(
+    ("cross_repository", "fetch"),
+    [(False, f"origin {BRANCH}"), (True, f"upstream refs/pull/{PR}/head")],
+    ids=["same-repository", "fork"],
+)
+def test_a_head_no_fetch_brings_names_the_fetch_to_make(
+    world, capsys, monkeypatch, cross_repository: bool, fetch: str
+) -> None:
+    """The fetch named is the one the run made: of the branch, on the remote it is
+    pushed to, or for a fork's PR of the ref the base repository keeps, on the base's
+    remote."""
+    run = world()
+    tip = run.github.head
+    monkeypatch.setattr(run.land.pr_head, "base_remote", lambda _base: "upstream")
+    run.github.cross_repository = cross_repository
+    run.github.head = "d" * 40
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1] == (
+        f"head: cannot tell whether local {BRANCH} (at {_short(tip)}) holds commits "
+        f"PR #{PR}'s head ddddddd lacks: this clone does not have that head. Fetch it "
+        f"(`git fetch {fetch}`) and run `land-work {ISSUE}` again"
+    )
+
+
 def test_a_draft_pr_is_refused(world, capsys) -> None:
     run = world()
     run.github.draft = True
@@ -2169,7 +2228,7 @@ def test_a_fork_s_behind_stop_names_the_merge_from_the_base_s_remote(
     run = world()
     _git(run.work, "remote", "add", "fork", "../origin.git")
     _git(run.work, "config", f"branch.{BRANCH}.pushRemote", "fork")
-    monkeypatch.setattr(run.land.friction_answers, "base_remote", lambda _base: "upstream")
+    monkeypatch.setattr(run.land.pr_head, "base_remote", lambda _base: "upstream")
     run.github.merge_state = "BEHIND"
     run.github.cross_repository = True
     rc, out, _err = run.authorised(capsys=capsys)
