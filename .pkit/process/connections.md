@@ -270,7 +270,7 @@ The engine's runtime never reads `depends_on`, and each other reader is bounded 
 
 - **The implementation form,** `<capability>:<process-id>`, names one capability's definition.
 - **The role form,** `<publisher>::<role>:<point>`, names a process offered under a role. It reaches whichever installed capability is that role's active provider.
-  - A capability declares the role among its `connections.roles`, and the process under `extension-points.offers` ([the lifecycle reference's manifest schema, "The connection, documentation and friction blocks"](../lifecycle/manifest.md#the-connection-documentation-and-friction-blocks)). Both sit in its package metadata.
+  - A capability declares the role among its `connections.roles`, and the process under `extension-points.offers` ([the lifecycle reference, "The connection, documentation and friction blocks"](../lifecycle/manifest.md#the-connection-documentation-and-friction-blocks)). Both sit in its package metadata.
   - Replacing that capability with another that provides the same role touches nothing in this definition.
 - **Scoped to `depends_on`.** Embedding, by `subprocess` and `cascade`, stays addressed by implementation, since a role there would make the engine consult the wiring.
 - **Both forms are valid.** Definitions that use the implementation form keep working unchanged.
