@@ -5,7 +5,8 @@ It is no plugin, no render and no export. It uses the seam from the engine's sid
 render and export do, and adds nothing to it. Only a person or an agent reads what it
 writes, never a check, an export or a producer. So nothing here moves a lock, keeps a
 finding or takes a number, no helper or producer runs, and a produced picture is drawn as it
-stands, stale or not.
+stands, stale or not. Its scenes fill an export's facts as a preview's do: the next number
+is read, and none is used up (DEC-016 point 5).
 
 - **Under the lock.** It reads the piece's own file with its lock and computes the scenes
   under it. A piece with no lock, or a lock that does not hold, is refused (`opened`). A
@@ -40,7 +41,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib import checks, files, keys, libraries, location, tokens, viewing_browser, viewing_tool
+from _lib import (
+    checks,
+    files,
+    keys,
+    layout,
+    libraries,
+    location,
+    tokens,
+    viewing_browser,
+    viewing_tool,
+)
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.plugins import seam
@@ -124,13 +135,18 @@ def opened(root: Path, name: str) -> pl.Project:
 
 
 def scenes(
-    project: pl.Project, languages: Sequence[str], keys: Sequence[str] | None = None
+    project: pl.Project,
+    languages: Sequence[str],
+    keys: Sequence[str] | None = None,
+    *,
+    facts: layout.Facts,
 ) -> list[tuple[str, SceneResult]]:
     """The scenes of `languages`, computed under the lock: one for each key over the size
-    axes, or each that serves one of the combinations `keys`. Raises Refused where a font
-    cannot measure the text."""
+    axes, or each that serves one of the combinations `keys`. `facts` fills the facts of
+    its export, as a preview's do (`exports.preview_filling`, DEC-016 point 5). Raises
+    Refused where a font cannot measure the text."""
     try:
-        return project.scenes(languages, keys)
+        return project.scenes(languages, keys, facts=facts)
     except MissingFont as exc:
         raise pl.Refused(f"`{project.piece.name}` cannot be drawn: {exc}") from exc
 

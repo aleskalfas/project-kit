@@ -40,7 +40,7 @@ The capability's next slice ships the starter and a neutral brand, which rest on
 - **Every role of the starter ends at a shared role.** Its chain of defaults ends at a role of the foundations, so any brand draws the starter. The starter's tests hold it to that.
 - **A meaning the starter needs that no shared role carries** becomes a shared role of the foundations, and each way costs something:
   - *Before the foundations' first release,* the role needs no default. Every brand that takes that version of the foundations gives it a value, or fails.
-  - *After it,* the role carries a default that aliases an older role (DEC-004 point 7), which may be of another meaning until a brand gives the role a value. That record makes the same trade for every shared role. The only other way is a major release of the foundations, since a new shared role with no default breaks every brand (DEC-004 point 5).
+  - *After it,* the role carries a default that aliases an older role (DEC-004 point 7), which may be of another meaning until a brand gives the role a value. That record makes the same trade for every shared role. The only other way is a major release of the foundations, since a new shared role with no default breaks every brand (DEC-004 point 5). A picture role needs neither a default nor a major, since no brand owes it a value (refinement per [visual-communication:DEC-025-picture-files] point 4).
 
 ### 3. A default aliases a role the library names, never a value
 
@@ -54,7 +54,7 @@ The capability's next slice ships the starter and a neutral brand, which rest on
 ### 4. A brand reaches a library's roles only where it names the library
 
 - **Named by major.** A brand reaches a library's own roles, and the component tokens of its components, only where it names that library among those it builds on, by the major it fits (DEC-001 point 5). To reach one is to give it a value, open it or alias it. So a brand's values never meet roles of a major they were not tuned for.
-- **What it owes a library it names.** It gives a value, in every combination, to each of that library's roles without a default, as it gives every shared role one. Each token it holds under that library's name gives one of the library's roles a value of its type, so its private tokens lie elsewhere.
+- **What it owes a library it names.** It gives a value, in every combination, to each of that library's roles without a default, as it gives every shared role but a picture role one (refinement per [visual-communication:DEC-025-picture-files] point 4). Each token it holds under that library's name gives one of the library's roles a value of its type, so its private tokens lie elsewhere.
 - **Where it names none,** the library is at its defaults under that brand. A token the brand holds under that library's name gives the library nothing, and stays private, as a brand's other tokens do (DEC-004 point 5).
 - **Built on a base,** a brand gives a library's role a value only where both name the library and the base opens the role (DEC-004 point 6). A base may open a role of a library it names, whether or not it gives the role a value. So a base that does not name a library leaves the library at its defaults for every brand built on it.
 - **What naming costs.** Every project that uses the brand holds the library, and every piece that uses the brand locks it, even a piece that draws none of its components (DEC-003 point 8). Moving to a new major of the library is a breaking change of the brand (DEC-003 point 6), and along a chain the base and every brand built on it move together. So a brand names a library only to give its roles values.
@@ -62,7 +62,7 @@ The capability's next slice ships the starter and a neutral brand, which rest on
 ### 5. A brand exports the library roles it gives values, and code sees every role locked with it
 
 The record of brands and notations makes a brand's exported names public (DEC-004 point 5). Two sets follow:
-- **A brand's exports** hold, beside the shared roles and its own, each role of a library it names that it gives a value, as they hold the component tokens it gives values. A brand built on a base exports what its base exports, its base's values included (DEC-004 point 4). The brand promises these names under its own versions.
+- **A brand's exports** hold, beside the shared roles and its own, each role of a library it names that it gives a value, as they hold the component tokens it gives values. They leave out a shared picture role the brand gives no value (refinement per [visual-communication:DEC-025-picture-files] point 4). A brand built on a base exports what its base exports, its base's values included (DEC-004 point 4). The brand promises these names under its own versions.
 - **The document of resolved values under a lock** also holds every other role and component token of the libraries locked with the brand, at the brand's values or at their defaults (DEC-005 point 7). Those names are promised by their own libraries, by major, and code that reads them names that library's major in its lock.
 
 ### 6. A library's contrast pairs hold at its defaults

@@ -17,6 +17,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
@@ -65,6 +66,7 @@ pkit:
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
         - visual-communication:DEC-016#5
+        - visual-communication:DEC-017#3
         - visual-communication:DEC-021#5
         - visual-communication:DEC-021#7
       artefact:
@@ -575,16 +577,22 @@ A scene is computed, never committed. Under one release of the capability, the s
 A component may show the facts of its export ([Parts](#parts)). A scene takes them as inputs, beside the files.
 
 - **`language` and `state`** come from the piece's files. A scene shows them as the files hold them, such as `en` and `draft`.
-- **`version` and `date`** come from no file, so a scene takes a fixed *stand-in* for each. So the same files give the same answer on every machine, on any day.
+- **`version` and `date`** come from no file. A scene shows what the command that computes it fills them with.
 
-Each fact takes one form in every language. Each stand-in is wide enough that a usual real value fits:
+Each fact takes one form in every language. A *stand-in* is a fixed text for a fact that no file holds. Each stand-in is wide enough that a usual real value fits:
 
 | Fact | Its form | Its stand-in |
 |---|---|---|
 | `version` | `v<N>`, with `<N>` the version's number | `v88` |
 | `date` | `YYYY-MM-DD` | `2088-08-28` |
 
+Which text fills `version` and `date`:
+
+- **The check, and a render's findings,** take the stand-ins. So the same files give the same answer on every machine, on any day.
+- **What a person looks at** shows real text: a preview, a before-and-after and the viewing step. Each fills what this clone's next export would: its next number, and the date of the run. Another clone may show another number.
+- **Where there is no next number,** what a person looks at takes the stand-ins, and the command says so, and why. A record of exports that cannot be read gives none, as one that conflicts on a merge. A final piece has none, since it takes no export.
 - **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library.
+- **A real text that overflows in a preview** is said in the render's output, and no record keeps it.
 - **A new stand-in** reaches a piece as a new engine does, at a render.
 
 ### What a scene holds
@@ -638,7 +646,7 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 Each drawn property names its source in `sources`:
 
 - **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes. A value an item takes from its list's component field names that field, such as `content:body.kind.tone`. A run of a list of runs is named by its place among its field's runs, as an item with no id: `content:body.say#2`. The run's style comes from `<its source>.style` where it names one, and its family from `<its source>.concept`.
-- **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, a stand-in included.
+- **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, whether a stand-in or real text fills it ([The facts of an export](#the-facts-of-an-export)).
 - **`option:<name>`:** a value a switch on that option chose.
 - **`size:<axis>`:** a value a switch on that size axis chose, such as `size:device`.
 - **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.

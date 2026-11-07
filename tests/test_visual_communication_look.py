@@ -35,8 +35,11 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    exported_up_to,
+    filled,
     on_devices,
     parts_project,
+    stamped,
     two_steps,
     write_content,
     write_picture,
@@ -58,7 +61,20 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-look, pages, svg, html, seam, framing, viewing, viewing_tool, viewing_browser, names = load(
+(
+    look,
+    pages,
+    svg,
+    html,
+    seam,
+    framing,
+    viewing,
+    viewing_tool,
+    viewing_browser,
+    names,
+    pl,
+    exports,
+) = load(
     "visual-communication",
     "look.py",
     "pages.py",
@@ -70,6 +86,8 @@ look, pages, svg, html, seam, framing, viewing, viewing_tool, viewing_browser, n
     "viewing_tool",
     "viewing_browser",
     "names",
+    "pipeline",
+    "exports",
 )
 
 LOCK = ["foundations 1.0.0", "test-brand 1.0.0", "tests 1.0.0"]
@@ -98,6 +116,14 @@ def folder_of(root: Path, piece: str = PIECE) -> Path:
 
 def report_of(root: Path, piece: str = PIECE) -> dict[str, Any]:
     return json.loads((folder_of(root, piece) / viewing.REPORT).read_text(encoding="utf-8"))
+
+
+def on_white(root: Path) -> None:
+    """The brand's background made clear, so a page draws no ground of its own."""
+    tokens = root / BRAND_TOKENS
+    held = json.loads(tokens.read_text(encoding="utf-8"))
+    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
+    tokens.write_text(json.dumps(held), encoding="utf-8")
 
 
 def written(root: Path) -> dict[str, bytes]:
@@ -740,10 +766,7 @@ def test_the_report_says_which_page_lies_on_white(flow: Path) -> None:
     assert run_look(flow, PIECE).returncode == 0
     [image] = report_of(flow)["images"]
     assert image["on-white"] is False
-    tokens = flow / BRAND_TOKENS
-    held = json.loads(tokens.read_text(encoding="utf-8"))
-    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
-    tokens.write_text(json.dumps(held), encoding="utf-8")
+    on_white(flow)
     shown = run_look(flow, PIECE)
     assert shown.returncode == 0, shown.stderr
     [image] = report_of(flow)["images"]
@@ -1155,16 +1178,21 @@ def html_report(root: Path, piece: str = PIECE) -> dict[str, Any]:
     return json.loads((html_folder(root, piece) / viewing.REPORT).read_text(encoding="utf-8"))
 
 
+def previewed(project: Any) -> Any:
+    """What fills the facts of an export in the scenes the step draws: what a preview fills."""
+    return exports.preview_filling(project.piece).facts
+
+
 def scene_of(root: Path, piece: str, language: str) -> dict[str, Any]:
     project = viewing.opened(root, piece)
-    [(_, result)] = viewing.scenes(project, [language])
+    [(_, result)] = viewing.scenes(project, [language], facts=previewed(project))
     return result.scene.to_dict()
 
 
 def page_file_of(root: Path, piece: str, language: str, key: str) -> bytes:
     """The page file the HTML renderer writes of `piece`, apart from any run of the step."""
     project = viewing.opened(root, piece)
-    results = viewing.scenes(project, [language])
+    results = viewing.scenes(project, [language], facts=previewed(project))
     [(_, _, drawn)] = list(viewing.pl.drawn(project, results, "html", [key]))
     return bytes(drawn.document)
 
@@ -1812,6 +1840,48 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
     assert any("has no face of Held at weight 700" in each for each in lines)
     assert "refused: en, default: a request for https://example.invalid/a.png" in lines
     assert any(each.startswith("loss: figure (en, default): ") for each in lines)
+
+
+# --- what fills an export's facts (DEC-016 point 5) ---------------------------------------------
+
+
+def test_a_look_fills_this_clones_next_number_as_a_preview_does(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [facts.version for facts in taken] == ["v42"]
+    assert "stand-in" not in shown.stdout
+
+
+def test_a_final_pieces_look_takes_the_stand_ins_and_says_so_after_the_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "date", state="final")
+    on_white(root)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
+    *_, reported, said, report = shown.stdout.splitlines()
+    assert reported.startswith("on white: ")
+    assert said == (
+        "look: a final piece has no next export, so a stand-in shows: `date` at `figure/body/date`"
+    )
+    assert report.startswith("report: ")
+
+
+def test_the_pages_listed_are_computed_as_a_preview_fills_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    assert run_pages(root, PIECE).returncode == 0
+    assert [facts.version for facts in taken] == ["v42"]
 
 
 # --- `pkit visual pages` ------------------------------------------------------------------------

@@ -2263,10 +2263,10 @@ def rooted(finding: Finding, piece: pl.Piece) -> Finding:
 
 
 def computed(project: pl.Project) -> list[Finding]:
-    """The scene findings of a piece, its scenes computed now; a font that refuses the
-    render is one."""
+    """The scene findings of a piece, its scenes computed now with the stand-ins, so every
+    machine finds the same (DEC-016 point 5); a font that refuses the render is one."""
     try:
-        results = project.scenes()
+        results = project.scenes(facts=project.piece.stand_ins)
     except MissingFont as exc:
         return [
             Finding(

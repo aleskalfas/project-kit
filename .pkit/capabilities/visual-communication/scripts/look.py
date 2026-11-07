@@ -14,9 +14,10 @@ local folder, for a person or an agent to read (DEC-015, DEC-020 point 5).
 
 It reads the piece's own file with its lock, computes the scenes under that lock and never
 moves it. It runs no helper and no producer, draws a produced picture as it stands, keeps
-no finding, takes no number and records no location. It reads a piece through the HTML
-renderer where the piece declares `html`, and through the SVG renderer otherwise;
-`--renderer` names either. Each renderer has a folder of its own in
+no finding, takes no number and records no location. Its images show what a preview fills,
+and it says where one shows a stand-in, with why (`exports.preview_filling`). It reads a
+piece through the HTML renderer where the piece declares `html`, and through the SVG
+renderer otherwise; `--renderer` names either. Each renderer has a folder of its own in
 `.pkit/capabilities/visual-communication/project/local/look/`: `<piece>/` for the SVG
 renderer's pages, `<piece>.html/` for the HTML renderer's. Each image lies there beside its
 frames and one report, and a run replaces only what an earlier run left in that folder. The
@@ -60,7 +61,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import files, location, viewing
+from _lib import exports, files, location, viewing
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -131,17 +132,20 @@ def _look(root: Path, args: argparse.Namespace) -> int:
     )
     folder = viewing.folder_of(args.piece, wanted.renderer)
     pl.writable(root, root / folder / viewing.REPORT)
-    results = viewing.scenes(project, wanted.languages, wanted.keys)
+    filling = exports.preview_filling(project.piece)
+    results = viewing.scenes(project, wanted.languages, wanted.keys, facts=filling.facts)
     viewed = viewing.view(project, results, wanted)
     written = viewing.write(root, folder, viewed)
     if viewed.stopped:
         _print_stop(written, viewed.report)
         return STOPPED
-    _print(written, viewed.report)
+    _print(written, viewed.report, filling.said(exports.shown_stand_ins(results)))
     return 0
 
 
-def _print(folder: str, report: Mapping[str, Any]) -> None:
+def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
+    """What a run prints: the report, and `stand_ins`, what it says of a stand-in an image
+    shows, where one does."""
     print(f"look: {len(report['images'])} image(s) in {folder}")
     _print_lock_and_renderer(report)
     tool = report["tool"]
@@ -167,6 +171,8 @@ def _print(folder: str, report: Mapping[str, Any]) -> None:
         print(f"drawn otherwise: {_at(each)}: {_otherwise(each)}")
     for each in report.get("refused", []):
         print(f"refused: {each['language']}, {each['key']}: a request for {each['url']}")
+    if stand_ins:
+        print(f"look: {stand_ins}")
     print(f"report: {folder}{viewing.REPORT}")
 
 

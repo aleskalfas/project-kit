@@ -19,6 +19,7 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
     BLOCKS,
+    CONFLICTED,
     LONG,
     NET,
     PATTERNS,
@@ -29,11 +30,14 @@ from tests.test_visual_communication_pipeline import (
     ROW,
     TESTS,
     drawing_project,
+    exported_up_to,
+    filled,
     lab_lock,
     lab_project,
     list_drawing_libraries,
     on_devices,
     stamped,
+    today,
     write_content,
     write_picture,
 )
@@ -158,7 +162,8 @@ def test_the_figure_grows_with_its_steps_texts_and_nothing_overflows(tmp_path: P
         write_picture(root, framing)
         assert run(root, PIECE).returncode == 0
         piece = pl.read_piece(root, "visual", PIECE)
-        [(_, result)] = pl.Project(piece, piece.lock, pl.Held(root, "visual")).scenes()
+        project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+        [(_, result)] = project.scenes(facts=piece.stand_ins)
         return height(previews(root)["flow.en.default.svg"]), result
 
     short, _ = drawn("short", "Plan.")
@@ -801,16 +806,115 @@ def test_two_clones_with_different_exports_keep_the_same_findings(
     tmp_path: Path, shows: str
 ) -> None:
     """A render reads what no file holds from the stand-ins, so what either clone holds
-    locally, and the day it runs, change nothing the record keeps (DEC-016 point 5)."""
+    locally, and the day it runs, change nothing the record keeps (DEC-016 point 5). Their
+    previews each show the clone's own next number."""
     roots = [drawing_project(tmp_path / clone, picture=False) for clone in ("one", "two")]
     for root in roots:
         write_content(root, body={"use": "tests/stamp", "shows": shows})
-    exports = ".pkit/capabilities/visual-communication/project/local/exports/flow"
-    write(roots[1] / exports / "flow.v41.en.default.svg", "<svg/>")
+    exported_up_to(roots[1], 41)
     for root in roots:
         assert run(root, PIECE).returncode == 0
     assert findings_of(roots[0]) == findings_of(roots[1])
     assert ("text-overflow" in findings_of(roots[0])) == (shows == "narrow")
+    shown = [previews(root)["flow.en.colour-scheme.dark.svg"] for root in roots]
+    assert not any(STAND_INS[shows] in drawn for drawn in shown)
+    if shows != "date":
+        assert ">v1<" in shown[0] and ">v42<" in shown[1]
+
+
+#: The text each fact a stamp shows takes as its stand-in.
+STAND_INS = {"number": "v88", "narrow": "v88", "date": "2088-08-28"}
+
+
+@pytest.mark.parametrize(("shows", "part"), [("number", "number"), ("date", "date")])
+def test_a_preview_fills_this_clones_next_number_and_the_date_of_the_run(
+    tmp_path: Path, shows: str, part: str
+) -> None:
+    root = stamped(tmp_path, shows=shows)
+    exported_up_to(root, 41)
+    before = today()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    texts = {before, today()} if shows == "date" else {"v42"}
+    drawn = previews(root)["flow.en.default.svg"]
+    assert any(f">{text}<" in drawn for text in texts)
+    assert "preview: " not in shown.stdout
+
+
+def test_a_preview_on_a_record_of_exports_that_conflicts_takes_the_stand_ins_and_says_so(
+    tmp_path: Path,
+) -> None:
+    root = stamped(tmp_path, shows="number")
+    write(root / PIECE_FOLDER / "exports.yaml", CONFLICTED)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = [line for line in shown.stdout.splitlines() if line.startswith("preview: ")]
+    assert len(said) == 1
+    assert said[0].startswith(f"preview: no next number can be read ({PIECE_FOLDER}/exports.yaml: ")
+    assert said[0].endswith("), so a stand-in shows: `version` at `figure/body/number`")
+    assert ">v88<" in previews(root)["flow.en.default.svg"]
+
+
+#: A component of the piece's own that shows a version's number in a width the stand-in
+#: fits, and a number of ten digits does not.
+NUMBER = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A version's number, in a width for a number of a few digits.
+
+parts:
+  number:
+    text: {fact: version, style: type.body, fill: text-primary}
+    width: "=@space.3 * 3"
+
+preferred:
+  height: "=@space.4 * 2"
+"""
+
+
+def test_a_real_text_that_overflows_in_a_preview_is_said_and_no_record_keeps_it(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    write(root / PIECE_FOLDER / "components" / "number.yaml", NUMBER)
+    write_content(root, body={"use": "piece/number"})
+    exported_up_to(root, 1_000_000_000)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = [line for line in shown.stdout.splitlines() if line.startswith("preview: ")]
+    assert said, shown.stdout
+    assert all("text-overflow" not in line for line in said)
+    assert said[0].startswith(f"preview: fails: {PIECE_FOLDER}/components/number.yaml")
+    assert "figure/body/number: a word of fact:version in `piece/number` is wider" in said[0]
+    assert "text-overflow" not in findings_of(root)
+    assert "wider" not in "".join(
+        line for line in shown.stdout.splitlines() if not line.startswith("preview: ")
+    )
+
+
+@pytest.mark.parametrize(
+    ("shows", "state", "computed"),
+    [
+        ("number", "draft", 2),
+        ("date", "published", 2),
+        ("files", "draft", 1),
+        ("number", "final", 1),
+    ],
+)
+def test_a_piece_that_shows_a_number_or_a_date_is_computed_twice_and_any_other_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shows: str, state: str, computed: int
+) -> None:
+    """The findings come from scenes with the stand-ins, and only a preview that fills
+    other text computes them again (DEC-016 point 5). A final piece's takes the stand-ins."""
+    root = stamped(tmp_path, shows=shows, state=state)
+    taken = filled(monkeypatch, pl)
+    assert run(root, PIECE).returncode == 0
+    stand_ins = pl.read_piece_file(root, "visual", PIECE).stand_ins
+    assert len(taken) == computed
+    assert taken[0] == stand_ins
+    assert all(facts != stand_ins for facts in taken[1:])
 
 
 # --- a final piece ------------------------------------------------------------------------------

@@ -42,7 +42,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import location, viewing, viewing_tool
+from _lib import exports, location, viewing, viewing_tool
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -71,6 +71,7 @@ def _listed(root: Path, name: str) -> dict[str, Any]:
     project = viewing.opened(root, name)
     languages = project.piece.languages
     first = viewing.first_key(project)
+    facts = exports.preview_filling(project.piece).facts
     # Every scene is computed, so what refuses `look` at any key refuses the list. The pages
     # of each language are those of the scene of the key drawn by default.
     return {
@@ -80,7 +81,7 @@ def _listed(root: Path, name: str) -> dict[str, Any]:
         "drawn-by-default": {"language": languages[0], "key": first},
         "pages": {
             language: list(result.scene.to_dict().get("pages", []))
-            for language, result in viewing.scenes(project, languages)
+            for language, result in viewing.scenes(project, languages, facts=facts)
             if result.scene.size_key == project.size_key(first)
         },
         "renderer": viewing.renderer_of(project.piece),
