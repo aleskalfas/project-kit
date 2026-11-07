@@ -17,6 +17,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
@@ -65,6 +66,7 @@ pkit:
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
         - visual-communication:DEC-016#5
+        - visual-communication:DEC-017#3
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
