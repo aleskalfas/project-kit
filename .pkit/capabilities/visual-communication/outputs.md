@@ -107,6 +107,11 @@ pkit:
         - visual-communication:DEC-023#6
         - visual-communication:DEC-023#7
         - visual-communication:DEC-023#8
+        - visual-communication:DEC-024#1
+        - visual-communication:DEC-024#2
+        - visual-communication:DEC-024#4
+        - visual-communication:DEC-024#5
+        - visual-communication:DEC-024#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -691,7 +696,7 @@ A browser draws them. No other format needs one, and the capability installs non
 - **The fonts.** The browser reads the faces the file embeds. A span it draws in a font of the machine is reported.
 - **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops. The page also holds a mode for each signal the file reads. Where setting one does not repaint it, the run stops too.
 - **Its profile** lies in a throwaway folder of the clone's local folder, which the run removes, even one that stops. The browser may write files of its own elsewhere, such as a crash report.
-- **A sandbox** may stop the browser. Draw these pages in a session outside it.
+- **Its own sandbox** stays on. The step passes no flag that turns it off or weakens it. A sandbox around the browser, such as a session's, may still stop it ([When the browser stops](#when-the-browser-stops)).
 
 ### When the browser stops
 
@@ -699,7 +704,13 @@ A run stops where no browser runs, where one stops part way, or where its first 
 
 - **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
 - **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
-- **How to go on.** The command exits 3, and names the SVG renderer as a way to go on. Those images show the layout, never the page file.
+- **A sandbox.** Where the browser's words show a sandbox, the run says that a sandbox stopped the browser. Otherwise it names what the browser said.
+- **A browser run as root.** Chrome run as root, as a container may run it, refuses to start with its own sandbox on. The run says so, apart from a sandbox, and never turns that sandbox off.
+- **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4):
+  1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them ([A pipeline's drawings](#a-pipelines-drawings)). They show a pushed commit, not your working tree.
+  2. the same look, run once by a person outside any sandbox, such as in their own terminal. This line is addressed to a person. It runs the clone's scripts as they stand, with that person's rights.
+  3. the SVG renderer's pages, through `pkit visual look <piece> --renderer svg`. They show the layout, never the page file.
+- **For an agent,** a last line says what it does (DEC-024 point 6). It reads a pipeline's drawings, or asks a person, and never takes the command out of the sandbox itself. It never runs a look over the folder a person's run left.
 
 ### What a run writes
 
@@ -734,7 +745,7 @@ Through the HTML renderer the report holds these too:
 - **`page-files`:** each page file, with its language, its key, and `keys`, each key it holds.
 - **`words`:** each text whose spans differ between the scene and the page file, in their words, order or number, with each side's spans. The page file lost part of that text.
 - **`refused`:** each request the page made, which the browser refused. A page file asks for nothing, so each request is a fault of the file.
-- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then whether a sandbox stopped it, and how to go on.
+- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then `sandbox`, whether a sandbox stopped it, and `as-root`, whether the browser ran as root. `go-on` lists the ways on in their order, and `for-an-agent` says what an agent does.
 
 ### What refuses a run
 
@@ -750,3 +761,19 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 - through the HTML renderer, a `browser` in the configuration that names no path ([The browser](files.md#the-browser)).
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.
+
+### A pipeline's drawings
+
+A project's build pipeline may draw each piece's HTML pages on every change it checks, such as a pull request (DEC-024 point 5). An agent whose session cannot run the browser then reads those. Whether the pipeline does so is the project's choice. No setting of the capability's says so, and the capability ships no pipeline file.
+
+- **What it runs.** On a runner with a browser of the Chromium family, `pkit visual look <piece> --renderer html --every-language --every-key` for each piece of the location. It runs the command as the project writes it. It sets nothing that turns off the browser's own sandbox.
+- **What it keeps.** The look's folder, `look/`, with each piece's images, frames, page files and report, as one artefact of the run. Its name is `visual-drawings-<commit>`, with `<commit>` the full hash of the commit drawn. On a pull request that is its head commit, not a merge the pipeline may check out.
+- **A stop fails the job.** A look that does not draw fails the job, so a stop never reads as a clean run. Its report is kept with the rest.
+- **No standing reach.** The job runs the change's own scripts, which an agent may have written. So it holds no secret, and its token only reads.
+- **What they show.** The commit drawn, as that runner's browser drew it, not your working tree. An image stands for that browser alone.
+
+**Fetching them.** Take the commit, such as a pull request's head, and fetch its drawings into a folder of their own, named by that commit.
+
+- **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
+- **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
+- **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.

@@ -29,7 +29,8 @@ is read, and none is used up (DEC-016 point 5).
   3), and for the HTML renderer each page file, for a person to open in their own browser.
 - **A stop.** Where no browser runs, or one stops part way, or its first read fails, the
   run gives the page files and a report that says what stopped it, and no image (DEC-020
-  point 8). Every refusal comes before that.
+  point 8). Every refusal comes before that. The report names the ways on, in the order of
+  DEC-024 point 4 (`ways_on`), and what an agent does where it stops (DEC-024 point 6).
 - **A run replaces** what an earlier run left in its renderer's folder, as one change
   (`write`), and leaves the other renderer's folder where it lies.
 """
@@ -93,6 +94,12 @@ ON_BROWSER_GROUND = "on-browser-ground"
 
 #: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
 SCALE_PLACES = 3
+
+#: The name a build pipeline keeps a commit's drawings under, and the page that says how one
+#: draws them and how they are fetched (DEC-024 point 5).
+DRAWINGS = "visual-drawings-<commit>"
+DRAWINGS_PAGE = ".pkit/capabilities/visual-communication/outputs.md"
+DRAWINGS_SECTION = "A pipeline's drawings"
 
 #: The scenes of a piece, by language.
 Results = Sequence[tuple[str, SceneResult]]
@@ -659,18 +666,16 @@ class _Made:
 
     def stopped(self, stop: viewing_browser.Stopped) -> Viewed:
         """What a stop gives: the page files, and a report that says what stopped the browser,
-        what is missing and how to go on, and no image (DEC-020 point 8)."""
-        piece = self.project.piece.name
+        what is missing and how to go on, and no image (DEC-020 point 8, DEC-024 point 4)."""
         self.stop = {
             "what": stop.what,
             "looked": list(stop.looked),
             "program": stop.program,
             "said": stop.said,
             "sandbox": stop.sandbox,
-            "go-on": (
-                f"`pkit visual look {piece} --renderer {SVG}` draws the same scenes through the "
-                f"SVG renderer and resvg, whose images show the layout, never this page"
-            ),
+            "as-root": stop.as_root,
+            "go-on": ways_on(self.project.piece.name),
+            "for-an-agent": FOR_AN_AGENT,
         }
         return self.viewed()
 
@@ -702,6 +707,38 @@ class _Made:
         report["drawn-otherwise"] = self.otherwise
         report["refused"] = self.refused
         return Viewed({**self.files, REPORT: _json(report)}, report, self.stop is not None)
+
+
+#: What an agent does where a look stops: it opens no way out of the sandbox itself (DEC-024
+#: point 6). It names no way out, as no stop does (DEC-024 point 4).
+FOR_AN_AGENT = (
+    "read a pipeline's drawings where you can reach them, or ask a person, naming these ways "
+    "on. Never take this command out of the sandbox yourself, and never run a look over the "
+    "folder a person's run left"
+)
+
+
+def ways_on(piece: str) -> list[str]:
+    """The ways on from a stop of `piece`'s HTML renderer's pages, in the order of DEC-024
+    point 4: a build pipeline's drawings, a way a project may take, which show a pushed commit;
+    the same look run by a person outside the sandbox, a line addressed to that person; and
+    the SVG renderer's pages, which show the layout."""
+    return [
+        (
+            f"a build pipeline's drawings, where the project has its pipeline draw each piece's "
+            f"pages: read those of `{piece}`, kept as `{DRAWINGS}`. They show a pushed commit, "
+            f'not the working tree ({DRAWINGS_PAGE}, "{DRAWINGS_SECTION}")'
+        ),
+        (
+            f"for a person: run `pkit visual look {piece} --renderer {HTML}` once on a machine "
+            f"with a browser, outside any sandbox, such as in your own terminal. It runs the "
+            f"clone's scripts as they stand, with your rights"
+        ),
+        (
+            f"`pkit visual look {piece} --renderer {SVG}` draws the same scenes through the SVG "
+            f"renderer and resvg, whose images show the layout, never this page"
+        ),
+    ]
 
 
 def scale(page: Mapping[str, Any]) -> float:

@@ -837,6 +837,23 @@ def test_a_browser_its_sandbox_stopped_is_told_apart(tmp_path: Path, words: str)
 def test_a_browser_that_stopped_otherwise_is_not_said_to_be_sandboxed(tmp_path: Path) -> None:
     stop, _ = stopped(tmp_path, says="Trace/BPT trap: 5", exit=133)
     assert not stop.sandbox
+    assert not stop.as_root
+
+
+#: What Chrome says where it runs as root, as a container may run it: it refuses to start with
+#: its own sandbox on, and its words name that sandbox.
+AS_ROOT_WORDS = (
+    "[1107/101010.000000:ERROR:zygote_host_impl_linux.cc(128)] Running as root without "
+    "--no-sandbox is not supported. See https://crbug.com/638180."
+)
+
+
+def test_a_browser_run_as_root_is_told_apart_from_a_sandbox_that_stopped_it(
+    tmp_path: Path,
+) -> None:
+    stop, _ = stopped(tmp_path, says=AS_ROOT_WORDS, exit=1)
+    assert stop.as_root
+    assert not stop.sandbox
 
 
 def test_only_the_end_of_what_a_browser_said_is_kept(tmp_path: Path) -> None:
@@ -863,6 +880,40 @@ def test_no_flag_touches_the_browsers_own_sandbox(tmp_path: Path) -> None:
     assert not [
         flag for flag in flags if "sandbox" in flag.split("=")[0] or "zygote" in flag.split("=")[0]
     ]
+
+
+#: Flags that turn off or weaken the sandbox of a browser's processes, merge them into one, or
+#: let a page read past its own file: the module passes none (DEC-024 point 1).
+UNSAFE_FLAGS = (
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-gpu-sandbox",
+    "--disable-seccomp-filter-sandbox",
+    "--disable-namespace-sandbox",
+    "--no-zygote",
+    "--single-process",
+    "--in-process-gpu",
+    "--disable-site-isolation-trials",
+    "--disable-web-security",
+    "--allow-file-access-from-files",
+    "--allow-file-access",
+    "--allow-running-insecure-content",
+    "--disable-features",
+    "--unsafely-treat-insecure-origin-as-secure",
+)
+
+#: Words in a flag's name that touch the browser's own sandbox or its processes' isolation.
+UNSAFE_WORDS = ("sandbox", "zygote", "single-process", "in-process", "unsafe", "security", "file")
+
+
+def test_no_flag_the_module_passes_weakens_the_browser_or_lets_a_page_read_past_its_file(
+    tmp_path: Path,
+) -> None:
+    _, program = drawn(tmp_path)
+    names = {flag.split("=")[0] for flag in logged(program)[0]["flags"]}
+    assert not names & set(UNSAFE_FLAGS)
+    assert not [name for name in names for word in UNSAFE_WORDS if word in name]
+    assert not set(viewing_browser.FLAGS) & set(UNSAFE_FLAGS)
 
 
 # Its profile.
