@@ -1,6 +1,9 @@
 component: visual-communication
 kind: none
 body: >
-  A proposed record decides how a size reaches a component, and how a size
-  changes a component's shape (#2780). It designs ahead of the Tasks that build
-  it. No command, path or file format changes, so no surface moves.
+  DEC-021 decides how a size reaches a component, and how a size changes a
+  component's shape (#2780): one shared axis, `device`, that a component reads
+  by a marked name in a switch or a `when`. Six accepted records say what it
+  decides of them. The record designs ahead: the axis and the shape that follows
+  it land in later pull requests, so no command, path or file format changes,
+  and no surface moves yet.
