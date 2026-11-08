@@ -19,11 +19,14 @@ pkit:
       path:
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/scripts/look.py
+        - .pkit/capabilities/visual-communication/scripts/render.py
+        - .pkit/capabilities/visual-communication/skills/visual-author/build-loop.md
         - .pkit/capabilities/visual-communication/schemas/piece.schema.json
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
         - visual-communication:DEC-015#1
+        - visual-communication:DEC-015#4
         - visual-communication:DEC-015#7
         - COR-017
 ---
@@ -34,7 +37,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): designs the piece for the developer, and reviews it. A rule it judges by must be one the capability ships, so the developer can see what it judged by.
+- **AI agent** (`core:ACT-ai-agent`): designs the piece for the developer, and reviews it.
 
 **Preconditions:** None.
 
@@ -47,13 +50,13 @@ pkit:
 **Main path:**
 
 1. The developer asks the AI agent for a piece. The developer says who the piece is for, where it is shown, and whether it explains.
-2. The AI agent designs the piece by the rules of visual communication that the capability ships: what each page says, and how it looks.
+2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks.
 
 > [!WARNING]
 > **Not built yet:** no agent or skill of the capability designs a piece by such rules. [DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for) decides that the capability carries its view of good visual communication as rules, with agents that make and review pieces, and #2584 tracks the agents.
 
-3. The system draws each page of the piece as an image, with `pkit visual look`.
-4. A reviewer reads the drawn pages as the piece's audience would. It reports each break of a rule as a finding that names the rule and the page.
+3. The system renders the piece, and draws each of its pages as an image, with `pkit visual render` and `pkit visual look`.
+4. A reviewer reads the drawn pages, and reports each break of a rule as a finding that names the rule and the page.
 
 > [!WARNING]
 > **Not built yet:** the reviewer reports faults and notes on the drawn pages, and judges no rule. DEC-001 point 1 decides that a reviewer judges the rules, and #2584 tracks the reviewer that does.
@@ -62,9 +65,9 @@ pkit:
 
 **Variants:**
 
-- **1a.** The piece does not explain, such as a map of a system or a board people fill in. A rule for pieces that explain does not judge it, and every other rule still does.
-- **4a.** The harness cannot read images. The reviewer stops and says so, and judges nothing.
-- **4b.** The reviewer reports a break. The AI agent mends the piece, and the path rejoins at step 3.
+- **1a.** The piece does not explain, such as a map of a system or a board people fill in. A rule for pieces that explain does not judge it.
+- **4a.** The harness cannot read images. The reviewer stops and says so, and judges nothing on the drawn pages.
+- **5a.** The developer asks the AI agent to mend the piece where a finding asks. The AI agent mends the piece, and the path rejoins at step 3.
 
 **Postconditions:** The piece is drawn, and each break of a rule the reviewer found is mended or left to the developer with its finding.
 
@@ -88,6 +91,7 @@ What the developer needs here that no accepted record decides yet:
 - **The steps and the guarantees:**
   - **Step 1:** a piece declares who it is for, where it is shown and whether it explains ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
   - **Steps 2 and 4:** the capability carries its view of good visual communication as rules a reviewer judges, and agents that make, review and translate pieces ([DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for)).
-  - **Step 3:** the viewing step draws what a renderer drew for each page as an image ([DEC-015 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#1-the-viewing-step-draws-a-renderers-output-and-adds-nothing-to-the-seam)).
-  - **Step 5, variants 4a and 4b, and the guarantees:** the reviewer advises, reads images and stops where the harness reads none, and says which pages it looked at ([DEC-015 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#7-the-reviewers-first-form)).
+  - **Step 3:** the viewing step draws what a renderer drew for each page as an image ([DEC-015 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#1-the-viewing-step-draws-a-renderers-output-and-adds-nothing-to-the-seam)), under the lock a render wrote ([DEC-015 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#4-it-reads-under-the-lock-and-writes-nothing-committed)).
+  - **Step 5, variant 4a and the guarantees:** the reviewer advises, reads images and stops where the harness reads none, and says which pages it looked at ([DEC-015 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#7-the-reviewers-first-form)).
+  - **Variant 5a:** the skill that guides whoever draws a piece renders, checks, reads and mends it until it can stop, its content first (`skills/visual-author/build-loop.md`).
   - **Variant 1a:** a rule says in its wording which pieces it judges, as a rule for pieces that explain does, and a reviewer reads that from the piece's fields ([DEC-001](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md), "Why a piece declares what it is selected by").
