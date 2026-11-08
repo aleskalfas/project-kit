@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -10,6 +12,7 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import data_points as dp
+from project_kit import install
 from project_kit.cli import main, status
 from project_kit.status import _data_point_lines, _skill_owner
 from tests.adopter_repo import MakeAdopterRepo
@@ -143,13 +146,49 @@ def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target:
     assert name in kit_block
 
 
-def test_status_names_the_deploy_commands_when_nothing_is_deployed(installed_target: Path) -> None:
-    result = CliRunner().invoke(status, [])
+# The adapter script that makes what each line of the adapter section reports.
+_MADE_BY = {
+    "settings.json": "merge-settings.sh",
+    "skills": "deploy-skills.sh",
+    "agents": "deploy-agents.sh",
+}
+
+
+def test_each_remedy_status_names_is_a_command_the_installed_pkit_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """In a project `pkit init` made, with no settings, skill or agent under `.claude/`,
+    status names a remedy for each. Each is a command of the installed `pkit`, and runs
+    the adapter script that makes what is missing (#2463). The adapter scripts are
+    recorded, not run, so `init` leaves the three out."""
+    ran: list[str] = []
+
+    def _record(script: Path, _ctx: install.InstallContext, *_args: str) -> None:
+        ran.append(f"{script.parent.name}/{script.name}")
+
+    monkeypatch.setattr(install, "_run_adapter_primitive", _record)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    monkeypatch.chdir(tmp_path)
+    made = CliRunner().invoke(main, ["init"])
+    assert made.exit_code == 0, made.output
+
+    result = CliRunner().invoke(main, ["status"])
     assert result.exit_code == 0, result.output
-    assert _deployed(result.output) == [
-        f"    {'skills':<18} 0 deployed (run 'pkit deploy-skills')",
-        f"    {'agents':<18} 0 deployed (run 'pkit deploy-agents')",
+    lines = _section(result.output, "Adapter: claude-code").splitlines()[:3]
+    assert lines == [
+        f"    {'settings.json':<18} not present (run 'pkit sync')",
+        f"    {'skills':<18} 0 deployed (run 'pkit sync')",
+        f"    {'agents':<18} 0 deployed (run 'pkit sync')",
     ]
+    for line in lines:
+        remedy = re.search(r"\(run '([^']+)'\)", line)
+        assert remedy is not None, line
+        program, *arguments = shlex.split(remedy.group(1))
+        assert program == "pkit"
+        ran.clear()
+        outcome = CliRunner().invoke(main, arguments)
+        assert outcome.exit_code == 0, outcome.output
+        assert f"claude-code/{_MADE_BY[line.split()[0]]}" in ran, (line, ran)
 
 
 def test_status_lists_a_capabilitys_skills_and_agents_under_the_capability(

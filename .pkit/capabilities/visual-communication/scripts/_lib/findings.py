@@ -1,14 +1,22 @@
-"""Findings and their levels (visual-communication DEC-002 point 7).
+"""Findings and their levels (visual-communication DEC-002 point 7, DEC-013 point 6).
 
 A finding states one thing a check found. Its *level* is the policy's: it fails,
 it asks for attention, or it states a fact. Whether a finding fails depends on
 where it lies: in a file the project can correct, it takes the level its record
-sets; in a released library version, which only its owner corrects, a failing
-finding asks for attention instead, and names the library's owner as who is to
-act (DEC-002 point 7). So the level, and that `who`, are worked out when a
-finding is read (`as_read`), never stored with it. A finding the project corrects
-whether the version is released or not names no version, so it keeps its level: a
-version that needs a newer release of the capability is one (DEC-014 point 5).
+sets. In a library version the project does not correct, a failing finding asks
+for attention instead, and names who corrects it (DEC-002 point 7):
+
+- in a released version, still as it was released, the library's owner, in a new
+  release;
+- in a copy of a library the capability ships, released or not, whoever maintains
+  the capability, since the command that brings the library in writes it as it is
+  authored (DEC-013 point 6). A released copy whose files no longer match its hash
+  is the project's to restore, so a finding in it keeps its level.
+
+So the level, and that `who`, are worked out when a finding is read (`as_read`),
+never stored with it. A finding the project corrects whether the version is
+released or not names no version, so it keeps its level: a version that needs a
+newer release of the capability is one (DEC-014 point 5).
 
 The validator document maps the levels onto the backbone's severities:
 fails -> `error`, attention -> `warning`, fact -> `info`.
@@ -44,6 +52,9 @@ DID = {
 #: Who a loss nobody accepted asks for attention (DEC-005 point 14).
 AUTHOR = "the piece's author"
 
+#: Who a finding names where the project corrects it, though it lies in a library folder.
+PROJECT = "the project"
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -75,33 +86,39 @@ class Finding:
             raise ValueError(f"unknown level {self.level!r}")
 
 
-def level_where(finding: Finding, released: bool) -> str:
-    """The level a finding takes where it lies (DEC-002 point 7).
+def level_where(finding: Finding, released: bool, *, shipped: bool = False) -> str:
+    """The level a finding takes where it lies (DEC-002 point 7, DEC-013 point 6).
 
-    A finding that would fail, in a released library version, asks for
-    attention instead: only the library's owner corrects it, in a new release.
+    A finding that would fail asks for attention instead in a library version the
+    project does not correct: a released one (`released`), which only the library's
+    owner corrects, in a new release; or a copy of a library the capability ships
+    (`shipped`), which only whoever maintains the capability corrects.
     """
-    if finding.level == FAILS and finding.library and released:
+    if finding.level == FAILS and finding.library and (released or shipped):
         return ATTENTION
     return finding.level
 
 
-def owner_of(library: str) -> str:
-    """Who corrects a finding in the released library version `library`
-    (`<name>@<version>`): the library's owner, in a new release."""
+def owner_of(library: str, *, shipped: bool = False) -> str:
+    """Who corrects a finding in the library version `library` (`<name>@<version>`)
+    that the project does not correct: whoever maintains the capability, in a copy of
+    a library it ships (`shipped`); else the library's owner, in a new release."""
     name = library.partition("@")[0]
+    if shipped:
+        return f"whoever maintains the capability, who corrects `{name}` where it is authored"
     return f"the owner of `{name}`, who corrects it in a new release"
 
 
-def as_read(finding: Finding, released: bool) -> tuple[Finding, str]:
+def as_read(finding: Finding, released: bool, *, shipped: bool = False) -> tuple[Finding, str]:
     """A finding as it reads where it lies, with its level there (`level_where`).
-    A failing finding that asks for attention instead, in a released library
-    version, names the library's owner as who is to act (DEC-002 point 7, DEC-005
-    point 14). `released` says whether its version is released and still as it was
-    released."""
-    level = level_where(finding, released)
+    A failing finding that asks for attention instead names who corrects it
+    (`owner_of`, DEC-002 point 7, DEC-005 point 14, DEC-013 point 6). `released`
+    says whether its version is released and still as it was released; `shipped`,
+    whether it is a copy of a library the capability ships, other than a released
+    copy whose files no longer match its hash."""
+    level = level_where(finding, released, shipped=shipped)
     if level != finding.level:
-        return replace(finding, who=owner_of(finding.library)), level
+        return replace(finding, who=owner_of(finding.library, shipped=shipped)), level
     return finding, level
 
 

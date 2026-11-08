@@ -1,0 +1,36 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+    revalidated:
+      at: 2026-11-04T11:47:49Z
+      outcome: updated
+  - artefact: docs/schemas/README.md
+    revalidated:
+      at: 2026-11-04T11:47:54Z
+      outcome: unchanged
+      unchanged-because: UC-038 now says a project's new rules stay proposed until they are accepted, as UC-040 describes, where it named who accepts them. This guide says a new rule is proposed and binds nothing until a person accepts it in the change that adds it, which still holds.

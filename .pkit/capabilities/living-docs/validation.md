@@ -22,8 +22,10 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-023, COR-050, COR-051, COR-056]
       artefact:
         - RS-LDOC-001
+        - RS-LDOC-002
         - RS-LDOC-003
         - RS-LDOC-004
+        - RS-LDOC-007
         - RS-LDOC-008
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#friction-artefacts---at-rev---json
@@ -33,6 +35,7 @@ pkit:
         - .pkit/capabilities/living-docs/pages.md#a-kinds-format
         - .pkit/capabilities/living-docs/pages.md#types
         - .pkit/capabilities/living-docs/pages.md#sources
+        - .pkit/capabilities/living-docs/pages.md#visual-elements
         - .pkit/capabilities/living-docs/spaces.md#declaring-the-spaces
         - .pkit/capabilities/living-docs/spaces.md#each-definitions-scope
         - .pkit/capabilities/living-docs/spaces.md#the-shared-method-ldoc
@@ -42,7 +45,7 @@ pkit:
 
 # Validation
 
-What `pkit living-docs validate` reads, fails on and reports, a page's unanchored mentions included ([living-docs:DEC-001-living-docs-discipline] points 1 to 4 and 6).
+What `pkit living-docs validate` reads, fails on, reports and warns of, a page's unanchored mentions included ([living-docs:DEC-001-living-docs-discipline] points 1 to 4 and 6).
 
 ## Contents
 
@@ -53,6 +56,7 @@ What `pkit living-docs validate` reads, fails on and reports, a page's unanchore
 - [What it reports](#what-it-reports)
 - [What a page is checked for](#what-a-page-is-checked-for)
 - [What a page mentions and does not anchor](#what-a-page-mentions-and-does-not-anchor)
+- [What it warns of](#what-it-warns-of)
 <!-- /pkit:contents -->
 
 ## The command
@@ -143,6 +147,7 @@ It reports each of these, without failing:
 - the readers each page's reader was checked against
 - how many pages were checked against their kind's structure, and how many were not because their kind declares none
 - how many pages each check left out, because its rule does not bind on them
+- how many links to another page's section and citations of a record it read, and how many it warned of
 - the pages left unanchored without an accepted reason, which is onboarding's work still to do
 - apart from them, the pages whose friction block gives a reason as `unanchored-because` (DEC-001 point 8, COR-050 point 1)
 
@@ -163,7 +168,7 @@ These are the parts `LDOC` declares under `checks` ([the page on spaces, "The sh
 - whether each fact has one home
 - whether the page says only what its reader needs
 
-The report below shows the mentions a page's anchors leave uncovered, as input to that judgment.
+The report and the warnings below show what a page's anchors leave uncovered, as input to that judgment.
 
 ## What a page mentions and does not anchor
 
@@ -183,7 +188,7 @@ mention(s) a page's anchors do not cover, each with an anchor that would cover i
 - **A path:** an inline code span that holds a `/` and no space, or a link's target, naming a file the repository holds.
   - A code span is read from the repository's root, and failing that from the page's folder.
   - A link is read from the page's folder, or from the root where it opens with `/`.
-  - A placeholder such as `<name>`, a glob, an ellipsis, a URL, a folder and an image are not read. A link's `#fragment` names a section.
+  - A placeholder such as `<name>`, a glob, an ellipsis, a URL, a folder and an image are not read. A link's `#fragment` names a section, read as the slug an anchor names it by ("What it warns of" below).
 - **A record:** `COR-NNN`, `PRJ-NNN`, `ADR-NNN`, or a capability's decision.
   - A capability's decision is read as `<capability>:DEC-NNN`, with its slug or without, or as `<capability> DEC-NNN`. A bare `DEC-NNN` is read on a page in that capability's folder.
   - The points written after the id count: `COR-050#5`, `COR-050 point 5`, `COR-050 points 2 and 5`.
@@ -213,6 +218,31 @@ Run `pkit sync` <!-- unanchored: named as the next step, not described --> after
 - **A mark that passes nothing over is reported.** That is any of these:
   - one that follows no mention, such as one after a file since removed or a record that no longer exists. It is reported, never moved to an earlier mention.
   - one that gives no reason
-  - one after a mention the page's anchors cover
+  - one after a mention the page's anchors cover, and that no warning names
 
 A page accepted with no anchors (`unanchored-because`) has its mentions read like any other. The report settles no part of `RS-LDOC-001`. Whether a statement rests on what it mentions stays a judgment, the agent's reader-review's and the rule-set reviewer's, so `LDOC` declares no check for it.
+
+## What it warns of
+
+Two passages break a rule more often than a mention does. On the pages where `RS-LDOC-001` binds, validation warns of each, and never fails on one (DEC-001 points 3 and 6). Each warning names the page, the line, the link or the citation, and the anchor to add. It names the rule by what the rule says.
+
+```
+  warning docs/guide.md:12
+    → docs/guide.md: the link at line 12 to `ref.md#use-it` leads to a section of another page that the page does not anchor. […] Add `artefact: [docs/ref.md#use-it]` to the page's anchors, […]
+```
+
+**A link to a section of another page** that the page does not anchor at that section. A page that sums up a fact whose home is another page links to the home. It anchors the home's section that states the fact, and an anchor on the whole home is not that anchor. A link is read only where the rule on one home binds on the page: `RS-LDOC-002`, or `RS-LDOC-007` once `LDOC` accepts it.
+
+- **The section.** The link's fragment is read as the slug an artefact anchor names a section by (COR-050 point 2). So a host's `#the-max_items-field` names the section that `#the-maxitems-field` anchors.
+- **One heading.** The fragment names the section whose heading has that slug, and only where one heading of the page has it.
+- **What stands on it.** An anchor on that section, or on a section that holds it.
+
+**A citation of a record** that the page's anchors do not stand on, read as a record mention is covered ("What covers each" above).
+
+- **A citation** is a parenthesis, outside code spans, that opens with a record's id, after `per` or `see` where one is written. Examples are `(COR-050 point 5)`, `(COR-051, COR-050 point 5)` and `(per [living-docs:DEC-001-living-docs-discipline] point 3)`.
+- **What it cites.** The id it opens with, and each id after a separator of its list: `,`, `;`, `+`, `/`, `and`, `or`, `per` or `see`. It runs to its close, or to the line's end where it closes on a later line.
+- **No citation.** An id the running text names, and one in a block quote, whose words are another's. A callout's words are the page's own, so a callout is read ([the page on pages, "Visual elements"](pages.md#visual-elements)).
+
+**A name needs no anchor,** so a warning is not always a break. Where a link or a passage only names the thing, mark it as a mention is marked, right after it. It is then not warned of. A page is warned once of each anchor it lacks, at the first passage that lacks it.
+
+**No part of a rule is settled.** Whether such a passage breaks its rule stays the reviewers' judgment, so `LDOC` declares no check for either warning (DEC-001 point 6).

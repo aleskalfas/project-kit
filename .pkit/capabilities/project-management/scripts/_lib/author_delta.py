@@ -45,10 +45,10 @@ carries over its new base were never reviewed.
 Both need the commits locally, and `author_delta` needs git 2.38 or later
 (for `merge-tree --write-tree`). A commit this checkout lacks — the reviewed
 head, the reviewed base, the PR's head, the base branch's head — is fetched
-first (`git fetch origin <oid>`), and the question asked again. When it still
-cannot be answered, the result is an error rather than an answer, and the
-freshness rule holds the verdict stale (fail closed). The error names the
-cause, since each has its own remedy:
+first, by its object name from origin (`_lib.pr_head.fetch`), and the question
+asked again. When it still cannot be answered, the result is an error rather
+than an answer, and the freshness rule holds the verdict stale (fail closed).
+The error names the cause, since each has its own remedy:
 
   * **unfetched** — the commit could not be fetched from origin (git's own
     message says why), or the checkout is shallow, so a commit that is in
@@ -67,15 +67,16 @@ every pm script runs from the project root.
 
 from __future__ import annotations
 
-import os
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 try:
+    from _lib import pr_head
     from _lib.audit import short_sha
 except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
+    import pr_head  # type: ignore[no-redef]
     from audit import short_sha  # type: ignore[no-redef]
 
 
@@ -270,26 +271,13 @@ class _Git:
         except OSError as exc:
             raise _GitFailed(f"git could not run: {exc}") from None
 
-    def has_commit(self, oid: str) -> bool:
-        return self("cat-file", "-e", f"{oid}^{{commit}}").returncode == 0
-
     def require_commit(self, oid: str, what: str) -> None:
-        """Make sure `oid` is in this checkout, fetching it from origin when
-        it is not; fail naming why it still is not."""
-        if self.has_commit(oid):
+        """Make sure `oid` is in this checkout, fetching it from origin by its
+        object name when it is not; fail naming why it still is not."""
+        fetched = pr_head.fetch(oid, git=self)
+        if fetched.held:
             return
-        # Never prompt for credentials: a pm script runs unattended.
-        fetch = self(
-            "fetch",
-            "--quiet",
-            "--no-tags",
-            "origin",
-            oid,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
-        )
-        if self.has_commit(oid):
-            return
-        why = _first_line(fetch.stderr) or f"git fetch exited {fetch.returncode}"
+        why = fetched.said[0] if fetched.said else f"git fetch exited {fetched.returncode}"
         raise _GitFailed(
             f"{what}, {short_sha(oid)}, is not in this checkout and could not be "
             f"fetched from origin: {why}"
@@ -388,11 +376,3 @@ class _BaseBranch:
             self._git.require_commit(self._tip, "the base branch's head")
             self._checked = True
         return self._git.is_ancestor(commit, self._tip)
-
-
-def _first_line(text: str) -> str:
-    """The first non-blank line of a git message, stripped."""
-    for line in text.splitlines():
-        if line.strip():
-            return line.strip()
-    return ""

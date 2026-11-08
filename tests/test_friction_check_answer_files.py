@@ -559,6 +559,40 @@ def test_the_command_reads_the_own_head_from_the_environment(
     assert f"Own head: {branch[:7]}" in result.output
 
 
+def test_a_merge_read_from_git_objects_is_judged_against_the_head_the_flag_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A reader that builds a merge reads it from git objects, from a working tree of its
+    own, and names the change's head beside `--head`: the flag keeps the variable's rule,
+    and the variable is not read."""
+    branch = _host_merge(repo)
+    merge = repo.head()
+    repo.checkout("main")
+    monkeypatch.chdir(repo.root)
+    monkeypatch.setenv(fc.HEAD_ENV, "no-such-commit")
+    command = ["friction", "check", "--base", "main", "--head", merge]
+    result = CliRunner().invoke(main, [*command, "--own-head", branch])
+    assert result.exit_code == 0, result.output
+    assert f"Own head: {branch[:7]}" in result.output and "--own-head: what" in result.output
+    alone = CliRunner().invoke(main, command)
+    assert alone.exit_code == 1 and "name the change's own head with --own-head" in alone.output
+
+
+def test_an_own_head_flag_neither_the_commit_nor_its_parent_is_refused(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _start(repo, ANSWERED)
+    root = repo.head()
+    repo.commit("one", CLI_CHANGE)
+    head = repo.commit("two", {"src/core/engine.py": "ENGINE = 2\n"})
+    with pytest.raises(FrictionCheckError, match="neither --head"):
+        _run(repo, named=fc.named_head(repo.root, head, root))
+    with pytest.raises(FrictionCheckError, match="names no commit"):
+        _run(repo, named=fc.named_head(repo.root, head, "no-such-commit"))
+    named = _run(repo, named=fc.named_head(repo.root, head, head)).head
+    assert named is not None and (named.own, named.own_source) == (head, fc.OWN_HEAD_FLAG)
+
+
 # --- dormant -------------------------------------------------------------------------------
 
 

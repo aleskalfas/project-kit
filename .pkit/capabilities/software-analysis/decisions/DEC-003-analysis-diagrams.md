@@ -6,6 +6,8 @@ date: 2026-10-19
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [software-analysis:DEC-008-diagram-rules-later-major].** Point 10's two diagram rules bind from a later major of `SAN` than its twelve judgement rules. Overturned: point 10's placing of them in that one major, with the passages of the Rationale and the Implications that say so. Every other point stands, point 8 among them.
+
 ## Context
 
 An analysis holds relations a reader grasps faster in a picture. A diagram drawn by hand from them drifts as soon as one relation changes. Examples of such relations:

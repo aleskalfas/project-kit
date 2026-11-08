@@ -7,6 +7,9 @@ stamp on send, freeze-by-convention with drift *detection*, live pull-only
 upstream read-back. The conversational layer (slug judgement, topic
 boundary, body-drafting opening) is the `scratchpad-author` skill's job
 per COR-005's "Skill / command pairing".
+
+It also holds the `scratchpad` member of `pkit validate` (`outcome`): a note
+lies in one state folder, the folder being its state (COR-012).
 """
 
 from __future__ import annotations
@@ -24,6 +27,8 @@ from typing import Literal
 
 import click
 from ruamel.yaml import YAML
+
+from project_kit.validators import Finding, Outcome
 
 RetiredState = Literal["done", "dropped"]
 
@@ -195,12 +200,21 @@ def _split_frontmatter(content: str) -> tuple[str, str]:
     return fm_yaml, body
 
 
-def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
-    """Find a scratchpad note by slug (kebab portion) or full filename."""
+def _notes_found_by(state_dir: Path, slug: str) -> list[Path]:
+    """The notes of `state_dir` that `slug` finds: the note whose whole file name
+    it is, or each note whose file name after the date is that whole slug
+    (`note_slug`). A slug never finds a note whose slug merely ends in it."""
     if slug.endswith(".md"):
         candidate = state_dir / slug
-        return candidate if candidate.is_file() else None
-    matches = list(state_dir.glob(f"*-{slug}.md"))
+        return [candidate] if Path(slug).name == slug and candidate.is_file() else []
+    return sorted(
+        path for path in state_dir.glob("*.md") if path.is_file() and note_slug(path.name) == slug
+    )
+
+
+def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
+    """Find a scratchpad note by its whole slug or its whole file name."""
+    matches = _notes_found_by(state_dir, slug)
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -213,17 +227,15 @@ def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
 
 
 def _find_in_any_state(scratchpad_dir: Path, slug: str) -> Path | None:
-    """Search every state folder (incl. the reported side-state) for a note with this slug."""
+    """The first note, searching every state folder (incl. the reported
+    side-state), that holds this whole slug."""
     for state in _ALL_STATES:
         state_dir = scratchpad_dir / state
         if not state_dir.is_dir():
             continue
-        try:
-            match = _resolve_in_state(state_dir, slug)
-        except click.ClickException:
-            continue
-        if match is not None:
-            return match
+        matches = _notes_found_by(state_dir, slug)
+        if matches:
+            return matches[0]
     return None
 
 
@@ -431,6 +443,41 @@ def list_notes(target_root: Path) -> list[NoteEntry]:
             refs = tuple(resolve_ref(ref) for ref in read_reported_refs(content))
             entries.append(NoteEntry(path.name, state, refs=refs, drifted=note_is_drifted(content)))
     return entries
+
+
+def outcome(target_root: Path) -> Outcome:
+    """The `scratchpad` member of `pkit validate`: each note lies in one state
+    folder, which is its state (COR-012). A slug whose notes lie in more than
+    one state folder is an error, one for each such slug, naming each of its
+    files. Two notes of one slug in one folder are not this member's concern.
+    Only `.md` files are notes."""
+    scratchpad_dir = target_root / ".pkit" / "scratchpad"
+    by_slug: dict[str, list[Path]] = {}
+    for state in _ALL_STATES:
+        state_dir = scratchpad_dir / state
+        if not state_dir.is_dir():
+            continue
+        for path in sorted(state_dir.glob("*.md")):
+            if path.is_file():
+                by_slug.setdefault(note_slug(path.name), []).append(path)
+    findings: list[Finding] = []
+    for slug, paths in sorted(by_slug.items()):
+        states = len({path.parent.name for path in paths})
+        if states > 1:
+            files = ", ".join(path.relative_to(target_root).as_posix() for path in paths)
+            findings.append(
+                Finding(
+                    f".pkit/scratchpad :: {slug}",
+                    f"slug {slug!r} is in {states} state folders: {files}. A note lies in one "
+                    "state folder, which is its state (COR-012). Keep the note in the folder "
+                    "of its state, and remove or rename each other file.",
+                )
+            )
+    notes = sum(len(paths) for paths in by_slug.values())
+    return Outcome(
+        (f"{notes} scratchpad note(s) checked; {len(findings)} error(s).",),
+        tuple(findings),
+    )
 
 
 def resolve_ref(ref: str) -> ReportedRefState:

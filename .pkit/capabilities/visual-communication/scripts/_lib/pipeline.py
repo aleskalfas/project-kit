@@ -6,19 +6,23 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 
 - **A piece** is a folder of the location's `pieces/`: its `piece.yaml`, a content file
   `content.<language>.yaml` for each language it lists, its local components, and what
-  a producer made for it under `produced/<output>/`. `read_piece` reads it.
+  a producer made for it under `produced/<output>/`. `read_piece` reads it, and
+  `read_piece_file` its `piece.yaml` alone, which is what the check reads of a final piece.
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
   the piece names itself: its top's library, its brand, its notations and every library
   its content uses; `libraries.move_lock` adds what they build on, judging each whole
-  combination it reaches with `Fit`. `write_lock` writes a
-  lock into `piece.yaml` as text, every other byte kept.
+  combination it reaches with `Fit`. `locked` gives the bytes of `piece.yaml` with a
+  lock written in as text, every other byte kept.
 - **A project** (`Project`) is a piece under one lock: the scope of the locked versions,
   the foundations' declarations and the own roles of each component library the lock
   names (DEC-008 point 1), and the brand read against it, over its base at the version
   the lock names when it builds on one (DEC-004 point 6), the notations the piece names
   (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
-  computes one scene for each language and each key over the size axes; format 1 has no
-  size axis, so that key is always `default`.
+  computes one scene for each language and each key over the size axes the piece names
+  (DEC-005 point 6), each reading the brand's roles at its key (`ProjectEnv.at`), and draws
+  each combination from the scene of its key (`drawn`). A format that holds modes takes the
+  combinations of one file in one call, grouped by the signal pairs its renderer declares
+  (`files_of`, DEC-023 points 1 and 2).
 - **A library version checked alone** is read through `LibraryEnv`, an `Env` that no
   piece or brand stands behind: components from a combination of library versions, and
   roles from their declarations alone (DEC-008 point 1, DEC-010 point 9).
@@ -30,20 +34,31 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   or a variant file it names that is missing, makes the picture missing for the engine,
   with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
   never crashes the computation.
+- **A picture file** lies in the piece's `pictures/`, or in that of a locked library's
+  version, found by its bare name and read as `pictures.Folder` reads one, each file once
+  (DEC-025 points 2, 5 and 9). One that cannot be read is kept with why, so an export
+  refuses the piece.
+- **What a renderer is handed** for each image, in each language and combination it draws
+  (`ProjectEnv.handed`): the file it shows there and its kind, by the image's trace id
+  (`seam.Shown`, DEC-025 point 7). A content's picture differs by language, so what a
+  renderer is handed is worked out from each language's scene.
 - **The findings record's key** (`findings_key_sources`) is worked out here from the
   current files, under form 1.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from _lib import keys, layout, notations, records, tokens, values
+from _lib import copies, keys, layout, notations, pictures, records, tokens, values
+from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
-from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
+from _lib.files import FileError, read_bound, refuse_links, without_binding
+from _lib.fingerprint import COPY_PLACE
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
@@ -64,9 +79,6 @@ PRODUCED = "produced"
 RECORD = "record.yaml"
 FINDINGS_FILE = "findings.yaml"
 EXPORTS_FILE = "exports.yaml"
-
-#: The key over the size axes of every scene: format 1 has no size axis (DEC-004 point 2).
-SIZE_KEY = keys.DEFAULT_KEY
 
 
 #: The byte-order mark a file may open with, which a rewrite of the lock keeps.
@@ -147,8 +159,31 @@ class Piece:
         return str(self.data.get("state", ""))
 
     @property
+    def stand_ins(self) -> layout.Facts:
+        """What fills the facts of every scene a shared answer rests on, such as the check's:
+        its state, and the stand-in for a version's number and its date (DEC-016 point 5)."""
+        return layout.stand_ins(self.state)
+
+    @property
     def pinned(self) -> bool:
-        return self.data.get("pinned") is True
+        """Whether its lock is pinned, which is read of a draft alone (DEC-003 point 8)."""
+        return self.state == DRAFT and self.data.get("pinned") is True
+
+    @cached_property
+    def why_final(self) -> str:
+        """Why it is final to every command, in words; empty where it is not (`copies.why_final`,
+        DEC-017 point 3). Its record of exports is read once."""
+        return copies.why_final(self.data, self.folder)
+
+    @property
+    def final(self) -> bool:
+        """Whether it is final to every command, by its state or by its record of exports."""
+        return bool(self.why_final)
+
+    @property
+    def lock_stays(self) -> bool:
+        """Whether no render moves its lock, whatever its `pinned` says (`copies.lock_stays`)."""
+        return copies.lock_stays(self.data, self.final)
 
     @property
     def lock(self) -> dict[str, str]:
@@ -167,6 +202,12 @@ class Piece:
         return list(self.data.get("exports") or [])
 
     @property
+    def copy_place(self) -> str | None:
+        """The folder it names for its current copy, a path from the repository's root, or
+        None, so the copy lies in the piece's folder (DEC-017 point 8)."""
+        return self.data.get(COPY_PLACE)
+
+    @property
     def accepted_losses(self) -> list[Mapping[str, Any]]:
         return [
             entry for entry in self.data.get("accept-losses") or [] if isinstance(entry, Mapping)
@@ -175,15 +216,19 @@ class Piece:
 
 def piece_names(root: Path, location: str) -> list[str]:
     """The pieces of the location: each folder of its `pieces/` that holds a file."""
+    return pieces_in(location, listed_files(root, f"{location}/{PIECES}"))
+
+
+def pieces_in(location: str, listed: Iterable[str]) -> list[str]:
+    """The pieces of the location that `listed`, the files of its `pieces/`, hold."""
     prefix = f"{location}/{PIECES}/"
-    return sorted(
-        {rel[len(prefix) :].split("/")[0] for rel in listed_files(root, f"{location}/{PIECES}")}
-    )
+    return sorted({rel[len(prefix) :].split("/")[0] for rel in listed})
 
 
-def read_piece(root: Path, location: str, name: str) -> Piece:
-    """The piece `name` of the location, read. Raises Refused, naming the file and what to
-    change, when it cannot be read as a piece."""
+def read_piece_file(root: Path, location: str, name: str) -> Piece:
+    """The piece `name` of the location as its `piece.yaml` alone gives it, with no contents:
+    no content file is read, so a fault in one refuses nothing (DEC-017 point 4). Raises
+    Refused, naming the file and what to change, when that file cannot be read as a piece's."""
     if not is_name(name):
         raise Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
     rel = f"{location}/{PIECES}/{name}"
@@ -213,19 +258,28 @@ def read_piece(root: Path, location: str, name: str) -> Piece:
     )
     _require(_is_lock(data.get("lock", {})), shown, "lock", "a mapping of libraries to versions")
     _require(_is_modes(data.get("modes", {})), shown, "modes", "a mapping of axes to modes")
+    _require(isinstance(data.get(COPY_PLACE, ""), str), shown, COPY_PLACE, "a path")
+    return Piece(root, location, name, data, {})
+
+
+def read_piece(root: Path, location: str, name: str) -> Piece:
+    """The piece `name` of the location, read: its `piece.yaml` and its content in each
+    language. Raises Refused, naming the file and what to change, when it cannot be read as a
+    piece."""
+    piece = read_piece_file(root, location, name)
     contents = {}
-    for language in languages:
-        content = root / rel / content_file(language)
+    for language in piece.languages:
+        content = piece.folder / content_file(language)
         if not content.is_file():
             raise Refused(
-                f"{rel}/{content_file(language)} does not exist: the piece lists the language "
-                f"`{language}`, so write its content there"
+                f"{piece.file(content_file(language))} does not exist: the piece lists the "
+                f"language `{language}`, so write its content there"
             )
         try:
             contents[language] = without_binding(read_bound(content, "content"))
         except (ReadError, FileError) as exc:
             raise Refused(str(exc)) from exc
-    return Piece(root, location, name, data, contents)
+    return Piece(root, location, name, piece.data, contents)
 
 
 def _require(holds: bool, file: str, key: str, shape: str) -> None:
@@ -313,16 +367,6 @@ def locked(piece: Piece, lock: Mapping[str, str]) -> bytes | None:
     return lock_text(path.read_bytes().decode("utf-8"), lock).encode("utf-8")
 
 
-def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
-    """Write `lock` into the piece's `piece.yaml` (`locked`); False, writing nothing,
-    when it holds that lock already. Raises Refused, writing nothing."""
-    data = locked(piece, lock)
-    if data is None:
-        return False
-    write_whole(piece.folder / PIECE_FILE, data)
-    return True
-
-
 # --- a piece under one lock ---------------------------------------------------------------------
 
 
@@ -370,6 +414,7 @@ class Project:
             fonts=self.root / self.location / FONTS,
             root=self.root,
             locked=locked,
+            walked=held.walked,
         )
         self.notations = {
             name: notations.read_notation(
@@ -378,10 +423,17 @@ class Project:
             for name in piece.notations
         }
         try:
-            self.combinations = keys.combinations(piece.modes, self.brand.axes)
+            self.combinations = self.brand.combinations_of(piece.modes)
         except keys.BadKey as exc:
             raise Refused(f"{piece.file(PIECE_FILE)}: `modes`: {exc}") from exc
-        self.keys = [keys.key_of(combination, self.brand.axes) for combination in self.combinations]
+        axes = self.brand.axes
+        self.keys = [keys.key_of(combination, axes) for combination in self.combinations]
+        self._size_keys = {
+            key: size_key_of(combination, axes)
+            for key, combination in zip(self.keys, self.combinations, strict=True)
+        }
+        self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
+        self._values: dict[str, Any] | None = None
         self.env = ProjectEnv(self)
 
     def label(self, library: str) -> str:
@@ -407,13 +459,34 @@ class Project:
 
     def values(self) -> dict[str, Any]:
         """The document of the brand's resolved values in every combination the piece names
-        (DEC-005 point 7)."""
-        return values.document(self.brand, self.combinations, self.lock)
+        (DEC-005 point 7), computed once."""
+        if self._values is None:
+            self._values = values.document(self.brand, self.combinations, self.lock)
+        return self._values
 
-    def scenes(self) -> list[tuple[str, SceneResult]]:
-        """One scene for each language, at the key over the size axes, in the piece's order
-        of languages. Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything
-        is laid out."""
+    def size_key(self, key: str) -> str:
+        """The key over the size axes of the combination `key` the piece names: the key of
+        the scene that serves it. Raises KeyError for a key the piece does not name."""
+        return self._size_keys[key]
+
+    def scenes(
+        self,
+        languages: Sequence[str] | None = None,
+        keys: Sequence[str] | None = None,
+        *,
+        facts: layout.Facts,
+    ) -> list[tuple[str, SceneResult]]:
+        """One scene for each language, or each of `languages`, and each key over the size
+        axes the piece names, or each that serves one of the combinations `keys`, in the
+        piece's order of languages, then in key order. Each scene's root names its key, and
+        it reads each role at that key (`ProjectEnv.at`), and each size axis of the
+        foundations a component reads at its mode there (`sizes_at`). Each takes its
+        language, and `facts` fills the rest of its export's facts: the caller says what,
+        and none takes one by default (DEC-016 point 5). A shared answer takes the piece's
+        `stand_ins`.
+        Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
+        served = None if keys is None else {self.size_key(key) for key in keys}
+        sizes = [size for size in self.size_keys if served is None or size in served]
         return [
             (
                 language,
@@ -423,49 +496,121 @@ class Project:
                     content=dict(self.piece.contents[language]),
                     language=language,
                     lock=self.lock,
-                    size_key=SIZE_KEY,
+                    size_key=size,
                     seam_version=seam.SEAM_VERSION,
-                    env=self.env,
+                    env=self.env.at(size),
+                    facts=facts,
+                    sizes=sizes_at(self.scope.axes, size),
                 ),
             )
             for language in self.piece.languages
+            if languages is None or language in languages
+            for size in sizes
         ]
+
+
+def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis]) -> str:
+    """The key over the size axes of a combination: its modes on the axes of kind `size`,
+    each other axis taken at its default (DEC-004 points 2 and 3)."""
+    return keys.key_of(
+        {axis: mode for axis, mode in combination.items() if axes[axis].kind == "size"}, axes
+    )
+
+
+def size_axes(axes: Mapping[str, tokens.Axis]) -> dict[str, tokens.Axis]:
+    """The axes of kind `size` among `axes`: those a component reads by a marked name
+    (DEC-021 point 3)."""
+    return {name: axis for name, axis in axes.items() if axis.kind == "size"}
+
+
+def sizes_at(axes: Mapping[str, tokens.Axis], size_key: str) -> layout.Sizes:
+    """What a scene at the key over the size axes `size_key` reads of them (DEC-021 point
+    3): each size axis of `axes`, the foundations', with its modes and its default, and the
+    mode the key holds on each. Raises keys.BadKey for a key `axes` do not hold."""
+    sized = size_axes(axes)
+    return layout.Sizes(sized, keys.parse_key(size_key, sized))
+
+
+@dataclass
+class _Read:
+    """What a project's `Env` has read, shared by its view at each key over the size axes:
+    each component by its use, and why each whose file cannot be read as one cannot; why
+    each produced picture that is missing is; the records read; the font files read from
+    the location's `fonts/`; the `pictures/` folder of the piece and of each library
+    version, by its holder (`piece` or the library's name); and why each picture file that
+    cannot be read cannot, by its holder and its name."""
+
+    components: dict[str, dict[str, Any] | None] = field(default_factory=dict)
+    unreadable: dict[str, str] = field(default_factory=dict)
+    missing: dict[str, str] = field(default_factory=dict)
+    records: dict[str, Mapping[str, Any]] = field(default_factory=dict)
+    fonts_read: set[Path] = field(default_factory=set)
+    folders: dict[str, pictures.Folder] = field(default_factory=dict)
+    refused: dict[tuple[str, str], str] = field(default_factory=dict)
 
 
 class ProjectEnv:
     """The `Env` the engine reads a project through: components from the locked versions
     and the piece's own folder, roles and fonts from the brand, colour families from the
     foundations' declarations, concepts from the notations the piece names, produced
-    pictures from their records, and the lock.
+    pictures from their records, picture files from the `pictures/` folder of the piece and
+    of each locked version, the file the brand gives each picture role, and the lock.
 
-    It keeps what the engine asked for that a check needs: why a produced picture is
-    missing (`missing`), the records read (`records`), and the font files read from the
-    location's `fonts/` (`fonts_read`)."""
+    It reads each role at one key over the size axes, `size_key`, which is `default` for
+    the project's own (`Project.env`). `at` gives the view that reads roles at another key,
+    and shares every other read with this one.
 
-    def __init__(self, project: Project) -> None:
+    It keeps what the engine asked for that a check needs, across every key: why a produced
+    picture is missing (`missing`), the records read (`records`), the font files read from
+    the location's `fonts/` (`fonts_read`), and why a picture file a drawn image names or
+    the brand gives a picture role it shows cannot be read (`refused`)."""
+
+    def __init__(
+        self, project: Project, size_key: str = keys.DEFAULT_KEY, read: _Read | None = None
+    ) -> None:
         self._project = project
-        self._components: dict[str, dict[str, Any] | None] = {}
-        self._unreadable: dict[str, str] = {}
-        self.missing: dict[str, str] = {}
-        self.records: dict[str, Mapping[str, Any]] = {}
-        self.fonts_read: set[Path] = set()
+        self.size_key = size_key
+        self._combination = keys.parse_key(size_key, project.brand.axes)
+        self._read = _Read() if read is None else read
+
+    def at(self, size_key: str) -> ProjectEnv:
+        """The view that reads each role at the key over the size axes `size_key`, sharing
+        every other read with this one, so a file is read once whatever the key."""
+        return ProjectEnv(self._project, size_key, self._read)
+
+    @property
+    def missing(self) -> dict[str, str]:
+        return self._read.missing
+
+    @property
+    def records(self) -> dict[str, Mapping[str, Any]]:
+        return self._read.records
+
+    @property
+    def fonts_read(self) -> set[Path]:
+        return self._read.fonts_read
+
+    @property
+    def refused(self) -> dict[tuple[str, str], str]:
+        return self._read.refused
 
     def component(self, use: str) -> dict:
-        if use not in self._components:
-            self._components[use] = self._read_component(use)
-        if use in self._unreadable:
-            raise UnreadableComponent(use, self._unreadable[use])
-        found = self._components[use]
+        read = self._read
+        if use not in read.components:
+            read.components[use] = self._read_component(use)
+        if use in read.unreadable:
+            raise UnreadableComponent(use, read.unreadable[use])
+        found = read.components[use]
         if found is None:
             raise KeyError(use)
         return found
 
     def _read_component(self, use: str) -> dict[str, Any] | None:
         """A component's data; None where there is none, and where its file is present and
-        cannot be read as one, why kept in `_unreadable`."""
+        cannot be read as one, why kept in `unreadable`."""
         data, why = read_component(self.component_path(use))
         if why is not None:
-            self._unreadable[use] = why
+            self._read.unreadable[use] = why
         return data
 
     def component_path(self, use: str) -> Path | None:
@@ -485,10 +630,35 @@ class ProjectEnv:
         return folder / COMPONENTS / f"{name}.yaml"
 
     def role(self, token_path: str) -> dict:
-        """The role's value under the brand. Raises tokens.RoleWithoutValue for a role of the
-        scope the brand leaves with none, and tokens.UnknownRole for a path no role holds;
-        both are KeyErrors, as the engine reads them."""
-        return self._project.brand.resolve(token_path, {})
+        """The role's value under the brand, at the view's key over the size axes, every
+        value axis at its default. Raises tokens.RoleWithoutValue for a role of the scope the
+        brand leaves with none, and tokens.UnknownRole for a path no role holds; both are
+        KeyErrors, as the engine reads them."""
+        return self._project.brand.resolve(token_path, self._combination)
+
+    def picture_role(self, token_path: str) -> pictures.Picture | None:
+        """The picture the brand gives the picture role at `token_path` at the view's key
+        over the size axes, every value axis at its default, as read; None where it gives
+        none, or its file cannot be read, which is the brand's own finding. Within that key,
+        each file the role takes in a combination the piece names that cannot be read is
+        kept in `refused`, so an export refuses it. Raises KeyError for a path no role
+        holds, and ValueError for a role of another type (DEC-025 point 4)."""
+        brand = self._project.brand
+        kind = brand.type_of(token_path)
+        if kind != tokens.PICTURE:
+            raise ValueError(f"the role @{token_path} is a {kind}, not a picture")
+        named = f"the picture role `{token_path}`"
+        project = self._project
+        for key, combination in zip(project.keys, project.combinations, strict=True):
+            given = brand.given(token_path, combination)
+            if given is None or project.size_key(key) != self.size_key:
+                continue
+            judged = brand.picture_of(given, named)
+            if judged.picture is None:
+                said = [f"{f.message} — {f.fix}" if f.fix else f.message for f in judged.findings]
+                self.refused[given.brand, given.name] = "; ".join(said) or "it cannot be read"
+        given = brand.given(token_path, self._combination)
+        return None if given is None else brand.picture_of(given, named).picture
 
     def font_file(self, family: str) -> Path:
         path = self._project.brand.font_file(family)
@@ -508,17 +678,94 @@ class ProjectEnv:
                 raise KeyError(output) from exc
         return _picture_info(self.records[output])
 
-    def pictures_at(self, key: str) -> dict[str, Path]:
-        """The file of the variant that serves the combination `key`, of each produced output
-        the engine read; an output whose record maps `key` to no variant is left out."""
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> pictures.Judged:
+        judged = self._folder(holder).judge(name, named=named, file="", where=where)
+        if judged.picture is None:
+            said = [f"{f.message} — {f.fix}" if f.fix else f.message for f in judged.findings]
+            self.refused[holder, str(name)] = "; ".join(said) or "it cannot be read"
+        return judged
+
+    def _folder(self, holder: str) -> pictures.Folder:
+        """The `pictures/` folder of the piece, where `holder` is `piece`, else of the version
+        of the library `holder` the lock names: its findings lie in the piece, or in that
+        version (DEC-025 point 9)."""
+        folders = self._read.folders
+        if holder not in folders:
+            piece = self._project.piece
+            walked = self._project.held.walked
+            if holder == PIECE:
+                folders[holder] = pictures.Folder(
+                    piece.folder, "", "the piece", final=piece.final, walked=walked
+                )
+            else:
+                label = self._project.label(holder)
+                folder = self._project.root / self._project.location / FOLDER / holder
+                folders[holder] = pictures.Folder(
+                    folder / self._project.lock[holder],
+                    "",
+                    f"the version {label}",
+                    label,
+                    walked=walked,
+                )
+        return folders[holder]
+
+    def handed(self, scene: Mapping[str, Any], key: str) -> dict[str, seam.Shown]:
+        """What a renderer is handed to draw `scene` (`Scene.to_dict()`) in the combination
+        `key`: the picture each of its images shows there, by the image's trace id (DEC-025
+        point 7). A produced output shows the variant its record maps `key` to, a PNG; a
+        picture file shows itself, of the kind its bytes are; a picture role shows the file
+        the document of values gives it in `key`, in the version of the brand that holds it.
+        An image of an output whose record maps `key` to no variant, of a picture file that
+        cannot be read, or of a picture role given no readable file in `key`, is left out,
+        and its renderer reports the loss."""
         found = {}
-        for output, record in sorted(self.records.items()):
-            combinations = record.get("combinations")
-            variant = combinations.get(key) if isinstance(combinations, Mapping) else None
-            entry = record["variants"].get(variant)
-            if isinstance(entry, Mapping):
-                found[output] = self._project.piece.folder / PRODUCED / output / entry["file"]
+        for element in _images(scene.get("children", [])):
+            trace = str(element.get("id"))
+            if "output" in element:
+                variant = self._variant(str(element["output"]), key)
+                if variant is not None:
+                    found[trace] = seam.Shown(variant, seam.PNG)
+            elif "file" in element:
+                holder = str(element.get("library", PIECE)).partition("@")[0]
+                name = str(element["file"])
+                read = self._folder(holder).judge(name, named="", file="", where="").picture
+                if read is not None:
+                    file = self._folder(holder).holder / pictures.FOLDER / name
+                    found[trace] = seam.Shown(file, read.kind)
+            elif "role" in element:
+                shown = self._role_file(str(element["role"]), key)
+                if shown is not None:
+                    found[trace] = shown
         return found
+
+    def _role_file(self, token_path: str, key: str) -> seam.Shown | None:
+        """The file the document of values gives the picture role at `token_path` in the
+        combination `key`, and its kind; None where it gives none, or the file cannot be
+        read (DEC-025 point 7)."""
+        token = self._project.values()["tokens"].get(token_path)
+        value = token["values"].get(key) if token is not None else None
+        if not isinstance(value, Mapping) or value.get("library") not in self._project.lock:
+            return None
+        folder = self._folder(str(value["library"]))
+        name = str(value["file"])
+        read = folder.judge(name, named="", file="", where="").picture
+        if read is None:
+            return None
+        return seam.Shown(folder.holder / pictures.FOLDER / name, read.kind)
+
+    def _variant(self, output: str, key: str) -> Path | None:
+        """The file of the variant of the produced output `output` that serves the
+        combination `key`; None where the engine read no record of it, or its record maps
+        `key` to no variant."""
+        record = self.records.get(output)
+        if record is None:
+            return None
+        combinations = record.get("combinations")
+        variant = combinations.get(key) if isinstance(combinations, Mapping) else None
+        entry = record["variants"].get(variant)
+        if not isinstance(entry, Mapping):
+            return None
+        return self._project.piece.folder / PRODUCED / output / entry["file"]
 
     def family(self, name: str) -> dict[str, str]:
         return dict(self._project.foundations.families[name])
@@ -576,6 +823,7 @@ class LibraryEnv:
         self._scope = scope
         self._components: dict[str, dict[str, Any] | None] = {}
         self._unreadable: dict[str, str] = {}
+        self._folders: dict[str, pictures.Folder] = {}
 
     def component(self, use: str) -> dict:
         if use not in self._components:
@@ -612,6 +860,15 @@ class LibraryEnv:
             return 0.0
         return {"$type": kind}
 
+    def picture_role(self, token_path: str) -> pictures.Picture | None:
+        """None: no brand stands behind a library checked alone, so it gives no picture role
+        a file. Raises tokens.UnknownRole, a KeyError, for a path no declaration of the scope
+        holds, and ValueError for a role of another type."""
+        kind = self._scope.type_of(token_path)
+        if kind != tokens.PICTURE:
+            raise ValueError(f"the role @{token_path} is a {kind}, not a picture")
+        return None
+
     def font_file(self, family: str) -> Path:
         raise MissingFont(
             f"no brand stands behind a library checked alone, so no file measures {family!r}"
@@ -619,6 +876,19 @@ class LibraryEnv:
 
     def picture(self, output: str) -> PictureInfo:
         raise KeyError(output)
+
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> pictures.Judged:
+        """A picture file of a version among those the library is checked with, its findings
+        lying in it; none of a piece, since no piece stands behind it."""
+        version = self._versions.get(holder)
+        if holder == PIECE or version is None:
+            return pictures.Judged(None)
+        if holder not in self._folders:
+            label = f"{holder}@{version.version}"
+            self._folders[holder] = pictures.Folder(
+                version.folder, "", f"the version {label}", label
+            )
+        return self._folders[holder].judge(name, named=named, file="", where=where)
 
     def family(self, name: str) -> dict[str, str]:
         return dict(self._scope.families[name])
@@ -685,9 +955,10 @@ def fit(piece: Piece, held: Held) -> Fit | None:
 class Fit:
     """The judgement a draft's render gives the search for its lock (`libraries.Judge`):
     whether a whole combination of versions fits the piece as its lock does (DEC-003 point
-    8). It places the piece under the combination, in every language, as the engine finds
-    a tie's ends (`layout.place_top`), and computes no scene. Versions do not fit where,
-    under them:
+    8). It places the piece under the combination, in every language and at each key over
+    the size axes the piece names that the combination's foundations declare, as the
+    engine finds a tie's ends (`layout.place_top`), and computes no scene. Versions do not
+    fit where, under them, at a key (DEC-021 point 7):
 
     - an item the lock places carries a key that both its component and its list declare,
       where it does not under the lock (DEC-010 point 2). The libraries of the item's
@@ -697,16 +968,20 @@ class Fit:
       Every library whose component the placing read or looked for is implicated.
 
     So what the lock already shows holds nothing back: a clash under the lock, an end it
-    does not find, and what a library it does not name yet brings. Each component file and
-    each produced picture's record is read once, across every combination judged. The
-    placing under the lock, which each combination is compared with, is made at the first
-    judgement."""
+    does not find, and what a library it does not name yet brings. A misfit at every key
+    the lock places the piece at reads as it is; one at some keys is said at each, ending
+    with the key it holds at. Each component file, each produced picture's record and each
+    version of the foundations' declarations is read once, across every combination judged.
+    The placing under the lock, which each combination is compared with, is made at the
+    first judgement."""
 
     def __init__(self, piece: Piece, held: Held) -> None:
         self.piece = piece
         self.held = held
         self.components: dict[Path | None, tuple[dict[str, Any] | None, str | None]] = {}
         self.pictures: dict[str, PictureInfo | str] = {}
+        self.folders: dict[Path, pictures.Folder] = {}
+        self.declared: dict[Path, dict[str, tokens.Axis]] = {}
         self._placed: dict[frozenset[str], _Placed] = {}
         self._lock: _Placed | None = None
 
@@ -715,14 +990,22 @@ class Fit:
         if not under_lock.items and not under_lock.drawn:
             return []
         now = self._place(versions)
-        misfits: dict[str, Misfit] = {}
+        by_size: dict[str, dict[str, Misfit]] = {size: {} for size in under_lock.sizes}
         for at, (said, implicates) in now.clashes.items():
-            language, item, _ = at
-            if (language, item) in under_lock.items and at not in under_lock.clashes:
-                misfits.setdefault(said, Misfit("clash", said, implicates))
-        for _, tie, end in sorted(under_lock.drawn - now.found):
+            language, size, item, _ = at
+            if (language, size, item) in under_lock.items and at not in under_lock.clashes:
+                by_size[size].setdefault(said, Misfit("clash", said, implicates))
+        for _, size, tie, end in sorted(under_lock.drawn - now.found):
             said = f"the end `{end}` of the tie `{tie}` would not be found"
-            misfits.setdefault(said, Misfit("end", said, now.asked))
+            by_size[size].setdefault(said, Misfit("end", said, now.asked))
+        misfits: dict[str, Misfit] = {}
+        for size, found in by_size.items():
+            for said, misfit in found.items():
+                if all(said in other for other in by_size.values()):
+                    misfits.setdefault(said, misfit)
+                else:
+                    named = f"{said} at `{size}`"
+                    misfits.setdefault(named, replace(misfit, said=named))
         return list(misfits.values())
 
     def _under_lock(self) -> _Placed:
@@ -746,36 +1029,71 @@ class Fit:
             env = _FitEnv(self, versions)
             placed = _Placed()
             asked: set[str] = set()
-            for language in self.piece.languages:
-                ctx = layout.Context(env, language)
-                top = layout.place_top(ctx, self.piece.top, dict(self.piece.contents[language]))
-                asked |= ctx.asked()
-                if top is not None:
-                    placed.add(language, top)
+            sized = self._size_axes(versions)
+            for combination in self._size_combinations(sized):
+                size = keys.key_of(combination, sized)
+                placed.sizes.append(size)
+                sizes = layout.Sizes(sized, combination)
+                for language in self.piece.languages:
+                    ctx = layout.Context(env, language, sizes=sizes)
+                    content = dict(self.piece.contents[language])
+                    top = layout.place_top(ctx, self.piece.top, content)
+                    asked |= ctx.asked()
+                    if top is not None:
+                        placed.add(language, size, top)
             placed.asked = frozenset(asked)
             self._placed[key] = placed
         return self._placed[key]
 
+    def _size_axes(self, versions: Mapping[str, Library]) -> dict[str, tokens.Axis]:
+        """The size axes the foundations among `versions` declare, read once for each
+        version; none where they hold no foundations, or their declarations cannot be read,
+        which their own check reports."""
+        foundations = versions.get(FOUNDATIONS)
+        if foundations is None:
+            return {}
+        path = foundations.folder / "roles.yaml"
+        if path not in self.declared:
+            try:
+                self.declared[path] = size_axes(tokens.read_declarations(path).axes)
+            except tokens.TokenError:
+                self.declared[path] = {}
+        return self.declared[path]
+
+    def _size_combinations(self, sized: Mapping[str, tokens.Axis]) -> list[dict[str, str]]:
+        """Each combination of the modes the piece names on the size axes `sized`, in key
+        order; the one of their defaults alone where it names a mode they lack, which the
+        piece's own read refuses."""
+        named = {axis: modes for axis, modes in self.piece.modes.items() if axis in sized}
+        try:
+            return keys.combinations(named, sized)
+        except keys.BadKey:
+            return [{}]
+
 
 @dataclass
 class _Placed:
-    """What placing the piece under one combination of versions shows, in every language:
-    each item placed, by its language and key path; each key an item carries that both its
-    component and its list declare, in words, with the libraries it implicates; the ends of
-    each tie drawn; every end found, a left-out tie's included where its item lies on the
-    tie's page; and the library of each component read or looked for."""
+    """What placing the piece under one combination of versions shows, in every language
+    and at each key over the size axes, `sizes`, in key order: each item placed, by its
+    language, its key and its key path; each key an item carries that both its component
+    and its list declare, in words, with the libraries it implicates; the ends of each tie
+    drawn; every end found, a left-out tie's included where its item lies on the tie's
+    page; and the library of each component read or looked for, at any key."""
 
-    items: set[tuple[str, str]] = field(default_factory=set)
-    clashes: dict[tuple[str, str, str], tuple[str, frozenset[str]]] = field(default_factory=dict)
-    drawn: set[tuple[str, str, str]] = field(default_factory=set)
-    found: set[tuple[str, str, str]] = field(default_factory=set)
+    sizes: list[str] = field(default_factory=list)
+    items: set[tuple[str, str, str]] = field(default_factory=set)
+    clashes: dict[tuple[str, str, str, str], tuple[str, frozenset[str]]] = field(
+        default_factory=dict
+    )
+    drawn: set[tuple[str, str, str, str]] = field(default_factory=set)
+    found: set[tuple[str, str, str, str]] = field(default_factory=set)
     asked: frozenset[str] = frozenset()
 
-    def add(self, language: str, top: layout.Instance) -> None:
+    def add(self, language: str, size: str, top: layout.Instance) -> None:
         for each in [top, *top.below()]:
             path = _path_of(each)
             if each.is_item:
-                self.items.add((language, path))
+                self.items.add((language, size, path))
             if each.clashed:
                 above, at = set(), each
                 while at is not None:
@@ -787,17 +1105,18 @@ class _Placed:
                         f"the item `{path}` carries `{key}`, which both its component "
                         f"`{each.component.use}` and its list declare"
                     )
-                    self.clashes.setdefault((language, path, key), (said, frozenset(above)))
+                    at = (language, size, path, key)
+                    self.clashes.setdefault(at, (said, frozenset(above)))
             if each.tie is not None and each.tie.ends is not None:
                 for name in each.tie.ends:
-                    self.drawn.add((language, path, name))
-                    self.found.add((language, path, name))
+                    self.drawn.add((language, size, path, name))
+                    self.found.add((language, size, path, name))
             for tie in each.left_out:
                 page = tie.page()
                 for which, name in zip(layout.ENDS, tie.tie.ends if tie.tie else (), strict=False):
                     end = tie.ends.get(which)
                     if end is not None and page is not None and end.item.page() is page:
-                        self.found.add((language, _path_of(tie), name))
+                        self.found.add((language, size, _path_of(tie), name))
 
 
 def _path_of(instance: layout.Instance) -> str:
@@ -844,6 +1163,10 @@ class _FitEnv:
     def role(self, token_path: str) -> dict:
         raise KeyError(token_path)
 
+    def picture_role(self, token_path: str) -> pictures.Picture | None:
+        """None: no brand stands behind the fit, so no picture role has a file."""
+        return None
+
     def font_file(self, family: str) -> Path:
         raise MissingFont(
             f"no brand stands behind the fit of versions, so no file measures {family!r}"
@@ -860,6 +1183,21 @@ class _FitEnv:
         if isinstance(found, str):
             raise KeyError(output)
         return found
+
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> pictures.Judged:
+        """A picture file of the piece or of a version of the combination, each folder read
+        once across the combinations; none of a library the combination holds no version of.
+        Whether it is drawn changes no item's place, so its findings are left to the scenes."""
+        if holder == PIECE:
+            folder = self._fit.piece.folder
+        elif holder in self._versions:
+            folder = self._versions[holder].folder
+        else:
+            return pictures.Judged(None)
+        folders = self._fit.folders
+        if folder not in folders:
+            folders[folder] = pictures.Folder(folder, "", "the folder")
+        return folders[folder].judge(name, named=named, file="", where=where)
 
     def family(self, name: str) -> dict[str, str]:
         raise KeyError(name)
@@ -884,27 +1222,111 @@ def colours_at(document: Mapping[str, Any], key: str) -> dict[str, Any]:
 
 
 def drawn(
-    project: Project, results: Sequence[tuple[str, SceneResult]], renderer: str
-) -> Iterator[tuple[str, str, Any]]:
-    """Each scene drawn by the renderer `renderer` in each combination the piece names, in
-    the order of the piece's languages and of the keys: the language, the key, and what the
-    renderer gives (`render`, the renderers' entry of the seam)."""
+    project: Project,
+    results: Sequence[tuple[str, SceneResult]],
+    renderer: str,
+    keys: Sequence[str] | None = None,
+    *,
+    form: str | None = None,
+) -> Iterator[tuple[str, tuple[str, ...], Any]]:
+    """Each file the renderer `renderer` draws in the format `form`, its own name by default, of
+    the combinations the piece names, or of those that serve one of `keys`, from the scene of
+    `results` in its language that serves it, the one of its key over the size axes, in the
+    order of the piece's languages and of the keys: the language, the keys the file holds, the
+    first naming it, and what the renderer gives (`render`, the renderers' entry of the seam).
+    A combination whose scene `results` does not hold is not drawn. A renderer is handed, for
+    each combination, the picture each image of that language's scene shows there
+    (`ProjectEnv.handed`).
+
+    A format the renderer's declaration names under `holds-modes` takes its keys in one call
+    for each file, grouped by the signal pairs it names there (`files_of`, DEC-023 points 1
+    and 2), each key with its combination, colours and pictures. A file holds every key its
+    group gives it, whichever `keys` asks for. Any other format's renderer is handed one key at
+    a time."""
+    declared = seam.declaration(renderer, seam.RENDERER)
     implementation = seam.implementation(renderer)
+    pairs = declared.get("holds-modes", {}).get(renderer if form is None else form)
+    asked = project.keys if keys is None else list(keys)
+    combinations = dict(zip(project.keys, project.combinations, strict=True))
+    if pairs is None:
+        groups = [(key,) for key in asked]
+    else:
+        held = files_of(project.combinations, project.brand.axes, pairs)
+        groups = [group for group in held if any(key in asked for key in group)]
     document = project.values()
-    for language, result in results:
-        scene = result.scene.to_dict()
-        for key in project.keys:
-            yield (
-                language,
-                key,
-                implementation.render(
+    scenes = {
+        (language, result.scene.size_key): result.scene.to_dict() for language, result in results
+    }
+    for language in dict.fromkeys(language for language, _ in results):
+        for group in groups:
+            scene = scenes.get((language, project.size_key(group[0])))
+            if scene is None:
+                continue
+            if pairs is None:
+                made = implementation.render(
                     scene,
-                    key=key,
-                    colours=colours_at(document, key),
+                    key=group[0],
+                    colours=colours_at(document, group[0]),
                     font_file=project.brand.font_file,
-                    pictures=project.env.pictures_at(key),
-                ),
-            )
+                    pictures=project.env.handed(scene, group[0]),
+                )
+            else:
+                made = implementation.render(
+                    scene,
+                    form=renderer if form is None else form,
+                    keys={key: combinations[key] for key in group},
+                    colours={key: colours_at(document, key) for key in group},
+                    font_file=project.brand.font_file,
+                    pictures={key: project.env.handed(scene, key) for key in group},
+                )
+            yield language, group, made
+
+
+def _images(elements: Sequence[Mapping[str, Any]]) -> Iterator[Mapping[str, Any]]:
+    """Each image among `elements` and the groups under them, in drawing order."""
+    for element in elements:
+        if element.get("type") == "image":
+            yield element
+        yield from _images(element.get("children", []))
+
+
+def files_of(
+    combinations: Sequence[Mapping[str, str]],
+    axes: Mapping[str, tokens.Axis],
+    pairs: Mapping[str, Mapping[str, Any]],
+) -> list[tuple[str, ...]]:
+    """The keys of `combinations`, grouped by the file of a format that holds modes and reads the
+    signal pairs `pairs`, as a renderer's declaration names them (DEC-023 point 1). Combinations
+    share a file where they differ only in modes that `pairs` pairs with a reader's signal, on
+    axes of kind `value`. So a file serves one key over the size axes, and any other mode takes
+    a file of its own. Each file's keys come in key order, the first naming it, and the files
+    in the order of their first keys."""
+    shared: dict[tuple[tuple[str, str | None], ...], list[str]] = {}
+    for combination in combinations:
+        mark = tuple(
+            (axis, None if _paired(axis, mode, axes, pairs) else mode)
+            for axis, mode in sorted(combination.items())
+        )
+        shared.setdefault(mark, []).append(keys.key_of(combination, axes))
+    held = [tuple(sorted(group, key=keys.key_order)) for group in shared.values()]
+    return sorted(held, key=lambda group: keys.key_order(group[0]))
+
+
+def _paired(
+    axis: str, mode: str, axes: Mapping[str, tokens.Axis], pairs: Mapping[str, Mapping[str, Any]]
+) -> bool:
+    """Whether `mode` of `axis` pairs with a reader's signal: the axis is a value axis, and the
+    pairs name the mode. A size axis is the whole page's, so it never shares a file."""
+    return axes[axis].kind != "size" and mode in pairs.get(axis, {}).get("pairs", {})
+
+
+def preview_files(
+    piece: str, language: str, key: str, pages: Sequence[Any]
+) -> Iterator[tuple[str, str]]:
+    """Each page a renderer drew of a scene, as the name of its preview and its text."""
+    for index, page in enumerate(pages, start=1):
+        number = f".{index}" if len(pages) > 1 else ""
+        yield f"{piece}.{language}.{key}{number}.svg", page.svg
 
 
 # --- the inputs of a fingerprint, worked out from the current files -----------------------------

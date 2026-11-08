@@ -23,11 +23,13 @@ point 9). The command prints each loss the piece does not accept under `accept-l
 as a render prints a renderer's. A producer that reaches a service, or calls an outside
 program this machine lacks, is refused before it runs.
 
-A piece with no lock yet is refused: run `pkit visual render <piece>` first. The command
-writes in the location, so where none is recorded it records the location at its first
-write (DEC-002 point 1); `--location <path>` names it. It writes the variants, then the
-record, then removes the variant files left from before, as one change: a write that
-fails leaves the variants, their record and the configuration as they were before the run.
+A final piece is refused (DEC-017 point 3). A draft with no lock yet is refused: run
+`pkit visual render <piece>` first. So is a published piece with no lock: set it back to
+a draft for its first render. The command writes in the location, so where none is
+recorded it records the location at its first write (DEC-002 point 1); `--location
+<path>` names it. It writes the variants, then the record, then removes the variant
+files left from before, as one change: a write that fails leaves the variants, their
+record and the configuration as they were before the run.
 
 Usage:
   pkit visual produce <piece> <output> [--location <path>]

@@ -99,6 +99,26 @@ def test_each_property_of_words_takes_the_engines_words(prop: str) -> None:
     assert words["enum"] == list(engine.WORDS[prop])
 
 
+def test_a_text_takes_the_engines_facts() -> None:
+    assert DEFS["text"]["properties"]["fact"]["enum"] == list(engine.FACTS)
+    assert DEFS["text"]["oneOf"] == [{"required": ["content"]}, {"required": ["fact"]}]
+
+
+def test_an_image_shows_exactly_one_of_the_engines_sources() -> None:
+    assert DEFS["image"]["oneOf"] == [{"required": [source]} for source in engine.IMAGE_SOURCES]
+
+
+@pytest.mark.parametrize(
+    "image",
+    [{"produced": "text"}, {"content": "text"}, {"file": "logo.png"}, {"role": "picture.logo"}],
+    ids=["produced", "content", "file", "role"],
+)
+def test_an_image_of_each_source_holds_the_schema_and_the_engine(image: dict[str, str]) -> None:
+    data = changed("parts.extra", {"image": image, "width": "=:width"})
+    assert problems(data) == []
+    assert engine_issues(data) == []
+
+
 def test_a_part_is_exactly_one_kind_of_the_engines() -> None:
     assert [one["required"] for one in DEFS["part"]["oneOf"]] == [[kind] for kind in engine.KINDS]
 
@@ -129,6 +149,7 @@ def test_the_shipped_and_fixture_components_hold_the_schema_and_the_engine(path:
         ("parts.label.text.text-anchor", {"by": "emphasis", "normal": "start", "strong": "end"}),
         ("states", {"done": {"colour": "success"}, "idle": {}}),
         ("options.at", {"item": "tags"}),
+        *(("parts.stamp.text.fact", word) for word in engine.FACTS),
     ],
 )
 def test_the_format_takes_each_way_of_writing_a_value(path: str, value: Any) -> None:
@@ -149,6 +170,14 @@ REFUSED: list[tuple[str, str, Any]] = [
     ("a text's height, which its measured text owns", "parts.label.height", "=0"),
     ("a box without its size", "parts.box.height", ...),
     ("a text without its style", "parts.label.text.style", ...),
+    ("a text that names neither a field nor a fact", "parts.label.text.content", ...),
+    ("a text that names a field and a fact", "parts.label.text.fact", "version"),
+    ("a word no fact takes", "parts.stamp.text.fact", "number"),
+    (
+        "a fact chosen by a switch",
+        "parts.stamp.text.fact",
+        {"by": "emphasis", "normal": "version", "strong": "date"},
+    ),
     ("a property its primitive does not take", "parts.label.text.rx", "=@space.1"),
     ("a length that is no formula", "parts.box.width", 120),
     ("a formula's switch on no option", "values.pad", {"normal": "=@space.1"}),
@@ -178,6 +207,77 @@ def test_the_schema_refuses_what_the_engine_refuses(case: str, path: str, value:
     assert engine_issues(data) != [], case
 
 
+# --- a switch and a `when` by a size (DEC-021 point 3) ------------------------------------------
+
+
+class _Device:
+    """The size axis `device`, as the foundations will declare it."""
+
+    modes = ("desktop", "tablet", "phone")
+    default = "desktop"
+
+
+def sized_issues(data: Any) -> list[tuple[str, str, str]]:
+    """What the engine finds in a component when it reads it where the size axis `device`
+    is one a piece can name."""
+    sizes = engine.Sizes({"device": _Device()})
+    return engine.Component("lab/x", data, engine.Context(FakeEnv(), "en", sizes=sizes)).issues
+
+
+BY_SIZE: list[tuple[str, Any]] = [
+    ("parts.label.x", {"by": ":device", "desktop": "=pad", "phone": "=@space.1"}),
+    ("parts.box.box.fill", {"by": ":device", "desktop": "surface", "phone": None}),
+    (
+        "values.pad",
+        {
+            "by": ":device",
+            "desktop": {"by": "emphasis", "normal": "=@space.1", "strong": "=@space.2"},
+            "tablet": "=@space.1",
+        },
+    ),
+    ("parts.label.text.text-anchor", {"by": ":device", "desktop": "start", "phone": "end"}),
+    ("parts.label.when", {"by": ":device", "desktop": True, "phone": "tags"}),
+    ("parts.label.when", {"by": ":device", "desktop": {"emphasis": ["strong"]}, "phone": False}),
+]
+
+
+@pytest.mark.parametrize(("path", "value"), BY_SIZE)
+def test_the_format_takes_a_switch_and_a_when_by_a_size(path: str, value: Any) -> None:
+    data = changed(path, value)
+    assert problems(data) == []
+    assert sized_issues(data) == []
+
+
+REFUSED_BY_SIZE: list[tuple[str, str, Any]] = [
+    ("a `when` by a size alone", "parts.label.when", {"by": ":device"}),
+    (
+        "a `when` by a size that switches again",
+        "parts.label.when",
+        {"by": ":device", "desktop": {"by": ":device", "desktop": True}},
+    ),
+    ("a branch of a `when` that is no `when`", "parts.label.when", {"by": ":device", "desktop": 3}),
+    (
+        "a `when` that switches on an option",
+        "parts.label.when",
+        {"by": "emphasis", "normal": True, "strong": False},
+    ),
+    (
+        "a switch by a name that is no marked name",
+        "parts.label.x",
+        {"by": "::device", "desktop": "=pad"},
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("case", "path", "value"), REFUSED_BY_SIZE, ids=[case for case, _, _ in REFUSED_BY_SIZE]
+)
+def test_the_schema_refuses_a_size_the_engine_refuses(case: str, path: str, value: Any) -> None:
+    data = changed(path, value)
+    assert problems(data) != [], case
+    assert sized_issues(data) != [], case
+
+
 def repeat(**more: Any) -> dict[str, Any]:
     part = {"repeat": "tags", "draw": "lab/tag", "width": "=:width", "row": {"gap": "=@space.1"}}
     return {**part, **more}
@@ -197,7 +297,24 @@ def repeat(**more: Any) -> dict[str, Any]:
         ("a use that is no use", {"use": "tag"}),
         ("a line without its ends", {"line": {"stroke": "line"}, "x1": "=0", "y1": "=0"}),
         ("a line without its stroke", {"line": {}, "x1": "=0", "y1": "=0", "x2": "=0", "y2": "=0"}),
-        ("an image without its output", {"image": {}, "width": "=:width"}),
+        ("an image that shows nothing", {"image": {}, "width": "=:width"}),
+        (
+            "an image of a produced output and a picture file",
+            {"image": {"produced": "text", "file": "logo.png"}, "width": "=:width"},
+        ),
+        (
+            "an image of the content's picture file and the library's",
+            {"image": {"content": "text", "file": "logo.png"}, "width": "=:width"},
+        ),
+        (
+            "an image of every source",
+            {"image": {"produced": "text", "content": "text", "file": "a.png"}, "width": "=:width"},
+        ),
+        (
+            "an image of a picture role and a picture file",
+            {"image": {"role": "picture.logo", "file": "logo.png"}, "width": "=:width"},
+        ),
+        ("an image of a role that is no path", {"image": {"role": "Logo"}, "width": "=:width"}),
     ],
     ids=lambda value: value if isinstance(value, str) else "",
 )
@@ -256,11 +373,13 @@ def test_format_1_is_stricter_than_the_engine_where_the_engine_reads_nothing(
 
 def forms(**layouts: Any) -> dict[str, Any]:
     """The reference instance as a top whose layouts are its pages' forms: `tags` marked
-    as holding its pages, no parts of its own, and `layouts`."""
+    as holding its pages, no parts of its own, and `layouts`. It asks for a width and a
+    height, as a deck does, so its layouts need say no height (DEC-022 point 3)."""
     data = changed("layouts", layouts)
     data["fields"]["properties"]["tags"]["x-pkit-pages"] = True
     data["fields"]["properties"]["tags"]["items"] = {"type": "object"}
-    del data["parts"], data["exposes"], data["preferred"]
+    del data["parts"], data["exposes"]
+    data["preferred"] = {"width": "=@size.slide", "height": "=@size.slide * 9 / 16"}
     return data
 
 
@@ -298,6 +417,49 @@ def test_the_schema_refuses_a_page_form_the_engine_refuses(
     data = forms(**layouts)
     assert problems(data) != [], case
     assert engine_issues(data) != [], case
+
+
+#: A layout that says its page's height, by a formula on its parts (DEC-022 point 3).
+TALL = {**DRAWN, "preferred": {"height": "=head.bottom"}}
+
+
+def asking_its_width(**layouts: Any) -> dict[str, Any]:
+    """`forms(**layouts)`, the top asking for its width alone, as the site does."""
+    data = forms(**layouts)
+    data["preferred"] = {"width": "=@size.slide"}
+    return data
+
+
+def test_a_layout_that_is_a_pages_form_says_its_pages_height() -> None:
+    for data in (forms(cover=TALL, slide=DRAWN), asking_its_width(cover=TALL, slide=TALL)):
+        assert problems(data) == []
+        assert engine_issues(data) == []
+
+
+def shape_issues(data: Any) -> list[str]:
+    """Where the engine finds a component's shape wrong."""
+    return [where for code, where, _ in engine_issues(data) if code == "component-shape"]
+
+
+def test_a_layout_that_says_a_width_fails_validation() -> None:
+    """A page gets the top's width (DEC-022 point 8)."""
+    wide = {**DRAWN, "preferred": {"height": "=head.bottom", "width": "=@space.4"}}
+    data = forms(cover=wide)
+    assert problems(data) != []
+    assert shape_issues(data) == ["layouts.cover.preferred.width"]
+
+
+def test_a_layout_under_a_top_that_asks_for_no_height_fails_validation_saying_none() -> None:
+    data = asking_its_width(cover=TALL, slide=DRAWN)
+    assert shape_issues(data) == ["layouts.slide.preferred"]
+
+
+def test_a_layout_of_format_1_says_no_height() -> None:
+    """Only a layout that is a page's form says its page's height: a top of one page says
+    its own under its own `preferred`."""
+    data = changed("layouts", {"frame": {"slots": {}, "preferred": {"height": "=@space.4"}}})
+    assert problems(data) != []
+    assert shape_issues(data) == ["layouts.frame.preferred"]
 
 
 # --- a pattern's lists (#2560) -----------------------------------------------------------------

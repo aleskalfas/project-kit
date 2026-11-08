@@ -1,0 +1,26 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# The aside's reference renders (DEC-007 point 3): a head, a command and a text, each
+# where given, in its default family and in a concept's, in English and in German, whose
+# compound words and diacritics stress its text. It has no option and no field of runs.
+# Pinned with the test brand, the starter and the test notation, so only a person moves
+# what they draw.
+top: foundations/deck
+brand: test-brand
+notations: [test-notation]
+languages: [en, de]
+audience: The starter's owner, who reviews the aside against its job and its form.
+shown: In the capability's tests, as the aside's reference renders.
+explains: false
+exports: [svg]
+state: draft
+pinned: true
+modes:
+  colour-scheme: [light, dark]
+  contrast: [standard, high]
+lock:
+  foundations: 1.0.0
+  starter: 1.0.0
+  test-brand: 1.0.0
+  test-notation: 1.0.0

@@ -66,6 +66,7 @@ pkit:
         - docs/permissions/README.md#turning-it-on
         - docs/rules/README.md#why-they-exist
         - docs/scratchpad/README.md#
+        - docs/agents/README.md#why-they-exist
         - docs/skills/README.md#why-they-exist
         - docs/decisions/README.md#why-they-exist
         - docs/schemas/README.md#why-they-exist
@@ -426,6 +427,7 @@ The friction check asks nothing of your documents until you declare where they l
 - **The permission model, explained:** [`docs/permissions/README.md`](docs/permissions/README.md) — why it exists, and how to turn it on.
 - **The operational rules, explained:** [`docs/rules/README.md`](docs/rules/README.md) — why sessions load them, and how to add your own.
 - **Scratchpad notes, explained:** [`docs/scratchpad/README.md`](docs/scratchpad/README.md) — why to think a question through in a note before a record decides it, and how to start, send and retire one.
+- **Agent definitions, explained:** [`docs/agents/README.md`](docs/agents/README.md) — why work goes to agents with fixed roles, and how to call the reviewers and write your own.
 - **Skills, explained:** [`docs/skills/README.md`](docs/skills/README.md) — why recurring work becomes a skill, and how to write your own.
 - **Decision records, explained:** [`docs/decisions/README.md`](docs/decisions/README.md) — why to keep your decisions as records a person accepts, and how to record, accept and refine one.
 - **Schemas, explained:** [`docs/schemas/README.md`](docs/schemas/README.md) — why your configuration, your rule sets and your capability's data are checked against schemas, and how to declare, write and check each.

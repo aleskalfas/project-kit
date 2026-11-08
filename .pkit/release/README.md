@@ -12,6 +12,9 @@ pkit:
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
+        - scripts/release_pr.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
       record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
       artefact:
         - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
@@ -539,6 +542,11 @@ In project-kit's own source no capability has a manifest (ADR-059), so the
 `version:` line `apply` writes in a capability's `package.yaml` is the version
 `pkit validate` reads for it.
 
+The release of a library the visual-communication capability ships reads
+this step's work too (`pkit visual release <library> --shipped`): the
+capability's `CHANGELOG.md` entry, the change that wrote it, and the version in
+its `package.yaml`.
+
 ### A replay may restore a removed default
 
 A version transition may run every backbone migration again, over a project
@@ -1005,13 +1013,25 @@ automation only proposes and, post-merge, tags.
   and **no-ops cleanly** when nothing moves a version (an empty release, or only
   `none` changesets — those wait for the next real release rather than opening a
   version-less PR).
-- Creates a `release/v<new-backbone>` branch off `main`, runs `pkit release
-  apply --yes` (versions + broaden + declared floors + `CHANGELOG.md`,
-  consuming the changesets), commits `chore(release): v<new-backbone>`, pushes,
-  and opens a **release PR** whose body shows the computed bumps — each with
-  the floor raises a changeset declared for it, on the backbone and on
-  capabilities, as `plan` prints them — any range that excludes a dependency's
-  version, and the generated changelog, raised floors included, for review.
+- Creates a release branch off `main`, runs `pkit release apply --yes`
+  (versions + broaden + declared floors + `CHANGELOG.md`, consuming the
+  changesets), and commits `chore(release): v<new-backbone>`. It then pushes
+  and opens a **release PR**. `scripts/release_pr.py` names the branch, and
+  writes the PR's body before the push:
+  - **The branch** is `release/v<new-backbone>`, or `release/<run id>` for a
+    release that moves no backbone. A run that failed after its push leaves
+    `release/v<new-backbone>` on `origin`. Where that branch exists with no PR
+    open from it, the run pushes `release/v<new-backbone>-<run id>` instead.
+    `pkit release merge` takes any head under `release/`, so it merges each.
+  - **The body** shows the computed bumps, each with the floor raises and upper
+    bounds a changeset declared for it, on the backbone and on capabilities, as
+    `plan` prints them. It shows any migration-dir warnings, and the generated
+    changelog section, raised floors included, for review.
+  - **A long changelog:** GitHub keeps at most 65,536 characters in a PR's
+    body. Where the changelog section would take the body past that, a link to
+    `CHANGELOG.md` on the release branch takes the section's place. The bumps
+    and the warnings stay whole. `pkit release publish-notes` links a section
+    too long for a Release the same way.
 - Is **idempotent**: if a release PR is already open (any head under
   `release/`), it skips rather than opening a duplicate.
 - Does **not** tag — the tag must point at the *merged* release commit (PRJ-004),

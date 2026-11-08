@@ -19,13 +19,18 @@ pieces (DEC-002 points 1 and 2).
   refused too, by reading and writing commands alike, rather than read as no location.
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
-Outside a git repository, the folder is walked. A link is never listed.
+Outside a git repository, the folder is walked. A link is listed only where a caller asks
+for links too (`listed`), as the reading of a picture file does, to tell a name that finds a
+link from one that finds nothing. What a commit holds is read from git alone (`files_at`,
+`file_at`). Whether a path is one git keeps is git's word too (`ignored`), and so is whether
+git hands it to a large-file store (`in_store`).
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -260,28 +265,78 @@ def files(root: Path, folder: str) -> list[str]:
     """The files under `folder`, relative to `root`, as git sees them: tracked, and
     untracked but not ignored; walked outside a git repository. In path order, without
     links, and without a tracked file the working tree no longer holds."""
+    return [rel for rel in listed(root, folder) if not (root / rel).is_symlink()]
+
+
+def listed(root: Path, folder: str) -> list[str]:
+    """The files under `folder` that `files` lists, and each link among them that git lists,
+    or that lies there outside a git repository. In path order."""
     if not _in_repository(root):
-        return _walked(root, folder)
-    argv = [
-        "git",
-        "--literal-pathspecs",
-        "ls-files",
-        "-z",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--",
-        folder,
-    ]
+        return walked(root, folder, links=True)
+    found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", folder)
+    entries = {entry for entry in found.decode("utf-8").split("\0") if entry}
+    return sorted(rel for rel in entries if _plain_file(root / rel) or (root / rel).is_symlink())
+
+
+def files_at(root: Path, commit: str, folder: str) -> list[str]:
+    """The files under `folder` at `commit`, relative to `root`, in path order: none where
+    that commit holds no such folder. Raises GitFailed."""
+    found = _git(root, "ls-tree", "-r", "-z", "--name-only", commit, "--", folder)
+    return sorted(entry for entry in found.decode("utf-8").split("\0") if entry)
+
+
+def file_at(root: Path, commit: str, rel: str) -> bytes:
+    """The bytes of the file `rel`, relative to `root`, at `commit`. Raises GitFailed where
+    that commit holds no such file."""
+    return _git(root, "cat-file", "blob", f"{commit}:./{rel}")
+
+
+def ignored(root: Path, paths: Iterable[str]) -> list[str]:
+    """Those of `paths`, relative to `root`, that git ignores, whether or not a file lies
+    there, so a commit would leave a file written there out: a tracked file is not one, and
+    outside a git repository none is. Raises GitFailed."""
+    if not _in_repository(root):
+        return []
+    asked = "\0".join(paths).encode("utf-8")
+    found = _git(root, "check-ignore", "-z", "--stdin", literal=False, given=asked, passes=(0, 1))
+    return [entry for entry in found.decode("utf-8").split("\0") if entry]
+
+
+def in_store(root: Path, paths: Iterable[str]) -> list[str]:
+    """Those of `paths`, relative to `root`, that git hands to a large-file store, by the
+    attribute `filter=lfs`, so a commit holds the store's pointer in their place, not their
+    bytes: none outside a git repository. Raises GitFailed."""
+    asked = list(paths)
+    if not asked or not _in_repository(root):
+        return []
+    given = "\0".join(asked).encode("utf-8")
+    found = _git(root, "check-attr", "-z", "--stdin", "filter", literal=False, given=given)
+    words = found.decode("utf-8").split("\0")
+    # Each answer is three words: the path, the attribute's name and its value.
+    return [words[i] for i in range(0, len(words) - 2, 3) if words[i + 2] == "lfs"]
+
+
+def _git(
+    root: Path,
+    *args: str,
+    literal: bool = True,
+    given: bytes | None = None,
+    passes: Collection[int] = (0,),
+) -> bytes:
+    """What git prints of `args`, run at `root`, handed `given` on its input: a path read as
+    it is written, unless the command takes no such word (`literal`). Raises GitFailed where
+    it exits with no code of `passes`."""
+    words = ["--literal-pathspecs"] if literal else []
     try:
-        proc = subprocess.run(argv, cwd=root, capture_output=True, check=False)
+        proc = subprocess.run(
+            ["git", *words, *args], cwd=root, input=given, capture_output=True, check=False
+        )
     except OSError as exc:
         raise GitFailed(f"git could not be run ({exc})") from exc
-    if proc.returncode != 0:
+    if proc.returncode not in passes:
         detail = [line for line in proc.stderr.decode("utf-8", "replace").splitlines() if line]
-        raise GitFailed(detail[-1] if detail else f"git ls-files exited {proc.returncode}")
-    listed = {entry for entry in proc.stdout.decode("utf-8").split("\0") if entry}
-    return sorted(rel for rel in listed if _plain_file(root / rel))
+        raise GitFailed(detail[-1] if detail else f"git {args[0]} exited {proc.returncode}")
+    return proc.stdout
 
 
 def _in_repository(root: Path) -> bool:
@@ -292,15 +347,19 @@ def _plain_file(path: Path) -> bool:
     return path.is_file() and not path.is_symlink()
 
 
-def _walked(root: Path, folder: str) -> list[str]:
+def walked(root: Path, folder: str, *, links: bool = False) -> list[str]:
+    """The files under `folder`, relative to `root`, as they lie, whatever git ignores: in
+    path order, without links, unless `links` asks for each link too. A linked folder is
+    never entered."""
     top = root / folder
     if not top.is_dir() or top.is_symlink():
         return []
     found = []
     for current, dirs, names in os.walk(top, followlinks=False):
-        dirs[:] = [d for d in dirs if not (Path(current) / d).is_symlink()]
-        for name in names:
+        linked = [d for d in dirs if (Path(current) / d).is_symlink()]
+        dirs[:] = [d for d in dirs if d not in linked]
+        for name in (*names, *(linked if links else ())):
             path = Path(current) / name
-            if _plain_file(path):
+            if _plain_file(path) or (links and path.is_symlink()):
                 found.append(path.relative_to(root).as_posix())
     return sorted(found)

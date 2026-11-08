@@ -19,11 +19,16 @@ DRAWS = "draws"
 #: The properties each element of the scene holds whatever its type.
 _FRAME = ("x", "y", "width", "height")
 
+#: The properties of an image of every source (DEC-025 point 7): a produced output, with its
+#: variants and its points; a picture file, by its name and where it lies; a picture role.
+#: The renderer draws each from the picture it is handed, whatever its source.
+IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library", "role")
+
 DECLARATION = {
     "name": "svg",
     "kind": "renderer",
-    "version": "1.0.1",
-    "seam": 3,
+    "version": "1.1.0",
+    "seam": 5,
     "module": "svg",
     "about": "An SVG file for each page, language and combination of modes.",
     "profile": "default",
@@ -65,9 +70,6 @@ DECLARATION = {
             ),
             DRAWS,
         ),
-        "image": dict.fromkeys(
-            (*_FRAME, "output", "preserveAspectRatio", "variants", "points"),
-            DRAWS,
-        ),
+        "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
     },
 }

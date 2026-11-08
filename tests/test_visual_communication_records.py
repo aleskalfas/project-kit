@@ -1,6 +1,7 @@
 """The records the commands keep, each read and written one way (`_lib/records.py`): a
 record's value, read with one error; a record written whole under its comment, its time
-quoted; and one key written into a file, every other byte kept."""
+quoted; one key written into a file, and one entry taken out of a file, at its top or below
+it, every other byte kept."""
 
 from __future__ import annotations
 
@@ -61,6 +62,19 @@ def test_a_key_that_would_not_read_back_is_refused_naming_what_a_line_holds() ->
     original = "names:\n  a: x\n# A comment at the left edge.\n  b: y\nrest: 1\n"
     with pytest.raises(records.RecordError, match="`names:` as a block mapping, one name a line"):
         records.with_mapping(original, "names", {"a": "x"}, each="name")
+
+
+def test_an_entry_of_the_files_top_ends_the_file_every_other_byte_kept() -> None:
+    original = records.BOM + "a: 1\r\n# The end.\r\n"
+    assert records.with_entry(original, [], "b", 2, each="field") == original + "b: 2\r\n"
+    assert records.with_entry("a: 1", [], "b", 2, each="field") == "a: 1\nb: 2\n"
+
+
+def test_an_entry_the_files_top_holds_or_cannot_take_is_refused() -> None:
+    with pytest.raises(records.RecordError, match="the file holds `a` already"):
+        records.with_entry("a: 1\n", [], "a", 2, each="field")
+    with pytest.raises(records.RecordError, match="write the file as a block mapping"):
+        records.with_entry("{a: 1}\n", [], "b", 2, each="field")
 
 
 def test_an_entry_is_added_last_to_a_block_mapping_at_its_indent() -> None:
@@ -133,3 +147,147 @@ def test_a_key_on_the_way_written_in_quotes_is_refused_naming_it(
     for key in path:
         mapping = mapping[key]
     assert mapping["b"] == 2
+
+
+# --- one entry's value replaced -----------------------------------------------------------------
+
+RELEASED = {"released": True, "hash": {"form": 1, "inputs": [{"path": "a.yaml", "sha256": "ab"}]}}
+
+
+def test_an_entry_written_in_block_is_written_again_at_its_indent() -> None:
+    original = (
+        records.BOM
+        + "# Kept.\r\nv:\r\n    1.0.0:  # ours\r\n        released: false\r\n"
+        + "    2.0.0:\r\n        released: false\r\n# The end.\r\n"
+    )
+    assert records.with_value(original, ["v"], "1.0.0", RELEASED, each="version") == (
+        records.BOM
+        + "# Kept.\r\nv:\r\n    1.0.0:  # ours\r\n      released: true\r\n      hash:\r\n"
+        + "        form: 1\r\n        inputs:\r\n          - path: a.yaml\r\n"
+        + "            sha256: ab\r\n"
+        + "    2.0.0:\r\n        released: false\r\n# The end.\r\n"
+    )
+
+
+def test_an_entry_written_in_flow_on_its_line_is_written_again_there() -> None:
+    original = "a:\n  v:\n    1.0.0: {released: false}  # ours\n    2.0.0: {released: false}"
+    assert records.with_value(original, ["a", "v"], "2.0.0", RELEASED, each="version") == (
+        "a:\n  v:\n    1.0.0: {released: false}  # ours\n"
+        "    2.0.0: {released: true, hash: {form: 1, inputs: [{path: a.yaml, sha256: ab}]}}"
+    )
+
+
+def test_an_entry_of_a_mapping_written_in_flow_is_written_again_in_its_place() -> None:
+    original = (
+        "libraries: {a: {v: {1.0.0: {released: false}}}, "
+        "b: {v: {2.0.0: {released: false}, 1.0.0: {released: false}}}}  # all\n"
+    )
+    assert records.with_value(original, ["libraries", "b", "v"], "1.0.0", RELEASED, each="v") == (
+        "libraries: {a: {v: {1.0.0: {released: false}}}, "
+        "b: {v: {2.0.0: {released: false}, 1.0.0: {released: true, hash: {form: 1, inputs: "
+        "[{path: a.yaml, sha256: ab}]}}}}}  # all\n"
+    )
+    flow = "a:\n  v: {1.0.0: {released: false}}\n"
+    assert reading.load_yaml(records.with_value(flow, ["a", "v"], "1.0.0", RELEASED, each="v")) == {
+        "a": {"v": {"1.0.0": RELEASED}}
+    }
+
+
+def test_an_entry_the_mapping_does_not_hold_or_the_text_does_not_show_is_refused() -> None:
+    with pytest.raises(records.RecordError, match=r"^`v` holds no `1\.0\.0`$"):
+        records.with_value("v: {}\n", ["v"], "1.0.0", RELEASED, each="version")
+    with pytest.raises(records.RecordError, match=r"^write `v` as a block mapping, one version"):
+        records.with_value(
+            "v: {\n  1.0.0: {released: false}}\n", ["v"], "1.0.0", RELEASED, each="version"
+        )
+    with pytest.raises(records.RecordError, match=r"^write the key `1\.0\.0` without quotes$"):
+        records.with_value(
+            "v:\n  '1.0.0': {released: false}\n", ["v"], "1.0.0", RELEASED, each="version"
+        )
+
+
+# --- one entry of a file's top taken out --------------------------------------------------------
+
+
+def test_an_entry_of_the_files_top_is_taken_out_with_its_lines_every_other_byte_kept() -> None:
+    original = (
+        records.BOM
+        + "# Kept.\r\nstate: final\r\ncopy-place:  # moved\r\n  # a note\r\n  docs/img\r\n"
+        + "\r\n# The lock.\r\nlock:\r\n  tests: 1.0.0\r\n"
+    )
+    assert records.without_entry(original, "copy-place") == (
+        records.BOM + "# Kept.\r\nstate: final\r\n\r\n# The lock.\r\nlock:\r\n  tests: 1.0.0\r\n"
+    )
+
+
+def test_an_entry_on_one_line_is_taken_out_and_the_last_may_end_the_file() -> None:
+    original = "state: final\ncopy-place: docs/img\nlock: {tests: 1.0.0}"
+    assert records.without_entry(original, "copy-place") == "state: final\nlock: {tests: 1.0.0}"
+    assert records.without_entry(original, "lock") == "state: final\ncopy-place: docs/img\n"
+    assert records.without_entry("copy-place: docs/img\n", "copy-place") == ""
+
+
+def test_an_entry_the_top_does_not_hold_or_the_text_cannot_lose_is_refused() -> None:
+    with pytest.raises(records.RecordError, match=r"^the file holds no `copy-place`$"):
+        records.without_entry("state: final\n", "copy-place")
+    with pytest.raises(records.RecordError, match=r"^write the key `copy-place` without quotes$"):
+        records.without_entry("'copy-place': docs/img\n", "copy-place")
+    with pytest.raises(records.RecordError, match=r"^write `copy-place:` at the top of the file"):
+        records.without_entry("{state: final, copy-place: docs/img}\n", "copy-place")
+    with pytest.raises(records.RecordError, match=r"^write `copy-place:` at the top of the file"):
+        records.without_entry("copy-place: &place docs/img\nshown: *place\n", "copy-place")
+
+
+# --- one entry taken out of a mapping below the top ---------------------------------------------
+
+LIST = (
+    "# The list.\n"
+    "libraries:\n"
+    "  tests:\n"
+    "    source: {kind: project}\n"
+    "    versions:\n"
+    "      1.0.0:  # the first\n"
+    "        released: true\n"
+    "        hash: {form: 1}\n"
+    "      # the second, kept\n"
+    "      1.1.0: {released: true}\n"
+    "      1.2.0:\n"
+    "        released: false\n"
+    "  foundations:\n"
+    "    versions: {1.0.0: {released: false}}\n"
+)
+VERSIONS = ["libraries", "tests", "versions"]
+
+
+def test_an_entry_below_the_top_is_taken_out_with_its_lines_every_other_byte_kept() -> None:
+    assert records.without_entry(LIST, "1.0.0", VERSIONS, each="version") == LIST.replace(
+        "      1.0.0:  # the first\n        released: true\n        hash: {form: 1}\n", ""
+    )
+    assert records.without_entry(LIST, "1.1.0", VERSIONS, each="version") == LIST.replace(
+        "      1.1.0: {released: true}\n", ""
+    )
+    crlf = records.BOM + LIST.replace("\n", "\r\n")
+    assert records.without_entry(crlf, "1.2.0", VERSIONS, each="version") == crlf.replace(
+        "      1.2.0:\r\n        released: false\r\n", ""
+    )
+
+
+def test_an_entry_below_the_top_that_cannot_go_as_text_is_refused() -> None:
+    with pytest.raises(records.RecordError, match=r"^`libraries.tests.versions` holds no `2.0.0`$"):
+        records.without_entry(LIST, "2.0.0", VERSIONS, each="version")
+    with pytest.raises(
+        records.RecordError,
+        match=r"^`libraries.foundations.versions` holds no version but `1.0.0`, so it keeps it$",
+    ):
+        records.without_entry(
+            LIST, "1.0.0", ["libraries", "foundations", "versions"], each="version"
+        )
+    flow = "v: {1.0.0: {released: false}, 1.1.0: {released: false}}\n"
+    with pytest.raises(
+        records.RecordError, match=r"^write `v` as a block mapping, one version an entry$"
+    ):
+        records.without_entry(flow, "1.0.0", ["v"], each="version")
+    with pytest.raises(records.RecordError, match=r"^write the key `1\.0\.0` without quotes$"):
+        records.without_entry(
+            "v:\n  '1.0.0': {released: false}\n  1.1.0: {}\n", "1.0.0", ["v"], each="version"
+        )

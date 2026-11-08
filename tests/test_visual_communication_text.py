@@ -22,6 +22,7 @@ from typing import Any
 
 import pytest
 from fontTools import subset
+from fontTools.ttLib import TTFont
 
 from tests.visual_engine import (
     FAMILY,
@@ -105,6 +106,35 @@ def test_a_role_the_engine_cannot_measure_is_refused(value: object, why: str) ->
 def test_a_family_with_no_committed_file_is_refused_naming_it() -> None:
     with pytest.raises(env.MissingFont, match="'Absent Sans' has no file at /nowhere/Absent Sans"):
         style(fontFamily=["Absent Sans"])
+
+
+def test_a_file_that_is_no_font_is_refused_naming_it(tmp_path: Path) -> None:
+    broken = tmp_path / "Broken.otf"
+    broken.write_bytes(b"not a font")
+
+    with pytest.raises(env.UnreadableFont) as raised:
+        text.Faces(lambda _family: broken).face(FAMILY)
+
+    assert str(raised.value).startswith(f"the font file {broken} cannot be read: ")
+    assert isinstance(raised.value, env.MissingFont)
+
+
+def test_a_font_the_reader_stops_on_with_an_error_of_another_kind_is_refused_too(
+    tmp_path: Path,
+) -> None:
+    lacking = tmp_path / "Lacking.otf"
+    font = TTFont(str(FONT))
+    del font["hmtx"], font["hhea"]
+    font.save(str(lacking))
+
+    with pytest.raises(env.UnreadableFont, match="hhea"):
+        text.Faces(lambda _family: lacking).face(FAMILY)
+
+
+def test_an_error_with_no_words_of_its_own_is_said_by_its_kind() -> None:
+    said = env.UnreadableFont(Path("Broken.otf"), AssertionError())
+
+    assert str(said) == "the font file Broken.otf cannot be read: AssertionError"
 
 
 def test_a_character_no_family_measures_is_refused_naming_it_and_where() -> None:

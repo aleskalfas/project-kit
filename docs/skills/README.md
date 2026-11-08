@@ -27,8 +27,9 @@ pkit:
         - .pkit/skills/README.md#deployment
         - .pkit/skills/README.md#adding-a-skill
         - docs/rules/README.md#add-your-own-rules
-        - .pkit/agents/README.md#authoring-an-agent
-        - .pkit/agents/README.md#storyboards
+        - .pkit/agents/README.md#authoring-a-definition
+        - .pkit/agents/storyboards.md#
+        - .pkit/agents/storyboards.md#when-a-definition-takes-one
         - .pkit/adapters/claude-code/README.md#git-footprint-per-adr-009
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
@@ -174,7 +175,7 @@ Give recurring work a skill when it is a procedure for one kind of task. Give it
 | What is, such as a format or a contract | A document | The format of your release notes |
 
 - **Cite, never copy.** A skill cites the decision, rule or document its procedure rests on, and never copies its text. An agent definition cites its skills and documents the same way. So each reads the current text ([COR-006](../../.pkit/decisions/core/COR-006-artifact-roles.md)).
-- **An agent definition** is written through the `agent-author` skill, as the agents reference says ([its "Authoring an agent"](../../.pkit/agents/README.md#authoring-an-agent)). Where its dialogue with a person follows a script, you write a storyboard for it first ([its "Storyboards"](../../.pkit/agents/README.md#storyboards)).
+- **An agent definition** is written through the `agent-author` skill, as the agents reference says ([its "Authoring a definition"](../../.pkit/agents/README.md#authoring-a-definition)). Where its dialogue with a person follows a script, you write a storyboard for it first ([the storyboards reference](../../.pkit/agents/storyboards.md)).
 
 ## Write your project's own skill
 
@@ -187,7 +188,7 @@ Write the skill as a file in `.pkit/skills/project/`, and run `pkit sync`. No co
 - **Its helpers.** A skill that needs a template or a script beside it becomes a folder, `<name>/<name>.md`, with the helpers beside it ([COR-015](../../.pkit/decisions/core/COR-015-artifact-file-layout.md)).
 
 > [!WARNING]
-> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Only a capability's upgrade, and its install for some skills, asks you first. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Only a capability's install and its upgrade ask you first, each about a skill it brings that has your skill's name. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
 
 Below, you write a skill that cites the document holding your notes' format. Then you sync, check where the skill is deployed, and validate:
 

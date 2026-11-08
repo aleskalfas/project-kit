@@ -1,0 +1,49 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: parts
+    layout: slide
+    title: A group holds a head, a tag and its items, each where given
+    visual:
+      use: starter/list
+      item: {use: starter/group}
+      items:
+        - id: all
+          head: project-management
+          tag: work tracking
+          items:
+            - {id: doc-check, text: The docs a change must update.}
+            - {id: fixers, text: Which agent fixes each document.}
+        - id: head
+          head: living-docs
+          items:
+            - {id: pages, text: Pages for each reader.}
+            - {id: anchors, text: What each page rests on.}
+        - id: items
+          items:
+            - {id: rules, head: Rules, text: Exactly what to do.}
+            - {id: checks, head: Checks, text: Run on every change.}
+
+  - id: families
+    layout: slide
+    title: Tinted by its concept, its items drawn as the content names
+    visual:
+      use: starter/list
+      item: {use: starter/group}
+      items:
+        - id: people
+          concept: test-notation/person
+          head: People
+          item: {use: starter/tag}
+          items:
+            - {id: maintainer, label: the maintainer}
+            - {id: adopter, label: an adopter}
+        - id: services
+          concept: test-notation/service
+          head: Services
+          tag: on call
+          item: {use: starter/card, fill: tint, concept: test-notation/service}
+          items:
+            - {id: check, head: The check, text: Judges every file.}
+            - {id: render, head: The renderer, text: Draws each piece.}

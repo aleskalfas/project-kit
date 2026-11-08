@@ -1,0 +1,41 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: head
+    layout: standard
+    main:
+      use: starter/table
+      head: What each release brought
+      rows:
+        - id: names
+          cells:
+            - {id: version, span: narrow, head: No.}
+            - {id: what, head: What it brought}
+            - {id: who, span: wide, head: Who reads it}
+        - id: first
+          cells:
+            - {id: version, span: narrow, text: "1.0"}
+            - {id: what, text: "The cards, the lists and the arrows of a slide."}
+            - id: who
+              span: wide
+              text: Whoever draws a deck or a figure, and the reviewer who checks it against the brand.
+        - id: second
+          cells:
+            - {id: version, span: narrow, text: "1.1"}
+            - {id: what, text: "The parts of a web page, at every size."}
+            - {id: who, span: wide, text: Whoever draws a site.}
+
+  - id: bare
+    layout: standard
+    main:
+      use: starter/table
+      rows:
+        - id: names
+          cells:
+            - {id: size, head: Size}
+            - {id: width, head: Width}
+        - id: phone
+          cells:
+            - {id: size, text: Phone}
+            - {id: width, text: As wide as a phone held upright.}

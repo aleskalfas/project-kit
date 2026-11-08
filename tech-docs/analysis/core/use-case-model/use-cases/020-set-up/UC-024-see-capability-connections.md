@@ -6,7 +6,7 @@ actor: ACT-adopter
 other-actors: []
 after:
   - [UC-014, UC-049]
-  - [UC-015, UC-048, environment]
+  - [UC-015, UC-048]
 requirements:
   - REQ-005
   - REQ-010
@@ -20,6 +20,7 @@ pkit:
         - src/project_kit/status.py
         - src/project_kit/capabilities.py
       record:
+        - COR-053#3
         - COR-053#8
         - ADR-065#7
       artefact:
@@ -38,7 +39,7 @@ pkit:
 **Preconditions:**
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From [UC-015](../010-develop/UC-015-package-capability.md) or [UC-048](../050-adopt/UC-048-install-cli.md), or Environment:** The [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) is on the machine. The project authors the capability, or the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI ships it ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+- **From [UC-015](../010-develop/UC-015-package-capability.md) or [UC-048](../050-adopt/UC-048-install-cli.md):** The [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) is on the machine. The project authors the capability, or the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI ships it ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 
 **Assumptions:** None.
 

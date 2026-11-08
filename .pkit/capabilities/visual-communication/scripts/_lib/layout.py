@@ -46,19 +46,28 @@ DEC-012).
   pages is a page alone, and part of the page that holds it (DEC-005 point 5). A top whose
   layouts are its pages' forms (DEC-010 point 5) marks one list field of its own
   `x-pkit-pages: true`, holds no parts, and declares each layout as `{slots: {<slot>:
-  <field schema>}, required: [<slot>, ...], parts: {...}, lists: {...}}`: the fields a
-  page in it fills, a slot marked as a field of runs as a field is, the layout's own
-  drawing, its default (DEC-009 point 1), and the fields of each list among its slots
-  that the drawing repeats over, as a pattern's `lists` (DEC-011 point 5). Each page
+  <field schema>}, required: [<slot>, ...], preferred: {height: <formula>}, parts: {...},
+  lists: {...}}`: the fields a page in it fills, a slot marked as a field of runs as a
+  field is, the height of its page, by a formula on its parts, the layout's own drawing,
+  its default (DEC-009 point 1), and the fields of each list among its slots that the
+  drawing repeats over, as a pattern's `lists` (DEC-011 point 5). A layout says no width,
+  and says its page's height where the top asks for none (DEC-022 point 3). Each page
   names its layout with `layout`, or its component with `use`, and is drawn as a page of
-  its own, as large as the top asks to be.
+  its own. It gets the top's width, and the top's height where the top asks for one, else
+  the height it asks for: its layout's, or its component's. A top that asks for no height
+  is as tall as its tallest page.
 
 **A part** is one of:
 
 - a primitive, `box`, `ellipse`, `text`, `line` or `image`, whose own mapping holds its
   properties under SVG's names: `fill`, `stroke`, `stroke-width`, `rx`, `text-anchor`;
-  a text's `content` (a field) and `style` (a typography role); an image's `produced` (a
-  field naming a produced output). Only a text part shows a field of runs: its `style`
+  a text's `content` (a field), or `fact` (a fact of its export, one of `FACTS`, which
+  takes no switch), and `style` (a typography role); an image's source, exactly one of
+  `produced` (a field naming a produced output), `content` (a field whose text is the bare
+  name of a picture file of the piece), `file` (the bare name of a picture file of the
+  component's own library version, or of the piece for a local component) and `role` (a
+  picture role, whose file the brand gives; DEC-025 points 1 to 4). Only a text part shows
+  a field of runs: its `style`
   and `fill` may switch on the run styles of the field it shows, `{by: <field>, <word>:
   <value>, ...}`, naming every word, and give each run the role and the paint its word
   chooses;
@@ -73,13 +82,27 @@ DEC-012).
   center end`), `justify-content` (`start center end space-between`) and `sizes` (`own`,
   each item its preferred size along the line, `equal`, the line shared equally, or
   `shares`, the line shared in proportion to the shares its list's weight gives its
-  items, equally where they are all the same). `colour` gives
+  items, equally where they are all the same). An item that `stretch` makes larger
+  across than it asks for passes the rest on to the last part it draws, where that part
+  places a component and gives no size across (`passed_on`). `colour` gives
   the items' default family. A part over a list of ties takes neither `row` nor
   `column`: each tie is drawn in the part's whole frame, by default the component's, and
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
 
+**An image** shows a produced output, its variants by key and its exposed points; or a
+picture file, found by its bare name and read through the environment, which judges it
+(`Env.picture_file`); or the file the brand gives a picture role at the scene's key over
+the size axes, read through the environment too (`Env.picture_role`). A picture file and a
+picture role have no points. A finding on a file's name lies in what named it, the content
+or the component; one on the file, at the file. A `role` that names no role is
+`unknown-role`, and one that names a role of another type `role-type`, each in the
+component. A field the content leaves empty, a picture file that cannot be read, and a
+picture role the brand gives no file, draw no image, at zero size, and only the file that
+cannot be read is a finding: no brand owes a picture role (DEC-025 point 4).
+
 A part may carry `when`: a field the content fills, a field of runs where one of its
-runs holds text, or `{<option>: [<word>, ...]}`. A missing part has zero size at its
+runs holds text, `{<option>: [<word>, ...]}`, or a switch on a size (below) whose each
+branch is `true`, `false`, or one of those. A missing part has zero size at its
 place. Its place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula. A line has `x1 y1 x2 y2`; or, in a component
 that takes ends, `connect: straight` or `connect: corners`, the connector tool, which
@@ -87,7 +110,9 @@ runs from its start to its end, straight or with corners, never around anything,
 spreads the ends that meet one side of an item evenly (DEC-005 point 2). A line's
 `marker-start` and `marker-end` are `none`, the default, or `arrow`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
-image's height, where none is given, keeps its picture's proportions. Any property
+image's height, where none is given, keeps its picture's proportions, a produced output's
+first variant's, a picture file's, or a picture role's file's at the scene's key. Any
+property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
 switch on a field's run styles serves only a text part's `style` and `fill`, and no part
 passes a field of runs on, or reads one but in `when`. A colour is a role's token path,
@@ -100,6 +125,15 @@ that changes the instance's family replaces it too. Content's `override: {<part>
 <role>}` points a part's paint at another role, each run's included. `:index` and
 `:count` are an item's place among the items its list draws, from 1, and how many it
 draws.
+
+**A size** reaches a component by a marked name, `:<axis>`: a switch or a `when` by it
+reads the mode of that size axis the scene's key holds, else the axis's default (DEC-021
+point 3). Such a switch names the axis's default, which takes each mode it leaves out, so
+a new mode draws as the default does. The axis is one of the size axes a piece can name,
+which the context holds (`Sizes`), and a mode it names is one of the axis's. A part a
+size hides is a missing part. Two parts that repeat over one list, whose `when`s by a
+size each say yes or no, say yes exactly once at each mode, so each item is drawn once
+at every size (point 4). A value a size chose names the axis as its source, `size:<axis>`.
 
 **Ties.** Once every instance is built, and before any value is computed, `find_ends`
 finds each tie's two ends (DEC-011 points 3 and 4). An end's key path starts in the
@@ -130,16 +164,18 @@ that brand's own finding says what it owes, and the part takes none.
 
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Callable, Collection, Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, TypeVar
 
 from _lib import formula as fm
 from _lib import names
 from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, UnvaluedRole
 from _lib.findings import FAILS, Finding
-from _lib.keys import key_order
+from _lib.keys import AxisLike, key_order
+from _lib.pictures import Judged, Picture
 from _lib.text import Broken, Faces, Run, Style, break_runs
 
 PRIMITIVES = ("box", "ellipse", "text", "line", "image")
@@ -178,15 +214,19 @@ ENDS_OF_LINE = ("x1", "y1", "x2", "y2")
 PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "box": ("fill", "stroke", "stroke-width", "rx"),
     "ellipse": ("fill", "stroke", "stroke-width"),
-    "text": ("content", "style", "fill", "text-anchor"),
+    "text": ("content", "fact", "style", "fill", "text-anchor"),
     "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
-    "image": ("produced",),
+    "image": ("produced", "content", "file", "role"),
 }
 REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
-    "text": ("content", "style"),
+    "text": ("style",),
     "line": ("stroke",),
-    "image": ("produced",),
 }
+
+#: What an image shows, of which it names exactly one (DEC-025 point 1): a produced output,
+#: by a field; a picture file of the piece, by a field; a picture file of the component's own
+#: library, by its bare name; the file a brand gives a picture role, by the role.
+IMAGE_SOURCES = ("produced", "content", "file", "role")
 
 #: The paint content's `override` points at another role, by kind of part.
 OVERRIDDEN = {"box": "fill", "ellipse": "fill", "text": "fill", "line": "stroke"}
@@ -206,6 +246,15 @@ WORDS: Mapping[str, tuple[str, ...]] = {
     "connect": ("straight", "corners"),
 }
 OPERATOR_WORDS = ("align-items", "justify-content", "sizes")
+
+#: The facts of its export a text part may show (DEC-006 point 7). They are no entry of
+#: `WORDS`, since a fact takes no switch.
+FACTS = ("version", "date", "language", "state")
+
+#: The text a scene takes for each fact no file holds (DEC-016 point 5). One form serves
+#: every language: a number as an exported file's name writes it, and a date as
+#: `YYYY-MM-DD`. Each digit is one that sets wide, so a usual real value fits.
+STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
@@ -235,6 +284,19 @@ GIVEN_BY_FIELD = ("concept", "state", "override")
 #: The key of a switch, which no option takes as a word.
 SWITCH = "by"
 
+#: The mark of a name the engine hands a component, such as `:width`. A switch or a `when`
+#: by `:<axis>` reads the mode of that size axis (DEC-021 point 3).
+MARKED = ":"
+
+#: The start of the source of a value a switch by a size axis chose (DEC-021 point 7).
+SIZE = "size:"
+
+#: The finding on a switch or a `when` by a marked name that reads no size axis a piece
+#: can name, names a mode the axis lacks, or leaves out its default; and on two parts over
+#: one list that do not draw each item once at every size (DEC-021 point 7).
+SIZE_SWITCH = "size-switch"
+SIZE_REPEAT = "size-repeat"
+
 #: The key by which a page of a top whose layouts are its pages' forms names its layout,
 #: which the format fixes on such a page alone (DEC-010 point 5).
 LAYOUT = "layout"
@@ -253,6 +315,9 @@ FAMILY = ":colour."
 
 #: The start of the source of a value the content gave.
 CONTENT = "content:"
+
+#: The start of the source of a text that shows a fact of its export.
+FACT = "fact:"
 
 #: A size this much less than the size asked for is not short of it: half the scene's
 #: rounding step.
@@ -569,6 +634,52 @@ def _leaves(value: Any) -> list[Any]:
     return [value]
 
 
+def _by_size(value: Any) -> bool:
+    """Whether `value` is a switch by a size, whose `by` is a marked name (DEC-021 point
+    3)."""
+    by = value.get(SWITCH) if isinstance(value, Mapping) else None
+    return isinstance(by, str) and by.startswith(MARKED)
+
+
+def _may_draw(when: Any, modes: Mapping[str, str], axes: Mapping[str, AxisLike]) -> bool:
+    """Whether a part whose `when` is `when` may be drawn where each size axis takes the mode
+    `modes` gives it, as `Instance._when` draws it: with no `when`, always; by a field or an
+    option's words, on some content, so it may; by a size, by the branch of that mode, else
+    of the axis's default, `true` or a `when` of those forms (DEC-021 points 3 and 5). A
+    `false`, and a `when` of no form, never draws it."""
+    if when is None:
+        return True
+    if _by_size(when):
+        axis = str(when[SWITCH])[len(MARKED) :]
+        when = when.get(modes[axis], when.get(axes[axis].default))
+        if isinstance(when, bool):
+            return when
+    return isinstance(when, str) or (isinstance(when, Mapping) and len(when) == 1)
+
+
+def source_of_choice(chosen: Any) -> str:
+    """The source of a value a switch chose: the size axis it reads, `size:<axis>`, or the
+    option it names, `option:<name>` (DEC-005 point 5, DEC-021 point 7)."""
+    if isinstance(chosen, str) and chosen.startswith(MARKED):
+        return f"{SIZE}{chosen[len(MARKED) :]}"
+    return f"option:{chosen}"
+
+
+@dataclass(frozen=True)
+class Sizes:
+    """The size axes a piece can name, as one scene reads them (DEC-021 point 3): each by
+    its name, with its modes and its default, as the foundations declare it, and the mode
+    of each that the scene's key holds, an axis the key leaves out at its default. A
+    context that knows no size axis reads none, and a switch by a size is refused there."""
+
+    axes: Mapping[str, AxisLike] = field(default_factory=dict)
+    modes: Mapping[str, str] = field(default_factory=dict)
+
+    def mode(self, axis: str) -> str:
+        """The mode the scene reads on `axis`, one of `axes`."""
+        return self.modes.get(axis, self.axes[axis].default)
+
+
 # --- components ---------------------------------------------------------------------------
 
 
@@ -728,6 +839,7 @@ class Component:
                     f"the option `{option.name}` names an item of `{option.items}`, "
                     "over which not exactly one part repeats",
                 )
+        self._read_size_repeats()
         if self.top:
             self._read_layouts(data)
         elif any(isinstance(s, Mapping) and PAGES in s for s in self.fields.values()):
@@ -836,6 +948,11 @@ class Component:
         for key in REQUIRED_PROPERTIES.get(part.kind, ()):
             if key not in part.props:
                 self._shape(where, f"the {part.kind} `{part.name}` needs `{key}`")
+        if part.kind == "text" and ("content" in part.props) == ("fact" in part.props):
+            self._shape(where, f"the text `{part.name}` names one of `content` and `fact`")
+        if part.kind == "image" and sum(key in part.props for key in IMAGE_SOURCES) != 1:
+            sources = ", ".join(f"`{source}`" for source in IMAGE_SOURCES)
+            self._shape(where, f"the image `{part.name}` names exactly one of {sources}")
         # A text part that shows a field of runs may choose its role and paint by the
         # field's run styles (DEC-012 point 2).
         shown = part.props.get("content") if part.kind == "text" else None
@@ -852,9 +969,16 @@ class Component:
                 self._switched(at, value, self._words(WORDS[key]))
             elif key == "style":
                 self._switched(at, value, self._role, runs=runs)
+            elif key == "fact":
+                if value not in FACTS:
+                    self._shape(at, f"`fact` takes {', '.join(FACTS)}, and no `{value}`")
+            elif key == "file":
+                continue  # a picture file's bare name, judged where it is drawn
+            elif key == "role":
+                self._role(at, value)  # a picture role, judged where it is drawn
             elif not _is_field(value, self.fields):  # content, produced
                 self._shape(at, f"`{key}` names no field `{value}`")
-            elif key == "produced" and value in self.runs:
+            elif part.kind == "image" and value in self.runs:
                 self._shape(
                     at,
                     f"the image `{part.name}` names the field of runs `{value}`, which only a "
@@ -1038,7 +1162,16 @@ class Component:
             )
         return True
 
-    def _read_when(self, where: str, when: Any) -> None:
+    def _read_when(self, where: str, when: Any, *, branch: bool = False) -> None:
+        """A part's `when`: a field, an option's words, or a switch by a size whose each
+        branch is `true`, `false` or one of those, never a switch again (DEC-021 point 3).
+        `branch` reads one branch of such a switch."""
+        if _by_size(when) and not branch:
+            axis = self._size_axis(where, when[SWITCH], "`when` switches")
+            for mode in self._size_branches(where, when, axis):
+                if not isinstance(when[mode], bool):
+                    self._read_when(f"{where}.{mode}", when[mode], branch=True)
+            return
         if isinstance(when, str):
             if when not in self.fields:
                 self._shape(where, f"`when` names no field `{when}`")
@@ -1052,7 +1185,50 @@ class Component:
             elif not all(word in option.words for word in listed):
                 self._shape(where, f"`when` names a word the option `{name}` lacks")
             return
-        self._shape(where, "`when` takes a field, or `{<option>: [<word>, ...]}`")
+        if branch:
+            self._shape(
+                where,
+                "a branch of a `when` by a size takes `true`, `false`, a field, or "
+                "`{<option>: [<word>, ...]}`",
+            )
+            return
+        self._shape(
+            where,
+            "`when` takes a field, `{<option>: [<word>, ...]}`, or a switch on a size, "
+            "`{by: :<axis>, <mode>: ...}`",
+        )
+
+    def _read_size_repeats(self) -> None:
+        """Two parts or more that repeat over one list, a `when` by a size among theirs: at
+        each combination of the modes of the axes those read, exactly one of them may be
+        drawn, so each item is drawn once at every size (DEC-021 points 4, 5 and 7). Every
+        part over the list counts, whatever its `when` (`_may_draw`). The finding lies at the
+        first `when` by a size. One that reads no size axis is reported already."""
+        over: dict[str, list[Part]] = {}
+        for part in self.parts.values():
+            listed = part.spec.get("repeat")
+            if part.kind == "repeat" and isinstance(listed, str):
+                over.setdefault(listed, []).append(part)
+        known = self._ctx.sizes.axes
+        for listed, parts in over.items():
+            sized = [part for part in parts if _by_size(part.spec.get("when"))]
+            read = sorted({str(part.spec["when"][SWITCH])[len(MARKED) :] for part in sized})
+            if len(parts) < 2 or not sized or any(axis not in known for axis in read):
+                continue
+            for modes in itertools.product(*(known[axis].modes for axis in read)):
+                at = dict(zip(read, modes, strict=True))
+                drawn = [part for part in parts if _may_draw(part.spec.get("when"), at, known)]
+                if len(drawn) == 1:
+                    continue
+                shown = " and ".join(f"`{mode}` of `{axis}`" for axis, mode in at.items())
+                self._issue(
+                    SIZE_REPEAT,
+                    f"parts.{sized[0].name}.when",
+                    f"the parts {', '.join(f'`{p.name}`' for p in parts)} repeat over "
+                    f"`{listed}`, and at {shown} {len(drawn)} of them may be drawn: exactly "
+                    "one may be drawn at each mode, so each item is drawn once",
+                )
+                break
 
     def _read_layouts(self, data: Mapping[str, Any]) -> None:
         layouts = data.get("layouts")
@@ -1070,6 +1246,12 @@ class Component:
         pages = set()
         for layout, decl in layouts.items():
             slots = decl.get("slots") if isinstance(decl, Mapping) else None
+            if isinstance(decl, Mapping) and "preferred" in decl:
+                self._shape(
+                    f"layouts.{layout}.preferred",
+                    f"the layout `{layout}` says its page's height, as only a layout that is "
+                    "a page's form does: this top's own `preferred` says the size it asks for",
+                )
             if not isinstance(slots, Mapping):
                 self._shape(f"layouts.{layout}", f"the layout `{layout}` declares no slots")
                 continue
@@ -1115,7 +1297,7 @@ class Component:
                 "a top whose layouts are its pages' forms draws nothing around its pages: "
                 "each layout's `parts` draw a whole page",
             )
-        shared = ("options", "states", "colour", "values", "preferred")
+        shared = ("options", "states", "colour", "values")
         others = {name: s for name, s in self.fields.items() if name not in forms.fields}
         layouts = data.get("layouts")
         if not isinstance(layouts, Mapping) or not layouts:
@@ -1145,6 +1327,7 @@ class Component:
                     "whose layouts are its pages' forms draws a page with its `parts`",
                 )
                 continue
+            preferred = self._page_height(where, layout, decl)
             fields = {
                 **others,
                 **{
@@ -1164,16 +1347,40 @@ class Component:
                     "fields": {"type": "object", "properties": fields},
                     "parts": parts,
                     **lists,
+                    **preferred,
                 },
                 self._ctx,
                 layout=layout,
             )
             for code, at, message in drawing.issues:
-                own = at.partition(".")[0] in ("parts", "lists")
+                own = at.partition(".")[0] in ("parts", "lists", "preferred")
                 at = f"{where}.{at}" if own else at
                 if (code, at, message) not in self.issues:
                     self.issues.append((code, at, message))
             self.drawings[layout] = drawing
+
+    def _page_height(self, where: str, layout: str, decl: Mapping[str, Any]) -> dict[str, Any]:
+        """What a layout that is a page's form asks for its page, as its drawing's
+        `preferred` (DEC-022 point 3): its height alone, by a formula on its parts. A width
+        is refused, since a page gets the top's width. Where the top asks for no height, a
+        layout that says none is refused, since its page would get no height."""
+        preferred = decl.get("preferred")
+        if isinstance(preferred, Mapping) and "width" in preferred:
+            self._shape(
+                f"{where}.preferred.width",
+                f"the layout `{layout}` says a width, and a page gets the top's width: a "
+                "layout says its page's height alone",
+            )
+        says = isinstance(preferred, Mapping) and "height" in preferred
+        if "height" not in self.preferred and not says:
+            self._shape(
+                f"{where}.preferred",
+                f"the top asks for no height, so the layout `{layout}` says its page's "
+                "height under `preferred`, by a formula on its parts",
+            )
+        if not isinstance(preferred, Mapping):
+            return {} if preferred is None else {"preferred": preferred}
+        return {"preferred": {size: f for size, f in preferred.items() if size != "width"}}
 
     def _read_slot(self, where: str, layout: str, slot: str, schema: Any) -> None:
         """A slot of a layout that is a page's form: a page's field, so no reserved key's
@@ -1281,6 +1488,14 @@ class Component:
             check(where, value)
             return
         by = value[SWITCH]
+        if _by_size(value):
+            axis = self._size_axis(where, by, "switches")
+            for mode in self._size_branches(where, value, axis):
+                if not (nothing and value[mode] is None):
+                    self._switched(
+                        f"{where}.{mode}", value[mode], check, nothing=nothing, runs=runs
+                    )
+            return
         if isinstance(by, str) and by in self.runs:
             if by != runs:
                 self._shape(
@@ -1307,6 +1522,48 @@ class Component:
         for word in words:
             if word in value and not (nothing and value[word] is None):
                 self._switched(f"{where}.{word}", value[word], check, nothing=nothing, runs=runs)
+
+    def _size_axis(self, where: str, by: str, what: str) -> AxisLike | None:
+        """The size axis that the marked name `by`, `:<axis>`, of a switch or a `when` reads
+        (DEC-021 point 3); None where it reads none a piece can name, a value axis or a name
+        the engine holds included, which is reported."""
+        axis = self._ctx.sizes.axes.get(by[len(MARKED) :])
+        if axis is None:
+            known = ", ".join(f"`{MARKED}{name}`" for name in sorted(self._ctx.sizes.axes))
+            self._issue(
+                SIZE_SWITCH,
+                where,
+                f"{what} on `{by}`, which reads no size axis a piece can name (the size axes: "
+                f"{known or 'none'})",
+            )
+        return axis
+
+    def _size_branches(
+        self, where: str, value: Mapping[str, Any], axis: AxisLike | None
+    ) -> list[str]:
+        """The branches of a switch by a size that name a mode of its axis, each read in
+        turn. The switch names the axis's default, which takes each mode it leaves out, and
+        names no other word (DEC-021 point 3); none where it reads no size axis."""
+        if axis is None:
+            return []
+        by = value[SWITCH]
+        branches = [str(key) for key in value if key != SWITCH]
+        if axis.default not in branches:
+            self._issue(
+                SIZE_SWITCH,
+                where,
+                f"the switch on `{by}` names no branch for `{axis.default}`, the axis's "
+                "default, which takes each mode it leaves out",
+            )
+        for branch in branches:
+            if branch not in axis.modes:
+                self._issue(
+                    SIZE_SWITCH,
+                    f"{where}.{branch}",
+                    f"the switch on `{by}` names `{branch}`, which is no mode of the axis "
+                    f"(its modes: {', '.join(axis.modes)})",
+                )
+        return [branch for branch in branches if branch in axis.modes]
 
     def _number(self, where: str, value: Any, expected: int | None) -> None:
         self._switched(where, value, lambda at, text: self._formula(at, text, expected))
@@ -1465,23 +1722,62 @@ class Component:
 # --- one scene's context ------------------------------------------------------------------
 
 
-class Context:
-    """What computing one scene shares: the environment, its language, the faces, the
-    components read, the findings, and the cells being computed."""
+@dataclass(frozen=True)
+class Facts:
+    """What fills the facts of an export in a scene, as the scene shows them: the version's
+    number, its date and the piece's state. The fourth fact, the language, is the scene's
+    own (DEC-006 point 7, DEC-016 point 5)."""
 
-    def __init__(self, env: Env, language: str) -> None:
+    version: str
+    date: str
+    state: str
+
+
+def stand_ins(state: str) -> Facts:
+    """The facts of a scene no export fills: the piece's state as its file holds it, and the
+    stand-in for each fact no file holds (DEC-016 point 5)."""
+    return Facts(STAND_INS["version"], STAND_INS["date"], state)
+
+
+class Context:
+    """What computing one scene shares: the environment, its language, what fills the facts
+    of its export, the size axes a piece can name with the mode of each at the scene's key
+    (`Sizes`), the faces, the components read, the findings, and the cells being computed.
+    A context that computes no scene takes the stand-ins and no state: what it judges reads
+    no text. One given no sizes knows no size axis."""
+
+    def __init__(
+        self, env: Env, language: str, facts: Facts | None = None, sizes: Sizes | None = None
+    ) -> None:
         self.env = env
         self.language = language
+        self.facts = facts if facts is not None else stand_ins("")
+        self.sizes = sizes if sizes is not None else Sizes()
         self.faces = Faces(env.font_file)
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
         self.active: set[tuple[int, tuple[str, ...]]] = set()
-        self._seen: set[tuple[str, str, str]] = set()
+        self._seen: set[tuple[str, str, str, str, str]] = set()
         self._components: dict[str, Component | None] = {}
         self._unreadable: set[str] = set()
         self._roles: dict[str, Any] = {}
+        self._pictured: dict[str, Picture | None | Exception] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
         self._concepts: dict[str, str | UnknownConcept | None] = {}
+
+    def fact(self, word: str) -> str:
+        """The text of the fact `word`, one of `FACTS`."""
+        return self.language if word == "language" else getattr(self.facts, word)
+
+    def size_branch(self, switch: Mapping[str, Any]) -> str | None:
+        """The branch a switch by a size takes in this scene (DEC-021 point 3): the mode the
+        scene's key holds on its axis, where the switch names it, else the axis's default.
+        None where it reads no size axis, which was reported when its component was read."""
+        axis = str(switch[SWITCH])[len(MARKED) :]
+        if axis not in self.sizes.axes:
+            return None
+        mode = self.sizes.mode(axis)
+        return mode if mode in switch else self.sizes.axes[axis].default
 
     def finding(self, code: str, message: str, *, where: str, use: str = "") -> Finding:
         """A finding that fails, at `where`: in the file of the component `use`, which it
@@ -1496,7 +1792,7 @@ class Context:
         self.add(self.finding(code, message, where=where, use=use))
 
     def add(self, finding: Finding) -> None:
-        key = (finding.code, finding.where, finding.message)
+        key = (finding.code, finding.file, finding.where, finding.message, finding.library)
         if key not in self._seen:
             self._seen.add(key)
             self.findings.append(finding)
@@ -1509,6 +1805,21 @@ class Context:
             if fault.finding is not None:
                 self.add(fault.finding)
             return default
+
+    def picture_file(
+        self, holder: str, name: object, *, named: str, where: str, use: str
+    ) -> Judged:
+        """The picture file `name` names, of the piece where `holder` is `piece`, else of the
+        version the lock names of the library `holder`, judged through the environment
+        (`Env.picture_file`), its findings recorded. One on the file lies at the file. One on
+        the name lies at `where` in the component `use`, which names the file, or, with no
+        `use`, in the content, as every finding on what the content gave."""
+        judged = self.env.picture_file(holder, name, named=named, where=where)
+        for finding in judged.findings:
+            if not finding.file and use:
+                finding = replace(finding, extra={**finding.extra, "component": use})
+            self.add(finding)
+        return judged
 
     def library(self, use: str) -> str:
         """`<library>@<version>` of the library a component lies in; empty for the piece's
@@ -1563,6 +1874,23 @@ class Context:
             raise UnvaluedRole(found.role, found.library, named=found.named)
         if isinstance(found, KeyError):
             raise KeyError(path)
+        return found
+
+    def picture_role(self, path: str) -> Picture | None:
+        """The picture the brand gives the picture role at `path` at the scene's key over the
+        size axes, read once (`Env.picture_role`); None where it gives none. Raises
+        `KeyError` for a path that holds no role, and `ValueError` for a role of another
+        type."""
+        if path not in self._pictured:
+            try:
+                self._pictured[path] = self.env.picture_role(path)
+            except (KeyError, ValueError) as error:
+                self._pictured[path] = error
+        found = self._pictured[path]
+        if isinstance(found, KeyError):
+            raise KeyError(path)
+        if isinstance(found, Exception):
+            raise ValueError(str(found))
         return found
 
     def unvalued(self, path: str) -> UnvaluedRole | None:
@@ -1688,8 +2016,20 @@ class Node:
     items: list[Instance] = field(default_factory=list)
     text: str = ""
     runs: list[TextRun] = field(default_factory=list)
+    # An image of a produced output: the output, as its record keeps it, and its name.
     picture: PictureInfo | None = None
     output: str = ""
+    # An image of a picture file: its bare name, where it lies, `piece` or a library's
+    # name, and the file as the reader read it (DEC-025 points 2 and 3). An image of a
+    # picture role: the role, and the file the brand gives it at the scene's key, as read
+    # (point 4).
+    file: str = ""
+    holder: str = ""
+    role: str = ""
+    read: Picture | None = None
+    # An image of a picture role the brand gives no file at the scene's key, which is not
+    # drawn: the role, so a move onto that brand can name it (DEC-025 point 8).
+    unvalued: str = ""
 
     @property
     def line_height(self) -> float:
@@ -1852,12 +2192,21 @@ class Instance:
 
     def field_path(self, name: str) -> str | None:
         """The key path of the field `name` in the content file, by the keys the file
-        writes: below the mapping that holds what this instance was given, or, where a
-        `use` part placed it, the path of the field the part passes on under that name.
-        None where no key of the content file gives the field."""
+        writes: the path of a field handed on under that name, by a `use` part that placed
+        this instance or by the top that holds this page, else below the mapping that holds
+        what this instance was given. None where no key of the content file gives the
+        field."""
+        if name in self._paths:
+            return self._paths[name]
         if self.content_path is not None:
             return _join(self.content_path, name)
-        return self._paths.get(name)
+        return None
+
+    def source_of_text(self, part: Part) -> str:
+        """Where what a text part shows comes from: the fact it names, else its field."""
+        if "fact" in part.props:
+            return f"{FACT}{part.props['fact']}"
+        return self.source_of_field(part.props["content"])
 
     def source_of_field(self, name: str) -> str:
         """Where the field or option `name` comes from: the source the part that placed
@@ -1999,13 +2348,17 @@ class Instance:
 
     def pick(self, where: str, value: Any, run: str | None = None) -> tuple[str, Any, str | None]:
         """A value through its switches: the key path of the branch taken, the value, and
-        the option, or the field of runs, that chose it. A switch on a field's run styles
-        takes `run`, the word of the run drawn, else the field's first word."""
+        the option, the field of runs, or the marked name of the size axis, that chose it.
+        A switch on a field's run styles takes `run`, the word of the run drawn, else the
+        field's first word. A switch by a size takes the branch of the scene's mode
+        (`Context.size_branch`)."""
         chosen = None
         while isinstance(value, Mapping) and SWITCH in value:
             chosen = value[SWITCH]
             words = self.component.runs.get(chosen) if isinstance(chosen, str) else None
-            if words is not None:
+            if _by_size(value):
+                word = self.ctx.size_branch(value)
+            elif words is not None:
                 word = run if run in words else words[0]
             else:
                 word = self.options.get(chosen)
@@ -2013,9 +2366,15 @@ class Instance:
         return where, value, chosen
 
     def _when(self, part: Part) -> bool:
+        """Whether the part is drawn: no `when`, or a `when` that holds. A `when` by a size
+        holds by the branch of the scene's mode: `true`, `false`, or the `when` it gives."""
         when = part.spec.get("when")
         if when is None:
             return True
+        if _by_size(when):
+            when = when.get(self.ctx.size_branch(when))
+            if isinstance(when, bool):
+                return when
         if isinstance(when, str):
             return _filled(self.given.get(when), runs=when in self.component.runs)
         if isinstance(when, Mapping) and len(when) == 1:
@@ -2043,11 +2402,18 @@ class Instance:
         return node
 
     def _build_text(self, node: Node, trace: str) -> None:
-        """The text a text part shows: its field's text, one run, or, in a field of runs,
-        its runs (DEC-012 point 1). Each run takes the typography role its word chooses.
-        A field given as text is one run of the field's first word."""
+        """The text a text part shows: a fact of its export (`_build_fact`), or its field's
+        text, one run, or, in a field of runs, its runs (DEC-012 point 1). Each run takes the
+        typography role its word chooses. A field given as text is one run of the field's
+        first word. A part that names neither is recorded when the component was read."""
         props = node.part.props
-        content = props.get("content", "")
+        if "fact" in props:
+            self._build_fact(node, trace)
+            return
+        if "content" not in props:
+            node.present = False
+            return
+        content = props["content"]
         words = self.component.runs.get(content)
         value = self.given.get(content)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -2065,29 +2431,66 @@ class Instance:
             given = [(value or "", words[0] if words else None, False, None, None)]
         styles: dict[str, Style] = {}
         for text, word, named, concept, place in given:
-            _, role, _ = self.pick(f"parts.{node.part.name}.text.style", props.get("style"), word)
-            if not isinstance(role, str):
-                node.present = False  # recorded when the component was read
+            style = self._style_of(node, word, styles, trace)
+            if style is None:
                 return
-            if role not in styles:
-                try:
-                    styles[role] = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
-                except UnvaluedRole as unvalued:
-                    use = self.component.use
-                    self.ctx.unvalued_at_lock(unvalued, f"the text `{trace}` of `{use}`")
-                    node.present = False
-                    return
-                except KeyError:
-                    message = f"{trace}: the brand gives the role @{role} no value"
-                    self._lose(node, "unknown-role", message, trace)
-                    return
-                except ValueError as error:
-                    self._lose(node, "role-type", f"{trace}: {error}", trace)
-                    return
             node.runs.append(
-                self._text_run(content, text, word, named, concept, place, styles[role], trace)
+                self._text_run(content, text, word, named, concept, place, style, trace)
             )
         node.text = "".join(run.text for run in node.runs)
+
+    def _build_fact(self, node: Node, trace: str) -> None:
+        """The text of a fact of the export, as what fills it gives it: one run, in the role
+        `style` names, which takes no run styles (DEC-006 point 7). A word no fact takes is
+        recorded when the component was read."""
+        word = node.part.props["fact"]
+        if word not in FACTS:
+            node.present = False
+            return
+        style = self._style_of(node, None, {}, trace)
+        if style is None:
+            return
+        node.text = self.ctx.fact(word)
+        node.runs.append(
+            TextRun(
+                node.text,
+                None,
+                style,
+                None,
+                self.family,
+                self.family_source,
+                self.source_of_text(node.part),
+                f"default:{self.component.use}",
+                trace,
+            )
+        )
+
+    def _style_of(
+        self, node: Node, word: str | None, styles: dict[str, Style], trace: str
+    ) -> Style | None:
+        """The style of a run of `word` in a text part, each role read once into `styles`.
+        None where the role cannot be read, and the part is then not drawn."""
+        name, props = node.part.name, node.part.props
+        _, role, _ = self.pick(f"parts.{name}.text.style", props.get("style"), word)
+        if not isinstance(role, str):
+            node.present = False  # recorded when the component was read
+            return None
+        if role not in styles:
+            try:
+                styles[role] = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
+            except UnvaluedRole as unvalued:
+                use = self.component.use
+                self.ctx.unvalued_at_lock(unvalued, f"the text `{trace}` of `{use}`")
+                node.present = False
+                return None
+            except KeyError:
+                message = f"{trace}: the brand gives the role @{role} no value"
+                self._lose(node, "unknown-role", message, trace)
+                return None
+            except ValueError as error:
+                self._lose(node, "role-type", f"{trace}: {error}", trace)
+                return None
+        return styles[role]
 
     def _given_runs(
         self, content: str, words: tuple[str, ...] | None, value: list[Any]
@@ -2171,6 +2574,79 @@ class Instance:
         node.present = False
 
     def _build_image(self, node: Node, trace: str) -> None:
+        """The picture an image shows (DEC-025 points 1 to 4): a produced output, by the field
+        `produced` names; a picture file of the piece, by the bare name the field `content`
+        names holds, whichever component draws it; a picture file of the component's own
+        library version, or of the piece for a local component, by `file`; or the file the
+        brand gives the picture role `role` names (`_show_role`). A field the content leaves
+        empty draws nothing, at zero size, with no finding; so does a picture file that
+        cannot be read, which is its finding. An image that names none of them is recorded
+        when its component was read."""
+        props = node.part.props
+        if "produced" in props:
+            self._build_produced(node, trace)
+        elif "content" in props:
+            shown = props["content"]
+            name = self.given.get(shown)
+            if not isinstance(name, str) or not name:
+                node.present = False
+                return
+            source = self.source_of_field(shown)
+            where = source[len(CONTENT) :] if source.startswith(CONTENT) else trace
+            named = f"the content's `{where}`"
+            self._show_file(node, names.PIECE, name, named=named, where=where, use="")
+        elif "file" in props:
+            use = self.component.use
+            where = f"parts.{node.part.name}.image.file"
+            named = f"{use}: the image `{node.part.name}`"
+            library = use.partition("/")[0]
+            self._show_file(node, library, props["file"], named=named, where=where, use=use)
+        elif "role" in props:
+            self._show_role(node, trace)
+        else:
+            node.present = False
+
+    def _show_role(self, node: Node, trace: str) -> None:
+        """The file the brand gives the picture role the image's `role` names, at the scene's
+        key over the size axes (DEC-025 point 4). Where the brand gives it none the image is
+        not drawn, at zero size, with no finding, since no brand owes a picture role; the
+        node keeps the role, so a move onto that brand can name it (DEC-025 point 8). A
+        `role` that names no role, or a role of another type, is the component's finding,
+        and the image is not drawn either."""
+        role = node.part.props["role"]
+        if not isinstance(role, str):
+            node.present = False  # recorded when the component was read
+            return
+        where = f"parts.{node.part.name}.image.role"
+        try:
+            read = self.ctx.picture_role(role)
+        except KeyError:
+            message = f"{trace}: no library locked with the brand declares the role @{role}"
+            self._lose(node, "unknown-role", message, where)
+            return
+        except ValueError as error:
+            self._lose(node, "role-type", f"{trace}: {error}", where)
+            return
+        if read is None:
+            node.present, node.unvalued = False, role
+            return
+        node.role, node.read = role, read
+
+    def _show_file(
+        self, node: Node, holder: str, name: object, *, named: str, where: str, use: str
+    ) -> None:
+        """The picture file `name` of `holder` an image shows, judged (`Context.picture_file`);
+        the image is not drawn where it cannot be read."""
+        judged = self.ctx.picture_file(holder, name, named=named, where=where, use=use)
+        if judged.picture is None or not isinstance(name, str):
+            node.present = False
+            return
+        node.file, node.holder, node.read = name, holder, judged.picture
+
+    def _build_produced(self, node: Node, trace: str) -> None:
+        """A produced output's picture, from its record: missing where the piece has no such
+        output; its variants of one pixel size and one set of points, as one scene holds
+        them (DEC-005 point 5)."""
         produced = node.part.props.get("produced", "")
         output = self.given.get(produced)
         if not isinstance(output, str):
@@ -2259,7 +2735,9 @@ class Instance:
         for theirs, raw in (spec.get("options") or {}).items():
             _, word, chosen = self.pick(f"parts.{node.part.name}.options.{theirs}", raw)
             given[theirs] = word
-            sources[theirs] = f"option:{chosen}" if chosen else f"default:{self.component.use}"
+            sources[theirs] = (
+                source_of_choice(chosen) if chosen else f"default:{self.component.use}"
+            )
         node.child = Instance(
             self.ctx, component, given, trace=trace, content_path=None, paths=paths,
             sources=sources, parent=self, part=node.part.name, chain=(*self.chain, use),
@@ -2441,15 +2919,19 @@ class Instance:
                 component = self.component.drawings.get(page.get(LAYOUT))
             if component is None:
                 continue
-            given, sources = dict(page), {}
+            given, sources, paths = dict(page), {}, {}
             if component.layout is not None:
-                # Its drawing takes the top's other fields, as the top was given them.
+                # Its drawing takes the top's other fields, as the top was given them, each
+                # at its own key path in the content file.
                 for other in self.component.fields:
                     if other != name and other in self.given and other not in page:
                         given[other], sources[other] = (
                             self.given[other],
                             self.source_of_field(other),
                         )
+                        handed = self.field_path(other)
+                        if handed is not None:
+                            paths[other] = handed
             pages.append(
                 Instance(
                     self.ctx,
@@ -2457,6 +2939,7 @@ class Instance:
                     given,
                     trace=at,
                     content_path=None if path is None else f"{path}{step}",
+                    paths=paths,
                     sources=sources,
                     parent=self,
                     part=str(name),
@@ -2464,6 +2947,24 @@ class Instance:
                 )
             )
         return pages
+
+    def from_the_top(self) -> list[str]:
+        """The trace of each part of this page that draws a field its top handed it: a part
+        that places it, repeats over it, shows it, or passes it on (DEC-010 point 5). Every
+        page drawn in a layout draws such a field alike, so what is found there is read once
+        (DEC-022 point 8). None for a page drawn by its own component, which takes no field
+        of the top."""
+        handed = set(self._sources) if self._is_forms_page and self.component.layout else set()
+        found = []
+        for name, node in self.nodes.items():
+            spec, props = node.part.spec, node.part.props
+            read = {spec.get("slot"), spec.get("repeat"), props.get("content")}
+            read.add(props.get("produced"))
+            fields = spec.get("fields") if node.part.kind == "use" else None
+            read.update(fields.values() if isinstance(fields, Mapping) else ())
+            if node.present and handed & {each for each in read if isinstance(each, str)}:
+                found.append(f"{self.trace}/{name}")
+        return found
 
     def texts(self) -> list[tuple[str, Node]]:
         """Every text this instance and those below it draw, its pages' included, with its
@@ -2487,6 +2988,8 @@ class Instance:
         kind = cell[0]
         if kind == "size":
             return f"{self.trace} :{cell[1]}"
+        if kind == "stretch":
+            return f"{self.trace} stretch of :{cell[1]}"
         if kind in ("preferred", "value"):
             return f"{self.trace} {kind} {cell[1]}"
         if kind == "part":
@@ -2525,6 +3028,8 @@ class Instance:
         kind, name = cell[0], cell[1]
         if kind == "size":
             return self._size(name)
+        if kind == "stretch":
+            return self._stretch(name)
         if kind == "preferred":
             if name not in self.component.preferred:
                 use = self.component.use
@@ -2565,7 +3070,7 @@ class Instance:
         reads, or the component's own default."""
         _, value, chosen = self.pick(where, raw)
         if chosen:
-            return f"option:{chosen}"
+            return source_of_choice(chosen)
         only = _ONLY_ROLE.match(value) if isinstance(value, str) else None
         return f"role:{only.group(1)}" if only else f"default:{self.component.use}"
 
@@ -2593,10 +3098,20 @@ class Instance:
     def _size(self, size: str) -> float:
         """The size this instance gets: from its parent's part or list, or, at the top,
         the size it asks for. A page of a top whose layouts are its pages' forms gets the
-        top's size."""
+        top's width, and the top's height where the top asks for one, else the height it
+        asks for (`takes_own`). Such a top that asks for no height is as tall as its
+        tallest page (DEC-022 point 3). A component its parent's last part places gets,
+        beside its part's size, the stretch its parent passes on (`passed_on`)."""
         if self.parent is None:
+            if self.component.forms and size == "height" and size not in self.component.preferred:
+                heights = [
+                    self.ctx.attempt(lambda p=p: p.get("size", size), 0.0) for p in self.pages
+                ]
+                return max(heights, default=0.0)
             return self.get("preferred", size)
-        if self.parent.component.forms and self.part_name == self.parent.component.pages_field:
+        if self.takes_own(size):
+            return self.get("preferred", size)
+        if self._is_forms_page:
             return self.parent.get("size", size)
         if self.tie is not None:
             # A tie is drawn in its part's whole frame (DEC-011 point 1).
@@ -2605,7 +3120,60 @@ class Instance:
             part = self.parent.nodes[self.part_name].part
             axis = "main" if size == part.main else "cross"
             return self.parent.get(axis, self.part_name).sizes[self.position]
-        return self.parent.get("part", self.part_name, size)
+        placed = self.parent.get("part", self.part_name, size)
+        return placed + self.parent.passed_on(self.part_name, size)
+
+    def takes_own(self, size: str) -> bool:
+        """Whether this instance is a page of a top whose layouts are its pages' forms that
+        takes the `size` it asks for: its height, where the top asks for none (DEC-022
+        point 3). A page always gets the top's width."""
+        return (
+            self._is_forms_page
+            and size == "height"
+            and self.parent is not None
+            and size not in self.parent.component.preferred
+        )
+
+    @property
+    def _is_forms_page(self) -> bool:
+        """Whether this instance is a page of a top whose layouts are its pages' forms."""
+        parent = self.parent
+        return (
+            parent is not None
+            and bool(parent.component.forms)
+            and self.part_name == parent.component.pages_field
+        )
+
+    def _stretch(self, size: str) -> float:
+        """How much more of `size` a stretch gives this instance than it asks for. An item
+        that its list's `align-items: stretch` makes larger across its line than it asks
+        for is stretched by the difference. A component its parent's last part places
+        takes the stretch its parent passes on (`passed_on`). Nothing else is stretched:
+        a size a part's formula gives is no stretch, nor is a page's or a tie's frame."""
+        parent = self.parent
+        if parent is None or self.tie is not None or self._is_forms_page:
+            return 0.0
+        if not self.is_item:
+            return parent.passed_on(self.part_name, size)
+        part = parent.nodes[self.part_name].part
+        if size == part.main or parent.setting(self.part_name, "align-items") != "stretch":
+            return 0.0
+        if size not in self.component.preferred:
+            return 0.0  # it asks for no such size, so none is more than it asks
+        return max(self.get("size", size) - self.get("preferred", size), 0.0)
+
+    def passed_on(self, name: str, size: str) -> float:
+        """The stretch this instance passes on along `size` to its part `name`: the whole
+        of its own (`_stretch`) where that part is the last it draws, places a component
+        by `use` or `slot`, and gives no `size`; else none. The component that part places
+        then ends where this instance ends, as a panel that holds panels of its own ends
+        with the row's other panels. The part's own frame, which this instance's formulas
+        read, stays the size it asks for, so what this instance asks for is unchanged."""
+        node = self.nodes[name]
+        drawn = [each for each, other in self.nodes.items() if other.present]
+        if drawn[-1:] != [name] or node.child is None or size in node.part.spec:
+            return 0.0  # only a `use` or a `slot` part places a component, its `child`
+        return self.get("stretch", size)
 
     def _geometry(self, name: str, key: str) -> float:
         node = self.nodes[name]
@@ -2638,6 +3206,8 @@ class Instance:
         if part.kind == "image" and key == "height" and node.picture is not None:
             pixels = node.picture.variants[first_variant(node.picture)]["pixels"]
             return self.get("part", name, "width") * pixels["height"] / pixels["width"]
+        if part.kind == "image" and key == "height" and node.read is not None:
+            return self.get("part", name, "width") * node.read.height / node.read.width
         if node.child is not None:
             return node.child.get("preferred", key)
         if part.kind == "repeat" and self.component.ties(part) is not None:
@@ -3197,7 +3767,7 @@ class Instance:
         if chosen and chosen in self.component.runs and run is not None:
             source = run.word_source
         else:
-            source = f"option:{chosen}" if chosen else f"default:{self.component.use}"
+            source = source_of_choice(chosen) if chosen else f"default:{self.component.use}"
         if not value.startswith(FAMILY):
             return value, source
         family = run.family if run is not None else self.family
@@ -3263,13 +3833,17 @@ def _point_part(item: Instance, point: str) -> str | None:
 
 
 def _pictured(item: Instance) -> bool:
-    """Whether every image part `item` exposes and draws has its picture: where one has
-    none, the missing picture is the finding."""
+    """Whether every image part of a produced output `item` exposes and draws has its
+    picture: where one has none, the missing picture is the finding. A picture file has no
+    points, so an end at one is its own finding (DEC-025 point 7)."""
     nodes = [item.nodes.get(name) for name in item.component.exposes]
     return all(
         node.picture is not None
         for node in nodes
-        if node is not None and node.present and node.part.kind == "image"
+        if node is not None
+        and node.present
+        and node.part.kind == "image"
+        and "produced" in node.part.props
     )
 
 

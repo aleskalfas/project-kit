@@ -2,8 +2,9 @@
 
 The engine (`formula`, `layout`, `text`, `scene`) knows nothing of the working folder,
 pieces, the library list or the configuration. It reads every component, role, colour
-family, concept, font and produced picture through an `Env`, which the pipeline builds
-from the project's files, and which the engine's tests stand in for with an in-memory one.
+family, concept, font, produced picture, picture file and picture role through an `Env`,
+which the pipeline builds from the project's files, and which the engine's tests stand in
+for with an in-memory one.
 """
 
 from __future__ import annotations
@@ -12,10 +13,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from _lib.pictures import Judged, Picture
+
 
 class MissingFont(Exception):
     """A font a role names has no committed file, so the render is refused before
     anything is laid out (DEC-004 point 9). The message names the font."""
+
+
+class UnreadableFont(MissingFont):
+    """A font whose committed file is present and cannot be read as one, which refuses as a
+    missing font does. The message names the file and the font reader's error."""
+
+    def __init__(self, path: Path, error: Exception) -> None:
+        why = str(error) or type(error).__name__
+        super().__init__(f"the font file {path} cannot be read: {why}")
 
 
 class UnreadableComponent(KeyError):
@@ -97,6 +109,26 @@ class Env(Protocol):
 
     def picture(self, output: str) -> PictureInfo:
         """A produced output of the piece. Raises `KeyError` where the piece has none."""
+        ...
+
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> Judged:
+        """The picture file `name` names, found by its bare name and read (DEC-025 points 2,
+        5 and 9): in the piece's own `pictures/` where `holder` is `piece`, else in the
+        `pictures/` of the version the lock names of the library `holder`. It comes with its
+        findings, each lying where `pictures.Folder` places it: one on the file itself at the
+        file, and one on the name, which `named` gives in words, at `where`, in no file, so
+        the engine places it in what named it, the content or a component."""
+        ...
+
+    def picture_role(self, token_path: str) -> Picture | None:
+        """The picture a brand gives the picture role at `token_path`, read, at the scene's
+        key over the size axes (DEC-025 points 4 and 7): the file of its first combination
+        of the value axes there, as every combination there gives a file of one proportion,
+        or none. None where the brand gives the role no file there, which no brand owes, or
+        where its file cannot be read, which is the brand's own finding. Its file in each
+        combination reaches a renderer from the document of values, never through the
+        scene. Raises `KeyError` for a path that holds no role, and `ValueError`, saying
+        so, for a role of another type than `picture`."""
         ...
 
     def family(self, name: str) -> dict[str, str]:

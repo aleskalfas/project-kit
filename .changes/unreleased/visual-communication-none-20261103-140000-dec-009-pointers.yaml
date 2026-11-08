@@ -1,6 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-004 point 7 carries a forward refinement pointer to DEC-009, and
-  DEC-008's Implications cite DEC-009 for layouts (#2529). Neither edit
-  changes what a record decides, so no surface moves.

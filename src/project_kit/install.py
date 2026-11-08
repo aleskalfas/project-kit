@@ -25,7 +25,7 @@ from typing import Any
 
 import click
 
-from project_kit import treecopy, workspace
+from project_kit import project_config, treecopy, workspace
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
@@ -658,11 +658,12 @@ def _source_gap_causes(target_root: Path) -> list[str]:
     return causes
 
 
-def install_kit(target_root: Path, dry_run: bool = False) -> None:
+def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool = False) -> None:
     """Run `pkit init` against `target_root`. Refuses to run if `.pkit/`
     already exists, if the source kit doesn't look like a real source
     tree, or if the target is the source itself (project-kit
-    self-hosts).
+    self-hosts). With `refuse_proposals`, the explicit flag, it writes the
+    key that turns the landing check's refusal on (ADR-081 point 5).
     """
     source_kit = find_source_kit()
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
@@ -692,6 +693,8 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     # The seed paths, before deploy reads the overlay and merge the adapter's
     # project settings (ADR-065 point 11).
     seed_missing_paths(ctx)
+    if refuse_proposals:
+        _write_refuse_proposals(ctx)
 
     # Every adapter the copy placed is registered, and recorded at the version
     # it ships, before deploy, the render and provisioning read the registry.
@@ -1111,6 +1114,21 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
 
 # The scratchpad's state folders (COR-012): seed paths, never propagated.
 _SCRATCHPAD_STATE_DIRS = ("active", "done", "dropped")
+
+
+def _write_refuse_proposals(ctx: InstallContext) -> None:
+    """Write the key that turns the landing check's refusal on. The flag that asked for it
+    is the consent (COR-048 point 5), and the install makes no offer (ADR-081 point 5)."""
+    if ctx.dry_run:
+        click.echo(f"  would write {project_config.REFUSE_PROPOSALS_KEY}: true")
+        return
+    segments = tuple(project_config.REFUSE_PROPOSALS_KEY.split("."))
+    project_config.write_config(
+        ctx.target_root,
+        lambda data: project_config.set_path(data, segments, True),
+        consent=project_config.Consent(yes=True),
+    )
+    click.echo(f"  wrote {project_config.REFUSE_PROPOSALS_KEY}: true")
 
 
 def seed_missing_paths(ctx: InstallContext, *, capabilities: Iterable[str] = ()) -> None:

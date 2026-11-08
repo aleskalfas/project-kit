@@ -74,10 +74,14 @@ def _change_check(timeline: Timeline) -> list[tuple[str, str | None]]:
 
 
 def _repository(timeline: Timeline) -> list[tuple[str, str | None, str | None]]:
+    """(kind, anchor, origin commit) per finding of the whole-repository check, an
+    over-broad anchor left out: in a history of a few commits, most anchors flagged
+    their artefacts in more than half of them (ADR-080 point 3)."""
     result = fr.run_repository_check(timeline.adopter.root)
     return [
         (f.kind.value, None if f.anchor is None else f.anchor.value, f.origin and f.origin.sha)
         for f in result.findings
+        if f.kind is not fr.RepositoryFindingKind.OVER_BROAD
     ]
 
 
@@ -274,7 +278,10 @@ def test_a_whole_record_anchor_still_changes_with_any_edit(timeline: Timeline) -
     _start(timeline, anchors={"record": ["PRJ-900", "PRJ-900#2"]})
     changed = _change(timeline, rationale="Another reason this way.")
     assert _change_check(timeline) == [("friction", "PRJ-900")]
-    assert _repository(timeline) == [("stale", "PRJ-900", changed)]
+    assert _repository(timeline) == [
+        ("stale", "PRJ-900", changed),
+        ("whole-and-parts", "PRJ-900", None),  # the whole anchor flags what the point does
+    ]
 
 
 # --- the explanation ----------------------------------------------------------------
@@ -331,7 +338,11 @@ def test_a_deferral_covers_a_point_as_it_stood_and_lists_only_its_changes(
     )
     _change(timeline, points=later)  # another point: the deferral still covers point 2
     assert _repository(timeline) == [("deferred", "PRJ-900#2", changed)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = [
+        f
+        for f in frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+        if f.finding.kind is not fr.RepositoryFindingKind.OVER_BROAD
+    ]
     assert finding.finding.kind is fr.RepositoryFindingKind.DEFERRED
     assert [c.commit.sha for c in finding.commits] == [changed]
 

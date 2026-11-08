@@ -6,10 +6,9 @@ TERM-acceptance-gate:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/decisions/README.md
         record:
           - COR-051#4
+          - COR-066#1
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -18,6 +17,10 @@ TERM-adapter:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/adapters/claude-code/deploy-skills.sh
+          - .pkit/adapters/claude-code/deploy-agents.sh
+          - .pkit/adapters/claude-code/merge-settings.sh
         record:
           - COR-005
           - COR-028
@@ -32,7 +35,7 @@ TERM-agent-definition:
       anchors:
         path:
           - src/project_kit/agents.py
-          - .pkit/adapters/README.md
+          - .pkit/adapters/claude-code/deploy-agents.sh
         record:
           - COR-006
           - COR-013#1
@@ -42,7 +45,7 @@ TERM-agent-workspace:
   name: agent workspace
   noun-forms: [agent workspaces]
   status: active
-  definition: "folder at the root of a checkout where AI agents keep their intermediate files, which the system excludes from version control"
+  definition: "folder at the root of a checkout where AI agents keep their intermediate files, which the system keeps out of git"
   pkit:
     friction:
       anchors:
@@ -53,6 +56,21 @@ TERM-agent-workspace:
           - ADR-060#1
           - ADR-060#3
           - ADR-060#9
+          - ADR-060#2
+TERM-allowance:
+  name: allowance
+  noun-forms: [allowances]
+  status: active
+  definition: "entry of the sandbox's settings that a command needs, classed `narrowing` where it enlarges no agent's reach or `widening` where it lowers the boundary"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/schemas/confinement-toolkit.yaml
+          - src/project_kit/permissions.py
+        record:
+          - ADR-008#1
+          - ADR-008#2
 TERM-anchor:
   name: anchor
   status: active
@@ -68,7 +86,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement in a change's own file that settles an edit to what an artefact rests on, or a revisit its links ask for"
+  definition: "statement in a change's own file that settles an edit to what an artefact rests on, or a revisit a revisit link asks for"
   pkit:
     friction:
       anchors:
@@ -78,6 +96,7 @@ TERM-answer:
           - COR-050#3
           - COR-050#4
           - COR-062#1
+          - COR-050#16
 TERM-answer-file:
   name: answer file
   noun-forms: [answer files]
@@ -100,6 +119,9 @@ TERM-area:
   pkit:
     friction:
       anchors:
+        path:
+          - src/project_kit/install.py
+          - src/project_kit/scaffolds.py
         record:
           - COR-011
           - COR-003
@@ -133,7 +155,7 @@ TERM-artefact-type:
 TERM-backbone:
   name: backbone
   status: active
-  definition: "part of the system that ships whole at one version: the CLI, the core records and the engines"
+  definition: "part of the system that ships whole at one version: the CLI, the core decision records and the engines"
   pkit:
     friction:
       anchors:
@@ -167,6 +189,7 @@ TERM-base:
         record:
           - COR-054#2
           - COR-054#3
+          - COR-054#5
 TERM-bump-segment:
   name: bump segment
   noun-forms: [bump segments]
@@ -179,6 +202,7 @@ TERM-bump-segment:
           - src/project_kit/changesets.py
         record:
           - PRJ-002#D2
+          - PRJ-002#D1
 TERM-capability:
   name: capability
   noun-forms: [capabilities]
@@ -193,6 +217,19 @@ TERM-capability:
           - COR-017
           - COR-026
           - COR-031
+TERM-capability-catalogue:
+  name: capability catalogue
+  noun-forms: [capability catalogues]
+  status: active
+  definition: "list of the packaged disciplines readable on disk, with nothing fetched: those installed, those authored in the project, and those shipped with the running CLI"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/capabilities.py
+          - src/project_kit/capability_plans.py
+        record:
+          - COR-053#8
 TERM-change:
   name: change
   status: active
@@ -245,10 +282,23 @@ TERM-changeset-guard:
         record:
           - PRJ-002#D1
           - PRJ-002#D4
+TERM-collection-file:
+  name: collection file
+  noun-forms: [collection files]
+  status: active
+  definition: "document whose front matter maps ids to keyed entries, each carrying its own anchors, such as a glossary or a rule set"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+        record:
+          - COR-050#1
+          - COR-051#2
 TERM-completion:
   name: completion
   status: active
-  definition: "state that first install or a transition of the backbone records last, after all else it writes, naming the version it reached"
+  definition: "state that first install or a version transition of the backbone records last, after all else it writes, naming the version it reached"
   pkit:
     friction:
       anchors:
@@ -273,6 +323,7 @@ TERM-component:
           - COR-010
 TERM-component-origin:
   name: component origin
+  noun-forms: [component origins]
   status: active
   definition: "property the manifest records for an installed capability or adapter: shipped by its distribution, authored in the project, or supplied by an external source"
   pkit:
@@ -325,6 +376,8 @@ TERM-consent:
   pkit:
     friction:
       anchors:
+        path:
+          - src/project_kit/project_config.py
         record:
           - COR-048#5
           - COR-059#4
@@ -401,6 +454,7 @@ TERM-decision-record:
           - COR-006
           - COR-025
           - COR-058#1
+          - COR-066#1
 TERM-declared-surface:
   name: declared surface
   status: active
@@ -442,7 +496,7 @@ TERM-deferral-point:
   name: deferral point
   noun-forms: [deferral points]
   status: active
-  definition: "commit that first introduced an answer putting off one anchor's friction, from which the checks measure what the anchor stands on"
+  definition: "commit first introducing an answer putting off one anchor's friction, from which the change check and the whole-repository check measure what the anchor stands on"
   pkit:
     friction:
       anchors:
@@ -452,6 +506,20 @@ TERM-deferral-point:
           - COR-050#4
           - COR-050#9
           - COR-062#6
+TERM-delegate:
+  name: delegate
+  other-senses: [delegate work, delegate to]
+  status: active
+  definition: "AI agent a person names in the backbone configuration, which decides in a person's place the answers no change owes, never one it drafted"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/config_validate.py
+        record:
+          - COR-064#1
+          - COR-064#2
+          - COR-064#3
 TERM-dependency-gate:
   name: dependency gate
   noun-forms: [dependency gates]
@@ -492,6 +560,19 @@ TERM-diagnostic-session:
         record:
           - PRJ-006#1
           - PRJ-006#5
+TERM-dimension:
+  name: dimension
+  noun-forms: [dimensions]
+  status: active
+  definition: "named aspect of what the permission model controls, such as `command-deny`, for which an enforcement declaration states the enforcing layer"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/adapters/claude-code/permission-enforcement.yaml
+          - src/project_kit/permissions.py
+        record:
+          - COR-028#3
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -542,11 +623,37 @@ TERM-environment-block:
           - src/project_kit/report.py
         record:
           - PRJ-008
+TERM-event:
+  name: event
+  noun-forms: [events]
+  status: active
+  definition: "connection point through which a capability signals that one of its writing commands finished, for other components to subscribe to"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/connections.py
+        record:
+          - COR-053#2
+          - COR-053#9
+TERM-excluded-path:
+  name: excluded path
+  noun-forms: [excluded paths]
+  status: active
+  definition: "pattern the backbone configuration lists under `friction.exclude`, whose files count for no anchor and in no measure, and whose artefacts owe no answer"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+        record:
+          - COR-050#7
+          - COR-050#14
 TERM-extension-point:
   name: extension point
   noun-forms: [extension points]
   status: active
-  definition: "named part of a rule that a rule of an inheriting set may fill, at most once along a line of inheritance"
+  definition: "named part of a rule that a rule of an inheriting rule set may fill, at most once along a line of inheritance"
   pkit:
     friction:
       anchors:
@@ -603,7 +710,7 @@ TERM-friction-mode:
   name: friction mode
   noun-forms: [friction modes]
   status: active
-  definition: "setting of the backbone configuration, `warning` by default or `enforcing`, saying whether the change check reports its findings and passes, or fails on them"
+  definition: "backbone configuration setting, `warning` by default or `enforcing`, saying whether the change check only reports its findings or fails on those COR-050 point 12 names"
   pkit:
     friction:
       anchors:
@@ -702,7 +809,7 @@ TERM-inheritance-pin:
 TERM-install:
   name: install
   status: active
-  definition: "operation that adds the backbone or a component to a repository, after checking name collisions"
+  definition: "operation that adds the backbone or a component to a repository, after checking what it would collide with"
   pkit:
     friction:
       anchors:
@@ -760,6 +867,7 @@ TERM-loaded-file:
       anchors:
         path:
           - src/project_kit/loaded_rules.py
+          - src/project_kit/loaded_rule_sets.py
         record:
           - COR-068#3
           - COR-070#1
@@ -774,6 +882,7 @@ TERM-loaded-rule-set:
       anchors:
         path:
           - src/project_kit/loaded_rules.py
+          - src/project_kit/loaded_rule_sets.py
         record:
           - COR-068#1
           - COR-068#2
@@ -801,6 +910,7 @@ TERM-merge-delivery:
       anchors:
         path:
           - src/project_kit/merge.py
+          - .pkit/adapters/claude-code/merge-settings.sh
         record:
           - COR-002
           - COR-059#2
@@ -836,6 +946,20 @@ TERM-migration:
           - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
         record:
           - COR-010
+TERM-namespace:
+  name: namespace
+  noun-forms: [namespaces]
+  status: active
+  definition: "owner's series of decision records, with one folder and prefix and numbered apart from every other, such as `COR`, `PRJ`, `ADR` or a capability's `DEC`"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/decisions.py
+        record:
+          - COR-001
+          - COR-017
+          - COR-025
 TERM-native-deny:
   name: native deny
   noun-forms: [native denies]
@@ -852,14 +976,13 @@ TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
   status: active
-  definition: "instruction every AI agent session loads through the harness's include, from the backbone's file, each installed capability's through the rules index, or the repository's own"
+  definition: "instruction every AI agent session loads through its instruction file, from the backbone's file, each installed capability's through the rules index, or the repository's own"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/rules/core.md
           - .pkit/rule-sets/ops.md
-          - .pkit/adapters/README.md
           - src/project_kit/loaded_rules.py
         record:
           - COR-014
@@ -897,7 +1020,7 @@ TERM-overlay-category:
 TERM-package-metadata:
   name: package metadata
   status: active
-  definition: "file a component ships that declares its version and ranges, and what it adds to the backbone, such as places, types, roles, commands and validators"
+  definition: "file a component ships declaring its version and ranges, and what it adds to the backbone, such as places, artefact types, roles, commands and validators"
   pkit:
     friction:
       anchors:
@@ -908,6 +1031,8 @@ TERM-package-metadata:
           - COR-021
           - COR-053#3
           - COR-056#2
+          - COR-055#3
+          - COR-030
 TERM-passage-for-a-person:
   name: passage for a person
   noun-forms: [passages for a person]
@@ -957,6 +1082,7 @@ TERM-permission-hook:
         path:
           - .pkit/permissions/decide.py
           - src/project_kit/permissions.py
+          - .pkit/adapters/claude-code/permission-hook.py
         record:
           - COR-028#2
           - COR-028#3
@@ -992,7 +1118,7 @@ TERM-placeholder:
   name: placeholder
   noun-forms: [placeholders]
   status: active
-  definition: "marker `<name>` in an agent definition's source, which the deploy replaces in its front matter with the paths the overlay gives that name's overlay category"
+  definition: "marker `<name>` in an agent definition's source, which an adapter replaces in its front matter with the paths the overlay gives that name's overlay category"
   pkit:
     friction:
       anchors:
@@ -1057,6 +1183,18 @@ TERM-process:
           - COR-033
           - COR-044
           - COR-053#2
+TERM-process-definition:
+  name: process definition
+  noun-forms: [process definitions]
+  status: active
+  definition: "file in a capability's `schemas/` folder that declares one course through states, addressed as `<capability>:<id>`"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/process.py
+        record:
+          - COR-033#P2
 TERM-process-subject:
   name: process subject
   noun-forms: [process subjects]
@@ -1098,7 +1236,7 @@ TERM-project:
 TERM-project-owned-content:
   name: project-owned content
   status: active
-  definition: "files the methodology does not own in an installed repository, which sync never removes and the system writes only through writers records name"
+  definition: "files the methodology does not own in an installed repository, which sync never removes and the system writes only through operations records name"
   pkit:
     friction:
       anchors:
@@ -1111,7 +1249,7 @@ TERM-project-owned-content:
 TERM-propagation:
   name: propagation
   status: active
-  definition: "operation that writes the methodology's files into a project verbatim, at the recorded versions or a transition's target, over whatever stands at those paths"
+  definition: "operation writing the methodology's or an externally-sourced component's files into a project verbatim, at recorded versions or a version transition's target, over what stands there"
   pkit:
     friction:
       anchors:
@@ -1121,6 +1259,20 @@ TERM-propagation:
           - COR-001
           - COR-059#2
           - ADR-065#1
+          - COR-041
+TERM-provider:
+  name: provider
+  noun-forms: [providers]
+  status: active
+  definition: "installed capability whose package metadata declares a role, which supplies that role's connection points where it stands alone or the project selects it"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/connections.py
+        record:
+          - COR-053#1
+          - COR-053#7
 TERM-pull-request:
   name: pull request
   noun-forms: [pull requests]
@@ -1269,7 +1421,7 @@ TERM-revalidation-point:
   name: revalidation point
   noun-forms: [revalidation points]
   status: active
-  definition: "commit where an artefact's answers first carried the timestamp `at` they carry now, from which the checks measure what its anchors stand on"
+  definition: "commit first carrying an artefact's answers' current `at`, or else its `friction` block, from which the whole-repository check measures what its anchors stand on"
   pkit:
     friction:
       anchors:
@@ -1277,12 +1429,13 @@ TERM-revalidation-point:
           - src/project_kit/friction_history.py
         record:
           - COR-050#3
+          - COR-050#6
           - COR-062#6
 TERM-reviewer:
   name: reviewer
   noun-forms: [reviewers]
   status: active
-  definition: "AI agent or person, not the author, who reports on a draft or a change within a remit, leaving each fix to the author"
+  definition: "AI agent or person, not the author, who reports on a draft or a change within a remit, and edits neither unless a record allows"
   pkit:
     friction:
       anchors:
@@ -1404,7 +1557,7 @@ TERM-rules-index:
 TERM-sandbox:
   name: sandbox
   status: active
-  definition: "isolation layer of the operating system in which the harness runs shell commands, bounding what they can reach on the file system and network"
+  definition: "isolation layer of the operating system in which the harness runs shell commands, bounding the files and network they can reach"
   pkit:
     friction:
       anchors:
@@ -1426,7 +1579,6 @@ TERM-scratchpad-note:
       anchors:
         path:
           - src/project_kit/scratchpads.py
-          - .pkit/scratchpad/README.md
         record:
           - COR-012
           - COR-043
@@ -1434,7 +1586,7 @@ TERM-seed-path:
   name: seed path
   noun-forms: [seed paths]
   status: active
-  definition: "project-owned location the methodology declares with a template, created from it at first install and at each transition of the backbone where it is missing"
+  definition: "project-owned location the methodology declares with a template, created from it at first install and at each backbone version transition where it is missing"
   pkit:
     friction:
       anchors:
@@ -1447,7 +1599,7 @@ TERM-seed-path:
 TERM-seeding:
   name: seeding
   status: active
-  definition: "operation that creates a declared seed path from its template where the path is missing, at first install and at each backbone transition"
+  definition: "operation that creates a declared seed path from its template where the path is missing, at first install and at each backbone version transition"
   pkit:
     friction:
       anchors:
@@ -1492,8 +1644,7 @@ TERM-skill:
     friction:
       anchors:
         path:
-          - .pkit/skills/README.md
-          - .pkit/adapters/README.md
+          - .pkit/adapters/claude-code/deploy-skills.sh
         record:
           - COR-005
           - COR-006
@@ -1549,6 +1700,17 @@ TERM-support-declaration:
           - .pkit/adapters/claude-code/harness-support.yaml
         record:
           - COR-047#2
+TERM-surface:
+  name: surface
+  other-senses: [uncovered surface, declares its surface, ambiguities surface]
+  status: active
+  definition: "part of the backbone or of a component that an adopter could observe, depend on or break against"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - PRJ-002#D1
+          - PRJ-002#D2
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
@@ -1628,7 +1790,7 @@ TERM-trigger-field:
 TERM-validation:
   name: validation
   status: active
-  definition: "check of a project's own files against the invariants its records own, which installed components join through validators, failing on one severity alone"
+  definition: "check of a project's state against the invariants its records own, which installed components join through validators, failing on one severity alone"
   pkit:
     friction:
       anchors:
@@ -1662,6 +1824,8 @@ TERM-version:
   pkit:
     friction:
       anchors:
+        path:
+          - src/project_kit/versioning.py
         record:
           - COR-010
           - PRJ-002#D2
@@ -1685,7 +1849,7 @@ TERM-version-transition:
   name: version transition
   noun-forms: [version transitions]
   status: active
-  definition: "operation that moves a project's recorded versions to a target, running every pending migration and recording its completion only after they have run"
+  definition: "operation that moves a project's recorded versions to a target, running every pending migration and, for the backbone, recording its completion only after they run"
   pkit:
     friction:
       anchors:
@@ -1763,6 +1927,17 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents, which a commit carries. The agent workspace holds nothing a commit carries.
 - **The harness's working directory:** the checkout's root for the main session, or a worktree's root for an agent working in a worktree. The agent workspace is one folder inside it ([ADR-060 point 3](../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#3-which-checkouts-count)).
 
+## TERM-allowance — allowance
+
+**Example:** `pkit permissions sandbox accommodate uv` applies the `uv` toolkit's narrowing allowance, a write to the tool's cache. `pkit permissions sandbox exclude <command>` applies a widening one.
+
+**Distinctions:**
+
+- **Narrowing allowance:** makes the [sandbox](#term-sandbox--sandbox) usable without enlarging an agent's reach, such as a build cache's write path or a needed socket ([ADR-008 point 3](../../architecture/decisions/ADR-008-confinement-allowances.md#3-narrowing-path--managed-detectable-committable-auto-applied)).
+- **Widening allowance:** lowers the boundary, such as a command carved out of the sandbox. It is never written to a committed file ([ADR-008 point 4](../../architecture/decisions/ADR-008-confinement-allowances.md#4-widening-path--explicit-loud-never-persisted-always-reported)).
+- **Toolkit:** a named bundle of the allowances one tool needs ([ADR-008 point 1](../../architecture/decisions/ADR-008-confinement-allowances.md#1-confinement-toolkits-are-data-new-confinement-toolkit-schema-cor-018)).
+- **Grant:** an entry that decides what a [grant subject](#term-grant-subject--grant-subject) may invoke. An allowance decides what a command run in the sandbox can reach ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
+
 ## TERM-anchor — anchor
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#anchor).
@@ -1789,6 +1964,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live in [answer files](#term-answer-file--answer-file), outside the artefacts.
 - **Answer file:** a file that one change adds and no other change writes ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). It holds the change's answers on each artefact, and names the other answer files on that artefact each answer read.
 - **A command's answer:** what a resolver or a [validator](#term-validator--validator) returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
+- **A reason for having no anchors:** the `unanchored-because` in an artefact's own block ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). [COR-064 point 1](../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides) counts it among the answers no change owes, yet it lies in no change's file, so this term does not fit it.
 - **To answer:** the plain verb, as when a command answers which rules bind on a file, or a person answers a question. It shares only the word.
 
 ## TERM-answer-file — answer file
@@ -1819,7 +1995,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#artefact).
 
-**Example:** each use case of the analysis is an artefact, and so is each entry of this glossary, a collection file. So is each page project-kit lists in `friction.places`, such as `.pkit/cli/README.md`.
+**Example:** each use case of the analysis is an artefact, and so is each entry of this glossary, a [collection file](#term-collection-file--collection-file). So is each page project-kit lists in `friction.places`, such as `.pkit/cli/README.md`.
 
 **Distinctions:**
 
@@ -1904,6 +2080,16 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **Bundle:** a retired kind of package inside an [area](#term-area--area). A capability expresses its alternatives as data instead (COR-027).
 - **Role:** what a capability provides for others to use without naming it, such as documentation ([COR-053 point 1](../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
 
+## TERM-capability-catalogue — capability catalogue
+
+**Example:** A [data point](#term-data-point--data-point) stands unfilled, so `pkit status` suggests a [capability](#term-capability--capability) of the capability catalogue that would fill it, and installs nothing ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+
+**Distinctions:**
+
+- **Capability:** what the catalogue lists. The definition says *packaged disciplines*, since a definition holds no word of its term's name.
+- **Permission catalog:** the data that names each [privilege](#term-privilege--privilege) ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)). It shares only the word.
+- **Manifest:** where a [project](#term-project--project) records what it installed. The catalogue also lists what no [manifest](#term-manifest--manifest) of the project names, such as a capability the running CLI ships.
+
 ## TERM-change — change
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#change).
@@ -1937,7 +2123,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Version:** a branch never edits a [version](#term-version--version) number, and declares its change in a changeset instead ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- **Bump segment:** the changeset's `kind`, one of `patch`, `minor`, `major` and `none`. It is a person's judgement of the change's surface, never read from the commit type ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **Bump segment:** the changeset's `kind`, one of `patch`, `minor`, `major` and `none`. It is a person's judgement of the change's [surface](#term-surface--surface), never read from the commit type ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 
 ## TERM-changeset-guard — changeset guard
 
@@ -1947,9 +2133,18 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 **Distinctions:**
 
-- **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no surface ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no [surface](#term-surface--surface) ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and [range](#term-range--range) edits are still checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - **Cross-repository guard:** a check against writing in another repository. It shares only the word.
+
+## TERM-collection-file — collection file
+
+**Example:** This glossary is a collection file, and each of its terms is a keyed entry. So is a [rule set](#term-rule-set--rule-set), each of whose rules is a keyed entry.
+
+**Distinctions:**
+
+- **Collection entry:** one keyed entry, with the body section headed by its id, if it has one ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). In a [place](#term-place--place), it is an [artefact](#term-artefact--artefact).
+- **Answer file, instruction file and loaded file:** documents of other kinds. They share only the word.
 
 ## TERM-completion — completion
 
@@ -2014,7 +2209,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **Data point, process and event:** the three kinds of connection point ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)):
   - a [data point](#term-data-point--data-point) takes data in
   - a [process](#term-process--process) is offered for others to depend on
-  - an event signals that a writing command finished
+  - an [event](#term-event--event) signals that a writing command finished
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)). It shares only the word.
 - **`extension-points`:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)). A [rule](#term-rule--rule)'s [extension point](#term-extension-point--extension-point) is another thing, which shares only the words ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
 - **Hook:** a named entry point that an [agent definition](#term-agent-definition--agent-definition) needs and a [skill](#term-skill--skill) or a command provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It is no connection point.
@@ -2106,7 +2301,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Surface change:** an alteration an adopter could observe, depend on or break against. It shares only the word ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a [component](#term-component--component)'s surface. They are no declared surface.
+- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a [component](#term-component--component)'s [surface](#term-surface--surface). They are no declared surface.
 - **Uncovered surface:** a measure, which no check fails on ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)).
 
 ## TERM-default-branch — default branch
@@ -2146,6 +2341,16 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **A deferral put back:** a commit that restores a deferral, as a revert does, does not introduce it. The deferral keeps the deferral point of the one it puts back (COR-050 point 4).
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision. It shares only the word ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
 
+## TERM-delegate — delegate
+
+**Example:** A person names an agent under `friction.delegate`. That agent then decides an [answer](#term-answer--answer) another agent drafted for [debt](#term-debt--debt), and the person is told afterwards, as information.
+
+**Distinctions:**
+
+- **To delegate:** the plain verb, as when a [harness](#term-harness--harness) delegates work to an [agent definition](#term-agent-definition--agent-definition), or a session dispatches a delegated agent. It shares only the word.
+- **Who names it:** a person who decides what reaches the [default branch](#term-default-branch--default-branch), on their own word. No agent names one on its own initiative ([COR-064 point 2](../../../.pkit/decisions/core/COR-064-answer-delegate.md#2-named-in-committed-configuration-by-the-person-alone)).
+- **Reviewer:** checks every answer no [change](#term-change--change) owes, whoever decided it, so the delegate's too ([COR-064 point 4](../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)).
+
 ## TERM-dependency-gate — dependency gate
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#dependency-gate).
@@ -2181,6 +2386,15 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 - **Its log:** local and git-ignored, size-capped, with command tails redacted by default ([PRJ-006 point 5](../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#5-mvp-cadence-and-guards)).
 - **A fix:** recommended, never applied by itself ([PRJ-006 point 4](../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#4-the-auto-fix-bright-line-resolved-on-paper-now)).
 
+## TERM-dimension — dimension
+
+**Example:** `command-deny` is a dimension that Claude Code's settings enforce. No layer of that [harness](#term-harness--harness) enforces `network-egress`, so `pkit permissions diff` names it as a gap.
+
+**Distinctions:**
+
+- **Privilege:** a named kind of action that a [grant](#term-grant--grant) allows or denies. A dimension is what a harness enforces of the model, whatever the action (COR-028 points [1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth) and [3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+- **Layer:** where a harness enforces a dimension, such as its settings, the [permission hook](#term-permission-hook--permission-hook) or the [sandbox](#term-sandbox--sandbox) (COR-028 point 3).
+
 ## TERM-distribution — distribution
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#distribution).
@@ -2210,7 +2424,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#enforcement-declaration).
 
-**Example:** Claude Code's enforcement declaration gives `command-deny` the layer `settings`, enforced `native`. `pkit permissions diff` reads it to name each dimension the [harness](#term-harness--harness) cannot enforce.
+**Example:** Claude Code's enforcement declaration gives `command-deny` the layer `settings`, enforced `native`. `pkit permissions diff` reads it to name each [dimension](#term-dimension--dimension) the [harness](#term-harness--harness) cannot enforce.
 
 **Distinctions:**
 
@@ -2228,6 +2442,27 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **The adopter's text:** what the adopter writes. The [system](#term-system--system) checks it for nothing private beyond what it can see, and builds the environment block itself ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **A capability the system does not ship:** counted, never named, unless the adopter asks to name it (PRJ-008).
+
+## TERM-event — event
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#event).
+
+**Example:** A [capability](#term-capability--capability) declares an event under `offers`, naming the writing command that emits it. Another capability subscribes to it, and the first never names the second.
+
+**Distinctions:**
+
+- **Data point and process:** the two other kinds of [connection point](#term-connection-point--connection-point) ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
+- **A process subject's move:** a bare operation of the [backbone](#term-backbone--backbone)'s engine emits no event, but a capability's writing command that wraps the move may emit one (COR-053 point 2).
+
+## TERM-excluded-path — excluded path
+
+**Example:** project-kit lists `CHANGELOG.md` under `friction.exclude`, since the [release step](#term-release-step--release-step) writes it. So no [anchor](#term-anchor--anchor) stands on that file.
+
+**Distinctions:**
+
+- **Seed path:** a project-owned location the [methodology](#term-methodology--methodology) declares with a template. It shares only the word.
+- **Held document:** a file a [component](#term-component--component) declares as its own, which no [place](#term-place--place) reads as an [artefact](#term-artefact--artefact). An artefact under an excluded path stays one, and its own anchors are still checked (COR-050 points [1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts) and [14](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
+- **Exclusion:** a command carved out of the [sandbox](#term-sandbox--sandbox) ([ADR-008 point 4](../../architecture/decisions/ADR-008-confinement-allowances.md#4-widening-path--explicit-loud-never-persisted-always-reported)). It is no excluded path.
 
 ## TERM-extension-point — extension point
 
@@ -2429,7 +2664,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Loaded rule set:** the collection file that a loaded file is generated from, which holds each [rule](#term-rule--rule)'s status and origin as well ([COR-068 point 3](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **Loaded rule set:** the [collection file](#term-collection-file--collection-file) that a loaded file is generated from, which holds each [rule](#term-rule--rule)'s status and origin as well ([COR-068 point 3](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
 - **A project's plain file of rules:** a [project](#term-project--project)'s [operational rules](#term-operational-rule--operational-rule) kept in a file of their own, generated from no set. It is loaded as it stands ([COR-068 point 7](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
 - **Rules index:** the generated file that lists each installed [capability](#term-capability--capability)'s loaded file, and holds no rule of its own ([ADR-076 point 2](../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)).
 
@@ -2505,6 +2740,15 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 - **Sync:** the operation that rewrites a project's [synced copies](#term-synced-copy--synced-copy) at its [recorded versions](#term-recorded-version--recorded-version). It runs no migration. A migration changes what sync cannot derive, such as a project's own settings ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
 - **The migration check:** `pkit migrations check-diff`, which finds the renames and removals of a [change](#term-change--change) that no migration covers. It runs no migration.
+
+## TERM-namespace — namespace
+
+**Example:** `pkit new decision adr <slug>` stamps the next [decision record](#term-decision-record--decision-record) of the `adr` namespace, one past the highest number its folder holds.
+
+**Distinctions:**
+
+- **The namespace a command names:** `core`, `project`, `adr`, or the name of a [capability](#term-capability--capability) the [project](#term-project--project) authors.
+- **A capability's namespace:** DEC, cited with the capability's name, as in `software-analysis:DEC-001` ([COR-017](../../../.pkit/decisions/core/COR-017-capability-pattern.md)). So two capabilities may hold one number.
 
 ## TERM-native-deny — native deny
 
@@ -2586,7 +2830,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 - **Grant:** allows or denies a [privilege](#term-privilege--privilege) the permission catalog names. A [grant](#term-grant--grant) is no part of it ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
 - **A capability's fragment:** the file of privileges a [capability](#term-capability--capability) ships in its own `permissions/` folder. Its ids open with the capability's name, and it marks no privilege a [guardrail](#term-guardrail--guardrail) (ADR-021 points [2](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#2-additive-only-and-collision-rejecting--the-catalog-is-a-map-so-the-merge-rule-is-load-bearing) and [3](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
-- **A catalogue of capabilities:** a list of the capabilities a [project](#term-project--project) may [install](#term-install--install), which a suggestion of what to install reads ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)). It shares only the word.
+- **Capability catalogue:** a list of the capabilities a [project](#term-project--project) may [install](#term-install--install), which a suggestion of what to install reads ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)). It shares only the word.
 
 ## TERM-permission-code — permission code
 
@@ -2663,6 +2907,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Extension point:** a part of a [rule](#term-rule--rule) that an inheriting [rule set](#term-rule-set--rule-set) may fill ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)). It shares only the word.
 - **Entry point:** what a hook names, which an [agent definition](#term-agent-definition--agent-definition) needs and a [skill](#term-skill--skill) or a command provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It shares only the word.
 - **Connection point:** a [component](#term-component--component)'s declared interface under a [role](#term-role--role) ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)). It shares only the word.
+- **Observation point:** where a [harness requirement](#term-harness-requirement--harness-requirement) is observed ([COR-047 point 4](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed)). It shares only the word.
 - **To point at:** to lead to something, as a tag points at a commit. It shares only the word.
 
 ## TERM-posture — posture
@@ -2700,6 +2945,16 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **State machine:** the [backbone](#term-backbone--backbone)'s shape that each process binds to, which holds no discipline of its own ([COR-033 P1](../../../.pkit/decisions/core/COR-033-process-substrate.md#p1--vocabulary-one-substrate-two-altitudes)).
 - **Process connection point:** the kind of [connection point](#term-connection-point--connection-point) through which a capability offers its process for other [components](#term-component--component) to depend on ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
 - **Operating-system process:** a running program, such as the one a command starts. It shares only the word.
+
+## TERM-process-definition — process definition
+
+**Example:** project-management's `schemas/workflow.yaml` declares the `issue-lifecycle` course, addressed as `project-management:issue-lifecycle`.
+
+**Distinctions:**
+
+- **Process:** the course itself, which the [backbone](#term-backbone--backbone)'s engine checks. The definition is the file that declares it ([COR-033 P2](../../../.pkit/decisions/core/COR-033-process-substrate.md#p2--ownership)).
+- **Process subject:** a thing the course moves. It shares only the word.
+- **Agent definition:** a document setting a standing remit. It shares only the word.
 
 ## TERM-process-subject — process subject
 
@@ -2766,6 +3021,17 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Synced copy:** a file that propagation writes into a project.
 - **Sync:** runs propagation at the [recorded versions](#term-recorded-version--recorded-version). [Sync](#term-sync--sync) also regenerates the deployed copies, and runs [merge delivery](#term-merge-delivery--merge-delivery)'s tier that asks nothing ([COR-059 point 2](../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none)).
 - **Seeding:** creates a missing project-owned file once, and never writes over one that exists ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)).
+
+## TERM-provider — provider
+
+**Example:** living-docs provides the documentation [role](#term-role--role). So it is the role's active provider where no other installed [capability](#term-capability--capability) provides that role.
+
+**Distinctions:**
+
+- **Active provider:** the provider that supplies the role's [connection points](#term-connection-point--connection-point), the only one installed or the one the [project](#term-project--project) selects ([COR-053 point 7](../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)). Another provider's [connections](#term-connection--connection) under that role are inert ([COR-053 point 1](../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
+- **A role with no provider:** a role no provider supplies. No installed capability provides it, or several do and the project has selected none (COR-053 point 1).
+- **Publisher:** who coined a role's name. That says nothing of which capability provides the role (COR-053 point 1).
+- **Contributor:** a capability that fills a [data point](#term-data-point--data-point), and defines none (COR-053 point 7).
 
 ## TERM-pull-request — pull request
 
@@ -3008,7 +3274,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 **Distinctions:**
 
-- **Rule set:** the collection file that holds rules, each an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
+- **Rule set:** the [collection file](#term-collection-file--collection-file) that holds rules, each an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
 - **Operational rule:** an instruction every AI agent session loads. In a loaded set, it is a rule, with an id, an origin and a status. It binds on what a session does, never on an artefact ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Decision record:** chooses among alternatives and says why. A rule says what must hold, and its origin may cite the record ([COR-051 point 5](../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 - **Core rule and project rule:** an [operational rule](#term-operational-rule--operational-rule) of the [backbone](#term-backbone--backbone)'s [loaded rule set](#term-loaded-rule-set--loaded-rule-set) `OPS`, and one of the [project](#term-project--project)'s own file. A project rule is a rule only once a loaded rule set holds it (COR-068).
@@ -3018,7 +3284,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#rule-set).
 
-**Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@1`.
+**Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@2`.
 
 **Distinctions:**
 
@@ -3051,7 +3317,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 - **Grant:** an entry that decides what a [grant subject](#term-grant-subject--grant-subject) may invoke. It spares a prompt, and confines nothing ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
 - **Per-agent confinement:** none exists. The agents of a session share one sandbox, so no agent is confined apart from another ([ADR-004 point 5](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#5-no-per-agent-confinement)).
 - **Exclusion:** a command carved out of the sandbox, which then runs unconfined ([ADR-008 point 4](../../architecture/decisions/ADR-008-confinement-allowances.md#4-widening-path--explicit-loud-never-persisted-always-reported)).
-- **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of what its [harness](#term-harness--harness) enforces. A dimension the harness cannot enforce is reported as a gap to close outside it, such as at the operating system ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+- **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of what its [harness](#term-harness--harness) enforces. A [dimension](#term-dimension--dimension) the harness cannot enforce is reported as a gap to close outside it, such as at the operating system ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 
 ## TERM-scratchpad-note — scratchpad note
 
@@ -3169,9 +3435,21 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 **Distinctions:**
 
-- **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of which layer enforces each dimension of the [permission model](#term-permission-model--permission-model) ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+- **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of which layer enforces each [dimension](#term-dimension--dimension) of the [permission model](#term-permission-model--permission-model) ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 - **Silence:** a [harness requirement](#term-harness-requirement--harness-requirement) the support declaration leaves out reads as indeterminate, never as met ([COR-047 point 3](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
 - **Its harness version bound:** never widened automatically, only by an author who tested the claim ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
+
+## TERM-surface — surface
+
+**Example:** A subcommand of `pkit` is surface. So a [change](#term-change--change) that adds one moves the surface of the [backbone](#term-backbone--backbone), and its [changeset](#term-changeset--changeset) declares `minor`.
+
+**Distinctions:**
+
+- **Surface change:** an alteration of the surface, which a change declares in a changeset ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
+- **Declared surface:** the paths a [component](#term-component--component) or the [project](#term-project--project) names as what descriptions ought to cover ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)). It shares only the word. A passage that says a component declares its surface, or that speaks of uncovered surface, means these paths.
+- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a component's surface. An edit to one only suggests a [surface change](#term-surface-change--surface-change) ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **The surface check:** the changeset guard's check that a change names each component it touches. The `skip-changeset` label skips it, and leaves floors, bounds and [range](#term-range--range) edits checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **To surface:** the plain verb, as when ambiguities surface in a draft. It shares only the word.
 
 ## TERM-surface-change — surface change
 
@@ -3181,7 +3459,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 **Distinctions:**
 
-- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a [component](#term-component--component)'s surface. An edit to one only suggests a surface change, and a person judges it ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a [component](#term-component--component)'s [surface](#term-surface--surface). An edit to one only suggests a surface change, and a person judges it ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - **Declared surface:** the paths a [project](#term-project--project) or a component says its descriptions ought to cover. Those no [artefact](#term-artefact--artefact) anchors are reported as uncovered ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)).
 
 ## TERM-sync — sync

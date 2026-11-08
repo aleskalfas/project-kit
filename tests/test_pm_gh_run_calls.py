@@ -31,7 +31,10 @@ BUGGY_CALL = re.compile(
 
 
 def _python_files_under(root: Path) -> list[Path]:
-    return [p for p in root.rglob("*.py") if "__pycache__" not in p.parts]
+    """The scripts under `root`, sorted: a folder lists its files in an order that
+    differs between machines, and the suite must collect its tests in one order on
+    every machine (#2668)."""
+    return sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts)
 
 
 @pytest.mark.parametrize("script_path", _python_files_under(SCRIPTS_DIR), ids=lambda p: p.name)

@@ -1,0 +1,211 @@
+answers:
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:37:10Z
+      outcome: updated
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T214030Z-7cd17739.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:37:15Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-044-write-page.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-04T11:37:20Z
+      outcome: updated
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:37:41Z
+      outcome: unchanged
+      unchanged-because: The page cites the validation reference's 'What it reports' only for the summary's counts of pages left unanchored and accepted unanchored. Those counts are unchanged; the section gains a bullet on links and citations read, which agent.md does not state.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:37:46Z
+      outcome: unchanged
+      unchanged-because: formats.py gains only a copy of the backbone's heading-slug rule, and spaces.py adds warnings and a summary line. What the page states of a page's fields, a kind's format, types, sources and callouts, and that a summary anchors its home's section, still holds.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:37:51Z
+      outcome: unchanged
+      unchanged-because: The change adds warnings and summary lines to validation, never declared under LDOC's checks. What the page states of declaring the spaces, the definitions' scopes, the shared method's rules and the parts validation settles still holds.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:40:00Z
+      outcome: unchanged
+      unchanged-because: The guide says validation checks a page's reader and sections and reports what a page names without anchoring; both still hold. UC-044 and the reference sections it cites gain only warnings, which fail nothing, and its console example's mention listing is unchanged.
+  - artefact: docs/capabilities/living-docs/010-set-up-your-spaces.md
+    read:
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+    revalidated:
+      at: 2026-11-04T11:38:00Z
+      outcome: unchanged
+      unchanged-because: "Its fences run on a fresh project with no link or citation to warn of, so the summary's last line still reads '0 error(s), 3 report(s).': the line names warnings only where there are any. The steps it gives still hold."
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+    revalidated:
+      at: 2026-11-04T11:38:05Z
+      outcome: unchanged
+      unchanged-because: Onboarding's counts, the unclassified documents and the pages left unanchored, are read and printed as before. The warnings this change adds fail nothing, so running validation until it reports no error still ends where the guide says.
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    read:
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-04T11:39:55Z
+      outcome: unchanged
+      unchanged-because: Its example names a file it does not anchor and no link or citation, so its listing is unchanged. UC-044 gains a variant warning of an unanchored link or citation; the guide's steps, its one-home rule and its mark still hold, and the warning fails nothing.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-documentation-space
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-04T11:38:15Z
+      outcome: unchanged
+      unchanged-because: spaces.py changes only by adding warnings and a summary line on links and citations. How a place gives a document its space, and what a space is, are read and decided as before.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-onboarding
+    revalidated:
+      at: 2026-11-04T11:38:20Z
+      outcome: unchanged
+      unchanged-because: validate.py only widens the severity column and names the warnings in its docstring. Onboarding still ends once validation counts no unclassified document and no page left unanchored without an accepted reason.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-unclassified-document
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-04T11:38:25Z
+      outcome: unchanged
+      unchanged-because: spaces.py classifies documents as before; it only adds warnings of a page's links and citations. What makes a document unclassified, and that it is counted for onboarding and never failed, still holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-024-checks-where-rule-binds.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-04T11:38:29Z
+      outcome: unchanged
+      unchanged-because: The reader, structure and diagram checks still run only where their rules bind. The new warnings are no declared check, and are read only where RS-LDOC-001 binds, a link only where the rule on one home binds too, so the statement and measure hold.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-014-adopt-on-documented-project.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-04T11:38:34Z
+      outcome: unchanged
+      unchanged-because: "The journey's steps on setting up spaces and onboarding the documents are unchanged by this change: validation adds warnings on links and citations, which fail nothing, and every count it relies on reads as before."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-043-set-up-space.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-04T11:38:39Z
+      outcome: unchanged
+      unchanged-because: The stamp's before-and-after check compares errors only, so a warning neither refuses a write nor is listed as a page the rules fail. Setting up a space, and its validation run, go as the use case says.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-04T11:38:45Z
+      outcome: unchanged
+      unchanged-because: Validation still lists the unclassified documents and the pages left unanchored, which onboarding works from. The warnings on links and citations it now adds fail nothing and change no count the use case relies on.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-015-publish-page-for-reader.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-04T11:40:05Z
+      outcome: unchanged
+      unchanged-because: "UC-044 gains a variant in which validation warns of an unanchored link or citation, failing nothing. The hand-off still holds: no check settles whether the anchors ground the page's statements, so the reader-review judges that grounding."

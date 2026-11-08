@@ -70,6 +70,8 @@ friction:
     - {path: .pkit/adapters/README.md, type: living-docs:page}
     - {path: .pkit/adapters/claude-code/README.md, type: living-docs:page}
     - {path: .pkit/agents/README.md, type: living-docs:page}
+    - {path: .pkit/agents/hooks.md, type: living-docs:page}
+    - {path: .pkit/agents/storyboards.md, type: living-docs:page}
     - {path: .pkit/capabilities/demo-recording/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/doc-examples/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/evidence/README.md, type: living-docs:page}
@@ -86,6 +88,7 @@ friction:
     - {path: .pkit/capabilities/visual-communication/components.md, type: living-docs:page}
     - {path: .pkit/capabilities/visual-communication/outputs.md, type: living-docs:page}
     - {path: .pkit/capabilities/visual-communication/checks.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/libraries/starter/README.md, type: living-docs:page}
     - {path: .pkit/cli/README.md, type: living-docs:page}
     - {path: .pkit/decisions/README.md, type: living-docs:page}
     - {path: .pkit/lifecycle/README.md, type: living-docs:page}

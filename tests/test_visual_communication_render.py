@@ -19,20 +19,29 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
     BLOCKS,
+    CONFLICTED,
     LONG,
     NET,
     PATTERNS,
+    PHONE,
+    PHONE_WIDE,
     PIECE,
     PIECE_FOLDER,
     ROW,
     TESTS,
     drawing_project,
+    exported_up_to,
+    filled,
     lab_lock,
     lab_project,
+    list_drawing_libraries,
+    on_devices,
+    stamped,
+    today,
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, importable, write_list
+from tests.visual_communication_project import CONFIG, importable, write, write_list
 from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl, checks, libraries = load(
@@ -51,6 +60,7 @@ script, svg, seam, framing, files, reading, pl, checks, libraries = load(
 PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
 TESTS_FOLDER = "visual/libraries/tests/1.0.0"
+BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
 LOCATION = (
     f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
     f"to move the work, move the folder and change the `location:` line there"
@@ -70,6 +80,10 @@ def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 def run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return run_main(script, *args, cwd=root)
+
+
+def findings_of(root: Path) -> str:
+    return (root / FINDINGS).read_text(encoding="utf-8")
 
 
 def previews(root: Path) -> dict[str, str]:
@@ -130,7 +144,7 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
     drawn = previews(root)
     assert sorted(drawn) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
     light = drawn["flow.en.default.svg"]
-    assert 'data-key="default"' in light and 'data-renderer="svg 1.0.1"' in light
+    assert 'data-key="default"' in light and 'data-renderer="svg 1.1.0"' in light
     assert '<image data-id="figure/body/steps[note]/pictures[square]/image"' in light
     assert ">Here</tspan>" in light and ">The flow.</tspan>" in light
     assert '@font-face{font-family:"Source Sans Pro"' in light
@@ -148,7 +162,8 @@ def test_the_figure_grows_with_its_steps_texts_and_nothing_overflows(tmp_path: P
         write_picture(root, framing)
         assert run(root, PIECE).returncode == 0
         piece = pl.read_piece(root, "visual", PIECE)
-        [(_, result)] = pl.Project(piece, piece.lock, pl.Held(root, "visual")).scenes()
+        project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+        [(_, result)] = project.scenes(facts=piece.stand_ins)
         return height(previews(root)["flow.en.default.svg"]), result
 
     short, _ = drawn("short", "Plan.")
@@ -158,6 +173,35 @@ def test_the_figure_grows_with_its_steps_texts_and_nothing_overflows(tmp_path: P
     for element in _texts(result.scene.to_dict()):
         assert not element.get("overflow"), element["id"]
         assert element["measured-height"] <= element["height"], element["id"]
+
+
+def test_a_piece_on_a_size_axis_has_a_preview_for_each_key_and_keeps_a_findings_size(
+    tmp_path: Path,
+) -> None:
+    modes = {"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    root = on_devices(tmp_path, head=PHONE_WIDE, modes=modes)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    drawn = previews(root)
+    dark = "colour-scheme.dark"
+    widths = {name: width(text) for name, text in drawn.items()}
+    assert widths == {
+        "flow.en.default.svg": 960.0,
+        f"flow.en.{dark}.svg": 960.0,
+        f"flow.en.{PHONE}.svg": 480.0,
+        f"flow.en.{dark}+{PHONE}.svg": 480.0,
+    }
+    head = "figure/body/steps[plan]/head"
+    [said] = [line for line in shown.stdout.splitlines() if line.startswith("fails: ")]
+    assert said.startswith(f"fails: {PIECE_FOLDER}/content.en.yaml#{head}: `{PHONE}`: {head}: ")
+    [kept] = [f for f in reading.read_yaml(root / FINDINGS)["findings"] if f["level"] == "fails"]
+    assert (kept["code"], kept["message"]) == ("text-overflow", said.split(f"#{head}: ", 1)[1])
+
+
+def width(svg_text: str) -> float:
+    found = re.match(r'<svg [^>]*width="([0-9.]+)"', svg_text)
+    assert found is not None
+    return float(found.group(1))
 
 
 def _texts(element: dict[str, Any]) -> Iterator[dict[str, Any]]:
@@ -170,8 +214,8 @@ def _texts(element: dict[str, Any]) -> Iterator[dict[str, Any]]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
-def newer_tests(root: Path) -> None:
-    """The `tests` library at 1.1.0 too, listed."""
+def newer_tests(root: Path, *, released: bool = False) -> None:
+    """The `tests` library at 1.1.0 too, every version listed as `released` says."""
     folder = root / "visual" / "libraries" / "tests" / "1.1.0"
     shutil.copytree(TESTS, folder)
     library = folder / "library.yaml"
@@ -179,18 +223,7 @@ def newer_tests(root: Path) -> None:
         library.read_text(encoding="utf-8").replace("version: 1.0.0", "version: 1.1.0"),
         encoding="utf-8",
     )
-    unreleased = {"released": False}
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
-            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
-            "tests": {
-                "source": {"kind": "project"},
-                "versions": {"1.0.0": unreleased, "1.1.0": unreleased},
-            },
-        },
-    )
+    list_drawing_libraries(root, released=released)
 
 
 def test_a_drafts_lock_moves_to_the_newest_in_its_major_keeping_every_other_byte(
@@ -216,6 +249,71 @@ def test_a_pinned_pieces_lock_stays(tmp_path: Path) -> None:
     assert shown.returncode == 0, shown.stderr
     assert "lock:" not in shown.stdout
     assert (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        pytest.param({"state": "final"}, id="final"),
+        pytest.param({"state": "final", "pinned": True}, id="final-pinned"),
+        pytest.param({"state": "published"}, id="published"),
+        pytest.param({"state": "published", "pinned": False}, id="published-not-pinned"),
+    ],
+)
+def test_no_render_moves_a_final_or_a_published_lock_with_a_newer_version_held(
+    tmp_path: Path, fields: dict[str, Any]
+) -> None:
+    root = drawing_project(tmp_path, **fields)
+    newer_tests(root)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "lock:" not in shown.stdout
+    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+
+
+@pytest.mark.parametrize("state", ["final", "published"])
+def test_a_final_or_a_published_lock_that_cannot_be_drawn_refuses_and_says_the_state(
+    tmp_path: Path, state: str
+) -> None:
+    lock = {"foundations": "1.0.0", "test-brand": "2.0.0", "tests": "1.0.0"}
+    root = drawing_project(tmp_path, state=state, lock=lock)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == (
+        f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
+        f"lock: the lock names test-brand@2.0.0, which the project does not hold: "
+        f"restore it\n"
+    )
+    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+    assert not (root / CONFIG).exists()
+    assert not (root / FINDINGS).exists()
+
+
+@pytest.mark.parametrize(
+    ("state", "fix"),
+    [
+        pytest.param(
+            "final",
+            "write back the lock of the version handed out, which is no move of it",
+            id="final",
+        ),
+        pytest.param("published", "set it back to a draft for its first render", id="published"),
+    ],
+)
+def test_a_final_or_a_published_piece_with_no_lock_is_refused_and_told_of_no_pin(
+    tmp_path: Path, state: str, fix: str
+) -> None:
+    root = drawing_project(tmp_path, state=state, lock=None)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
+        f"lock: {fix}\n"
+    )
+    assert not (root / FINDINGS).exists()
 
 
 # --- findings, losses and refusals --------------------------------------------------------------
@@ -274,7 +372,7 @@ def test_the_previews_of_before_are_replaced(tmp_path: Path) -> None:
     [
         pytest.param(
             {"lock": {"foundations": "1.0.0", "test-brand": "2.0.0", "tests": "1.0.0"}},
-            "visual/pieces/flow/piece.yaml: the pinned lock names test-brand@2.0.0, which the "
+            "visual/pieces/flow/piece.yaml: the lock names test-brand@2.0.0, which the "
             "project does not hold",
             id="brand-not-held",
         ),
@@ -369,6 +467,18 @@ def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path
     )
     assert "unknown-component" not in [e["code"] for e in kept]
     assert str(tmp_path) not in entry["message"]
+
+
+def test_a_font_file_that_cannot_be_read_refuses_the_render_naming_it(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    (root / BRAND_FONT).write_bytes(b"not a font")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert (
+        f"the render of `{PIECE}` is refused before anything is laid out: "
+        f"the font file {root / BRAND_FONT} cannot be read: "
+    ) in shown.stderr
+    assert not (root / PREVIEWS).exists()
 
 
 # --- what a failed render leaves ----------------------------------------------------------------
@@ -593,6 +703,71 @@ def test_past_its_bound_of_combinations_judged_the_render_keeps_the_lock_and_say
     assert locked(root) == lab_lock("1.0.0", "1.0.0")
 
 
+def proposed(root: Path, **given: Any) -> Any:
+    """The move proposed for the piece, every version the list names marked released."""
+    listed = reading.read_yaml(root / "visual" / "libraries" / "libraries.yaml")["libraries"]
+    for library in listed.values():
+        library["versions"] = {version: {"released": True} for version in library["versions"]}
+    write_list(root, listed)
+    piece = pl.read_piece(root, "visual", PIECE)
+    held = libraries.Held(root, "visual")
+    return libraries.propose_lock(
+        held, pl.needed(piece), piece.lock, judge=pl.fit(piece, held), **given
+    )
+
+
+#: What a draft's render says under a version that clashes, and that loses an end.
+CLASH = (
+    f"the item `body.items[a]` carries `size`, which both its component `{BLOCKS}/sized` and "
+    "its list declare"
+)
+LOST = [f"the end `{end}` of the tie `body.links[ab]` would not be found" for end in ("from", "to")]
+
+
+def clashing(tmp_path: Path) -> Path:
+    """A lab piece under a lock a newer version of the patterns would clash with."""
+    lock = lab_lock("1.0.0", "1.0.0")
+    return lab_project(
+        tmp_path, ROW, lock, {"1.0.0": False}, {"1.0.0": {}, "1.1.0": {"size": True}}
+    )
+
+
+def losing(tmp_path: Path) -> Path:
+    """A lab piece under a lock a newer version of the blocks would lose an end under."""
+    lock = lab_lock("1.0.0", "1.0.0")
+    blocks = {"1.0.0": False, "1.1.0": True}
+    return lab_project(tmp_path, NET, lock, blocks, {"1.0.0": {"frame": True}})
+
+
+def test_a_move_holds_back_a_clash_and_a_lost_end_in_the_words_a_render_uses(
+    tmp_path: Path,
+) -> None:
+    clash = proposed(clashing(tmp_path / "clash"))
+    lost = proposed(losing(tmp_path / "loss"))
+
+    assert clash.lock == lost.lock == lab_lock("1.0.0", "1.0.0")
+    [held_clash], [held_end] = clash.held_back, lost.held_back
+    assert held_clash.label == f"{PATTERNS}@1.1.0"
+    assert [(reason.rule, reason.said) for reason in held_clash.reasons] == [("clash", CLASH)]
+    assert held_end.label == f"{BLOCKS}@1.1.0"
+    assert [(reason.rule, reason.said) for reason in held_end.reasons] == [
+        ("end", said) for said in LOST
+    ]
+
+
+def test_a_name_goes_past_a_clash_and_a_lost_end_and_the_check_still_finds_them(
+    tmp_path: Path,
+) -> None:
+    clash = proposed(clashing(tmp_path / "clash"), names=[f"{PATTERNS}@1.1.0"])
+    lost = proposed(losing(tmp_path / "loss"), names=[f"{BLOCKS}@1.1.0"])
+
+    assert clash.lock == lab_lock("1.0.0", "1.1.0")
+    assert lost.lock == lab_lock("1.1.0", "1.0.0")
+    assert (clash.held_back, lost.held_back) == ((), ())
+    assert [(misfit.rule, misfit.said) for misfit in clash.past] == [("clash", CLASH)]
+    assert [(misfit.rule, misfit.said) for misfit in lost.past] == [("end", said) for said in LOST]
+
+
 def test_a_pinned_lock_moved_by_hand_to_such_versions_shows_the_item_and_the_tie(
     tmp_path: Path,
 ) -> None:
@@ -621,3 +796,207 @@ def test_a_pinned_lock_moved_by_hand_to_such_versions_shows_the_item_and_the_tie
     report = checks.check(clashing, only=PIECE)
     assert [f.where for f, _ in report.judged if f.code == "item-clash"] == ["lock"]
     assert "the end `cards[a]` is drawn 2 times below `figure/body`" in lost.stdout
+
+
+# --- the facts of an export ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("shows", ["number", "date", "narrow"])
+def test_two_clones_with_different_exports_keep_the_same_findings(
+    tmp_path: Path, shows: str
+) -> None:
+    """A render reads what no file holds from the stand-ins, so what either clone holds
+    locally, and the day it runs, change nothing the record keeps (DEC-016 point 5). Their
+    previews each show the clone's own next number."""
+    roots = [drawing_project(tmp_path / clone, picture=False) for clone in ("one", "two")]
+    for root in roots:
+        write_content(root, body={"use": "tests/stamp", "shows": shows})
+    exported_up_to(roots[1], 41)
+    for root in roots:
+        assert run(root, PIECE).returncode == 0
+    assert findings_of(roots[0]) == findings_of(roots[1])
+    assert ("text-overflow" in findings_of(roots[0])) == (shows == "narrow")
+    shown = [previews(root)["flow.en.colour-scheme.dark.svg"] for root in roots]
+    assert not any(STAND_INS[shows] in drawn for drawn in shown)
+    if shows != "date":
+        assert ">v1<" in shown[0] and ">v42<" in shown[1]
+
+
+#: The text each fact a stamp shows takes as its stand-in.
+STAND_INS = {"number": "v88", "narrow": "v88", "date": "2088-08-28"}
+
+
+@pytest.mark.parametrize(("shows", "part"), [("number", "number"), ("date", "date")])
+def test_a_preview_fills_this_clones_next_number_and_the_date_of_the_run(
+    tmp_path: Path, shows: str, part: str
+) -> None:
+    root = stamped(tmp_path, shows=shows)
+    exported_up_to(root, 41)
+    before = today()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    texts = {before, today()} if shows == "date" else {"v42"}
+    drawn = previews(root)["flow.en.default.svg"]
+    assert any(f">{text}<" in drawn for text in texts)
+    assert "preview: " not in shown.stdout
+
+
+def test_a_preview_on_a_record_of_exports_that_conflicts_takes_the_stand_ins_and_says_so(
+    tmp_path: Path,
+) -> None:
+    root = stamped(tmp_path, shows="number")
+    write(root / PIECE_FOLDER / "exports.yaml", CONFLICTED)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = [line for line in shown.stdout.splitlines() if line.startswith("preview: ")]
+    assert len(said) == 1
+    assert said[0].startswith(f"preview: no next number can be read ({PIECE_FOLDER}/exports.yaml: ")
+    assert said[0].endswith("), so a stand-in shows: `version` at `figure/body/number`")
+    assert ">v88<" in previews(root)["flow.en.default.svg"]
+
+
+#: A component of the piece's own that shows a version's number in a width the stand-in
+#: fits, and a number of ten digits does not.
+NUMBER = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A version's number, in a width for a number of a few digits.
+
+parts:
+  number:
+    text: {fact: version, style: type.body, fill: text-primary}
+    width: "=@space.3 * 3"
+
+preferred:
+  height: "=@space.4 * 2"
+"""
+
+
+def test_a_real_text_that_overflows_in_a_preview_is_said_and_no_record_keeps_it(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    write(root / PIECE_FOLDER / "components" / "number.yaml", NUMBER)
+    write_content(root, body={"use": "piece/number"})
+    exported_up_to(root, 1_000_000_000)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = [line for line in shown.stdout.splitlines() if line.startswith("preview: ")]
+    assert said, shown.stdout
+    assert all("text-overflow" not in line for line in said)
+    assert said[0].startswith(f"preview: fails: {PIECE_FOLDER}/components/number.yaml")
+    assert "figure/body/number: a word of fact:version in `piece/number` is wider" in said[0]
+    assert "text-overflow" not in findings_of(root)
+    assert "wider" not in "".join(
+        line for line in shown.stdout.splitlines() if not line.startswith("preview: ")
+    )
+
+
+@pytest.mark.parametrize(
+    ("shows", "state", "computed"),
+    [
+        ("number", "draft", 2),
+        ("date", "published", 2),
+        ("files", "draft", 1),
+        ("number", "final", 1),
+    ],
+)
+def test_a_piece_that_shows_a_number_or_a_date_is_computed_twice_and_any_other_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shows: str, state: str, computed: int
+) -> None:
+    """The findings come from scenes with the stand-ins, and only a preview that fills
+    other text computes them again (DEC-016 point 5). A final piece's takes the stand-ins."""
+    root = stamped(tmp_path, shows=shows, state=state)
+    taken = filled(monkeypatch, pl)
+    assert run(root, PIECE).returncode == 0
+    stand_ins = pl.read_piece_file(root, "visual", PIECE).stand_ins
+    assert len(taken) == computed
+    assert taken[0] == stand_ins
+    assert all(facts != stand_ins for facts in taken[1:])
+
+
+# --- a final piece ------------------------------------------------------------------------------
+
+
+def handed_out_field(root: Path) -> None:
+    """A record of exports that names a version handed out."""
+    write(
+        root / PIECE_FOLDER / "exports.yaml",
+        "pkit_schema: visual-communication:exports\nschema_version: 1\nversions: []\n"
+        "handed-out: 1\n",
+    )
+
+
+@pytest.mark.parametrize("by", ["state", "field"])
+def test_a_final_pieces_render_draws_its_previews_and_keeps_no_findings_record(
+    tmp_path: Path, by: str
+) -> None:
+    root = drawing_project(tmp_path, state="final" if by == "state" else "draft")
+    if by == "field":
+        handed_out_field(root)
+    newer_tests(root, released=True)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+    assert "lock:" not in shown.stdout
+    assert not (root / FINDINGS).exists()
+    assert sorted(path.name for path in (root / PREVIEWS).iterdir()) == [
+        "flow.en.colour-scheme.dark.svg",
+        "flow.en.default.svg",
+    ]
+    assert shown.stdout.splitlines()[-1].startswith("findings: ")
+    assert " kept in no record: `flow` is final (its " in shown.stdout
+
+
+def test_a_final_pieces_render_prints_what_it_finds(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, state="final", picture=False)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "its library may still change it in any release" in shown.stdout
+    assert not (root / FINDINGS).exists()
+
+
+def test_a_findings_record_left_from_before_stays(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    record = (root / FINDINGS).read_bytes()
+    edit = root / PIECE_FOLDER / "piece.yaml"
+    edit.write_text(edit.read_text(encoding="utf-8").replace("state: draft", "state: final"))
+    assert run(root, PIECE).returncode == 0
+    assert (root / FINDINGS).read_bytes() == record
+
+
+@pytest.mark.parametrize(("shows", "word"), [("number", "version"), ("date", "date")])
+def test_a_final_pieces_preview_takes_the_stand_ins_and_says_so(
+    tmp_path: Path, shows: str, word: str
+) -> None:
+    root = stamped(tmp_path, shows=shows, state="final")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = [line for line in shown.stdout.splitlines() if line.startswith("preview: ")]
+    assert len(said) == 1
+    assert said[0].startswith("preview: a final piece has no next export, so a stand-in shows: `")
+    assert word in said[0]
+
+
+def test_a_final_piece_that_shows_no_fact_says_nothing_of_a_stand_in(tmp_path: Path) -> None:
+    root = stamped(tmp_path, shows="files", state="final")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "stand-in" not in shown.stdout
+
+
+def test_a_failed_render_of_a_final_piece_leaves_its_previews_as_they_were(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = drawing_project(tmp_path, state="final")
+    assert run(root, PIECE).returncode == 0
+    before = {path.name: path.read_bytes() for path in (root / PREVIEWS).iterdir()}
+    failing(monkeypatch, write=["flow.en.default.svg"])
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert FULL in shown.stderr
+    assert {path.name: path.read_bytes() for path in (root / PREVIEWS).iterdir()} == before

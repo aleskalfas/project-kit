@@ -14,6 +14,15 @@ point reaches (`History.ancestors`), which commits touched a path
 (`History.touched`), a file's names over time (`History.versions`, renames
 followed as git's rename detection paired them).
 
+**The commits on the first-parent line** (point 7; `first_parent_changes`). The
+newest commits on the line of first parents from the newest commit, each with
+the paths it changed against its first parent: what the warning on an
+over-broad anchor counts its flags in (ADR-080 point 2). A commit with one
+parent is read from the one log; a merge, against its first parent, from one
+`git diff-tree` for them all. A line that ends at a shallow clone's cut,
+short of the count asked for, is told apart from one that ends at the root
+(`cut_short`): the clone lacks history that exists.
+
 **The revalidation point** (point 3; `Walker.carried`). An artefact's history
 is its file's, renames followed, back to where the file was last added — for
 a collection entry, back to where the entry was last added to its file. A
@@ -43,9 +52,14 @@ held it, tested again the same way. Rewording within a stretch moves nothing.
 **Reading little** (critic G4). A file's versions are parsed once each, by
 object id, shared by every artefact in the file; and a version whose bytes
 hold none of what the walk looks for — the value, in any spelling YAML's
-timestamp grammar allows (`stamps_in`), the block's key, every word of a
+timestamp grammar allows (`stamps_in`), sought in its front matter alone,
+where every artefact's data is read; the block's key; every word of a
 deferral's reason (`reason_words`) — carries none of it, so it is never
-parsed.
+parsed. The walk that finds where each entry of a collection file was last
+added reads each version of the file from git once, however many of its
+entries it seeks: it keeps their bytes by object id while it walks that
+file, and lets them go when it walks another, so it holds one file's
+versions at most (`Walker.added`).
 
 **A shallow clone.** The boundary commit is listed as adding every file. A
 value — or a deferral entry — the file already carries there has its point
@@ -94,6 +108,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
+from project_kit.document_parts import split_front_matter
 from project_kit.friction_discovery import (
     Anchor,
     Artefact,
@@ -140,7 +155,8 @@ _INSTANT = "%Y-%m-%dT%H:%M:%S"
 # The bytes every version carrying a `friction` block holds.
 _BLOCK_KEY = b"friction"
 
-# How many blobs the walker keeps in memory between a prefilter and a parse.
+# How many blobs the walker keeps in memory between a prefilter and a parse, beside
+# those it keeps for the walk of one collection file (`Walker._kept`).
 _RECENT = 16
 
 # The shortest word of a deferral's reason worth searching for.
@@ -538,6 +554,94 @@ def _merge_entry(fields: Sequence[str], named: Sequence[str], parents: int) -> M
     return MergeEntry(status, path, old_path, None, after, before, sources)
 
 
+# --- the commits on the first-parent line ------------------------------------------
+
+
+@dataclass(frozen=True)
+class LineChange:
+    """What one commit on the first-parent line that leads to the history's newest commit
+    changed: a commit whose first parent this clone holds, with the paths it changed
+    against that parent alone (COR-050 point 7; ADR-080 point 2).
+
+    A commit with one parent is listed as the one log lists it. A merge is
+    listed against its first parent, so what the side it merged brought in is
+    what it changed, as the change check reads a pull request merged by a merge
+    commit."""
+
+    index: int  # the commit's position in the log
+    entries: tuple[DiffEntry, ...]
+
+
+def first_parent_changes(root: Path, history: History, count: int) -> tuple[LineChange, ...]:
+    """The newest `count` commits on the first-parent line from the history's newest commit,
+    newest first, each with what it changed (`LineChange`); fewer where the line holds
+    fewer.
+
+    The line ends at a commit whose first parent the clone does not hold: the
+    root, or a shallow clone's cut, which the log lists as adding every file.
+    Neither is counted, having no parent to be compared with (`cut_short` tells
+    them apart). The merges on the line are read against their first parents in
+    one `git diff-tree --stdin`; every other commit is read from the log, with no
+    process started.
+    """
+    line: list[int] = []
+    index: int | None = 0 if history.commits else None
+    while index is not None and len(line) < count:
+        parents = history.parent_positions[index]
+        first = parents[0] if parents else None
+        if first is None:
+            break
+        line.append(index)
+        index = first
+    merges = [i for i in line if len(history.commits[i].parents) > 1]
+    against = _against_first_parents(root, history, merges) if merges else {}
+    return tuple(LineChange(i, against.get(i, history.commits[i].entries)) for i in line)
+
+
+def _against_first_parents(
+    root: Path, history: History, merges: Sequence[int]
+) -> dict[int, tuple[DiffEntry, ...]]:
+    """Each merge's paths against its first parent alone, from one `git diff-tree --stdin`:
+    one line `<merge> <first parent>` each, so the merge is compared with that parent as
+    if it were its only one. The output gives each merge's id, then its raw entries."""
+    shas = [history.commits[i].sha for i in merges]
+    lines = "".join(
+        f"{sha} {history.commits[i].parents[0]}\n" for sha, i in zip(shas, merges, strict=True)
+    )
+    raw = run_git(
+        root,
+        "diff-tree",
+        "--stdin",
+        "-r",
+        "-z",
+        "--raw",
+        "--no-abbrev",
+        "-M",
+        stdin=lines.encode("ascii"),
+    ).stdout
+    tokens = [token for token in raw.decode("utf-8", "surrogateescape").split("\0") if token]
+    by_sha: dict[str, tuple[DiffEntry, ...]] = {}
+    at = 0
+    while at < len(tokens):
+        sha = tokens[at].strip()
+        start = at = at + 1
+        while at < len(tokens) and tokens[at].startswith(":"):
+            letter = tokens[at].split(" ")[4][:1]
+            at += 3 if letter in ("R", "C") else 2
+        by_sha[sha] = tuple(_raw_entries(tokens[start:at]))
+    return {i: by_sha.get(sha, ()) for sha, i in zip(shas, merges, strict=True)}
+
+
+def cut_short(history: History, changes: Sequence[LineChange], count: int) -> bool:
+    """Whether `changes`, the first-parent line `first_parent_changes` read for `count`,
+    are fewer than `count` because the line ends at a shallow clone's cut: the clone
+    lacks history that exists, where a line that ends at the root holds all there is."""
+    if len(changes) >= count or not history.commits:
+        return False
+    stop = history.parent_positions[changes[-1].index][0] if changes else 0
+    return stop is not None and history.is_cut(stop)
+
+
 def shallow_commits(root: Path) -> frozenset[str]:
     """The commits at which a shallow clone is cut; empty for a full clone."""
     shallow = run_git(root, "rev-parse", "--is-shallow-repository").stdout.decode().strip()
@@ -649,6 +753,20 @@ class _Bytes:
     block: bool  # it holds the block's key
 
 
+def _data_of(raw: bytes) -> bytes:
+    """The part of a version's bytes a time is sought in: its front matter, as
+    `parse_artefacts` cuts it, since a body holds no artefact's data — so a long
+    document's body is never scanned for times. The whole where no front matter is
+    cut, or the bytes are not UTF-8 text, so a file whose data is held some other
+    way is never passed over unread."""
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw
+    front_matter, _body = split_front_matter(text)
+    return raw if front_matter is None else front_matter.encode("utf-8")
+
+
 def stamp(value: datetime) -> str:
     """An aware time as the prefilters compare one: the UTC instant, `YYYY-MM-DDTHH:MM:SS`."""
     return value.astimezone(UTC).strftime(_INSTANT)
@@ -716,11 +834,16 @@ class Walker:
         self._recent: OrderedDict[str, bytes | None] = OrderedDict()
         self._added: dict[tuple[str, str | None], int | None] = {}
         self._held: dict[tuple[str, str], bool] = {}
+        self._walking: str | None = None  # the collection file whose versions `_kept` holds
+        self._kept: dict[str, bytes | None] = {}
 
     # --- one version --------------------------------------------------------------
 
     def _read(self, obj: str) -> bytes | None:
-        """The blob `obj` names; the last few kept, so a prefilter and a parse read it once."""
+        """The blob `obj` names: one kept for the walk of a collection file (`_kept`), else
+        one of the last few read, so a prefilter and a parse read it once, else from git."""
+        if obj in self._kept:
+            return self._kept[obj]
         if obj in self._recent:
             self._recent.move_to_end(obj)
             return self._recent[obj]
@@ -730,17 +853,32 @@ class Walker:
             self._recent.popitem(last=False)
         return raw
 
+    def _walk(self, path: str) -> None:
+        """Start keeping the blobs of the collection file at `path` (`_kept_read`), letting
+        go of another file's: the walker holds one file's versions at most."""
+        if path != self._walking:
+            self._walking = path
+            self._kept = {}
+
+    def _kept_read(self, obj: str) -> bytes | None:
+        """The blob `obj` names, read from git once for the walk of its file (`_walk`) and
+        kept by object id until the walker walks another."""
+        if obj not in self._kept:
+            self._kept[obj] = self._read(obj)
+        return self._kept[obj]
+
     def _scan(self, obj: str) -> _Bytes:
         found = self._bytes.get(obj)
         if found is None:
             raw = self._read(obj) or b""
-            found = _Bytes(frozenset(stamps_in(raw)), _BLOCK_KEY in raw)
+            found = _Bytes(frozenset(stamps_in(_data_of(raw))), _BLOCK_KEY in raw)
             self._bytes[obj] = found
         return found
 
     def may_carry(self, state: TreeEntry | None, value: Any) -> bool:
-        """Whether the blob of `state` could carry `value`: `False` only where its bytes
-        hold no spelling of it (`stamps_in`), so it is never parsed to find out."""
+        """Whether the blob of `state` could carry `value`: `False` only where the part of
+        its bytes a parse reads data from holds no spelling of it (`stamps_in`,
+        `_data_of`), so it is never parsed to find out."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
         if value is BLOCK:
@@ -752,11 +890,20 @@ class Walker:
     def holds(self, state: TreeEntry | None, words: Sequence[str]) -> bool:
         """Whether the blob of `state` holds every one of `words` — any blob does where
         there are none."""
+        return self._holds(state, words, self._read)
+
+    def _holds(
+        self,
+        state: TreeEntry | None,
+        words: Sequence[str],
+        read: Callable[[str], bytes | None],
+    ) -> bool:
+        """`holds`, the blob's bytes given by `read`."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
         if not words:
             return True
-        raw = self._read(state[1]) or b""
+        raw = read(state[1]) or b""
         return all(word.encode() in raw for word in words)
 
     def artefact_in(self, state: TreeEntry | None, path: str, like: Artefact) -> Artefact | None:
@@ -826,13 +973,19 @@ class Walker:
         is taken to hold none, so its child may read as the add. A merge that took the file
         whole from a side adds nothing, as it is
         no version of the file, so an entry a line of work removed where the merge kept it
-        keeps its start."""
+        keeps its start.
+
+        Each version of a collection file is read from git once while the walker seeks its
+        entries' starts, however many it seeks: kept by object id until it seeks those of
+        another file (`_walk`). So the walker holds one file's versions at most, and a file
+        it comes back to is read again."""
         key = (like.path, like.id if like.kind is ArtefactKind.ENTRY else None)
         if key in self._added:
             return self._added[key]
         versions = list(self.history.versions(like.path))
         found = versions[-1].index if versions else None
         if like.kind is ArtefactKind.ENTRY:
+            self._walk(like.path)
             for version in versions:
                 if any(self._holds_id(state, like.id) for state, _name in version.parents()):
                     continue
@@ -845,13 +998,14 @@ class Walker:
         return found
 
     def _holds_id(self, state: TreeEntry | None, entry_id: str) -> bool:
-        """Whether the blob of `state` holds `entry_id` (`holds`), asked once per blob."""
+        """Whether the blob of `state` holds `entry_id` (`holds`), asked once per blob and id,
+        the blob read from git once for the walk of its file (`_kept_read`)."""
         if state is None:
             return False
         key = (state[1], entry_id)
         found = self._held.get(key)
         if found is None:
-            found = self._held[key] = self.holds(state, (entry_id,))
+            found = self._held[key] = self._holds(state, (entry_id,), self._kept_read)
         return found
 
     # --- the revalidation point ---------------------------------------------------
@@ -1584,6 +1738,7 @@ __all__ = [
     "Commit",
     "Deferred",
     "History",
+    "LineChange",
     "MergeEntry",
     "Points",
     "Version",
@@ -1591,9 +1746,11 @@ __all__ = [
     "carrier",
     "changed",
     "changed_since",
+    "cut_short",
     "differs",
     "file_entry",
     "files_line_changes",
+    "first_parent_changes",
     "line_changes",
     "origin",
     "read_history",
