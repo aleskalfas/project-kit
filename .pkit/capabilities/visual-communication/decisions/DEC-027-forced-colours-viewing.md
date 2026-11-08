@@ -1,5 +1,5 @@
 ---
-id: DEC-026
+id: DEC-027
 title: Where asked, the viewing step also draws an HTML page as a reader who forces their own colours sees it
 status: proposed
 date: 2026-11-07
