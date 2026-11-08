@@ -9,5 +9,4 @@ body: >
   the stamp wrote, so it hashes the text the stamp hashed. A field the note
   held before it was reported, such as its own `project`, `workstream` or
   `reported`, is part of what the hash covers, and an edit to it reads as
-  drift. A later send writes only the stamp's own fields, and no longer
-  rewrites a line of the note's body that starts `reported_hash:`.
+  drift.
