@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/release.py
+        - src/project_kit/release_answers.py
         - src/project_kit/changesets.py
         - src/project_kit/versioning.py
         - .changie.yaml
@@ -15,7 +16,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
+      record: [COR-010, COR-030, COR-041, "COR-050#5", PRJ-002, PRJ-004, PRJ-014, ADR-040]
       artefact:
         - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
@@ -517,7 +518,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | Command | Writes? | What |
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets → answer what its version edits ask of the change check (below). Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section, or short notes pointing to it when it is longer than a Release keeps (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes, and which of the two forms they take, without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
@@ -546,6 +547,39 @@ The release of a library the visual-communication capability ships reads
 this step's work too (`pkit visual release <library> --shipped`): the
 capability's `CHANGELOG.md` entry, the change that wrote it, and the version in
 its `package.yaml`.
+
+### The answers a release writes (PRJ-014)
+
+Each version line `apply` rewrites changes a file, so the change check asks
+about every artefact anchored on that file (COR-050 point 5). Last, `apply` answers what
+it can of that, as
+[PRJ-014](../decisions/project/PRJ-014-release-answers-its-edits.md) decides:
+
+- **What it answers.** The check asks about the artefact only through path
+  anchors, on files the release changed in version lines alone. The artefact
+  states none of the versions those lines held and no longer hold, each read as
+  a whole number: `0.3.0` stands in `v0.3.0` but not in `10.3.0`. It carries no
+  live deferral, and at most one live revalidation. Each such artefact gets an
+  `unchanged` revalidation, in one answer file `apply` adds through the friction
+  writer. The reason names each rewritten line, before and after, and the
+  versions the artefact does not state.
+- **What it leaves.** Every other artefact the check asks about, such as a
+  README whose Dependencies section states a version a rewritten line held.
+  One is left too where the check asks about it through the changelog, a
+  deleted changeset or another anchor kind. So is one with a live deferral or
+  with answers made apart. `apply` lists each artefact it leaves, with why. A person answers it on the release branch, with
+  `pkit friction revalidate`, before the release PR merges.
+- **What it takes back.** `apply` runs the check again over its own answers.
+  It takes back each one the check does not accept, or flags as replacing
+  answers made apart, and lists that artefact as left.
+- **Who checks.** The release PR's reviewer and the person who merges it check
+  each answer against the list `pkit friction check` gives, as for any change.
+
+A project whose friction functionality holds no artefact gets no answers.
+Where the change check cannot run, `apply` warns and writes no answers. The
+changeset guard admits the answer file beside the release's writes (the
+release-PR exemption, under
+[the surface-without-changeset CI guard](#the-surface-without-changeset-ci-guard)).
 
 ### A replay may restore a removed default
 
@@ -1014,8 +1048,9 @@ automation only proposes and, post-merge, tags.
   `none` changesets — those wait for the next real release rather than opening a
   version-less PR).
 - Creates a release branch off `main`, runs `pkit release apply --yes`
-  (versions + broaden + declared floors + `CHANGELOG.md`, consuming the
-  changesets), and commits `chore(release): v<new-backbone>`. It then pushes
+  (versions + broaden + declared floors + `CHANGELOG.md` + the answers its
+  version edits owe, consuming the changesets), and commits
+  `chore(release): v<new-backbone>`. It then pushes
   and opens a **release PR**. `scripts/release_pr.py` names the branch, and
   writes the PR's body before the push:
   - **The branch** is `release/v<new-backbone>`, or `release/<run id>` for a
@@ -1224,7 +1259,9 @@ writers rewrite them by (a `package.yaml`'s `version:` line and a
 declared bound widens, the
 manifest's `backbone_version:`). A release PR may also carry the answers its
 writes need, in answer files the diff adds: an answer file is no surface, so it
-may stand beside the writes, though it shows no release on its own. A diff that
+may stand beside the writes, though it shows no release on its own. `apply`
+writes those it can, and a person the rest
+([the answers a release writes](#the-answers-a-release-writes-prj-014)). A diff that
 is *only* those writes and the answer files it adds, and more than the consumed
 changesets and those answer files, is the release itself, not a new surface
 change, and passes the surface check with no `skip-changeset` label. The signal

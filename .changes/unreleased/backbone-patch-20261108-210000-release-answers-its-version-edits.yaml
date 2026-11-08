@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release apply` answers the friction its own version edits raise, so a
+  release pull request passes the change check and the documentation check
+  where no document states a version the release changed (#2378). After its
+  writes, it revalidates `unchanged` each artefact the change check asks about
+  only through version lines it rewrote, in one answer file it adds, where the
+  artefact states none of the versions those lines held and carries no live
+  deferral or answers made apart. It names every other artefact, such as a
+  README that states the old version, with why, for a person to answer on the
+  release branch. It takes back any answer the check does not accept. A project
+  whose friction functionality holds no artefact gets no answers. The release
+  reference says how a release's answers are made.

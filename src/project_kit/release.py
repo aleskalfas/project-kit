@@ -14,7 +14,8 @@ the changelog, which states each raised floor and widened bound, deletes the con
 changesets, and (for a backbone bump) cuts the tag via the existing
 `tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
 which the changeset guard recognises a release diff by, beside the answer files
-a release PR adds for the answers its writes need.
+a release PR adds for the answers its writes need: those the release step writes
+for its version edits (`release_answers`, PRJ-014), and any a person adds.
 
 Cutover note (PRJ-002 D-implications): this module *adds* the release-
 authority path; it does not retire `pkit version bump`. Both broaden
@@ -36,7 +37,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -65,6 +66,9 @@ from project_kit.changesets import (
 )
 from project_kit.manifest import BACKBONE_VERSION_KEY, COMPLETED_VERSION_KEY, set_state_line
 from project_kit.migrations import _VERSION_DIR_RE, minor_of, parse_version_tuple
+
+if TYPE_CHECKING:
+    from project_kit.release_answers import ReleaseAnswers
 
 # Repo-root-relative path prefixes whose changes count as touching the
 # backbone's surface, for the changeset guard. A heuristic — see the "Limits"
@@ -132,7 +136,8 @@ _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
 
 # --- What a release writes: one list, shared by the release step and the guard
 #
-# `pkit release apply` writes the files `release_writes` names and nothing else,
+# `pkit release apply` writes the files `release_writes` names, then the answers
+# its version edits owe in an answer file it adds (`release_answers`, PRJ-014),
 # and the changeset guard recognises a release diff as those files and nothing
 # else (`is_release_diff`), save the answer files a release PR adds for the
 # answers its writes need (#2381). The list is made of what the writers write through:
@@ -181,20 +186,38 @@ class ReleaseWrite:
 def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
     """The files `pkit release apply` writes in `source_kit`'s repo, and how:
 
+    - its version files (`version_writes`);
+    - `CHANGELOG.md`, created or prepended;
+    - the consumed changesets, deleted — in every release, but a diff deleting
+      only changesets is none.
+
+    The answer files a release PR adds for the answers its writes need are not
+    among them: `is_release_diff` admits those files beside the list, whether
+    the release step wrote them (`release_answers`, PRJ-014) or a person did.
+    """
+    repo_root = source_kit.parent
+    return (
+        *version_writes(source_kit),
+        ReleaseWrite(CHANGELOG_NAME, "AM"),
+        ReleaseWrite(
+            _repo_rel(repo_root, unreleased_dir(repo_root)) + "/", "D", marks_release=False
+        ),
+    )
+
+
+def version_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
+    """The version files `pkit release apply` rewrites, each only in its version lines:
+
     - each component's version file — the backbone's `VERSION` whole, a
       `package.yaml` only in its `version:` line, a `requires_backbone:` line
       of the shapes the broaden and a declared floor rewrite, and the `version:`
       line of a `requires_capabilities` entry whose floor or upper bound a
       changeset declared;
     - the self-host manifest's `backbone_version:` and `completed_version:`
-      lines, on a backbone release (`_sync_self_host_manifest_backbone`, PRJ-007);
-    - `CHANGELOG.md`, created or prepended;
-    - the consumed changesets, deleted — in every release, but a diff deleting
-      only changesets is none.
+      lines, on a backbone release (`_sync_self_host_manifest_backbone`, PRJ-007).
 
-    The answer files a release PR adds for the answers its writes need are not
-    among them: the release step writes no answer, and `is_release_diff` admits
-    those files beside the list.
+    The release step answers the artefacts these lines alone ask about
+    (`release_answers`, PRJ-014).
     """
     repo_root = source_kit.parent
     package_lines = (
@@ -216,10 +239,6 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
             _repo_rel(repo_root, source_kit / SELF_HOST_MANIFEST_NAME),
             "M",
             (_MANIFEST_BACKBONE_LINE_RE, _MANIFEST_COMPLETED_LINE_RE),
-        ),
-        ReleaseWrite(CHANGELOG_NAME, "AM"),
-        ReleaseWrite(
-            _repo_rel(repo_root, unreleased_dir(repo_root)) + "/", "D", marks_release=False
         ),
     )
 
@@ -1219,14 +1238,18 @@ def apply_release(
     clearance: session_guard.Clearance | None = None,
     broaden: bool = True,
     today: date | None = None,
-) -> None:
-    """Write the release: versions, broaden, declared floors, changelog, delete.
+) -> ReleaseAnswers:
+    """Write the release: versions, broaden, declared floors, changelog, delete,
+    then the answers its version edits owe; returns those answers.
 
     The order matters — versions and the requires_backbone broaden land
     first, then the declared floors are raised (after the broaden, so a raised
     floor always sits under an upper bound that admits it), then the changelog
-    is prepended, then the consumed changesets are deleted. Idempotent inputs
-    only: re-running with an empty plan is a no-op.
+    is prepended, then the consumed changesets are deleted. Last, before any
+    tag, the release step answers what its version edits ask of the change check
+    where it can check the answer, and names each artefact it leaves to a person
+    (`release_answers`, PRJ-014). Idempotent inputs only: re-running with an
+    empty plan is a no-op.
 
     The broaden step has two shapes, keyed on what moved:
 
@@ -1283,7 +1306,7 @@ def apply_release(
         click.echo("No pending changesets move a version — nothing to release.")
         # Still consume any `none`-only changesets so the tree is clean.
         _delete_changesets(plan.consumed)
-        return
+        return _no_answers()
 
     check_raised_ranges(plan, broaden=broaden)  # the CLI prints its warnings before confirming
 
@@ -1304,6 +1327,7 @@ def apply_release(
 
     _write_changelog(source_kit.parent, plan, today or date.today())
     _delete_changesets(plan.consumed)
+    answers = _answer_release(source_kit)
 
     if tag and backbone is not None:
         versioning.tag_version(source_kit, push=push, clearance=clearance)
@@ -1312,6 +1336,34 @@ def apply_release(
             "Next: commit the release, then `pkit version tag --push` on main "
             f"to cut v{backbone.new_version} (PRJ-004)."
         )
+    return answers
+
+
+def _answer_release(source_kit: Path) -> ReleaseAnswers:
+    """Write the answers the release's version edits owe, and say which artefacts it
+    answered and which it left to a person (PRJ-014). The versions are written already,
+    so a check that cannot run is a warning: every answer is then left to a person."""
+    from project_kit import release_answers
+    from project_kit.friction_git import FrictionCheckError
+
+    try:
+        answers = release_answers.write_release_answers(source_kit)
+    except FrictionCheckError as exc:
+        click.echo(
+            f"warning: the release wrote no answers, since the change check cannot run: "
+            f"{exc.message} Answer what `pkit friction check` asks of the release by hand.",
+            err=True,
+        )
+        return release_answers.ReleaseAnswers()
+    for line in release_answers.render(answers):
+        click.echo(line)
+    return answers
+
+
+def _no_answers() -> ReleaseAnswers:
+    from project_kit.release_answers import ReleaseAnswers
+
+    return ReleaseAnswers()
 
 
 def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
