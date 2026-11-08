@@ -171,7 +171,7 @@ def logo_brand(
     where `light`, and the dark logo, twice its pixels, in the dark colour scheme where
     `dark`."""
     folder = version_folder(root, NAME, version, location)
-    shutil.copytree(TEST_BRAND, folder)
+    shutil.copytree(TEST_BRAND, folder, ignore=shutil.ignore_patterns("__pycache__"))
     library = folder / "library.yaml"
     text = library.read_text(encoding="utf-8").replace("name: test-brand", f"name: {NAME}", 1)
     library.write_text(text.replace("version: 1.0.0", f"version: {version}", 1), encoding="utf-8")
