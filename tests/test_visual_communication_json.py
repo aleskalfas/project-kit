@@ -18,6 +18,7 @@ from tests.visual_communication_project import (
     CAPABILITY,
     FIXTURES,
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_PARTS,
 )
@@ -42,7 +43,10 @@ REFERENCE = {"1.0.0": FIXTURES / "reference" / "json-1.0.0.json"}
 
 @pytest.fixture(scope="module")
 def brand() -> Any:
-    return tokens.read_brand(TEST_BRAND, tokens.read_declarations(FOUNDATIONS / "roles.yaml"))
+    """The test brand on the foundations' release 1.0.0, which never changes, as its lock
+    names: so its reference file is the writer's output alone."""
+    roles = RELEASED_FOUNDATIONS / "roles.yaml"
+    return tokens.read_brand(TEST_BRAND, tokens.read_declarations(roles))
 
 
 @pytest.fixture(scope="module")

@@ -17,7 +17,13 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
-from tests.visual_communication_project import CAPABILITY, FOUNDATIONS, TEST_BRAND, TEST_PARTS
+from tests.visual_communication_project import (
+    CAPABILITY,
+    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
+    TEST_BRAND,
+    TEST_PARTS,
+)
 
 css, css_declaration, seam, values, tokens, keys = load(
     "visual-communication",
@@ -163,7 +169,10 @@ REFERENCE = {
 
 @pytest.fixture(scope="module")
 def brand() -> Any:
-    return tokens.read_brand(TEST_BRAND, tokens.read_declarations(FOUNDATIONS / "roles.yaml"))
+    """The test brand on the foundations' release 1.0.0, which never changes, as its lock
+    names: so its reference style sheet is the writer's output alone."""
+    roles = RELEASED_FOUNDATIONS / "roles.yaml"
+    return tokens.read_brand(TEST_BRAND, tokens.read_declarations(roles))
 
 
 def axes_of(brand: Any) -> dict[str, dict[str, Any]]:

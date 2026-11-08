@@ -21,6 +21,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
+        - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/card.yaml
@@ -69,6 +70,7 @@ pkit:
         - visual-communication:DEC-017#3
         - visual-communication:DEC-021#5
         - visual-communication:DEC-021#7
+        - visual-communication:DEC-022#3
         - visual-communication:DEC-025#1
         - visual-communication:DEC-025#3
         - visual-communication:DEC-025#4
@@ -113,7 +115,7 @@ One model binds every component. A pattern, an item component and a block are ro
 - **A pattern** arranges items. It has a `repeat` part over a list of the content, and decides how its items lie. `tests/steps` is a pattern.
 - **An item component** draws one item of a list. The pattern names its default in `draw`. Content may name another for the whole list, in a field the pattern declares for the list ([Lists](#lists)). An item may name its own in `use`, a pattern included. Which of them draws an item is in [Repeating over a list](#repeating-over-a-list-row-and-column).
 - **A block** is a small component, such as a card, that a pattern draws its items with, or that content places alone (DEC-007 point 1). `tests/card` and `tests/picture` are blocks.
-- **A top component** declares `layouts`. A piece names one as its top ([`piece.yaml`](files.md#pieceyaml)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([The foundations](files.md#the-foundations), [Layouts](#layouts)).
+- **A top component** declares `layouts`. A piece names one as its top ([`piece.yaml`](files.md#pieceyaml)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide. Their `site` is one too, whose pages are web pages ([The foundations](files.md#the-foundations), [Layouts](#layouts)).
 - **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>` ([Shapes](files.md#shapes)). The lock alone says which version of a library is read ([The lock](files.md#the-lock)).
 
 ## A component's file
@@ -347,7 +349,8 @@ A top component declares `layouts`, by name. Each layout has a *drawing*, the pa
 - **`slots`:** the fields a page in that layout fills, each written as a field of `fields` is. They are a page's fields, not the top's. No slot takes a reserved key's name, nor `layout`, the key by which a page names its layout, nor the name of a field of the top. No slot holds pages.
 - **`required`:** the slots a page in that layout must fill.
 - **`lists`:** the fields of each list among its slots that its drawing repeats over, as a pattern declares them ([Lists](#lists)). They lie in the top's file, and content gives them as it gives the slots (DEC-011 point 5).
-- **`parts`:** the layout's drawing, which draws one page. Every layout has one. It takes the page's slots, the top's other fields and the words of the top's options, as the content gives them to the top, and the states, colour and values the top declares (DEC-009 point 5). Its `:width` and `:height` are the top's size. A part that places a slot is best named after the slot, as the deck's are, so what the slot places keeps one trace id under every drawing.
+- **`preferred`:** the height of a page in that layout, `preferred: {height: <formula>}`, by a formula on its drawing's parts (DEC-022 point 3). A layout says it where the top asks for no height, and may say it where the top asks for one. It never says a width.
+- **`parts`:** the layout's drawing, which draws one page. Every layout has one. It takes the page's slots, the top's other fields and the words of the top's options, as the content gives them to the top, and the states, colour and values the top declares (DEC-009 point 5). Its `:width` and `:height` are the page's size. A part that places a slot is best named after the slot, as the deck's are, so what the slot places keeps one trace id under every drawing.
 
 The deck's field of pages, and its slide trimmed to two of its slots, their descriptions left out:
 
@@ -381,12 +384,35 @@ layouts:
         width: "=:width - 2 * margin"
 ```
 
-- **The top draws nothing around its pages.** It has no `parts` of its own. Each page is a page of its own, drawn by its layout's drawing at the top's origin, as large as the top. The top is not a page.
-- **A page names its form.** It names its layout with `layout`, and fills that layout's slots, or names the component that draws it with `use` ([content files](files.md#content-files)). A page drawn by its own component is as large as the top too.
+- **The top draws nothing around its pages.** It has no `parts` of its own. Each page is a page of its own, drawn by its layout's drawing at the top's origin. The top is not a page.
+- **A page names its form.** It names its layout with `layout`, and fills that layout's slots, or names the component that draws it with `use` ([content files](files.md#content-files)).
+- **A page gets the top's width** (DEC-022 point 3). It gets the top's height where the top asks for one, as the deck does. Otherwise it gets the height it asks for: its layout's `preferred`, or the component that draws it.
+- **A page that asks for more than the top's height** gets the top's, and is reported as an element that gets less than it asks.
+- **The top's own frame** in the scene is as large as it asks. Where it asks for no height, it is as tall as its tallest page, and the height names `engine` as its source.
 - **A slot that holds one page** places it as every slot places a component, by `use`, and names no layout. The key `layout` belongs to a page of a top whose layouts are its pages' forms, which places no component.
 - **A top that is a page alone keeps one layout,** as the figure does. Its content is the top's own mapping, whose keys are the top's fields, and a top with one layout may declare a field named `layout`. So the key cannot choose among forms of such a top without refusing a file format 1 accepts.
 
 A page inside a page is reported: what a slot of pages places, where that slot lies inside a page, and each page of a top whose layouts are its pages' forms, where that top lies inside one.
+
+The site is a top whose layouts are its pages' forms, and which asks for its width alone ([The foundations](files.md#the-foundations)). So its layout `standard` says its page's height, by its lowest part. Each page is as tall as its content. The site's file, trimmed, its descriptions and its background left out:
+
+```yaml
+preferred:
+  width: "=@size.site"
+layouts:
+  standard:
+    slots:
+      main: {type: object}
+    required: [main]
+    preferred:
+      height: "=footer.bottom"
+    parts:
+      header: {slot: header, width: "=:width"}
+      main: {slot: main, y: "=header.bottom", width: "=:width"}
+      footer: {slot: footer, y: "=main.bottom", width: "=:width"}
+```
+
+A part placed from such a page's foot, such as `y: "=:height - footer.height"`, reads the height its own place gives, and is refused as a loop.
 
 ## Formulas
 
@@ -571,7 +597,7 @@ links:
 
 ### What an element asks for, and what it gets
 
-- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
+- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A page of a top whose layouts are its pages' forms gets the size [Layouts](#layouts) gives it. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
 - **A stretch reaches the part drawn last.** An item that `stretch` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
   - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
   - **The size passed on names `engine` as its source** ([Sources](#sources)).

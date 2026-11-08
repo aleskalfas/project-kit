@@ -373,11 +373,13 @@ def test_format_1_is_stricter_than_the_engine_where_the_engine_reads_nothing(
 
 def forms(**layouts: Any) -> dict[str, Any]:
     """The reference instance as a top whose layouts are its pages' forms: `tags` marked
-    as holding its pages, no parts of its own, and `layouts`."""
+    as holding its pages, no parts of its own, and `layouts`. It asks for a width and a
+    height, as a deck does, so its layouts need say no height (DEC-022 point 3)."""
     data = changed("layouts", layouts)
     data["fields"]["properties"]["tags"]["x-pkit-pages"] = True
     data["fields"]["properties"]["tags"]["items"] = {"type": "object"}
-    del data["parts"], data["exposes"], data["preferred"]
+    del data["parts"], data["exposes"]
+    data["preferred"] = {"width": "=@size.slide", "height": "=@size.slide * 9 / 16"}
     return data
 
 
@@ -415,6 +417,49 @@ def test_the_schema_refuses_a_page_form_the_engine_refuses(
     data = forms(**layouts)
     assert problems(data) != [], case
     assert engine_issues(data) != [], case
+
+
+#: A layout that says its page's height, by a formula on its parts (DEC-022 point 3).
+TALL = {**DRAWN, "preferred": {"height": "=head.bottom"}}
+
+
+def asking_its_width(**layouts: Any) -> dict[str, Any]:
+    """`forms(**layouts)`, the top asking for its width alone, as the site does."""
+    data = forms(**layouts)
+    data["preferred"] = {"width": "=@size.slide"}
+    return data
+
+
+def test_a_layout_that_is_a_pages_form_says_its_pages_height() -> None:
+    for data in (forms(cover=TALL, slide=DRAWN), asking_its_width(cover=TALL, slide=TALL)):
+        assert problems(data) == []
+        assert engine_issues(data) == []
+
+
+def shape_issues(data: Any) -> list[str]:
+    """Where the engine finds a component's shape wrong."""
+    return [where for code, where, _ in engine_issues(data) if code == "component-shape"]
+
+
+def test_a_layout_that_says_a_width_fails_validation() -> None:
+    """A page gets the top's width (DEC-022 point 8)."""
+    wide = {**DRAWN, "preferred": {"height": "=head.bottom", "width": "=@space.4"}}
+    data = forms(cover=wide)
+    assert problems(data) != []
+    assert shape_issues(data) == ["layouts.cover.preferred.width"]
+
+
+def test_a_layout_under_a_top_that_asks_for_no_height_fails_validation_saying_none() -> None:
+    data = asking_its_width(cover=TALL, slide=DRAWN)
+    assert shape_issues(data) == ["layouts.slide.preferred"]
+
+
+def test_a_layout_of_format_1_says_no_height() -> None:
+    """Only a layout that is a page's form says its page's height: a top of one page says
+    its own under its own `preferred`."""
+    data = changed("layouts", {"frame": {"slots": {}, "preferred": {"height": "=@space.4"}}})
+    assert problems(data) != []
+    assert shape_issues(data) == ["layouts.frame.preferred"]
 
 
 # --- a pattern's lists (#2560) -----------------------------------------------------------------

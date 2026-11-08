@@ -338,6 +338,14 @@ def as_one_layout(spec: Any) -> None:
     slides["parts"] = {"slides": {"slot": "slides", "width": "=:width"}}
 
 
+def asking_no_height(spec: Any) -> None:
+    """The slides, asking for their width alone, each layout saying its page's height."""
+    slides = spec["components"]["slides"]
+    del slides["preferred"]["height"]
+    slides["layouts"]["cover"]["preferred"] = {"height": "=title.bottom"}
+    slides["layouts"]["points"]["preferred"] = {"height": "=points.bottom"}
+
+
 def new_list_of_ties(spec: Any) -> None:
     diagram = spec["components"]["diagram"]
     diagram["fields"]["properties"]["routes"] = {"type": "array", "items": {"type": "object"}}
@@ -588,6 +596,17 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         ["`parts/slides`: ceases to make its layouts its pages' forms (DEC-010 point 7)"],
         None,
     ),
+    # DEC-022 point 8: whether a top asks for a height, and a layout's height.
+    "a top that ceases to ask for a height": (
+        asking_no_height,
+        ["`parts/slides`: ceases to ask for a height (DEC-022 point 8)"],
+        None,
+    ),
+    "a layout's height said under a top that asks for one": (
+        lambda s: put(s["components"]["slides"]["layouts"]["cover"], "preferred", {"height": 300}),
+        [],
+        None,
+    ),
     # DEC-011 point 6: end fields, and a component that takes ends.
     "end fields declared for a list it held": (
         lambda s: put(s["components"]["diagram"]["lists"], "nodes", {"ends": ["from", "to"]}),
@@ -730,6 +749,31 @@ def test_each_change_of_a_component_library_is_named_as_its_record_counts_it(
         assert addition in said(found.additions)
 
 
+def test_a_top_that_comes_to_ask_for_a_height_breaks_and_a_layouts_height_does_not(
+    tmp_path: Path,
+) -> None:
+    """Every page's size changes with whether its top asks for a height. A page under a top
+    that asks for one gets it, so its layout's height, changed or dropped, breaks nothing
+    (DEC-022 point 8)."""
+    root = project(tmp_path)
+    foundations(root)
+    earlier = copy.deepcopy(PARTS)
+    asking_no_height(earlier)
+    write_parts(root, "1.0.0", earlier)
+    write_parts(root, "1.1.0", PARTS)
+    for version, height in (("1.2.0", 300), ("1.3.0", 200), ("1.4.0", None)):
+        spec = copy.deepcopy(PARTS)
+        if height is not None:
+            spec["components"]["slides"]["layouts"]["cover"]["preferred"] = {"height": height}
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == [
+        "`parts/slides`: comes to ask for a height (DEC-022 point 8)"
+    ]
+    for pair in (("1.2.0", "1.3.0"), ("1.3.0", "1.4.0")):
+        assert said(compared(root, "parts", *pair).breaks) == [], pair
+
+
 def test_a_version_that_changes_nothing_needs_a_patch(tmp_path: Path) -> None:
     found = compared_parts(tmp_path, lambda spec: None)
 
@@ -796,12 +840,14 @@ def compared_foundations(tmp: Path, later: Change, earlier: Change | None = None
     return compared(root, "foundations", "1.0.0", "1.1.0")
 
 
-def test_the_foundations_being_built_add_the_size_axis_device_and_need_a_minor(
+def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_a_minor(
     tmp_path: Path,
 ) -> None:
     """The version being built of the foundations, compared with their release 1.0.0, adds
-    the shared size axis `device` and changes nothing else. No brand can hold an axis of its
-    own yet, so a new shared axis is an addition (DEC-021 point 9, DEC-004 point 5)."""
+    the shared size axis `device`, the top `site` and its role `size.site`, and changes
+    nothing else. No brand can hold an axis of its own yet, so a new shared axis is an
+    addition (DEC-021 point 9, DEC-004 point 5), as are a new component and a new role with
+    a default (DEC-003 point 1, DEC-022 point 8)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -810,7 +856,11 @@ def test_the_foundations_being_built_add_the_size_axis_device_and_need_a_minor(
     found = compared(root, "foundations", "1.0.0", built)
 
     assert said(found.breaks) == []
-    assert said(found.additions) == ["shared axis `device`: is new (DEC-004 point 5)"]
+    assert said(found.additions) == [
+        "`foundations/site`: is new (DEC-003 point 1)",
+        "shared role `size.site`: is new, with a default (DEC-004 point 5)",
+        "shared axis `device`: is new (DEC-004 point 5)",
+    ]
     assert found.segment == "minor"
 
 

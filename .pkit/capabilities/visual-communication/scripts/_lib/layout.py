@@ -46,12 +46,16 @@ DEC-012).
   pages is a page alone, and part of the page that holds it (DEC-005 point 5). A top whose
   layouts are its pages' forms (DEC-010 point 5) marks one list field of its own
   `x-pkit-pages: true`, holds no parts, and declares each layout as `{slots: {<slot>:
-  <field schema>}, required: [<slot>, ...], parts: {...}, lists: {...}}`: the fields a
-  page in it fills, a slot marked as a field of runs as a field is, the layout's own
-  drawing, its default (DEC-009 point 1), and the fields of each list among its slots
-  that the drawing repeats over, as a pattern's `lists` (DEC-011 point 5). Each page
+  <field schema>}, required: [<slot>, ...], preferred: {height: <formula>}, parts: {...},
+  lists: {...}}`: the fields a page in it fills, a slot marked as a field of runs as a
+  field is, the height of its page, by a formula on its parts, the layout's own drawing,
+  its default (DEC-009 point 1), and the fields of each list among its slots that the
+  drawing repeats over, as a pattern's `lists` (DEC-011 point 5). A layout says no width,
+  and says its page's height where the top asks for none (DEC-022 point 3). Each page
   names its layout with `layout`, or its component with `use`, and is drawn as a page of
-  its own, as large as the top asks to be.
+  its own. It gets the top's width, and the top's height where the top asks for one, else
+  the height it asks for: its layout's, or its component's. A top that asks for no height
+  is as tall as its tallest page.
 
 **A part** is one of:
 
@@ -1242,6 +1246,12 @@ class Component:
         pages = set()
         for layout, decl in layouts.items():
             slots = decl.get("slots") if isinstance(decl, Mapping) else None
+            if isinstance(decl, Mapping) and "preferred" in decl:
+                self._shape(
+                    f"layouts.{layout}.preferred",
+                    f"the layout `{layout}` says its page's height, as only a layout that is "
+                    "a page's form does: this top's own `preferred` says the size it asks for",
+                )
             if not isinstance(slots, Mapping):
                 self._shape(f"layouts.{layout}", f"the layout `{layout}` declares no slots")
                 continue
@@ -1287,7 +1297,7 @@ class Component:
                 "a top whose layouts are its pages' forms draws nothing around its pages: "
                 "each layout's `parts` draw a whole page",
             )
-        shared = ("options", "states", "colour", "values", "preferred")
+        shared = ("options", "states", "colour", "values")
         others = {name: s for name, s in self.fields.items() if name not in forms.fields}
         layouts = data.get("layouts")
         if not isinstance(layouts, Mapping) or not layouts:
@@ -1317,6 +1327,7 @@ class Component:
                     "whose layouts are its pages' forms draws a page with its `parts`",
                 )
                 continue
+            preferred = self._page_height(where, layout, decl)
             fields = {
                 **others,
                 **{
@@ -1336,16 +1347,40 @@ class Component:
                     "fields": {"type": "object", "properties": fields},
                     "parts": parts,
                     **lists,
+                    **preferred,
                 },
                 self._ctx,
                 layout=layout,
             )
             for code, at, message in drawing.issues:
-                own = at.partition(".")[0] in ("parts", "lists")
+                own = at.partition(".")[0] in ("parts", "lists", "preferred")
                 at = f"{where}.{at}" if own else at
                 if (code, at, message) not in self.issues:
                     self.issues.append((code, at, message))
             self.drawings[layout] = drawing
+
+    def _page_height(self, where: str, layout: str, decl: Mapping[str, Any]) -> dict[str, Any]:
+        """What a layout that is a page's form asks for its page, as its drawing's
+        `preferred` (DEC-022 point 3): its height alone, by a formula on its parts. A width
+        is refused, since a page gets the top's width. Where the top asks for no height, a
+        layout that says none is refused, since its page would get no height."""
+        preferred = decl.get("preferred")
+        if isinstance(preferred, Mapping) and "width" in preferred:
+            self._shape(
+                f"{where}.preferred.width",
+                f"the layout `{layout}` says a width, and a page gets the top's width: a "
+                "layout says its page's height alone",
+            )
+        says = isinstance(preferred, Mapping) and "height" in preferred
+        if "height" not in self.preferred and not says:
+            self._shape(
+                f"{where}.preferred",
+                f"the top asks for no height, so the layout `{layout}` says its page's "
+                "height under `preferred`, by a formula on its parts",
+            )
+        if not isinstance(preferred, Mapping):
+            return {} if preferred is None else {"preferred": preferred}
+        return {"preferred": {size: f for size, f in preferred.items() if size != "width"}}
 
     def _read_slot(self, where: str, layout: str, slot: str, schema: Any) -> None:
         """A slot of a layout that is a page's form: a page's field, so no reserved key's
@@ -2154,12 +2189,15 @@ class Instance:
 
     def field_path(self, name: str) -> str | None:
         """The key path of the field `name` in the content file, by the keys the file
-        writes: below the mapping that holds what this instance was given, or, where a
-        `use` part placed it, the path of the field the part passes on under that name.
-        None where no key of the content file gives the field."""
+        writes: the path of a field handed on under that name, by a `use` part that placed
+        this instance or by the top that holds this page, else below the mapping that holds
+        what this instance was given. None where no key of the content file gives the
+        field."""
+        if name in self._paths:
+            return self._paths[name]
         if self.content_path is not None:
             return _join(self.content_path, name)
-        return self._paths.get(name)
+        return None
 
     def source_of_text(self, part: Part) -> str:
         """Where what a text part shows comes from: the fact it names, else its field."""
@@ -2877,15 +2915,19 @@ class Instance:
                 component = self.component.drawings.get(page.get(LAYOUT))
             if component is None:
                 continue
-            given, sources = dict(page), {}
+            given, sources, paths = dict(page), {}, {}
             if component.layout is not None:
-                # Its drawing takes the top's other fields, as the top was given them.
+                # Its drawing takes the top's other fields, as the top was given them, each
+                # at its own key path in the content file.
                 for other in self.component.fields:
                     if other != name and other in self.given and other not in page:
                         given[other], sources[other] = (
                             self.given[other],
                             self.source_of_field(other),
                         )
+                        handed = self.field_path(other)
+                        if handed is not None:
+                            paths[other] = handed
             pages.append(
                 Instance(
                     self.ctx,
@@ -2893,6 +2935,7 @@ class Instance:
                     given,
                     trace=at,
                     content_path=None if path is None else f"{path}{step}",
+                    paths=paths,
                     sources=sources,
                     parent=self,
                     part=str(name),
@@ -2900,6 +2943,24 @@ class Instance:
                 )
             )
         return pages
+
+    def from_the_top(self) -> list[str]:
+        """The trace of each part of this page that draws a field its top handed it: a part
+        that places it, repeats over it, shows it, or passes it on (DEC-010 point 5). Every
+        page drawn in a layout draws such a field alike, so what is found there is read once
+        (DEC-022 point 8). None for a page drawn by its own component, which takes no field
+        of the top."""
+        handed = set(self._sources) if self._is_forms_page and self.component.layout else set()
+        found = []
+        for name, node in self.nodes.items():
+            spec, props = node.part.spec, node.part.props
+            read = {spec.get("slot"), spec.get("repeat"), props.get("content")}
+            read.add(props.get("produced"))
+            fields = spec.get("fields") if node.part.kind == "use" else None
+            read.update(fields.values() if isinstance(fields, Mapping) else ())
+            if node.present and handed & {each for each in read if isinstance(each, str)}:
+                found.append(f"{self.trace}/{name}")
+        return found
 
     def texts(self) -> list[tuple[str, Node]]:
         """Every text this instance and those below it draw, its pages' included, with its
@@ -3033,9 +3094,18 @@ class Instance:
     def _size(self, size: str) -> float:
         """The size this instance gets: from its parent's part or list, or, at the top,
         the size it asks for. A page of a top whose layouts are its pages' forms gets the
-        top's size. A component its parent's last part places gets, beside its part's
-        size, the stretch its parent passes on (`passed_on`)."""
+        top's width, and the top's height where the top asks for one, else the height it
+        asks for (`takes_own`). Such a top that asks for no height is as tall as its
+        tallest page (DEC-022 point 3). A component its parent's last part places gets,
+        beside its part's size, the stretch its parent passes on (`passed_on`)."""
         if self.parent is None:
+            if self.component.forms and size == "height" and size not in self.component.preferred:
+                heights = [
+                    self.ctx.attempt(lambda p=p: p.get("size", size), 0.0) for p in self.pages
+                ]
+                return max(heights, default=0.0)
+            return self.get("preferred", size)
+        if self.takes_own(size):
             return self.get("preferred", size)
         if self._is_forms_page:
             return self.parent.get("size", size)
@@ -3048,6 +3118,17 @@ class Instance:
             return self.parent.get(axis, self.part_name).sizes[self.position]
         placed = self.parent.get("part", self.part_name, size)
         return placed + self.parent.passed_on(self.part_name, size)
+
+    def takes_own(self, size: str) -> bool:
+        """Whether this instance is a page of a top whose layouts are its pages' forms that
+        takes the `size` it asks for: its height, where the top asks for none (DEC-022
+        point 3). A page always gets the top's width."""
+        return (
+            self._is_forms_page
+            and size == "height"
+            and self.parent is not None
+            and size not in self.parent.component.preferred
+        )
 
     @property
     def _is_forms_page(self) -> bool:

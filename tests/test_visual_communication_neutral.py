@@ -310,8 +310,9 @@ def test_every_reference_render_passes_the_check_under_it(location: Path) -> Non
         for finding, level in report.judged
         if finding.code != "component-experimental"
     ]
+    built = taken("neutral", being_built=True).version
     assert found == [
-        ("fact", "picture-role-unvalued", "visual/libraries/neutral/1.0.0/", "picture.logo")
+        ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
     ]
     assert not report.failed()
 
@@ -319,25 +320,38 @@ def test_every_reference_render_passes_the_check_under_it(location: Path) -> Non
 def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The neutral brand gives no size, so the size axis `device`, which the foundations
-    being built add to their release 1.0.0, changes nothing it draws (DEC-021 points 2 and
-    9). Each reference piece draws under it on them as on that release, byte for byte: its
-    values and each preview, but for the foundations' version they name."""
+    """The neutral brand being built gives the sizes of the axis `device`, which the
+    foundations being built add to their release 1.0.0, and a piece that names none is
+    drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece draws
+    under it on them as under the brand's release 1.0.0 on theirs, byte for byte: each
+    preview, but for the foundations' version they name, and its values, but for the role
+    `size.site` they add, which the brand gives as wide as its slide on a desktop."""
     importable(monkeypatch, starter.svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)
-    released, built = starter.on_each_foundations(root).values()
+    released_brand = hold_shipped(root, "neutral", being_built=False).version
+    assert released_brand != taken("neutral", being_built=True).version
+    on_each = starter.on_each_foundations(root, brand={"neutral": released_brand})
+    released, built = on_each.values()
     assert sorted(built) == sorted(path.name for path in PIECES.iterdir())
     for name, (values, files) in built.items():
         assert files, name
-        assert (values, files) == released[name], name
+        assert (starter.as_released(values), files) == released[name], name
 
 
 def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combination(
     brand: Any, drawn: Mapping[str, Any]
 ) -> None:
+    """A piece that names no size is drawn at the brand's default size alone, in every
+    combination of its other axes (DEC-021 point 2)."""
     measured = 0
-    expected = [keys.key_of(each, brand.axes) for each in brand.combinations()]
+    sizes = pl.size_axes(brand.axes)
+    expected = [
+        keys.key_of(each, brand.axes)
+        for each in brand.combinations()
+        if all(each[axis] == sizes[axis].default for axis in sizes)
+    ]
+    assert sizes and len(expected) < len(brand.combinations())
     for name, piece in drawn.items():
         assert sorted(piece.keys) == sorted(expected), name
         colours = colours_of(piece)

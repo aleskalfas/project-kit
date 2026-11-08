@@ -3,8 +3,9 @@ schema_version: 1
 
 # The foundations: the shared roles, the shared axes, the colour families and the pairs
 # that must contrast (roles.yaml), and the top components every piece starts from
-# (components/). They hold no value: a brand gives every shared role its value. A
-# released version never changes: a change is a new version (DEC-003 point 6).
+# (components/): the deck, the figure and the site. They hold no value: a brand gives
+# every shared role its value, and a role with a default takes it where a brand gives
+# none. A released version never changes: a change is a new version (DEC-003 point 6).
 name: foundations
 version: 1.1.0
 kind: components

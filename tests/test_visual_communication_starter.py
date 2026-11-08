@@ -294,21 +294,26 @@ def previews(drawn: Any) -> dict[str, str]:
     return found
 
 
-def on_each_foundations(root: Path, released: str = "1.0.0") -> dict[str, dict[str, Any]]:
+def on_each_foundations(
+    root: Path, released: str = "1.0.0", brand: Mapping[str, str] | None = None
+) -> dict[str, dict[str, Any]]:
     """Each piece of the location at `root` drawn on the foundations being built and on their
     release `released`, both of which the location holds: by the foundations' version, each
     piece's document of values and its previews, by the piece's name. Each piece's lock
-    names the version being built. What names the version drawn on is left out: the lock
+    names the version being built. On the release, the lock names `brand`'s version of each
+    library it names instead: a brand's release, which a brand being built on the
+    foundations being built follows. What names the version drawn on is left out: the lock
     the document of values holds, and the version a preview's trace gives each component of
     the foundations."""
     built = taken("foundations", being_built=True).version
     held = pl.Held(root, "visual")
     drawn: dict[str, dict[str, Any]] = {released: {}, built: {}}
+    locks = {released: {**(brand or {}), "foundations": released}, built: {"foundations": built}}
     for folder in sorted((root / "visual" / "pieces").iterdir()):
         piece = pl.read_piece(root, "visual", folder.name)
         assert piece.lock["foundations"] == built
         for version, pieces in drawn.items():
-            on = pl.Project(piece, {**piece.lock, "foundations": version}, held)
+            on = pl.Project(piece, {**piece.lock, **locks[version]}, held)
             values = {field: value for field, value in on.values().items() if field != "lock"}
             named = re.escape(version)
             traced = re.compile(rf'(data-component="foundations/[^"]*" data-version="){named}"')
@@ -317,13 +322,28 @@ def on_each_foundations(root: Path, released: str = "1.0.0") -> dict[str, dict[s
     return drawn
 
 
+#: The shared role the foundations being built add to their release 1.0.0 (DEC-022 point 3).
+ADDED_ROLE = "size.site"
+
+
+def as_released(values: Mapping[str, Any]) -> dict[str, Any]:
+    """A piece's document of values drawn on the foundations being built, as on their release
+    1.0.0: without the role they add, which takes the value of `size.slide` where the brand
+    gives it none, as the test brand 1.0.0 does (DEC-004 point 7)."""
+    added = values["tokens"][ADDED_ROLE]
+    assert added == values["tokens"]["size.slide"]
+    tokens = {path: token for path, token in values["tokens"].items() if path != ADDED_ROLE}
+    return {**values, "tokens": tokens}
+
+
 def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The foundations being built add the size axis `device` to their release 1.0.0, and
-    the test brand gives no size (DEC-021 points 2 and 9). So each reference piece draws on
-    them as on that release, byte for byte: its values and each preview, but for the
-    foundations' version they name."""
+    """The foundations being built add the size axis `device` and the role `size.site` to
+    their release 1.0.0, and the test brand gives no size (DEC-021 points 2 and 9, DEC-022
+    point 3). So each reference piece draws on them as on that release, byte for byte: each
+    preview, but for the foundations' version they name, and its values, but for the role
+    they add."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)
@@ -332,7 +352,7 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     assert sorted(built) == sorted(COMPONENTS)
     for name, (values, files) in built.items():
         assert files, name
-        assert (values, files) == released[name], name
+        assert (as_released(values), files) == released[name], name
 
 
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:

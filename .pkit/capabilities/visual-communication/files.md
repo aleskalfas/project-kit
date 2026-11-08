@@ -139,6 +139,10 @@ pkit:
         - visual-communication:DEC-020#7
         - visual-communication:DEC-021#1
         - visual-communication:DEC-021#2
+        - visual-communication:DEC-022#1
+        - visual-communication:DEC-022#2
+        - visual-communication:DEC-022#3
+        - visual-communication:DEC-022#8
         - visual-communication:DEC-025#1
         - visual-communication:DEC-025#2
         - visual-communication:DEC-025#3
@@ -629,16 +633,22 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`. It carries 1.1.0, since it adds the size axis `device` ([Axes and modes](#axes-and-modes)), an addition, which needs a minor ([What a release compares](#what-a-release-compares)). It is not released yet, so only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`. It carries 1.1.0, since it adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site` and the role `size.site`. These are additions, which need a minor ([What a release compares](#what-a-release-compares)). It is not released yet, so only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
 - `components/figure.yaml`, the top component `figure`, for a figure in a documentation page;
-- `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names.
+- `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names;
+- `components/site.yaml`, the top component `site`, for a web page or a portal of several: each of its `pages` is a web page, in its layout `standard`, or drawn by the component it names (DEC-022 point 1).
+
+A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge (DEC-022 point 2).
+
+- **The header and the footer** are the site's own fields, each optional, each the component the content places there. Every page drawn in a layout takes them, so each is written once in each language. A page drawn by its own component takes neither.
+- **Its size.** The site asks for its width alone, `=@size.site`, so every page is as wide as the brand's site at the size it is drawn at. Each page is as tall as its content, and the site as tall as its tallest page (DEC-022 point 3).
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure` and `size.slide`, a slide's width. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value (DEC-022 point 3). The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 
@@ -715,6 +725,7 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
   - **Its lists.** A list's component field removed or renamed breaks, and so does marking a field it held as one (DEC-010 point 7). So does an arrangement field or one of its words removed. A new component field, arrangement field or word is an addition. An arrangement field's default is neither.
   - **Its ties.** End fields declared for a list it held break, and so do its end fields swapped or one removed (DEC-011 point 6). So does a component that ceases to take ends. A new list of ties is an addition.
   - **A top's layouts.** A layout or a slot removed breaks, and so does a new required slot (DEC-003 point 6, DEC-009 point 7). A top that makes its layouts its pages' forms, or ceases to, breaks too (DEC-010 point 7). A new layout and a new optional slot are additions. A slot of a page's form is compared as a field is, and a slot that comes to hold pages, or ceases to, breaks.
+  - **Whether a top asks for a height.** A top that starts or ceases to ask for one breaks, since every page's size changes with it (DEC-022 point 8). A layout's height, said, changed or dropped, breaks nothing. A page under a top that asks for a height gets that height.
 - **A library's own roles.** A role promises what the components that read it promise (DEC-008 point 7). So only an own role a stable or deprecated component reads, directly or through a default, can break. It breaks where it is removed, changes type, or no longer ends its chain of defaults at a shared role, where it did. A new one such a component reads breaks where its chain ends at no shared role, and any other new own role is an addition.
 - **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
 - **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition, and so is a new picture role, which no brand owes a value. A new top group of the shared roles breaks, even where each of its roles carries a default. No library takes its name (DEC-004 point 7), so it fails a library already named so (DEC-025 point 10).
@@ -882,11 +893,12 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 
 ### The neutral brand
 
-The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its released version 1.0.0 lies at `.pkit/capabilities/visual-communication/releases/neutral/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `brand` and needs release 0.3.0. Its version being built stays where it was, at `libraries/neutral/`, and carries 1.0.0 until a change raises its number (DEC-013 point 3).
+The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its released version 1.0.0 lies at `.pkit/capabilities/visual-communication/releases/neutral/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `brand` and needs release 0.3.0. Its version being built stays where it was, at `libraries/neutral/`. It carries 1.1.0, since it gives the sizes of `device`, an addition, which needs a minor (DEC-013 point 3). It is not released yet, so only `pkit visual add neutral --being-built` takes it.
 
 `pkit visual add neutral` copies the released version whole to `libraries/neutral/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
 
 - **Its values.** It gives every shared role a value in each of the four combinations of the shared value axes ([Keys of combinations](#keys-of-combinations)), but `picture.logo`. It has no logo, which its version states as a fact ([Picture roles](#picture-roles)). Each pair the foundations declare reaches its level in all four.
+- **Its sizes.** Its version being built gives `desktop`, `tablet` and `phone`, each mode but the default from a token file of its own in `tokens/`. Its `size.site` is 1,280 px on a desktop, 768 px on a tablet and 390 px on a phone. No other value changes with the size, so a piece that names no size draws as under 1.0.0.
 - **Its look.** Greys, with a blue accent. The colour families keep their hues in dark and at high contrast.
 - **The libraries it names.** It builds on the foundations alone, so the starter draws at its defaults ([`roles.yaml`](#rolesyaml)), and a project need not hold the starter to use it.
 - **Its open roles.** `open` is empty, so a brand built on it can change no value. A project that wants other values writes its own brand.

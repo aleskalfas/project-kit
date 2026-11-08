@@ -23,9 +23,10 @@ and the record that sets it), the segment, and whether the later number allows i
 
 - *any library:* its kind, and the major of each library it builds on (DEC-003 point 6);
 - *components:* each component the earlier version marks stable or deprecated, its fields,
-  options, states, exposed parts, ends, lists and layouts with their slots (DEC-003 points
-  6 and 7, DEC-009 to DEC-012). An experimental component may change in any release, so
-  only its arrival is named, as for any new component;
+  options, states, exposed parts, ends, lists and layouts with their slots, and whether a
+  top asks for a height (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8). An
+  experimental component may change in any release, so only its arrival is named, as for
+  any new component;
 - *a library's own roles:* those its stable and deprecated components read, directly or
   through a default, and a new one such a component reads (DEC-008 point 7);
 - *pairs:* every pair a library declares, whatever reads it (DEC-008 point 7);
@@ -565,8 +566,11 @@ def _layouts(
     data_l: Mapping[str, Any],
     found: _Found,
 ) -> None:
-    """A top's layouts and their slots (DEC-003 point 6, DEC-009 point 7), and whether its
-    layouts are its pages' forms (DEC-010 point 7)."""
+    """A top's layouts and their slots (DEC-003 point 6, DEC-009 point 7), whether its
+    layouts are its pages' forms (DEC-010 point 7), and whether it asks for a height, which
+    every page's size follows (DEC-022 point 8). A layout's height, said, changed or
+    dropped, breaks nothing: a top that asks for no height needs one in each of its
+    layouts, which validation holds to, and a page under a top that asks for one gets it."""
     if later.top and earlier.forms != later.forms:
         what = (
             "makes its layouts its pages' forms"
@@ -575,6 +579,13 @@ def _layouts(
         )
         found.broken(where, what, "DEC-010 point 7")
         return
+    if later.top and ("height" in earlier.preferred) != ("height" in later.preferred):
+        what = (
+            "comes to ask for a height"
+            if "height" in later.preferred
+            else "ceases to ask for a height"
+        )
+        found.broken(where, what, "DEC-022 point 8")
     layouts_e, layouts_l = _layouts_of(data_e), _layouts_of(data_l)
     _named(where, "layout", layouts_e, layouts_l, "DEC-003 point 6", "DEC-009 point 7", found)
     forms_e, forms_l = layout.page_forms(data_e), layout.page_forms(data_l)
