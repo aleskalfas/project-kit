@@ -1833,7 +1833,7 @@ def test_where_the_base_opens_the_logo_the_brand_built_on_it_gives_its_own(
 
 
 def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
-    tmp_path: Path, sized: Any
+    tmp_path: Path, foundations: Any
 ) -> None:
     """Each key over the size axes takes its logo in every value combination or in none,
     and at one proportion, apart from the others (DEC-025 point 4)."""
@@ -1841,7 +1841,7 @@ def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
     logos.hold(folder, "logo.png", logos.logo())
     giving_logo(folder, picture("phone.png"), PHONE)
     logos.hold(folder, "phone.png", logos.mark())
-    read = tokens.read_brand(folder, sized)
+    read = tokens.read_brand(folder, foundations)
     assert read.findings == ()
     assert read.given("picture.logo", {"device": "phone", "colour-scheme": "dark"}).name == (
         "phone.png"
@@ -1850,7 +1850,7 @@ def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
     edit_json(folder / BASE, lambda data: data.pop("picture"))
     giving_logo(folder, picture("phone.png"), PHONE)
     giving_logo(folder, picture("logo.png"), DARK)
-    [finding] = tokens.read_brand(folder, sized).findings
+    [finding] = tokens.read_brand(folder, foundations).findings
     assert finding.code == "picture-role-modes"
     assert finding.message.startswith(
         "the brand gives the picture role `picture.logo` a file in `colour-scheme.dark`, "

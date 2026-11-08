@@ -5,7 +5,8 @@
 name of its own (`logo_brand`), so the tests that share the test brand never see a logo. It
 gives `picture.logo` a light logo in every combination, and a dark one in the dark colour
 scheme, which holds twice the pixels at the same proportion. A test may leave either out,
-or give a phone its own logo once the foundations hold the size axis `device`.
+or give a phone its own logo on the size axis `device`, which the foundations being built
+declare.
 
 **The logos** are PNGs drawn here with the standard library alone (zlib and struct), so no
 binary fixture is kept: a mark, a ring round a dot, beside two bars of a word mark, each
@@ -190,6 +191,6 @@ def logo_brand(
 def give_phone(folder: Path, name: str = PHONE) -> None:
     """The brand at `folder` giving a phone its own logo, the mark alone, from the token
     file of the size axis `device`'s mode `phone`, which its Resolver document already
-    applies (`tests.test_visual_communication_pipeline.add_device`)."""
+    applies (`tests.test_visual_communication_logos.add_device`)."""
     giving(folder, PHONE_FILE, name)
     hold(folder, name, mark())
