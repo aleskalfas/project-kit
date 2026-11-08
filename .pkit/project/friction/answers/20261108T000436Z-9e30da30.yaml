@@ -69,10 +69,11 @@ answers:
       - 20261107T182709Z-672f266b.yaml
       - 20261107T184836Z-d3d0aa8b.yaml
       - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T225725Z-d491b7e6.yaml
     revalidated:
-      at: 2026-11-07T22:50:22Z
+      at: 2026-11-08T00:04:36Z
       outcome: unchanged
-      unchanged-because: "The release raises only the capability's version in its package.yaml, 0.1.0 to 0.2.0. Where the page names 0.1.0, it names the release a library needs: the test brand's needs-release in an example, and the foundations and neutral needing release 0.1.0, which their library.yaml files still say. Its line that no library is released while the capability carries a version no release wrote, as 0.1.0 is, stays true of 0.1.0, though once 2.1.0 merges the capability carries 0.2.0, which a release wrote; that example dates, and #2611 rewrites the passage when it releases the libraries. Every statement holds."
+      unchanged-because: "Judged with the answer made apart that this one replaces. 20261107T225725Z-d491b7e6 found the page true against 837aa5e5, where the tests came to read the capability's version from its package.yaml: the page says the installed release is that version and states nothing of the tests' helpers. The release then raises that version, 0.1.0 to 0.2.0, which the page never states as current. Where it names 0.1.0, it names the release a library needs: the test brand's needs-release in an example, and the foundations and neutral needing release 0.1.0, which their library.yaml files still say. Its line that no library is released while the capability carries a version no release wrote, as 0.1.0 is, stays true of 0.1.0, though once 2.1.0 merges that example dates, and #2611 rewords the passage. So the two hold together, and every statement holds."
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
       - 20261103T053645Z-9b958b41.yaml
@@ -146,7 +147,7 @@ answers:
       - 20261107T194747Z-edf4a2ac.yaml
       - 20261107T203800Z-471a3d6c.yaml
     revalidated:
-      at: 2026-11-07T22:50:25Z
+      at: 2026-11-08T00:04:38Z
       outcome: unchanged
       unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T194747Z-edf4a2ac updated the page (aaab6dc5: each HTML fact in one home, the record of exports example resting on stamp.yaml). 20261107T203800Z-471a3d6c found it true against 9ed0f4d4, where location.py came to list links and the files git hands a large-file store and files.md's Picture roles came to point at Picture files. The page as aaab6dc5 left it still says nothing of git's listing, links, a store or picture files, and its link to files.md#picture-roles still resolves, so the two hold together. The release then raises only the capability's version, 0.1.0 to 0.2.0, which the page never states: its capability: 0.1.0 is what a past run recorded, and its renderer versions are the plugins' own."
   - artefact: .pkit/capabilities/visual-communication/checks.md
@@ -223,7 +224,7 @@ answers:
       - 20261107T194747Z-edf4a2ac.yaml
       - 20261107T203800Z-471a3d6c.yaml
     revalidated:
-      at: 2026-11-07T22:50:29Z
+      at: 2026-11-08T00:04:40Z
       outcome: unchanged
       unchanged-because: "Judged with the three answers made apart that this one replaces. 20261107T133905Z-5a681b61 found it true against ef6907ac, the new scratchpad member of pkit validate, since the page lists no members. 20261107T194747Z-edf4a2ac found it true against aaab6dc5, which rewrote outputs.md's HTML facts and record of exports example, neither restated here. 20261107T203800Z-471a3d6c updated it (9ed0f4d4: the Picture files section, the picture- rows, the files-unlisted row and what a release reads). Those additions list no validate member and restate nothing aaab6dc5 changed, so the three hold together. The release then raises only the capability's version, 0.1.0 to 0.2.0; the page states none, its version: 1.0.0 being a library's in an example."
   - artefact: .pkit/capabilities/visual-communication/README.md
@@ -303,7 +304,7 @@ answers:
       - 20261107T194747Z-edf4a2ac.yaml
       - 20261107T203800Z-471a3d6c.yaml
     revalidated:
-      at: 2026-11-07T22:50:33Z
+      at: 2026-11-08T00:04:41Z
       outcome: unchanged
       unchanged-because: "Judged with the three answers made apart that this one replaces. 20261107T133905Z-5a681b61 found it true against ef6907ac, the new scratchpad member of pkit validate, since the README lists no members. 20261107T194747Z-edf4a2ac updated it (aaab6dc5: the look bullet on the ways on links When the browser stops and states no order). 20261107T203800Z-471a3d6c found it true against 9ed0f4d4, since it links how a release reads a version and restates none of it. The look bullet as aaab6dc5 left it speaks only of where look stops, nothing of picture files or validate members, so the three hold together. The release then raises only the capability's version, 0.1.0 to 0.2.0, and leaves its backbone range as it was; the README states neither."
   - artefact: .pkit/capabilities/software-analysis/README.md
@@ -330,7 +331,7 @@ answers:
       - 20261107T155747Z-06175c8e.yaml
       - 20261107T171148Z-59c0d09e.yaml
     revalidated:
-      at: 2026-11-07T22:50:36Z
+      at: 2026-11-08T00:04:43Z
       outcome: unchanged
       unchanged-because: "The release raises the capability's version, 0.2.0 to 1.0.0, and widens its backbone range's upper bound to <2.2.0. The README states neither: its 1.149.0 is the version a foundation's links name in an example, and its version: 1.0.0 is an example artefact's, so every statement holds."
   - artefact: .pkit/capabilities/software-engineering/README.md
@@ -358,7 +359,7 @@ answers:
       - 20261107T131245Z-5afe6d5a.yaml
       - 20261107T150914Z-b8b0a9c1.yaml
     revalidated:
-      at: 2026-11-07T22:50:39Z
+      at: 2026-11-08T00:04:45Z
       outcome: unchanged
       unchanged-because: The release raises the capability's version, 0.3.0 to 0.3.1, the floor of its project-management range to 0.56.0 and its backbone bound to <2.2.0. The README states none of these numbers, so what it says holds.
   - artefact: docs/capabilities/software-engineering/README.md
@@ -388,7 +389,7 @@ answers:
       - 20261107T131245Z-5afe6d5a.yaml
       - 20261107T150914Z-b8b0a9c1.yaml
     revalidated:
-      at: 2026-11-07T22:50:42Z
+      at: 2026-11-08T00:04:46Z
       outcome: unchanged
       unchanged-because: The release raises the capability's version, 0.3.0 to 0.3.1, the floor of its project-management range to 0.56.0 and its backbone bound to <2.2.0. The page states none of these numbers, so what it says holds.
   - artefact: tech-docs/analysis/demo-recording/use-case-model/use-cases/010-record-demos/UC-035-record-demo.md
@@ -401,7 +402,7 @@ answers:
       - 20261105T205735Z-53dde51c.yaml
       - 20261105T234807Z-9035c0e0.yaml
     revalidated:
-      at: 2026-11-07T22:50:45Z
+      at: 2026-11-08T00:04:48Z
       outcome: unchanged
       unchanged-because: The release raises only the version lines of demo-recording's package.yaml, 0.2.0 to 0.2.1 and the backbone bound to <2.2.0. The use case names no version, and its steps do not depend on one, so it holds.
   - artefact: tech-docs/analysis/evidence/use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md
@@ -411,7 +412,7 @@ answers:
       - 20261104T212906Z-76af4d6b.yaml
       - 20261105T180856Z-0a8bab69.yaml
     revalidated:
-      at: 2026-11-07T22:50:48Z
+      at: 2026-11-08T00:04:50Z
       outcome: unchanged
       unchanged-because: The release widens only the backbone bound in evidence's package.yaml, to <2.2.0. The use case names no version, and its steps do not depend on one, so it holds.
   - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md
@@ -423,7 +424,7 @@ answers:
       - 20261104T212906Z-76af4d6b.yaml
       - 20261105T180856Z-0a8bab69.yaml
     revalidated:
-      at: 2026-11-07T22:50:50Z
+      at: 2026-11-08T00:04:51Z
       outcome: unchanged
       unchanged-because: The release raises only the version lines of living-docs' package.yaml, 0.2.0 to 1.0.0 and the backbone bound to <2.2.0. The use case names no version, and proposing a page's fix does not depend on one, so it holds.
   - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-043-set-up-space.md
@@ -434,7 +435,7 @@ answers:
       - 20261103T031311Z-415182b4.yaml
       - 20261104T113710Z-f8ec2bbd.yaml
     revalidated:
-      at: 2026-11-07T22:50:53Z
+      at: 2026-11-08T00:04:53Z
       outcome: unchanged
       unchanged-because: The release raises only the version lines of living-docs' package.yaml, 0.2.0 to 1.0.0 and the backbone bound to <2.2.0. The use case names no version, and setting up a space does not depend on one, so it holds.
   - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md
@@ -445,7 +446,7 @@ answers:
       - 20261104T212906Z-76af4d6b.yaml
       - 20261105T180856Z-0a8bab69.yaml
     revalidated:
-      at: 2026-11-07T22:50:55Z
+      at: 2026-11-08T00:04:55Z
       outcome: unchanged
       unchanged-because: The release raises only the version lines of software-analysis' package.yaml, 0.2.0 to 1.0.0 and the backbone bound to <2.2.0. The use case names no version, and revalidating after a change does not depend on one, so it holds.
   - artefact: .pkit/capabilities/doc-examples/README.md
