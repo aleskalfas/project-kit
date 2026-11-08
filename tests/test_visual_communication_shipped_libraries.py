@@ -55,10 +55,10 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import (
     CAPABILITY,
-    FOUNDATIONS,
     REPO,
     TEST_PICTURES,
     bound,
+    built_as_released,
     project,
     write,
     yaml_text,
@@ -581,9 +581,10 @@ UNFINISHED = bound(
 
 
 def capability(tmp: Path) -> Path:
-    """A capability's folder that builds the foundations, as the tree holds them."""
+    """A capability's folder that builds the foundations as they stood when 1.0.0 was
+    released, and releases none."""
     folder = tmp / "capability"
-    shutil.copytree(FOUNDATIONS, folder / libraries.FOLDER / libraries.FOUNDATIONS)
+    built_as_released(folder / libraries.FOLDER / libraries.FOUNDATIONS)
     return folder
 
 

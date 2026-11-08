@@ -28,10 +28,16 @@ from ruamel.yaml import YAML
 REPO = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO / ".pkit" / "capabilities" / "visual-communication"
 SCHEMAS = CAPABILITY / "schemas"
+#: The foundations' version being built, which every change to them goes into, whatever
+#: number it carries (DEC-013 point 2).
 FOUNDATIONS = CAPABILITY / "libraries" / "foundations"
 #: The released versions of each library the capability ships, each in a place of its own
 #: beside the library's record, `releases/<library>/releases.yaml` (DEC-013 point 2).
 RELEASES = CAPABILITY / "releases"
+#: The foundations' released version 1.0.0, which never changes (DEC-013 point 2): what a
+#: test copies where it holds the foundations at 1.0.0, as `pkit visual add foundations`
+#: takes them, whatever the version being built carries since.
+RELEASED_FOUNDATIONS = RELEASES / "foundations" / "1.0.0"
 FIXTURES = REPO / "tests" / "fixtures" / "visual-communication"
 TEST_BRAND = FIXTURES / "libraries" / "test-brand" / "1.0.0"
 #: A brand built on the test brand, its base (DEC-004 point 6).
@@ -104,6 +110,20 @@ def copy_library(
     return target
 
 
+def built_as_released(target: Path) -> Path:
+    """The foundations' version being built as it stood when 1.0.0 was released, copied to
+    `target`, for a capability's folder a test builds: the files of the released version,
+    naming release 0.1.0 as the release they need, as the version being built named it
+    until that release wrote the capability's version (DEC-013 point 2)."""
+    shutil.copytree(RELEASED_FOUNDATIONS, target)
+    library = target / "library.yaml"
+    text = library.read_text(encoding="utf-8")
+    assert "\nneeds-release: 0.3.0\n" in text
+    needs = text.replace("\nneeds-release: 0.3.0\n", "\nneeds-release: 0.1.0\n")
+    library.write_text(needs, encoding="utf-8")
+    return target
+
+
 def add_library(
     root: Path,
     name: str,
@@ -162,12 +182,15 @@ def taken(name: str, *, being_built: bool = False) -> Taken:
     return Taken(version, RELEASES / name / version, dict(released[version]))
 
 
-def hold_shipped(root: Path, name: str, location: str = "visual") -> Taken:
-    """The version being built of `name`, a library the capability ships, held as `pkit
-    visual add <name> --being-built` takes it from the tree: copied whole in place of any
-    copy of its number, and listed from the source `shipped` with its entry, every other
-    entry of the list kept."""
-    held = taken(name, being_built=True)
+def hold_shipped(
+    root: Path, name: str, location: str = "visual", *, being_built: bool = True
+) -> Taken:
+    """A version of `name`, a library the capability ships, held as `pkit visual add <name>`
+    takes it from the tree: the version being built, as `--being-built` takes it, or where
+    `being_built` is false the newest released version. Copied whole in place of any copy
+    of its number, and listed from the source `shipped` with its entry, every other entry
+    of the list kept."""
+    held = taken(name, being_built=being_built)
     target = version_folder(root, name, held.version, location)
     if target.exists():
         shutil.rmtree(target)
@@ -180,6 +203,17 @@ def hold_shipped(root: Path, name: str, location: str = "visual") -> Taken:
     libraries[name] = {"source": {"kind": "shipped"}, "versions": versions}
     write_list(root, libraries, location)
     return held
+
+
+def locked_at(folder: Path, versions: Mapping[str, str]) -> Path:
+    """The piece in `folder` locked at `versions`, for each library its lock names among
+    them, every other field and library of its lock kept: a reference piece drawn on the
+    versions a location holds. Returns its `piece.yaml`."""
+    path = folder / "piece.yaml"
+    piece = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+    lock = dict(piece["lock"])
+    lock.update({name: version for name, version in versions.items() if name in lock})
+    return write(path, yaml_text({**piece, "lock": lock}))
 
 
 def write_list(root: Path, libraries: Mapping[str, Any], location: str = "visual") -> Path:

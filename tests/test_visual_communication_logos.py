@@ -41,15 +41,16 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_export import drawn_pictures
 from tests.test_visual_communication_pdf import data_of as pdf_data_of
-from tests.test_visual_communication_pipeline import DEVICE, NARROW, TESTS, every_file
+from tests.test_visual_communication_pipeline import NARROW, TESTS, every_file
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_EDITION,
     TEST_PICTURES,
     bound,
     copy_library,
     importable,
     project,
+    taken,
     write,
     write_list,
     write_piece,
@@ -286,18 +287,24 @@ def logo_project(
     """The piece `masthead` under the brand `test-logo` (`logo.logo_brand`), in both colour
     schemes, exported as SVG unless `fields` say otherwise: its steps the brand's logo, a
     picture file of the piece, a PNG, and a callout over the produced picture `square`.
-    With `device`, the foundations hold the size axis `device`, and the brand gives a
-    phone its own logo (`add_device`)."""
+    The project holds the foundations' release 1.0.0. With `device`, it holds their
+    version being built instead, which declares the size axis `device`, locked at it, and
+    the brand gives a phone its own logo (`add_device`)."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TESTS, "tests", "1.0.0")
     logo.logo_brand(root, light=light, dark=dark)
+    lock = dict(LOCK)
     if device:
+        built = taken("foundations", being_built=True)
+        copy_library(root, built.folder, "foundations", built.version)
+        lock["foundations"] = built.version
         add_device(root)
+    else:
+        copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     list_libraries(root)
     piece = {
         "brand": logo.NAME,
-        "lock": dict(LOCK),
+        "lock": lock,
         "modes": {"colour-scheme": ["light", "dark"]},
         "exports": ["svg"],
         "produced": {
@@ -491,12 +498,10 @@ def test_a_page_file_of_both_schemes_draws_the_light_logo_and_reports_the_dark_o
 
 
 def add_device(root: Path) -> Path:
-    """The size axis `device` on the foundations the project holds, which the brand
-    `test-logo` varies: its mode `phone` gives the tokens of a phone's own file, a narrower
-    figure and a phone's own logo, the mark alone (`logo.give_phone`). The brand's folder."""
-    roles = root / "visual/libraries/foundations/1.0.0/roles.yaml"
-    text = roles.read_text(encoding="utf-8")
-    roles.write_text(text.replace("axes:\n", f"axes:\n  {DEVICE}\n", 1), encoding="utf-8")
+    """The brand `test-logo` made to vary the size axis `device`, which the foundations being
+    built declare (visual-communication DEC-021 points 1 and 2), at `desktop` and `phone`:
+    its mode `phone` gives the tokens of a phone's own file, a narrower figure and a phone's
+    own logo, the mark alone (`logo.give_phone`). The brand's folder."""
     brand = root / BRAND_FOLDER
     write(brand / logo.PHONE_FILE, json.dumps(NARROW, indent=2))
     resolver = brand / "test-brand.resolver.json"
@@ -794,11 +799,11 @@ def code_project(
     given: bool = True,
     accepted: list[dict[str, str]] | None = None,
 ) -> Path:
-    """A project holding the foundations and the brand `test-logo`, giving its logos unless
-    `given` is false, and the declaration of `writer` in `form` under it, accepting the
-    losses `accepted` where given."""
+    """A project holding the foundations' release 1.0.0 and the brand `test-logo`, giving
+    its logos unless `given` is false, and the declaration of `writer` in `form` under it,
+    accepting the losses `accepted` where given."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     logo.logo_brand(root, light=given, dark=given)
     out = "web/brand.css" if writer == "css" else "web/brand.json"
     lock = {"foundations": "1.0.0", logo.NAME: logo.VERSION}

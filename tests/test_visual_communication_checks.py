@@ -59,7 +59,7 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_PARTS,
     TEST_PICTURES,
     add_library,
@@ -371,10 +371,11 @@ def not_released(root: Path, name: str, **more: str) -> None:
 
 @pytest.fixture
 def capability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A capability's folder the test controls, building a copy of the foundations and
-    releasing none, in place of the capability's own for the length of the test."""
+    """A capability's folder the test controls, building the foundations at 1.0.0, the files
+    of their release, and releasing none, in place of the capability's own for the length
+    of the test."""
     folder = tmp_path / "capability"
-    shutil.copytree(FOUNDATIONS, folder / "libraries" / "foundations")
+    shutil.copytree(RELEASED_FOUNDATIONS, folder / "libraries" / "foundations")
     monkeypatch.setattr(copies, "SHIPPED", folder)
     monkeypatch.setattr(checks, "SHIPPED", folder)
     return folder
@@ -775,7 +776,7 @@ def test_a_shipped_copy_a_final_piece_locks_names_the_command_that_restores_it(
     entry = release(capability)
     copy = root / "visual/libraries/foundations/1.0.0"
     shutil.rmtree(copy)
-    shutil.copytree(FOUNDATIONS, copy)
+    shutil.copytree(RELEASED_FOUNDATIONS, copy)
     path = root / "visual/libraries/libraries.yaml"
     data = reading.read_yaml(path)
     data["libraries"]["foundations"]["versions"]["1.0.0"] = entry
@@ -1378,10 +1379,10 @@ def test_scene_findings_name_the_component_file_and_the_command_that_makes_a_pic
 
 
 def test_the_skeleton_piece_with_its_picture_fails_nothing(tmp_path: Path) -> None:
-    """With the foundations held as the capability ships them, so their copy raises no
-    finding of its own."""
+    """With the foundations held as `pkit visual add foundations` takes them, so their copy
+    raises no finding of its own."""
     root = drawing_project(tmp_path)
-    hold_shipped(root, "foundations")
+    hold_shipped(root, "foundations", being_built=False)
     write_picture(root, framing)
     report = checks.check(root)
     assert not report.failed()

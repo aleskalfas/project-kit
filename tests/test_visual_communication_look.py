@@ -53,7 +53,7 @@ from tests.test_visual_communication_viewing_browser import span as held_span
 from tests.test_visual_communication_viewing_browser import text as held_text
 from tests.visual_communication_browser import called, logged, stand_in
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     copy_library,
     importable,
@@ -555,7 +555,7 @@ def starter_project(tmp_path: Path) -> Path:
     """The starter, the test brand and notation, and the starter's reference pieces, which
     hold more than one page, two languages and four keys."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, STARTER, "starter", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
