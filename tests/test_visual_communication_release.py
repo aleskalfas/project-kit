@@ -45,10 +45,11 @@ from tests.test_visual_communication_shipped_libraries import (
     without_note,
 )
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     REPO,
     TEST_PICTURES,
     bound,
+    built_as_released,
     copy_library,
     project,
     write,
@@ -119,7 +120,7 @@ def own_project(tmp: Path, listed: str = OWN_LIST) -> Path:
     """A project that holds the foundations, and version 1.0.0 of its own library `parts`,
     built on them, with a stable component, listed not released."""
     root = project(tmp)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     parts_version(root, "1.0.0", label=LABEL)
     write(root / LIST, listed)
     return root
@@ -400,15 +401,16 @@ components:
 
 
 class Repository:
-    """A repository the tests build, whose capability's folder ships the foundations: where
-    the capability is authored, the methodology's source, unless `source` is false, where
-    the capability is installed as a copy. A commit at a time, never signed. The clone's
-    local folder is ignored, as the capability's `runtime_ignore` asks."""
+    """A repository the tests build, whose capability's folder ships the foundations, built
+    as they stood when 1.0.0 was released: where the capability is authored, the
+    methodology's source, unless `source` is false, where the capability is installed as a
+    copy. A commit at a time, never signed. The clone's local folder is ignored, as the
+    capability's `runtime_ignore` asks."""
 
     def __init__(self, tmp: Path, *, source: bool = True) -> None:
         self.root = tmp / "repository"
         self.folder = self.root / CAPABILITY_DIR
-        shutil.copytree(FOUNDATIONS, built(self.folder))
+        built_as_released(built(self.folder))
         set_fields(built(self.folder) / "library.yaml", **{"needs-release": BEFORE})
         write(self.folder / "package.yaml", PACKAGE.format(version="0.1.0"))
         write(self.root / OWNERSHIP, (REPO / OWNERSHIP).read_text(encoding="utf-8"))

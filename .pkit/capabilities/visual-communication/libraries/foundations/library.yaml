@@ -6,7 +6,7 @@ schema_version: 1
 # (components/). They hold no value: a brand gives every shared role its value. A
 # released version never changes: a change is a new version (DEC-003 point 6).
 name: foundations
-version: 1.0.0
+version: 1.1.0
 kind: components
 needs-release: 0.1.0
 builds-on: []

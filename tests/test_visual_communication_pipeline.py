@@ -29,7 +29,7 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load
 from tests.visual_communication_project import (
     FIXTURES,
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_NOTATION,
     TEST_PARTS,
@@ -153,7 +153,7 @@ def lay_out_drawing(
     no producer is needed to check it. The libraries are listed unreleased, but under a
     final or a published piece's lock, which names released versions alone; `released` says
     otherwise."""
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TESTS, "tests", "1.0.0")
     stays = fields.get("state") in ("final", "published")
@@ -529,8 +529,8 @@ def test_a_lock_naming_a_version_not_held_is_refused(tmp_path: Path) -> None:
 
 # --- a piece on a size axis (DEC-004 points 2 and 3, DEC-005 point 6) ---------------------------
 
-#: The size axis the size tests add to the foundations they hold. No shipped brand declares
-#: one, so each test adds it to its own copy.
+#: The size axis the size tests add, in two modes, to the foundations they hold: their
+#: release 1.0.0, which declares none, so each test adds it to its own copy.
 DEVICE = "device: {kind: size, modes: [desktop, phone], default: desktop}"
 
 #: The key of the phone, the mode of `device` that is not its default.
@@ -862,7 +862,7 @@ def system_project(tmp_path: Path) -> Path:
     """The foundations, the test brand and the test notation, listed unreleased, and the
     draft `system`: a figure of the pattern over `NODES`, in both colour schemes."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     unreleased = {"1.0.0": {"released": False}}
@@ -977,7 +977,7 @@ def parts_project(tmp_path: Path, warning: bool = False) -> Path:
     three; with `warning`, the tag paints its label with the library's warning, which has
     no default and which the test brand, naming no library, leaves with no value."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     parts = copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
     if warning:

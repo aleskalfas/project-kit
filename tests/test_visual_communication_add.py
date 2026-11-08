@@ -45,9 +45,11 @@ from tests.visual_communication_project import (
     CAPABILITY,
     CONFIG,
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_PARTS,
     bound,
+    built_as_released,
     copy_library,
     importable,
     project,
@@ -98,10 +100,11 @@ def tree(folder: Path) -> dict[str, bytes]:
 
 
 def capability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A capability's folder the test controls, building a copy of the foundations and
-    releasing none, in place of the capability's own for the length of the test."""
+    """A capability's folder the test controls, building the foundations as they stood when
+    1.0.0 was released and releasing none, in place of the capability's own for the length
+    of the test."""
     folder = tmp_path / "capability"
-    shutil.copytree(FOUNDATIONS, folder / "libraries" / "foundations")
+    built_as_released(folder / "libraries" / "foundations")
     monkeypatch.setattr(copies, "SHIPPED", folder)
     return folder
 
@@ -179,7 +182,7 @@ def test_the_list_takes_the_library_and_keeps_every_other_byte(
 def test_a_version_is_added_to_the_shipped_library_the_list_names(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    capability(tmp_path, monkeypatch)
+    folder = capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     original = (
         "pkit_schema: visual-communication:libraries\n"
@@ -194,7 +197,7 @@ def test_a_version_is_added_to_the_shipped_library_the_list_names(
     assert (root / LIST).read_text(encoding="utf-8") == original.replace(
         "{2.0.0: {released: false}}", "{2.0.0: {released: false}, 1.0.0: {released: false}}"
     )
-    assert tree(root / COPY) == tree(FOUNDATIONS)
+    assert tree(root / COPY) == tree(folder / "libraries" / "foundations")
 
 
 def test_an_empty_list_takes_the_library_in_its_flow(
@@ -222,7 +225,7 @@ def test_an_empty_list_takes_the_library_in_its_flow(
 def test_a_folder_the_list_does_not_name_is_never_overwritten(tmp_path: Path, held: str) -> None:
     root = project(tmp_path)
     if held == "changed":
-        folder = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+        folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
         write(folder / "roles.yaml", "# Changed by the project.\n")
     else:
         (root / COPY).mkdir(parents=True)
@@ -240,17 +243,17 @@ def test_a_folder_the_list_does_not_name_is_never_overwritten(tmp_path: Path, he
 def test_a_version_the_list_names_without_its_folder_is_brought_in(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    capability(tmp_path, monkeypatch)
+    folder = capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     write_list(root, {"foundations": LISTED})
     listed = (root / LIST).read_bytes()
     added = run(root, "foundations")
     assert added.returncode == 0, added.stderr
-    assert tree(root / COPY) == tree(FOUNDATIONS)
+    assert tree(root / COPY) == tree(folder / "libraries" / "foundations")
     assert (root / LIST).read_bytes() == listed
     assert added.stdout.splitlines()[1:] == [
-        f"replaced foundations@1.0.0, {len(tree(FOUNDATIONS))} files, in {COPY}/, with the "
-        f"version being built, its folder missing before"
+        f"replaced foundations@1.0.0, {len(tree(RELEASED_FOUNDATIONS))} files, in {COPY}/, "
+        f"with the version being built, its folder missing before"
     ]
 
 
@@ -538,7 +541,7 @@ def listed(root: Path) -> dict[str, Any]:
 def unreleased_copy(root: Path, about: str = "An older figure.") -> Path:
     """A copy of foundations 1.0.0 not yet released, taken before the release, so its figure
     differs from the released one, and listed `released: false`."""
-    folder = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     set_fields(folder / "components" / "figure.yaml", about=about)
     write_list(root, {"foundations": LISTED})
     return folder
@@ -966,7 +969,7 @@ def written(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     changed(folder / "libraries/test-parts/roles.yaml", GAP, CHANGED_GAP)
     importable(monkeypatch, css)
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
     versions = {"1.0.0": {"released": False}}

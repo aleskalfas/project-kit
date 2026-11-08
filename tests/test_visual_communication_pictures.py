@@ -28,7 +28,7 @@ import pytest
 
 from tests.in_process import load
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_PICTURES,
     copy_library,
@@ -661,7 +661,7 @@ def test_a_brands_logo_read_in_full_is_reported_once(tmp_path: Path) -> None:
     """The brand judges the file its role names, and the full read each file of the version;
     a file nothing names is read too (DEC-014 point 1)."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     folder = copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     tokens = folder / "tokens" / "base.tokens.json"
     data = json.loads(tokens.read_text(encoding="utf-8"))

@@ -61,7 +61,7 @@ from tests.test_visual_communication_pipeline import (
 from tests.test_visual_communication_sizes import DEVICE, ON_DESKTOP, ON_PHONE
 from tests.test_visual_communication_ties import pictured, to_a_point
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_EDITION,
     TEST_PICTURES,
     add_library,
@@ -668,7 +668,7 @@ def test_a_version_read_in_full_judges_each_name_its_components_give(tmp_path: P
     """As the engine judges a name where it draws the image, and each file the version holds
     once, though a component names it."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     frames = add_library(root, FRAMES, "1.0.0", builds_on={"foundations": 1})
     mark = dict(MARK_COMPONENT)
     mark["parts"] = {**mark["parts"], "gone": {"image": {"file": "gone.png"}, "width": "=:width"}}
