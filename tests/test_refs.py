@@ -431,6 +431,27 @@ Mentions COR-999 without declaring it.
     assert any("body cites record 'COR-999'" in i.diagnosis for i in issues)
 
 
+def test_validate_flags_a_bare_reads_patterns_entry_of_an_agent(kit_target: Path) -> None:
+    """An agent's bare `reads.patterns` name is reported, and a placeholder or a path
+    passes; a skill's is not, as a skill's `reads.patterns` is never filled (#2481)."""
+    front = """reads:
+  patterns: [code-paths, <project-conventions>, docs/notes.md]
+---
+# {name}
+Reads `<project-conventions>`, `<code-paths>` and `docs/notes.md`.
+"""
+    _write_agent(kit_target, "core", "agent-a", "---\nname: agent-a\n" + front.format(name="A"))
+    _write_skill(kit_target, "core", "skill-b", "---\nname: skill-b\n" + front.format(name="B"))
+    issues = refs.validate_corpus(kit_target)
+    assert [(i.kind, i.location) for i in issues] == [
+        (refs.READS_PATTERN, ".pkit/agents/core/agent-a.md")
+    ]
+    assert issues[0].diagnosis == (
+        "`reads.patterns` entry 'code-paths' is neither a `<category>` placeholder nor a "
+        "path, so the deploy does not resolve it. Write it `<code-paths>`."
+    )
+
+
 # --- backward-citation exemptions (#584) ----------------------------
 #
 # The backward check must not flag references that are not overlay-resolved

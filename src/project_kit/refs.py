@@ -12,6 +12,9 @@ queries:
   paths, not placeholders) and cross-agent path overlaps are flagged.
 - Agent policy: every `model:` / `effort:` an agent's front matter declares,
   or the overlay sets for one, is a value the harness accepts (#1047).
+- Pattern form: every `reads.patterns` entry of an agent is a `<category>`
+  placeholder the deploy resolves, or a path; a bare category name is reported
+  (#2481).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -162,6 +165,10 @@ STORYBOARD = "storyboard"
 CITATION = "citation"
 COMPOSES = "composes"
 AGENT_POLICY = "agent-policy"
+# An agent's `reads.patterns` entry that is neither a `<category>` placeholder nor a
+# path: the deploy resolves only a placeholder, so a bare name never reaches its paths
+# (#2481).
+READS_PATTERN = "reads-pattern"
 # A citation of a point its record does not hold (COR-058 point 1): read from prose, so
 # reported and never failed, by the member and by `pkit refs validate` alike.
 POINT_CITATION = "point-citation"
@@ -275,8 +282,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy
-    checks."""
+    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
+    `reads.patterns` form checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -299,6 +306,7 @@ def check_corpus(
     issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
+    issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
     return issues
 
 
@@ -316,7 +324,8 @@ def outcome(target_root: Path) -> Outcome:
     hook). Every other finding — a path owned twice or by nobody, a hook no
     provider answers, two providers at one tier, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
-    model or effort the harness does not accept — is an **error**. A citation of
+    model or effort the harness does not accept, an agent's `reads.patterns`
+    entry that is neither a placeholder nor a path — is an **error**. A citation of
     a point its record does not hold is a **warning** too, read from prose as
     drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
     it fails on any finding but that last.
@@ -1899,7 +1908,12 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
             else str(art.path)
         )
 
-        declared_paths_all = art.declared.reads_paths | art.declared.owns | art.declared.storyboards
+        # A path written under `reads.patterns` is a declared path like any other,
+        # never a category the pattern block below looks for.
+        pattern_paths = frozenset(p for p in art.declared.reads_patterns if _is_pattern_path(p))
+        declared_paths_all = (
+            art.declared.reads_paths | art.declared.owns | art.declared.storyboards | pattern_paths
+        )
         # Pattern tokens (`<category-name>`) often appear as `owns:` entries
         # and as backticked references in body. The body parser skips
         # template-marker tokens, so backward checks would otherwise demand
@@ -1958,8 +1972,11 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # the placeholder the deploy reads (`<project-conventions>`,
         # `agents_overlay.placeholder_category`); the placeholder must appear
         # in the file — a bare name in the body, a bracketed declaration
-        # already does, like an `owns:` placeholder.
-        pattern_names: set[str] = {p.strip("<>") for p in art.declared.reads_patterns}
+        # already does, like an `owns:` placeholder. A bare name in an agent's
+        # `reads.patterns` is `_validate_reads_patterns`'s finding as well.
+        pattern_names: set[str] = {
+            p.strip("<>") for p in art.declared.reads_patterns if not _is_pattern_path(p)
+        }
         for p in art.declared.reads_paths | art.declared.owns:
             if p.startswith("<") and p.endswith(">"):
                 pattern_names.add(p.strip("<>"))
@@ -3019,6 +3036,45 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                     Issue(
                         location=str(agents_overlay.OVERLAY_PATH),
                         diagnosis=f"`overrides.{agent}.{key}`: {problem}.",
+                    )
+                )
+    return issues
+
+
+def _is_pattern_path(entry: str) -> bool:
+    """Whether a `reads.patterns` entry is a path: no `<category>` placeholder, and
+    holding a `/` or a `.`, such as `docs/` or `CLAUDE.md`.
+
+    The deploy resolves a placeholder through the overlay and writes any other entry
+    as it stands, so a path still names something on disk in the deployed copy.
+    """
+    return agents_overlay.placeholder_category(entry) is None and any(
+        mark in entry for mark in "/."
+    )
+
+
+def _validate_reads_patterns(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every `reads.patterns` entry of an agent is a `<category>` placeholder or a
+    path (#2481).
+
+    The agents README writes each category there as its placeholder, the form the
+    deploy resolves. A bare category name, such as `architecture-docs`, deploys as
+    written: the deployed copy carries the name, never the category's paths. A skill
+    is left out, since the adapter deploys a skill's text unchanged and its
+    `reads.patterns` is not filled (the skills README).
+    """
+    issues: list[Issue] = []
+    for art in artifacts:
+        if art.kind != "agent":
+            continue
+        for entry in sorted(art.declared.reads_patterns):
+            if agents_overlay.placeholder_category(entry) is None and not _is_pattern_path(entry):
+                issues.append(
+                    Issue(
+                        location=_location(art, target_root),
+                        diagnosis=f"`reads.patterns` entry {entry!r} is neither a "
+                        f"`<category>` placeholder nor a path, so the deploy does not "
+                        f"resolve it. Write it `<{entry.strip('<>')}>`.",
                     )
                 )
     return issues
