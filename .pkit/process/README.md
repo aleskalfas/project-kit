@@ -387,7 +387,7 @@ The backbone writes the journal pattern, `.pkit/capabilities/*/project/process/*
 
 - **When it is left out:** where the setting is `committed: true`, with `enabled: true`.
 - **When it takes effect:** the configuration command renders the file again at once. A hand edit of the configuration takes effect at the next sync.
-- **A journal already tracked** by git stays tracked, whatever the file says.
+- **A journal already tracked** by git stays tracked, whatever the file says. While the file ignores it, `pkit validate` warns at it, and names `pkit visibility untrack --runtime-ignored`, which takes it out of the index and keeps the file.
 
 A capability that still declares the pattern in its own `runtime_ignore` is older than the backbone that took the line over. It cannot keep committed journals ignored:
 

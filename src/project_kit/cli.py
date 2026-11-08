@@ -5205,19 +5205,27 @@ def _visibility_target() -> Path:
     return target_root
 
 
-def _confirm_untrack(question: str, *, wrote_region: bool = False) -> bool:
+def _confirm_untrack(
+    question: str, *, wrote_region: bool = False, runtime_ignored: bool = False
+) -> bool:
     """Ask before untracking the footprint; refuse off a terminal (#2003).
 
     `wrote_region`: `visibility private` wrote its `.git/info/exclude` region
-    before asking, so the refusal says so."""
+    before asking, so the refusal says so. `runtime_ignored`: the files are the
+    tracked ones `.pkit/.gitignore` ignores (`visibility untrack --runtime-ignored`)."""
     from project_kit.project_config import confirm_at_terminal
 
     written = " `.git/info/exclude` now lists them, but" if wrote_region else ""
+    noun, command = (
+        ("runtime-ignored", "pkit visibility untrack --runtime-ignored")
+        if runtime_ignored
+        else ("footprint", "pkit visibility untrack")
+    )
     return confirm_at_terminal(
         question,
-        refusal="refusing to remove the tracked footprint files from the index: stdin is not "
+        refusal=f"refusing to remove the tracked {noun} files from the index: stdin is not "
         f"a terminal, so nobody can confirm it (#2003).{written} They stay tracked. Run "
-        "`pkit visibility untrack` at a terminal.",
+        f"`{command}` at a terminal.",
     )
 
 
@@ -5270,18 +5278,32 @@ def visibility_private(dry_run: bool) -> None:
     default=False,
     help="Preview the footprint files that would be removed from the index.",
 )
-def visibility_untrack(dry_run: bool) -> None:
+@click.option(
+    "--runtime-ignored",
+    is_flag=True,
+    default=False,
+    help="Remove only the tracked files the rendered .pkit/.gitignore ignores, the "
+    "runtime-local files components declare (ADR-009 rule 7).",
+)
+def visibility_untrack(dry_run: bool, runtime_ignored: bool) -> None:
     """Remove already-tracked pkit footprint files from the git index (per ADR-009).
 
     Footprint-only, confirm-gated, working-copy-preserving (`git rm --cached`).
     Refuses mid-merge/rebase or when footprint paths have staged changes. Its own
     subcommand so the one git-index-mutating gesture stays explicit, never folded
-    silently into a `shared`/`private` mode flip.
+    silently into a `shared`/`private` mode flip. With `--runtime-ignored`, only the
+    tracked files `.pkit/.gitignore` ignores, which `pkit validate` warns of.
     """
     from project_kit import visibility as vis
 
     click.echo(
-        vis.untrack(_visibility_target(), dry_run=dry_run, confirm=_confirm_untrack), nl=False
+        vis.untrack(
+            _visibility_target(),
+            dry_run=dry_run,
+            confirm=lambda question: _confirm_untrack(question, runtime_ignored=runtime_ignored),
+            runtime_ignored=runtime_ignored,
+        ),
+        nl=False,
     )
 
 
@@ -5603,9 +5625,9 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
 
     The backbone's members run first — manifests, schemas, configuration,
     packages, connections, versions, decisions, friction, rule-sets, refs,
-    process, data, scratchpad — then each installed capability's, registered
-    in its package metadata (`validators:`, each naming a `commands:` leaf that
-    declares the query contract). One renderer prints every section;
+    process, data, scratchpad, visibility — then each installed capability's,
+    registered in its package metadata (`validators:`, each naming a `commands:`
+    leaf that declares the query contract). One renderer prints every section;
     warnings, information and reports print, only errors fail. The
     diff-scoped checks (`friction check`, `migrations check-diff`, `release
     lint`) are not members: they answer about a change, not the tree.

@@ -34,9 +34,9 @@
 #   - `pkit validate` — the project's one check of its own STATE against the
 #     invariants its records own (COR-055): the backbone's registered members
 #     (manifests, schemas, configuration, packages, connections, versions,
-#     decisions, friction, rule-sets, refs, process, data, scratchpad) and
-#     each installed capability's. One line, so nothing registered can be
-#     forgotten here; it fails on errors only.
+#     decisions, friction, rule-sets, refs, process, data, scratchpad,
+#     visibility) and each installed capability's. One line, so nothing
+#     registered can be forgotten here; it fails on errors only.
 #   - the diff-scoped checks — migration coverage, the numbering check of
 #     decision records (a point renumbered, reused or dropped, or a point or
 #     record id the base took first: `pkit decisions check-diff`, COR-058 point

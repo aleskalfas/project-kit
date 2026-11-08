@@ -34,7 +34,9 @@ Pointer:
    one an adapter registers — the registry reads capabilities alone — a
    command that declares what it reads beyond the working tree (`reads`, the
    same point) declares the query contract too — its values are the schema's
-   to check — a contribution names `command` or `value` but not both,
+   to check — a contribution names `command` or `value` but not both, a
+   `runtime_ignore` entry lies in its component's own folder
+   (`.pkit/capabilities/<name>/` or `.pkit/adapters/<name>/`, ADR-009 rule 7),
    documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
    project and held folders inside a declared location, the target of each
@@ -509,7 +511,16 @@ def _repository_findings(
         if host is not None:
             _check_relative(findings, "/loaded_rules/host", host, "a repository-relative path")
 
+    own_folder = component_folder(component)
     for index, pattern in enumerate(_items(raw.get("runtime_ignore"))):
+        if (
+            own_folder is not None
+            and isinstance(pattern, str)
+            and pattern.strip()
+            and relative_path_problem(pattern.strip()) is None
+            and not lies_in_folder(pattern.strip(), own_folder)
+        ):
+            _error(f"/runtime_ignore/{index}", runtime_ignore_outside_message(pattern, own_folder))
         if isinstance(pattern, str) and journal.drops_claim(pattern):
             findings.append(
                 PackageFinding(
@@ -1015,6 +1026,42 @@ def journal_claim_message(pattern: str, provenance: Provenance = Provenance.OWN)
         f"and this project does (`process.journal.committed: true`, COR-033 point 7), so "
         f"the `.pkit/.gitignore` render drops the entry and names it in a comment line. "
         f"{_JOURNAL_CLAIM_FIX[provenance]}"
+    )
+
+
+def component_folder(component: Any) -> str | None:
+    """The folder a component's own files lie in, repository-relative with a
+    trailing `/` — `.pkit/capabilities/<name>/` or `.pkit/adapters/<name>/` — read
+    from its `component` block; None where the block names no known kind and a
+    name (the shape pass reports that)."""
+    if not isinstance(component, Mapping):
+        return None
+    block = cast("Mapping[str, Any]", component)
+    kind, name = block.get("kind"), block.get("name")
+    folder = _COMPONENT_DIRS.get(kind) if isinstance(kind, str) else None
+    if folder is None or not isinstance(name, str) or not name or "/" in name:
+        return None
+    return f".pkit/{folder}/{name}/"
+
+
+def lies_in_folder(pattern: str, folder: str) -> bool:
+    """Whether a `runtime_ignore` pattern can match only inside `folder`: it is the
+    folder, or opens with the folder's own path, every segment of it written out.
+    A pattern with no `/` before its end matches at any depth under `.pkit/`, and
+    a glob in a leading segment reaches other folders, so neither lies in it."""
+    return pattern == folder or pattern == folder.rstrip("/") or pattern.startswith(folder)
+
+
+def runtime_ignore_outside_message(pattern: str, folder: str) -> str:
+    """The error on a `runtime_ignore` entry that lies outside its component's
+    own folder (ADR-009 rule 7)."""
+    return (
+        f"runtime_ignore entry {pattern!r} lies outside this component's own folder, "
+        f"{folder}: a component declares only files under it (ADR-009 rule 7). Every "
+        "tracked file `.pkit/.gitignore` ignores is removed from the index, by the upgrade "
+        "and by `pkit visibility untrack --runtime-ignored`, so an entry outside would "
+        "untrack files another component owns. Write the entry under the folder, the whole "
+        "path spelled out."
     )
 
 
