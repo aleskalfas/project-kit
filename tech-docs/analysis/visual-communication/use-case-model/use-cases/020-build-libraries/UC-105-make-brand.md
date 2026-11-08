@@ -52,7 +52,7 @@ pkit:
 **Variants:**
 
 - **2a.** A renderer lacks the brand's fonts, such as an online board. The developer names the fonts the brand uses in that renderer, and a font to use instead of a monospace font.
-- **2b.** The brand has no logo. The developer gives none, and a piece under the brand draws no logo where one would show. The system reports nothing.
+- **2b.** The brand has no logo. The developer gives none, and a piece under the brand draws no logo where one would show. The system reports no fault, and no piece takes a finding. The brand's version states once that the brand gives no logo.
 - **3a.** Other brands are meant to build on this one, such as an online platform's brand that each of its games restyles. The developer lists which of its named values a brand built on it may alter ([UC-106](UC-106-build-brand-on-brand.md)).
 - **4a.** The developer gives the logo in some modes of one size and not in others, or as files of two shapes there. The system reports it, since the modes of one size share one layout.
 - **6a.** A part of the look has a form of the brand's own, unlike any library component of the starter library. The brand keeps it as a library component of its own. Otherwise the brand gives values to a library component of the starter library, and never copies it.
