@@ -7,8 +7,8 @@ schema_version: 1
 # at its defaults (DEC-008, Implications), and it draws no layout, so each top draws its
 # own (DEC-009, Implications). It opens no role: opening one later breaks nothing, closing
 # one does (DEC-004 point 5). Its fonts are Source Sans Pro, a family for each weight, and
-# Source Code Pro for code, committed unchanged with their licences in fonts/. Not
-# released yet, so it may still change.
+# Source Code Pro for code, committed unchanged with their licences in fonts/. A
+# released version never changes: a change is a new version (DEC-003 point 6).
 name: neutral
 version: 1.0.0
 kind: brand

@@ -22,10 +22,11 @@ content names, its own component's file, a library's file and a produced picture
 
 - what a renderer is handed for each image, in each language and combination, whatever its
   source; a library's file the same in every mode and under two brands;
-- each language's file drawn in a preview, in an SVG and an HTML export, and in a look,
-  whose report names the picture with a colour profile;
+- each language's file drawn in a preview, in an SVG, an HTML and a PDF export, and in a
+  look, whose report names the picture with a colour profile; a PDF draws each picture,
+  the produced one from the variant that serves each combination, and loses none;
 - what the check finds of a file a field or a component names, and of a file nothing
-  names; each image a PDF refuses, and the piece accepting it;
+  names;
 - an export refused over a picture file missing or unreadable, writing nothing;
 - a changed or added picture file: the findings record stale, the change since the last
   export, and a published piece's current copy out of date.
@@ -44,6 +45,7 @@ import pytest
 
 from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
+from tests.test_visual_communication_export import drawn_pictures
 from tests.test_visual_communication_pipeline import (
     LOCK,
     PIECE,
@@ -102,6 +104,7 @@ from tests.visual_engine import seam as engine_seam
     viewing,
     full_read,
     libraries,
+    png,
 ) = load(
     "visual-communication",
     "export.py",
@@ -120,6 +123,7 @@ from tests.visual_engine import seam as engine_seam
     "viewing",
     "full_read",
     "libraries",
+    "png",
 )
 
 #: The field a content names a picture file of the piece by.
@@ -680,24 +684,38 @@ def test_a_version_read_in_full_judges_each_name_its_components_give(tmp_path: P
     assert {f.library for f in read.findings if f.code.startswith("picture-")} == {"frames@1.0.0"}
 
 
-def test_a_pdf_reports_each_image_as_a_refused_loss_which_the_piece_may_accept(
+def test_each_language_exports_its_own_file_and_every_other_picture_in_a_pdf(
     tmp_path: Path,
 ) -> None:
+    """Each PDF draws, in the scene's order, the content's own file in its language, a PNG with
+    a colour profile in English and a progressive JPEG in Czech; the piece's badge, a JPEG; the
+    library's mark, a palette's PNG with a transparent colour; and the produced picture, from
+    the variant that serves its combination. No image is a loss."""
     root = pictured_project(tmp_path, exports=["pdf"])
-    lost = [
-        finding
-        for finding in checks.computed(project_of(root))
-        if finding.code == "loss" and finding.message.startswith("the pdf renderer refuses ")
-    ]
-    assert sorted({finding.where for finding in lost}) == sorted({SHOT, BADGE, MARK, NOTE})
-    assert all("draws no `image`" in finding.message for finding in lost)
-
-    accepted = [
-        {"plugin": "pdf", "what": what, "reason": "Known."} for what in (SHOT, BADGE, MARK, NOTE)
-    ]
-    root = pictured_project(tmp_path / "accepted", exports=["pdf"], **{"accept-losses": accepted})
+    variants = {"default": (200, 30, 30, 255), "colour-scheme.dark": (30, 60, 200, 128)}
+    write_picture(root, framing, by_variant=variants)
     assert [f for f in checks.computed(project_of(root)) if f.code == "loss"] == []
-    assert run_main(export_script, PIECE, cwd=root).returncode == 0
+
+    exported = run_main(export_script, PIECE, cwd=root)
+
+    assert exported.returncode == 0, exported.stderr
+    pictures, frames = root / PIECE_PICTURES, root / FRAMES_PICTURES
+    mark = png.read((frames / "mark.png").read_bytes())
+    own = {
+        "en": (png.read((pictures / "photo.png").read_bytes()).data, None),
+        "cs": ((pictures / "photo.jpg").read_bytes(), None),
+    }
+    for language in ("en", "cs"):
+        for key, (red, green, blue, alpha) in variants.items():
+            path = root / EXPORTS / f"{PIECE}.v1.{language}.{key}.pdf"
+            produced = (bytes([red, green, blue]) * 100 * 100, bytes([alpha]) * 100 * 100)
+            assert drawn_pictures(path) == [
+                own[language],
+                ((pictures / "badge.jpg").read_bytes(), None),
+                (mark.data, png.palette_alpha(mark, png.samples(mark))),
+                produced,
+            ]
+            assert (b"/ICCBased" in path.read_bytes()) == (language == "en")
 
 
 # --- what refuses an export ---------------------------------------------------------------------
