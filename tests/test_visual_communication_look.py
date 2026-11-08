@@ -47,7 +47,7 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.test_visual_communication_starter import PIECES, STARTER, TEST_NOTATION, UNRELEASED
+from tests.test_visual_communication_starter import PIECES, TEST_NOTATION, UNRELEASED
 from tests.test_visual_communication_svg import COLOURS, FONT, SEMIBOLD, element, line, run, scene
 from tests.test_visual_communication_viewing_browser import FUNCTIONS, planted
 from tests.test_visual_communication_viewing_browser import page as held_page
@@ -56,6 +56,7 @@ from tests.test_visual_communication_viewing_browser import text as held_text
 from tests.visual_communication_browser import called, logged, stand_in
 from tests.visual_communication_project import (
     RELEASED_FOUNDATIONS,
+    RELEASES,
     TEST_BRAND,
     bound,
     copy_library,
@@ -562,11 +563,11 @@ def flow(tmp_path: Path) -> Path:
 
 
 def starter_project(tmp_path: Path) -> Path:
-    """The starter, the test brand and notation, and the starter's reference pieces, which
-    hold more than one page, two languages and four keys."""
+    """The starter's release 1.0.0, the test brand and notation, and the starter's reference
+    pieces, which hold more than one page, two languages and four keys."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
+    copy_library(root, RELEASES / "starter" / "1.0.0", "starter", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(

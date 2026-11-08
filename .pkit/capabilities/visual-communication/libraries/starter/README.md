@@ -31,6 +31,12 @@ pkit:
         - visual-communication:DEC-011#3
         - visual-communication:DEC-012#1
         - visual-communication:DEC-012#2
+        - visual-communication:DEC-021#4
+        - visual-communication:DEC-022#4
+        - visual-communication:DEC-022#5
+        - visual-communication:DEC-022#6
+        - visual-communication:DEC-025#1
+        - visual-communication:DEC-025#4
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
@@ -38,7 +44,7 @@ pkit:
 
 # The starter
 
-The starter is the component library to start from (visual-communication DEC-007). Its *patterns* arrange items, each for one job a visual does. Its *blocks* draw those items, or stand alone in content. The starter holds the forms, and a brand gives them their look.
+The starter is the component library to start from (visual-communication DEC-007). Its *patterns* arrange items, each for one job a visual does. Its *blocks* draw those items, or stand alone in content. Its *web parts* draw a site's pages, each for one job on a page. The starter holds the forms, and a brand gives them their look.
 
 Bring it into the location beside the foundations:
 
@@ -153,11 +159,124 @@ A block draws one item of a pattern, or stands alone where content places it.
   - `route`: `straight`, the default, or `corners`.
   - `arrow`, where its arrowheads stand: `end`, the default, `start`, `both` or `none`.
 
+## The web parts, by their job on a page
+
+The web parts draw the pages of a site (visual-communication DEC-022 point 4). Each does one job on a page, a job public design systems share, and cites them. Choose a part by its job.
+
+| Part | Its job on a page | Take another part when |
+|---|---|---|
+| `header` | Says whose site the page belongs to, and leads to its other pages | the links stand alone, with no title: `navigation` |
+| `navigation` | Leads to the site's other pages | the links head every page, beside the site's title: `header` |
+| `section` | Says one thing, beside a picture where it has one | the facts fall into rows and columns: `table` |
+| `sections` | Lays sections down a page, in their order | the page says one thing: `section` |
+| `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
+| `table` | Shows facts in rows and columns | each fact needs a sentence of its own: `section` |
+
+Each web part fits every size the brand gives: a desktop, a tablet and a phone. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
+
+- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
+- **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
+- **At rest.** A part is drawn as a page stands before anyone uses it. A form is never sent and a link never followed, and no part shows a hover, a focus or a press (visual-communication DEC-022 point 6).
+
+### `header`
+
+- **Form:** a band across the top of the page, with a rule along its foot. On a desktop the brand's logo, the site's title and its navigation stand in one row, the navigation at the row's end. On a tablet and a phone the navigation moves under the title, and the title takes the whole row.
+- **Source:** the GOV.UK Design System's header and its service navigation, and the U.S. Web Design System's header.
+- **Fields:** `title`, required, the site's name. `links`, optional, the links of its navigation, each with the fields of the `link`.
+- **Options:** `fill`: `plain`, the default, lies on the page's background; `tint` lies on its colour family's fill, its title in the family's text.
+- **Its logo** is the picture the brand gives `picture.logo`, no wider than `starter.logo`. Under a brand that gives none, the header draws no logo, and its title starts at the inset.
+- **On a desktop** the title stands on one line, so a long title belongs in a section, not the header.
+
+### `navigation`
+
+- **Form:** links in a row on a desktop and a tablet, each as wide as its label, at the row's start or at its end. On a phone the links stand one under another.
+- **Source:** the GOV.UK Design System's service navigation.
+- **Options:** `align`, its words `start`, the default, and `end`, where the links of a row stand. A column on a phone always starts at the start.
+- **Lists:** `links`, each drawn by the `link`, unless the component field `link` names another.
+- **Too many links.** Links that ask for more than the row's width are reported at that size. Fewer links, or shorter labels, mend it.
+
+### `section`
+
+- **Form:** a head and a text beside a picture, on the page's background or on its family's fill. On a desktop the words and the picture stand side by side, the picture taking the width the text leaves. On a tablet and a phone the picture stands under the text, across the whole width.
+- **Source:** the U.S. Web Design System's media block, a picture beside a text.
+- **Fields:** `head`, `text` and `picture`, each optional. `picture` names a picture file of the piece, by its bare name, such as `screen.png`. A section that names none draws its words alone, at the start.
+- **Options:**
+  - `fill`: `plain`, the default, or `tint`, as a header's.
+  - `side`: `right`, the default, stands the picture to the right of the text on a desktop; `left` stands it to the left.
+
+### `sections`
+
+- **Form:** sections one under another, in their order, each across the page's whole width. Each more section makes the page taller.
+- **Source:** the U.S. Web Design System's landing page template, whose sections stand one under another.
+- **Options:** none.
+- **Lists:** `sections`, each drawn by the `section`, unless the component field `section` names another.
+
+### `form`
+
+- **Form:** a head, its fields one under another, and its buttons under them. The buttons stand in a row on a desktop and a tablet, and one under another on a phone. A form holds no action: each field shows the text its content gives it.
+- **Source:** the GOV.UK Design System's question pages, its text input and its button group.
+- **Fields:** `head`, optional.
+- **Options:** none.
+- **Lists:**
+  - `fields`, each drawn by the `field`, unless the component field `field` names another;
+  - `buttons`, each drawn by the `button`, unless the component field `button` names another. The first button is the one that sends the form.
+
+### `table`
+
+- **Form:** a head, then its rows, one under another, each across the table's width. Each row's cells share its width, and their text breaks to the cell's width, so a row is as tall as its tallest cell. A row more makes the table taller.
+- **Source:** the GOV.UK Design System's table, and the U.S. Web Design System's table.
+- **Fields:** `head`, optional.
+- **Options:** none.
+- **Lists:** `rows`, each drawn by the `row`, unless the component field `row` names another.
+- **Its columns.** A row cannot read the table's columns, so each row gives its cells the same spans, and the columns line up. A table keeps its columns on a phone, so a word in a narrow column must fit a phone's width.
+
+## The web blocks
+
+A web block draws one item of a web part's list.
+
+### `link`
+
+- **Form:** a label in the accent colour, on one line, as wide as the label.
+- **Source:** the GOV.UK Design System's links.
+- **Fields:** `label`, required.
+- **Options:** none.
+
+### `button`
+
+- **Form:** a label on a box with rounded corners, all in its colour family: its fill, its edge and its label. It is as large as its label, on one line.
+- **Source:** the GOV.UK Design System's button, and Material Design's filled tonal button, which lays a family's text on the family's fill.
+- **Fields:** `label`, required.
+- **Options:** none. Its family is `blue`.
+- **States:** `disabled`, a button that cannot be pressed, takes the `neutral` family. It loses its colour, but its label stays as strong as any button's.
+
+### `field`
+
+- **Form:** a label, a box that holds the text the content gives the field, and a note under the box where the content gives one. The box is edged in its family's text, so it stands out against the page.
+- **Source:** the GOV.UK Design System's text input, its hint and its error message.
+- **Fields:** `label`, required, `value`, the text the field shows, and `note`, such as a hint or what is wrong.
+- **Options:** none. Its family is `neutral`.
+- **States:** `error`, a field whose text is wrong, takes the `red` family, its box and its text.
+
+### `row`
+
+- **Form:** cells side by side, sharing the row's width, and a rule along its foot.
+- **Lists:** `cells`, each drawn by the `cell`, unless the component field `cell` names another.
+- **Arrangement field:** `span`, on each cell, its words `normal`, `narrow` and `wide`. A `normal` cell, the default, takes two shares of the row, a `narrow` one one, and a `wide` one three.
+- **Options:** none.
+
+### `cell`
+
+- **Form:** a head in a strong type, a text, or both, one under the other, each broken to the cell's width.
+- **Fields:** `head` and `text`, each optional. A first row of heads names the table's columns.
+- **Options:** none.
+
 ## Colours
 
 Each starter block declares the colour family `neutral`, which the concept an item names replaces with the concept's own. A text in a family's text lies on that family's fill, a pair the foundations declare. On the surface, a card's texts take the shared roles `text-primary` and `text-secondary` instead. So a run of a card's text reads the family only where the card is tinted.
 
 A group, a code block and an aside always lie on their family's fill, so their heads read the family's text. So do an aside's text and a code block's plain runs. A code block's prompts and comments take `text-secondary`, and its commands `accent`, whatever its family.
+
+A header and a section lie on the page's `background`, or on their family's fill where tinted. A link takes `accent`, and a field's note `text-secondary`. A button and a field's box lie on their family's fill, and their text reads the family's text.
 
 A connector's line takes its family's text, not its line. Nothing beside the line shows the tie, so it needs a contrast of 3 to 1 against what it lies on (WCAG 2.1, success criterion 1.4.11). A family's line edges a fill, and may be faint: the neutral family's is the shared `line`. A family's text is the member a brand makes legible, since the foundations pair it with the family's fill.
 
@@ -167,14 +286,18 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
+- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe.
 - **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations (the capability's `files.md`, under *The foundations*). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
 | Role | What it sizes or sets | Its default |
 |---|---|---|
 | `starter.corner` | the radius of a block's corners | `space.1` |
+| `starter.button.corner` | the radius of a button's corners | `starter.corner` |
 | `starter.inset` | the space between a block's edge and what it holds | `space.3` |
 | `starter.gap` | the space between a pattern's items, or a group's | `space.3` |
+| `starter.margin` | the wider spaces within a web part, and its inset where [*Their inset*](#the-web-parts-by-their-job-on-a-page) says | `space.4` |
+| `starter.logo` | the width of a header's logo, as [`header`](#header) says | `space.4` |
 | `starter.bar` | how thick a card's or an aside's bar is | `space.1` |
 | `starter.edge` | how wide a block's edge is | `stroke.thin` |
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |
@@ -193,4 +316,7 @@ At the defaults a connector's line is as wide as a line drawn on its own, not as
 - **A colour for each place,** such as a tint that deepens down the levels (project-kit#2576).
 - **A legend and icons,** so that colour is never the only sign (project-kit#2576).
 - **The other patterns and blocks** of the first wave (project-kit#2576).
-- **Other arrangement fields.** A panel's `span` is the only one, so no other item chooses its own size or place in its list.
+- **Other arrangement fields.** A panel's `span` and a cell's are the only ones, so no other item chooses its own size or place in its list.
+- **A menu that folds the links away.** On a phone a header lists its links under its title, where a design system shows a menu button.
+- **A table that scrolls across,** or stacks its cells on a phone. A table keeps its columns at every size.
+- **A muted button, and an error message in red.** A state changes only a part's colour family, and a family's text lies on its own fill. So a button that cannot be pressed keeps its label's strength, and a field's note stays in `text-secondary`.

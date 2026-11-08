@@ -1,0 +1,32 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: plain
+    layout: standard
+    main:
+      use: starter/header
+      title: Project kit
+      links:
+        - {id: guide, label: Guide}
+        - {id: rules, label: Rules}
+        - {id: tools, label: Tools}
+        - {id: about, label: About}
+
+  - id: tint
+    layout: standard
+    main:
+      use: starter/header
+      fill: tint
+      title: Project kit
+      links:
+        - {id: guide, label: Guide}
+        - {id: rules, label: Rules}
+        - {id: tools, label: Tools}
+        - {id: about, label: About}
+
+  - id: title
+    layout: standard
+    main:
+      use: starter/header
+      title: The rules a project keeps, and the tools that apply them

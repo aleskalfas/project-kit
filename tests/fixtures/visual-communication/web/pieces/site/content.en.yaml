@@ -1,0 +1,77 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+header:
+  use: starter/header
+  title: Project kit
+  links:
+    - {id: home, label: Home}
+    - {id: ask, label: Ask}
+    - {id: releases, label: Releases}
+
+footer:
+  use: starter/section
+  fill: tint
+  head: Project kit
+  text: Written down, every rule can be read and reviewed, like any change.
+
+pages:
+  - id: home
+    layout: standard
+    main:
+      use: starter/sections
+      sections:
+        - id: written
+          head: Every rule in one place
+          text: >-
+            A project writes each of its rules down once, where every agent and every
+            person who works on it reads the same words.
+          picture: window.png
+        - id: applied
+          fill: tint
+          side: left
+          head: Applied by the tools
+          text: The tools read the rules and apply them, on every change.
+          picture: window.png
+        - id: reviewed
+          head: Reviewed like code
+          text: A change to a rule is a change like any other, and a reviewer reads it.
+
+  - id: ask
+    layout: standard
+    main:
+      use: starter/form
+      head: Ask for a review
+      fields:
+        - {id: name, label: Your name, value: Ada Lovelace}
+        - id: mail
+          state: error
+          label: Your e-mail address
+          value: ada.example.org
+          note: An address holds an @, such as ada@example.org.
+        - {id: what, label: What to review, note: "A record, a page or a picture."}
+      buttons:
+        - {id: send, label: Send the request}
+        - {id: draft, state: disabled, label: Save a draft}
+
+  - id: releases
+    layout: standard
+    main:
+      use: starter/table
+      head: What each release brought
+      rows:
+        - id: names
+          cells:
+            - {id: version, span: narrow, head: No.}
+            - {id: what, head: What it brought}
+            - {id: who, span: wide, head: Who reads it}
+        - id: first
+          cells:
+            - {id: version, span: narrow, text: "1.0"}
+            - {id: what, text: "The cards, the lists and the arrows of a slide."}
+            - {id: who, span: wide, text: "Whoever draws a deck or a figure."}
+        - id: second
+          cells:
+            - {id: version, span: narrow, text: "1.1"}
+            - {id: what, text: "The parts of a web page, at every size."}
+            - {id: who, span: wide, text: "Whoever draws a site."}

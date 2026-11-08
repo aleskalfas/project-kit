@@ -670,9 +670,11 @@ DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop"
 #: no size.
 RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
 
-#: The shared role the foundations being built add to their release 1.0.0, and the role its
-#: default aliases (DEC-022 point 3).
+#: The shared roles the foundations being built add to their release 1.0.0, each with the role
+#: its default aliases (DEC-022 points 3 and 5).
 SITE = tokens.Role("size.site", "dimension", "size.slide")
+LINE = tokens.Role("size.line", "dimension", "size.figure")
+ADDED = {"size.site": SITE, "size.line": LINE}
 
 PHONE = "tokens/phone.tokens.json"
 
@@ -687,20 +689,21 @@ def released() -> Any:
     return tokens.read_declarations(RELEASED_FOUNDATIONS / "roles.yaml")
 
 
-def test_the_foundations_being_built_add_the_size_axis_device_the_role_size_site_alone(
+def test_the_foundations_being_built_add_the_size_axis_device_and_two_roles_alone(
     foundations: Any, released: Any
 ) -> None:
     """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
-    (DEC-021 point 1), and `size.site`, a dimension whose default is `size.slide` (DEC-022
-    point 3). Every other declaration is their release 1.0.0's."""
+    (DEC-021 point 1). `size.site`, a dimension whose default is `size.slide` (DEC-022
+    point 3), and `size.line`, the length of a line, whose default is `size.figure` (DEC-022
+    point 5). Every other declaration is their release 1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
         released.axes
     )
-    assert "size.site" not in released.roles
+    assert not set(ADDED) & set(released.roles)
     assert (foundations.roles, foundations.families, foundations.pairs) == (
-        {**released.roles, "size.site": SITE},
+        {**released.roles, **ADDED},
         released.families,
         released.pairs,
     )
@@ -763,7 +766,8 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     """The test brand 1.0.0 and the neutral brand's release 1.0.0 give no size, so on the
     foundations being built each keeps the axes, the keys and every value it has on their
     release 1.0.0, and a piece cannot name `device` in either (DEC-021 point 2). It gains
-    the role the foundations add, at its slide's width (DEC-022 point 3)."""
+    the roles the foundations add, each at the value of the role its default aliases: the
+    site at its slide's width, a line at its figure's (DEC-022 points 3 and 5)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings
@@ -772,16 +776,18 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     assert [keys.key_of(c, read.axes) for c in read.combinations()] == [
         keys.key_of(c, before.axes) for c in before.combinations()
     ]
-    assert "size.site" not in before.roles
+    assert not set(ADDED) & set(before.roles)
     assert (set(read.roles), set(read.valued)) == (
-        {*before.roles, "size.site"},
-        {*before.valued, "size.site"},
+        {*before.roles, *ADDED},
+        {*before.valued, *ADDED},
     )
     for path in before.valued:
         for combination in read.combinations():
             assert read.resolve(path, combination) == before.resolve(path, combination)
     for combination in read.combinations():
-        assert read.resolve("size.site", combination) == read.resolve("size.slide", combination)
+        for path, role in ADDED.items():
+            assert role.default is not None
+            assert read.resolve(path, combination) == read.resolve(role.default, combination)
     with pytest.raises(keys.BadKey, match="`device`"):
         read.resolve("space.3", {"device": "phone"})
 

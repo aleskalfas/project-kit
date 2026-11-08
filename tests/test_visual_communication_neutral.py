@@ -286,11 +286,13 @@ def colours_of(piece: Any) -> dict[str, Mapping[str, Any]]:
     }
 
 
-def scenes_of(piece: Any) -> Iterator[Mapping[str, Any]]:
-    """The scene of a piece in each of its languages."""
+def scenes_of(piece: Any) -> Iterator[tuple[list[str], Mapping[str, Any]]]:
+    """The scene of a piece in each of its languages and at each of its sizes, with the keys
+    it is drawn in: each combination of the piece's modes at that size."""
     for _, result in piece.scenes(facts=piece.piece.stand_ins):
         assert result.findings == []
-        yield result.scene.to_dict()
+        size = result.scene.size_key
+        yield [key for key in piece.keys if piece.size_key(key) == size], result.scene.to_dict()
 
 
 def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
@@ -325,7 +327,9 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece draws
     under it on them as under the brand's release 1.0.0 on theirs, byte for byte: each
     preview, but for the foundations' version they name, and its values, but for the role
-    `size.site` they add, which the brand gives as wide as its slide on a desktop."""
+    `size.site` they add, which the brand gives as wide as its slide on a desktop, and
+    `size.line`, which no piece that names no size reads. A web part's piece names the
+    sizes, which the foundations' release does not declare."""
     importable(monkeypatch, starter.svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)
@@ -333,30 +337,33 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     assert released_brand != taken("neutral", being_built=True).version
     on_each = starter.on_each_foundations(root, brand={"neutral": released_brand})
     released, built = on_each.values()
-    assert sorted(built) == sorted(path.name for path in PIECES.iterdir())
+    assert sorted(built) == sorted(starter.UNSIZED)
     for name, (values, files) in built.items():
         assert files, name
-        assert (starter.as_released(values), files) == released[name], name
+        assert (starter.as_released(values, given=["size.line"]), files) == released[name], name
 
 
 def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combination(
     brand: Any, drawn: Mapping[str, Any]
 ) -> None:
     """A piece that names no size is drawn at the brand's default size alone, in every
-    combination of its other axes (DEC-021 point 2)."""
+    combination of its other axes (DEC-021 point 2). A web part's piece is drawn at every
+    size, so a field in error and a button that cannot be pressed reach theirs in each."""
     measured = 0
     sizes = pl.size_axes(brand.axes)
-    expected = [
+    every = [keys.key_of(each, brand.axes) for each in brand.combinations()]
+    unsized = [
         keys.key_of(each, brand.axes)
         for each in brand.combinations()
         if all(each[axis] == sizes[axis].default for axis in sizes)
     ]
-    assert sizes and len(expected) < len(brand.combinations())
+    assert sizes and len(unsized) < len(every)
     for name, piece in drawn.items():
+        expected = every if starter.names_a_size(PIECES / name) else unsized
         assert sorted(piece.keys) == sorted(expected), name
         colours = colours_of(piece)
-        for scene in scenes_of(piece):
-            assert checks.drawn_contrast(scene, colours, piece.keys) == [], name
+        for served, scene in scenes_of(piece):
+            assert checks.drawn_contrast(scene, colours, served) == [], name
             measured += sum(1 for _ in texts(scene))
     assert measured > 0
 
@@ -368,7 +375,7 @@ def test_the_measure_of_a_text_reads_each_combination(drawn: Mapping[str, Any]) 
     colours = colours_of(card)
     last = sorted(card.keys)[-1]
     weak = {**colours["text-secondary"], last: colours["surface"][last]}
-    [scene, *_] = scenes_of(card)
+    [(_, scene), *_] = scenes_of(card)
     found = checks.drawn_contrast(scene, {**colours, "text-secondary": weak}, card.keys)
     assert found
     assert all(finding.code == "contrast-drawn" for finding in found)

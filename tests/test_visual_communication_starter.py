@@ -25,7 +25,7 @@ import json
 import math
 import re
 import shutil
-from collections.abc import Iterator, Mapping
+from collections.abc import Collection, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -49,12 +49,22 @@ from tests.visual_communication_project import (
     write_list,
 )
 
-add, checks, pl, reading, tokens, svg = load(
-    "visual-communication", "add.py", "checks", "pipeline", "reading", "tokens", "plugins.svg"
+add, checks, keys, pl, reading, tokens, svg = load(
+    "visual-communication",
+    "add.py",
+    "checks",
+    "keys",
+    "pipeline",
+    "reading",
+    "tokens",
+    "plugins.svg",
 )
 
 STARTER = CAPABILITY / "libraries" / "starter"
 PIECES = FIXTURES / "starter" / "pieces"
+#: The test brand's version that gives the sizes of the axis `device` (DEC-021 point 2), which
+#: the web parts' reference pieces lock.
+SIZED_BRAND = FIXTURES / "libraries" / "test-brand" / "1.1.0"
 README = STARTER / "README.md"
 LANGUAGES = ["en", "de"]
 UNRELEASED = {"1.0.0": {"released": False}}
@@ -219,20 +229,24 @@ def test_each_default_of_its_own_roles_is_an_alias_never_a_value() -> None:
 @pytest.fixture(scope="module")
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A location that holds the foundations and the starter being built as the capability
-    ships them, the released version of their number where it is released, the test brand
-    and the test notation, and the starter's reference pieces, each locked at the versions
-    being built."""
+    ships them, the released version of their number where it is released, the test brand,
+    its version that gives sizes, and the test notation, and the starter's reference
+    pieces, each locked at the versions being built."""
     return reference_location(project(tmp_path_factory.mktemp("starter")))
 
 
 def reference_location(root: Path) -> Path:
     """The location of `location`, laid out in the project at `root`."""
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    copy_library(root, SIZED_BRAND, "test-brand", "1.1.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(
         root,
         {
-            "test-brand": {"source": {"kind": "project"}, "versions": UNRELEASED},
+            "test-brand": {
+                "source": {"kind": "project"},
+                "versions": {**UNRELEASED, "1.1.0": {"released": False}},
+            },
             "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
         },
     )
@@ -255,34 +269,41 @@ def projects(location: Path) -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def scenes(projects: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
-    """The scene of each reference piece in each language, by piece and language."""
+    """The scene of each reference piece in each language, by piece and language, at the
+    default size: each is drawn at every size with no finding."""
     computed = {}
     for name, drawn in projects.items():
         for language, result in drawn.scenes(facts=drawn.piece.stand_ins):
             assert result.findings == [], (name, language, result.findings)
-            computed[(name, language)] = result.scene.to_dict()
+            if result.scene.size_key == keys.DEFAULT_KEY:
+                computed[(name, language)] = result.scene.to_dict()
     return computed
 
 
 @pytest.fixture(scope="module")
 def resolved(projects: Mapping[str, Any]) -> dict[str, tuple[dict[str, Any], list[str]]]:
     """For each reference piece, the test brand's value of each token in each combination
-    of modes, by token path, and the combinations the piece is drawn in."""
+    of modes, by token path, and the combinations the piece is drawn in at the default
+    size, those of its scenes in `scenes`."""
     found = {}
     for name, drawn in projects.items():
         values = {path: token["values"] for path, token in drawn.values()["tokens"].items()}
-        found[name] = (values, list(drawn.keys))
+        default = [key for key in drawn.keys if drawn.size_key(key) == keys.DEFAULT_KEY]
+        found[name] = (values, default)
     return found
 
 
 def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> None:
+    """Each piece locks a version of the starter the capability ships: the components of its
+    release 1.0.0 that, and the web parts the version being built, which adds them."""
+    shipped = {taken("starter").version, taken("starter", being_built=True).version}
     assert sorted(path.name for path in PIECES.iterdir()) == sorted(COMPONENTS)
     for folder in PIECES.iterdir():
         piece = read(folder / "piece.yaml")
         assert piece["brand"] == "test-brand"
         assert piece["pinned"] is True
         assert piece["languages"] == LANGUAGES
-        assert piece["lock"]["starter"] == "1.0.0"
+        assert piece["lock"]["starter"] in shipped
 
 
 def previews(drawn: Any) -> dict[str, str]:
@@ -312,6 +333,8 @@ def on_each_foundations(
     for folder in sorted((root / "visual" / "pieces").iterdir()):
         piece = pl.read_piece(root, "visual", folder.name)
         assert piece.lock["foundations"] == built
+        if names_a_size(folder):
+            continue
         for version, pieces in drawn.items():
             on = pl.Project(piece, {**piece.lock, **locks[version]}, held)
             values = {field: value for field, value in on.values().items() if field != "lock"}
@@ -322,42 +345,58 @@ def on_each_foundations(
     return drawn
 
 
-#: The shared role the foundations being built add to their release 1.0.0 (DEC-022 point 3).
-ADDED_ROLE = "size.site"
+#: The shared roles the foundations being built add to their release 1.0.0, each by the role
+#: its default aliases (DEC-022 point 3, DEC-004 point 7).
+ADDED_ROLES = {"size.site": "size.slide", "size.line": "size.figure"}
 
 
-def as_released(values: Mapping[str, Any]) -> dict[str, Any]:
+def names_a_size(folder: Path) -> bool:
+    """Whether the reference piece in `folder` is drawn at the sizes of the axis `device`, as
+    each web part's is: the foundations' release 1.0.0 declares no such axis (DEC-021
+    point 2)."""
+    return "device" in (read(folder / "piece.yaml").get("modes") or {})
+
+
+#: The reference pieces that name no size, by name.
+UNSIZED = [folder.name for folder in sorted(PIECES.iterdir()) if not names_a_size(folder)]
+
+
+def as_released(values: Mapping[str, Any], given: Collection[str] = ()) -> dict[str, Any]:
     """A piece's document of values drawn on the foundations being built, as on their release
-    1.0.0: without the role they add, which takes the value of `size.slide` where the brand
-    gives it none, as the test brand 1.0.0 does (DEC-004 point 7)."""
-    added = values["tokens"][ADDED_ROLE]
-    assert added == values["tokens"]["size.slide"]
-    tokens = {path: token for path, token in values["tokens"].items() if path != ADDED_ROLE}
+    1.0.0: without the roles they add. Each takes the value of the role its default aliases
+    where the brand gives it none, as the test brand 1.0.0 gives none (DEC-004 point 7);
+    `given` names those the brand gives a value of its own."""
+    for added, aliased in ADDED_ROLES.items():
+        if added not in given:
+            assert values["tokens"][added] == values["tokens"][aliased], added
+    tokens = {path: token for path, token in values["tokens"].items() if path not in ADDED_ROLES}
     return {**values, "tokens": tokens}
 
 
 def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The foundations being built add the size axis `device` and the role `size.site` to
-    their release 1.0.0, and the test brand gives no size (DEC-021 points 2 and 9, DEC-022
-    point 3). So each reference piece draws on them as on that release, byte for byte: each
-    preview, but for the foundations' version they name, and its values, but for the role
-    they add."""
+    """The foundations being built add the size axis `device` and the roles `size.site` and
+    `size.line` to their release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021
+    points 2 and 9, DEC-022 point 3). So each reference piece that names no size draws on
+    them as on that release, byte for byte: each preview, but for the foundations' version
+    they name, and its values, but for the roles they add. A web part's piece names the
+    sizes, which that release does not declare."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)
     drawn = on_each_foundations(root)
     released, built = drawn.values()
-    assert sorted(built) == sorted(COMPONENTS)
+    assert sorted(built) == sorted(UNSIZED)
     for name, (values, files) in built.items():
         assert files, name
         assert (as_released(values), files) == released[name], name
 
 
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
-    """The test brand's version states, once, that it gives `picture.logo` no value, and no
-    piece states it (DEC-025 point 9)."""
+    """The test brand's newest version, the one the check of a version alone reads (DEC-019),
+    states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
+    point 9): a header draws with no logo."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
@@ -365,7 +404,7 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
         if finding.code != "component-experimental"
     ]
     assert found == [
-        ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.0.0/", "picture.logo")
+        ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert not report.failed()
     assert report.summary == [
