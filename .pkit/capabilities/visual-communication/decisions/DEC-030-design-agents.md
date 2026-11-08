@@ -1,7 +1,7 @@
 ---
 id: DEC-030
 title: A designer turns a piece's brief into a piece, and a reviewer judges the drawing against faults, rules and the brief
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

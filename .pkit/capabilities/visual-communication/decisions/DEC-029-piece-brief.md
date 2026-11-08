@@ -1,7 +1,7 @@
 ---
 id: DEC-029
 title: A piece's brief, one file beside its content, says what the piece must show and why it is designed so
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
