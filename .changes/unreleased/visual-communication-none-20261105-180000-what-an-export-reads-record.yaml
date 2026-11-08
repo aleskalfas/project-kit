@@ -1,8 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-016 decides what a piece's export reads, what a piece's own files leave
-  out, that form 1 of the fingerprint stands, and how an export's facts are
-  measured, and DEC-001, DEC-005 and DEC-006 state in place what it decides of
-  them (#2698). The records design ahead: the reading, the folders and the
-  facts land in later pull requests, so no surface moves yet.

@@ -17,7 +17,8 @@
 - the data member walks the project-owned folders under `.pkit/` and skips
   what nothing claims, unreadable files included;
 - the refs member classifies drift as a warning, the rest as errors, and
-  reads a bracketed `reads.patterns` declaration the way the deploy does.
+  reads a bracketed `reads.patterns` declaration the way the deploy does;
+- the scratchpad member fails on a slug whose notes lie in two state folders.
 """
 
 from __future__ import annotations
@@ -54,6 +55,7 @@ BACKBONE_ORDER = [
     "refs",
     "process",
     "data",
+    "scratchpad",
 ]
 
 CLEAN_ANSWER = {"summary": ["3 thing(s) checked; 0 error(s)."], "findings": []}
@@ -170,9 +172,10 @@ def test_capability_validators_sort_after_the_backbone_by_order_then_name(
     registered = validators.registered_validators(adopter.root)
     names = [v.name for v in registered]
     # `order: 5` sorts among the backbone's members; the default sorts after every one.
+    backbone_end = 1 + len(BACKBONE_ORDER)
     assert names[0] == "zeta:early"
-    assert names[1:13] == BACKBONE_ORDER
-    assert names[13:] == ["alpha:citations", "zeta:late"]
+    assert names[1:backbone_end] == BACKBONE_ORDER
+    assert names[backbone_end:] == ["alpha:citations", "zeta:late"]
     # The help is the leaf's — a nested leaf resolves like a top-level one.
     assert _member(adopter.root, "alpha:citations").help == "Every citation resolves."
 
@@ -878,6 +881,28 @@ def test_refs_member_warns_on_drift_and_fails_on_a_hook_nobody_answers(
     assert (
         CliRunner().invoke(main, ["refs", "validate"]).exit_code == 1
     )  # drift alone still fails it
+
+
+# --- the scratchpad member: a note lies in one state folder (COR-012) ---------
+
+
+def test_the_scratchpad_member_fails_on_a_slug_in_two_state_folders(adopter: AdopterRepo) -> None:
+    scratchpad = adopter.root / ".pkit" / "scratchpad"
+    note = "---\nauthors:\n  - Test Author\nstarted: 2026-09-30\n---\n\n# Review load\n"
+    (scratchpad / "active" / "2026-09-30-review-load.md").write_text(note, encoding="utf-8")
+    clean = CliRunner().invoke(main, ["validate", "--only", "scratchpad"])
+    assert clean.exit_code == 0, clean.output
+    assert "1 scratchpad note(s) checked; 0 error(s)." in clean.output
+
+    (scratchpad / "done" / "2026-09-30-review-load.md").write_text(note, encoding="utf-8")
+    result = CliRunner().invoke(main, ["validate", "--only", "scratchpad"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/scratchpad :: review-load" in result.output
+    assert (
+        "slug 'review-load' is in 2 state folders: "
+        ".pkit/scratchpad/active/2026-09-30-review-load.md, "
+        ".pkit/scratchpad/done/2026-09-30-review-load.md." in result.output
+    )
 
 
 # --- the answer document ------------------------------------------------------

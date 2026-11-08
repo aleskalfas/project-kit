@@ -7,7 +7,7 @@ to ADR-058 point 7: it reads a base, so it answers about a change, not the
 tree, and is a query command of its own rather than a member of `pkit
 validate`. Like the friction change check, it fails when its base names no
 commit or shares no history with HEAD, and reports an outdated base without
-failing on it.
+failing on it or naming a remedy.
 
 The number check, the stamp and the check run in the test's own process, their
 `pkit` calls answered there too (`tests/in_process.py`, #2324). Two tests keep the
@@ -79,6 +79,19 @@ def numbers_as_a_process(repo: AdopterRepo, *args: str) -> subprocess.CompletedP
 
 def document(completed: subprocess.CompletedProcess[str]) -> dict[str, Any]:
     return json.loads(completed.stdout)
+
+
+#: What the outdated-base note never advises: the remedy is the project's workflow's.
+REMEDIES = ("merge", "rebase", "run again")
+
+
+def _outdated_note(base: dict[str, Any]) -> str:
+    """The report of an outdated base, for the `base` of a `--json` document."""
+    return (
+        f"outdated base: the base {base['ref']} is at {base['tip'][:12]}, which is not an "
+        f"ancestor of HEAD: it moved on after this branch left it at {base['commit'][:12]}; "
+        "numbers were compared with its tip"
+    )
 
 
 def _main_took_ours(repo: AdopterRepo) -> str:
@@ -215,7 +228,8 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     """One path, two versions: each line of work took UC-002 for an export. That is one
     line of work's file landed and edited since as much as two artefacts, and only the
     person can tell which — warned, never failed; merging main brings the two to one
-    path, where git asks which to keep."""
+    path, where git asks which to keep. That advice fixes a real clash, so it keeps its
+    merge, while the outdated-base note beside it names no remedy."""
     stamped(branched, "use-case", "export", "--actor", "ACT-tester", "--path", "src/run.py")
     branched.commit("UC-002 on topic")
     branched.checkout(MAIN)
@@ -225,7 +239,9 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     ours = f"{USE_CASES}/UC-002-export.md"
     completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stderr
-    _outdated, warning = document(completed)["findings"]
+    answer = document(completed)
+    outdated, warning = answer["findings"]
+    assert outdated["message"] == _outdated_note(answer["base"])
     assert warning == {
         "severity": "warning",
         "location": ours,
@@ -403,7 +419,11 @@ def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
     branched: AdopterRepo,
 ) -> None:
     """main moved on after this branch left it, taking no number: reported, never
-    failed, with the same base as `pkit friction check` gives."""
+    failed, with the same base as `pkit friction check` gives. Like the change check's
+    report, the note states the fact — where the base is, where this branch left it,
+    and that the numbers were compared with its tip — and names no remedy: whether and
+    how a branch takes in its base is the project's workflow to decide (COR-050 point
+    12)."""
     stamped(branched, "use-case", "two", "--actor", "ACT-tester")
     branched.commit("UC-002 on topic")
     branched.checkout(MAIN)
@@ -415,9 +435,8 @@ def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
     answer = document(completed)
     ((finding,),) = [answer["findings"]]
     assert finding["severity"] == "report"
-    assert finding["message"].startswith(
-        f"outdated base: the base main is at {answer['base']['tip'][:12]}"
-    )
+    assert finding["message"] == _outdated_note(answer["base"])
+    assert not [word for word in REMEDIES if word in finding["message"]]
     friction = InProcessPkit()(
         ["pkit", "friction", "check", "--base", MAIN, "--json"],
         cwd=branched.root,

@@ -24,6 +24,9 @@ topology reads no Milestone, and the reckoning of ready work
   point 6). The pools are read only where a Milestone of the move carries a
   ``Pool:`` line, so a project with no pools reads nothing more. Where they
   cannot be read, the write asks, so no Task enters a pool unasked.
+- :func:`standing_pools` names the pools the ``Pool:`` lines name, each taken
+  to stand where the topology cannot be read to tell. Such a write, and the
+  rollforward of a Milestone's close, judge a Task's pool by them.
 """
 
 from __future__ import annotations
@@ -279,6 +282,15 @@ def write_refusal(name: str, capability_root: Path) -> str | None:
     return None
 
 
+def standing_pools(descriptions: Iterable[str]) -> tuple[str, ...]:
+    """The pools the well-formed `Pool:` lines of ``descriptions`` name, each
+    taken to stand: what a writer passes for the declared pools where the
+    topology cannot be read to tell, so that it asks rather than let a Task
+    enter a pool unasked (DEC-061 point 6)."""
+    named = {milestone.parse_pool_line(d).name for d in descriptions}
+    return tuple(sorted(name for name in named if name is not None))
+
+
 def may_ask(after: int | None, rows: Rows | None) -> bool:
     """Whether a write into the Milestone ``after`` may ask the person: it
     carries a well-formed ``Pool:`` line, or the open Milestones could not be
@@ -321,8 +333,7 @@ def move(
         return Move(False)
     declared, note = declared_pools(capability_root)
     if note is not None:
-        named = {line.name for line in lines.values() if line.name is not None}
-        declared = tuple(sorted(named))
+        declared = standing_pools(descriptions.get(n, "") for n in lines)
     pools = {n: milestone.milestone_pool(descriptions.get(n, ""), declared).name for n in lines}
     was = pools.get(before) if before is not None else None
     now = pools[after]

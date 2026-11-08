@@ -207,10 +207,10 @@ def test_each_field_piece_md_chooses_is_one_a_piece_takes_and_each_required_one_
 def test_each_report_entry_the_loop_names_is_one_a_run_writes() -> None:
     reader = (CAPABILITY / "scripts" / "look.py").read_text(encoding="utf-8")
     entries = _rows(_section(LOOP_MD.read_text(encoding="utf-8"), "## 3. Read"))
-    assert len(entries) == 4
+    assert len(entries) == 6
     for row in entries:
         (entry,) = _LABEL.findall(row[0])
-        assert f'["{entry}"]' in reader, entry
+        assert f'["{entry}"]' in reader or f'.get("{entry}")' in reader, entry
         assert row[2], entry
 
 

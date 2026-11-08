@@ -28,6 +28,7 @@ from typing import Any
 import pytest
 from fontTools.ttLib import TTFont
 
+from tests import test_visual_communication_starter as starter
 from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
@@ -36,7 +37,11 @@ from tests.visual_communication_project import (
     TEST_NOTATION,
     bound,
     copy_library,
+    hold_shipped,
+    importable,
+    locked_at,
     project,
+    taken,
     write_list,
     yaml_text,
 )
@@ -101,14 +106,18 @@ def brand() -> Any:
 
 
 def test_add_copies_it_whole_and_lists_it_shipped(tmp_path: Path) -> None:
+    """What the capability ships by default, as the tree holds it: the newest released
+    version, with its record's entry, or the version being built where none is released."""
+    ships = taken("neutral")
     root = project(tmp_path)
     added = run_main(add, "neutral", cwd=root)
     assert added.returncode == 0, added.stderr
-    assert files_of(root / "visual" / "libraries" / "neutral" / "1.0.0") == files_of(NEUTRAL)
+    copy = root / "visual" / "libraries" / "neutral" / ships.version
+    assert files_of(copy) == files_of(ships.folder)
     listed = read(root / "visual" / "libraries" / "libraries.yaml")
+    versions = {ships.version: ships.entry}
     assert listed == bound(
-        "libraries",
-        libraries={"neutral": {"source": {"kind": "shipped"}, "versions": UNRELEASED}},
+        "libraries", libraries={"neutral": {"source": {"kind": "shipped"}, "versions": versions}}
     )
 
 
@@ -122,11 +131,21 @@ def test_it_names_the_foundations_alone_opens_no_role_and_holds_no_component() -
 # --- its values -------------------------------------------------------------------------------
 
 
-def test_it_gives_every_shared_role_a_value_in_every_combination(brand: Any) -> None:
-    shared = read(FOUNDATIONS / "roles.yaml")["roles"]
+def test_it_gives_every_shared_role_but_its_logo_a_value_in_every_combination(
+    brand: Any,
+) -> None:
+    """It gives `picture.logo` no value, which no brand owes, so it does not export it, and
+    its version states so (DEC-025 points 4 and 9)."""
+    shared = {
+        role: declared
+        for role, declared in read(FOUNDATIONS / "roles.yaml")["roles"].items()
+        if declared["type"] != tokens.PICTURE
+    }
     assert brand.findings == ()
     assert len(brand.combinations()) == math.prod(len(a.modes) for a in brand.axes.values())
     assert set(shared) <= set(brand.roles)
+    assert "picture.logo" not in brand.roles
+    assert [(f.code, f.where) for f in brand.facts] == [("picture-role-unvalued", "picture.logo")]
     for role, combination in itertools.product(shared, brand.combinations()):
         assert brand.resolve(role, combination) is not None, (role, combination)
 
@@ -227,25 +246,24 @@ def pinned_with_neutral(folder: Path) -> None:
 
 @pytest.fixture(scope="module")
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A location that holds the foundations, the starter and the neutral brand as the
-    capability ships them, the test notation, and the starter's reference pieces."""
-    root = project(tmp_path_factory.mktemp("neutral"))
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
-    copy_library(root, NEUTRAL, "neutral", "1.0.0")
+    """A location that holds the foundations, the starter and the neutral brand being built
+    as the capability ships them, the released version of their number where it is
+    released, the test notation, and the starter's reference pieces, each locked at the
+    versions being built."""
+    return reference_location(project(tmp_path_factory.mktemp("neutral")))
+
+
+def reference_location(root: Path) -> Path:
+    """The location of `location`, laid out in the project at `root`."""
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "neutral": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
-        },
-    )
+    write_list(root, {"test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED}})
+    built = {
+        name: hold_shipped(root, name).version for name in ("foundations", "starter", "neutral")
+    }
     shutil.copytree(PIECES, root / "visual" / "pieces")
     for folder in (root / "visual" / "pieces").iterdir():
         pinned_with_neutral(folder)
+        locked_at(folder, built)
     return root
 
 
@@ -270,7 +288,7 @@ def colours_of(piece: Any) -> dict[str, Mapping[str, Any]]:
 
 def scenes_of(piece: Any) -> Iterator[Mapping[str, Any]]:
     """The scene of a piece in each of its languages."""
-    for _, result in piece.scenes():
+    for _, result in piece.scenes(facts=piece.piece.stand_ins):
         assert result.findings == []
         yield result.scene.to_dict()
 
@@ -284,21 +302,56 @@ def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 
 
 def test_every_reference_render_passes_the_check_under_it(location: Path) -> None:
+    """The brand's version states, once, that it gives `picture.logo` no value, and no
+    piece states it (DEC-025 point 9)."""
     report = checks.check(location)
     found = [
-        (level, finding.code, finding.file, finding.message)
+        (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
         if finding.code != "component-experimental"
     ]
-    assert found == []
+    built = taken("neutral", being_built=True).version
+    assert found == [
+        ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
+    ]
     assert not report.failed()
+
+
+def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The neutral brand being built gives the sizes of the axis `device`, which the
+    foundations being built add to their release 1.0.0, and a piece that names none is
+    drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece draws
+    under it on them as under the brand's release 1.0.0 on theirs, byte for byte: each
+    preview, but for the foundations' version they name, and its values, but for the role
+    `size.site` they add, which the brand gives as wide as its slide on a desktop."""
+    importable(monkeypatch, starter.svg)
+    root = reference_location(project(tmp_path))
+    hold_shipped(root, "foundations", being_built=False)
+    released_brand = hold_shipped(root, "neutral", being_built=False).version
+    assert released_brand != taken("neutral", being_built=True).version
+    on_each = starter.on_each_foundations(root, brand={"neutral": released_brand})
+    released, built = on_each.values()
+    assert sorted(built) == sorted(path.name for path in PIECES.iterdir())
+    for name, (values, files) in built.items():
+        assert files, name
+        assert (starter.as_released(values), files) == released[name], name
 
 
 def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combination(
     brand: Any, drawn: Mapping[str, Any]
 ) -> None:
+    """A piece that names no size is drawn at the brand's default size alone, in every
+    combination of its other axes (DEC-021 point 2)."""
     measured = 0
-    expected = [keys.key_of(each, brand.axes) for each in brand.combinations()]
+    sizes = pl.size_axes(brand.axes)
+    expected = [
+        keys.key_of(each, brand.axes)
+        for each in brand.combinations()
+        if all(each[axis] == sizes[axis].default for axis in sizes)
+    ]
+    assert sizes and len(expected) < len(brand.combinations())
     for name, piece in drawn.items():
         assert sorted(piece.keys) == sorted(expected), name
         colours = colours_of(piece)

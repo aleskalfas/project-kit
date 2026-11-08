@@ -5,7 +5,10 @@ DEC-013 point 5).
 - **A side** (`Side`) is what one set of versions gives: each preview of a piece's scenes, or
   the code of a declaration; where they give none, why. A piece's side also says which
   produced pictures it drew stale or could not find (`drawing`), which it draws as they lie
-  and never makes again (DEC-019 point 5).
+  and never makes again (DEC-019 point 5), and where it shows a version's number or its
+  date. Both sides take one filling of those facts, which the caller works out, and a run
+  says where that is a stand-in (`stand_ins_said`, DEC-016 point 5). It also holds what its
+  scenes show that does not follow their brand (`rebranding.unfollowed`, DEC-025 point 8).
 - **Each side is read from a location of its own,** which it builds in the clone's local
   folder (`_built`): the piece or the declaration, the location's fonts, and each version the
   lock names, as the project holds it or, for a version `sources` gives, as the capability
@@ -32,7 +35,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from _lib import code, copies, exports, tokens
+from _lib import code, copies, exports, layout, rebranding, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change, FileError, refuse_links
@@ -60,12 +63,17 @@ _FAULTS = (pl.Refused, tokens.TokenError, MissingFont, code.CodeRefused)
 @dataclass(frozen=True)
 class Side:
     """What one set of versions gives: each file's name and text; where it gives none, why;
-    and each produced picture a piece's side read that is stale or missing, with what
-    changed or why it is missing."""
+    each produced picture a piece's side read that is stale or missing, with what changed or
+    why it is missing; each element its scenes show a version's number or its date at, as
+    `exports.shown_stand_ins` words it; and what its scenes show that does not follow their
+    brand, which a look names where its two locks name different brands
+    (`rebranding.unfollowed`, DEC-025 point 8)."""
 
     files: Mapping[str, str] = field(default_factory=dict)
     why: str = ""
     stale: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    facts: Sequence[str] = ()
+    unfollowed: Sequence[rebranding.Unfollowed] = ()
 
 
 def drawing(
@@ -74,22 +82,30 @@ def drawing(
     name: str,
     lock: Mapping[str, str],
     sources: Sequence[copies.Source] = (),
+    *,
+    facts: layout.Facts,
 ) -> Side:
     """The previews of the piece `name` under `lock`, each of `sources` in place of the
     project's copy of its version, and each picture they read that is stale or missing
-    (`_stale`). A scene that holds no page is a side that cannot be drawn
-    (`_refuse_no_page`)."""
+    (`_stale`). `facts` fills the facts of its export: the caller works out one filling and
+    gives it to both sides, so a fact the piece shows differs in no page (DEC-016 point 5).
+    A scene that holds no page is a side that cannot be drawn (`_refuse_no_page`)."""
     own = _files(root, f"{location}/{pl.PIECES}/{name}", f"{location}/{pl.FONTS}")
 
     def previews(built: Path) -> Side:
         piece = pl.read_piece(built, location, name)
         project = pl.Project(piece, lock, Held(built, location, walked=True))
-        results = project.scenes()
+        results = project.scenes(facts=facts)
         _refuse_no_page(results)
         found: dict[str, str] = {}
-        for language, key, drawn in pl.drawn(project, results, "svg"):
+        for language, (key,), drawn in pl.drawn(project, results, "svg"):
             found.update(pl.preview_files(name, language, key, drawn.pages))
-        return Side(found, stale=_stale(project, built))
+        return Side(
+            found,
+            stale=_stale(project, built),
+            facts=exports.shown_stand_ins(results),
+            unfollowed=rebranding.unfollowed(results),
+        )
 
     return _read(root, {**own, **_version_files(root, location, lock, sources)}, previews)
 
@@ -164,10 +180,15 @@ def shown(
 def _piece(
     root: Path, location: str, lock: copies.Lock, source: copies.Source, change: Change
 ) -> tuple[str, ...]:
-    """A piece's scenes drawn both ways, kept in `change`, in words."""
+    """A piece's scenes drawn both ways, kept in `change`, in words. Both take what a preview
+    of the piece fills (`exports.preview_filling`), and it says where that is a stand-in."""
     versions = lock.versions or {}
-    before = drawing(root, location, lock.name, versions)
-    after = drawing(root, location, lock.name, versions, [source])
+    try:
+        filling = exports.preview_filling(pl.read_piece_file(root, location, lock.name))
+    except pl.Refused as exc:
+        return (f"no before-and-after: {exc}",)
+    before = drawing(root, location, lock.name, versions, facts=filling.facts)
+    after = drawing(root, location, lock.name, versions, [source], facts=filling.facts)
     why = _why(before, after)
     if why:
         return (f"no before-and-after: {why}",)
@@ -175,7 +196,15 @@ def _piece(
         keep(change, lock.name, before, after)
     except pl.Refused as exc:
         return (f"no before-and-after: {exc}",)
-    return (both_ways(lock.name, before, after),)
+    said = stand_ins_said(filling, before, after)
+    return (both_ways(lock.name, before, after), *((said,) if said else ()))
+
+
+def stand_ins_said(filling: exports.Filling, before: Side, after: Side) -> str:
+    """What a run says of the stand-ins the two sides of a piece show under `filling`, the one
+    both took; empty where they show none."""
+    said = filling.said({*before.facts, *after.facts})
+    return f"before-and-after: {said}" if said else ""
 
 
 def _declaration(

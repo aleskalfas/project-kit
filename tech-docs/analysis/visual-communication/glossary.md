@@ -323,6 +323,18 @@ TERM-renderer:
           - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         record:
           - visual-communication:DEC-001#2
+TERM-site:
+  name: site
+  status: active
+  definition: "kind of piece made of one web page, or of several that share one header and one footer, such as a portal"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
+        record:
+          - visual-communication:DEC-022#1
+          - visual-communication:DEC-022#2
 TERM-stable:
   name: stable
   status: active
@@ -346,6 +358,18 @@ TERM-starter-library:
           - .pkit/capabilities/visual-communication/libraries/starter/library.yaml
         record:
           - visual-communication:DEC-007#1
+TERM-web-page:
+  name: web page
+  status: active
+  definition: "one drawing of a site that a reader scrolls, as wide as the device it is drawn for and as tall as its content"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
+        record:
+          - visual-communication:DEC-022#1
+          - visual-communication:DEC-022#3
 ---
 
 # Glossary
@@ -595,6 +619,15 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Adapter:** the core's word for what fits the system to a harness. A renderer fits a piece to a medium.
 
+## TERM-site — site
+
+**Example:** A project's portal is a site of three web pages, its home, its guide and a notice. Each of the first two shows the portal's header and footer, written once.
+
+**Distinctions:**
+
+- **A reader's site:** where a reader finds a piece, such as a documentation site whose light or dark setting a figure follows. The system draws no such site. It draws a figure into one.
+- **The HTML renderer's medium:** the file the HTML renderer writes, which a browser shows. A presentation drawn in it is no site. A site is drawn in it as any piece is, and as a PDF or in SVG too.
+
 ## TERM-stable — stable
 
 **Example:** Suppose the starter library's card were stable. A library version that removes one of its options, and keeps its major number, would then be refused.
@@ -611,3 +644,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Brand:** the starter library holds no values. A brand gives its library components their colours, fonts and sizes.
+
+## TERM-web-page — web page
+
+**Example:** On a desktop, the portal's guide is a web page 1,280 px wide. On a phone it is 390 px wide, and taller, since its text takes more lines.
+
+**Distinctions:**
+
+- **A reader's web page:** a page where a reader finds a piece, such as a documentation page with a figure. Or one whose code takes a brand's values. The system draws no such page.
+- **The HTML renderer's medium:** the file the HTML renderer writes, in which any piece is shown, a presentation's slides among them. A web page is one of a site's drawings, in whichever medium a renderer draws it.
+- **Slide:** a presentation's page, as large as each of its others. Each web page of a site is as tall as its own content.

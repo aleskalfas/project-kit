@@ -90,6 +90,12 @@ NOT_PLACES: dict[str, str] = {
     ),
 }
 
+# The released versions of the libraries visual-communication ships, each a copy of the
+# version being built fixed by its hash (visual-communication DEC-013 point 2). A README in
+# one is that version's README as it was released, which never changes: the version being
+# built's README is the place.
+RELEASED_COPIES = ".pkit/capabilities/visual-communication/releases/"
+
 # The trees of the code-to-doc mapping's retired rules (#1010), which the
 # declared surface covers.
 SURFACE_TREES = (
@@ -232,6 +238,7 @@ def test_every_pkit_readme_is_a_place_or_named_as_not_one() -> None:
         for path in (REPO / ".pkit").rglob("README.md")
         # A `project/` tier is the project's own content, not a shipped README.
         if "project" not in PurePosixPath(path.relative_to(REPO / ".pkit").as_posix()).parts
+        and not path.relative_to(REPO).as_posix().startswith(RELEASED_COPIES)
     }
     unclassified = sorted(on_disk - declared - NOT_PLACES.keys())
     assert unclassified == [], (

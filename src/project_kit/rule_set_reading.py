@@ -645,8 +645,8 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
         lines.append(
             cli_render.style(
                 "warn",
-                "  the base moved on after this branch left it; merge or "
-                "rebase onto it for results that hold",
+                "  the base moved on after this branch left it; results hold only "
+                "against an up-to-date base",
             )
         )
     budgets = document.get("budgets", [])

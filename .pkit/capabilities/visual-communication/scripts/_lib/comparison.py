@@ -23,15 +23,17 @@ and the record that sets it), the segment, and whether the later number allows i
 
 - *any library:* its kind, and the major of each library it builds on (DEC-003 point 6);
 - *components:* each component the earlier version marks stable or deprecated, its fields,
-  options, states, exposed parts, ends, lists and layouts with their slots (DEC-003 points
-  6 and 7, DEC-009 to DEC-012). An experimental component may change in any release, so
-  only its arrival is named, as for any new component;
+  options, states, exposed parts, ends, lists and layouts with their slots, and whether a
+  top asks for a height (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8). An
+  experimental component may change in any release, so only its arrival is named, as for
+  any new component;
 - *a library's own roles:* those its stable and deprecated components read, directly or
   through a default, and a new one such a component reads (DEC-008 point 7);
 - *pairs:* every pair a library declares, whatever reads it (DEC-008 point 7);
-- *the foundations:* their shared roles, axes and colour families, whatever reads them
-  (DEC-004 point 5);
-- *a brand:* the token paths it exports, its axes and modes, every shared value axis whole
+- *the foundations:* their shared roles and the top groups they lie in, axes and colour
+  families, whatever reads them (DEC-004 point 5);
+- *a brand:* the token paths it exports, a shared picture role among them only where it
+  gives it a value (DEC-025 point 4), its axes and modes, every shared value axis whole
   and each size it gives (DEC-021 point 2), and the roles it opens to a brand built on it
   (DEC-004 point 5). The component tokens it exports join them with the
   Task that builds them (#2573).
@@ -564,8 +566,11 @@ def _layouts(
     data_l: Mapping[str, Any],
     found: _Found,
 ) -> None:
-    """A top's layouts and their slots (DEC-003 point 6, DEC-009 point 7), and whether its
-    layouts are its pages' forms (DEC-010 point 7)."""
+    """A top's layouts and their slots (DEC-003 point 6, DEC-009 point 7), whether its
+    layouts are its pages' forms (DEC-010 point 7), and whether it asks for a height, which
+    every page's size follows (DEC-022 point 8). A layout's height, said, changed or
+    dropped, breaks nothing: a top that asks for no height needs one in each of its
+    layouts, which validation holds to, and a page under a top that asks for one gets it."""
     if later.top and earlier.forms != later.forms:
         what = (
             "makes its layouts its pages' forms"
@@ -574,6 +579,13 @@ def _layouts(
         )
         found.broken(where, what, "DEC-010 point 7")
         return
+    if later.top and ("height" in earlier.preferred) != ("height" in later.preferred):
+        what = (
+            "comes to ask for a height"
+            if "height" in later.preferred
+            else "ceases to ask for a height"
+        )
+        found.broken(where, what, "DEC-022 point 8")
     layouts_e, layouts_l = _layouts_of(data_e), _layouts_of(data_l)
     _named(where, "layout", layouts_e, layouts_l, "DEC-003 point 6", "DEC-009 point 7", found)
     forms_e, forms_l = layout.page_forms(data_e), layout.page_forms(data_l)
@@ -762,7 +774,9 @@ def _pairs(earlier: FullRead, later: FullRead, found: _Found) -> None:
 
 def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
     """The foundations' shared roles, axes and colour families, whatever reads them (DEC-003
-    point 6, DEC-004 point 5)."""
+    point 6, DEC-004 point 5). A new top group of the shared roles breaks, whatever its
+    roles carry, since no library takes its name (DEC-004 point 7, DEC-025 point 10). A new
+    picture role is an addition, since no brand owes it a value (DEC-025 point 4)."""
     assert earlier.scope is not None and later.scope is not None
     declared_e, declared_l = earlier.scope.foundations, later.scope.foundations
     for path, role in sorted(declared_e.roles.items()):
@@ -779,9 +793,19 @@ def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
             found.broken(
                 at, "loses its default, so every brand gives it a value", "DEC-004 points 5 and 7"
             )
+    for group in sorted(set(declared_l.top_groups) - set(declared_e.top_groups)):
+        found.broken(
+            f"shared group `{group}`",
+            "is new, a name no library takes, so it fails a library already named so",
+            "DEC-004 point 5",
+        )
     for path in sorted(set(declared_l.roles) - set(declared_e.roles)):
         at = f"shared role `{path}`"
-        if declared_l.roles[path].default is None:
+        if declared_l.roles[path].type == tokens.PICTURE:
+            found.added(
+                at, "is new, a picture role, which no brand owes a value", "DEC-004 point 5"
+            )
+        elif declared_l.roles[path].default is None:
             found.broken(at, "is new, with no default", "DEC-004 point 5")
         else:
             found.added(at, "is new, with a default", "DEC-004 point 5")

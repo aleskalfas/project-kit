@@ -23,7 +23,10 @@ from tests.test_visual_communication_pipeline import (
     changed_tests,
     drawing_project,
     every_file,
+    exported_up_to,
+    filled,
     list_drawing_libraries,
+    write_content,
     write_picture,
 )
 from tests.visual_communication_project import (
@@ -49,6 +52,7 @@ from tests.visual_communication_writes import FULL, failing
     fingerprint,
     reading,
     files,
+    pl,
 ) = load(
     "visual-communication",
     "upgrade.py",
@@ -63,6 +67,7 @@ from tests.visual_communication_writes import FULL, failing
     "fingerprint",
     "reading",
     "files",
+    "pipeline",
 )
 
 RECORD = f"{PIECE_FOLDER}/exports.yaml"
@@ -311,6 +316,69 @@ def test_the_run_leaves_the_findings_record_of_a_render_under_the_moved_lock(
     assert data["pkit_schema"] == "visual-communication:findings"
     inputs = data["key"]["inputs"]
     assert {entry["version"] for entry in inputs if entry.get("library") == "tests"} == {"1.1.0"}
+
+
+def test_its_findings_take_the_stand_ins_and_its_drawing_what_its_export_fills(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Its findings take the stand-ins, as a render's do. Its export fills its own number and
+    date, and its drawing, of both sides, shows what that export fills (DEC-016 point 5)."""
+    root = published(tmp_path)
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    lines(root)
+    stand_ins = pl.read_piece_file(root, "visual", PIECE).stand_ins
+    [made] = [each for each in record_of(root)["versions"] if each["version"] == 42]
+    date = made["recorded"]["time"][: len("YYYY-MM-DD")]
+    assert taken[0] == stand_ins
+    assert [(facts.version, facts.date, facts.state) for facts in taken[1:]] == [
+        ("v42", date, "published"),
+        ("v42", date, "published"),
+    ]
+
+
+# --- a number or a date that overflows ----------------------------------------------------------
+
+
+def overflowing(tmp_path: Path) -> Path:
+    """The piece published, its body the stamp's number in a width too narrow for it, exported
+    once with that number let through, and the `tests` library at 1.1.0 too."""
+    root = drawing_project(tmp_path, state="published", picture=False)
+    write_content(root, body={"use": "tests/stamp", "shows": "narrow"})
+    export(root, "--use-overflowing", "version")
+    newer(root)
+    return root
+
+
+def test_a_number_that_overflows_stops_it_and_names_the_line_that_goes_on(tmp_path: Path) -> None:
+    root = overflowing(tmp_path)
+    said = refused(root)
+    assert said.startswith(
+        "error: a number or a date the export fills does not fit: `version` as `v2` at "
+        "`figure/body/narrow` in `tests/stamp`, which overflows its width. Give each room in "
+        "its component, or name its fact to use its text as it is: "
+    )
+    assert said.endswith("`pkit visual upgrade flow --use-overflowing version`\n")
+
+
+def test_a_number_named_is_let_through_and_the_record_keeps_it(tmp_path: Path) -> None:
+    root = overflowing(tmp_path)
+    said = lines(root, "--use-overflowing", "version")
+    assert (
+        "let through: `version` as `v2` at `figure/body/narrow` in `tests/stamp`, which "
+        "overflows its width"
+    ) in said
+    made = record_of(root)["versions"][-1]
+    assert made["version"] == 2
+    assert made["recorded"]["let-through"] == [
+        {
+            "fact": "version",
+            "text": "v2",
+            "element": "figure/body/narrow",
+            "component": "tests/stamp",
+            "version": "1.1.0",
+        }
+    ]
 
 
 def test_it_draws_no_preview_and_keeps_its_look_ahead_in_the_local_folder(tmp_path: Path) -> None:

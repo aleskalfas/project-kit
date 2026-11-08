@@ -1,7 +1,7 @@
 """The CSS code writer: a brand's resolved values as CSS custom properties, spelling form 1
 (visual-communication DEC-004 point 4, DEC-005 points 7 to 9, DEC-021 point 8).
 
-It reads the values document, version 1 (`_lib.values`), and the brand's value axes, and
+It reads the values document, version 2 (`_lib.values`), and the brand's value axes, and
 writes one style sheet. Its declaration, `css_declaration.py`, says what it takes. It spells
 no size axis: the command hands it a brand's values at the default of each, and reports
 each token a size changes as a loss. Nothing in the sheet answers a window's width.
@@ -16,7 +16,8 @@ words keep their single hyphens, and no name holds `--`, so no two paths spell t
 up), or `#rrggbbaa` when its alpha is not 1. A dimension is its number and `px`. A font
 family is a list of quoted names. A font weight and a number are the number. Numbers are
 written as the canonical text writes them (`1.4`, `16`). The writer has no form for a
-typography value; its declaration says so, and the command reports it as a loss.
+typography value, nor for a picture role's file (DEC-025 point 4); its declaration says
+so, and the command reports each as a loss.
 
 **Rules, form 1, in this order.** Each mode is switched by an attribute,
 `data-<axis>="<mode>"`, which the selectors expect on one element: the page's root by
@@ -105,7 +106,7 @@ def write(
     form: int = 1,
     prefix: str | None = None,
 ) -> str:
-    """The style sheet of `document`, the values document version 1, in spelling `form`.
+    """The style sheet of `document`, the values document version 2, in spelling `form`.
     `axes` maps each axis of the brand to `{kind, modes, default}`, its modes in declared
     order; the document's keys must be every combination of them. Raises CssError."""
     if form not in FORMS:

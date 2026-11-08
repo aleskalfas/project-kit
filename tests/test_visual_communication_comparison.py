@@ -24,6 +24,7 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import (
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     add_library,
     bound,
@@ -257,8 +258,9 @@ def write_parts(root: Path, version: str, spec: Mapping[str, Any]) -> Path:
 
 
 def foundations(root: Path, version: str = "1.0.0", change: Change | None = None) -> Path:
-    """The shipped foundations, copied at `version`, their `roles.yaml` changed by `change`."""
-    folder = copy_library(root, FOUNDATIONS, "foundations", version)
+    """The shipped foundations' released version 1.0.0, copied at `version`, their
+    `roles.yaml` changed by `change`."""
+    folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", version)
     edit(folder / "library.yaml", lambda data: data.update(version=version))
     if change is not None:
         edit(folder / "roles.yaml", change)
@@ -334,6 +336,14 @@ def as_one_layout(spec: Any) -> None:
     del slides["fields"]["properties"]["slides"]["x-pkit-pages"]
     slides["layouts"] = {"deck": {"slots": {"slides": {"pages": True}}}}
     slides["parts"] = {"slides": {"slot": "slides", "width": "=:width"}}
+
+
+def asking_no_height(spec: Any) -> None:
+    """The slides, asking for their width alone, each layout saying its page's height."""
+    slides = spec["components"]["slides"]
+    del slides["preferred"]["height"]
+    slides["layouts"]["cover"]["preferred"] = {"height": "=title.bottom"}
+    slides["layouts"]["points"]["preferred"] = {"height": "=points.bottom"}
 
 
 def new_list_of_ties(spec: Any) -> None:
@@ -586,6 +596,17 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         ["`parts/slides`: ceases to make its layouts its pages' forms (DEC-010 point 7)"],
         None,
     ),
+    # DEC-022 point 8: whether a top asks for a height, and a layout's height.
+    "a top that ceases to ask for a height": (
+        asking_no_height,
+        ["`parts/slides`: ceases to ask for a height (DEC-022 point 8)"],
+        None,
+    ),
+    "a layout's height said under a top that asks for one": (
+        lambda s: put(s["components"]["slides"]["layouts"]["cover"], "preferred", {"height": 300}),
+        [],
+        None,
+    ),
     # DEC-011 point 6: end fields, and a component that takes ends.
     "end fields declared for a list it held": (
         lambda s: put(s["components"]["diagram"]["lists"], "nodes", {"ends": ["from", "to"]}),
@@ -728,6 +749,31 @@ def test_each_change_of_a_component_library_is_named_as_its_record_counts_it(
         assert addition in said(found.additions)
 
 
+def test_a_top_that_comes_to_ask_for_a_height_breaks_and_a_layouts_height_does_not(
+    tmp_path: Path,
+) -> None:
+    """Every page's size changes with whether its top asks for a height. A page under a top
+    that asks for one gets it, so its layout's height, changed or dropped, breaks nothing
+    (DEC-022 point 8)."""
+    root = project(tmp_path)
+    foundations(root)
+    earlier = copy.deepcopy(PARTS)
+    asking_no_height(earlier)
+    write_parts(root, "1.0.0", earlier)
+    write_parts(root, "1.1.0", PARTS)
+    for version, height in (("1.2.0", 300), ("1.3.0", 200), ("1.4.0", None)):
+        spec = copy.deepcopy(PARTS)
+        if height is not None:
+            spec["components"]["slides"]["layouts"]["cover"]["preferred"] = {"height": height}
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == [
+        "`parts/slides`: comes to ask for a height (DEC-022 point 8)"
+    ]
+    for pair in (("1.2.0", "1.3.0"), ("1.3.0", "1.4.0")):
+        assert said(compared(root, "parts", *pair).breaks) == [], pair
+
+
 def test_a_version_that_changes_nothing_needs_a_patch(tmp_path: Path) -> None:
     found = compared_parts(tmp_path, lambda spec: None)
 
@@ -792,6 +838,30 @@ def compared_foundations(tmp: Path, later: Change, earlier: Change | None = None
     foundations(root, "1.0.0", earlier)
     foundations(root, "1.1.0", later)
     return compared(root, "foundations", "1.0.0", "1.1.0")
+
+
+def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_a_minor(
+    tmp_path: Path,
+) -> None:
+    """The version being built of the foundations, compared with their release 1.0.0, adds
+    the shared size axis `device`, the top `site` and its role `size.site`, and changes
+    nothing else. No brand can hold an axis of its own yet, so a new shared axis is an
+    addition (DEC-021 point 9, DEC-004 point 5), as are a new component and a new role with
+    a default (DEC-003 point 1, DEC-022 point 8)."""
+    root = project(tmp_path)
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
+    built = str(libraries.read_library(FOUNDATIONS).version)
+    copy_library(root, FOUNDATIONS, "foundations", built)
+
+    found = compared(root, "foundations", "1.0.0", built)
+
+    assert said(found.breaks) == []
+    assert said(found.additions) == [
+        "`foundations/site`: is new (DEC-003 point 1)",
+        "shared role `size.site`: is new, with a default (DEC-004 point 5)",
+        "shared axis `device`: is new (DEC-004 point 5)",
+    ]
+    assert found.segment == "minor"
 
 
 def roles(data: Any) -> Any:
@@ -912,6 +982,13 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
         ["colour family `red`: is removed (DEC-003 point 6)"],
         None,
     ),
+    "a new picture role": (
+        lambda d: roles(d).update({"picture.mark": {"type": "picture"}}),
+        None,
+        [],
+        "shared role `picture.mark`: is new, a picture role, which no brand owes a value "
+        "(DEC-004 point 5)",
+    ),
 }
 
 
@@ -932,6 +1009,27 @@ def test_each_change_of_the_foundations_is_named_whatever_reads_it(
     assert said(found.breaks) == breaks
     if addition is not None:
         assert addition in said(found.additions)
+
+
+def test_a_new_top_group_of_the_shared_roles_breaks_the_foundations_whatever_its_roles_carry(
+    tmp_path: Path,
+) -> None:
+    """The foundations as they ship, then a minor that adds the group `shadow`, its one role
+    with a default. No library takes the group's name, so it fails any library already named
+    so, and the minor is refused (DEC-025 point 10, DEC-004 point 5)."""
+    found = compared_foundations(
+        tmp_path,
+        lambda d: roles(d).update({"shadow.soft": {"type": "dimension", "default": "{space.1}"}}),
+    )
+
+    assert said(found.breaks) == [
+        "shared group `shadow`: is new, a name no library takes, so it fails a library already "
+        "named so (DEC-004 point 5)"
+    ]
+    assert "shared role `shadow.soft`: is new, with a default (DEC-004 point 5)" in said(
+        found.additions
+    )
+    assert (found.segment, found.allowed) == ("major", False)
 
 
 # --- a brand ------------------------------------------------------------------------------------
@@ -1004,6 +1102,49 @@ def test_a_brands_exported_token_removed_breaks_it_and_a_new_one_is_an_addition(
         [],
         ["exported token `size.poster`: is new (DEC-004 point 5)"],
     )
+
+
+def logo_location(tmp: Path, version: str, given: bool) -> Any:
+    """A location that holds the shipped foundations and the test brand at `version`, which
+    gives `picture.logo` a file its version holds where `given` (DEC-025 point 4)."""
+    held = brand_location(tmp, version, None, None)
+    if given:
+        folder = held.root / LOCATION / "libraries" / "test-brand" / version
+        path = folder / "tokens" / "base.tokens.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["picture"] = {
+            "logo": {"$extensions": {"pkit.visual-communication": {"file": "a.png"}}}
+        }
+        path.write_text(json.dumps(data), encoding="utf-8")
+        write(folder / "pictures" / "a.png", "")
+    return held
+
+
+def compared_logos(tmp: Path, earlier: bool, later: bool) -> Any:
+    """The test brand 1.0.0 compared with 1.1.0, each giving its logo a file or not."""
+    version = libraries.Version.parse
+    return comparison.compare(
+        full_read.read(
+            logo_location(tmp / "earlier", "1.0.0", earlier), "test-brand", version("1.0.0")
+        ),
+        full_read.read(
+            logo_location(tmp / "later", "1.1.0", later), "test-brand", version("1.1.0")
+        ),
+    )
+
+
+def test_a_logo_a_brand_comes_to_give_is_an_addition_and_one_it_ceases_to_give_breaks(
+    tmp_path: Path,
+) -> None:
+    """A brand exports a picture role only where it gives it a value (DEC-025 point 4)."""
+    added = compared_logos(tmp_path / "added", earlier=False, later=True)
+    ceased = compared_logos(tmp_path / "ceased", earlier=True, later=False)
+
+    assert (said(added.breaks), said(added.additions)) == (
+        [],
+        ["exported token `picture.logo`: is new (DEC-004 point 5)"],
+    )
+    assert said(ceased.breaks) == ["exported token `picture.logo`: is removed (DEC-004 point 5)"]
 
 
 def test_a_role_taken_off_a_bases_open_roles_breaks_it_and_a_newly_opened_one_does_not(
@@ -1127,3 +1268,63 @@ def test_a_value_mode_a_brand_ceases_to_give_is_no_break(tmp_path: Path) -> None
     )
 
     assert (found.breaks, found.additions) == ((), ())
+
+
+# --- a shape that follows a size (DEC-021 points 3 and 7) ---------------------------------------
+
+#: The size axis a test adds to its copy of the foundations.
+DEVICE = {"kind": "size", "modes": ["desktop", "phone"], "default": "desktop"}
+
+
+def with_device(data: Any) -> None:
+    data["axes"]["device"] = dict(DEVICE)
+
+
+def following_a_size(spec: Any) -> None:
+    """The card's title narrows on a phone, and its tags are drawn on a desktop alone."""
+    card(spec)["parts"]["title"]["width"] = {
+        "by": ":device",
+        "desktop": "=:width",
+        "phone": "=:width * 0.5",
+    }
+    card(spec)["parts"]["tags"]["when"] = {"by": ":device", "desktop": True, "phone": False}
+
+
+@pytest.mark.parametrize("device", [True, False], ids=["the-axis", "no-axis"])
+def test_a_version_read_in_full_reads_a_switch_by_a_size_against_its_foundations(
+    tmp_path: Path, device: bool
+) -> None:
+    """A library checked alone places nothing: it reads the switch against the size axes of
+    the foundations it is read with, as a piece does."""
+    root = project(tmp_path)
+    foundations(root, change=with_device if device else None)
+    spec = copy.deepcopy(PARTS)
+    following_a_size(spec)
+    write_parts(root, "1.0.0", spec)
+
+    read = full_read.read(libraries.Held(root, LOCATION), "parts", libraries.Version.parse("1.0.0"))
+    found = [finding for finding in read.findings if finding.code == "size-switch"]
+
+    if device:
+        assert found == []
+        return
+    assert [(f.where, f.library, f.extra) for f in found] == [
+        ("parts.title.width", "parts@1.0.0", {"component": "parts/card"}),
+        ("parts.tags.when", "parts@1.0.0", {"component": "parts/card"}),
+    ]
+    assert all("(the size axes: none)" in finding.message for finding in found)
+
+
+def test_a_shape_that_follows_a_size_changes_how_a_piece_looks_and_needs_a_patch(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    foundations(root, change=with_device)
+    spec = copy.deepcopy(PARTS)
+    following_a_size(spec)
+    write_parts(root, "1.0.0", PARTS)
+    write_parts(root, "1.1.0", spec)
+
+    found = compared(root, "parts", "1.0.0", "1.1.0")
+
+    assert (found.breaks, found.additions, found.segment) == ((), (), "patch")

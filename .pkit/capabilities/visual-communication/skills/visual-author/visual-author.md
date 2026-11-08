@@ -24,6 +24,8 @@ reads:
     - .pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md
     - .pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md
     - .pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md
     - .pkit/capabilities/visual-communication/README.md
     - .pkit/capabilities/visual-communication/files.md
     - .pkit/capabilities/visual-communication/components.md
@@ -41,7 +43,7 @@ This is the **visual-communication** capability's skill for whoever draws a piec
 
 No command writes a piece. You write its `piece.yaml` and its content by hand, and the commands read them.
 
-The rule is [visual-communication:DEC-001-visual-communication-discipline]: content and look are data, and renderers only project them. How the files are kept and judged is [visual-communication:DEC-002-files-and-validation], how a lock moves is [visual-communication:DEC-003-change-over-time], and what a component may hold is [visual-communication:DEC-005-engine-and-plugins]. How drawn pages are seen is [visual-communication:DEC-015-viewing-step-and-reviewer].
+The rule is [visual-communication:DEC-001-visual-communication-discipline]: content and look are data, and renderers only project them. How the files are kept and judged is [visual-communication:DEC-002-files-and-validation], how a lock moves is [visual-communication:DEC-003-change-over-time], and what a component may hold is [visual-communication:DEC-005-engine-and-plugins]. How drawn pages are seen is [visual-communication:DEC-015-viewing-step-and-reviewer]. Where a sandbox stops the browser that draws them, [visual-communication:DEC-024-outside-programs-sandbox] says how you go on.
 
 Every command is under [Commands](../../README.md#commands) in the capability's README. Each file is in [The files of the visual work](../../files.md), each finding in [What the check reports](../../checks.md).
 

@@ -8,9 +8,9 @@ brand: neutral
 notations: [pkit]
 languages: [en, cs]
 audience: Developers who have not used pkit.
-shown: In project-kit's talks, projected, and handed out as a PDF.
+shown: In project-kit's talks, projected, handed out as a PDF, and opened as a web page.
 explains: true
-exports: [pdf]
+exports: [pdf, html]
 state: draft
 modes:
   colour-scheme: [light, dark]

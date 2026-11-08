@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-010 decides how content names a list's component, and each item's
-  arrangement, in fields its pattern declares: a page's layout, a weight and a
-  colour by place (#2498). The record designs ahead: the code that reads these
-  fields lands in later pull requests, so no surface moves yet.

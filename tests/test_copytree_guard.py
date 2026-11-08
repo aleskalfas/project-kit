@@ -29,6 +29,7 @@ DATA_FOLDERS = (
     ".pkit/capabilities/project-management/schemas",
     ".pkit/capabilities/project-management/templates",
     ".pkit/capabilities/visual-communication/libraries",
+    ".pkit/capabilities/visual-communication/releases",
     ".pkit/permissions/profiles",
     "tests/fixtures/visual-communication",
 )
@@ -54,7 +55,7 @@ HOLDS_NO_PYTHON = {
     "test_schemas_authoring.py": {"tmp_path / '.pkit'"},
     "test_visual_communication_add.py": {"FOUNDATIONS", "TEST_PARTS", "built"},
     "test_visual_communication_checks.py": {
-        "FOUNDATIONS",
+        "RELEASED_FOUNDATIONS",
         "root / PIECE_FOLDER",
         "root / 'visual/pieces/tags'",
     },
@@ -62,20 +63,16 @@ HOLDS_NO_PYTHON = {
     "test_visual_communication_export.py": {"root / PIECE_FOLDER"},
     "test_visual_communication_code.py": {"TEST_PARTS"},
     "test_visual_communication_fingerprint.py": {"tmp_path / 'visual'"},
-    "test_visual_communication_libraries.py": {"FOUNDATIONS", "built"},
+    "test_visual_communication_libraries.py": {"RELEASED_FOUNDATIONS", "built"},
     "test_visual_communication_look.py": {"PIECES"},
     "test_visual_communication_neutral.py": {"PIECES"},
     "test_visual_communication_pipeline.py": {"TESTS"},
-    "test_visual_communication_release.py": {"FOUNDATIONS"},
     "test_visual_communication_render.py": {"TESTS"},
-    "test_visual_communication_shipped_libraries.py": {
-        "FOUNDATIONS",
-        "built(folder, name)",
-        "place(folder)",
-    },
+    "test_visual_communication_shipped_libraries.py": {"built(folder, name)", "place(folder)"},
+    "test_visual_communication_site.py": {"PIECES"},
     "test_visual_communication_starter.py": {"PIECES", "location"},
     "test_visual_communication_tokens.py": {"TEST_BRAND", "TEST_EDITION", "edition", "naming"},
-    "visual_communication_project.py": {"source"},
+    "visual_communication_project.py": {"source", "held.folder", "RELEASED_FOUNDATIONS"},
 }
 
 

@@ -15,6 +15,7 @@ pkit:
         - .pkit/cli/README.md#scratchpad-drop-slug
         - .pkit/cli/README.md#scratchpad-reported-slug-ref
         - .pkit/cli/README.md#scratchpad-list
+        - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#report-bug--report-feedback--report-change-request
         - .pkit/cli/README.md#report-submit-id
         - .pkit/lifecycle/upgrade-flow.md#seed-paths
@@ -73,6 +74,7 @@ The folder a note lies in is its state, and no field of its front matter holds o
 | **`dropped/`** | The line of thought failed. The note is kept, ending with why it stopped. |
 
 - **A move between states** is a move of the file, which a command makes ("Commands" below). The command writes the file in its new folder and deletes the old one, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../cli/README.md#scratchpad-commands)). Once both paths are staged, git shows the move as a rename where the note changed little.
+- **A note lies in one state folder.** `pkit validate` reports a slug whose notes lie in more than one as an error, and names each file ([the CLI reference, "validate"](../cli/README.md#validate)).
 - **A reported note is frozen by convention.** Do not edit it, since the issue holds the text as sent. Put further thinking in a new note that links the reported note (COR-043 point 4).
 - **An edit to a reported note is detected, never prevented.** `pkit scratchpad list` marks a reported note `[modified since reported]` when it differs from the hash recorded at the send. Composing a report warns of such a note too ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
 - **Its issues' states are read live.** `pkit scratchpad list` reads each through `gh` at each run, and stores none. A state it cannot read shows as `state unknown` (COR-043 point 5).
