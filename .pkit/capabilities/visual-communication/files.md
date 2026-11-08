@@ -42,6 +42,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/rebranding.py
         - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
         - .pkit/capabilities/visual-communication/scripts/_lib/taking_up.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pruning.py
@@ -143,6 +144,7 @@ pkit:
         - visual-communication:DEC-025#3
         - visual-communication:DEC-025#4
         - visual-communication:DEC-025#5
+        - visual-communication:DEC-025#8
         - visual-communication:DEC-025#9
         - visual-communication:DEC-025#10
 ---
@@ -449,6 +451,17 @@ A library moves no lower than the version the lock names while versions at or ab
 - **A finding that fails.** A version fits by what a lock can hold, not by how a page draws. So a move may bring a finding that fails, such as text that overflows. The run names each and stops on none, and each holds the landing. Mend the content in the same change and run an export, or discard the proposal.
 - **The rest of an export's rules** hold the run. Only the refusal of a lock that differs does not (*What refuses an export* in *What is made from a piece*). Every stop comes before any write.
 - **After it,** the version that wrote the copy was made under the lock the piece holds. So the next export runs, and the check raises no finding for the move itself.
+
+**A move onto another brand.** A person changes a piece's `brand`, and the command that moves its lock onto the new brand says what does not follow it (DEC-025 point 8). The brand a lock names is the one no other brand it locks builds on. So an edition locked with its base names the edition.
+
+- **Who says it.** The render of a draft that is not pinned says it, and so does `pkit visual upgrade`. An upgrade also says it where the lock its copy was made under names another brand. `pkit visual mark-final` says it where the lock it puts back names another brand than the lock it replaces.
+- **The before-and-after says it too,** looking ahead or back, wherever its two locks name different brands. So a reviewer of a lock written by hand reads it there.
+- **What it names,** in each language, each with its image's trace id (*Trace ids* in *Components*):
+  - each picture file of the piece a scene shows, whether the content or a local component names it ([Picture files](#picture-files));
+  - each picture role a part shows that the new brand gives no file, though the part is not drawn ([Picture roles](#picture-roles)).
+- **At some sizes alone.** One shown or left out at some keys over the size axes alone names those keys ([Keys of combinations](#keys-of-combinations)).
+- **What it leaves out.** A library's own file is part of the form its owner chose for every brand. A produced picture is no picture file.
+- **Said, never kept.** No record keeps it, and the check is silent on it. A move that keeps the brand says none of it.
 
 A copy not yet released that a pinned or a published lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft, each published piece and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8). Under a final piece's lock it replaces such a copy with no piece named, since that changes none of the piece's exports.
 
