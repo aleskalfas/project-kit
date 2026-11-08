@@ -73,9 +73,10 @@ answers:
       - 20261107T225725Z-d491b7e6.yaml
       - 20261108T000436Z-9e30da30.yaml
       - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T02:13:06Z
+      at: 2026-11-08T02:18:21Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -157,9 +158,10 @@ answers:
       - 20261108T000436Z-9e30da30.yaml
       - 20261108T004550Z-f8bba9dd.yaml
       - 20261108T005759Z-29300bbe.yaml
+      - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T02:13:08Z
+      at: 2026-11-08T02:18:23Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
@@ -218,7 +220,7 @@ answers:
       - 20261107T203800Z-471a3d6c.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T02:13:19Z
+      at: 2026-11-08T02:18:25Z
       outcome: unchanged
       unchanged-because: files.md's section on the foundations now says only that their version 1.0.0 is released, under releases/foundations/1.0.0/ and needing release 0.3.0, that the version being built stays at libraries/foundations/, and that pkit visual add copies the released version and lists it released with its hash. components.md cites that section for the foundations' top components figure and deck, the colour families their roles.yaml declares and the text on its own fill each family promises, none of which changed, and it says nothing of whether the foundations are released.
   - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
@@ -237,7 +239,7 @@ answers:
       - 20261108T004550Z-f8bba9dd.yaml
       - 20261108T005759Z-29300bbe.yaml
     revalidated:
-      at: 2026-11-08T02:14:14Z
+      at: 2026-11-08T02:18:26Z
       outcome: unchanged
       unchanged-because: "Judged with the two answers it replaces. 20261107T221657Z-71211da2.yaml found it unchanged when files.md's Content files gained a bullet on a piece's picture files, since no starter component shows a picture file, which still holds. 20261108T005759Z-29300bbe.yaml updated it so that it links nothing out of its folder: an end's key path now cites DEC-011 point 3, the three shared roles name files.md's section on the foundations in words, and it says a released version of it never changes. Now that section says only that the foundations' version 1.0.0 is released, under releases/foundations/1.0.0/ and needing release 0.3.0, that their version being built stays at libraries/foundations/, and what pkit visual add lists. stroke.thick, type.strong and type.code are still roles of the foundations with no default, and the starter's 1.0.0, released in this change, is a version that never changes, so the README holds as it stands."
   - artefact: .pkit/capabilities/visual-communication/checks.md
@@ -316,8 +318,9 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T000436Z-9e30da30.yaml
       - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T02:13:23Z
+      at: 2026-11-08T02:18:28Z
       outcome: unchanged
-      unchanged-because: "files.md changed in what it says of the shipped libraries' release: the foundations and the neutral brand each have version 1.0.0 released under releases/<library>/1.0.0/, needing release 0.3.0, with the version being built left where it was, pkit visual add lists the released version with its hash, and 'How a version is released' no longer gives 0.1.0 as a version no release wrote. checks.md cites the library folder and the libraries the capability ships for a version's entry in the list and in the library's record, and brands for the roles a brand is read against; none of those rules changed, and no finding, severity or fingerprint it describes depends on which versions are released."
+      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261108T013532Z-39c81bd6 found the page, as 0d6c06c0 left it, true against 8128295f, where release.py's header came to pin jsonschema and referencing and add.py's and write-code.py's came to pin referencing, and against the release of 0.3.0, which raised only the capability's version. 20261108T011854Z-346a8070 found the same text true against a6f1ef76, where the PDF renderer came to draw every image: the picture reader gained a grey field the check does not read, and the PDF declaration names the image, which the Losses row, read from each renderer's declaration, already covers. Neither changed the page, and they reach different things, so the two hold together. This change then rewrites what files.md says of the shipped libraries' release: the foundations and the neutral brand each have version 1.0.0 released under releases/<library>/1.0.0/, needing release 0.3.0, with the version being built left where it was, pkit visual add lists the released version with its hash, and 'How a version is released' no longer gives 0.1.0 as a version no release wrote. checks.md cites the library folder and the libraries the capability ships for a version's entry in the list and in the library's record, and brands for the roles a brand is read against; none of those rules changed, and no finding, severity or fingerprint it describes depends on which versions are released."
