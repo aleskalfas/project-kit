@@ -270,7 +270,7 @@ def test_siblings_deploy_from_the_source_that_wins_only(mock_kit: Path) -> None:
     assert sorted(p.name for p in _deployed(mock_kit, "shared").iterdir()) == ["SKILL.md"]
 
 
-# --- suspensions: a project skill of a shipped skill's name (COR-071) -----------
+# --- suspensions: a project skill of a shipped skill's name (COR-074) -----------
 
 
 def _suspended_lines(output: str) -> list[str]:

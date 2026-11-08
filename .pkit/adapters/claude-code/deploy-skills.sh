@@ -26,7 +26,7 @@
 #
 # Behavior:
 # - Project namespace wins on collision (per COR-005). Each run names each
-#   suspension it applies (COR-071): a `suspended` line for each skill of core
+#   suspension it applies (COR-074): a `suspended` line for each skill of core
 #   or a registered capability that a file of the project's replaces — its own
 #   skill of that name, or a file at the skill's place the deploy did not make —
 #   naming both files, and a closing note with their count.
@@ -125,7 +125,7 @@ resolve_skill() {
     return 1
 }
 
-# Name each suspension the deploy applies (COR-071): one `suspended` line for
+# Name each suspension the deploy applies (COR-074): one `suspended` line for
 # each skill of NAME that core or a registered capability ships, naming HOLDER,
 # the file of the project's that takes the name in its place. Each run names it
 # again, for as long as it holds. Counts the lines in `suspended`.
@@ -236,7 +236,7 @@ while IFS= read -r name; do
 
     mkdir -p "$target_dir"
 
-    # The file of the project's that takes the name, if any (COR-071): a file
+    # The file of the project's that takes the name, if any (COR-074): a file
     # the deploy did not make at the skill's place, or else the project's own
     # skill when it is the one that deploys.
     holder=""

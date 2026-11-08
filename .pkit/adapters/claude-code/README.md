@@ -16,7 +16,7 @@ pkit:
         - src/project_kit/permissions.py
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
-      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, COR-071, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
+      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
       artefact:
         - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks]
@@ -100,7 +100,7 @@ Walks `.pkit/skills/{core,project}/` and creates relative symlinks at `.claude/s
 
 **Capability skills: registered capabilities only.** A capability's `skills/` folder deploys when the capability is registered in `.pkit/manifest.yaml`, not because its directory sits under `.pkit/capabilities/` — a capability unregistered in place (an incubated one, or one in the methodology's source repository) keeps its subtree on disk, and its skills must stop deploying all the same. On a name collision the project's skill wins, then core's, then a registered capability's (the first by name).
 
-**A suspension is named on each run** ([COR-071](../../decisions/core/COR-071-suspensions-named.md)). Where a file of the project's keeps out a skill that core or a registered capability ships, the run prints a `suspended` line for each shipped file it leaves out:
+**A suspension is named on each run** ([COR-074](../../decisions/core/COR-074-suspensions-named.md)). Where a file of the project's keeps out a skill that core or a registered capability ships, the run prints a `suspended` line for each shipped file it leaves out:
 
 ```
   suspended  .pkit/skills/core/decision-author.md (replaced by .pkit/skills/project/decision-author.md)
@@ -120,7 +120,7 @@ A listed skill whose canonical file doesn't resolve — most commonly a composit
 
 Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.md` — copies, not symlinks, because the source carries overlay placeholders the deploy substitutes (the agents README, "Deploy mechanics"). `_resolve_agent.py` resolves one agent: it substitutes the `<category>` placeholders from `.pkit/agents/project/overlay.yaml` and carries the agent's execution policy into the deployed front matter. The resolver ends the agent's body with the workspace sentence (*The agent workspace* below).
 
-**Name collisions.** When more than one location ships an agent of one name, the project's is deployed, else an installed capability's (the first by capability name), else core's — a capability's agent is the discipline's specialisation of a core default ([COR-026](../../decisions/core/COR-026-agent-placement-by-discipline.md)). The agents README, "Name-collision precedence", states the rule and the collisions between capabilities. Where a file of the project's keeps out a shipped agent, each run prints a `suspended` line naming both files, and a closing count, as `deploy-skills.sh` does (COR-071). The project's file is its own agent of that name, deployed or skipped. A `.claude/agents/<name>.md` without the deploy's mark keeps a shipped agent out too, and takes the same line.
+**Name collisions.** When more than one location ships an agent of one name, the project's is deployed, else an installed capability's (the first by capability name), else core's — a capability's agent is the discipline's specialisation of a core default ([COR-026](../../decisions/core/COR-026-agent-placement-by-discipline.md)). The agents README, "Name-collision precedence", states the rule and the collisions between capabilities. Where a file of the project's keeps out a shipped agent, each run prints a `suspended` line naming both files, and a closing count, as `deploy-skills.sh` does (COR-074). The project's file is its own agent of that name, deployed or skipped. A `.claude/agents/<name>.md` without the deploy's mark keeps a shipped agent out too, and takes the same line.
 
 **Model and effort** (#1047). Claude Code reads a `model:` and an `effort:` key from an agent definition's front matter (verified against Claude Code 2.1.283: `effort` takes `low`, `medium`, `high`, `xhigh`, `max`, or an integer; `model` takes `inherit`, an alias or a full model name). The resolver writes both under those names, taking each from the overlay's `overrides.<agent>.model` / `.effort` when set, else from the agent's front matter. It writes **nothing** for an absent or `inherit` value — so a shipped agent that sets neither deploys exactly as before, and the harness default applies: a dispatched agent inherits its caller's model and effort. A value outside the accepted set (the named effort levels only; the integer form is not part of the methodology's vocabulary) is not written: the agent still deploys, inherits, and the run prints a `warning` line naming the value. The accepted values, the precedence and the `pkit agents` report are specified in the agents README, "Model and effort".
 

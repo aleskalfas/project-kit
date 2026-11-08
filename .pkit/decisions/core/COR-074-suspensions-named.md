@@ -1,5 +1,5 @@
 ---
-id: COR-071
+id: COR-074
 title: The deploy names each suspension it applies
 status: proposed
 date: 2026-11-08

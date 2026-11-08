@@ -3,7 +3,7 @@ kind: minor
 custom:
   category: Added
 body: >
-  The skills and agents deploys now name each suspension they apply (COR-071,
+  The skills and agents deploys now name each suspension they apply (COR-074,
   #2464). Where a file of your project's keeps out a skill or an agent
   definition that core or a capability ships, every sync, upgrade and install
   prints a `suspended` line naming the shipped file and yours, such as

@@ -218,7 +218,7 @@ def test_deploy_takes_the_first_capability_by_name_between_two(mock_kit: Path) -
     assert _deployed_description(mock_kit, "twin") == "From a-cap."
 
 
-# --- suspensions: a project agent of a shipped agent's name (COR-071) ---------
+# --- suspensions: a project agent of a shipped agent's name (COR-074) ---------
 
 
 def _suspended_lines(output: str) -> list[str]:

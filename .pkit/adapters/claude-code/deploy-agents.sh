@@ -19,7 +19,7 @@
 # - Name collision: the project's agent wins, then an installed capability's
 #   (the first by name), then core's (the agents README, "Name-collision
 #   precedence"; COR-026). Each run names each suspension it applies
-#   (COR-071): a `suspended` line for each agent of an installed capability or
+#   (COR-074): a `suspended` line for each agent of an installed capability or
 #   core that a file of the project's replaces — its own agent of that name,
 #   deployed or skipped, or a file at the agent's place without the deploy's
 #   mark — naming both files, and a closing note with their count.
@@ -111,7 +111,7 @@ source_for() {
     return 1
 }
 
-# Name each suspension the deploy applies (COR-071): one `suspended` line for
+# Name each suspension the deploy applies (COR-074): one `suspended` line for
 # each agent of NAME that an installed capability or core ships, naming HOLDER,
 # the file of the project's that takes the name in its place. Nothing when
 # HOLDER is empty. Each run names it again, for as long as it holds. Counts the
@@ -196,7 +196,7 @@ deploy_one() {
     fi
     local dest="$CLAUDE_AGENTS/$name.md"
 
-    # The file of the project's that takes the name, if any (COR-071): a file
+    # The file of the project's that takes the name, if any (COR-074): a file
     # at the agent's place without the deploy's mark, or else the project's own
     # agent, whether this run deploys it or skips it. Named after the line that
     # reports the agent.
