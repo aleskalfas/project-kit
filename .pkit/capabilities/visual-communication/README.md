@@ -29,6 +29,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/looks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/rebranding.py
         - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
         - .pkit/capabilities/visual-communication/scripts/_lib/taking_up.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pruning.py
@@ -254,6 +255,7 @@ Draws a piece in each of its languages and each combination of modes it names.
 
 - **Moves the lock** of a draft and writes it into `piece.yaml`. It only checks the lock of a pinned draft, a final piece or a published piece, and a refusal of a final or a published piece's lock says its state ([The lock](files.md#the-lock)).
 - **States** the facts of the lock's move ([The lock](files.md#the-lock)), which no `findings.yaml` keeps ([Content against components](checks.md#content-against-components)).
+- **Names what does not follow a new brand,** where the lock it writes names another brand than the lock it replaces ([The lock](files.md#the-lock)).
 - **Computes every scene,** or refuses where a font cannot measure the text ([How the engine computes a scene](components.md#how-the-engine-computes-a-scene)).
 - **Writes `findings.yaml`** beside `piece.yaml` ([The findings record](checks.md#the-findings-record)).
 - **Draws the previews** with the SVG renderer, and replaces the piece's previews from before ([Previews](outputs.md#previews)).
@@ -298,6 +300,7 @@ Makes a numbered export of a piece in each format it declares.
 Marks a piece final, and names the version handed out, whatever changed since ([The lock](files.md#the-lock)).
 
 - **Puts back the lock** that version was made under, and names it. It puts back nothing else.
+- **Names what does not follow a new brand,** where the lock it puts back names another brand than the lock it replaces ([The lock](files.md#the-lock)). It stops on none of it.
 - **Says what else changed,** each input that still does not verify, and each number or date the version let through. It stops on none of it.
 - **Says what no longer holds of the lock,** and goes on.
 - **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
@@ -355,6 +358,7 @@ Draws each of a piece's pages under two locks, and prints each page that differs
 - **Draws** both sides with today's engine, from the piece's files and [produced pictures](outputs.md#produced-pictures) as they lie, and it runs no program. Both sides fill what a piece shows of its export in one way, as a preview does, so a number the piece shows does not differ ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Writes** each page in `before/` and `after/`, under `before-after/<piece>/` in [the clone's local folder](files.md#the-clones-local-folder), each file named as its [preview](outputs.md#previews). It replaces what an earlier run left there, and writes nothing else.
 - **Prints** each lock, each page that differs, and each picture that is stale or missing. It says where the two locks are one, and where the engine's release differs from the one the copy's version recorded. Last, it prints each stand-in the sides show, with why ([The facts of an export](components.md#the-facts-of-an-export)).
+- **Names what does not follow the after's brand,** looking ahead or back, where the two locks name different brands ([The lock](files.md#the-lock)).
 - **Goes on** past a drawing it cannot make, such as where a library version left the project. It says why, and draws the other side.
 - **Refuses** a piece with no lock yet, a draft with no version named, and a final piece with one. It refuses a version a move cannot take, and a base that resolves to nothing.
 - **Exits** 0 when it drew a side or said why not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
@@ -365,6 +369,7 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 
 - **Takes** a published piece, and reads the lock its `piece.yaml` holds, whoever wrote it. It refuses any other piece, and names what moves that lock.
 - **Moves the lock** to the newest released versions that fit, within the lock's majors. It prints each newer version it did not take, with why.
+- **Names what does not follow a new brand,** where the lock it proposes names another brand than the lock the piece holds, or than the lock the copy was made under ([The lock](files.md#the-lock)).
 - **`<library>@<version>` names versions instead,** in the form `pkit visual add` takes, and may repeat. The run then moves what you name, and only what that needs.
 - **Looks ahead** as [`pkit visual before-after --ahead`](#pkit-visual-before-after-piece) does, and prints each page that differs. The drawing lies in [the clone's local folder](files.md#the-clones-local-folder).
 - **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.

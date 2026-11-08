@@ -25,7 +25,9 @@ point 5).
   stops nothing: the other side is still drawn.
 - **What it says** (`report`). Each lock, what the search states, a release that differs
   from the one the copy's version recorded, each stale picture, and each page that differs.
-  A run that keeps no drawing says only what it found.
+  Where the two locks name different brands, it names what the after's scenes show that does
+  not follow the after's brand (`rebranding`, DEC-025 point 8), looking ahead or back. A run
+  that keeps no drawing says only what it found.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ from _lib import (
     fingerprint,
     layout,
     libraries,
+    rebranding,
 )
 from _lib import location as loc
 from _lib import pipeline as pl
@@ -285,9 +288,17 @@ def _side(look: Look, lock: Mapping[str, str], facts: layout.Facts) -> Side:
     return before_after.drawing(piece.root, piece.location, piece.name, lock, facts=facts)
 
 
-def report(look: Look, before: Side, after: Side, *, kept: bool = True) -> Iterator[str]:
+def report(
+    look: Look,
+    before: Side,
+    after: Side,
+    *,
+    kept: bool = True,
+    moved: Mapping[str, str] | None = None,
+) -> Iterator[str]:
     """What the command prints of a look and its two drawings, a line each. With `kept` false
-    the drawings were not kept, so it names no folder."""
+    the drawings were not kept, so it names no folder. `moved` is the lock a run moves to the
+    after, where it is not the before (`_rebranded`)."""
     name, lock = look.piece.name, look.before.lock
     if lock is not None:
         yield f"before: {look.before.said}: {versions_said(lock)}"
@@ -296,6 +307,7 @@ def report(look: Look, before: Side, after: Side, *, kept: bool = True) -> Itera
         yield "the two locks are one"
     yield from _release(look)
     yield from look.stated
+    yield from _rebranded(look, after, moved)
     yield from _stale(before, after)
     if before.why == after.why != "":
         yield f"no drawing: {after.why}"
@@ -309,6 +321,18 @@ def report(look: Look, before: Side, after: Side, *, kept: bool = True) -> Itera
         if kept:
             yield before_after.both_ways(name, before, after)
         yield from (f"differs: {file}" for file in before_after.differing(before, after))
+
+
+def _rebranded(look: Look, after: Side, moved: Mapping[str, str] | None) -> Iterator[str]:
+    """What does not follow the after's brand, where the before names another brand, or
+    `moved` does, the lock a run moves to the after (DEC-025 point 8). It is read from the
+    after's drawing, and where none was drawn, says why. Said once, of the first that names
+    another brand."""
+    for lock in (look.before.lock, moved):
+        brands = rebranding.moved(look.held, lock, look.after)
+        if brands is not None:
+            yield from rebranding.said(*brands, after.unfollowed, why=after.why)
+            return
 
 
 def _whys(before: Side, after: Side) -> Iterator[tuple[str, str]]:
