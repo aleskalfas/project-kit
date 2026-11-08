@@ -1,0 +1,70 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  One field of a form: its label, then a box with rounded corners that holds the text the
+  content gives it, then a note under the box where the content gives one, such as a hint
+  or what is wrong with the answer. The box is painted in its colour family: its fill, an
+  edge in the family's text, and the text on that fill. It is as wide as it is given, and
+  as tall as what it holds. A field in error takes the red family.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: What the field asks for, in a few words.
+      x-pkit-prose: true
+    value:
+      type: string
+      description: The text the field shows, such as an answer a reader gave.
+      x-pkit-prose: true
+    note:
+      type: string
+      description: A word under the field, such as a hint or what is wrong with the answer.
+      x-pkit-prose: true
+
+colour: neutral
+
+# A state is a colour family (DEC-022 point 6): a field in error is drawn in the red
+# family's colours.
+states:
+  error: {colour: red}
+
+values:
+  # How far the text keeps inside the box, and how wide it is.
+  pad: "=@space.2"
+  inner: "=:width - pad - pad"
+
+parts:
+  label:
+    text: {content: label, style: type.strong, fill: text-primary}
+    width: "=:width"
+  # The box is at least as tall as a line of its text, so an empty field keeps its size.
+  # Its edge is the family's text, so it stands out from what it lies on.
+  box:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.text"
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.corner"
+    y: "=label.bottom + @space.1"
+    width: "=:width"
+    height: "=max(value.height, @space.4 - @space.2) + pad + pad"
+  # The text is the family's text on the family's fill, a pair the foundations declare.
+  value:
+    when: value
+    text: {content: value, style: type.body, fill: ":colour.text"}
+    x: "=pad"
+    y: "=box.y + (box.height - value.height) / 2"
+    width: "=inner"
+  note:
+    when: note
+    text: {content: note, style: type.body, fill: text-secondary}
+    y: "=box.bottom + min(note.height, @space.1)"
+    width: "=:width"
+
+preferred:
+  height: "=note.bottom"

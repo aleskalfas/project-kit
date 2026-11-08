@@ -1,0 +1,109 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  Whose site a page belongs to: the brand's logo, where the brand gives one, the site's
+  title, and the navigation to the site's other pages, where the content gives its links.
+  On a desktop they stand in one row, the navigation at its end, and the title on one
+  line. On a tablet and a phone the navigation moves under the title, and the title takes
+  the whole row, broken to its width. It fills the width it is given, and sets its own
+  inset, so its fill reaches the page's edge, and a rule along its foot sets it off from
+  what lies under it.
+
+fields:
+  type: object
+  required: [title]
+  properties:
+    title:
+      type: string
+      description: The site's name, in a few words.
+      x-pkit-prose: true
+    links:
+      type: array
+      minItems: 1
+      description: The links of its navigation, in their order, each with a label.
+      items: {type: object}
+
+options:
+  # What the header lies on: the page's background, or its colour family's fill.
+  fill: [plain, tint]
+
+colour: neutral
+
+values:
+  # The inset from either edge: a large spacing on a wide page, the inset on a phone. The
+  # navigation keeps the same inset of its own, so its links end where the title starts.
+  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  inner: "=:width - margin - margin"
+  top: "=@starter.inset"
+  # Where the title starts: beside the logo, or at the inset where the brand gives none.
+  start: "=logo.right + min(logo.width, @starter.gap)"
+  # How tall the row is that the logo and the title share, and the navigation on a desktop.
+  band:
+    by: ":device"
+    desktop: "=max(logo.height, title.height, navigation.height)"
+    tablet: "=max(logo.height, title-narrow.height)"
+    phone: "=max(logo.height, title-narrow.height)"
+
+parts:
+  box:
+    box: {fill: {by: fill, plain: background, tint: ":colour.fill"}}
+    width: "=:width"
+    height: "=:height"
+  rule:
+    box: {fill: {by: fill, plain: line, tint: ":colour.line"}}
+    y: "=:height - @starter.edge"
+    width: "=:width"
+    height: "=@starter.edge"
+  # The brand's logo, as wide as the brand's logo role allows and its proportions keep. A
+  # brand that gives no logo draws none, and the title starts at the inset.
+  logo:
+    image: {role: picture.logo}
+    x: "=margin"
+    y: "=top + (band - logo.height) / 2"
+    width: "=min(@starter.logo, inner)"
+  # The title on one line beside the navigation on a desktop; on a tablet and a phone,
+  # broken to the whole row.
+  title:
+    when: {by: ":device", desktop: true, tablet: false, phone: false}
+    text:
+      content: title
+      style: starter.type.head
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=start"
+    y: "=top + (band - title.height) / 2"
+  title-narrow:
+    when: {by: ":device", desktop: false, tablet: true, phone: true}
+    text:
+      content: title
+      style: starter.type.head
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=start"
+    y: "=top + (band - title-narrow.height) / 2"
+    width: "=:width - margin - start"
+  # On a desktop the navigation takes the room the title leaves, its links at its end; its
+  # own inset keeps them from the title and from the edge. On a tablet and a phone it moves
+  # under the title, across the whole width: its links stand in a row on a tablet, and in
+  # a column on a phone.
+  navigation:
+    when: {by: ":device", desktop: links, tablet: false, phone: false}
+    use: starter/navigation
+    fields: {links: links}
+    options: {align: end}
+    x: "=title.right"
+    y: "=top + (band - navigation.height) / 2"
+    width: "=:width - title.right"
+  navigation-narrow:
+    when: {by: ":device", desktop: false, tablet: links, phone: links}
+    use: starter/navigation
+    fields: {links: links}
+    y: "=top + band + min(navigation-narrow.height, @space.2)"
+    width: "=:width"
+
+preferred:
+  height:
+    by: ":device"
+    desktop: "=top + band + top"
+    tablet: "=max(top + band, navigation-narrow.bottom) + top"
+    phone: "=max(top + band, navigation-narrow.bottom) + top"

@@ -1,0 +1,13 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: states
+    layout: standard
+    main:
+      use: starter/form
+      fields:
+        - {id: name, label: Your name, value: Ada Lovelace}
+      buttons:
+        - {id: send, label: Send}
+        - {id: draft, state: disabled, label: Save a draft}

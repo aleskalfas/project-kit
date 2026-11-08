@@ -1,0 +1,41 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: head
+    layout: standard
+    main:
+      use: starter/table
+      head: Was jede Veröffentlichung brachte
+      rows:
+        - id: names
+          cells:
+            - {id: version, span: narrow, head: Nr.}
+            - {id: what, head: Was sie brachte}
+            - {id: who, span: wide, head: Wer sie liest}
+        - id: first
+          cells:
+            - {id: version, span: narrow, text: "1.0"}
+            - {id: what, text: "Die Karten, die Listen und die Pfeile einer Folie."}
+            - id: who
+              span: wide
+              text: Wer eine Präsentation oder eine Abbildung zeichnet, und wer sie gegen die Marke prüft.
+        - id: second
+          cells:
+            - {id: version, span: narrow, text: "1.1"}
+            - {id: what, text: "Die Teile einer Webseite, in jeder Größe."}
+            - {id: who, span: wide, text: Wer eine Website zeichnet.}
+
+  - id: bare
+    layout: standard
+    main:
+      use: starter/table
+      rows:
+        - id: names
+          cells:
+            - {id: size, head: Größe}
+            - {id: width, head: Breite}
+        - id: phone
+          cells:
+            - {id: size, text: Telefon}
+            - {id: width, text: So breit wie ein aufrecht gehaltenes Telefon.}

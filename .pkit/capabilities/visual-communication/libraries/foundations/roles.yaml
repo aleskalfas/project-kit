@@ -43,6 +43,9 @@ roles:
   # The width of a site's pages: a brand that gives it no value draws a site as wide as its
   # slide (DEC-022 point 3).
   size.site: {type: dimension, default: '{size.slide}'}
+  # The length of a line of text, at most, which a web part caps its text at: a brand that
+  # gives it no value caps a line at its figure's width (DEC-008 point 2).
+  size.line: {type: dimension, default: '{size.figure}'}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}

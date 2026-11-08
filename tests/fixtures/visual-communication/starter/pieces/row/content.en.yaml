@@ -1,0 +1,19 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: spans
+    layout: standard
+    main:
+      use: starter/table
+      rows:
+        - id: normal
+          cells:
+            - {id: one, text: Draw}
+            - {id: two, text: Check}
+            - {id: three, text: Release}
+        - id: mixed
+          cells:
+            - {id: one, span: narrow, text: "1"}
+            - {id: two, text: Draw}
+            - {id: three, span: wide, text: "Each part, at each size the brand gives."}

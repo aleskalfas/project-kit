@@ -1,0 +1,44 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  A label on a filled shape with rounded corners, painted in its colour family: its fill,
+  its edge, and its label on that fill. It is as large as its label, on one line. It is
+  drawn at rest, and pressing it does nothing. A button that cannot be pressed takes the
+  neutral family.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: What pressing the button does, in a word or a few.
+      x-pkit-prose: true
+
+colour: blue
+
+# A state is a colour family (DEC-022 point 6): a button that cannot be pressed is drawn
+# in the neutral family's colours.
+states:
+  disabled: {colour: neutral}
+
+parts:
+  box:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.line"
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.button.corner"
+    width: "=:width"
+    height: "=:height"
+  # The label is the family's text on the family's fill, a pair the foundations declare.
+  label:
+    text: {content: label, style: type.strong, fill: ":colour.text"}
+    x: "=@starter.inset"
+    y: "=@space.2"
+
+preferred:
+  width: "=label.right + @starter.inset"
+  height: "=label.bottom + @space.2"

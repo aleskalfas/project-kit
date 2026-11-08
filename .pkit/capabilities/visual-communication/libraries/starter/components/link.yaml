@@ -1,0 +1,26 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  One link of a navigation: its label in the accent, on one line, as wide as the label.
+  It is drawn, never followed: no link leads to another page.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: Where the link leads, in a word or a few, such as the name of a page.
+      x-pkit-prose: true
+
+parts:
+  # A space above and below the label, so a column of links on a phone stands apart.
+  label:
+    text: {content: label, style: type.body, fill: accent}
+    y: "=@space.2"
+
+preferred:
+  width: "=label.width"
+  height: "=label.bottom + @space.2"
