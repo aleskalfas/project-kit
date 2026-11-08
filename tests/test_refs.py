@@ -692,6 +692,107 @@ def test_resolve_hook_picks_project_over_core(kit_target: Path) -> None:
     assert winner.tier == "project"
 
 
+# --- same-tier collisions (COR-013 point 4, #2480) ------------------
+
+
+def _write_capability_package(root: Path, name: str, provides: dict[str, str]) -> None:
+    folder = root / ".pkit" / "capabilities" / name
+    folder.mkdir(parents=True)
+    lines = [f"component:\n  name: {name}\n", "provides:\n"]
+    lines += [f"  {hook}: {impl}\n" for hook, impl in provides.items()]
+    (folder / "package.yaml").write_text("".join(lines), encoding="utf-8")
+
+
+def _two_capabilities_provide(root: Path, hook: str) -> None:
+    _write_capability_package(root, "tracker-b", {hook: "scripts/b.py"})
+    _write_capability_package(root, "tracker-a", {hook: "scripts/a.py"})
+
+
+def _project_skill_answers(root: Path, hook: str) -> None:
+    body = f"---\nname: own-tracker\ndescription: own\nanswers: [{hook}]\n---\n# Own\n{hook}.\n"
+    _write_skill(root, "project", "own-tracker", body)
+
+
+def _collisions(root: Path) -> list[refs.Issue]:
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.COLLISION]
+
+
+def test_a_same_tier_collision_binds_neither_provider() -> None:
+    providers = [
+        refs.Provider(hook="x.y", tier="core", source="below", implementation="/below"),
+        refs.Provider(hook="x.y", tier="capability", source="b", implementation="b.py"),
+        refs.Provider(hook="x.y", tier="capability", source="a", implementation="a.py"),
+    ]
+    assert [p.source for p in refs.winning_providers(providers, "x.y")] == ["a", "b"]
+    assert refs.resolve_hook(providers, "x.y") is None
+    assert refs.winning_providers(providers, "x.unknown") == []
+
+
+def test_a_higher_tier_provider_settles_a_collision_below_it() -> None:
+    providers = [
+        refs.Provider(hook="x.y", tier="core", source="b", implementation="/b"),
+        refs.Provider(hook="x.y", tier="core", source="a", implementation="/a"),
+        refs.Provider(hook="x.y", tier="adapter", source="harness", implementation="h.sh"),
+    ]
+    winner = refs.resolve_hook(providers, "x.y")
+    assert winner is not None
+    assert (winner.tier, winner.source) == ("adapter", "harness")
+
+
+def test_validate_fails_a_same_tier_collision_naming_both_providers(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    collisions = _collisions(kit_target)
+    assert [i.location for i in collisions] == ["hooks/tracker.create-issue"]
+    assert "tier 'capability'" in collisions[0].diagnosis
+    assert "(tracker-a, tracker-b)" in collisions[0].diagnosis
+
+
+def test_validate_passes_a_collision_a_project_provider_settles(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    _project_skill_answers(kit_target, "tracker.create-issue")
+    assert _collisions(kit_target) == []
+
+
+def test_validate_fails_a_collision_at_the_project_tier(kit_target: Path) -> None:
+    _project_skill_answers(kit_target, "project.do-thing")
+    body = "---\nname: other\ndescription: o\nanswers: [project.do-thing]\n---\n# O\n"
+    _write_skill(kit_target, "project", "other", body + "project.do-thing.\n")
+    collisions = _collisions(kit_target)
+    assert len(collisions) == 1
+    assert "tier 'project'" in collisions[0].diagnosis
+    assert "`answers:`" in collisions[0].diagnosis
+
+
+def test_cli_hooks_resolve_refuses_a_same_tier_collision(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    result = CliRunner().invoke(main, ["hooks", "resolve", "tracker.create-issue"])
+    assert result.exit_code == 1
+    assert "same-tier collision at tier 'capability'" in result.output
+    assert "(tracker-a, tracker-b)" in result.output
+
+
+def test_cli_hooks_list_marks_a_same_tier_collision(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    result = CliRunner().invoke(main, ["hooks", "list"])
+    assert result.exit_code == 0
+    assert (
+        "tracker.create-issue (same-tier collision at capability: tracker-a, tracker-b)"
+        in result.output
+    )
+
+
+def test_cli_hooks_resolve_and_list_name_the_project_provider_that_settles_one(
+    kit_target: Path,
+) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    _project_skill_answers(kit_target, "tracker.create-issue")
+    resolved = CliRunner().invoke(main, ["hooks", "resolve", "tracker.create-issue"])
+    assert resolved.exit_code == 0
+    assert "tracker.create-issue -> project:own-tracker (/own-tracker)" in resolved.output
+    listed = CliRunner().invoke(main, ["hooks", "list"])
+    assert "tracker.create-issue -> project:own-tracker" in listed.output
+
+
 def test_who_references_finds_declared_and_body_mentions(kit_target: Path) -> None:
     _write_decision(kit_target, "core", "COR", "005", "test")
     body = """---
