@@ -43,6 +43,13 @@ TEST_PICTURES = FIXTURES / "pictures"
 CONFIG = ".pkit/capabilities/visual-communication/project/config.yaml"
 
 
+def capability_version() -> str:
+    """The capability's version, as its `package.yaml` carries it: the release a run
+    records, and the one a library's needed release is read against as installed."""
+    package = YAML(typ="safe").load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    return str(package["component"]["version"])
+
+
 def yaml_text(data: Any) -> str:
     """`data` as block YAML."""
     yaml = YAML()

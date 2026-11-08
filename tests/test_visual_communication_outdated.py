@@ -38,6 +38,7 @@ from tests.test_visual_communication_render import CLASH, LOST
 from tests.visual_communication_project import (
     CONFIG,
     bound,
+    capability_version,
     importable,
     write,
     write_list,
@@ -266,8 +267,8 @@ def test_a_version_the_capability_cannot_read_is_named_and_states_no_fact(tmp_pa
         "behind: 1 of 1 lock a person moves",
         PUBLISHED,
         NOTHING_NEWER,
-        "    tests@1.1.0: it needs release 9.0.0 of the capability, and 0.1.0 is installed: "
-        "upgrade the capability",
+        f"    tests@1.1.0: it needs release 9.0.0 of the capability, and {capability_version()} "
+        "is installed: upgrade the capability",
     ]
     assert behind_facts(root) == []
 
