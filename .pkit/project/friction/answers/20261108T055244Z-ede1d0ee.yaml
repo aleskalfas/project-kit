@@ -78,8 +78,9 @@ answers:
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
       - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:28:22Z
+      at: 2026-11-08T05:52:44Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
@@ -140,8 +141,9 @@ answers:
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
       - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:28:27Z
+      at: 2026-11-08T05:52:50Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
@@ -222,8 +224,9 @@ answers:
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T025310Z-7acd7024.yaml
       - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:28:29Z
+      at: 2026-11-08T05:52:51Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
     read:
@@ -243,9 +246,9 @@ answers:
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T05:28:34Z
+      at: 2026-11-08T05:52:57Z
       outcome: unchanged
-      unchanged-because: The foundations come to hold the role size.site, with a default, and files.md's foundations section names it; the starter README names only the shared roles its components read, size.site among none of them, and its three roles without a default are still so
+      unchanged-because: roles.yaml comes to declare size.site, with the default {size.slide}, and files.md's foundations section comes to name it; the merge of main changes neither. The starter README names only the shared roles its components read, size.site not among them, and its three shared roles with no default are still so.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -257,10 +260,11 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:28:47Z
+      at: 2026-11-08T05:53:04Z
       outcome: unchanged
-      unchanged-because: The layout schema and engine come to take a page's height by a formula on its parts, and to hand a site's header and footer to every page; a content slot is still a named place a piece fills, as the site's layout standard has its slot main
+      unchanged-because: "Read with 20261108T042239Z-7c260a12.yaml, merged: from that change layout.py keeps the picture role of an image the brand gives no file, and from this one a layout that is a page's form says its page's height, and a site hands its header and footer to each page. A content slot is still a named place a piece fills, as the site's layout standard has its slot main, so the definition and the slide example hold."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
     read:
       - 20261103T165045Z-20cf3897.yaml
@@ -275,9 +279,9 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T05:28:52Z
+      at: 2026-11-08T05:53:10Z
       outcome: unchanged
-      unchanged-because: The schema comes to take a layout's preferred height, and the comparison comes to break a top that starts or ceases to ask for a height; neither changes what marks a library component experimental, or that a later library version may reshape one
+      unchanged-because: The component schema comes to take a layout's preferred height, and the comparison to break a top that starts or ceases to ask for a height; the merge of main changes neither file. What marks a library component experimental, and that a later library version may rename, reshape or remove it, stay as the term says.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -289,10 +293,11 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:28:54Z
+      at: 2026-11-08T05:53:13Z
       outcome: unchanged
-      unchanged-because: A layout that is a page's form comes to say its page's height by a formula on its parts, never a width, and the site top declares the layout standard; a layout is still a named arrangement of a page that a kind of piece declares, and the example of a presentation's slide layout still holds
+      unchanged-because: "Read with 20261108T042239Z-7c260a12.yaml, merged: from that change layout.py keeps the picture role of an image the brand gives no file, and from this one a layout that is a page's form says its page's height, never a width, and the site declares the layout standard. A layout is still a named arrangement of a page that a kind of piece declares and a brand draws, and the slide layout example holds."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -304,10 +309,11 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:28:56Z
+      at: 2026-11-08T05:53:19Z
       outcome: unchanged
-      unchanged-because: The schema and the layout engine change only a top's layouts, which come to take a page's height and a site's header and footer; a library component is still a shared part that arranges and draws its content, from a block to a whole page
+      unchanged-because: "Read with 20261108T042239Z-7c260a12.yaml, merged: from that change layout.py keeps the picture role of an image the brand gives no file, and from this one a top's layouts take a page's height and a site's header and footer. A library component is still a shared part that arranges and draws the content it is given, from a small block to a whole page, a site's page among them."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -333,9 +339,9 @@ answers:
       - 20261108T025310Z-7acd7024.yaml
       - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T05:28:58Z
+      at: 2026-11-08T05:53:21Z
       outcome: unchanged
-      unchanged-because: The schema changes only a top's layouts, which come to take a page's height by a formula and refuse it in format 1; a local component is still made inside one piece and used by it alone
+      unchanged-because: The component schema comes to take a layout's preferred page height and to refuse a width there; the merge of main leaves the schema as it was. A local component is still a part made inside one piece and used by that piece alone.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
     read:
       - 20261103T073153Z-01c32629.yaml
@@ -348,10 +354,11 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:29:00Z
+      at: 2026-11-08T05:53:29Z
       outcome: unchanged
-      unchanged-because: The schema and the layout engine change a top's layouts, their page height and the parts a site hands its pages, and leave a component's options as they were; an option is still a choice a library component declares and a piece makes from its values
+      unchanged-because: "Read with 20261108T042239Z-7c260a12.yaml, merged: from that change layout.py keeps the picture role of an image the brand gives no file, and from this one a layout says its page's height and a site hands its other fields to its pages. Neither changes how a library component declares an option, or how a piece takes one of its values, so the definition and the card example hold."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
     read:
       - 20261103T165045Z-20cf3897.yaml
@@ -366,9 +373,9 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T05:29:02Z
+      at: 2026-11-08T05:53:31Z
       outcome: unchanged
-      unchanged-because: The comparison comes to break a top that starts or ceases to ask for a height, a change of what a layout's height means, which the term's breaking already covers; only a new major number may still break a stable library component
+      unchanged-because: The comparison comes to break a top that starts or ceases to ask for a height, and to take a layout's height said, changed or dropped as no break; the merge of main changes neither the comparison nor the schema. That break changes what a part means, which the term's breaking covers, and only a library version with a new major number may still break a stable component.
   - artefact: .pkit/cli/README.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -414,9 +421,9 @@ answers:
       - 20261107T182709Z-672f266b.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T05:29:04Z
+      at: 2026-11-08T05:53:33Z
       outcome: unchanged
-      unchanged-because: look.py comes to draw a tall page in bands and to name the band files; the CLI README only points to the visual-communication README for pkit visual look, which the change updated
+      unchanged-because: look.py comes to draw a page too tall for one image in bands and to name the band files; the merge of main leaves look.py as it was. The CLI README only sends a reader of pkit visual look to the visual-communication README, which this change updated, so it states nothing that changed.
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
       - 20261102T235145Z-1a0d93cb.yaml
@@ -498,8 +505,9 @@ answers:
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
       - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:29:09Z
+      at: 2026-11-08T05:53:36Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -586,6 +594,7 @@ answers:
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
       - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
     revalidated:
-      at: 2026-11-08T05:29:11Z
+      at: 2026-11-08T05:53:37Z
       outcome: updated
