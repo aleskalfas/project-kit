@@ -57,8 +57,9 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T04:07:46Z
+      at: 2026-11-08T04:22:39Z
       outcome: unchanged
       unchanged-because: layout.py and scene.py now keep, for each image of a picture role the brand gives no file, its trace id and role beside the scene, which a move onto another brand names; the scene a renderer gets is as before, and such a part is still not drawn, at zero size, with no finding, as the image's bullets say. files.md's The lock gains only the paragraph on a move onto another brand, which nothing here restates.
   - artefact: .pkit/capabilities/visual-communication/outputs.md
@@ -139,8 +140,9 @@ answers:
       - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T04:07:47Z
+      at: 2026-11-08T04:22:41Z
       outcome: unchanged
       unchanged-because: render.py, upgrade.py, mark-final.py, marking.py and before_after.py only add the lines that name what does not follow a new brand, and layout.py keeps the role of a logo it leaves out; no export, preview, renderer, current copy or record of exports this page describes changes, and what an upgrade writes is as it says. files.md's The lock gains only the paragraph on a move onto another brand, which this page does not restate.
   - artefact: .pkit/capabilities/visual-communication/checks.md
@@ -223,8 +225,9 @@ answers:
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T04:07:49Z
+      at: 2026-11-08T04:22:43Z
       outcome: unchanged
       unchanged-because: "What a move onto another brand says is printed by the commands, never a finding: the render's four stated facts at the lock are as listed, the findings record keeps none of the new lines, and the check reports none of them. layout.py and scene.py only keep the trace id of a logo left out beside the scene, which takes no finding as before; files.md's The lock gains only the paragraph on that move."
   - artefact: .pkit/capabilities/visual-communication/files.md
@@ -305,8 +308,9 @@ answers:
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T04:08:00Z
+      at: 2026-11-08T04:22:45Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -392,8 +396,9 @@ answers:
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T021821Z-a73154b1.yaml
       - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
     revalidated:
-      at: 2026-11-08T04:08:01Z
+      at: 2026-11-08T04:22:47Z
       outcome: updated
   - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md
     read:
@@ -401,7 +406,7 @@ answers:
       - 20261107T124642Z-7a8e773a.yaml
       - 20261107T150704Z-dc1b19d8.yaml
     revalidated:
-      at: 2026-11-08T04:08:03Z
+      at: 2026-11-08T04:22:49Z
       outcome: updated
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
     read:
@@ -415,7 +420,7 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T04:08:05Z
+      at: 2026-11-08T04:22:51Z
       outcome: unchanged
       unchanged-because: layout.py now keeps, on the part of an image whose picture role the brand gives no file, that role, so the scene can name the image a move onto another brand names; it changes nothing of how content slots, layouts, library components and options are read or placed, so the definition holds.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
@@ -430,7 +435,7 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T04:08:06Z
+      at: 2026-11-08T04:22:53Z
       outcome: unchanged
       unchanged-because: layout.py now keeps, on the part of an image whose picture role the brand gives no file, that role, so the scene can name the image a move onto another brand names; it changes nothing of how content slots, layouts, library components and options are read or placed, so the definition holds.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
@@ -445,7 +450,7 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T04:08:08Z
+      at: 2026-11-08T04:22:55Z
       outcome: unchanged
       unchanged-because: layout.py now keeps, on the part of an image whose picture role the brand gives no file, that role, so the scene can name the image a move onto another brand names; it changes nothing of how content slots, layouts, library components and options are read or placed, so the definition holds.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
@@ -461,6 +466,6 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T04:08:10Z
+      at: 2026-11-08T04:22:57Z
       outcome: unchanged
       unchanged-because: layout.py now keeps, on the part of an image whose picture role the brand gives no file, that role, so the scene can name the image a move onto another brand names; it changes nothing of how content slots, layouts, library components and options are read or placed, so the definition holds.
