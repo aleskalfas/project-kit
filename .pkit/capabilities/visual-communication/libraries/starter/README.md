@@ -161,7 +161,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ## The web parts, by their job on a page
 
-The web parts draw the pages of a site, a piece whose top is `site` (visual-communication DEC-022). Each does one job on a page, a job public design systems share, and cites them. Choose a part by its job.
+The web parts draw the pages of a site (visual-communication DEC-022 point 4). Each does one job on a page, a job public design systems share, and cites them. Choose a part by its job.
 
 | Part | Its job on a page | Take another part when |
 |---|---|---|
@@ -172,10 +172,10 @@ The web parts draw the pages of a site, a piece whose top is `site` (visual-comm
 | `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
 | `table` | Shows facts in rows and columns | each fact needs a sentence of its own: `section` |
 
-Each web part fits every size the brand gives: a desktop, a tablet and a phone. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets fails the check at that size.
+Each web part fits every size the brand gives: a desktop, a tablet and a phone. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
 
 - **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
-- **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`. It is a shared role of the foundations, whose default is `size.figure`, so a brand gives it the length a line reads best at.
+- **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
 - **At rest.** A part is drawn as a page stands before anyone uses it. A form is never sent and a link never followed, and no part shows a hover, a focus or a press (visual-communication DEC-022 point 6).
 
 ### `header`
@@ -193,7 +193,7 @@ Each web part fits every size the brand gives: a desktop, a tablet and a phone. 
 - **Source:** the GOV.UK Design System's service navigation.
 - **Options:** `align`, its words `start`, the default, and `end`, where the links of a row stand. A column on a phone always starts at the start.
 - **Lists:** `links`, each drawn by the `link`, unless the component field `link` names another.
-- **Too many links.** Links that ask for more than the row's width fail the check at that size. Fewer links, or shorter labels, mend it.
+- **Too many links.** Links that ask for more than the row's width are reported at that size. Fewer links, or shorter labels, mend it.
 
 ### `section`
 
