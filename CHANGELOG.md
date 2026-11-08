@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-08
+
+### Added
+- **visual-communication 0.3.0** — A piece and a library show a picture file (#2856). An `image` part names exactly one of `produced`, `content` and `file`. `content` names a field whose text is the bare name of a picture file in the piece's new `pictures/` folder, so each language names its own, and an empty field draws nothing. `file` names a picture file of the component's own library version, the same in every mode and under every brand, or of the piece for a local component. Each name is found and judged as a brand's logo is, its finding in the content, the component or the file, and `pkit visual export` refuses a picture file that is missing or cannot be read. A picture is drawn whole, centred, as large as its frame allows, and an image with no height takes its proportions. The seam rises to 5: a renderer is handed the file each image shows in each language and combination, and its kind. The SVG renderer, at 1.1.0, and the HTML renderer, at 1.2.0, come to draw a JPEG as JPEG data, and keep a picture's colour profile; `pkit visual look` names each picture with one. The PDF renderer still refuses every image. It breaks nothing an adopter holds: every file format 1 accepted reads and draws as before.
+
+### Fixed
+- **visual-communication 0.3.0** — `pkit visual release` reads a library in full again (#2869). Its script runs as a `uv run --script` program, and its header did not declare `jsonschema` or `referencing`, which the read imports to judge each file against its schema. So the release stopped there with `ModuleNotFoundError`. Its header now pins both, at the versions `uv.lock` holds, and `pkit visual add` and `pkit visual write-code` pin `referencing` beside `jsonschema`. The `library.yaml` of the foundations, the starter and the neutral brand, and the starter's README, no longer say that their version is not released, which their release would have kept for good. Each says that a released version never changes, and that a change is a new version. The starter's README no longer links out of its folder, so none of its links breaks where `pkit visual add` or a release copies it: it cites the records instead, and names the section of the capability's `files.md` in words.
+
 ## 2.1.0 — 2026-11-07
 
 ### Added
