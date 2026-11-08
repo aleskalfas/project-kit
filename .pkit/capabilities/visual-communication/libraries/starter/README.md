@@ -286,7 +286,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
-- **For the web parts:** `size.line` caps a line's length, and `picture.logo` is the header's logo. `type.strong` sets a button's and a field's label.
+- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe.
 - **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations (the capability's `files.md`, under *The foundations*). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
@@ -296,8 +296,8 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.button.corner` | the radius of a button's corners | `starter.corner` |
 | `starter.inset` | the space between a block's edge and what it holds | `space.3` |
 | `starter.gap` | the space between a pattern's items, or a group's | `space.3` |
-| `starter.margin` | a web part's inset on a desktop and a tablet, and the wider spaces within it | `space.4` |
-| `starter.logo` | how wide a header draws the brand's logo, at most | `space.4` |
+| `starter.margin` | the wider spaces within a web part, and its inset where [*Their inset*](#the-web-parts-by-their-job-on-a-page) says | `space.4` |
+| `starter.logo` | the width of a header's logo, as [`header`](#header) says | `space.4` |
 | `starter.bar` | how thick a card's or an aside's bar is | `space.1` |
 | `starter.edge` | how wide a block's edge is | `stroke.thin` |
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |

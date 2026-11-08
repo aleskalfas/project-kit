@@ -2,6 +2,9 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design systems its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's button, and Material Design's filled tonal button, which lays a family's text
+# on the family's fill.
 about: >-
   A label on a filled shape with rounded corners, painted in its colour family: its fill,
   its edge, and its label on that fill. It is as large as its label, on one line. It is

@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's service navigation.
 about: >-
   The way to a site's other pages: its links, in a row on a wide page and in a column on a
   phone, each drawn by the link unless the content names another. In a row the links

@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the U.S. Web Design
+# System's media block, a picture beside a text.
 about: >-
   One part of a page: a head and a text beside a picture file the content names, each
   where the content gives it. On a wide page the text and the picture stand side by side,

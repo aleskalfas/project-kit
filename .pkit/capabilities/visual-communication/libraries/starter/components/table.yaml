@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design systems its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's table, and the U.S. Web Design System's table.
 about: >-
   Facts in rows and columns: a head where the content gives one, then its rows one under
   another, each drawn by the row unless the content names another. Each row lays its cells

@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's question pages, its text input and its button group.
 about: >-
   What takes a reader's answer: a head where the content gives one, its fields one under
   another, each drawn by the field unless the content names another, and its buttons

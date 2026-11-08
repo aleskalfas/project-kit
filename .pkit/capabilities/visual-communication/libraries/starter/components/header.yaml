@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design systems its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's header and its service navigation, and the U.S. Web Design System's header.
 about: >-
   Whose site a page belongs to: the brand's logo, where the brand gives one, the site's
   title, and the navigation to the site's other pages, where the content gives its links.

@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the U.S. Web Design
+# System's landing page template, whose sections stand one under another.
 about: >-
   The sections of a page, laid down it in the content's order, one under another, each
   as wide as it is given and as tall as it asks. A section is drawn by the section unless
