@@ -105,7 +105,7 @@ What the body cites is checked against the front matter, in both directions (COR
 - **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook, and warns. Put it in a code fence, or reword it: declared under `needs`, it fails, since nothing answers it.
 - **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
 - **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares a record or a hook that the body never cites, but not a file. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
-- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record or a dropped scratchpad note ([the CLI reference, "Surface"](../cli/README.md#surface)). It lists files it cannot find too, but reads each path from the project's root. So it may list a relative path whose file is there, such as one in a capability's skill.
+- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record, a dropped scratchpad note or a missing file ([the CLI reference, "Surface"](../cli/README.md#surface)).
 
 ## The body
 
