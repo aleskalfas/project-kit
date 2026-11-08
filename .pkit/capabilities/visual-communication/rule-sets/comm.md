@@ -3,31 +3,31 @@ rule-set: COMM
 version: 1.0.0
 rules:
   RS-COMM-001:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6"]}
   RS-COMM-002:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6"]}
   RS-COMM-003:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6"]}
   RS-COMM-004:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#7"]}
   RS-COMM-005:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:

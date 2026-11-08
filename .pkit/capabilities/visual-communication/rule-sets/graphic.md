@@ -3,43 +3,43 @@ rule-set: GRAPHIC
 version: 1.0.0
 rules:
   RS-GRAPHIC-001:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8"]}
   RS-GRAPHIC-002:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8"]}
   RS-GRAPHIC-003:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9"]}
   RS-GRAPHIC-004:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9"], artefact: ["visual-communication:RS-GRAPHIC-007"]}
   RS-GRAPHIC-005:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10"]}
   RS-GRAPHIC-006:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10"]}
   RS-GRAPHIC-007:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:

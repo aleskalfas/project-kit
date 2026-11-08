@@ -1,7 +1,7 @@
 ---
 id: DEC-028
 title: Two rule sets hold the principles of visual communication, each rule taken from its field's canon
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
