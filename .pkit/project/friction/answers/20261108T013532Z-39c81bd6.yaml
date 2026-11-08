@@ -74,9 +74,9 @@ answers:
       - 20261108T000436Z-9e30da30.yaml
       - 20261108T004550Z-f8bba9dd.yaml
     revalidated:
-      at: 2026-11-08T01:26:19Z
+      at: 2026-11-08T01:35:32Z
       outcome: unchanged
-      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T004550Z-f8bba9dd found it true against 8128295f, where the scripts' headers came to pin jsonschema and referencing and the three libraries' library.yaml comments came to say a released version never changes. The page as 0d6c06c0 left it names no package a script pins and quotes no library's comment, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0, which the page never states: its 0.1.0 names the release a library needs, and its line that no library is released while the capability carries a version no release wrote, as 0.1.0 is, stays true of 0.1.0 until #2611 rewords it."
+      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T004550Z-f8bba9dd found it true against 8128295f, where release.py's header came to pin jsonschema and referencing, add.py's and write-code.py's came to pin referencing beside jsonschema, and the three libraries' library.yaml comments came to say a released version never changes. The page as 0d6c06c0 left it names no package a script pins and quotes no library's comment, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0, which the page never states: its 0.1.0 names the release a library needs, and its line that no library is released while the capability carries a version no release wrote, as 0.1.0 is, stays true of 0.1.0 until #2611 rewords it."
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
       - 20261103T053645Z-9b958b41.yaml
@@ -153,7 +153,7 @@ answers:
       - 20261108T000436Z-9e30da30.yaml
       - 20261108T004550Z-f8bba9dd.yaml
     revalidated:
-      at: 2026-11-08T01:26:21Z
+      at: 2026-11-08T01:35:33Z
       outcome: unchanged
       unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T004550Z-f8bba9dd found it true against 8128295f, where add.py and write-code.py came to pin referencing beside jsonschema. The page as 0d6c06c0 left it says what each renderer draws and records, never which packages a script pins, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0, which the page never states: the capability: 0.1.0 in its examples is what a past run recorded, and its renderer versions are the plugins' own, which the release does not move."
   - artefact: .pkit/capabilities/visual-communication/checks.md
@@ -233,9 +233,9 @@ answers:
       - 20261108T000436Z-9e30da30.yaml
       - 20261108T004550Z-f8bba9dd.yaml
     revalidated:
-      at: 2026-11-08T01:26:23Z
+      at: 2026-11-08T01:35:35Z
       outcome: unchanged
-      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T004550Z-f8bba9dd found it true against 8128295f, where the release's header came to pin jsonschema and referencing so its read in full runs. The page as 0d6c06c0 left it, its picture rows among it, names no package a script pins and describes the release's read as the code does, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0; the page states no version of the capability, its version: 1.0.0 being a library's in an example."
+      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T004550Z-f8bba9dd found it true against 8128295f, where release.py's header came to pin jsonschema and referencing so its read in full runs, and add.py's and write-code.py's came to pin referencing beside jsonschema. The page as 0d6c06c0 left it, its picture rows among it, names no package a script pins and describes the release's read as the code does, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0; the page states no version of the capability, its version: 1.0.0 being a library's in an example."
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
       - 20261102T235145Z-1a0d93cb.yaml
@@ -317,6 +317,6 @@ answers:
       - 20261108T004550Z-f8bba9dd.yaml
       - 20261108T005759Z-29300bbe.yaml
     revalidated:
-      at: 2026-11-08T01:26:25Z
+      at: 2026-11-08T01:35:37Z
       outcome: unchanged
-      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T005759Z-29300bbe found it true against 8128295f, where the scripts' headers came to pin jsonschema and referencing and the starter's README came to cite records rather than link out of its folder. The README as 0d6c06c0 left it names no package a script pins and restates nothing of the starter's README, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0, and leaves its backbone range as it was; the README states neither, and its line that the shipped libraries are not released yet stays true until #2611 releases them."
+      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page with 0d6c06c0, where a piece and a library came to show a picture file through an image part, the seam rose to 5 and the SVG and HTML renderers to new versions. 20261108T005759Z-29300bbe found it true against 8128295f, where release.py's header came to pin jsonschema and referencing, add.py's and write-code.py's came to pin referencing beside jsonschema, and the starter's README came to say a released version of it never changes, in place of its line that 1.0.0 is not released yet, and to cite a record or name the page in words in place of its links out of its folder. The README as 0d6c06c0 left it names no package a script pins. Of the starter's README it says only that its patterns and blocks are experimental, that it lists them by the question each answers, and that pkit visual add starter brings it in, none of which 8128295f changed, so the two hold together. The release then raises only the capability's version, 0.2.0 to 0.3.0, and leaves its backbone range as it was; the README states neither, and its lines that the three shipped libraries are not released yet stay true until #2611 releases them."
