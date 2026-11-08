@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -1433,6 +1434,97 @@ Per COR-001 it works.
     artifacts = refs.load_artifacts(kit_target)
     issues = refs.find_rot(kit_target, artifacts)
     assert issues == []
+
+
+def _missing(kit_target: Path) -> list[str]:
+    """The paths `find_rot` reports missing, as cited."""
+    found = refs.find_rot(kit_target, refs.load_artifacts(kit_target))
+    return sorted(i.diagnosis.split("'")[1] for i in found if "missing path" in i.diagnosis)
+
+
+def test_rot_reads_a_link_from_the_folder_of_the_file_that_holds_it(kit_target: Path) -> None:
+    """A relative link that resolves from its file's folder is no rot, its section
+    included; one that does not is, though the project's root holds the path (#2465)."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    body = (
+        "---\nname: skill-a\ndescription: t\nreads:\n  records: [COR-001]\n---\n# A\n"
+        "Per [COR-001](../../decisions/core/COR-001-thing.md), "
+        "[its section](../../decisions/core/COR-001-thing.md#1-scope), "
+        "[a lost one](../decisions/core/COR-001-thing.md) "
+        "and [one from the root](.pkit/decisions/core/COR-001-thing.md).\n"
+    )
+    _write_skill(kit_target, "core", "skill-a", body)
+    assert _missing(kit_target) == [
+        "../decisions/core/COR-001-thing.md",
+        ".pkit/decisions/core/COR-001-thing.md",
+    ]
+
+
+def test_rot_reads_a_path_in_backticks_from_the_project_root(kit_target: Path) -> None:
+    """A project-rooted path in backticks is read from the root, never from the file's
+    folder; a path that opens with `./` is read from the file's folder."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    (kit_target / ".pkit" / "skills" / "core" / "beside.md").write_text("x", encoding="utf-8")
+    body = (
+        "---\nname: skill-a\ndescription: t\n---\n# A\n"
+        "Read `.pkit/decisions/core/COR-001-thing.md`, `./beside.md`, "
+        "`decisions/core/COR-001-thing.md` and `./decisions/core/COR-001-thing.md`.\n"
+    )
+    _write_skill(kit_target, "core", "skill-a", body)
+    assert _missing(kit_target) == [
+        "./decisions/core/COR-001-thing.md",
+        "decisions/core/COR-001-thing.md",
+    ]
+
+
+def test_rot_reads_a_capabilitys_paths_inside_its_own_folder(kit_target: Path) -> None:
+    """A capability's skill names its scripts from the capability's root and its
+    sub-procedures beside it, as the reference graph reads them; a `.pkit/` path is
+    read from the project root only."""
+    skill = _write_capability_skill(
+        kit_target,
+        "mycap",
+        "s",
+        "---\nname: s\ndescription: t\n---\n# S\n"
+        "Run `scripts/do-thing.py`, follow [the walk](walk.md#2-step) and `project/gone.yaml`, "
+        "read `.pkit/capabilities/mycap/scripts/do-thing.py` and `.pkit/scripts/do-thing.py`.\n",
+    )
+    (skill.parent / "walk.md").write_text(
+        "Then [the script](../../scripts/do-thing.py).\n", encoding="utf-8"
+    )
+    scripts = kit_target / ".pkit" / "capabilities" / "mycap" / "scripts"
+    scripts.mkdir()
+    (scripts / "do-thing.py").write_text("", encoding="utf-8")
+    assert _missing(kit_target) == [".pkit/scripts/do-thing.py", "project/gone.yaml"]
+
+
+def test_rot_reads_a_link_to_a_dropped_scratchpad_note_from_its_folder(kit_target: Path) -> None:
+    dropped = kit_target / ".pkit" / "scratchpad" / "dropped"
+    dropped.mkdir(parents=True)
+    (dropped / "2026-05-01-old-idea.md").write_text("# old\n", encoding="utf-8")
+    body = (
+        "---\nname: skill-a\ndescription: t\n---\n# A\n"
+        "See [the note](../../scratchpad/active/2026-05-01-old-idea.md).\n"
+    )
+    _write_skill(kit_target, "core", "skill-a", body)
+    issues = refs.find_rot(kit_target, refs.load_artifacts(kit_target))
+    assert [i.diagnosis for i in issues] == [
+        "references dropped scratchpad note '../../scratchpad/active/2026-05-01-old-idea.md'."
+    ]
+
+
+# Slow, some five seconds: a real `pkit init`, the adapter's primitives included,
+# since they write files the shipped agents read, such as `CLAUDE.md`, which the
+# adopter fixture's stubbed install leaves out.
+def test_rot_finds_nothing_in_a_fresh_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project `pkit init` just made reports no rotten reference (#2465)."""
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert refs.find_rot(tmp_path, refs.load_artifacts(tmp_path)) == []
 
 
 # --- rename ---------------------------------------------------------
