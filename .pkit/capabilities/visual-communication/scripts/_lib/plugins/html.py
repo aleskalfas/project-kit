@@ -26,8 +26,11 @@ shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-005 points 4, 5
 - **Under forced colours** one rule gives each line, stroke and arrowhead the reader's text
   colour, and each fill opaque in every key the reader's background colour, with an edge
   where it has no stroke of its own, as the declaration names (DEC-023 point 7).
-- **A picture** draws the first key's variant. Each other key whose variant differs reports a
-  loss (DEC-023 point 8). A loss in one key of a file that holds several names that key.
+- **A picture** draws as the first key shows it, embedded whole as the canvas embeds it, a
+  PNG or a JPEG with the colour profile it carries. Each other key that shows another
+  picture, such as another variant of a produced output, reports a loss (DEC-023 point 8).
+  A picture file is the same in every key, so it reports none. A loss in one key of a file
+  that holds several names that key.
 - **The tree's order is the file's.** The renderer walks a page's tree in order. Each text
   is written where it comes, and each run of shapes between two texts is one layer: an
   `svg` the size of the page, which takes no pointer. A group is no element of the page. A
@@ -74,6 +77,8 @@ from _lib.canvas import (
     find,
     font_families,
     number,
+    shows,
+    unshown,
 )
 from _lib.plugins import seam
 from _lib.plugins.css import name_of
@@ -132,12 +137,13 @@ def render(
     keys: Mapping[str, Mapping[str, str]],
     colours: Mapping[str, Mapping[str, Mapping[str, Any]]],
     font_file: Callable[[str], Path],
-    pictures: Mapping[str, Mapping[str, Path]],
+    pictures: Mapping[str, Mapping[str, seam.Shown]],
 ) -> Drawn:
     """`scene` (`Scene.to_dict()`) drawn as one page file of the format `form`, holding each of
     `keys`: each key with its combination, every axis's mode, in key order, the first naming
     the file. By key, `colours` gives each colour role's value, in canonical form, and
-    `pictures` the file of each produced output's variant that serves it; `font_file` gives
+    `pictures` the picture each image shows there, by the image's trace id (`seam.Shown`),
+    whatever its source; `font_file` gives
     the committed file of a font family. Raises ValueError for a format the declaration does
     not name, or keys that differ in a mode it pairs with no signal."""
     file = PageFile(DECLARATION, scene, form, keys, colours, font_file, pictures)
@@ -212,7 +218,7 @@ class PageFile(Canvas):
         keys: Mapping[str, Mapping[str, str]],
         colours: Mapping[str, Mapping[str, Mapping[str, Any]]],
         font_file: Callable[[str], Path],
-        pictures: Mapping[str, Mapping[str, Path]],
+        pictures: Mapping[str, Mapping[str, seam.Shown]],
     ) -> None:
         if form not in declaration["holds-modes"]:
             raise ValueError(f"the {declaration['name']} renderer writes no format `{form}`")
@@ -498,29 +504,26 @@ class PageFile(Canvas):
     # -- a picture
 
     def _image(self, element: Mapping[str, Any]) -> str:
-        """A picture in the first key's variant. Each other key whose variant holds another
-        picture reports the loss, and each key the picture has no variant for (DEC-023 point
-        8)."""
-        output = str(element.get("output"))
-        variants = {key: self.pictures_of[key].get(output) for key in self.keys}
-        first = variants[self.key]
-        shown = first is not None and first.is_file()
-        drawn = first.read_bytes() if first is not None and shown else None
-        for key, variant in variants.items():
-            if variant is None or not variant.is_file():
+        """A picture as the first key shows it. Each other key that shows another picture
+        reports the loss, and each key it is handed no picture in (DEC-023 point 8). A
+        picture file is the same in every key, so it reports none."""
+        trace = str(element["id"])
+        handed = {key: self.pictures_of[key].get(trace) for key in self.keys}
+        first = handed[self.key]
+        shown = first is not None and first.file.is_file()
+        drawn = first.file.read_bytes() if first is not None and shown else None
+        # A produced output's picture is a variant; any other is a file.
+        held = "variant" if "output" in element else "picture"
+        for key, each in handed.items():
+            if each is None or not each.file.is_file():
+                why = unshown(element, key, self.scene.get("piece"))
+                self._lose_in(key, trace, seam.LEFT_OUT, why)
+            elif each != first and each.file.read_bytes() != drawn:
                 self._lose_in(
                     key,
-                    element["id"],
-                    seam.LEFT_OUT,
-                    f"the produced output `{output}` has no variant for `{key}`: run "
-                    f"`pkit visual produce {self.scene.get('piece')} {output}`",
-                )
-            elif variant.read_bytes() != drawn:
-                self._lose_in(
-                    key,
-                    element["id"],
+                    trace,
                     seam.APPROXIMATED if shown else seam.LEFT_OUT,
-                    f"the page draws the variant of `{self.key}` of the produced output "
-                    f"`{output}`, and `{key}` takes another",
+                    f"the page draws the {held} of `{self.key}` of {shows(element)}, and `{key}` "
+                    f"takes another",
                 )
         return super()._image(element) if shown else ""

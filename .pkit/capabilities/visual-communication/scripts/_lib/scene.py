@@ -15,8 +15,13 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   Each line holds its text, its width, its baseline below its top, its paragraph, and
   its spans: each the part of one run of its paragraph that lies on it, with its width
   (DEC-012 points 4 and 7).
-- **An image of a produced output** holds the output's variants by key and its exposed
-  points, mapped into the image's frame.
+- **An image** is drawn whole, centred, as large as its frame allows (`FIT`). One of a
+  produced output holds the output, its variants by key and its exposed points, mapped into
+  the image's frame. One of a picture file holds the file's bare name, `file`, and where it
+  lies, `library`: `piece` for the piece's own `pictures/`, else `<library>@<version>`. Its
+  name's source is the content's field that names it, or the component's default, and it
+  holds no variants and no points (DEC-025 point 7). A renderer is handed the file each
+  image shows in each combination, whatever its source, never the scene's names.
 - **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
   and `marker-end`, where it draws one. A tie's connector also holds, where its route
   turns, every point of it, `points`, its ends first and last, and `attached`: for each
@@ -50,6 +55,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from _lib import formula as fm
+from _lib import names
 from _lib.env import Env
 from _lib.findings import ATTENTION, Finding
 from _lib.layout import (
@@ -478,6 +484,9 @@ class _Emitter:
         self.ctx.add(found)
 
     def _image(self, element: Element, instance: Instance, node: Node) -> None:
+        if node.read is not None:
+            self._picture_file(element, instance, node)
+            return
         picture = node.picture
         assert picture is not None
         element.set("output", node.output, instance.source_of_field(node.part.props["produced"]))
@@ -499,6 +508,21 @@ class _Emitter:
             {p: {"x": length(x), "y": length(y)} for p, (x, y) in sorted(points.items())},
             ENGINE,
         )
+
+    def _picture_file(self, element: Element, instance: Instance, node: Node) -> None:
+        """An image of a picture file (DEC-025 point 7): its bare name, from the content's
+        field or the component's default, and where it lies, the piece or the library
+        version of the component that names it. It holds no variants and no points."""
+        props = node.part.props
+        if "content" in props:
+            source = instance.source_of_field(props["content"])
+            lies = names.PIECE
+        else:
+            source = f"default:{instance.component.use}"
+            lies = instance.library or names.PIECE
+        element.set("file", node.file, source)
+        element.set("library", lies, ENGINE)
+        element.set("preserveAspectRatio", FIT, ENGINE)
 
     def _items(self, element: Element, instance: Instance, node: Node) -> None:
         name, part = node.part.name, node.part

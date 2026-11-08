@@ -39,6 +39,11 @@ DRAWS = "draws"
 #: The properties each element of the scene holds whatever its type.
 _FRAME = ("x", "y", "width", "height")
 
+#: The properties of an image of every source (DEC-025 point 7): a produced output, with its
+#: variants and its points; a picture file, by its name and where it lies; a picture role.
+#: The renderer draws each from the picture it is handed, whatever its source.
+IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library", "role")
+
 #: The attribute that marks each thing a page file holds.
 MARKS = {
     "page": "data-page",
@@ -66,8 +71,8 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.1.0",
-    "seam": 4,
+    "version": "1.2.0",
+    "seam": 5,
     "module": "html",
     "about": (
         "A page file for each language and each key over the size axes, holding the modes a "
@@ -126,9 +131,6 @@ DECLARATION = {
             ),
             DRAWS,
         ),
-        "image": dict.fromkeys(
-            (*_FRAME, "output", "preserveAspectRatio", "variants", "points"),
-            DRAWS,
-        ),
+        "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
     },
 }

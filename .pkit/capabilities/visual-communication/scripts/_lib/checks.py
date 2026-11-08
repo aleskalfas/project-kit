@@ -2462,10 +2462,14 @@ def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:
     """An engine finding placed in the file a person edits to mend it: the piece's own file
     where it lies in what the piece names (`piece`), its top or its lock (DEC-008 point 9);
     the file of the component it names (`component`), the piece's own in its `components/`
-    and a library's in the locked version's; with neither, the content file. A missing
-    picture gets why, and the command that makes it."""
+    and a library's in the locked version's; with neither, the content file. One the engine
+    already placed in a file keeps it, as a finding on a picture file lies at the file, in
+    the piece or in the version (DEC-025 point 9). A missing picture gets why, and the
+    command that makes it."""
     library, _, name = str(finding.extra.get("component") or "").partition("/")
     versioned, _, version = finding.library.partition("@")
+    if finding.file:
+        return finding
     if finding.extra.get("piece"):
         finding = dataclasses.replace(finding, library="", file=pl.PIECE_FILE)
     elif library == names.PIECE and name:

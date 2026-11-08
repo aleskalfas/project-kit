@@ -869,7 +869,7 @@ def test_a_component_whose_file_cannot_be_read_is_a_finding_in_that_file_alone()
     def drawn(use: str, **components: dict[str, Any]) -> Any:
         return scene.compute_scene(
             piece="test-piece", top=use, content={}, language="en", lock=dict(VERSIONS),
-            size_key="default", seam_version=4, env=_Unreadable(components=lab(**components)),
+            size_key="default", seam_version=5, env=_Unreadable(components=lab(**components)),
             facts=layout.stand_ins("draft"),
         )  # fmt: skip
 

@@ -213,4 +213,4 @@ The loop ends when all three hold.
 
 Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. Mend a fault it reports as in step 4. Its findings are advice, and it changes nothing. Where its harness reads no image it stops and says so, and those pages stay not looked at.
 
-**Then commit** the piece's folder: `piece.yaml`, the content, any local component, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.
+**Then commit** the piece's folder: `piece.yaml`, the content, any local component, its `pictures/`, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.

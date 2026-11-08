@@ -23,7 +23,7 @@ DECLARATION = {
     "name": "json",
     "kind": "code-writer",
     "version": "1.0.0",
-    "seam": 4,
+    "seam": 5,
     "module": "json",
     "forms": [1],
     "kinds": ["color", "dimension", "fontFamily", "fontWeight", "number", "typography"],

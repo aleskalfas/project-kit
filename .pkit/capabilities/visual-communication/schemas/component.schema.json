@@ -1110,18 +1110,40 @@
       }
     },
     "image": {
-      "description": "An image's properties: the produced output it shows.",
+      "description": "An image's properties: what it shows, exactly one of a produced output, a picture file the content names, and a picture file of the component's own library (visual-communication DEC-025 point 1).",
       "type": "object",
-      "required": [
-        "produced"
-      ],
       "additionalProperties": false,
       "properties": {
         "produced": {
           "description": "The field naming a produced output of the piece.",
           "$ref": "defs.schema.json#/$defs/name"
+        },
+        "content": {
+          "description": "The field whose text is the bare name of a picture file in the piece's `pictures/`; each language's content names its own, and an empty field draws nothing.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "file": {
+          "description": "The bare name of a picture file in the `pictures/` of the component's own library version, or of the piece for a local component: the same in every mode and under every brand.",
+          "type": "string"
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "produced"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        },
+        {
+          "required": [
+            "file"
+          ]
+        }
+      ]
     },
     "operator": {
       "description": "How a list's items are arranged along a row or a column, by CSS flexible layout's names.",
@@ -1303,7 +1325,7 @@
       ]
     },
     "image-part": {
-      "description": "An image of a produced output: its height keeps the picture's proportions where none is given.",
+      "description": "An image of a produced output or of a picture file: its height keeps the picture's proportions where none is given.",
       "type": "object",
       "required": [
         "image",

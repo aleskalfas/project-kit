@@ -72,6 +72,7 @@ Write `pieces/<piece>/content.<language>.yaml` for each language. The content sa
 - **What draws a visual.** A mapping with `use` places a component. Choose a pattern by the question the visual answers, never by its look ([The patterns, by the question they answer](../../libraries/starter/README.md#the-patterns-by-the-question-they-answer)). Its page says which fields and options it takes.
 - **Ids.** Give each slide and each item an `id`, unique in its list. A second language is a second file of the same shape, with the same ids.
 - **Concepts.** Where the piece names a notation, `concept: <notation>/<concept>` gives a component its colour family.
+- **A picture of the piece's own,** such as a photo, is a PNG or a JPEG in `pieces/<piece>/pictures/`. In each language, the field of the image that shows it gives the file's bare name, with no folder before it ([Picture files](../../files.md#picture-files)).
 
 The content of a deck, one cover and one slide:
 
