@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:ffbff7715eb3017122d6a7f5c0d5c9f4dc39d9d8bcde7fed10d93be8ab4c012e -->
+<!-- pkit:overview reads=5 fingerprint=sha256:ab9b0c394de2b6795fa4ca79e978f0dc7c643a350e9971d3f396dc3382c3fd1f -->
 
 [Visual work keeps its content and its look as data, and renderers only project it](../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md).
 
@@ -23,7 +23,7 @@ Make each piece, such as a deck or a figure in a documentation page, from librar
 - [UC-095 — Draw several views of one system from one model](../use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md)
 - [UC-096 — Add a new kind of visual to a piece as data](../use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md)
 - [UC-097 — Put a picture that a program makes in a piece](../use-case-model/use-cases/010-make/UC-097-put-produced-picture.md)
-- [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md) ([not built yet](#not-built-yet): step 2, step 4)
+- [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md) ([not built yet](#not-built-yet): step 2)
 
 **Its journeys:**
 
@@ -140,7 +140,6 @@ flowchart LR
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
 - [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md): step 2, decided by `visual-communication:DEC-001#1`, tracked in `#2584`
-- [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md): step 4, decided by `visual-communication:DEC-001#1`, tracked in `#2584`
 
 ### Diagrams
 
