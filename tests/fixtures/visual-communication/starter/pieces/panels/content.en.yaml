@@ -1,0 +1,99 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: spans
+    layout: slide
+    title: A network beside a terminal, the wide panel taking more of the row
+    visual:
+      use: starter/panels
+      panels:
+        - id: network
+          use: starter/network
+          span: wide
+          item: {use: starter/card, fill: tint, concept: test-notation/service}
+          left:
+            - {id: living-docs, head: living-docs, text: Docs for each reader.}
+            - {id: software-analysis, head: software-analysis, text: What it must do.}
+          right:
+            - id: groups
+              use: starter/groups
+              groups:
+                - id: project-management
+                  head: project-management
+                  items:
+                    - {id: doc-check, text: The docs to update.}
+                    - {id: fixers, text: Who fixes each.}
+          ties:
+            - id: docs-check
+              from: {item: "left[living-docs]"}
+              to: {item: "right[groups].groups[project-management].items[doc-check]"}
+            - id: analysis-fixers
+              from: {item: "left[software-analysis]"}
+              to: {item: "right[groups].groups[project-management].items[fixers]"}
+        - id: status
+          use: starter/code
+          span: normal
+          head: What the status shows
+          text:
+            - {text: "$ ", style: prompt}
+            - {text: "pkit status\n", style: command}
+            - "  roles   3 named\n"
+            - "  points  6 defined"
+
+  - id: under
+    layout: slide
+    title: Panels side by side, and one more component under them
+    visual:
+      use: starter/panels
+      panels:
+        - {id: rules, head: Rules, text: "Exactly what to do, for every session."}
+        - {id: checks, head: Checks, text: Run on every change.}
+        - {id: work, head: Your code, text: "The work itself, tied to what it depends on."}
+      under:
+        use: starter/aside
+        head: Every panel a card
+        text: A panel that names no component is drawn by the card.
+
+  - id: nested
+    layout: slide
+    title: A panel that holds panels of its own, beside a file's text
+    visual:
+      use: starter/panels
+      panels:
+        - id: steps
+          use: starter/panels
+          panels:
+            - id: install
+              use: starter/code
+              text:
+                - {text: "# once, on your machine\n", style: comment}
+                - {text: "$ ", style: prompt}
+                - {text: "uv tool install pkit\n", style: command}
+                - {text: "$ ", style: prompt}
+                - {text: "pkit init", style: command}
+          under:
+            use: starter/aside
+            head: Want it out of your repository?
+            command: "$ pkit visibility private"
+            text: It stays only in your clone.
+        - id: tree
+          use: starter/code
+          text:
+            - "your-project/\n"
+            - "├── .pkit/"
+            - {text: "        # the methodology\n", style: comment}
+            - "│   ├── agents/\n"
+            - "│   ├── decisions/\n"
+            - "│   ├── permissions/\n"
+            - "│   ├── rules/\n"
+            - "│   ├── scratchpad/\n"
+            - "│   ├── skills/\n"
+            - "│   └── manifest.yaml\n"
+            - "├── .claude/"
+            - {text: "      # your Claude Code setup\n", style: comment}
+            - "│   └── settings.json\n"
+            - "├── CLAUDE.md"
+            - {text: "     # loads the rules\n", style: comment}
+            - "└── src/"
+            - {text: "          # your code", style: comment}

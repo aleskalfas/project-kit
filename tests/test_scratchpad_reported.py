@@ -256,6 +256,19 @@ def test_resolve_note_missing_raises(kit_target: Path) -> None:
         scratchpads.resolve_note(kit_target, "missing")
 
 
+def test_resolve_note_and_stamp_reported_find_a_whole_slug_never_its_end(
+    kit_target: Path,
+) -> None:
+    # #2439: `layer` does not find `…-cache-layer.md`.
+    src = _stamp_note(kit_target, "cache-layer")
+    with pytest.raises(click.ClickException, match=r"no scratchpad note matches 'layer'"):
+        scratchpads.resolve_note(kit_target, "layer")
+    with pytest.raises(click.ClickException, match=r"no scratchpad note matches 'layer'"):
+        scratchpads.stamp_reported(kit_target, "layer", ("owner/repo#7",))
+    assert src.is_file()
+    assert scratchpads.resolve_note(kit_target, "cache-layer") == src
+
+
 # --- list_notes (live read-back) --------------------------------------
 
 
@@ -433,6 +446,22 @@ def test_cli_scratchpad_done_from_reported(cli_target: Path) -> None:
     res = CliRunner().invoke(main, ["scratchpad", "done", "my-note", "--produced", "owner/repo#7"])
     assert res.exit_code == 0, res.output
     assert "reported/" in res.output and "done/" in res.output
+
+
+def test_cli_scratchpad_commands_refuse_a_slug_that_only_ends_the_note_s_slug(
+    cli_target: Path,
+) -> None:
+    # #2439: `done`, `drop` and `reported` find a note by its whole slug.
+    note = _stamp_note(cli_target, "cache-layer")
+    for args in (
+        ["scratchpad", "done", "layer"],
+        ["scratchpad", "drop", "layer"],
+        ["scratchpad", "reported", "layer", "owner/repo#7"],
+    ):
+        res = CliRunner().invoke(main, args)
+        assert res.exit_code != 0, args
+        assert "matches 'layer'" in res.output, args
+    assert note.is_file()
 
 
 # --- report --scratchpad: attach + stamp flow -------------------------
@@ -631,6 +660,20 @@ def test_cli_report_attach_missing_note_errors(cli_target: Path) -> None:
     )
     assert res.exit_code != 0
     assert "no scratchpad note matches" in res.output
+
+
+def test_cli_report_attach_refuses_a_slug_that_only_ends_the_note_s_slug(
+    cli_target: Path,
+) -> None:
+    # #2439: `--scratchpad layer` does not attach `…-cache-layer.md`.
+    note = _stamp_note(cli_target, "cache-layer")
+    res = CliRunner().invoke(
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--scratchpad", "layer"],
+    )
+    assert res.exit_code != 0
+    assert "no scratchpad note matches 'layer'" in res.output
+    assert note.is_file()
 
 
 # --- pre-send drift lint ---------------------------------------------

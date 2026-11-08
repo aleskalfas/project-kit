@@ -2,7 +2,8 @@
 
 The script renders the document of the backbone's whole-repository friction
 check (COR-050 point 6), `pkit friction check --all --json`, as one Markdown
-body, and counts the findings that need an answer. It is a function of that
+body, counts the findings that need an answer and says whether a prune is due. It
+is a function of that
 document, so the tests call it over a document the real backbone wrote for a
 real history, or one shaped like it where the backbone cannot be made to report
 a kind. The history is laid on an install committed once per session
@@ -12,7 +13,12 @@ and as a process, as the workflow runs it, in one test.
 Held to: stale debt with what changed and since when; deferrals listed with
 their reason and never counted; revalidations answered apart listed and counted
 apart from what needs an answer (COR-062 point 7, #2206); the other findings;
-both measures, never counted; the same findings giving the same body; what the
+over-broad anchors listed apart and never counted (ADR-055 point 5), the second
+bar's on one artefact as one entry (ADR-080 point 3); a whole anchor beside its parts
+listed as owing nothing and never counted (ADR-080 point 5); both
+measures, never counted; a prune due from its bar, told apart from what needs an
+answer and leaving the body as it is (ADR-068 point 4); the same findings giving
+the same body; what the
 findings carry staying
 inert text, a path that is no UTF-8 included; the body within its size, cut by
 whole entries, the findings that need an answer last; and nothing rendered from
@@ -36,7 +42,16 @@ from scripts import friction_report_body as report
 
 from project_kit import friction_repository as fr
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author
-from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
+from tests.friction_documents import (
+    MANUAL,
+    T1,
+    T2,
+    Timeline,
+    document,
+    friction_config,
+    guide,
+    manual,
+)
 from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
 from tests.test_answer_files import entry as revalidation
@@ -140,6 +155,7 @@ def _document(**overrides: Any) -> dict[str, Any]:
         "artefacts": [],
         "findings": [],
         "measures": {"accepted_unanchored": [], "unanchored": [], "uncovered_surface": []},
+        "answers": {"folder": ".pkit/project/friction/answers", "files": 0, "prunable": []},
     }
     base.update(overrides)
     return base
@@ -294,6 +310,44 @@ def test_a_dormant_check_needs_no_answer() -> None:
     assert "The check is dormant" in made["body"]
 
 
+# --- a prune that is due (ADR-068 point 4) --------------------------------------------------
+
+
+def _prunable(count: int) -> dict[str, Any]:
+    """A document with nothing found, in which a prune would remove `count` answer files."""
+    names = [f"{n}.yaml" for n in range(count)]
+    return _document(answers={"folder": "answers", "files": count, "prunable": names})
+
+
+def test_a_prune_is_due_from_its_bar_and_is_no_finding() -> None:
+    below = report.publication(_prunable(report.PRUNE_DUE - 1))
+    at_the_bar = report.publication(_prunable(report.PRUNE_DUE))
+    assert below["prune_due"] is False and at_the_bar["prune_due"] is True
+    assert at_the_bar["needs_answer"] == 0
+    assert at_the_bar["body"] == below["body"]  # the tracking issue reads as it did
+
+
+def test_a_document_without_the_answers_reads_and_says_no_prune_is_due() -> None:
+    """The key came without a version change, so a version-1 document may lack it."""
+    assert report.publication(_without("answers"))["prune_due"] is False
+
+
+def test_the_bar_counts_what_the_real_check_says_a_prune_would_remove(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The document's key as the backbone writes it: a file a later answer replaced."""
+    timeline.start({GUIDE: bare_guide()}, friction_config())
+    timeline.commit("answer", {answer_path("a0"): answers(revalidation(at=T1))})
+    timeline.commit(
+        "answer again",
+        {answer_path("a1"): answers(revalidation(at=T2, because="it moved", read=("a0",)))},
+    )
+    document_ = _check(timeline.adopter.root)
+    assert report.prune_due(document_) is False
+    monkeypatch.setattr(report, "PRUNE_DUE", 1)
+    assert report.prune_due(document_) is True
+
+
 # --- answered apart: debt, reported only (COR-062 point 7) ----------------------------------
 
 
@@ -355,16 +409,21 @@ def test_the_same_findings_render_the_same_body(timeline: Timeline) -> None:
     assert report.publication(later) == report.publication(earlier)
 
 
-def test_an_over_broad_anchor_keeps_the_body_while_the_tracked_files_change(
-    timeline: Timeline,
+def test_an_over_broad_anchor_is_listed_apart_and_holds_nothing_open(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The check's message counts the tracked files, which most pushes change; the
-    body tells the finding without the count."""
+    """An over-broad anchor is reported only, and its count moves as the window of
+    commits slides, with no anchor changed (ADR-055 point 5; ADR-080). So it is listed in
+    a section of its own, counted for nothing, in words that keep the body while the
+    check's message, which gives the counts, moves with most pushes. Each check reads a
+    window as long as the line."""
     timeline.start({"docs/guide.md": guide(anchors={"path": ["**"]})})
     root = timeline.adopter.root
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)
     earlier = _check(root)
     timeline.commit("add a module", {"src/extra/tool.py": "TOOL = 1\n"})
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 3)
     later = _check(root)
 
     def over_broad(check: dict[str, Any]) -> str:
@@ -372,9 +431,81 @@ def test_an_over_broad_anchor_keeps_the_body_while_the_tracked_files_change(
         return finding["message"]
 
     assert over_broad(earlier) != over_broad(later)  # the count moved
-    body = report.publication(later)["body"]
-    assert body == report.publication(earlier)["body"]
-    assert "- `docs/guide.md` · `over-broad` · `path:**`\n  matches most of the tracked" in body
+    made = report.publication(later)
+    assert made["body"] == report.publication(earlier)["body"]
+    assert made["needs_answer"] == 1  # the stale guide alone
+    assert made["body"].startswith("**Needs an answer: 1 stale.**\n")
+    assert "### Other findings" not in made["body"]
+    section = _section(made["body"], "Over-broad: reported, holding nothing open")
+    assert (
+        "- `docs/guide.md` · `path:**`\n  flagged its artefact in most of the recent commits"
+    ) in section
+
+    alone = report.publication(_document(findings=[later["findings"][-1]]))
+    assert later["findings"][-1]["kind"] == "over-broad"
+    assert alone["needs_answer"] == 0
+    assert alone["body"].startswith("**Nothing needs an answer.**\n")
+
+
+def test_a_whole_anchor_beside_its_parts_is_listed_as_owing_nothing_and_holds_nothing_open(
+    timeline: Timeline,
+) -> None:
+    """It makes nothing untrue, and a person may keep it, which nothing records (ADR-055
+    point 5; ADR-080 point 5). So it is listed with what owes nothing, counted for nothing,
+    in the check's own words, which read HEAD alone and so keep the body."""
+    anchors = {"artefact": [MANUAL, f"{MANUAL}#using"]}
+    timeline.start({MANUAL: manual(), "docs/guide.md": guide(anchors=anchors)})
+    root = timeline.adopter.root
+    earlier = report.publication(_check(root))
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+
+    assert report.publication(_check(root)) == earlier
+    assert earlier["needs_answer"] == 0
+    assert earlier["body"].startswith("**Nothing needs an answer.**\n")
+    section = _section(earlier["body"], "Reported, nothing owed")
+    assert f"- `docs/guide.md` · `whole-and-parts` · `artefact:{MANUAL}`\n" in section
+    assert f"artefact {MANUAL}#using — removing them loses no flag" in section
+
+
+def test_the_second_bar_s_anchors_on_one_artefact_are_one_entry() -> None:
+    """Grouped as the check's own view groups them (ADR-080 point 3): the anchors the
+    second bar names on one artefact are one entry, in the document's order, the largest
+    share first; an anchor over the first bar is an entry of its own, and so is the
+    same anchor named by the second; a finding with no `bar`, from an older backbone,
+    is listed apart, in words that cover either bar."""
+
+    def broad(location: str, value: str, bar: str | None) -> dict[str, Any]:
+        anchor = {"kind": "path", "value": value}
+        finding = _finding("over-broad", location, "counts", anchor=anchor)
+        return {**finding, "bar": bar}
+
+    findings = [
+        broad("docs/guide.md", "src/cli/**", "flags"),
+        broad("docs/guide.md", "src/lib/**", "asks"),
+        broad("docs/guide.md", "src/cli/**", "asks"),
+        broad("docs/other.md", "src/core/**", "asks"),
+        broad("docs/older.md", "src/a/**", None),
+        broad("docs/older.md", "src/b/**", None),
+    ]
+    made = report.publication(_document(findings=findings))
+    assert made["needs_answer"] == 0
+    section = _section(made["body"], "Over-broad: reported, holding nothing open")
+    entries = [line for line in section.splitlines() if line.startswith("- ")]
+    assert entries == [
+        "- `docs/guide.md` · `path:src/cli/**`",
+        "- `docs/guide.md` · `path:src/lib/**` · `path:src/cli/**`",
+        "- `docs/other.md` · `path:src/core/**`",
+        "- `docs/older.md` · `path:src/a/**`",
+        "- `docs/older.md` · `path:src/b/**`",
+    ]
+    said = [line.strip() for line in section.splitlines() if line.startswith("  ")]
+    assert said == [
+        report.OVER_BROAD_SAID[report.FLAGS],
+        report.OVER_BROAD_SAID[report.ASKS],
+        report.OVER_BROAD_SAID[report.ASKS],
+        report.OVER_BROAD_SAID[None],
+        report.OVER_BROAD_SAID[None],
+    ]
 
 
 def test_since_when_is_the_utc_day_the_checks_message_names() -> None:

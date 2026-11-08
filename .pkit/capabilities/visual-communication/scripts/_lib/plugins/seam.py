@@ -22,9 +22,19 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-SEAM_VERSION = 1
+#: 2 since a scene's text holds paragraphs of runs, each with its own role, paint and fonts,
+#: and each line its own baseline and spans (visual-communication DEC-012). 3 since a line
+#: may hold arrowheads, and a tie's connector the points of its route and the elements its
+#: ends meet (visual-communication DEC-011). 4 since a renderer of a format that holds modes
+#: is handed every key of one file in one call, and its loss in one of them names that key
+#: (visual-communication DEC-023 point 2). 5 since an image shows a produced output, a
+#: picture file or a picture role, and a renderer is handed the picture each image shows
+#: in each combination, a PNG or a JPEG, by the image's trace id (`Shown`,
+#: visual-communication DEC-025 point 7).
+SEAM_VERSION = 5
 
 RENDERER = "renderer"
 PRODUCER = "producer"
@@ -47,19 +57,49 @@ class Loss:
     - `what`: what was lost, by trace id or token path.
     - `did`: what the plugin did instead, one of `OUTCOMES`.
     - `why`: why, in plain words.
+    - `key`: the key of the one combination it holds in, where a renderer's file holds
+      several (DEC-023 point 8); None for every other loss, which no field adds.
     """
 
     plugin: str
     what: str
     did: str
     why: str
+    key: str | None = None
 
     def __post_init__(self) -> None:
         if self.did not in OUTCOMES:
             raise ValueError(f"unknown outcome {self.did!r}")
 
     def as_dict(self) -> dict[str, str]:
-        return {"plugin": self.plugin, "what": self.what, "did": self.did, "why": self.why}
+        held = {"plugin": self.plugin, "what": self.what, "did": self.did, "why": self.why}
+        return held if self.key is None else {**held, "key": self.key}
+
+
+#: The kinds of picture a renderer is handed, as the picture reader names them.
+PNG = "png"
+JPEG = "jpeg"
+PICTURE_KINDS = (PNG, JPEG)
+
+
+@dataclass(frozen=True)
+class Shown:
+    """The picture an image shows in one combination, as a renderer is handed it (DEC-025
+    point 7): the file to draw, and its kind, `png` or `jpeg`. The engine resolves every image
+    to one, whatever its source, so a renderer draws each alike and reads nothing else for
+    it: a produced output's variant that serves the combination, a picture file of the piece
+    or of a library's version, or the file a brand gives a picture role there.
+
+    A renderer is handed them by the image's trace id. One handed none draws the image as
+    missing, and reports the loss. The file's bytes are drawn as they are, so a colour
+    profile the file carries stays with the picture."""
+
+    file: Path
+    kind: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in PICTURE_KINDS:
+            raise ValueError(f"unknown kind of picture {self.kind!r}")
 
 
 class PluginError(Exception):

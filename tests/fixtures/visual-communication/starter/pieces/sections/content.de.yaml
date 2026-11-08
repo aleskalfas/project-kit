@@ -1,0 +1,22 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: order
+    layout: standard
+    main:
+      use: starter/sections
+      sections:
+        - id: written
+          head: Einmal geschrieben
+          text: Jede Regel liegt in der Datei, die ihr Projekt für sie führt.
+          picture: window.png
+        - id: applied
+          fill: tint
+          side: left
+          head: Jedes Mal durchgesetzt
+          text: Die Werkzeuge lesen die Regeln und setzen sie bei jeder Änderung durch.
+          picture: window.png
+        - id: reviewed
+          head: Wie Code geprüft
+          text: Eine Regeländerung ist eine Änderung wie jede andere, und jemand prüft sie.

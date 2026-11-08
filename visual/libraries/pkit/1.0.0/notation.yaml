@@ -1,0 +1,20 @@
+pkit_schema: visual-communication:notation
+schema_version: 1
+
+# What project-kit's pieces tell apart by colour. A concept that shares a family with
+# another never meets it on one page, as `rule` and `capability` do not. Until a place in a
+# list can take a colour of its own (project-kit#2576), the layers of how pkit fits together
+# take theirs from what each is: pkit's commands and checks are `core`, your code and
+# documents `yours`, and the three layers above them each a concept here.
+concepts:
+  # Whose a thing is: pkit's own files and commands, which each upgrade replaces; what
+  # belongs to you; and an optional part of pkit a project installs.
+  core: {colour: purple}
+  yours: {colour: blue}
+  capability: {colour: orange}
+  # The layers above pkit's commands: the choices you accepted, the working rules, schemas
+  # and processes that say exactly what to do, and the skills, agents and permissions that
+  # say how agents act.
+  decision: {colour: green}
+  rule: {colour: orange}
+  skill: {colour: red}

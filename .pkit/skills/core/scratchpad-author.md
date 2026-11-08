@@ -21,7 +21,7 @@ reads:
 
 A scratchpad note (per COR-012) is the carrier for exploratory work that precedes a decision: mapping the design space, listing forces, sketching alternatives, abandoning unworkable lines, and progressively narrowing toward the artifacts (records, docs, skills, agents) that will eventually crystallise from the work.
 
-This skill walks through stamping a new active-state note and the disciplines that make it useful.
+This skill walks through stamping a new active-state note and the disciplines that make it useful. The area's layout, states and front matter are in `.pkit/scratchpad/README.md`.
 
 ## When to invoke this skill
 

@@ -17,7 +17,7 @@ import shlex
 import sys
 from collections.abc import Callable, Generator, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 import click
 
@@ -2416,14 +2416,28 @@ def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
     default=None,
     help="Check commit REV instead of the working tree: its files read from git objects, "
     "nothing checked out, the merge-base taken against REV. Uncommitted work is not read. "
-    f"REV is the change's own head too, and ${_CHECK_HEAD_ENV} is not read. "
-    "Not with --all.",
+    f"REV is the change's own head too, unless --own-head names another, and "
+    f"${_CHECK_HEAD_ENV} is not read. Not with --all.",
+)
+@click.option(
+    "--own-head",
+    "own_rev",
+    metavar="REV",
+    default=None,
+    help=f"With --head: the change's own head, as ${_CHECK_HEAD_ENV} names it for a working "
+    "tree: the commit --head names, or a parent of it, such as the change's head where "
+    "--head names its merge with the base. With --json, a refusal to run a resolver away "
+    "from that commit is then a document too.",
 )
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def friction_check_command(
-    base_ref: str | None, whole_repository: bool, head_rev: str | None, as_json: bool
+    base_ref: str | None,
+    whole_repository: bool,
+    head_rev: str | None,
+    own_rev: str | None,
+    as_json: bool,
 ) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
@@ -2469,6 +2483,11 @@ def friction_check_command(
             "--head and --all exclude each other: the whole-repository check reads HEAD and "
             "its history."
         )
+    if own_rev is not None and head_rev is None:
+        raise click.UsageError(
+            f"--own-head names the change's own head beside --head; for a working tree, "
+            f"${_CHECK_HEAD_ENV} names it."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -2479,15 +2498,23 @@ def friction_check_command(
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
-    named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
+    named = None if head_rev is None else friction_check.named_head(target_root, head_rev, own_rev)
     # The fork is taken against the commit the name gave, which the diff reads too.
     settled = default_branch.settled(
         target_root, base_ref, head_rev="HEAD" if named is None else named.commit
     )
     _warn_settled(settled)
-    result = friction_check.run_change_check(
-        target_root, base_ref, resolved=settled.base, named=named
-    )
+    try:
+        result = friction_check.run_change_check(
+            target_root, base_ref, resolved=settled.base, named=named
+        )
+    except friction_check.ResolverElsewhere as refused:
+        # The sentence still reaches standard error, and the exit code stays the run's.
+        # Only a caller that names the own head gets the document: a reader older than
+        # the flag knows this refusal by an empty standard output and that sentence.
+        if as_json and own_rev is not None:
+            click.echo(friction_check.render_refusal_json(refused), nl=False)
+        raise
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
     else:
@@ -3650,7 +3677,16 @@ def _announce_init_target(
         "exclusive with --here."
     ),
 )
-def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
+@click.option(
+    "--refuse-proposals",
+    is_flag=True,
+    default=False,
+    help=(
+        "Write `decisions.refuse-proposals: true` into the new project's configuration, "
+        "turning on the landing check's refusal (COR-066 point 4). The flag is the consent."
+    ),
+)
+def init(dry_run: bool, here: bool, yes: bool, root: Path | None, refuse_proposals: bool) -> None:
     """First install: propagation + seed + merge per COR-001 / COR-002 / COR-004.
 
     Announces the resolved install target and why it was chosen, then confirms
@@ -3733,7 +3769,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"status` to see why."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
-        install_kit(target, dry_run=dry_run)
+        install_kit(target, dry_run=dry_run, refuse_proposals=refuse_proposals)
         return
 
     target, reason = resolve_init_target(cwd)
@@ -3900,7 +3936,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"install there, or run `pkit init`\n"
                 f"       from {target}.",
             )
-        install_kit(target, dry_run=dry_run)
+        install_kit(target, dry_run=dry_run, refuse_proposals=refuse_proposals)
         return
 
     # Target IS the current directory (GIT_ROOT, --here, or a fresh non-git
@@ -3914,7 +3950,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"       Re-run with --yes to install project-kit into {target}.",
         )
 
-    install_kit(target, dry_run=dry_run)
+    install_kit(target, dry_run=dry_run, refuse_proposals=refuse_proposals)
 
 
 @main.command()
@@ -5671,8 +5707,8 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
 
     The backbone's members run first — manifests, schemas, configuration,
     packages, connections, versions, decisions, friction, rule-sets, refs,
-    process, data — then each installed capability's, registered in its
-    package metadata (`validators:`, each naming a `commands:` leaf that
+    process, data, scratchpad — then each installed capability's, registered
+    in its package metadata (`validators:`, each naming a `commands:` leaf that
     declares the query contract). One renderer prints every section;
     warnings, information and reports print, only errors fail. The
     diff-scoped checks (`friction check`, `migrations check-diff`, `release
@@ -5962,8 +5998,16 @@ def hooks_list() -> None:
         + "   (bound provider by precedence)"
     ]
     for hook in declared_hooks:
-        winner = refs_mod.resolve_hook(providers, hook)
-        marker = f" -> {winner.tier}:{winner.source}" if winner else " (no provider)"
+        winners = refs_mod.winning_providers(providers, hook)
+        if not winners:
+            marker = " (no provider)"
+        elif len(winners) > 1:
+            sources = ", ".join(p.source for p in winners)
+            marker = cli_render.style(
+                "danger", f" (same-tier collision at {winners[0].tier}: {sources})"
+            )
+        else:
+            marker = f" -> {winners[0].tier}:{winners[0].source}"
         lines.append(f"  {hook}{marker}")
     click.echo("\n".join(lines) + "\n", nl=False)
 
@@ -5971,14 +6015,17 @@ def hooks_list() -> None:
 @hooks.command("resolve")
 @click.argument("hook")
 def hooks_resolve(hook: str) -> None:
-    """Show the currently-bound provider for a hook (by precedence)."""
+    """Show the provider a hook binds to (by precedence); refuse a same-tier collision."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    winner = refs_mod.resolve_hook(providers, hook)
-    if winner is None:
+    winners = refs_mod.winning_providers(providers, hook)
+    if not winners:
         raise click.ClickException(f"no provider declared for hook {hook!r}.")
+    if len(winners) > 1:
+        raise click.ClickException(f"{hook}: {refs_mod.collision_diagnosis(winners)}")
+    winner = winners[0]
     click.echo(f"  {hook} -> {winner.tier}:{winner.source} ({winner.implementation})")
 
 
@@ -6007,12 +6054,10 @@ def hooks_who_provides(hook: str) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    matches = [p for p in providers if p.hook == hook]
+    matches = refs_mod.by_precedence([p for p in providers if p.hook == hook])
     if not matches:
         click.echo(f"  no provider declared for hook {hook!r}.")
         return
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    matches.sort(key=lambda p: order.get(p.tier, 99))
     click.echo(cli_render.style("strong", f"{len(matches)} provider(s) for {hook!r}:"))
     for p in matches:
         click.echo(f"  {p.tier:8} {p.source:30} {p.implementation}")
@@ -6896,6 +6941,75 @@ def decisions_check_diff(base_ref: str | None, head_rev: str | None, as_json: bo
         check_mod.print_report(report)
     if report.errors:
         raise click.ClickException(f"{report.errors} error(s) in the change's numbering found.")
+
+
+@decisions.command("check-landing")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help="The base the change would land on, else $PKIT_CHECK_BASE. There is no default: "
+    "a run that names none gives no answer.",
+)
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="The commit that would land. Default: HEAD. The working tree is never read.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the check's own JSON document."
+)
+def decisions_check_landing(base_ref: str | None, head_rev: str | None, as_json: bool) -> None:
+    """Judge what a change's merge would land on its base (COR-066 points 2 to 4, ADR-081).
+
+    Compares each decision record and rule at the landing state, git's merge of the
+    head into the base's tip, with its state at that tip. Reports each proposed there
+    and not at the tip, and lists each the change makes accepted, with the commits
+    that accepted it, the work before them and the edits since. A record the project
+    receives by sync is skipped.
+
+    The key `decisions.refuse-proposals`, read at the base's tip, decides whether a
+    reported proposal fails the run, and only a landing on the default branch can fail.
+    The default branch's name is read at that tip too. Which files the project receives
+    and where the check looks are read at that tip and at the landing state.
+
+    Exits 0 on a pass and 1 on a refusal. Where the check cannot compute what lands, it
+    gives no answer and exits 3, which is never a pass. Among the causes: the base is
+    unnamed or names no commit, the head names none, the head and the base share no
+    history, the clone is shallow, the merge conflicts, a git command fails, or the
+    synced-copy test cannot run. The CLI reference lists every cause. The check gate and
+    the hooks never run it. --json prints one document either way.
+    """
+    from project_kit import decisions_landing as landing_mod
+    from project_kit.friction_check import printable
+
+    def no_answer(problem: str) -> NoReturn:
+        if as_json:
+            click.echo(landing_mod.render_json(landing_mod.no_answer_document(problem)), nl=False)
+        else:
+            click.echo(f"No answer: {printable(problem)}", err=True)
+        raise SystemExit(landing_mod.NO_ANSWER_EXIT)
+
+    target_root = find_target_root()
+    if target_root is None:
+        no_answer("not in a project tree.")
+    try:
+        found = landing_mod.check(target_root, base_ref, head_rev)
+    except landing_mod.NoAnswer as exc:
+        no_answer(exc.problem)
+    for warning in found.warnings:
+        click.echo(f"  warning: {printable(warning)}", err=True)
+    if as_json:
+        click.echo(landing_mod.render_json(landing_mod.document(found)), nl=False)
+    else:
+        click.echo(landing_mod.render_human(found), nl=False)
+    if found.refuses:
+        raise click.ClickException(
+            f"{len(found.proposals)} proposal(s) would land on the default branch."
+        )
 
 
 @main.group()

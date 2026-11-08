@@ -1,0 +1,67 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: stack
+    layout: slide
+    title: Levels stacked one on another, the top first
+    visual:
+      use: starter/layers
+      levels:
+        - id: decisions
+          head: Decisions
+          text: Choices you accepted, and why.
+        - id: rules
+          head: Working rules
+          text: Exactly what to do, for every session and tool.
+        - id: commands
+          head: Commands and checks
+          text: Carry out what is decided, and check every change.
+        - id: work
+          head: Your code and documents
+          text: The work itself, tied to what it depends on.
+
+  - id: tinted
+    layout: slide
+    title: Each level tinted by the concept it names
+    visual:
+      use: starter/layers
+      level: {use: starter/card, fill: tint}
+      levels:
+        - id: people
+          concept: test-notation/person
+          head: People
+          text: Who asks for the work.
+        - id: services
+          concept: test-notation/service
+          head: Services
+          text: What answers them.
+        - id: stores
+          concept: test-notation/store
+          head: Stores
+          text: Where what they keep lies.
+
+  - id: notes
+    layout: slide
+    title: Notes beside the stack hold across its levels
+    visual:
+      use: starter/layers
+      level: {use: starter/card, fill: tint, concept: test-notation/service}
+      note: {use: starter/card, bar: left}
+      levels:
+        - id: decisions
+          head: Decisions
+          text: Choices you accepted, and why.
+        - id: rules
+          head: Working rules
+          text: Exactly what to do.
+        - id: work
+          head: Your code
+          text: The work itself.
+      notes:
+        - id: carried-out
+          head: Carried out
+          text: Each level carries out the ones above it.
+        - id: checked
+          head: Checked
+          text: A level that disagrees is checked first.

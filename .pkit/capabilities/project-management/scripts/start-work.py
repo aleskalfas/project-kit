@@ -33,6 +33,13 @@ Gates per DEC-026:
     reason. In a project with a topology, a claim whose clone no longer holds
     its seat is no claim, and one that cannot be judged refuses (DEC-059
     point 9).
+  - Code that cannot read the topology in full (DEC-061 point 9): a clone
+    that holds a seat starts no work, and the refusal, before anything is
+    written, says what this code did not understand.
+  - The take's own check of the Task's pool (DEC-061 point 5), where the
+    topology declares pools of workers and the clone's seat builds: a Task
+    outside the seat's pools, or one whose Milestone's pool cannot be read,
+    is warned of and started as directed. A warning, never a gate.
 
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
@@ -68,6 +75,7 @@ Exit codes:
      instance claimed the issue in the same instant and keeps it, or claimed
      it first, so this clone did not move the issue / the clash guard refused
      an issue another instance owns / this clone's seat could not be confirmed
+     / this code cannot read the topology in full (DEC-061 point 9)
   *  a failed composed move-issue passes its exit code through
 """
 

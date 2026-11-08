@@ -1,0 +1,45 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: equal
+    layout: slide
+    title: Gleichrangige Einträge, jeder so breit wie die anderen
+    visual:
+      use: starter/list
+      head: Warum ein Projekt seine Regeln aufschreibt
+      items:
+        - id: advice
+          head: Kein Ratschlag
+          text: Eine Regel, die ein Agent liest, ist ein Ratschlag. Eine Regel, die das Werkzeug anwendet, nicht.
+        - id: reviewed
+          head: Überprüfbar
+          text: Aufgeschrieben lässt sich jede Regel lesen und überprüfen, wie jede Änderung.
+        - id: alike
+          head: Gleichbehandlung
+          text: Die Einstellungen des Werkzeugs binden jeden Agenten gleichermaßen.
+
+  - id: own
+    layout: slide
+    title: Oder jeder so groß, wie er verlangt, wie Etiketten
+    visual:
+      use: starter/list
+      head: Welche Rollen eine Fähigkeit übernehmen kann
+      widths: own
+      item: {use: starter/tag, concept: test-notation/service}
+      items:
+        - {id: documentation, label: Dokumentation}
+        - {id: analysis, label: Anforderungsanalyse}
+        - {id: work-tracking, label: Arbeitsverfolgung}
+
+  - id: no-head
+    layout: slide
+    title: Ohne Überschrift beginnen die Einträge oben
+    lead: Jeden Eintrag zeichnet eine getönte Karte mit einem Balken oben, die die Liste für alle benennt.
+    visual:
+      use: starter/list
+      item: {use: starter/card, fill: tint, bar: top, concept: test-notation/store}
+      items:
+        - {id: swap, text: "Tausche eine Fähigkeit gegen eine in derselben Rolle. Der Rest bleibt, wie er ist."}
+        - {id: install, text: "Installiere nur, was du brauchst. Ein leerer Steckplatz schadet nicht."}
+        - {id: wiring, text: "Die Statusübersicht zeichnet die Verdrahtung, und die Prüfung prüft sie."}

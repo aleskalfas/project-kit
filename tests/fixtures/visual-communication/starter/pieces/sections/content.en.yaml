@@ -1,0 +1,22 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: order
+    layout: standard
+    main:
+      use: starter/sections
+      sections:
+        - id: written
+          head: Written once
+          text: Each rule lies in the file its project keeps for it.
+          picture: window.png
+        - id: applied
+          fill: tint
+          side: left
+          head: Applied every time
+          text: The tools read the rules and apply them, on every change.
+          picture: window.png
+        - id: reviewed
+          head: Reviewed like code
+          text: A change to a rule is a change like any other, and a reviewer reads it.

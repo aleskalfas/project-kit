@@ -36,6 +36,11 @@ if TYPE_CHECKING:
 # The indent of an entry listed under a status line's label.
 _LIST_INDENT = " " * 25
 
+# What the adapter section names for settings, skills or agents `.claude/` lacks: `pkit sync`
+# runs each installed adapter's scripts, the settings merge and the skill and agent deploys
+# among them. Those scripts are no commands of the installed `pkit` (#2463).
+_ADAPTER_REMEDY = "pkit sync"
+
 
 def report_status() -> None:
     """Walk the project tree and print the status report — as one run, so every
@@ -215,7 +220,8 @@ def _report_workspace(target_root: Path) -> None:
 
 def _report_claude_adapter(target_root: Path) -> None:
     """Settings, then the skills and agents under `.claude/`, each listed under
-    where pkit deployed it from, or as the project's own (#2085)."""
+    where pkit deployed it from, or as the project's own (#2085). Settings not
+    present, and no skill or agent deployed, name `pkit sync` (#2463)."""
     from project_kit.agents import agent_locations
 
     click.echo()
@@ -229,19 +235,17 @@ def _report_claude_adapter(target_root: Path) -> None:
         else:
             value = "merged"
     else:
-        value = "not present (run 'pkit merge-settings')"
+        value = f"not present (run '{_ADAPTER_REMEDY}')"
     click.echo(f"    {'settings.json':<18} {value}")
 
-    for line in _deployed_lines(
-        "skills", _deployed_skills(target_root), remedy="pkit deploy-skills"
-    ):
+    for line in _deployed_lines("skills", _deployed_skills(target_root), remedy=_ADAPTER_REMEDY):
         click.echo(line)
-    # The deploy command is named only where something ships an agent to deploy.
+    # The remedy is named only where something ships an agent to deploy.
     ships_agents = any(_count_artifacts(folder) for _, folder in agent_locations(target_root))
     for line in _deployed_lines(
         "agents",
         _deployed_agents(target_root),
-        remedy="pkit deploy-agents" if ships_agents else None,
+        remedy=_ADAPTER_REMEDY if ships_agents else None,
     ):
         click.echo(line)
     for line in _rules_index_lines(target_root):
@@ -349,8 +353,8 @@ def _deployed_lines(label: str, deployed: _Deployed, *, remedy: str | None) -> l
     """One group per owner — core, each capability by name, the project
     namespace — then the project's own, then what the next deploy removes.
 
-    With nothing deployed, the first line names the deploy command `remedy`
-    when it is given.
+    With nothing deployed, the first line names `remedy`, the command that
+    deploys it, when it is given.
     """
     owners = sorted(deployed.by_owner, key=lambda o: (o == "project", o != "core", o))
     groups = [

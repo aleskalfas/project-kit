@@ -1,0 +1,652 @@
+answers:
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:10:46Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on tokens.py, which reads each modifier of a brand's Resolver document as a shared axis whose contexts are its modes, and on roles.schema.json, where the foundations declare each shared axis with its kind, modes and default. With DEC-004 point 2, an axis is a switch of a brand along which its modes lie, so the definition holds. The two changes answered apart, the render's held-back versions and the PDF renderer, touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:10:51Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on tokens.py, which reads a brand as a library version of kind brand whose DTCG tokens give colours, dimensions and font families their values, and on library.schema.json, where a brand's library file names its DTCG version, Resolver document and open roles. With DEC-001 point 5 and DEC-004 point 1, a brand is the library holding the values pieces are drawn in, so the definition holds. Neither change answered apart, the render's held-back versions or the PDF renderer, touched these files, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:10:56Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on content.schema.json, the shape of a piece's content in one language: its top component's fields, whose keys are names or reserved keys, none of them a position, a colour or a font. With DEC-001 point 3, content is what a piece shows, kept as data apart from its look, so the definition holds. Neither change answered apart, the render's held-back versions or the PDF renderer, touched that schema, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:11:01Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on layout.py, where a `slot` part places the component the content gives in a field and a top's layouts name the slots a page fills, and on component.schema.json, which gives those layouts their slots. With DEC-001 point 4, a content slot is a named place in a layout or a component that a piece fills, so the definition holds. The render's held-back versions added to layout.py only what the search for a draft's lock reads of a placed piece, and the PDF renderer touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:11:06Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on piece.schema.json, whose `state` takes `draft`, the state whose lock each render moves, and whose `pinned` holds that lock, and on libraries.py, which moves a draft's lock at each render to the newest held versions that fit within the majors it names, and never moves a pinned one. With DEC-003 point 8, that is the definition, so it holds. The render's held-back versions narrowed which versions fit, the PDF renderer added `pdf` to a piece's exports, and #2618 refined DEC-003 points 1, 4 and 6, so their combined state leaves the moving lock as the term says."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:11:12Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on component.schema.json, whose `status` takes `experimental` beside `stable` and `deprecated`, and on comparison.py, which names only an experimental component's arrival, since it may change in any release. With DEC-003 point 7, an experimental component is one its library owner has not yet marked ready, which a later version may rename, reshape or remove, so the definition holds. The render's held-back versions, the PDF renderer and #2618's refinements of DEC-003 points 1, 4 and 6 touch neither the status nor point 7, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:11:17Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on exports.py, which gives each export run one number, names every file it makes with that number and overwrites no export, and on exports.schema.json, the record of each numbered export. With DEC-006 point 7, an export is a file a piece is handed out as, numbered by its run and never overwritten, so the definition holds. The PDF renderer, answered apart from the render's held-back versions, made the PDF of one language the definition names, and the held-back versions touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:11:22Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes, and the term rests on DEC-003 point 8 alone. That point decides that a person marks a handed-out piece final, that its lock never moves again and that the exports handed out are its freeze. No code holds the state yet, since format 1's piece schema takes `draft` alone, so no path anchors it and the definition holds on the record. The render's held-back versions narrowed only which versions fit a draft's lock, and the PDF renderer and #2618's refinements of DEC-003 points 1, 4 and 6 leave the final state as it was, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:11:27Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes, and the term rests on DEC-001 point 8 and DEC-006 point 1 alone. They decide that a helper is the project's own script, run on purpose while a piece is prepared and never by the engine, writing a local component or a picture. No code frames a helper's run yet, since framing.py frames only a producer's, so no path anchors it and the definition holds on the records. The render's held-back versions and the PDF renderer, answered apart, touch neither point, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:11:32Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on layout.py, which reads a top component's layouts, each a page's form with the slots a page fills, and on component.schema.json, which declares them. DEC-001 point 4 decides that a kind of piece's top declares its layouts. DEC-001 point 5, now anchored too, decides that a brand draws the layouts of the kinds of work it serves, so every part of the definition rests on an anchor. The render's held-back versions added to layout.py only what the lock's search reads, and the PDF renderer touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:11:37Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on libraries.py, which reads the library folder, the list of the project's libraries and each version pieces share, and on library.schema.json, whose `kind` is `components`, `brand` or `notation`. With DEC-001 point 5, a library is a shared set of one of those three kinds that pieces take their look from, so the definition holds. The render's held-back versions changed only how libraries.py moves a draft's lock, and the PDF renderer touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:11:43Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on layout.py, which reads a component as data, its fields, options and parts placed by formulas, and on component.schema.json, the shape of a component's file in a library. With DEC-001 point 4, a library component is a reusable part, from a small block to a page's arrangement, that a library shares with pieces, so the definition holds. The render's held-back versions added to layout.py only what the lock's search reads, and the PDF renderer touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:11:52Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes, and the term rests on DEC-001 point 5 and DEC-003 point 7 alone. They decide that one owner releases each named, versioned library and marks its components' status. No code holds an owner as such, so no path anchors it and the definition holds on the records. The render's held-back versions, the PDF renderer and #2618's refinements of DEC-003 points 1, 4 and 6 leave both points' owner as it was, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-version
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:12:02Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on libraries.py, which keeps each version whole in a folder of its own, numbered X.Y.Z, and finds that a released one whose folder no longer verifies has changed, and on libraries.schema.json, the list that marks each version released with its fingerprint. DEC-003 point 4, now anchored too, decides that each version is kept whole, beside points 1 and 6 on its number and on never changing once released, so the definition holds. The render's held-back versions changed only how a draft's lock moves, #2618 refined points 1, 4 and 6 on the release a library needs and on reading a version in full, and the PDF renderer touched neither file, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:09Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on pipeline.py, which reads a piece's own component, `piece/<name>`, from the piece's `components/` folder and from no library, and on component.schema.json, which shapes it as it shapes every component. With DEC-001 point 4, a local component is made inside one piece for that piece alone, as the same data a library component is, so the definition holds. The render's held-back versions added to pipeline.py the judgement of which versions fit a draft, and the PDF renderer touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-lock
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:17Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on piece.schema.json, whose `lock` names the version of each library the piece uses, and on libraries.py, which writes a lock with the libraries the named ones build on. With DEC-001 point 7, a lock names one version of each library a piece uses, those they build on included, so the definition holds. The render's held-back versions changed which versions a draft's lock moves to, and the PDF renderer only added `pdf` to a piece's exports, so their combined state leaves what a lock is as it was.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:23Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on tokens.py, where each context of a brand's Resolver modifier is one mode of a shared axis, holding the values that differ in it, and on roles.schema.json, which lists each shared axis's modes and its default. With DEC-004 point 2, a mode is one setting on one axis of a brand, such as dark on its colour scheme, so the definition holds. Neither change answered apart, the render's held-back versions or the PDF renderer, touched these files, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:29Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes, and the term rests on DEC-001 point 3 and DEC-006 point 1 alone. They decide that a piece may read shared content, such as a model of one system that several views read, and leave how views share one model to the change that builds it. No code reads a model yet, so no path anchors it and the definition holds on the records. Neither change answered apart, the render's held-back versions or the PDF renderer, touched those points, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-notation
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:35Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on notations.py, which reads a notation as a library version of kind notation mapping each concept of its subject to a colour family, and on notation.schema.json, which shapes that map. With DEC-001 point 5 and DEC-004 point 10, which add an icon among a notation's marks, a notation says what each thing of a subject is and how every piece marks it, so the definition holds. Neither change answered apart, the render's held-back versions or the PDF renderer, touched these files, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:41Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on layout.py, where a component declares each option as a list of words, the first its default, or as an item of a list, and where whatever places the component chooses one, and on component.schema.json, which declares `options`. With DEC-001 point 6, an option is a choice a library component declares, made from the values it lists, so the definition holds. The render's held-back versions added to layout.py only what the lock's search reads, and the PDF renderer touched neither file, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:12:46Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on piece.schema.json, the piece's own file naming its top, brand, notations, languages and lock, and on pipeline.py, which reads a piece's folder: that file and a content file for each language. With DEC-001 point 3, a piece is a visual item keeping its content as data and taking its look from the libraries it names, so the definition holds. The render's held-back versions changed how pipeline.py judges versions for the lock, and the PDF renderer added `pdf` to a piece's exports, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:12:52Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on piece.schema.json, whose `pinned` says a draft's lock moves only when a person moves it, and on libraries.py, which checks a pinned lock at each render and never moves it. With DEC-003 point 8, pinned is said of a draft's lock held in place, so the definition holds. The render's held-back versions changed only how an unpinned lock moves, the PDF renderer moves no lock, and #2618 refined DEC-003 points 1, 4 and 6 but not point 8's pinned draft, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:12:57Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes, and the term rests on DEC-003 point 8 alone. That point decides that a published piece stays in use where others rely on it, and that its lock moves only through a change a person reviews, with a before-and-after. No code holds the state yet, since format 1's piece schema takes `draft` alone, so no path anchors it and the definition holds on the record. The render's held-back versions narrowed only which versions fit a draft's lock, and the PDF renderer and #2618 leave the published state as it was, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-renderer
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:13:03Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes. The term now rests on seam.py, the seam between the engine and its plugins, where a renderer is the kind of plugin that draws a scene in one medium. With DEC-001 point 2, a renderer draws a piece's scene in one medium and decides nothing the scene sets, so the definition holds. The PDF renderer added a second renderer to the seam's registry and left seam.py as it was, and the render's held-back versions touched neither, so their combined state leaves the term true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+      - 20261103T175014Z-3d68a4ed.yaml
+    revalidated:
+      at: 2026-11-04T11:13:09Z
+      outcome: unchanged
+      unchanged-because: "The README anchor goes. The term now rests on component.schema.json, whose `status` takes `stable`, and on comparison.py, which compares each stable component with the earlier release and asks a major for each break it finds. With DEC-003 point 7, a stable component is one its library owner marked ready, which only a new major may break, so the definition holds. The render's held-back versions, the PDF renderer and #2618's refinements of DEC-003 points 1, 4 and 6 touch neither the status nor point 7, so their combined state leaves it true."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-starter-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T093302Z-f941a127.yaml
+      - 20261103T100547Z-f2f1a222.yaml
+      - 20261103T110207Z-3f5faa9e.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261103T170705Z-a57dfc2d.yaml
+    revalidated:
+      at: 2026-11-04T11:13:15Z
+      outcome: unchanged
+      unchanged-because: The README anchor goes, and the term rests on DEC-007 point 1 alone. That point plans the starter wide, with patterns and blocks for the jobs visuals commonly do. The capability ships no starter library yet, only the foundations, so no path anchors it and the definition holds on the record. Neither change answered apart, the render's held-back versions or the PDF renderer, touched that point, so their combined state leaves it true.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+    revalidated:
+      at: 2026-11-04T11:13:21Z
+      outcome: unchanged
+      unchanged-because: The decisions README goes, a page whose every edit flagged the term, and COR-066 point 1 joins COR-051 point 4. Point 1 decides that a person accepts a decision record or a rule in the change that proposes it, before work rests on it. COR-051 point 4 decides that a proposed rule binds nothing. Together they make the gate the condition that work builds only on accepted records and rules, never on proposed ones, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-definition
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-11-04T11:13:27Z
+      outcome: unchanged
+      unchanged-because: The adapters README goes, and the term rests on agents.py, which stamps an agent's file in the unified front matter, and on its records. COR-013 point 2 gives that front matter its `reads` and `owns`, and COR-006 makes an agent a persistent role with boundaries. COR-013 point 1 leaves deploying the file to each harness's adapter, so the definition holds without the README.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+    revalidated:
+      at: 2026-11-04T11:13:32Z
+      outcome: unchanged
+      unchanged-because: "The adapters README goes, and the term keeps the backbone's rules file, the OPS set and loaded_rules.py. loaded_rules.py gives how each loaded file reaches a session: the backbone's through the include the adapter keeps, a capability's through the rules index, and the project's own beside them. With COR-068's and COR-070's points, which decide those routes, the definition holds without the README."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-scratchpad-note
+    read:
+      - 20261101T153124Z-da768340.yaml
+    revalidated:
+      at: 2026-11-04T11:13:38Z
+      outcome: unchanged
+      unchanged-because: The scratchpad README goes, and the term rests on scratchpads.py, which stamps a note and moves it between its state folders, and on COR-012 and COR-043. COR-012 decides that a note binds nothing, explores a question before a record can be made, and retires once it is incorporated into other artefacts or abandoned, so the definition holds without the README.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-skill
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+    revalidated:
+      at: 2026-11-04T11:13:44Z
+      outcome: unchanged
+      unchanged-because: The skills README and the adapters README go, and the term rests on COR-005, COR-006 and COR-020 alone. COR-006 makes a skill the procedure an AI agent invokes for a matching task, and has the harness's adapter carry its canonical path to where the harness looks. COR-005 and COR-020 give its layout and its pairing with a command, so the definition holds on the records.

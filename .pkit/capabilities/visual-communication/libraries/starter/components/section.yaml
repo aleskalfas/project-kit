@@ -1,0 +1,119 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the U.S. Web Design
+# System's media block, a picture beside a text.
+about: >-
+  One part of a page: a head and a text beside a picture file the content names, each
+  where the content gives it. On a wide page the text and the picture stand side by side,
+  the picture to the right of the text or to its left; on a tablet and a phone, the
+  picture stands under the text, across the whole width. A line of its text runs no longer
+  than the brand's length of a line. It fills the width it is given, and sets its own
+  inset, so a tinted section's fill reaches the page's edge.
+
+fields:
+  type: object
+  properties:
+    head:
+      type: string
+      description: What the section is about, in a few words.
+      x-pkit-prose: true
+    text:
+      type: string
+      description: What the section says, in a sentence or a few.
+      x-pkit-prose: true
+    picture:
+      type: string
+      description: >-
+        The bare name of a picture file of the piece that the section shows, such as
+        `screen.png`. Each language may name its own.
+
+options:
+  # What the section lies on: the page's background, or its colour family's fill.
+  fill: [plain, tint]
+  # Where the picture stands on a wide page: to the right of the text, or to its left.
+  side: [right, left]
+
+colour: neutral
+
+values:
+  # The inset from each edge: a large spacing on a wide page, the inset on a phone.
+  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  inner: "=:width - margin - margin"
+  # How wide the text is: the whole inner width, up to the brand's length of a line.
+  measure: "=min(@size.line, inner)"
+  # On a wide page the picture takes what the text leaves, less the space between them.
+  rest: "=inner - measure"
+  between: "=min(@starter.margin, rest)"
+  # How tall the head and the text are together, and the row they share with the picture.
+  words: "=head.height + min(head.height, text.height, @starter.gap) + text.height"
+  band: "=max(words, picture.height)"
+  # Where the text and the picture start across, and how wide the picture is.
+  text-x:
+    by: ":device"
+    desktop:
+      by: side
+      right: "=margin"
+      # To the right of the picture, and of the space between them where it is drawn.
+      left: "=margin + picture.width + min(picture.width, between)"
+    tablet: "=margin"
+    phone: "=margin"
+  picture-x:
+    by: ":device"
+    desktop: {by: side, right: "=margin + measure + between", left: "=margin"}
+    tablet: "=margin"
+    phone: "=margin"
+  picture-width: {by: ":device", desktop: "=rest - between", tablet: "=inner", phone: "=inner"}
+  # Where the head starts down: at the top of the row, so the words stand at the middle
+  # of the row beside the picture on a wide page, or at the inset, above the picture.
+  head-y:
+    by: ":device"
+    desktop: "=margin + (band - words) / 2"
+    tablet: "=margin"
+    phone: "=margin"
+
+parts:
+  box:
+    box: {fill: {by: fill, plain: background, tint: ":colour.fill"}}
+    width: "=:width"
+    height: "=:height"
+  # Each of the head and the text keeps a gap from what stands above it only where both
+  # are drawn: a part not drawn has no height.
+  head:
+    when: head
+    text:
+      content: head
+      style: starter.type.head
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=text-x"
+    y: "=head-y"
+    width: "=measure"
+  text:
+    when: text
+    text:
+      content: text
+      style: type.body
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=text-x"
+    y: "=head.bottom + min(head.height, text.height, @starter.gap)"
+    width: "=measure"
+  # The picture keeps its proportions: as wide as it is given, and as tall as that makes it.
+  # With no picture named, it is not drawn.
+  picture:
+    when: picture
+    image: {content: picture}
+    x: "=picture-x"
+    y:
+      by: ":device"
+      desktop: "=margin + (band - picture.height) / 2"
+      tablet: "=text.bottom + min(words, picture.height, @starter.margin)"
+      phone: "=text.bottom + min(words, picture.height, @starter.margin)"
+    width: "=picture-width"
+
+preferred:
+  height:
+    by: ":device"
+    desktop: "=margin + band + margin"
+    tablet: "=picture.bottom + margin"
+    phone: "=picture.bottom + margin"

@@ -1,0 +1,2834 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-adapter
+    read:
+      - moved-078936bc8e96.yaml
+    revalidated:
+      at: 2026-11-05T21:45:20Z
+      outcome: unchanged
+      unchanged-because: It only gains path anchors on Claude Code's deploy and merge scripts, the code that translates what its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-definition
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+    revalidated:
+      at: 2026-11-05T21:45:28Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on deploy-agents.sh, which deploys what its definition says is deployed, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-answer
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+    revalidated:
+      at: 2026-11-05T21:45:35Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-area
+    read:
+      - moved-4d8449208c62.yaml
+    revalidated:
+      at: 2026-11-05T21:45:42Z
+      outcome: unchanged
+      unchanged-because: It only gains path anchors on install.py and scaffolds.py, which create the slices its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-base
+    read:
+      - moved-e1ef5b41a230.yaml
+    revalidated:
+      at: 2026-11-05T21:45:47Z
+      outcome: unchanged
+      unchanged-because: It only gains an anchor on COR-054 point 5, where the backbone computes a comparison's base, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-bump-segment
+    revalidated:
+      at: 2026-11-05T21:45:53Z
+      outcome: unchanged
+      unchanged-because: It only gains an anchor on PRJ-002 D1, where a changeset declares the segment, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-consent
+    read:
+      - moved-68d5ca1911bd.yaml
+    revalidated:
+      at: 2026-11-05T21:45:58Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on project_config.py, whose write asks the consent its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-decision-record
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+    revalidated:
+      at: 2026-11-05T21:46:03Z
+      outcome: unchanged
+      unchanged-because: It only gains an anchor on COR-066 point 1, which says a person accepts a proposal in its change, what 'binding only once accepted' rests on, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-loaded-file
+    revalidated:
+      at: 2026-11-05T21:46:08Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on loaded_rule_sets.py, which generates the file its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-loaded-rule-set
+    revalidated:
+      at: 2026-11-05T21:46:19Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on loaded_rule_sets.py, which generates the loaded file from the set, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-merge-delivery
+    read:
+      - moved-b778de774b28.yaml
+    revalidated:
+      at: 2026-11-05T21:46:28Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on merge-settings.sh, which carries out the operation its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-package-metadata
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-11-05T21:46:35Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revalidation-point
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T21:46:42Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+    revalidated:
+      at: 2026-11-05T21:46:49Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-skill
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+    revalidated:
+      at: 2026-11-05T21:47:00Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on deploy-skills.sh, which deploys what its definition says is deployed, so its words stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version
+    read:
+      - moved-318ae20df6a7.yaml
+    revalidated:
+      at: 2026-11-05T21:47:08Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on versioning.py, which bumps the number its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/domain-model/020-parts-of-the-system.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:47:14Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md
+    read:
+      - moved-e579ada00294.yaml
+    revalidated:
+      at: 2026-11-05T21:47:21Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/constraints/020-set-up/REQ-011-suggestion-offline.md
+    read:
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - moved-49c5a870d30e.yaml
+    revalidated:
+      at: 2026-11-05T21:47:28Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/capability_plans.py
+        outcome: unchanged
+        reason: REQ-011's statement and applies-to now say capability catalogues, and a capability a process depends on where they said an upstream, the same suggestions under the same limit. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_capability_plans.py
+        outcome: unchanged
+        reason: REQ-011's statement and applies-to now say capability catalogues, and a capability a process depends on where they said an upstream, the same suggestions under the same limit. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: COR-053#8
+        outcome: unchanged
+        reason: REQ-011's statement and applies-to now say capability catalogues, and a capability a process depends on where they said an upstream, the same suggestions under the same limit. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T033712Z-0279b815.yaml
+      - moved-ed2838c951d1.yaml
+    revalidated:
+      at: 2026-11-05T21:47:34Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/docs_roots.py
+        outcome: unchanged
+        reason: REQ-014's measure now writes documentation root in full, the same root and the same obligation. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_docs_roots.py
+        outcome: unchanged
+        reason: REQ-014's measure now writes documentation root in full, the same root and the same obligation. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: COR-049#5
+        outcome: unchanged
+        reason: REQ-014's measure now writes documentation root in full, the same root and the same obligation. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-049#6
+        outcome: unchanged
+        reason: REQ-014's measure now writes documentation root in full, the same root and the same obligation. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-015-missing-root-warns.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261102T130234Z-4a978d21.yaml
+    revalidated:
+      at: 2026-11-05T21:47:39Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/config_validate.py
+        outcome: unchanged
+        reason: REQ-015's measure now writes documentation root in full, the same root and the same warning. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_config_validate.py
+        outcome: unchanged
+        reason: REQ-015's measure now writes documentation root in full, the same root and the same warning. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: COR-049#7
+        outcome: unchanged
+        reason: REQ-015's measure now writes documentation root in full, the same root and the same warning. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/requirements/quality/040-release/REQ-001-migration-runs-again.md
+    read:
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261103T102155Z-bb4aed19.yaml
+      - 20261105T153939Z-90260b80.yaml
+    revalidated:
+      at: 2026-11-05T21:47:44Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on test_software_analysis_migration_obligation.py, one more test of a migration run again, so its words stand. ACT-adopter only rewords its install need, the same want, and this requirement rests on none of it.
+  - artefact: tech-docs/analysis/core/requirements/quality/040-release/REQ-017-backbone-migration-safe.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+    revalidated:
+      at: 2026-11-05T21:47:51Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: .pkit/rules/core.md
+        outcome: unchanged
+        reason: REQ-017's statement and measure now say edit where they used the noun change, the same obligation on a backbone migration. So RS-OPS-005 in this file, which asks the same in its own words, still stands behind it.
+      - anchor:
+          kind: path
+          value: tests/test_backbone_migration_replay.py
+        outcome: unchanged
+        reason: REQ-017's statement and measure now say edit where they used the noun change, the same obligation on a backbone migration. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: COR-010
+        outcome: unchanged
+        reason: REQ-017's statement and measure now say edit where they used the noun change, the same obligation on a backbone migration. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-059#6
+        outcome: unchanged
+        reason: REQ-017's statement and measure now say edit where they used the noun change, the same obligation on a backbone migration. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-05T21:48:00Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T21:48:07Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T21:48:13Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-11-05T21:48:20Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-ci-pipeline rewords two lines of its body and none of its needs. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-05T21:48:36Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-permission-hook
+    read:
+      - 20261028T213538Z-054672e7.yaml
+      - moved-ccc6676d24af.yaml
+    revalidated:
+      at: 2026-11-05T21:48:49Z
+      outcome: unchanged
+      unchanged-because: It only gains a path anchor on the adapter's permission-hook.py, the script its definition names, so its words stand.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-component-author.md
+    read:
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - moved-55249d16bb02.yaml
+    revalidated:
+      at: 2026-11-05T21:49:01Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T21:49:21Z
+      outcome: unchanged
+      unchanged-because: ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:49:34Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-11-05T21:49:45Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-05T21:49:56Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/080-agents-and-permissions.md
+    read:
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - moved-0c20f597f718.yaml
+    revalidated:
+      at: 2026-11-05T21:50:02Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md
+    read:
+      - 20261102T130728Z-1bf556b1.yaml
+      - moved-abc944d997af.yaml
+    revalidated:
+      at: 2026-11-05T21:50:08Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T21:50:16Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-11-05T21:50:28Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_package_validate.py
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: ADR-057#3
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: ADR-057#4
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: ADR-058#4
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-055#3
+        outcome: unchanged
+        reason: REQ-007's statement, measure and applies-to now name by the term query command the commands a component registers for its three uses, with the same three obligations. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115109Z-58e99185.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:50:38Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/friction_check.py
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/friction_repository.py
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/friction_validate.py
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_friction_check.py
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_friction_repository.py
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_friction_validate.py
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: COR-050#12
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-050#7
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-062#2
+        outcome: unchanged
+        reason: REQ-020's applies-to now names the change check and the whole-repository check where it said either friction check, the same two checks and the same obligation. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:50:48Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:50:53Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:51:01Z
+      outcome: unchanged
+      unchanged-because: "Judged on the two revalidations answered apart together with this change. One rewords variant 5a's over-broad warning, and the other answers REQ-020's measure, which names the friction mode and the query command. The two meet on no line: a dead anchor is still an error, and an over-broad anchor still only a warning. ACT-developer's need now reads 'a change that edits any of that reaches me', and this goal's 'a change there reaches me' states the same want, which RS-SAN-004 lets a goal word its own way, until #2687 brings its words to the need's. REQ-007 names the same commands by the term query command, with the same obligations. REQ-015 writes documentation root in full and gives its warning's reason, the same requirement. REQ-020 names the change check and the whole-repository check, the same two checks. This use case states none of those words."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261029T233222Z-05a7bfb9.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+    revalidated:
+      at: 2026-11-05T21:51:09Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-05T21:51:15Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. REQ-021's Verified by now says agent workspace, and nothing else moved. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/domain-model/050-a-projects-own-files.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+    revalidated:
+      at: 2026-11-05T21:51:21Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-propagation
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-05T21:51:25Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/040-versions-and-copies.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:51:30Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/constraints/010-develop/REQ-008-areas-held.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - moved-430737ca8b62.yaml
+    revalidated:
+      at: 2026-11-05T21:51:36Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:51:43Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:51:48Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-002-project-owned-writers.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-11-05T21:51:57Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-010-stop-under-another-version.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-05T21:52:04Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:52:09Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/capabilities.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/install.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/manifest.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/status.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/upgrade.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_backbone_migration_replay.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_capabilities.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_install.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_status.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_upgrade.py
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: ADR-065#3
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: ADR-065#4
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-059
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: COR-059#6
+        outcome: unchanged
+        reason: REQ-026's measure now holds a backbone transition from the moment it records its target, and a capability's until its migrations finish, leaving out a refusal that writes nothing. So what this record decides still stands behind it.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T114749Z-6d317cb4.yaml
+    revalidated:
+      at: 2026-11-05T21:52:14Z
+      outcome: unchanged
+      unchanged-because: "REQ-011 now says capability catalogues, and a capability a process depends on, and this use case's 'local catalogue' and 'upstream' name those same things under the same limit, until #2687 brings its words to the requirement's. ACT-adopter only rewords its install need, the same want, which this use case does not state."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T120714Z-e6d6c881.yaml
+      - 20261104T121552Z-b67de55f.yaml
+    revalidated:
+      at: 2026-11-05T21:52:21Z
+      outcome: unchanged
+      unchanged-because: ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. REQ-007 names the same commands by the term query command, with the same obligations. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023222Z-8e258fcb.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T015639Z-08c9720c.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T144102Z-ac6bce95.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+    revalidated:
+      at: 2026-11-05T21:52:28Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. REQ-007 names the same commands by the term query command, with the same obligations. REQ-015 writes documentation root in full and gives its warning's reason, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T133129Z-a00dd54f.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:52:36Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T132647Z-b5b3a09e.yaml
+      - 20261102T133129Z-a00dd54f.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T120714Z-e6d6c881.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+    revalidated:
+      at: 2026-11-05T21:52:44Z
+      outcome: updated
+  - artefact: docs/capabilities/living-docs/010-set-up-your-spaces.md
+    read:
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T21:52:53Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    read:
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:53:02Z
+      outcome: unchanged
+      unchanged-because: ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-05T21:53:10Z
+      outcome: unchanged
+      unchanged-because: ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:53:19Z
+      outcome: unchanged
+      unchanged-because: ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T21:53:28Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-methodology-maintainer.md
+    read:
+      - 20261027T013912Z-adb73078.yaml
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T21:53:33Z
+      outcome: unchanged
+      unchanged-because: It only gains an anchor on COR-010, the record behind the backbone and the releases it names, so its words stand.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T21:53:44Z
+      outcome: unchanged
+      unchanged-because: It only gains anchors on PRJ-006, ADR-032 and ADR-039 D2, the records behind its needs to find out why a command prompted it, keep per-machine choices and be told of a fallback, so its words stand.
+  - artefact: tech-docs/analysis/core/requirements/functional/020-set-up/REQ-013-deny-wins.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - moved-f9d95966d366.yaml
+    revalidated:
+      at: 2026-11-05T21:53:54Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This requirement rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T005901Z-de9d5b1f.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:54:02Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T21:54:07Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T005901Z-de9d5b1f.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:54:14Z
+      outcome: unchanged
+      unchanged-because: ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+    revalidated:
+      at: 2026-11-05T21:54:20Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:54:30Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261102T140536Z-ff2d2c9f.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:54:42Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-006-gate-merges.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:54:49Z
+      outcome: unchanged
+      unchanged-because: "Judged on the two revalidations answered apart together with this change. One keeps an over-broad anchor from holding the tracking issue open, and the other answers the change check's index and REQ-020's measure. Neither moves what fails the change check, so merges wait on the same findings. ACT-adopter only rewords its install need, the same want. ACT-ci-pipeline rewords two lines of its body and none of its needs. REQ-007 names the same commands by the term query command, with the same obligations. REQ-015 writes documentation root in full and gives its warning's reason, the same requirement. REQ-020 names the change check and the whole-repository check, the same two checks. This use case states none of the words that moved, so it still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-05T21:54:59Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. REQ-014 writes documentation root in full, the same requirement. REQ-015 writes documentation root in full and gives its warning's reason, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:55:08Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. This use case states none of the words that moved, so it still holds.
+  - artefact: docs/process/README.md
+    read:
+      - 20261103T043834Z-e7198abd.yaml
+    revalidated:
+      at: 2026-11-05T21:55:17Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:55:25Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:55:34Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T053322Z-07b72ba5.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T154833Z-45114068.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:55:40Z
+      outcome: unchanged
+      unchanged-because: "ACT-ai-agent's need now says operational rules, and this goal's 'the project's rules and conventions' states the same want, which RS-SAN-004 lets a goal word its own way, until #2687 brings its words to the need's. ACT-adopter only rewords its install need, the same want, which this use case does not state."
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+    revalidated:
+      at: 2026-11-05T21:55:48Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/skills/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+    revalidated:
+      at: 2026-11-05T21:55:58Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:56:06Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. REQ-016 writes permission code in full, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:56:22Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-ci-pipeline rewords two lines of its body and none of its needs. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. REQ-007 names the same commands by the term query command, with the same obligations. REQ-020 names the change check and the whole-repository check, the same two checks. REQ-021's Verified by now says agent workspace, and nothing else moved. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:56:39Z
+      outcome: unchanged
+      unchanged-because: "Judged on the two revalidations answered apart together with this change. One says the over-broad warning is no debt, and the other answers the use case's anchor on friction_write.py, its citation of RS-OPS-020 and REQ-020's measure. Neither moves what debt the whole-repository check reports, or how it is resolved. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-ci-pipeline rewords two lines of its body and none of its needs. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. REQ-007 names the same commands by the term query command, with the same obligations. REQ-020 names the change check and the whole-repository check, the same two checks. This use case states none of the words that moved, so it still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:56:48Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261029T233222Z-05a7bfb9.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T004856Z-a8dfafee.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T21:56:54Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-ci-pipeline rewords two lines of its body and none of its needs. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T133609Z-a3edfa39.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T21:57:00Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T21:57:06Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. REQ-021's Verified by now says agent workspace, and nothing else moved. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T21:57:15Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T143018Z-edd7b739.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T21:57:26Z
+      outcome: unchanged
+      unchanged-because: ACT-ci-pipeline rewords two lines of its body and none of its needs. ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+    revalidated:
+      at: 2026-11-05T21:57:32Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-ci-pipeline rewords two lines of its body and none of its needs. REQ-017 says edit for the noun change, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-011-migrate-component-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+    revalidated:
+      at: 2026-11-05T21:57:40Z
+      outcome: unchanged
+      unchanged-because: "ACT-component-author's need now says a surface change of it that breaks them, and this goal's 'a breaking change of it' states the same want, which RS-SAN-004 lets a goal word its own way, until #2687 brings its words to the need's. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-ci-pipeline rewords two lines of its body and none of its needs. This use case states none of those words."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-009-release-breaking-component-change.md
+    read:
+      - 20261101T143018Z-edd7b739.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261101T150225Z-1b059460.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:57:46Z
+      outcome: unchanged
+      unchanged-because: "ACT-component-author's need now says a surface change of it that breaks them, and this journey's 'a breaking change of my component' names the same change, until #2687 brings its words to the need's. Its Context and Core use the glossary's terms, and this journey states neither."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:57:53Z
+      outcome: unchanged
+      unchanged-because: "ACT-adopter's need now reads 'see it wired into my project', and this goal's 'see its wiring into my project' states the same want, which RS-SAN-004 lets a goal word its own way. REQ-026's measure no longer counts a refusal before the target is recorded, or a capability's stop after its migrations finish, as a stop it holds: this use case's stop in 10a falls after step 5 recorded the target, so it still fits."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+    revalidated:
+      at: 2026-11-05T21:58:01Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This journey states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+    revalidated:
+      at: 2026-11-05T21:58:10Z
+      outcome: unchanged
+      unchanged-because: "Judged on the two revalidations answered apart together with this change. Both read UC-037 and UC-040 with a new record's edits made once it is accepted in its change. One adds the over-broad warning, which holds no tracking issue open, and the other UC-049's step 13, which names a capability's loaded file. None touches what the journey needs: a record accepted before the change builds on it, and each artefact the change made stale answered. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This journey states none of the words that moved, so it still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-005-package-and-share-capability.md
+    read:
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+    revalidated:
+      at: 2026-11-05T21:58:17Z
+      outcome: unchanged
+      unchanged-because: ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. This journey states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:58:26Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. REQ-017 says edit for the noun change, the same requirement. REQ-026's measure no longer counts a refusal before the target is recorded, or a capability's stop after its migrations finish, as a stop it holds. REQ-030's Rationale says a colliding skill or agent definition, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:58:36Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This journey states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:58:45Z
+      outcome: unchanged
+      unchanged-because: REQ-026's measure no longer counts a refusal before the target is recorded, or a capability's stop after its migrations finish, as a stop it holds. REQ-028 only adds to its Rationale why the warning comes once and goes to standard error. REQ-030's Rationale says a colliding skill or agent definition, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:59:01Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. REQ-026's measure no longer counts a refusal before the target is recorded, or a capability's stop after its migrations finish, as a stop it holds. REQ-030's Rationale says a colliding skill or agent definition, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-007-upgrade-one-capability.md
+    read:
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:59:13Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This journey states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-012-report-problem.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T21:59:20Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. This use case states none of the words that moved, so it still holds.
+  - artefact: docs/scratchpad/README.md
+    read:
+      - 20261102T133609Z-a3edfa39.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-05T21:59:30Z
+      outcome: unchanged
+      unchanged-because: ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T21:59:42Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/schemas/README.md
+    read:
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T125441Z-87b370f0.yaml
+    revalidated:
+      at: 2026-11-05T21:59:55Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-component-author's need now says a surface change that breaks them, the same want, and its Context and Core use the glossary's terms. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-013-link-reports.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T22:00:06Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-05T22:00:23Z
+      outcome: unchanged
+      unchanged-because: "ACT-ai-agent's need now says the agent workspace, and this goal's 'a workspace that no commit carries' states the same want, which RS-SAN-004 lets a goal word its own way, until #2687 brings its title and goal to the need's words. REQ-016 writes permission code in full, the same requirement, and this use case's steps rest on none of it."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T22:00:43Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-05T22:00:58Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. REQ-016 writes permission code in full, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-05T22:01:11Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. This use case states none of the words that moved, so it still holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-05T22:01:23Z
+      outcome: unchanged
+      unchanged-because: ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. REQ-016 writes permission code in full, the same requirement. This use case states none of the words that moved, so it still holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T154833Z-45114068.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T133609Z-a3edfa39.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261102T140536Z-ff2d2c9f.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T215329Z-f5d52865.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T014145Z-5f96d643.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T113759Z-36cfe195.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+    revalidated:
+      at: 2026-11-05T22:01:35Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-ai-agent's needs and role holders now use the glossary's terms, the same wants. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. REQ-021's Verified by now says agent workspace, and nothing else moved. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T22:01:46Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter only rewords its install need, the same want. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T091216Z-b5483b71.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T22:02:03Z
+      outcome: unchanged
+      unchanged-because: "Judged on the two revalidations answered apart together with this change. One has review-work refuse a description with no sentence for an updated document, and land-work hold a run on a sentence the list does not show. The other adds only the over-broad warning, which owes no answer. Both read UC-001's loss of the aside on project-kit's corpus, which the guide never said, and none contradicts what the guide says of the sentences or of the build task. ACT-developer's need now says a change that edits what a document rests on, the same want, and its summary and Core use the glossary's terms. This page speaks to its readers and rests on none of the words that moved, so it still holds."
+  - artefact: tech-docs/analysis/core/requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md
+    read:
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - moved-0d42e41477bb.yaml
+    revisited:
+      - anchor:
+          kind: path
+          value: .pkit/permissions/*.py
+        outcome: unchanged
+        reason: REQ-016's measure now names the permission code where it said the code, the same code and the same obligation. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: src/project_kit/permissions.py
+        outcome: unchanged
+        reason: REQ-016's measure now names the permission code where it said the code, the same code and the same obligation. So this code still holds what the requirement asks.
+      - anchor:
+          kind: path
+          value: tests/test_permission_decide.py
+        outcome: unchanged
+        reason: REQ-016's measure now names the permission code where it said the code, the same code and the same obligation. So this file still verifies what the requirement asks.
+      - anchor:
+          kind: record
+          value: ADR-014#1
+        outcome: unchanged
+        reason: REQ-016's measure now names the permission code where it said the code, the same code and the same obligation. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: ADR-014#2
+        outcome: unchanged
+        reason: REQ-016's measure now names the permission code where it said the code, the same code and the same obligation. So what this record decides still stands behind it.
+      - anchor:
+          kind: record
+          value: ADR-014#3
+        outcome: unchanged
+        reason: REQ-016's measure now names the permission code where it said the code, the same code and the same obligation. So what this record decides still stands behind it.

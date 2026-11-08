@@ -3,7 +3,8 @@ schema_version: 1
 
 # The component library the engine's tests draw with: a pattern of steps in a row, the
 # card that draws each step, a block that draws a produced picture and exposes its
-# points, and a pattern that places a label at one of them. No project locks it.
+# points, a pattern that places a label at one of them, and a block that shows the facts
+# of its export. No project locks it.
 name: tests
 version: 1.0.0
 kind: components

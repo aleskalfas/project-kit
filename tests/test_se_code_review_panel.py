@@ -373,7 +373,7 @@ def test_collect_contributions_end_to_end_undeployed_agent_fails_closed(rr, tmp_
 
 
 # ---------------------------------------------------------------------------
-# D3 pre-existing-defect clause — one rule, three bodies (#883)
+# Point 3's pre-existing-defect clause — one rule, three bodies (#883)
 # ---------------------------------------------------------------------------
 
 _PANEL_AGENTS = ("code-reviewer", "security-reviewer", "docs-reviewer")
@@ -392,7 +392,7 @@ def _pre_existing_clause(agent: str) -> str:
 
 
 def test_pre_existing_clause_is_identical_across_the_panel():
-    """The block threshold is per-agent but shared (DEC-002 D3): the three copies must not drift."""
+    """The block threshold is per-agent but shared (DEC-002 point 3): the copies must not drift."""
     clauses = {agent: _pre_existing_clause(agent) for agent in _PANEL_AGENTS}
     assert len(set(clauses.values())) == 1, (
         "pre-existing-defect clause differs between panel agents"
@@ -400,8 +400,8 @@ def test_pre_existing_clause_is_identical_across_the_panel():
 
 
 @pytest.mark.parametrize("agent", _PANEL_AGENTS)
-def test_pre_existing_clause_cites_d3(agent):
-    assert "[software-engineering:DEC-002-code-review-panel] D3" in _pre_existing_clause(agent)
+def test_pre_existing_clause_cites_point_3(agent):
+    assert "[software-engineering:DEC-002-code-review-panel] point 3" in _pre_existing_clause(agent)
 
 
 # ---------------------------------------------------------------------------
@@ -511,7 +511,9 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
     lead = "- **Each `updated` document needs its sentence, and the sentence must match.**"
     (item,) = [line for line in _answers_check() if line.startswith(lead)]
     for words in (
-        "Read that section as the commands that write the list read it",
+        "Read that section as the project-management commands read it",
+        "The description carries no list of the answers",
+        "read each sentence from that section alone",
         '"Where the sentences live" of `.pkit/capabilities/project-management/README.md`',
         "starts in the line's first column with the document in a code span",
         f"The form to write is ``{answers.SENTENCE_FORM}``.",

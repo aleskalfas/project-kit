@@ -1,10 +1,10 @@
 # A piece's own file, `pieces/<piece>/piece.yaml` (visual-communication DEC-001 points 3
 # and 7, DEC-002 point 5, DEC-003 point 8, DEC-004 point 10): what the piece is, its
 # notations, its state, its modes, the pictures produced for it, the losses it accepts,
-# and its lock. A person writes it; a render rewrites only `lock`, keeping every other
-# byte.
+# the place of its current copy, and its lock. A person writes it; a render rewrites only
+# `lock`, keeping every other byte.
 #
-# Format 1 takes `state: draft` alone. The body below is the reference instance.
+# The body below is the reference instance.
 
 pkit_schema: visual-communication:piece
 schema_version: 1
@@ -40,6 +40,7 @@ accept-losses:
   - plugin: svg
     what: figure/body
     reason: The preview needs no shadow.
+copy-place: docs/images/figures
 lock:
   foundations: 1.0.0
   test-brand: 1.0.0

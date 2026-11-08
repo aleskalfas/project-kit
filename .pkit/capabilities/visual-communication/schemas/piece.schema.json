@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "piece.schema.json",
   "title": "A piece — visual-communication capability",
-  "description": "Formal shape of a piece's `piece.yaml` (DEC-001 points 3 and 7, DEC-002 point 5, DEC-003 point 8, DEC-004 point 10): what the piece is, its notations, its state, its modes, what it produces, the losses it accepts, and its lock. A person writes it; a render rewrites only its lock, keeping every other byte. Format 1 takes `state: draft` alone; the later states arrive with their checks. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a piece's `piece.yaml` (DEC-001 points 3 and 7, DEC-002 point 5, DEC-003 point 8, DEC-004 point 10): what the piece is, its notations, its state, its modes, what it produces, the losses it accepts, the place of its current copy, and its lock. A person writes it; a render rewrites only its lock, keeping every other byte. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -65,18 +65,24 @@
       "type": "boolean"
     },
     "exports": {
-      "description": "The formats a numbered export makes (DEC-006 point 7); may be empty.",
+      "description": "The formats a numbered export makes (DEC-006 point 7): `svg`, a file for each page, `pdf`, a file that holds every page, and `html`, a page file that holds every page and the modes a reader's signal names (DEC-023 point 1); may be empty.",
       "type": "array",
       "items": {
         "enum": [
-          "svg"
+          "svg",
+          "pdf",
+          "html"
         ]
       },
       "uniqueItems": true
     },
     "state": {
-      "description": "The piece's stage of life (DEC-003 point 8): a draft, whose lock each render moves.",
-      "const": "draft"
+      "description": "The piece's stage of life, which says who moves its lock (DEC-003 point 8): a draft, whose lock each render moves; a final piece, whose lock never moves; or a published piece, whose lock moves only through a change a person reviews.",
+      "enum": [
+        "draft",
+        "final",
+        "published"
+      ]
     },
     "modes": {
       "description": "The modes the piece is drawn in, by axis; an axis it names none of is drawn in its default.",
@@ -94,7 +100,7 @@
       }
     },
     "pinned": {
-      "description": "Whether the draft's lock is pinned: it moves only when a person moves it.",
+      "description": "Whether a draft's lock is pinned: it moves only when a person moves it. It is read of a draft alone.",
       "type": "boolean"
     },
     "produced": {
@@ -148,6 +154,10 @@
     },
     "accept-losses": {
       "$ref": "defs.schema.json#/$defs/accept-losses"
+    },
+    "copy-place": {
+      "description": "The folder a published piece's current copy lies in, in place of the piece's folder (DEC-006 point 7, DEC-017 point 8): a plain path, such as the place the documentation's rules put a page's produced images. An export refuses a place the rules refuse.",
+      "$ref": "defs.schema.json#/$defs/repository-path"
     },
     "lock": {
       "description": "The version of each library the piece uses; a render writes it.",

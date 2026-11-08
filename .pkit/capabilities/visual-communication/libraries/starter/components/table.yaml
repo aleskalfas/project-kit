@@ -1,0 +1,56 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# The design systems its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's table, and the U.S. Web Design System's table.
+about: >-
+  Facts in rows and columns: a head where the content gives one, then its rows one under
+  another, each drawn by the row unless the content names another. Each row lays its cells
+  side by side across the table's whole width, and the table is as tall as its rows. It
+  fills the width it is given, and sets its own inset.
+
+fields:
+  type: object
+  required: [rows]
+  properties:
+    head:
+      type: string
+      description: What the table shows, in a few words.
+      x-pkit-prose: true
+    rows:
+      type: array
+      minItems: 1
+      description: The rows, from the top, each with the fields of the component that draws it.
+      items: {type: object}
+    row:
+      type: object
+      description: >-
+        The component that draws each row that names none, with words for its options:
+        the row unless the content names another.
+
+lists:
+  rows: {component: row}
+
+values:
+  # The inset from each edge: a large spacing on a wide page, the inset on a phone.
+  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  inner: "=:width - margin - margin"
+
+parts:
+  head:
+    when: head
+    text: {content: head, style: starter.type.head, fill: text-primary}
+    x: "=margin"
+    y: "=margin"
+    width: "=min(@size.line, inner)"
+  rows:
+    repeat: rows
+    draw: starter/row
+    x: "=margin"
+    y: "=head.bottom + min(head.height, @starter.gap)"
+    width: "=inner"
+    column: {align-items: stretch}
+
+preferred:
+  height: "=rows.bottom + margin"

@@ -119,6 +119,11 @@ review:
     # need the operator's interactive effort, and four reviewers re-run
     # after every push. Override once with `review-pr --effort <level>`.
     effort: medium
+    # The reviewers start once the quick checks have passed, with the suite's two
+    # slices still running (ADR-078), so a round costs the longer of CI and the
+    # quick checks plus the review. `land-work` merges only with every check passed.
+    start_after_checks:
+      - the quick checks
     local_registered:
       - name: pm-reviewer
 

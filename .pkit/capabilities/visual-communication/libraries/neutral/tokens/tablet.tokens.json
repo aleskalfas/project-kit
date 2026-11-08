@@ -1,0 +1,12 @@
+{
+  "$description": "The neutral's values on a tablet, where they differ from a desktop's.",
+  "size": {
+    "$type": "dimension",
+    "site": {
+      "$value": {
+        "value": 768,
+        "unit": "px"
+      }
+    }
+  }
+}

@@ -19,6 +19,9 @@ pkit:
         - COR-039
         - PRJ-004
         - ADR-063
+        - PRJ-006
+        - ADR-032
+        - ADR-039#D2
       artefact:
         - CONTRIBUTING.md#running-checks
 ---

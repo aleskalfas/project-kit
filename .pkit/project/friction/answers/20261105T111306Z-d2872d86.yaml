@@ -1,0 +1,435 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T175718Z-a2abdc87.yaml
+    revalidated:
+      at: 2026-11-05T11:13:06Z
+      outcome: unchanged
+      unchanged-because: batch-plan.md's slicing step orders Tasks that share a file and plans those of one parent, Milestone and priority as one Task, its gate shows each fold, and the agent names one more storyboard scenario. DEC-029 points to DEC-066 at its slicing step and its critic threshold. A batch plan is still an outline of issues approved whole before any is filed, and the term's example still holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-05T11:13:08Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold, on Tasks that share a file. The term rests on DEC-029 for a seat's role setting whether its agent plans, builds or both, which the change leaves as it stood.
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+    revalidated:
+      at: 2026-11-05T11:13:10Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-05T11:13:12Z
+      outcome: unchanged
+      unchanged-because: DEC-029's slicing step gains Tasks that share a file, built one at a time or planned as one, and its critic threshold counts issues before that. The view's batch plan still outlines one intent's issues, a row each, reviewed and approved whole before any is filed. A folded Task is one row, and a filed Task that takes in work is shown beside the rows, as a first plan's edits to filed issues are.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+    revalidated:
+      at: 2026-11-05T11:13:14Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold, on Tasks that share a file. The actor rests on DEC-029 for its role holders and the harness's limit on nesting agents, both as they stood.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-05T11:13:15Z
+      outcome: unchanged
+      unchanged-because: "DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold. The actor rests on DEC-029 for the agent that plans on the planner's direction and files a whole plan only once the planner approves it, which still holds: a fold is shown at that approval."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-05T11:13:17Z
+      outcome: unchanged
+      unchanged-because: batch-plan.md orders Tasks that share a file and plans those of one parent, Milestone and priority as one Task, and DEC-029 points to DEC-066. The planning agent still plans on the planner's direction, follows batch-plan, and files nothing before the planner approves the plan, the folds included.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-05T11:13:19Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold, which concern planning. The actor rests on DEC-029 for its role holders following the pm skill on their seat's direction, as it stood, and a worker still takes ready Tasks one at a time.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-05T11:13:22Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold. The use case rests on DEC-029 for a helper dispatched with no name, whose whole result reaches the lead, and for the harness's limit on nesting, all as they stood.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-05T11:13:24Z
+      outcome: unchanged
+      unchanged-because: batch-plan.md orders Tasks that share a file and may plan them as one Task, and DEC-025's sentence on readiness before lanes says the planner orders such Tasks through dependencies. The use case's next piece still names this piece's Task in its Dependencies section, and typed Blocked-by lines still wait for lived evidence.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T040414Z-bea9746a.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T175718Z-a2abdc87.yaml
+    revalidated:
+      at: 2026-11-05T11:13:27Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T11:13:29Z
+      outcome: unchanged
+      unchanged-because: create-issue.md's judgment 6 orders a Task after an open one it shares a file with, or folds it into one not started on the user's approval. The use case describes filing a Task through create-issue and the checks the command makes, none of which changes, and it never described that ordering.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T175718Z-a2abdc87.yaml
+    revalidated:
+      at: 2026-11-05T11:13:32Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+    revalidated:
+      at: 2026-11-05T11:13:34Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold, and the agent names one more batch-plan scenario. The use case rests on DEC-029 and the agent for a seat's role setting the agent's direction, which the change leaves as it stood.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+    revalidated:
+      at: 2026-11-05T11:13:37Z
+      outcome: unchanged
+      unchanged-because: DEC-025 now says readiness reckons nothing from the code a Task touches, and the planner orders Tasks that share a file through dependencies. The use case's ready Tasks are still those whose Dependencies name no open issue, and typed Blocked-by lines still wait, so it holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+    revalidated:
+      at: 2026-11-05T11:13:39Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+    revalidated:
+      at: 2026-11-05T11:13:42Z
+      outcome: unchanged
+      unchanged-because: UC-083 plans Tasks that share a file as one Task where they are of one parent, Milestone and priority, and UC-089 drops its open question on review rounds. The journey needs from them only the approved plan's Tasks, each with its workstream, and each Task's pull request merged, which still hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-05T11:13:44Z
+      outcome: unchanged
+      unchanged-because: UC-083 plans Tasks that share a file as one Task where it can, and orders the rest through dependencies, and UC-089 drops its open question on review rounds. The journey needs filed Tasks, ready once their Dependencies name no open issue, and a Task's pull request landed, which still hold.
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+    revalidated:
+      at: 2026-11-05T11:13:47Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gains pointers to DEC-066 at its slicing step and its critic threshold, on Tasks that share a file. The README rests on DEC-029 for dispatching a helper without a name, which stands as it was.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+    revalidated:
+      at: 2026-11-05T11:13:49Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+    revalidated:
+      at: 2026-11-05T11:14:21Z
+      outcome: unchanged
+      unchanged-because: UC-063 counts a plan's issues for the critic before Tasks that share a file are planned as one. The journey needs from it only a Task the planner's approved plan filed, which still holds.

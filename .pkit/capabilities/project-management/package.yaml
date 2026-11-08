@@ -2,14 +2,14 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.55.0
+  version: 0.56.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 # The floor is the newest backbone this package needs: `pkit report link`
 # (shipped in v1.144.0), which create-issue --from-report invokes per DEC-048's
 # one-linker rule; and the backbone release that took over the process-journal
 # ignore line this package no longer declares — the changeset that dropped the
 # line raises the floor to it at that release (`requires_backbone: release`).
-requires_backbone: ">=2.0.0,<2.1.0"
+requires_backbone: ">=2.1.0,<2.2.0"
 aliases:
   - pm
 # Runtime-local files this capability owns under `.pkit/` (ADR-009 rule 7).
@@ -189,7 +189,7 @@ commands:
     help: "Workflow wrapper (DEC-026): Todo → Backlog with milestone + audit comment. Composes over move-issue. Scheduling a Task into a Milestone of a pool of workers asks the person, at a terminal or --yes on their word, and the audit comment records the consent (DEC-061 point 6)."
   start-work:
     script: scripts/start-work.py
-    help: "Workflow wrapper (DEC-026): Backlog → In Progress. Creates branch + sets assignee; composes over move-issue."
+    help: "Workflow wrapper (DEC-026): Backlog → In Progress. Creates branch + sets assignee; composes over move-issue. A clone that holds a seat starts no work where this code cannot read the topology in full: it says what it did not understand, writes nothing, and exits 2 (DEC-061 point 9). Where the topology declares pools of workers, it warns of a Task outside the pools of a seat that builds, or one whose Milestone's pool cannot be read, and starts it as directed: a warning, never a gate (DEC-061 point 5)."
   next-task:
     script: scripts/next-task.py
     help: "Take the next ready Task from the shared pool (DEC-059 point 7) and start it, claimed, through start-work. Ready: an open Task in Backlog, with no owner and not assigned to another account, whose ## Dependencies section names no open issue by #N, or, in a project with a topology, a Task In Progress whose claim no longer counts. This clone's own Tasks in Backlog come first, then the shared pool, each the highest in priority first (DEC-012), then the lowest number, within the scope of the seat this clone holds; a clone with no seat, or a planner's seat, takes nothing in a project with a topology. Where another instance claims the Task first, the first claim holds, and this clone takes the next ready Task. --dry-run says which it would start; asks before starting unless --yes. Exit 5 when no Task is ready. Where the topology declares pools of workers, a seat takes only ready Tasks whose native milestone is an open milestone of a pool it serves; milestones that cannot be read take nothing (exit 3), and exit 5 says why in terms of the seat's pools (DEC-061 points 5 and 8). Where the substrate map binds the state to the board, each Task's state is its card's Status, read once from the cards of the open issues listed and no others: a Task it does not place is skipped with a warning, and a board that cannot be read takes nothing (exit 3, DEC-051 point 6). Code that cannot read the topology in full takes nothing (exit 2)."
@@ -207,7 +207,7 @@ commands:
     help: "Workflow wrapper (DEC-026): Review → Done. Squash-merges PR via three-way approval gate (APPROVED review / Approved-prefix comment / --bypass); composes over move-issue. Where the base merges through a queue it enqueues instead, prints the PR's place and waits for the merge (as long as the queue estimates, at most 30 min; --wait-minutes; --no-wait returns at once, exit 4); a later run from any clone finds the PR merged and completes the close and cascade."
   land-work:
     script: scripts/land-work.py
-    help: "Land an issue's PR in one command (#1203), composing review-pr and done-work: pin the PR's head, wait for its checks (--wait-minutes, default 30; --no-wait reads once — no check reported yet is never green; a PR conflicting with its base stops at once), have the reviewers whose verdicts are not fresh for that head review it, then merge it through done-work. Without --yes, off a terminal, it merges nothing: it runs done-work's gates as a dry run and stops on a `ready:` line giving the command that merges that head (--yes --expect-head <sha>; exit 8). That authorisation also covers a later head whose every change since lies inside answer files the change adds, a clean merge of the base counting as none (pkit friction since); it merges there only where nothing needs the person, and any other later head stops the run (exit 3). One line per step; one exit code per next action (README, \"Landing a pull request in one command\"); a re-run resumes. No flag skips the checks or the review."
+    help: "Land an issue's PR in one command (#1203), composing review-pr and done-work: pin the PR's head, wait for its checks (--wait-minutes, default 30; --no-wait reads once — no check reported yet is never green; a PR conflicting with its base stops at once), have the reviewers whose verdicts are not fresh for that head review it, then merge it through done-work. Where the project names the checks that start the review (review.agents.start_after_checks), a run without --yes or --no-wait starts the reviewers once those pass, and waits for the rest after them. Without --yes, off a terminal, it merges nothing: it runs done-work's gates as a dry run and stops on a `ready:` line giving the command that merges that head (--yes --expect-head <sha>; exit 8). That authorisation also covers a later head whose every change since lies inside answer files the change adds, a clean merge of the base counting as none (pkit friction since); it merges there only where nothing needs the person, and any other later head stops the run (exit 3). One line per step; one exit code per next action (README, \"Landing a pull request in one command\"); a re-run resumes. No flag skips the checks or the review."
   handoff-issue:
     script: scripts/handoff-issue.py
     help: "Workflow wrapper (DEC-026): reassign an in-flight issue to a new owner. Audit comment records the handoff; no state transition."

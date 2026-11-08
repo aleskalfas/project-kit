@@ -34,8 +34,9 @@ it reads the newest full run on `main` that passed and kept them:
 
     uv run python -m tests.slices table [--run ID]
 
-The command asks `gh` for the run and its artifacts. Whoever refreshes the table
-reviews it like any change (the tests README, "Running the suite").
+The command asks `gh` for the run and its artifacts, and says how far apart the
+run's runners were. Whoever refreshes the table reviews it like any change (the
+tests README, "Running the suite").
 """
 
 from __future__ import annotations
@@ -351,10 +352,12 @@ def newest_run(run: Gh, repository: str) -> int:
     )
 
 
-def times_of(folders: Sequence[Path]) -> dict[str, float]:
-    """Each test's time from the slices' reports, the i-th slice's in the i-th folder.
-    Raises Refused where the slices do not make up one cut."""
+def times_of(folders: Sequence[Path]) -> tuple[dict[str, float], list[float]]:
+    """Each test's time from the slices' reports, the i-th slice's in the i-th folder,
+    and each slice's test time summed. Raises Refused where the slices do not make up
+    one cut."""
     times: dict[str, float] = {}
+    summed: list[float] = []
     digests: set[str] = set()
     for index, folder in enumerate(folders, 1):
         cut_said = json.loads((folder / CUT_REPORT).read_text(encoding="utf-8"))
@@ -362,21 +365,31 @@ def times_of(folders: Sequence[Path]) -> dict[str, float]:
         if cut_said["shard"] != f"{index}/{len(folders)}":
             raise Refused(f"the report of slice {index}/{len(folders)} is {cut_said['shard']}'s")
         digests.add(cut_said["digest"])
-        for test, seconds in cast("Mapping[str, float]", ran["tests"]).items():
+        tests = cast("Mapping[str, float]", ran["tests"])
+        for test, seconds in tests.items():
             if test in times:
                 raise Refused(f"{test} ran in two slices")
             times[test] = seconds
+        summed.append(sum(tests.values()))
     if len(digests) != 1:
         raise Refused("the slices of the run did not cut the same tests")
-    return times
+    return times, summed
+
+
+def runners_apart(summed: Sequence[float]) -> float:
+    """How far apart the runners of a run were: the fraction by which its slowest
+    slice's summed test time passes its fastest's. The cut gave the slices equal
+    shares, so what parts them is mostly how fast each runner ran."""
+    fastest = min(summed)
+    return max(summed) / fastest - 1 if fastest else float("inf")
 
 
 def write_table(
     run: Gh, repository: str, run_id: int | None, out: Path | None = None
-) -> tuple[str, int]:
+) -> tuple[str, int, float]:
     """Write the table, the committed one unless `out` names another, from the run
-    `run_id`, or the newest that kept the times. Returns the run's address and how
-    many tests the table holds."""
+    `run_id`, or the newest that kept the times. Returns the run's address, how many
+    tests the table holds, and how far apart the run's runners were."""
     out = TABLE if out is None else out
     run_id = newest_run(run, repository) if run_id is None else run_id
     meta = _api(run, f"repos/{repository}/actions/runs/{run_id}")
@@ -403,7 +416,7 @@ def write_table(
                     str(folders[-1]),
                 ]
             )
-        times = times_of(folders)
+        times, summed = times_of(folders)
     source = {
         "run": str(meta.get("html_url")),
         "event": str(meta.get("event")),
@@ -412,7 +425,7 @@ def write_table(
     }
     document = table_document(times, source)
     out.write_text(json.dumps(document, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    return source["run"], len(times)
+    return source["run"], len(times), runners_apart(summed)
 
 
 def main(argv: Sequence[str] | None = None, run: Gh = gh) -> int:
@@ -435,11 +448,15 @@ def main(argv: Sequence[str] | None = None, run: Gh = gh) -> int:
             args.repository
             or run(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).strip()
         )
-        address, tests = write_table(run, repository, args.run)
+        address, tests, apart = write_table(run, repository, args.run)
     except (Refused, ValueError, KeyError, OSError) as exc:
         print(f"tests.slices table: {exc}", file=sys.stderr)
         return 1
     print(f"wrote {TABLE}: {tests} tests, from {address}")
+    print(
+        f"the run's runners were about {apart:.0%} apart, by each slice's summed test time; "
+        'over a tenth apart, take another run (tests/README.md, "Keeping the table")'
+    )
     return 0
 
 

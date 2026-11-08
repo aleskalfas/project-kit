@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     copy_library,
     project,
@@ -36,13 +36,14 @@ from tests.visual_communication_project import (
 NAME = "square"
 VERSION = "1.0.0"
 
-#: Its declaration, in seam 1's form: two inputs, each a colour role, the first required;
-#: and what it needs beyond the project's files, which is nothing.
+#: Its declaration, in the seam's form, which version 2 left as version 1 wrote it for a
+#: producer: two inputs, each a colour role, the first required; and what it needs beyond
+#: the project's files, which is nothing.
 DECLARATION: dict[str, Any] = {
     "name": NAME,
     "kind": "producer",
     "version": VERSION,
-    "seam": 1,
+    "seam": 5,
     "inputs": {
         "type": "object",
         "description": "What the square is painted with.",
@@ -146,7 +147,7 @@ def producing_project(
     64 × 64 pixels, drawn in every mode of both axes unless `modes` says otherwise; and
     accepting `accept_losses`, when given."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     fields: dict[str, Any] = {
         "modes": dict(EVERY_MODE if modes is None else modes),

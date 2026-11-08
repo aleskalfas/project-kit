@@ -1,25 +1,33 @@
-"""Brands and the foundations' declarations (DEC-004): the shipped foundations, the test
-brand resolved in every combination, the test edition resolved over the test brand, its
-base (point 6), and what a brand or a declarations file is refused for, each refusal built
-in the test's own folder from a copy of a valid one."""
+"""Brands and the foundations' declarations (DEC-004): the shipped foundations, the size
+axis their version being built adds to their release 1.0.0, which changes nothing of a
+brand that gives no size (DEC-021 points 1, 2 and 9), the test brand resolved in every
+combination, the test edition resolved over the test brand, its base (point 6), the
+picture role a brand may give a file, judged as any picture file is (DEC-025 points 2, 4,
+5 and 9), and what a brand or a declarations file is refused for, each refusal built in
+the test's own folder from a copy of a valid one."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import shutil
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from tests import visual_communication_logo as logos
 from tests.in_process import load
 from tests.visual_communication_project import (
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
+    RELEASES,
     TEST_BRAND,
     TEST_EDITION,
     TEST_PARTS,
+    TEST_PICTURES,
     bound,
     copy_library,
     project,
@@ -94,7 +102,7 @@ def test_the_foundations_declare_the_shared_roles_axes_and_pairs(foundations: An
     assert foundations.roles["text-primary"] == tokens.Role("text-primary", "color")
     assert foundations.roles["space.3"].type == "dimension"
     assert foundations.roles["type.body"].type == "typography"
-    assert set(foundations.axes) == {"colour-scheme", "contrast"}
+    assert set(foundations.axes) == {"colour-scheme", "contrast", "device"}
     assert foundations.axes["contrast"] == tokens.Axis(
         "contrast", "value", ("standard", "high"), "standard"
     )
@@ -163,9 +171,11 @@ def test_the_test_brand_reads_with_no_findings(brand: Any) -> None:
     assert set(brand.axes) == {"colour-scheme", "contrast"}
 
 
-def test_the_test_brand_gives_every_role_a_value_of_its_type_in_every_combination(
+def test_the_test_brand_gives_every_role_but_its_logo_a_value_of_its_type_in_every_combination(
     brand: Any, foundations: Any
 ) -> None:
+    """No brand owes a picture role a value, and the test brand gives `picture.logo` none
+    (DEC-025 point 4)."""
     combinations = brand.combinations()
     assert [keys.key_of(c, brand.axes) for c in combinations] == [
         "default",
@@ -175,6 +185,8 @@ def test_the_test_brand_gives_every_role_a_value_of_its_type_in_every_combinatio
     ]
     for combination in combinations:
         for path, role in foundations.roles.items():
+            if role.type == tokens.PICTURE:
+                continue
             value = brand.resolve(path, combination)
             assert brand.type_of(path) == role.type
             assert value is not None, (path, combination)
@@ -224,7 +236,11 @@ def test_a_role_the_brand_does_not_export_or_a_mode_the_axes_lack_is_refused(bra
 
 
 def test_the_brand_names_the_font_files_it_holds(brand: Any) -> None:
-    assert brand.families() == ("Source Sans Pro", "Source Sans Pro Semibold")
+    assert brand.families() == (
+        "Source Code Pro",
+        "Source Sans Pro",
+        "Source Sans Pro Semibold",
+    )
     assert brand.font_file("Source Sans Pro") == TEST_BRAND / "fonts" / "SourceSansPro-Regular.otf"
     with pytest.raises(env.MissingFont, match="`Comic Sans`"):
         brand.font_file("Comic Sans")
@@ -267,7 +283,8 @@ PX = {"value": 5, "unit": "px"}
         (RESOLVER, setting("resolutionOrder", [{"$ref": "#/sets/palette"}]), "resolver-shape"),
         (RESOLVER, setting("modifiers|density", {"contexts": {}, "default": "x"}), "brand-axis"),
         (RESOLVER, setting("modifiers|colour-scheme|default", "dark"), "brand-axis"),
-        (RESOLVER, dropping("modifiers|contrast|contexts|high"), "brand-axis"),
+        (RESOLVER, dropping("modifiers|contrast|contexts|standard"), "brand-axis"),
+        (RESOLVER, setting("modifiers|contrast|contexts|low", []), "brand-axis"),
         (RESOLVER, setting("sets|base|sources", [{"$ref": "../base.json"}]), "brand-file"),
         (RESOLVER, setting("sets|base|sources", [{"$ref": "tokens/none.json"}]), "brand-file"),
     ],
@@ -629,18 +646,268 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
     tmp_path: Path,
 ) -> None:
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_EDITION, "test-edition", "1.0.0")
     write_piece(root, "card", brand="test-edition", modes={"colour-scheme": ["light", "dark"]})
     write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
-    held = libraries.Held(root, "visual", (0, 1, 0))
+    held = libraries.Held(root, "visual")
     piece = pl.read_piece(root, "visual", "card")
-    lock = libraries.move_lock(held, pl.needed(piece))
+    lock = libraries.move_lock(held, pl.needed(piece)).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
     document = pl.Project(piece, lock, held).values()
     assert document["tokens"]["accent"]["values"]["colour-scheme.dark"] == ORANGE
     assert document["tokens"]["space.4"]["values"]["default"] == {"value": 40, "unit": "px"}
+
+
+# --- the axes a brand has (DEC-021 points 1, 2 and 9) ------------------------------------------
+
+#: The size axis the foundations declare from the version built after their release 1.0.0
+#: (DEC-021 points 1 and 9).
+DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop")
+
+#: The brand the capability ships to start from, as its release 1.0.0 holds it, which gives
+#: no size.
+RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
+
+#: The shared roles the foundations being built add to their release 1.0.0, each with the role
+#: its default aliases (DEC-022 points 3 and 5).
+SITE = tokens.Role("size.site", "dimension", "size.slide")
+LINE = tokens.Role("size.line", "dimension", "size.figure")
+ADDED = {"size.site": SITE, "size.line": LINE}
+
+PHONE = "tokens/phone.tokens.json"
+
+#: The test brand's `space.3`, and its value on a phone where a brand gives that size.
+WIDE, NARROW = {"value": 16, "unit": "px"}, {"value": 8, "unit": "px"}
+
+
+@pytest.fixture(scope="module")
+def released() -> Any:
+    """The declarations of the foundations' released version 1.0.0, which declare no size
+    axis."""
+    return tokens.read_declarations(RELEASED_FOUNDATIONS / "roles.yaml")
+
+
+def test_the_foundations_being_built_add_the_size_axis_device_and_two_roles_alone(
+    foundations: Any, released: Any
+) -> None:
+    """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
+    (DEC-021 point 1). `size.site`, a dimension whose default is `size.slide` (DEC-022
+    point 3), and `size.line`, the length of a line, whose default is `size.figure` (DEC-022
+    point 5). Every other declaration is their release 1.0.0's."""
+    assert foundations.findings == ()
+    assert foundations.axes["device"] == DEVICE
+    assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
+        released.axes
+    )
+    assert not set(ADDED) & set(released.roles)
+    assert (foundations.roles, foundations.families, foundations.pairs) == (
+        {**released.roles, **ADDED},
+        released.families,
+        released.pairs,
+    )
+
+
+def giving_device(folder: Path, contexts: dict[str, Any] | None = None) -> Path:
+    """The brand at `folder`, made to vary `device` in a modifier of its Resolver document:
+    by `contexts`, or at `desktop` as it is and with a narrower `space.3` on a `phone`."""
+    narrow = {"space": {"$type": "dimension", "3": {"$value": NARROW}}}
+    write(folder / PHONE, json.dumps(narrow))
+
+    def change(data: dict[str, Any]) -> None:
+        given = {"desktop": [], "phone": [{"$ref": PHONE}]} if contexts is None else contexts
+        data["modifiers"]["device"] = {"contexts": given, "default": "desktop"}
+        data["resolutionOrder"].append({"$ref": "#/modifiers/device"})
+
+    edit_json(folder / f"{folder.parent.name}.resolver.json", change)
+    return folder
+
+
+def test_a_value_mode_the_brand_does_not_give_takes_its_values_at_the_default(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    """The copy gives the contrast at `standard` alone, with the test brand's high-contrast
+    values: so at `high` too."""
+    folder = brand_copy(tmp_path)
+    strong = {"standard": [{"$ref": "tokens/high-contrast.tokens.json"}]}
+    edit_json(folder / RESOLVER, setting("modifiers|contrast|contexts", strong))
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == ()
+    assert read.axes == brand.axes
+    assert len(read.combinations()) == 4
+    for combination in brand.combinations():
+        at_high = {**combination, "contrast": "high"}
+        for path in ("line", "text-primary", "background"):
+            assert read.resolve(path, combination) == brand.resolve(path, at_high)
+
+
+def test_a_brand_built_on_another_keeps_its_bases_values_at_a_mode_it_does_not_give(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    """The edition gives the colour scheme at `light` alone, with its orange accent: in the
+    dark scheme, the base's accent holds."""
+    base, folder = chain_copy(tmp_path)
+    light = {"light": [{"$ref": DARK}]}
+    resolver = folder / "test-edition.resolver.json"
+    edit_json(resolver, setting("modifiers|colour-scheme|contexts", light))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.axes == brand.axes
+    assert read.resolve("accent", {}) == ORANGE
+    assert read.resolve("accent", DARK_MODE) == brand.resolve("accent", DARK_MODE) != ORANGE
+
+
+@pytest.mark.parametrize(
+    "folder", [TEST_BRAND, RELEASED_NEUTRAL], ids=["test-brand", "neutral-1.0.0"]
+)
+def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_their_release(
+    foundations: Any, released: Any, folder: Path
+) -> None:
+    """The test brand 1.0.0 and the neutral brand's release 1.0.0 give no size, so on the
+    foundations being built each keeps the axes, the keys and every value it has on their
+    release 1.0.0, and a piece cannot name `device` in either (DEC-021 point 2). It gains
+    the roles the foundations add, each at the value of the role its default aliases: the
+    site at its slide's width, a line at its figure's (DEC-022 points 3 and 5)."""
+    before = tokens.read_brand(folder, released)
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == before.findings
+    assert read.axes == before.axes
+    assert "device" not in read.axes
+    assert [keys.key_of(c, read.axes) for c in read.combinations()] == [
+        keys.key_of(c, before.axes) for c in before.combinations()
+    ]
+    assert not set(ADDED) & set(before.roles)
+    assert (set(read.roles), set(read.valued)) == (
+        {*before.roles, *ADDED},
+        {*before.valued, *ADDED},
+    )
+    for path in before.valued:
+        for combination in read.combinations():
+            assert read.resolve(path, combination) == before.resolve(path, combination)
+    for combination in read.combinations():
+        for path, role in ADDED.items():
+            assert role.default is not None
+            assert read.resolve(path, combination) == read.resolve(role.default, combination)
+    with pytest.raises(keys.BadKey, match="`device`"):
+        read.resolve("space.3", {"device": "phone"})
+
+
+def test_a_brand_has_a_size_axis_with_the_modes_its_modifier_gives(
+    tmp_path: Path, foundations: Any
+) -> None:
+    read = tokens.read_brand(giving_device(brand_copy(tmp_path)), foundations)
+    assert read.findings == ()
+    assert read.axes["device"] == tokens.Axis("device", "size", ("desktop", "phone"), "desktop")
+    assert read.axes["colour-scheme"] == foundations.axes["colour-scheme"]
+    assert len(read.combinations()) == 8
+    assert read.resolve("space.3", {}) == WIDE
+    assert read.resolve("space.3", {"device": "phone", "contrast": "high"}) == NARROW
+    with pytest.raises(keys.BadKey, match="`tablet` is not a mode of `device`"):
+        read.resolve("space.3", {"device": "tablet"})
+
+
+def test_a_size_axis_a_brand_gives_holds_its_default(tmp_path: Path, foundations: Any) -> None:
+    folder = giving_device(brand_copy(tmp_path), {"phone": [{"$ref": PHONE}]})
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = raised.value.findings
+    assert finding.code == "brand-axis"
+    assert "must give the axis's default, `desktop`" in finding.message
+
+
+def test_a_brand_built_on_another_has_its_bases_sizes(tmp_path: Path, foundations: Any) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_device(base)
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.axes == read.base.axes
+    assert read.axes["device"].modes == ("desktop", "phone")
+    assert read.resolve("space.3", {"device": "phone"}) == NARROW
+    assert read.resolve("space.4", {"device": "phone"}) == {"value": 40, "unit": "px"}
+
+    bare, edition = chain_copy(tmp_path / "bare")
+    giving_device(edition, {"desktop": []})
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(edition, foundations, locked={"test-brand": bare})
+    (finding,) = [f for f in raised.value.findings if f.code == "base-axis"]
+    assert "the modifier `device` adds an axis" in finding.message
+
+
+def piece_on_device(tmp_path: Path, brand: Path, modes: dict[str, list[str]]) -> Any:
+    """A project that holds the foundations being built, which declare `device`, and `brand`
+    as `test-brand`, and a piece in it drawn in `modes`: its lock, and what it is read with."""
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", str(libraries.read_library(FOUNDATIONS).version))
+    copy_library(root, brand, "test-brand", "1.0.0")
+    write_piece(root, "card", brand="test-brand", modes=modes)
+    write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
+    held = libraries.Held(root, "visual", (0, 1, 0))
+    piece = pl.read_piece(root, "visual", "card")
+    return piece, libraries.move_lock(held, pl.needed(piece)).lock, held
+
+
+def test_a_piece_names_only_a_size_its_brand_gives(tmp_path: Path) -> None:
+    """The refusal names the size and the brand that does not give it, and how the piece is
+    drawn without it."""
+    piece, lock, held = piece_on_device(tmp_path / "none", TEST_BRAND, {"device": ["phone"]})
+    with pytest.raises(pl.Refused) as refused:
+        pl.Project(piece, lock, held)
+    assert str(refused.value) == (
+        "visual/pieces/card/piece.yaml: `modes`: `device` is a size axis that the brand "
+        "test-brand@1.0.0 does not give: leave it out to draw the piece at its default, "
+        "`desktop`, or draw it in a brand that gives the axis"
+    )
+
+    given = giving_device(brand_copy(tmp_path))
+    piece, lock, held = piece_on_device(tmp_path / "some", given, {"device": ["tablet"]})
+    with pytest.raises(pl.Refused) as refused:
+        pl.Project(piece, lock, held)
+    assert str(refused.value) == (
+        "visual/pieces/card/piece.yaml: `modes`: `tablet` is a size of `device` that the brand "
+        "test-brand@1.0.0 does not give (the brand's sizes: desktop, phone)"
+    )
+
+    piece, lock, held = piece_on_device(tmp_path / "phone", given, {"device": ["desktop", "phone"]})
+    document = pl.Project(piece, lock, held).values()
+    assert document["keys"] == ["default", "device.phone"]
+    assert document["tokens"]["space.3"]["values"]["device.phone"] == NARROW
+
+
+def test_a_size_a_brand_lacks_names_its_base_where_it_builds_on_one(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A brand built on another has its base's sizes (DEC-021 point 2), so the refusal names
+    both."""
+    edition = tokens.read_brand(TEST_EDITION, foundations, locked={"test-brand": TEST_BRAND})
+    with pytest.raises(keys.BadKey) as refused:
+        edition.combinations_of({"device": ["phone"]})
+    assert str(refused.value).startswith(
+        "`device` is a size axis that neither the brand test-edition@1.0.0 nor its base "
+        "test-brand@1.0.0 gives: "
+    )
+
+    base, folder = chain_copy(tmp_path)
+    giving_device(base)
+    edition = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    with pytest.raises(keys.BadKey) as refused:
+        edition.combinations_of({"device": ["tablet"]})
+    assert str(refused.value) == (
+        "`tablet` is a size of `device` that neither the brand test-edition@1.0.0 nor its base "
+        "test-brand@1.0.0 gives (the brand's sizes: desktop, phone)"
+    )
+
+
+def test_a_mode_the_foundations_lack_is_no_mode_whatever_the_brand_gives(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    """Only a size the foundations declare is one a brand may lack."""
+    sized = tokens.read_brand(giving_device(brand_copy(tmp_path)), foundations)
+    with pytest.raises(keys.BadKey, match="`watch` is not a mode of `device`"):
+        sized.combinations_of({"device": ["watch"]})
+    with pytest.raises(keys.BadKey, match="`sepia` is not a mode of `colour-scheme`"):
+        brand.combinations_of({"colour-scheme": ["sepia"]})
+    with pytest.raises(keys.BadKey, match="`weight` is not an axis"):
+        brand.combinations_of({"weight": ["bold"]})
 
 
 # --- contrast -----------------------------------------------------------------------------------
@@ -1017,6 +1284,30 @@ def test_a_base_that_does_not_name_the_library_opens_none_of_its_roles(
     assert read.resolve("test-parts.ink", {}) == read.resolve("text-primary", {})
 
 
+def without_value(brand: Any, path: str) -> Any:
+    """What resolving the role at `path` under `brand` raises, which has no value there."""
+    with pytest.raises(tokens.RoleWithoutValue) as raised:
+        brand.resolve(path, {})
+    return raised.value
+
+
+def test_a_role_without_a_value_names_its_library_and_whether_a_brand_of_the_chain_names_it(
+    tmp_path: Path, parts: Any
+) -> None:
+    alone = without_value(tokens.read_brand(TEST_BRAND, parts), "test-parts.warning")
+    assert isinstance(alone, env.UnvaluedRole)
+    assert (alone.role, alone.library, alone.named) == ("test-parts.warning", "test-parts", False)
+    named = tokens.read_brand(naming_brand(tmp_path / "named", {}), parts)
+    assert without_value(named, "test-parts.warning").named
+    base, edition = library_chain(tmp_path / "chain", base_names=True, edition_names=False)
+    edit_json(base / BASE, dropping("test-parts|warning"))
+    read = tokens.read_brand(edition, parts, locked={"test-brand": base})
+    assert ("library-role-missing", "test-brand@1.0.0") in {
+        (finding.code, finding.library) for finding in read.findings
+    }
+    assert without_value(read, "test-parts.warning").named
+
+
 @pytest.mark.parametrize(
     ("roles", "builds_on", "code", "said"),
     [
@@ -1189,3 +1480,403 @@ def test_a_pair_resting_on_a_pair_of_its_library_at_a_level_as_strict_holds(
     ]
     found = own_roles(tmp_path, roles, pairs).findings_of("test-parts")
     assert [(f.code, f.where) for f in found] == [("pair-defaults", "pairs.2")]
+
+
+# --- picture roles (DEC-025 points 4, 9 and 10) -------------------------------------------------
+
+
+def picture(name: Any) -> dict[str, Any]:
+    """A picture role's value: an empty group that names its file, by its bare name, in the
+    capability's extension key (DEC-025 point 4)."""
+    return {"$extensions": {"pkit.visual-communication": {"file": name}}}
+
+
+def giving_logo(folder: Path, value: Any, file: str = BASE) -> Path:
+    """`folder`, a brand's version, its token file `file` giving `picture.logo` `value`."""
+    edit_json(folder / file, lambda data: data.setdefault("picture", {}).update(logo=value))
+    return folder
+
+
+def holding(folder: Path, *names: str, source: str = "") -> Path:
+    """`folder`, a brand's version, holding each of `names` in its `pictures/`: a copy of the
+    test picture `source`, or of one the capability reads, of the kind its extension says."""
+    for name in names:
+        path = folder / "pictures" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        given = source or ("alpha.png" if name.endswith(".png") else "colour.jpg")
+        shutil.copyfile(TEST_PICTURES / given, path)
+    return folder
+
+
+def test_the_foundations_declare_the_picture_role_logo_with_no_default(foundations: Any) -> None:
+    """Its group, `picture`, is a top group of the shared roles, which no library takes as
+    its name (DEC-025 points 4 and 10)."""
+    assert foundations.roles["picture.logo"] == tokens.Role("picture.logo", "picture")
+    assert "picture" in foundations.top_groups
+
+
+def test_a_picture_role_of_the_foundations_carries_no_default(tmp_path: Path) -> None:
+    text = ROLES_TEXT.replace("gap: {type: dimension}", "logo: {type: picture}")
+    declarations = tokens.read_declarations(write(tmp_path / "roles.yaml", text))
+    assert declarations.roles["logo"] == tokens.Role("logo", "picture")
+    defaulted = text.replace("logo: {type: picture}", "logo: {type: picture, default: '{mark}'}")
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_declarations(write(tmp_path / "defaulted.yaml", defaulted))
+    assert [(f.code, f.where) for f in raised.value.findings] == [("role-default", "roles.logo")]
+
+
+def test_a_picture_role_a_library_other_than_the_foundations_declares_fails(
+    tmp_path: Path,
+) -> None:
+    """Only the foundations declare a picture role (DEC-025 points 4 and 9): the role is not
+    read, and the rest of the library's roles are."""
+    roles = {
+        "test-parts.logo": {"type": "picture"},
+        "test-parts.ink": {"type": "color", "default": "{text-primary}"},
+    }
+    scope = own_roles(tmp_path, roles)
+    [finding] = scope.findings_of("test-parts")
+    assert (finding.code, finding.level, finding.where) == (
+        "role-picture",
+        findings.FAILS,
+        "roles.test-parts.logo",
+    )
+    assert finding.library == "test-parts@1.0.0"
+    assert "test-parts.logo" not in scope.roles
+    assert scope.default_of("test-parts.ink") == "text-primary"
+
+
+def test_a_brand_that_gives_its_logo_no_value_states_it_once_and_does_not_export_it(
+    brand: Any,
+) -> None:
+    """No brand owes a picture role a value, so its absence is no finding (DEC-025 point 4).
+    The brand's version states it as a fact, apart from its findings (point 9)."""
+    assert brand.findings == ()
+    assert "picture.logo" not in brand.roles
+    [fact] = brand.facts
+    assert (fact.code, fact.level, fact.where, fact.library) == (
+        "picture-role-unvalued",
+        findings.FACT,
+        "picture.logo",
+        "test-brand@1.0.0",
+    )
+    assert "`picture.logo`" in fact.message
+    with pytest.raises(tokens.UnknownRole):
+        brand.resolve("picture.logo", {})
+
+
+def test_a_brand_that_gives_its_logo_a_file_it_holds_reads_and_exports_it(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """Its value is an empty group at the role's path, naming a file of its version's
+    `pictures/` (DEC-025 point 4). Only an image shows it (`given`): no formula or paint
+    resolves it, so the brand's other values are those of a brand without one."""
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "logo.png")
+    read = tokens.read_brand(folder, foundations)
+    assert (read.findings, read.facts) == ((), ())
+    assert "picture.logo" in read.roles
+    assert read.type_of("picture.logo") == "picture"
+    assert "picture.logo" not in read.valued
+    assert read.valued == tokens.read_brand(TEST_BRAND, foundations).valued
+    assert read.pictured == ("picture.logo",)
+    given = [read.given("picture.logo", combination) for combination in read.combinations()]
+    for each in given:
+        assert (each.name, each.library, each.path) == (
+            "logo.png",
+            "test-brand@1.0.0",
+            folder / "pictures" / "logo.png",
+        )
+    assert read.picture_of(given[0]).picture == tokens.pictures.Picture("png", 4, 3, None)
+    with pytest.raises(tokens.UnknownRole):
+        read.resolve("picture.logo", {})
+    with pytest.raises(tokens.UnknownRole):
+        read.given("accent", {})
+
+
+def test_a_value_axis_may_give_a_dark_mode_its_own_logo(tmp_path: Path, foundations: Any) -> None:
+    """A dark mode's source gives its logo over the default's, as a token's value merges
+    (DEC-025 point 4)."""
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    giving_logo(folder, picture("logo-dark.png"), DARK)
+    read = tokens.read_brand(holding(folder, "logo.png", "logo-dark.png"), foundations)
+    assert (read.findings, read.facts) == ((), ())
+    assert {
+        keys.key_of(combination, read.axes): read.given("picture.logo", combination).name
+        for combination in read.combinations()
+    } == {
+        "default": "logo.png",
+        "contrast.high": "logo.png",
+        "colour-scheme.dark": "logo-dark.png",
+        "colour-scheme.dark+contrast.high": "logo-dark.png",
+    }
+
+
+def test_a_logo_given_in_some_value_modes_of_a_key_and_not_in_others_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """Within one key over the size axes, a picture role takes a file in every combination
+    of the value axes, or in none, so one scene draws it in every value mode (DEC-025
+    point 4). The brand still exports it."""
+    dark = giving_logo(brand_copy(tmp_path), picture("logo-dark.png"), DARK)
+    read = tokens.read_brand(holding(dark, "logo-dark.png"), foundations)
+    [finding] = read.findings
+    assert (finding.code, finding.level, finding.where, finding.library) == (
+        "picture-role-modes",
+        findings.FAILS,
+        "picture.logo",
+        "test-brand@1.0.0",
+    )
+    assert finding.message == (
+        "the brand gives the picture role `picture.logo` a file in `colour-scheme.dark`, "
+        "`colour-scheme.dark+contrast.high`, and none in `default`, `contrast.high`: within one "
+        "key over the size axes, a picture role takes a file in every combination of the value "
+        "axes, or in none"
+    )
+    assert finding.fix == (
+        "give `picture.logo` a file in every combination of the value axes, or in none"
+    )
+    assert "picture.logo" in read.roles
+
+
+def test_a_dark_logo_at_twice_the_pixels_passes_and_one_of_another_proportion_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """The files a picture role takes over the value axes share one proportion of width to
+    height, since an image's height may come from it; a mode's file may hold more pixels
+    (DEC-025 point 4)."""
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    giving_logo(folder, picture("logo-dark.png"), DARK)
+    logos.hold(folder, "logo.png", logos.logo())
+    logos.hold(folder, "logo-dark.png", logos.logo(2, dark=True))
+    assert tokens.read_brand(folder, foundations).findings == ()
+
+    logos.hold(folder, "logo-dark.png", logos.mark(96, dark=True))
+    [finding] = tokens.read_brand(folder, foundations).findings
+    assert (finding.code, finding.level, finding.where) == (
+        "picture-role-proportion",
+        findings.FAILS,
+        "picture.logo",
+    )
+    assert finding.message == (
+        "the picture role `picture.logo` takes files of 2 proportions of width to height: "
+        "`logo.png`, 160 × 48 pixels, in `default`; `logo-dark.png`, 96 × 96 pixels, in "
+        "`colour-scheme.dark`. The files a picture role takes over the value axes share one "
+        "proportion, since an image's height may come from it"
+    )
+
+
+@pytest.mark.parametrize(
+    ("held", "named"),
+    [
+        ((), "logo.png"),
+        (("Logo.png",), "logo.png"),
+        (("logo.png",), "logo.jpg"),
+    ],
+    ids=["no-pictures-folder", "another-case", "another-extension"],
+)
+def test_a_logo_that_names_a_file_its_version_does_not_hold_fails(
+    tmp_path: Path, foundations: Any, held: tuple[str, ...], named: str
+) -> None:
+    """The file is found by its exact name among those its version holds in `pictures/`
+    (DEC-025 points 2 and 9). The brand stays usable, and exports the role it gives."""
+    folder = holding(giving_logo(brand_copy(tmp_path), picture(named)), *held)
+    read = tokens.read_brand(folder, foundations, root=tmp_path)
+    [finding] = read.findings
+    assert (finding.code, finding.level, finding.file, finding.where) == (
+        "picture-missing",
+        findings.FAILS,
+        "test-brand/1.0.0/tokens/base.tokens.json",
+        "picture.logo",
+    )
+    assert f"`{named}`" in finding.message
+    assert f"pictures/{named}" in finding.fix
+    assert "picture.logo" in read.roles
+
+
+def test_a_logo_that_names_a_symbolic_link_fails(tmp_path: Path, foundations: Any) -> None:
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "elsewhere.png")
+    (folder / "pictures" / "logo.png").symlink_to("elsewhere.png")
+    read = tokens.read_brand(folder, foundations, root=tmp_path)
+    assert [(f.code, f.file, f.library) for f in read.findings] == [
+        ("picture-link", "test-brand/1.0.0/pictures/logo.png", "test-brand@1.0.0")
+    ]
+
+
+def test_a_logo_whose_name_differs_in_case_says_which_file_the_folder_holds(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "Logo.png")
+    [finding] = tokens.read_brand(folder, foundations).findings
+    assert finding.code == "picture-missing"
+    assert "it holds `Logo.png`, and a name finds a file by its exact case" in finding.message
+
+
+def test_a_logo_of_an_encoding_the_capability_refuses_fails_in_the_brands_version(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A brand's file is read as any picture file is (DEC-025 points 5 and 9): the brand
+    stays usable, exports the role, and the finding lies in its version."""
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    read = tokens.read_brand(
+        holding(folder, "logo.png", source="deep.png"), foundations, root=tmp_path
+    )
+    [finding] = read.findings
+    assert (finding.code, finding.level, finding.file, finding.where, finding.library) == (
+        "picture-encoding",
+        findings.FAILS,
+        "test-brand/1.0.0/pictures/logo.png",
+        "",
+        "test-brand@1.0.0",
+    )
+    assert finding.message == (
+        "`logo.png` is a PNG of 16 bits for each sample, which the capability does not read"
+    )
+    assert finding.fix == "save it at 8 bits for each sample, not interlaced"
+    assert "picture.logo" in read.roles
+    _, level = findings.as_read(finding, released=True)
+    assert level == findings.ATTENTION
+
+
+def test_a_logo_two_modes_name_is_judged_once(tmp_path: Path, foundations: Any) -> None:
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    giving_logo(folder, picture("logo.png"), DARK)
+    read = tokens.read_brand(holding(folder, "logo.png", source="interlaced.png"), foundations)
+    assert [f.code for f in read.findings] == ["picture-encoding"]
+
+
+def git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+
+def test_a_logo_git_ignores_finds_no_file(tmp_path: Path, foundations: Any) -> None:
+    """A name finds its file among the folder's files as version control lists them, so a
+    file the clone ignores is no picture (DEC-025 point 2)."""
+    git(tmp_path, "init", "-q")
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "logo.png")
+    assert tokens.read_brand(folder, foundations).findings == ()
+    (tmp_path / ".gitignore").write_text("logo.png\n", encoding="utf-8")
+    [finding] = tokens.read_brand(folder, foundations, root=tmp_path).findings
+    assert (finding.code, finding.file, finding.where) == (
+        "picture-missing",
+        "test-brand/1.0.0/tokens/base.tokens.json",
+        "picture.logo",
+    )
+    assert finding.message.endswith("the file lies there, and git ignores it, so no clone holds it")
+
+
+@pytest.mark.parametrize(
+    ("value", "code", "said"),
+    [
+        ({"$value": "logo.png"}, "picture-shape", "it holds `$value`"),
+        ({"$type": "color", **picture("logo.png")}, "picture-shape", "it holds `$type`"),
+        ({"mark": {"$value": "logo.png"}, **picture("logo.png")}, "picture-shape", "`mark`"),
+        ({"$description": "The logo."}, "picture-shape", '`{"file": "<name>"}`'),
+        (
+            {"$extensions": {"pkit.visual-communication": {"file": "a.png", "x": 1}}},
+            "picture-shape",
+            "",
+        ),
+        (picture("../logo.png"), "picture-name", "no picture file's bare name"),
+        (picture("Logo.png"), "picture-name", "no picture file's bare name"),
+        (picture("logo.gif"), "picture-name", "no picture file's bare name"),
+        (picture("{picture.mark}"), "picture-name", "no picture file's bare name"),
+        (picture(["logo.png"]), "picture-name", "no picture file's bare name"),
+    ],
+)
+def test_a_logo_not_of_its_form_stops_the_brand(
+    tmp_path: Path, foundations: Any, value: Any, code: str, said: str
+) -> None:
+    folder = holding(giving_logo(brand_copy(tmp_path), value), "logo.png")
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    [finding] = raised.value.findings
+    assert (finding.code, finding.where) == (code, "picture.logo")
+    assert said in finding.message
+
+
+def test_no_token_aliases_a_picture_role(tmp_path: Path, foundations: Any) -> None:
+    folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "logo.png")
+    edit_json(folder / BASE, setting("mark", {"$value": "{picture.logo}"}))
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    assert [(f.code, f.where) for f in raised.value.findings] == [("alias-type", "mark")]
+
+
+def test_a_brand_built_on_a_base_keeps_its_bases_logo(tmp_path: Path, foundations: Any) -> None:
+    """It gives the logo a value only where its base opens the role (DEC-025 point 4, DEC-004
+    point 6)."""
+    base, edition = chain_copy(tmp_path)
+    holding(giving_logo(base, picture("logo.png")), "logo.png")
+    read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
+    assert (read.findings, read.facts) == ((), ())
+    assert "picture.logo" in read.roles
+    given = read.given("picture.logo", {})
+    assert (given.library, given.path) == ("test-brand@1.0.0", base / "pictures" / "logo.png")
+    assert read.picture_of(given).picture is not None
+    holding(giving_logo(edition, picture("edition.png"), EDITION), "edition.png")
+    read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
+    assert [(f.code, f.where) for f in read.findings] == [("role-not-open", "picture.logo")]
+
+
+def test_where_the_base_opens_the_logo_the_brand_built_on_it_gives_its_own(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A fault of the two together is the brand's own where its file takes part, and its
+    base's alone where only the base's do (DEC-025 point 4)."""
+    base, edition = chain_copy(tmp_path)
+    holding(giving_logo(base, picture("logo.png")), "logo.png")
+    text = (base / "library.yaml").read_text(encoding="utf-8")
+    (base / "library.yaml").write_text(
+        text.replace("open: [accent, space]", "open: [accent, space, picture.logo]"),
+        encoding="utf-8",
+    )
+    logos.hold(
+        giving_logo(edition, picture("edition.png"), "tokens/dark.tokens.json"),
+        "edition.png",
+        logos.mark(),
+    )
+    read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
+    assert [f.code for f in read.findings] == ["picture-role-proportion"]
+    assert read.findings[0].library == "test-edition@1.0.0"
+    logos.hold(edition, "edition.png", logos.logo())
+    logos.hold(base, "logo.png", logos.logo(2))
+    read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    by_key = {
+        keys.key_of(combination, read.axes): read.given("picture.logo", combination).library
+        for combination in read.combinations()
+    }
+    assert by_key == {
+        "default": "test-brand@1.0.0",
+        "contrast.high": "test-brand@1.0.0",
+        "colour-scheme.dark": "test-edition@1.0.0",
+        "colour-scheme.dark+contrast.high": "test-edition@1.0.0",
+    }
+
+
+def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """Each key over the size axes takes its logo in every value combination or in none,
+    and at one proportion, apart from the others (DEC-025 point 4)."""
+    folder = giving_device(giving_logo(brand_copy(tmp_path), picture("logo.png")))
+    logos.hold(folder, "logo.png", logos.logo())
+    giving_logo(folder, picture("phone.png"), PHONE)
+    logos.hold(folder, "phone.png", logos.mark())
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == ()
+    assert read.given("picture.logo", {"device": "phone", "colour-scheme": "dark"}).name == (
+        "phone.png"
+    )
+    edit_json(folder / PHONE, lambda data: data.pop("picture"))
+    edit_json(folder / BASE, lambda data: data.pop("picture"))
+    giving_logo(folder, picture("phone.png"), PHONE)
+    giving_logo(folder, picture("logo.png"), DARK)
+    [finding] = tokens.read_brand(folder, foundations).findings
+    assert finding.code == "picture-role-modes"
+    assert finding.message.startswith(
+        "the brand gives the picture role `picture.logo` a file in `colour-scheme.dark`, "
+    )
+    assert finding.fix == (
+        "give `picture.logo` a file in every combination of the value axes, or in none"
+    )

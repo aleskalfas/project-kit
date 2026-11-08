@@ -38,6 +38,7 @@ pkit:
         - ADR-061#5
         - ADR-061#6
         - ADR-061#8
+        - ADR-081#7
       artefact:
         - ACT-developer
         - ACT-ai-agent
@@ -87,7 +88,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer works alone, and commits the [change](../../../glossary.md#term-change--change) straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [COR-009 point 5](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced) allows. It is one commit, its subject a conventional title ([COR-008](../../../../../../.pkit/decisions/core/COR-008-git-conventions.md)). Where an agent commits, it first tells the merge authoriser what the change updated, and what the change leaves out of date ([RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)). No command of the [system](../../../glossary.md#term-system--system) carries this way, and the use case ends.
+- **1a.** The developer works alone, and commits the [change](../../../glossary.md#term-change--change) straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [COR-009 point 5](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced) allows. It is one commit, its subject a conventional title ([COR-008](../../../../../../.pkit/decisions/core/COR-008-git-conventions.md)), pushed only on a pass of `pkit decisions check-landing` ([ADR-081 point 7](../../../../../architecture/decisions/ADR-081-landing-check.md#7-where-it-runs)). Where an agent commits, it first tells the merge authoriser what the change updated, and what the change leaves out of date ([RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)). No command of the [system](../../../glossary.md#term-system--system) carries this way, and the use case ends.
 - **2a.** The developer passes `--dry-run`. The system checks the repository as step 3 does, but asks no one, so in another repository it refuses unless `--allow-foreign-repo` is passed. Otherwise it takes its one reading, says what the landing would do, and sends nothing. The use case ends.
 - **2b.** `<sha>` is no full commit id, such as an abbreviated one. The system refuses it as a usage error, reads nothing, and exits `2`, since an abbreviated [head](../../../glossary.md#term-head--head) would read as another head.
 - **3a.** The repository is another, and the operator declines. Or nobody can reply, and the developer passed no `--allow-foreign-repo`. The system refuses, sends nothing, and the use case ends.

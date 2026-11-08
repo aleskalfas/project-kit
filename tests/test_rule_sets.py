@@ -1396,9 +1396,9 @@ def test_a_tree_without_the_schema_skips_the_kind(adopter: AdopterRepo) -> None:
 
 
 def test_the_reference_example_has_the_shipped_shape() -> None:
-    """The front matter shown in the schemas README's "Rule-set files" section is valid."""
-    readme = (REPO / ".pkit/schemas/README.md").read_text(encoding="utf-8")
-    section = readme.split("### Rule-set files", 1)[1]
+    """The front matter shown in the backbone file schemas' "Rule-set files" section is valid."""
+    page = (REPO / ".pkit/schemas/backbone-files.md").read_text(encoding="utf-8")
+    section = page.split("\n## Rule-set files\n", 1)[1]
     example = section.split("```yaml\n", 1)[1].split("```", 1)[0]
     front_matter, body = document_parts.split_front_matter(example)
     assert front_matter is not None and body.startswith("## RS-DOC-001")

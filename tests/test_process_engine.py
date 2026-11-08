@@ -7,7 +7,8 @@ real reality to resolve against. Covers:
 - position resolution (the state whose detection predicate matches),
 - a passing and a failing deterministic gate,
 - an authorisation-artifact gate with cross-authority (produced_by == actor
-  refuses; != actor allows),
+  refuses; != actor allows; a missing, null, empty or blank produced_by
+  refuses and says no producer is named),
 - fail-closed on a broken predicate (non-zero exit / bad JSON),
 - a predicate that cannot be evaluated says why (#752): the reason names how
   its run ended and what it said on stderr reaches `status`, `can-move` and
@@ -225,14 +226,17 @@ commands:
 
     # Authorisation-artifact gate: reports {exists, produced_by} from a
     # `_review` JSON marker if present; the engine computes cross-authority.
+    # A marker with no `by` reports no `produced_by` at all.
     _write_script(
         scripts / "gate_review.py",
         "import json, sys, pathlib\n"
         "p = pathlib.Path('_review')\n"
         "if p.exists():\n"
         "    data = json.loads(p.read_text())\n"
-        "    print(json.dumps({'exists': True, 'produced_by': data['by'],\n"
-        "                      'result': True, 'reason': 'verdict present'}))\n"
+        "    answer = {'exists': True, 'result': True, 'reason': 'verdict present'}\n"
+        "    if 'by' in data:\n"
+        "        answer['produced_by'] = data['by']\n"
+        "    print(json.dumps(answer))\n"
         "else:\n"
         "    print(json.dumps({'exists': False, 'reason': 'no verdict'}))\n"
         "sys.exit(0)\n",
@@ -344,6 +348,30 @@ def test_authorisation_artifact_supplied_result_is_ignored(fixture_repo: Path) -
     (fixture_repo / "_review").write_text(json.dumps({"by": "alice"}), encoding="utf-8")
     allowed, _reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
     assert allowed is False
+
+
+@pytest.mark.parametrize("producer", ["", "   ", "\t\n", 42, True], ids=repr)
+def test_authorisation_artifact_unnamed_producer_refuses(fixture_repo: Path, producer) -> None:
+    # An empty, blank or non-string `produced_by` names no authority: the gate
+    # stays shut even though it differs from the actor (#2542).
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": producer}), encoding="utf-8")
+    allowed, reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
+    assert allowed is False
+    assert "names no producer" in reason
+
+
+@pytest.mark.parametrize("review", [{}, {"by": None}], ids=["missing", "null"])
+def test_authorisation_artifact_without_producer_refuses(fixture_repo: Path, review) -> None:
+    # The artefact exists but names no producer: the gate stays shut, and the
+    # reason says so rather than "authorised by None" (#2542).
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps(review), encoding="utf-8")
+    allowed, reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
+    assert allowed is False
+    assert "names no producer" in reason
+    assert "None" not in reason
+    assert "authorised by" not in reason
 
 
 # --- fail-closed ----------------------------------------------------------
@@ -747,7 +775,9 @@ def test_logging_off_full_lifecycle_writes_no_journal_and_same_verdicts(
     # setting), once with it off. Live detection decides everything, so every
     # verdict matches; only the journal differs.
     logged = tmp_path_factory.mktemp("logged")
-    shutil.copytree(fixture_repo, logged, dirs_exist_ok=True)
+    shutil.copytree(
+        fixture_repo, logged, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__")
+    )
     set_journal_logging(fixture_repo, enabled=False)
 
     unlogged_verdicts = _lifecycle_verdicts(fixture_repo)

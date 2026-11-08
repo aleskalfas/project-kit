@@ -1,0 +1,17 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  `graphic-design-reviewer` judges more than faults (#2885, DEC-030 points 6
+  and 7). Its findings are of four kinds, kept apart by what they cite: a
+  fault, a rule finding that cites a rule by its id from the rule-set files, a
+  brief finding that cites the piece's brief, and a note, which never fails.
+  It reads the piece's brief, its reasons only after it has judged the page,
+  the rule sets the capability ships but the one sessions load, and the
+  sources of the piece's facts. Each finding names where its fix belongs, and
+  its report names the brief and the rule sets it read. While a piece's files
+  are no artefacts, every rule finding informs. A piece's brief joins the
+  format (DEC-029): one `brief.yaml` in the piece's folder, among its sources
+  and the files people write, which no command changes the meaning of. The
+  Task that builds it writes its schema and its check.

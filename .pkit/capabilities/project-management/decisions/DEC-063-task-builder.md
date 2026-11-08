@@ -101,7 +101,9 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 ### 8. The seat asks for the reviews, and the merge gate checks them
 
 - **The builder starts no reviewer** (point 4).
-- **The seat asks for the verdicts** once the checks on its pushed head pass. A verdict that asks for changes starts a fix round through the build command (point 1).
+- **The seat asks for the verdicts** once the checks on its pushed head that the project names to start the review pass. Where the project names none, it asks once every check passes. It asks for none while a check has failed. A verdict that asks for changes starts a fix round through the build command (point 1).
+- **The remaining checks run on beside the review.** The seat waits for them once the reviewers end, and a check that fails then stops the landing before the merge. A check run again on the same head leaves every verdict as it stood, and a push is judged by the freshness rule, as any push is (DEC-028).
+- **A run authorised up front starts no reviewer before every check has passed.** A stop between its verdicts and the findings' step would let its next run merge on a `[person]` finding nobody was shown (DEC-055 point 3).
 - **The merge gate** keeps its check of the reviews, and gains the provenance check (point 1). It refuses the merge until every required reviewer has a verdict that stands for the head, or the person overrides that reviewer with an audited reason ([project-management:DEC-028-agent-as-approver-paths], [project-management:DEC-050-per-reviewer-override]). The person authorises the merge.
 
 ### What this changes, and what stands
@@ -133,6 +135,8 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 **Why a connection point.** The side that needs a builder declares the point ([pkit:COR-053]). Installing a capability that ships a producer agent then makes the build command work with no configuration, and the point's version keeps a builder on the contract it follows.
 
 **Why no build in the session by default.** A build in the seat's session gives up the clean start. Where it happens with nobody choosing it, the loss does not show. A person's audited direction makes it show.
+
+**Why the reviewers start before the suite ends.** One after the other, a round costs all of CI and all of the review, and the suite is most of CI. Neither needs the other: the reviewers read the head, and the checks run on the same head. So the merge waits for both, and a round costs the longer of CI and the checks that start the review plus the review. A head that fails those checks draws no review. A suite that fails later costs the verdicts its fix makes stale, and no others. Where it has failed by the time the reviewers end, the failure and their findings reach one fix round.
 
 ### Alternatives considered
 

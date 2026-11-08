@@ -1,0 +1,41 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: parts
+    layout: slide
+    title: Ein Hinweis enthält Überschrift, Befehl und Text, wo angegeben
+    visual:
+      use: starter/list
+      item: {use: starter/aside}
+      items:
+        - id: all
+          head: Nicht im Repository gewünscht?
+          command: "$ pkit visibility private"
+          text: Es bleibt nur in Ihrem Klon, und nichts davon wird übertragen.
+        - id: head-text
+          head: Ein leerer Anschluss
+          text: Er schadet nicht, und die Prüfung besteht weiterhin.
+        - id: command-text
+          command: "$ pkit status"
+          text: Es zeigt, was eingerichtet ist und was jeden Anschluss füllen könnte.
+
+  - id: families
+    layout: slide
+    title: Er nimmt seine Farbe aus seiner Familie
+    visual:
+      use: starter/list
+      item: {use: starter/aside}
+      items:
+        - id: service
+          concept: test-notation/service
+          head: Ein Dienst
+          command: "$ pkit validate"
+          text: Auf der Füllung seiner Familie, sein Balken in deren Linie.
+        - id: store
+          concept: test-notation/store
+          head: Ein Datenspeicher
+          command: "$ pkit visual check"
+          text: Sein Codeblock behält eine eigene Familie.
+        - id: text
+          text: Ein Text allein, ohne etwas darüber.

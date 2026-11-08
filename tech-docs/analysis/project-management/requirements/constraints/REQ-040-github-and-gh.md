@@ -17,6 +17,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/pre-check.py
       record:
         - project-management:DEC-003
+        - project-management:DEC-017
+        - project-management:DEC-023
         - ADR-061#1
         - ADR-061#3
         - COR-009

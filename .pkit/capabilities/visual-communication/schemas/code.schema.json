@@ -26,12 +26,16 @@
     },
     "writer": {
       "enum": [
-        "css"
+        "css",
+        "json"
       ]
     },
     "form": {
-      "description": "The version of the code writer's spelling.",
-      "const": 1
+      "description": "The version of the code writer's spelling: `css` spells form 1, `json` forms 1 and 2.",
+      "enum": [
+        1,
+        2
+      ]
     },
     "brand": {
       "$ref": "defs.schema.json#/$defs/library-name"
@@ -45,7 +49,7 @@
       "$ref": "defs.schema.json#/$defs/repository-path"
     },
     "prefix": {
-      "description": "A name that opens every name the code writes.",
+      "description": "A name that opens every name the code writes. The `json` writer takes none: the capability's code refuses it, naming why.",
       "$ref": "defs.schema.json#/$defs/name"
     },
     "accept-losses": {

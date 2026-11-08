@@ -1,0 +1,24 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: start
+    layout: standard
+    main:
+      use: starter/navigation
+      links:
+        - {id: start, label: Erste Schritte}
+        - {id: decisions, label: Entscheidungen}
+        - {id: capabilities, label: Erweiterungen}
+        - {id: help, label: Hilfe}
+
+  - id: end
+    layout: standard
+    main:
+      use: starter/navigation
+      align: end
+      links:
+        - {id: start, label: Erste Schritte}
+        - {id: decisions, label: Entscheidungen}
+        - {id: capabilities, label: Erweiterungen}
+        - {id: help, label: Hilfe}

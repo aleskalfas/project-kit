@@ -38,6 +38,9 @@ _EXACT = 2**53 - 1
 #: A `%YAML` directive, which only the lines before a document's first content may hold.
 _DIRECTIVE = re.compile(r"^%YAML[ \t]+(\S+)")
 
+#: A SHA-256 in lower-case hexadecimal.
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
 
 class ReadError(Exception):
     """A file, or a value, the capability cannot read under its one reading."""
@@ -111,6 +114,11 @@ def canonical_bytes(value: Any) -> bytes:
 def sha256(data: bytes) -> str:
     """The SHA-256 of `data`, in lower-case hexadecimal."""
     return hashlib.sha256(data).hexdigest()
+
+
+def is_sha256(value: object) -> bool:
+    """Whether `value` takes the shape of a SHA-256 in lower-case hexadecimal."""
+    return isinstance(value, str) and _SHA256.match(value) is not None
 
 
 # --- YAML ---------------------------------------------------------------------------------------

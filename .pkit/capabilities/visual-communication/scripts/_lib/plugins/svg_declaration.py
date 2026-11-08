@@ -19,11 +19,16 @@ DRAWS = "draws"
 #: The properties each element of the scene holds whatever its type.
 _FRAME = ("x", "y", "width", "height")
 
+#: The properties of an image of every source (DEC-025 point 7): a produced output, with its
+#: variants and its points; a picture file, by its name and where it lies; a picture role.
+#: The renderer draws each from the picture it is handed, whatever its source.
+IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library", "role")
+
 DECLARATION = {
     "name": "svg",
     "kind": "renderer",
-    "version": "1.0.1",
-    "seam": 1,
+    "version": "1.1.0",
+    "seam": 5,
     "module": "svg",
     "about": "An SVG file for each page, language and combination of modes.",
     "profile": "default",
@@ -36,30 +41,35 @@ DECLARATION = {
         ),
         "box": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width", "rx"), DRAWS),
         "ellipse": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width"), DRAWS),
-        "line": dict.fromkeys((*_FRAME, "x1", "y1", "x2", "y2", "stroke", "stroke-width"), DRAWS),
+        "line": dict.fromkeys(
+            (
+                *_FRAME,
+                "x1",
+                "y1",
+                "x2",
+                "y2",
+                "stroke",
+                "stroke-width",
+                "marker-start",
+                "marker-end",
+                "points",
+                "attached",
+            ),
+            DRAWS,
+        ),
         "text": dict.fromkeys(
             (
                 *_FRAME,
                 "text-anchor",
-                "fill",
-                "style",
-                "font-family",
-                "font-size",
-                "font-weight",
                 "line-height",
-                "baseline",
                 "text",
+                "paragraphs",
                 "lines",
                 "measured-height",
-                "measured",
-                "fonts",
                 "overflow",
             ),
             DRAWS,
         ),
-        "image": dict.fromkeys(
-            (*_FRAME, "output", "preserveAspectRatio", "variants", "points"),
-            DRAWS,
-        ),
+        "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
     },
 }

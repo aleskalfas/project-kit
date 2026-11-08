@@ -6,8 +6,9 @@ through one protocol, `Env` (`_lib/env.py`). Its tests stand in for it with `Fak
 never with the data layer's modules: components come from the test library's and the
 foundations' files (read with ruamel's safe loader) or from mappings a test writes, roles
 from a mapping of resolved DTCG values, colour families and concepts from mappings a test
-writes, the font from the test brand's committed Source Sans Pro, and produced pictures
-from `PictureInfo`s. A component a test needs broken is a mapping in
+writes, the font from the test brand's committed Source Sans Pro, produced pictures from
+`PictureInfo`s, and picture files from the test pictures, each read by the capability's
+reader, by its holder and its bare name. A component a test needs broken is a mapping in
 memory, never a file: the repository's validation reads every bound YAML file under
 `tests/`.
 """
@@ -22,15 +23,27 @@ from ruamel.yaml import YAML
 
 from tests.in_process import REPO, load
 
-env, formula, layout, text, scene = load(
-    "visual-communication", "env", "formula", "layout", "text", "scene"
+env, formula, layout, text, scene, pictures, findings, seam = load(
+    "visual-communication",
+    "env",
+    "formula",
+    "layout",
+    "text",
+    "scene",
+    "pictures",
+    "findings",
+    "plugins.seam",
 )
 
 FIXTURES = REPO / "tests" / "fixtures" / "visual-communication" / "libraries"
+#: The test pictures, each of an encoding the capability reads or refuses (DEC-025 point 5).
+PICTURES = REPO / "tests" / "fixtures" / "visual-communication" / "pictures"
 TESTS_LIBRARY = FIXTURES / "tests" / "1.0.0"
 FOUNDATIONS = REPO / ".pkit" / "capabilities" / "visual-communication" / "libraries" / "foundations"
 FONT = FIXTURES / "test-brand" / "1.0.0" / "fonts" / "SourceSansPro-Regular.otf"
 FAMILY = "Source Sans Pro"
+SEMIBOLD_FONT = FIXTURES / "test-brand" / "1.0.0" / "fonts" / "SourceSansPro-Semibold.otf"
+SEMIBOLD = "Source Sans Pro Semibold"
 
 #: The library versions a fake lock names.
 VERSIONS = {"foundations": "1.0.0", "tests": "1.0.0", "lab": "1.0.0"}
@@ -68,6 +81,17 @@ ROLES: dict[str, Any] = {
 }
 
 
+#: The roles the tests of runs set runs in, and their fonts. Each weight is a family of its
+#: own, as the test brand's heading is, so each run is measured and drawn from its own
+#: weight's file (DEC-012, Implications, "A weight's own file"): the body, and the heading
+#: in the semibold family.
+RUN_ROLES: dict[str, Any] = {
+    "type.body": ROLES["type.body"],
+    "type.heading": {**ROLES["type.heading"], "fontFamily": [SEMIBOLD]},
+}
+RUN_FONTS = {FAMILY: FONT, SEMIBOLD: SEMIBOLD_FONT}
+
+
 def read_components() -> dict[str, dict[str, Any]]:
     """The test library's components and the foundations', by their use."""
     reader = YAML(typ="safe", pure=True)
@@ -97,7 +121,8 @@ class FakeEnv:
     families are none unless `families` gives them, and its concepts none unless
     `concepts` gives them: each `<notation>/<concept>` mapped to its family, or to None for
     a concept its notation cannot read. A notation the piece names is one a concept of
-    `concepts` comes from."""
+    `concepts` comes from. Its picture roles are none unless `logos` gives them: each role
+    mapped to the file the brand gives it, or to None for none."""
 
     def __init__(
         self,
@@ -107,6 +132,8 @@ class FakeEnv:
         pictures: Mapping[str, Any] | None = None,
         families: Mapping[str, Mapping[str, str]] | None = None,
         concepts: Mapping[str, str | None] | None = None,
+        files: Mapping[str, Path] | None = None,
+        logos: Mapping[str, Path | None] | None = None,
     ) -> None:
         self.components = {**COMPONENTS, **(components or {})}
         self.roles = {**ROLES, **(roles or {})}
@@ -114,6 +141,9 @@ class FakeEnv:
         self.pictures = {"square": square()} if pictures is None else dict(pictures)
         self.families = {name: dict(members) for name, members in (families or {}).items()}
         self.concepts = dict(concepts or {})
+        # Each picture file, `<holder>/<bare name>`, and the file that holds its bytes.
+        self.files = dict(files or {})
+        self.logos = dict(logos or {})
         self.asked: list[str] = []
 
     def component(self, use: str) -> dict:
@@ -133,6 +163,38 @@ class FakeEnv:
     def picture(self, output: str) -> Any:
         self.asked.append(f"picture {output}")
         return self.pictures[output]
+
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> Any:
+        """A picture file of `files`, read by the capability's reader; a finding on its name
+        where `files` holds none, and one on the file where the reader refuses it."""
+        self.asked.append(f"picture file {holder}/{name}")
+        path = self.files.get(f"{holder}/{name}")
+        if not isinstance(name, str) or path is None:
+            said = f"{named} names `{name}`, which `{holder}` does not hold in `pictures/`"
+            missing = findings.Finding(pictures.MISSING, findings.FAILS, said, where=where)
+            return pictures.Judged(None, (missing,))
+        try:
+            return pictures.Judged(pictures.read(path.read_bytes(), name))
+        except pictures.Refused as refused:
+            fault = findings.Finding(
+                refused.code,
+                findings.FAILS,
+                refused.message,
+                file=f"pictures/{name}",
+                fix=refused.fix,
+            )
+            return pictures.Judged(None, (fault,))
+
+    def picture_role(self, token_path: str) -> Any:
+        """The picture of the file `logos` gives the picture role, read by the capability's
+        reader; None where it gives none."""
+        self.asked.append(f"picture role {token_path}")
+        if token_path in self.logos:
+            path = self.logos[token_path]
+            return None if path is None else pictures.read(path.read_bytes(), path.name)
+        if token_path in self.roles:
+            raise ValueError(f"the role @{token_path} is not a picture")
+        raise KeyError(token_path)
 
     def family(self, name: str) -> dict[str, str]:
         self.asked.append(f"family {name}")
@@ -179,9 +241,11 @@ def draw(
     *,
     use: str = "lab/top",
     language: str = "en",
+    facts: Any = None,
     **environment: Any,
 ) -> Any:
-    """The scene of a piece whose top is `use`, and its findings."""
+    """The scene of a piece whose top is `use`, and its findings, its facts filled by `facts`
+    or by the stand-ins of a draft."""
     return scene.compute_scene(
         piece="test-piece",
         top=use,
@@ -189,8 +253,9 @@ def draw(
         language=language,
         lock=dict(VERSIONS),
         size_key="default",
-        seam_version=1,
+        seam_version=seam.SEAM_VERSION,
         env=FakeEnv(**environment),
+        facts=facts if facts is not None else layout.stand_ins("draft"),
     )
 
 

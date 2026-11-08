@@ -23,6 +23,7 @@ pkit:
         - COR-003
         - COR-048
         - COR-049
+        - COR-053#6
         - COR-055
         - COR-059
         - ADR-039
@@ -30,6 +31,7 @@ pkit:
         - ADR-058#4
         - ADR-064
         - ADR-065#1
+        - ADR-065#4
       artefact:
         - TERM-project-owned-content
         - TERM-seeding
@@ -48,12 +50,12 @@ pkit:
 
 A [project](../glossary.md#term-project--project) adds content of its own, which the [methodology](../glossary.md#term-methodology--methodology) must never take away ([COR-001](../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)). Yet some of its files need entries the methodology ships ([COR-002](../../../../.pkit/decisions/core/COR-002-merge-delivery.md)). Overwriting such a file destroys the project's entries, and writing it only once misses later ones (COR-002). Facts that no part owns, such as the project's name, must not be guessed either ([COR-048](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md)).
 
-[Project-owned content](../glossary.md#term-project-owned-content--project-owned-content) is the part of a project the methodology does not own. [Seeding](../glossary.md#term-seeding--seeding) creates a missing file once, and [merge delivery](../glossary.md#term-merge-delivery--merge-delivery) adds the methodology's entries to one, each with the [consent](../glossary.md#term-consent--consent) its record sets. The [version pin](../glossary.md#term-version-pin--version-pin) and the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration) are such files, and the backbone configuration declares the [documentation roots](../glossary.md#term-documentation-root--documentation-root). [Validation](../glossary.md#term-validation--validation) checks a project's own files against the invariants the project's records own.
+[Project-owned content](../glossary.md#term-project-owned-content--project-owned-content) is the part of a project the methodology does not own. [Seeding](../glossary.md#term-seeding--seeding) creates a missing file once, and [merge delivery](../glossary.md#term-merge-delivery--merge-delivery) adds the methodology's entries to one, each with the [consent](../glossary.md#term-consent--consent) its record sets. The [version pin](../glossary.md#term-version-pin--version-pin) and the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration) are such files, and the backbone configuration declares the [documentation roots](../glossary.md#term-documentation-root--documentation-root). [Validation](../glossary.md#term-validation--validation) checks a project's state against the invariants the project's records own.
 
 ```mermaid
 classDiagram
   accTitle: A project's own files
-  accDescr: A project holds project-owned content beside its synced copies. Seeding creates a missing seed path, which is project-owned content, and merge delivery adds the methodology's entries to a project-owned file. Merge delivery's tier that asks needs consent. The version pin and the backbone configuration are project-owned files. The router reads the version pin. The backbone configuration declares the documentation roots. Validation checks the project's own files, the backbone configuration among them, and runs each validator.
+  accDescr: A project holds project-owned content beside its synced copies. Seeding creates a missing seed path, which is project-owned content, and merge delivery adds the methodology's entries to a project-owned file. Merge delivery's tier that asks needs consent. The version pin and the backbone configuration are project-owned files. The router reads the version pin. The backbone configuration declares the documentation roots. Validation checks the project's state, the backbone configuration among them, and runs each validator.
   class Project["Project"]
   class SyncedCopy["Synced copy"]
   class ProjectOwnedContent["Project-owned content"]
@@ -91,12 +93,13 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a project's own files come to be written
-  accDescr: The first install, and each transition of the backbone, seed each missing seed path, which is project-owned content from then on. A transition's chosen target is the one consent for every migration it runs, and each migration writes within what the records owning the content allow. The transition writes the version pin last, after the content and the migrations. Sync runs only merge delivery's tier that asks nothing, which adds the methodology's entries. Merge delivery's tier that asks, and the configuration commands, write only with consent. Where nobody can reply, nothing is written and the default applies. Validation checks the project's own files as they stand.
+  accDescr: The first install, and each version transition of the backbone, seed each missing seed path, which is project-owned content from then on. A version transition's chosen target is the one consent for every migration it runs, and each migration writes within what the records owning the content allow. After the version transition, pkit upgrade writes the version pin, last of all. Sync runs only merge delivery's tier that asks nothing, which adds the methodology's entries. Merge delivery's tier that asks, and the configuration commands, write only with consent. Where nobody can reply, nothing is written and the default applies. Validation checks the project's state as it stands.
   I([First install]) -->|seeding creates each missing seed path| C[Project-owned content]
-  T(["Transition of the backbone, by pkit upgrade"]) -->|seeding creates each missing seed path| C
+  U(["pkit upgrade"]) -->|runs| T(["Version transition of the backbone"])
+  T -->|seeding creates each missing seed path| C
   T -->|its chosen target is the one consent for| M[Migrations]
   M -->|write within what the records owning the content allow| C
-  T -->|writes it last, after the content and the migrations| P["Version pin, a project-owned file"]
+  U -->|writes it last, after the version transition| P["Version pin, a project-owned file"]
   S([Sync]) -->|runs only| D1["Merge delivery, tier that asks nothing"]
   D1 -->|adds the methodology's entries| C
   D2["Merge delivery, tier that asks"] --> Q{Consent}
@@ -141,14 +144,14 @@ Defined in [TERM-seeding](../glossary.md#term-seeding--seeding).
 
 **Why:** Some files must exist from the start, yet belong to the [project](../glossary.md#term-project--project), which edits them freely ([COR-001](../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)). Seeding writes such a file where it is missing, and never revisits one that exists (COR-001, [COR-002](../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
 
-Seeding creates a declared [seed path](../glossary.md#term-seed-path--seed-path) from its template where the path is missing. It runs at first [install](../glossary.md#term-install--install) and at each transition of the [backbone](../glossary.md#term-backbone--backbone). A project that deleted `.pkit/agents/project/overlay.yaml` gets it back at its next `pkit upgrade`.
+Seeding creates a declared [seed path](../glossary.md#term-seed-path--seed-path) from its template where the path is missing. It runs at first [install](../glossary.md#term-install--install) and at each [version transition](../glossary.md#term-version-transition--version-transition) of the [backbone](../glossary.md#term-backbone--backbone). A project that deleted `.pkit/agents/project/overlay.yaml` gets it back at its next `pkit upgrade`.
 
 **Attributes:** None.
 
 **Relations:**
 
 - What it creates is [project-owned content](../glossary.md#term-project-owned-content--project-owned-content) from the moment it is written (COR-001).
-- It runs at first install and in each transition of the backbone ([COR-059 point 8](../../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)).
+- It runs at first install and in each version transition of the backbone ([COR-059 point 8](../../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)).
 
 **States:** None.
 
@@ -156,7 +159,7 @@ Seeding creates a declared [seed path](../glossary.md#term-seed-path--seed-path)
 
 - It never writes over a seed path that exists (COR-059 point 8).
 - Neither [sync](../glossary.md#term-sync--sync) nor [propagation](../glossary.md#term-propagation--propagation) creates a seed path (COR-059 point 8, [ADR-065 point 1](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#1-syncs-propagation-step-has-two-callers)).
-- A seed the project deleted on purpose comes back at the next transition of the backbone (COR-059 point 8).
+- A seed the project deleted on purpose comes back at the next version transition of the backbone (COR-059 point 8).
 
 ## Seed path
 
@@ -164,7 +167,7 @@ Defined in [TERM-seed-path](../glossary.md#term-seed-path--seed-path).
 
 **Why:** Some files must exist in a [project](../glossary.md#term-project--project) from the start, yet belong to the project, which edits them freely ([COR-001](../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)). So the [methodology](../glossary.md#term-methodology--methodology) declares each such path with a template, and leaves the file to the project once it is written (COR-001).
 
-A seed path is a project-owned location the methodology declares with a template. Where it is missing, [seeding](../glossary.md#term-seeding--seeding) creates it from that template, at first [install](../glossary.md#term-install--install) and at each transition of the [backbone](../glossary.md#term-backbone--backbone). `.pkit/agents/project/overlay.yaml` is one.
+A seed path is a project-owned location the methodology declares with a template. Where it is missing, [seeding](../glossary.md#term-seeding--seeding) creates it from that template, at first [install](../glossary.md#term-install--install) and at each [version transition](../glossary.md#term-version-transition--version-transition) of the [backbone](../glossary.md#term-backbone--backbone). `.pkit/agents/project/overlay.yaml` is one.
 
 **Attributes:**
 
@@ -218,7 +221,7 @@ Consent is a person's agreement to a write. The person gives it in one of these 
 - by an explicit confirmation flag
 - by running a command that a record says carries it
 
-Choosing the target of `pkit upgrade` is one consent for every [migration](../glossary.md#term-migration--migration) the transition runs.
+Choosing the target of `pkit upgrade` is one consent for every [migration](../glossary.md#term-migration--migration) the [version transition](../glossary.md#term-version-transition--version-transition) runs.
 
 **Attributes:**
 
@@ -227,7 +230,7 @@ Choosing the target of `pkit upgrade` is one consent for every [migration](../gl
 
 **Relations:**
 
-- Once chosen, a [version transition](../glossary.md#term-version-transition--version-transition)'s target is the one consent for every part of the transition (COR-059 point 4).
+- Once chosen, a version transition's target is the one consent for every part of the transition (COR-059 point 4).
 - [Merge delivery](../glossary.md#term-merge-delivery--merge-delivery)'s tier that asks, and a [data point](../glossary.md#term-data-point--data-point)'s question, each keep a consent of their own (COR-059 point 4).
 
 **States:** None.
@@ -253,7 +256,7 @@ A version pin is a project-owned file, `.pkit/version-pin`, that names a [releas
 
 - `pkit upgrade` writes it at the release it brought the project to, unless asked not to ([ADR-064 point 1](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#1-the-default-pin)).
 - It is no [recorded version](../glossary.md#term-recorded-version--recorded-version): it directs which release runs, where a recorded version records the content held ([ADR-049 point 1](../../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)).
-- A [source repository](../glossary.md#term-source-repository--source-repository) is never pinned ([ADR-064 point 3](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
+- The [methodology](../glossary.md#term-methodology--methodology)'s [source repository](../glossary.md#term-source-repository--source-repository) is never pinned ([ADR-064 point 3](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
 
 **States:** A project has no pin until `pkit pin` or `pkit upgrade` writes one. A later pin may raise it, and `pkit unpin` removes it (ADR-049 point 3, ADR-064 point 1).
 
@@ -285,7 +288,7 @@ The router is the entry code of the [system](../glossary.md#term-system--system)
 - the release a version pin names
 - or else the installed CLI
 
-A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150.0, whatever the installed CLI's version.
+A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150.0, where the installed CLI is at another version.
 
 **Attributes:** None.
 
@@ -300,8 +303,8 @@ A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150
 **Always true:**
 
 - It routes every command alike, reading commands included (ADR-049 point 4).
-- Where the pinned release cannot be fetched, it runs the installed CLI with a loud warning. It never fails the command over that pin ([ADR-039 D2](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#d2--graceful-degradation-is-mandatory)).
-- A command run with `PKIT_NO_ROUTE` set runs the installed CLI's code ([ADR-049 point 5](../../../architecture/decisions/ADR-049-per-project-version-pin.md#5-bootstrap-the-raise-via-the-existing-pkit_no_route-bypass-self-invoked-in-the-gesture)).
+- Where the pinned release cannot be fetched, it runs the installed CLI with a loud warning. It never fails the command over that version pin ([ADR-039 D2](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#d2--graceful-degradation-is-mandatory)).
+- A command run with `PKIT_NO_ROUTE` set runs the code it was started with ([ADR-049 point 5](../../../architecture/decisions/ADR-049-per-project-version-pin.md#5-bootstrap-the-raise-via-the-existing-pkit_no_route-bypass-self-invoked-in-the-gesture)).
 
 ## Validation
 
@@ -309,7 +312,7 @@ Defined in [TERM-validation](../glossary.md#term-validation--validation).
 
 **Why:** Many records say that a defect "fails validation", and that must mean one thing in each ([COR-055](../../../../.pkit/decisions/core/COR-055-validation.md)). One check that installed [components](../glossary.md#term-component--component) join forgets nothing they register (COR-055).
 
-Validation checks a [project](../glossary.md#term-project--project)'s own files against the invariants the project's records own. Each installed component may join it with a [validator](../glossary.md#term-validator--validator). It fails on one severity alone, so `pkit validate` fails on an unknown key of the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration). It only warns that a [documentation root](../glossary.md#term-documentation-root--documentation-root) does not exist yet.
+Validation checks a [project](../glossary.md#term-project--project)'s state against the invariants the project's records own. Each installed component may join it with a [validator](../glossary.md#term-validator--validator). It fails on one severity alone, so `pkit validate` fails on an unknown key of the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration). It only warns that a [documentation root](../glossary.md#term-documentation-root--documentation-root) does not exist yet.
 
 **Attributes:**
 
@@ -320,31 +323,35 @@ Validation checks a [project](../glossary.md#term-project--project)'s own files 
 
 - Installed components join it through their validators (COR-055 point 3).
 - It checks the backbone configuration and the documentation roots ([COR-048 point 4](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#4-strict-when-checked-forgiving-when-read), [COR-049 point 7](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked)).
+- It checks the [connections](../glossary.md#term-connection--connection) that installed components declare ([COR-053 point 6](../../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection)).
 
 **States:** None.
 
 **Always true:**
 
 - It judges the files as they stand, never a comparison of two states ([COR-055 point 2](../../../../.pkit/decisions/core/COR-055-validation.md#2-state-not-a-change)).
-- It fails when one of its results carries the failing severity, and only then (COR-055 point 5).
+- It fails on the failing severity, and only then (COR-055 point 5).
+- It rejects a mandatory mark that a connection carries with no reason (COR-053 point 6).
+- It reports a connection that ties to no [connection point](../glossary.md#term-connection-point--connection-point) (COR-053 point 6).
+- It rejects two mandatory connections facing each other, which form a cycle (COR-053 point 6).
 
 ## Validator
 
 Defined in [TERM-validator](../glossary.md#term-validator--validator).
 
-**Why:** One check that each installed [component](../glossary.md#term-component--component) joins forgets nothing a component registers ([COR-055](../../../../.pkit/decisions/core/COR-055-validation.md)). A component registers what it can run in one registry, which carries the command's declared limits, so a validator names a command registered there (COR-055).
+**Why:** One check that each installed [component](../glossary.md#term-component--component) joins forgets nothing a component registers ([COR-055](../../../../.pkit/decisions/core/COR-055-validation.md)). A component registers what it can run in one registry, which carries the command's declared limits, so a validator is a command registered there (COR-055).
 
 A validator is a command an installed component registers for [validation](../glossary.md#term-validation--validation) to run. Validation reads what it reports, in a form a machine reads. A validator that gives no result fails validation, and the command stays runnable by itself.
 
 **Attributes:**
 
-- the command it names, among those its component registers ([COR-055 point 3](../../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command))
+- its name, among the commands its component registers ([COR-055 point 3](../../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command))
 - where it is given one, its order among the validators ([ADR-058 point 4](../../../architecture/decisions/ADR-058-validator-registry.md#4-an-installed-component-registers-its-validators-in-package-metadata))
 
 **Relations:**
 
 - An installed [capability](../glossary.md#term-capability--capability) or [adapter](../glossary.md#term-adapter--adapter) registers it (ADR-058 point 4).
-- Validation runs it within a bound on its time, and reads its results (COR-055 point 3).
+- Validation runs it within a bound on its time, and reads what it reports (COR-055 point 3).
 
 **States:** None.
 
@@ -354,7 +361,7 @@ A validator is a command an installed component registers for [validation](../gl
   - it cannot be run
   - it ends abnormally
   - it overruns its time
-  - it prints anything but its results
+  - it prints anything but what it reports
 - No setting turns a validator's missing result into a warning (COR-055 point 6).
 
 ## Backbone configuration
@@ -378,7 +385,7 @@ The backbone configuration is the project-owned file, `.pkit/project/config.yaml
 
 **Always true:**
 
-- It survives every upgrade and sync, and the removal of any [capability](../glossary.md#term-capability--capability) ([COR-048 point 1](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#1-one-file-owned-by-the-project)).
+- It survives every [version transition](../glossary.md#term-version-transition--version-transition) and sync, and the removal of any [capability](../glossary.md#term-capability--capability) ([COR-048 point 1](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#1-one-file-owned-by-the-project)).
 - No capability adds a key to it (COR-048 point 2).
 - A missing file or a missing key means the owning record's default applies ([COR-048 point 3](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#3-absence-means-defaults)).
 - Validation fails on an unknown key or an invalid value ([COR-048 point 4](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#4-strict-when-checked-forgiving-when-read)).
@@ -496,7 +503,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 
 **Validator:**
@@ -513,8 +520,10 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
+- [REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails](../requirements/functional/REQ-015-missing-root-warns.md)
 
 **Documentation root:**
 
@@ -525,3 +534,5 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
+- [REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails](../requirements/functional/REQ-015-missing-root-warns.md)
