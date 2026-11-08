@@ -23,7 +23,9 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   holds no variants and no points (DEC-025 point 7). One of a picture role holds the role,
   `role`, as a paint holds its colour's, so one scene serves every value mode; its source is
   the brand's value, `role:<token path>`. A renderer is handed the file each image shows in each
-  combination, whatever its source, never the scene's names.
+  combination, whatever its source, never the scene's names. One of a picture role the brand
+  gives no file at the scene's key is not drawn, and the result names it by its trace id
+  (`SceneResult.unvalued`), so a move onto that brand can name it (DEC-025 point 8).
 - **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
   and `marker-end`, where it draws one. A tie's connector also holds, where its route
   turns, every point of it, `points`, its ends first and last, and `attached`: for each
@@ -152,13 +154,17 @@ class Scene:
 @dataclass
 class SceneResult:
     """A scene, what computing it found, and which facts of its export it shows: each fact's
-    word with the trace of every element that shows it. `shared` holds, for each page of a
-    top whose layouts are its pages' forms, the trace of each of its parts that draws a field
-    of the top, which every such page draws alike (`Instance.from_the_top`)."""
+    word with the trace of every element that shows it. `unvalued` names each image of a
+    picture role the brand gives no file at the scene's key, by its trace id, with the role:
+    the scene does not draw it, and a move onto that brand names it (DEC-025 point 8).
+    `shared` holds, for each page of a top whose layouts are its pages' forms, the trace of
+    each of its parts that draws a field of the top, which every such page draws alike
+    (`Instance.from_the_top`)."""
 
     scene: Scene
     findings: list[Finding]
     facts: dict[str, list[str]]
+    unvalued: dict[str, str] = field(default_factory=dict)
     shared: dict[str, list[str]] = field(default_factory=dict)
 
 
@@ -192,16 +198,20 @@ def compute_scene(
         children.append(emitter.root(root))
     scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children)
     shared = {page.trace: page.from_the_top() for page in (root.pages if root else [])}
-    return SceneResult(scene, list(ctx.findings), emitter.facts, shared)
+    return SceneResult(
+        scene, list(ctx.findings), emitter.facts, unvalued=emitter.unvalued, shared=shared
+    )
 
 
 class _Emitter:
-    """Turns placed instances into the scene's elements, computing each value as it goes."""
+    """Turns placed instances into the scene's elements, computing each value as it goes, and
+    names each image of a picture role it leaves out, since the brand gives it no file."""
 
     def __init__(self, ctx: Context, pages: list[str]) -> None:
         self.ctx = ctx
         self.pages = pages
         self.facts: dict[str, list[str]] = {}
+        self.unvalued: dict[str, str] = {}
 
     def root(self, top: Instance) -> Element:
         """The top's group. A top whose layouts are its pages' forms and asks for no height
@@ -245,6 +255,8 @@ class _Emitter:
             drawn = self.part(instance, name, node) if node.present else None
             if drawn is not None:
                 element.children.append(drawn)
+            elif node.unvalued:
+                self.unvalued[f"{instance.trace}/{name}"] = node.unvalued
         # The pages of a top whose layouts are its pages' forms, each at the top's origin. A
         # page that takes its own height names where that height comes from (DEC-022 point 3).
         for page in instance.pages:

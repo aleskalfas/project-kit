@@ -2027,6 +2027,9 @@ class Node:
     holder: str = ""
     role: str = ""
     read: Picture | None = None
+    # An image of a picture role the brand gives no file at the scene's key, which is not
+    # drawn: the role, so a move onto that brand can name it (DEC-025 point 8).
+    unvalued: str = ""
 
     @property
     def line_height(self) -> float:
@@ -2606,7 +2609,8 @@ class Instance:
     def _show_role(self, node: Node, trace: str) -> None:
         """The file the brand gives the picture role the image's `role` names, at the scene's
         key over the size axes (DEC-025 point 4). Where the brand gives it none the image is
-        not drawn, at zero size, with no finding, since no brand owes a picture role. A
+        not drawn, at zero size, with no finding, since no brand owes a picture role; the
+        node keeps the role, so a move onto that brand can name it (DEC-025 point 8). A
         `role` that names no role, or a role of another type, is the component's finding,
         and the image is not drawn either."""
         role = node.part.props["role"]
@@ -2624,7 +2628,7 @@ class Instance:
             self._lose(node, "role-type", f"{trace}: {error}", where)
             return
         if read is None:
-            node.present = False
+            node.present, node.unvalued = False, role
             return
         node.role, node.read = role, read
 

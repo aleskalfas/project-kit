@@ -23,7 +23,9 @@ does, among released versions alone, within its majors, to versions that fit, an
 newer version it held back, with why. Each `<library>@<version>`, in the form `pkit visual add`
 takes, moves what it names and only what that needs, past a clash or a lost end, and past the
 lock's majors. No library version travels in the run: it moves only to versions the library
-folder holds.
+folder holds. Where the lock it proposes names another brand than the lock the piece holds, or
+than the lock that wrote the copy, it names what does not follow that brand, as the look ahead
+does (DEC-025 point 8).
 
 Where it would propose the lock the piece holds, and the version that wrote the copy was made
 under that lock, it says so and writes nothing. Otherwise the run is a lock move, a render with
@@ -155,7 +157,7 @@ def _upgrade(root: Path, args: argparse.Namespace) -> int:
     before, after = looks.sides(move.look, planned.export.facts)
     if args.dry_run:
         for line in (
-            *looks.report(move.look, before, after, kept=False),
+            *looks.report(move.look, before, after, kept=False, moved=piece.lock),
             WOULD,
             *proposals.report(planned),
         ):
@@ -166,7 +168,7 @@ def _upgrade(root: Path, args: argparse.Namespace) -> int:
     why = proposals.write(planned, before, after, change)
     if said is not None:
         print(said)
-    for line in looks.report(move.look, before, after, kept=not why):
+    for line in looks.report(move.look, before, after, kept=not why, moved=piece.lock):
         print(line)
     if why:
         print(f"no before-and-after kept: {why}")

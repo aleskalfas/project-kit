@@ -12,8 +12,10 @@
 out (DEC-017 points 1, 2 and 8).
 
 It takes the version named, whatever changed since: it puts back the lock that version was
-made under, and only the lock, and says what else changed, stopping on none of it. It names
-each number or date the version let through, and stops on none (DEC-016 point 6). It moves
+made under, and only the lock, and says what else changed, stopping on none of it. Where that
+lock names another brand than the lock it replaces, it names what does not follow that brand
+(DEC-025 point 8). It names each number or date the version let through, and stops on none
+(DEC-016 point 6). It moves
 every file of the version from the clone's local folder into the piece's `handed-out/`, and
 names the version in `exports.yaml` (`_lib/marking.py`). The project commits them: they are
 the piece's freeze. It takes a piece set final by hand.
