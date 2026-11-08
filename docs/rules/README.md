@@ -99,11 +99,12 @@ Below, `uvx` fetches release 1.134.0 from GitHub and sets up a project with it. 
 $ git init -q older-project && cd older-project
 $ uvx -q --from git+https://github.com/aleskalfas/project-kit.git@v1.134.0 pkit init >/dev/null 2>&1
 $ printf '## Tests\n\n1. **Run `make test` before each commit.**\n' > .pkit/rules/project.md
-$ pkit upgrade | grep -e "^Upgrading" -e "refreshed    .pkit/rules/core.md" -e "backbone:OPS" -e RS-OPS-001 -e "^Pinned"
+$ pkit upgrade | grep -e "^Upgrading" -e "refreshed    .pkit/rules/core.md" -e "backbone:OPS" -e "cannot be told" -e RS-OPS-001 -e "^Pinned"
 Upgrading backbone: 1.134.0 -> <VERSION>
   refreshed    .pkit/rules/core.md
     backbone:OPS <any> (first delivered):
-      binds    RS-OPS-001  The no-shared-files invariant
+      Which of its rules bound before cannot be told. Until this step, sessions loaded .pkit/rules/core.md as a plain file, whose rules carry no ids to compare by.
+      holds    RS-OPS-001  The no-shared-files invariant
 Pinned project-kit to <VERSION> (.pkit/version-pin).
 $ tail -n 1 .pkit/rules/project.md
 1. **Run `make test` before each commit.**
@@ -112,7 +113,7 @@ $ tail -n 1 .pkit/rules/project.md
 What the output proves, claim by claim:
 
 - **Included.** `CLAUDE.md`'s three lines include the methodology's rules, the index of the installed capabilities' rules, and yours. Claude Code loads the files a `CLAUDE.md` includes when a session starts, and the files those include ([its memory docs](https://code.claude.com/docs/en/memory)).
-- **Upgraded, yours kept.** The upgrade copies the newer `core.md`, and names each rule it newly binds. `project.md` holds your rule as you wrote it, since no sync or upgrade writes `project.md` ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
+- **Upgraded, yours kept.** The upgrade copies the newer `core.md`, and names each rule core's set holds. 1.134.0 kept core's rules in a plain file with no ids. So the upgrade says it cannot tell which of them bound before ([the lifecycle reference, "What a step newly binds"](../../.pkit/lifecycle/README.md#what-a-step-newly-binds)). `project.md` holds your rule as you wrote it, since no sync or upgrade writes `project.md` ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
 - **With the install.** The install names the rule it newly binds, and adds the capability's file to the index. `CLAUDE.md` already includes the index, so it needs no edit. Uninstalling takes the file out of the index again ([the third task](#have-a-capabilitys-rules-reach-each-session)).
 
 > [!WARNING]
