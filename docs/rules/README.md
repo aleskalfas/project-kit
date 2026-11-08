@@ -231,7 +231,7 @@ Install the capability, and its rules reach every session that loads `CLAUDE.md`
 - **A later version.** An upgrade of the capability names each of its rules that it newly binds, changes or retires.
 - **No opt-out.** While the capability is installed, no setting of project-kit's keeps its rules away.
 - **A rule you kept yourself.** Where a capability you install ships a rule your `project.md` held, you may delete or shorten yours, keeping what holds only in your project.
-- **The uninstall** renders the index again without the capability's file. Today it refuses while the capability's own deployed agents cite its records, so the fence below shows the refusal, then passes `--force`. `--force` also skips the checks of what depends on the capability ([the lifecycle reference, "Uninstall"](../../.pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)).
+- **The uninstall** renders the index again without the capability's file ([the lifecycle reference, "Uninstall"](../../.pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)).
 
 Below, `pkit rule-sets loaded` lists the files a session loads, in their order, before and after the uninstall:
 
@@ -242,9 +242,7 @@ Loaded files — 2   (every layer's, in the order a session reads them)
 
   backbone    backbone            .pkit/rules/core.md                             backbone:OPS (.pkit/rule-sets/ops.md)
   capability  project-management  .pkit/capabilities/project-management/rules.md  project-management:PM (.pkit/capabilities/project-management/rule-sets/pm.md)
-$ pkit capabilities uninstall project-management 2>&1 | grep Refusing
-  Refusing to uninstall 'project-management': <any> reference(s) found:
-$ pkit capabilities uninstall project-management --force | grep -e Removed -e rules/capabilities
+$ pkit capabilities uninstall project-management | grep -e Removed -e rules/capabilities
   Removed capability 'project-management' from .pkit/capabilities/project-management
   rendered     .pkit/rules/capabilities.md (0 capability file(s))
 $ pkit rule-sets loaded

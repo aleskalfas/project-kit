@@ -47,6 +47,7 @@ from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import treecopy
+from project_kit.agents import agent_locations, carries_deploy_mark
 from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
@@ -2020,6 +2021,13 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     Scans the project tree but skips `.pkit/capabilities/<name>/` itself
     (the capability's own files don't count as "references to it"), and
     skips `.git/`, `.venv/`, `node_modules/`, etc.
+
+    It also skips each copy an adapter deployed of an agent definition, such as
+    one of the capability's own agents in the harness's agents folder
+    (`_is_deployed_agent_copy`). The copy is not the project's file, since the
+    deploy writes it again from its source. The scan judges that source where it
+    lies: a definition under `.pkit/agents/project/` counts, and one that core
+    or a capability ships does not.
     """
     findings: list[tuple[Path, str]] = []
     # Imported here: the rule-set reader imports this module.
@@ -2034,6 +2042,9 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     citation_re = re.compile(rf"\[{re.escape(capability_name)}:[^\]]+\]")
     path_re = re.compile(rf"\.pkit/capabilities/{re.escape(capability_name)}/")
     self_path = (target_root / ".pkit" / "capabilities" / capability_name).resolve()
+    shipped_agents = frozenset(
+        name for _, folder in agent_locations(target_root) for name in artefact_names(folder)
+    )
 
     ignored_dirs = {".git", ".venv", "node_modules", "__pycache__", ".pytest_cache"}
 
@@ -2058,6 +2069,8 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
             continue
         if path.resolve() in inheriting:
             continue
+        if _is_deployed_agent_copy(target_root, path, shipped_agents):
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
@@ -2067,6 +2080,30 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
         for match in path_re.finditer(text):
             findings.append((path, match.group(0)))
     return findings
+
+
+def _is_deployed_agent_copy(target_root: Path, path: Path, shipped_agents: Collection[str]) -> bool:
+    """True if the file is a copy an adapter deployed of an agent definition.
+
+    The deploy writes each copy outside `.pkit/`, where its harness reads
+    agents, under the definition's name and with the deploy mark in its front
+    matter (the agents README, "Deploy mechanics"). Which folder that is, is the
+    adapter's knowledge (COR-013), so the copy is known by its name and its mark.
+    *shipped_agents* are the names the agents folders ship (`agent_locations`).
+
+    A file under `.pkit/` is never such a copy, even with the mark: where the
+    reference scan reads one, it is the project's own, such as a definition
+    copied into `.pkit/agents/project/` to override another.
+    """
+    if path.suffix != ".md" or path.stem not in shipped_agents:
+        return False
+    try:
+        parts = path.relative_to(target_root).parts
+    except ValueError:
+        return False
+    if parts[:1] == (".pkit",):
+        return False
+    return carries_deploy_mark(path)
 
 
 def _is_kit_propagated_path(target_root: Path, path: Path) -> bool:
