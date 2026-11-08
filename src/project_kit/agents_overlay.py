@@ -510,14 +510,36 @@ def render_status(target_root: Path) -> str:
         # reported separately below and never contribute to a skip.
         missing = sorted(set(missing_categories(target_root)) - set(optional_undefined))
         cats = ", ".join(missing)
-        warn_lines = [
-            "Deploy the skipped agent(s):  pkit agents adopt <agent>",
-            "Custom doc layout:            pkit agents reconcile --write → set paths → pkit sync",
+        # `adopt` serves a skipped agent only when each required category it
+        # lacks has a conventional folder to create; for any other it refuses.
+        # So the lead line names `adopt` only for the agents it serves (#2469).
+        conventional = conventional_category_defaults(target_root)
+        write_carrying_set = write_carrying_categories(target_root)
+        adoptable = [
+            s.name
+            for s in skipped
+            if all(c in conventional for c in set(s.missing) - set(s.optional))
         ]
+        warn_lines: list[str] = []
+        if adoptable:
+            who = "the skipped agent(s)" if len(adoptable) == len(skipped) else ", ".join(adoptable)
+            warn_lines.append(f"Deploy {who}:  pkit agents adopt <agent>")
+            warn_lines.append(
+                "Custom doc layout:            "
+                "pkit agents reconcile --write → set paths → pkit sync"
+            )
+        # A category with no conventional folder, and not write-carrying, is the
+        # project's to locate: `adopt` has no folder to create for it.
+        no_folder = [c for c in missing if c not in conventional and c not in write_carrying_set]
+        if no_folder:
+            warn_lines.append(
+                f"No conventional folder ({', '.join(no_folder)}): set the paths in overlay.yaml, "
+                f"or stub them with `pkit agents reconcile --write`, then `pkit sync`."
+            )
         # A write-carrying category (ADR-051) names paths only the adopter can
         # enumerate, so `adopt` has nothing to create for it — say so here rather
         # than let the lead line send the adopter to a command that must refuse.
-        write_carrying = sorted(set(missing) & write_carrying_categories(target_root))
+        write_carrying = sorted(set(missing) & write_carrying_set)
         if write_carrying:
             warn_lines.append(
                 f"Not adoptable ({', '.join(write_carrying)}): reconcile --write fills "
