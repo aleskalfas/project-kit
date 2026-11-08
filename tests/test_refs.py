@@ -11,6 +11,9 @@ from click.testing import CliRunner
 
 from project_kit import refs
 from project_kit.cli import main
+from tests.adopter_repo import MakeAdopterRepo
+
+REPO = Path(__file__).resolve().parents[1]
 
 # --- fixtures -------------------------------------------------------
 
@@ -1305,6 +1308,60 @@ def test_rot_flags_accepted_record_citing_proposed_record_of_another_namespace(
     _cap_record(kit_target, "cap-a", "001", "lanes", "accepted", "Rests on PRJ-001.\n")
     issues = _resting(kit_target)
     assert [i.location for i in issues] == [".pkit/capabilities/cap-a/decisions/DEC-001-lanes.md"]
+    assert "'PRJ-001'" in issues[0].diagnosis
+
+
+def test_rot_reads_no_project_record_in_a_record_the_project_receives(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A core record an adopter receives is authored in the methodology's source, so a
+    `PRJ-` or `ADR-` id it cites names a record of the source: COR-021 cites the PRJ-001
+    that names the CLI, and COR-037 cites ADR-022. The adopter's own proposed PRJ-001
+    and ADR-022 are no grounds of theirs, while its own accepted record citing them
+    still rests on proposals (#2484)."""
+    root = make_adopter_repo().root
+    core = root / ".pkit" / "decisions" / "core"
+    received = {
+        ".pkit/decisions/core/" + path.name: key
+        for pattern, key in (("COR-021-*.md", "PRJ-001"), ("COR-037-*.md", "ADR-022"))
+        for path in core.glob(pattern)
+    }
+    for rel, key in received.items():
+        assert key in refs.record_citations((root / rel).read_text(encoding="utf-8"), None)
+    assert len(received) == 2
+
+    (root / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
+        "adr-records:\n  - docs/architecture/decisions/\n", encoding="utf-8"
+    )
+    adrs = root / "docs" / "architecture" / "decisions"
+    _record(adrs / "ADR-022-own.md", "ADR-022", "proposed")
+    project = root / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-own.md", "PRJ-001", "proposed")
+    _record(project / "PRJ-002-on-own.md", "PRJ-002", "accepted", "Per PRJ-001 and ADR-022.\n")
+
+    issues = _resting(root)
+    assert [i for i in issues if i.location in received] == []
+    own = [i.diagnosis for i in issues if i.location == ".pkit/decisions/project/PRJ-002-on-own.md"]
+    assert len(own) == 2
+    assert "'ADR-022'" in own[0]
+    assert "'PRJ-001'" in own[1]
+
+
+def test_rot_reads_a_core_records_project_citation_in_the_methodologys_source(
+    kit_target: Path,
+) -> None:
+    """In the methodology's source the core records are authored, so a `PRJ-` id one
+    cites names the project's own record, and a proposed one is listed."""
+    for marker in ("src/project_kit/__init__.py", ".pkit/lifecycle/ownership.py"):
+        (kit_target / marker).parent.mkdir(parents=True, exist_ok=True)
+        (kit_target / marker).write_bytes((REPO / marker).read_bytes())
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-cli.md", "PRJ-001", "proposed")
+    core = kit_target / ".pkit" / "decisions" / "core"
+    _record(core / "COR-021-dispatch.md", "COR-021", "accepted", "Named per PRJ-001.\n")
+
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/core/COR-021-dispatch.md"]
     assert "'PRJ-001'" in issues[0].diagnosis
 
 
