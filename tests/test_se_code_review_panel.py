@@ -756,13 +756,13 @@ def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
 
 
 def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
-    """DEC-002 D1 and the README agree on what the reviewer blocks on for a revisit,
+    """DEC-002 point 1 and the README agree on what the reviewer blocks on for a revisit,
     on what is only advisory, and on the revisit entries that stay a person's
     decision. The agent body applies the same tests."""
     record = (_SE_DIR / "decisions" / "DEC-002-code-review-panel.md").read_text(encoding="utf-8")
     readme = (_SE_DIR / "README.md").read_text(encoding="utf-8")
     body = "\n".join(_answers_check())
-    d1 = record.split("\n### 1. The panel\n", 1)[1].split("\n### ", 1)[0]
+    point_1 = record.split("\n### 1. The panel\n", 1)[1].split("\n### ", 1)[0]
     shared = (
         "for a target that owes an answer, a",
         "entry the change writes with a new reason that does not hold against the change, or a"
@@ -774,7 +774,7 @@ def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
         " answer, or one whose outcome alone changed",
     )
     for words in shared:
-        assert words.lower() in d1.lower(), ("DEC-002", words)
+        assert words.lower() in point_1.lower(), ("DEC-002", words)
         assert words.lower() in readme.lower(), ("README", words)
     for words in ("contradicts what the modified trigger fields now say", "contradicts nothing"):
         assert words in body, words
