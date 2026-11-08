@@ -1,0 +1,9 @@
+component: visual-communication
+kind: none
+body: >
+  Design-ahead: DEC-031, a proposed record, decides that the HTML page of a
+  deck shows each slide inside a keyline, on a backdrop that mixes the
+  browser's own colours (#2886). It names which pages show them, what the
+  viewing step draws, and the edits it asks of DEC-001, DEC-005, DEC-020 and
+  DEC-023 once accepted. Nothing is built yet, so no command, file or check
+  moves.
