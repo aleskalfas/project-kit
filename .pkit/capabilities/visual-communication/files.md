@@ -809,10 +809,11 @@ A brand gives a picture role its value as an empty group at the role's path. DTC
 
 - **The file** lies in the `pictures/` folder of the brand's version, under its bare name. It is found and read as any picture file is ([Picture files](#picture-files)). Each finding on it lies in the brand's version (DEC-025 point 9).
 - **The group holds nothing else** but a `$description` and a `$deprecated`. It aliases nothing, and no token aliases it.
-- **It merges as a token's value does,** in the Resolver document's order of sources. So a value axis may give a dark mode its own logo. A brand built on a base keeps its base's logo, unless the base opens the role ([Open roles](#open-roles)).
+- **It merges as a token's value does,** in the Resolver document's order of sources. So a value axis may give a dark mode its own logo, and a size axis a phone its own. A brand built on a base keeps its base's logo, unless the base opens the role ([Open roles](#open-roles)).
+- **In every value mode, or in none.** Within one key over the size axes, a brand gives a picture role a file in every combination of the value axes, or in none. A brand that gives it in some and not in others is at fault.
+- **One proportion within a key.** The files a picture role takes over the value axes, within one key, share one proportion of width to height. So a dark logo may hold twice the pixels, but never another shape.
 - **No brand owes one a value.** A brand that gives it none is not at fault. Its version states that once, as a fact, and no piece states it (DEC-025 point 9).
 - **It is exported only where the brand gives it a value** (DEC-004 point 5). So ceasing to give one breaks the brand ([What a release compares](#what-a-release-compares)).
-- **No written code holds it.**
 
 ### A library's roles
 

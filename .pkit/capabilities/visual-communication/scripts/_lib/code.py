@@ -19,10 +19,12 @@
 - **A run** resolves every token the brand exports, and every other role of the
   component libraries the lock names at the brand's value or its default (DEC-008 point
   5), in every combination of the brand's axes whose kind the writer's declaration spells,
-  each other axis at its default (the values document, version 1). It knows its losses
-  before the writer runs: each token of a type the writer's declaration has no form for
-  is left out, and each other token an axis of another kind changes, such as a size, is
-  written at that axis's default (DEC-021 point 8). Each is reported unless the
+  each other axis at its default (the values document, version 2), and each picture role
+  the brand gives a file. It knows its losses before the writer runs: each token of a type
+  the writer's declaration has no form for in the declaration's form is left out, such as
+  a picture role in CSS or in form 1 of JSON (DEC-025 point 4), and each other token an
+  axis of another kind changes, such as a size, is written at that axis's default
+  (DEC-021 point 8). Each is reported unless the
   declaration accepts it. The writer gets the rest. The command writes the code, then its
   record: the fingerprint, form 1, over the declaration file, each value written in each
   combination, and the writer's version (`fingerprint.code_record_inputs`); the hash of
@@ -312,7 +314,7 @@ def plan(
         {name: axis["modes"] for name, axis in axes.items()}, brand.axes
     )
     document = values.document(brand, combinations, declaration.lock)
-    kinds = writer.get("kinds", ())
+    kinds = kinds_of(writer, declaration.form)
     written = {path: token for path, token in document["tokens"].items() if token["type"] in kinds}
     form = f"form {declaration.form} of the {writer['name']} writer"
     losses = tuple(
@@ -349,6 +351,17 @@ def plan(
         losses=losses,
         sources=sources,
     )
+
+
+def kinds_of(writer: Mapping[str, Any], form: int) -> tuple[str, ...]:
+    """The value types the code writer's declaration `writer` has a form for in its form
+    `form`: its `kinds`, or, where they differ by form, those it names for `form`. A token
+    of another type is a loss known before the writer runs, such as a picture role in a
+    form whose spelling has no form for a file (DEC-025 point 4)."""
+    kinds = writer.get("kinds", ())
+    if isinstance(kinds, Mapping):
+        kinds = kinds.get(str(form), ())
+    return tuple(kinds)
 
 
 def _changed_by(

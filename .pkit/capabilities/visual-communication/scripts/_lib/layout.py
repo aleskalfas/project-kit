@@ -60,9 +60,10 @@ DEC-012).
   a text's `content` (a field), or `fact` (a fact of its export, one of `FACTS`, which
   takes no switch), and `style` (a typography role); an image's source, exactly one of
   `produced` (a field naming a produced output), `content` (a field whose text is the bare
-  name of a picture file of the piece) and `file` (the bare name of a picture file of the
-  component's own library version, or of the piece for a local component; DEC-025 points 1
-  to 3). Only a text part shows a field of runs: its `style`
+  name of a picture file of the piece), `file` (the bare name of a picture file of the
+  component's own library version, or of the piece for a local component) and `role` (a
+  picture role, whose file the brand gives; DEC-025 points 1 to 4). Only a text part shows
+  a field of runs: its `style`
   and `fill` may switch on the run styles of the field it shows, `{by: <field>, <word>:
   <value>, ...}`, naming every word, and give each run the role and the paint its word
   chooses;
@@ -86,9 +87,14 @@ DEC-012).
 
 **An image** shows a produced output, its variants by key and its exposed points; or a
 picture file, found by its bare name and read through the environment, which judges it
-(`Env.picture_file`). A picture file has no points. A finding on its name lies in what
-named it, the content or the component; one on the file, at the file. A field the content
-leaves empty, and a picture file that cannot be read, draws no image, at zero size.
+(`Env.picture_file`); or the file the brand gives a picture role at the scene's key over
+the size axes, read through the environment too (`Env.picture_role`). A picture file and a
+picture role have no points. A finding on a file's name lies in what named it, the content
+or the component; one on the file, at the file. A `role` that names no role is
+`unknown-role`, and one that names a role of another type `role-type`, each in the
+component. A field the content leaves empty, a picture file that cannot be read, and a
+picture role the brand gives no file, draw no image, at zero size, and only the file that
+cannot be read is a finding: no brand owes a picture role (DEC-025 point 4).
 
 A part may carry `when`: a field the content fills, a field of runs where one of its
 runs holds text, `{<option>: [<word>, ...]}`, or a switch on a size (below) whose each
@@ -101,7 +107,8 @@ spreads the ends that meet one side of an item evenly (DEC-005 point 2). A line'
 `marker-start` and `marker-end` are `none`, the default, or `arrow`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
 image's height, where none is given, keeps its picture's proportions, a produced output's
-first variant's or a picture file's. Any property
+first variant's, a picture file's, or a picture role's file's at the scene's key. Any
+property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
 switch on a field's run styles serves only a text part's `style` and `fill`, and no part
 passes a field of runs on, or reads one but in `when`. A colour is a role's token path,
@@ -205,7 +212,7 @@ PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "ellipse": ("fill", "stroke", "stroke-width"),
     "text": ("content", "fact", "style", "fill", "text-anchor"),
     "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
-    "image": ("produced", "content", "file"),
+    "image": ("produced", "content", "file", "role"),
 }
 REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "text": ("style",),
@@ -214,8 +221,8 @@ REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
 
 #: What an image shows, of which it names exactly one (DEC-025 point 1): a produced output,
 #: by a field; a picture file of the piece, by a field; a picture file of the component's own
-#: library, by its bare name.
-IMAGE_SOURCES = ("produced", "content", "file")
+#: library, by its bare name; the file a brand gives a picture role, by the role.
+IMAGE_SOURCES = ("produced", "content", "file", "role")
 
 #: The paint content's `override` points at another role, by kind of part.
 OVERRIDDEN = {"box": "fill", "ellipse": "fill", "text": "fill", "line": "stroke"}
@@ -963,6 +970,8 @@ class Component:
                     self._shape(at, f"`fact` takes {', '.join(FACTS)}, and no `{value}`")
             elif key == "file":
                 continue  # a picture file's bare name, judged where it is drawn
+            elif key == "role":
+                self._role(at, value)  # a picture role, judged where it is drawn
             elif not _is_field(value, self.fields):  # content, produced
                 self._shape(at, f"`{key}` names no field `{value}`")
             elif part.kind == "image" and value in self.runs:
@@ -1717,6 +1726,7 @@ class Context:
         self._components: dict[str, Component | None] = {}
         self._unreadable: set[str] = set()
         self._roles: dict[str, Any] = {}
+        self._pictured: dict[str, Picture | None | Exception] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
         self._concepts: dict[str, str | UnknownConcept | None] = {}
 
@@ -1829,6 +1839,23 @@ class Context:
             raise UnvaluedRole(found.role, found.library, named=found.named)
         if isinstance(found, KeyError):
             raise KeyError(path)
+        return found
+
+    def picture_role(self, path: str) -> Picture | None:
+        """The picture the brand gives the picture role at `path` at the scene's key over the
+        size axes, read once (`Env.picture_role`); None where it gives none. Raises
+        `KeyError` for a path that holds no role, and `ValueError` for a role of another
+        type."""
+        if path not in self._pictured:
+            try:
+                self._pictured[path] = self.env.picture_role(path)
+            except (KeyError, ValueError) as error:
+                self._pictured[path] = error
+        found = self._pictured[path]
+        if isinstance(found, KeyError):
+            raise KeyError(path)
+        if isinstance(found, Exception):
+            raise ValueError(str(found))
         return found
 
     def unvalued(self, path: str) -> UnvaluedRole | None:
@@ -1958,9 +1985,12 @@ class Node:
     picture: PictureInfo | None = None
     output: str = ""
     # An image of a picture file: its bare name, where it lies, `piece` or a library's
-    # name, and the file as the reader read it (DEC-025 points 2 and 3).
+    # name, and the file as the reader read it (DEC-025 points 2 and 3). An image of a
+    # picture role: the role, and the file the brand gives it at the scene's key, as read
+    # (point 4).
     file: str = ""
     holder: str = ""
+    role: str = ""
     read: Picture | None = None
 
     @property
@@ -2503,13 +2533,14 @@ class Instance:
         node.present = False
 
     def _build_image(self, node: Node, trace: str) -> None:
-        """The picture an image shows (DEC-025 points 1 to 3): a produced output, by the field
+        """The picture an image shows (DEC-025 points 1 to 4): a produced output, by the field
         `produced` names; a picture file of the piece, by the bare name the field `content`
-        names holds, whichever component draws it; or a picture file of the component's own
-        library version, or of the piece for a local component, by `file`. A field the
-        content leaves empty draws nothing, at zero size, with no finding; so does a picture
-        file that cannot be read, which is its finding. An image that names none of them is
-        recorded when its component was read."""
+        names holds, whichever component draws it; a picture file of the component's own
+        library version, or of the piece for a local component, by `file`; or the file the
+        brand gives the picture role `role` names (`_show_role`). A field the content leaves
+        empty draws nothing, at zero size, with no finding; so does a picture file that
+        cannot be read, which is its finding. An image that names none of them is recorded
+        when its component was read."""
         props = node.part.props
         if "produced" in props:
             self._build_produced(node, trace)
@@ -2529,8 +2560,35 @@ class Instance:
             named = f"{use}: the image `{node.part.name}`"
             library = use.partition("/")[0]
             self._show_file(node, library, props["file"], named=named, where=where, use=use)
+        elif "role" in props:
+            self._show_role(node, trace)
         else:
             node.present = False
+
+    def _show_role(self, node: Node, trace: str) -> None:
+        """The file the brand gives the picture role the image's `role` names, at the scene's
+        key over the size axes (DEC-025 point 4). Where the brand gives it none the image is
+        not drawn, at zero size, with no finding, since no brand owes a picture role. A
+        `role` that names no role, or a role of another type, is the component's finding,
+        and the image is not drawn either."""
+        role = node.part.props["role"]
+        if not isinstance(role, str):
+            node.present = False  # recorded when the component was read
+            return
+        where = f"parts.{node.part.name}.image.role"
+        try:
+            read = self.ctx.picture_role(role)
+        except KeyError:
+            message = f"{trace}: no library locked with the brand declares the role @{role}"
+            self._lose(node, "unknown-role", message, where)
+            return
+        except ValueError as error:
+            self._lose(node, "role-type", f"{trace}: {error}", where)
+            return
+        if read is None:
+            node.present = False
+            return
+        node.role, node.read = role, read
 
     def _show_file(
         self, node: Node, holder: str, name: object, *, named: str, where: str, use: str

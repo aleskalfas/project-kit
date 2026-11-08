@@ -1110,7 +1110,7 @@
       }
     },
     "image": {
-      "description": "An image's properties: what it shows, exactly one of a produced output, a picture file the content names, and a picture file of the component's own library (visual-communication DEC-025 point 1).",
+      "description": "An image's properties: what it shows, exactly one of a produced output, a picture file the content names, a picture file of the component's own library, and a picture role, whose file the brand gives (visual-communication DEC-025 points 1 and 4).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1125,6 +1125,10 @@
         "file": {
           "description": "The bare name of a picture file in the `pictures/` of the component's own library version, or of the piece for a local component: the same in every mode and under every brand.",
           "type": "string"
+        },
+        "role": {
+          "description": "A picture role, such as `picture.logo`: the brand's file for it in each mode; where the brand gives it none, the image is not drawn.",
+          "$ref": "defs.schema.json#/$defs/token-path"
         }
       },
       "oneOf": [
@@ -1141,6 +1145,11 @@
         {
           "required": [
             "file"
+          ]
+        },
+        {
+          "required": [
+            "role"
           ]
         }
       ]
@@ -1325,7 +1334,7 @@
       ]
     },
     "image-part": {
-      "description": "An image of a produced output or of a picture file: its height keeps the picture's proportions where none is given.",
+      "description": "An image of a produced output, a picture file or a picture role: its height keeps the picture's proportions where none is given.",
       "type": "object",
       "required": [
         "image",

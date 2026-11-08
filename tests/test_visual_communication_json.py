@@ -1,7 +1,8 @@
-"""The JSON code writer, spelling form 1 (visual-communication DEC-004 point 4, DEC-005 points 7
-to 9): the document written unchanged in one fixed text, the reference output pinned to its
-version, the schema it holds to, and what it refuses. What a run and the check make of its
-code is in `test_visual_communication_code.py`, as for any code writer."""
+"""The JSON code writer, spelling forms 1 and 2 (visual-communication DEC-004 point 4, DEC-005
+points 7 to 9, DEC-025 point 4): the document written unchanged in one fixed text, as the
+version of it each form is, the reference output pinned to its version, the schema each
+form holds to, and what it refuses. What a run and the check make of its code is in
+`test_visual_communication_code.py`, as for any code writer."""
 
 from __future__ import annotations
 
@@ -59,7 +60,7 @@ def small(type_: str = "number", value: Any = 1) -> dict[str, Any]:
     token = {"type": type_, "values": {"default": value}}
     return {
         "document": "visual-communication/values",
-        "version": 1,
+        "version": 2,
         "lock": {"lab": "1.0.0"},
         "keys": ["default"],
         "tokens": {"a.b": token},
@@ -100,8 +101,37 @@ def test_the_test_brand_gives_the_reference_file_of_the_writers_version(
     assert written(document) == REFERENCE[writer.VERSION].read_text(encoding="utf-8")
 
 
-def test_the_file_is_the_document_unchanged(document: dict[str, Any]) -> None:
-    assert json.loads(written(document)) == document
+def test_the_file_is_the_document_unchanged_as_the_version_its_form_is(
+    document: dict[str, Any],
+) -> None:
+    assert json.loads(written(document, form=2)) == document
+    assert json.loads(written(document)) == {**document, "version": 1}
+
+
+#: The values a picture role takes in a document: a file of the brand's version, and none.
+LOGO = {
+    "type": "picture",
+    "values": {
+        "default": {"file": "logo.png", "library": "lab"},
+        "colour-scheme.dark": None,
+    },
+}
+
+
+def test_form_2_writes_a_picture_role_and_form_1_the_rest_as_before() -> None:
+    """Form 2 holds a picture role's file, and none where the brand gives it none; form 1
+    holds no picture role, and the command hands it none (DEC-025 point 4)."""
+    two = {**small(), "keys": ["default", "colour-scheme.dark"]}
+    two["tokens"] = {"a.b": {"type": "number", "values": {"default": 1, "colour-scheme.dark": 2}}}
+    held = {**two, "tokens": {**two["tokens"], "picture.logo": LOGO}}
+    assert json.loads(written(held, form=2)) == held
+    assert '        "default": {"file":"logo.png","library":"lab"},\n' in written(held, form=2)
+    assert '        "colour-scheme.dark": null\n' in written(held, form=2)
+    assert files.shape_problems(json.loads(written(held, form=2)), "values-2") == []
+    assert written(two) == written(two, form=1)
+    assert json.loads(written(two))["version"] == 1
+    with pytest.raises(writer.JsonError, match="form 1 of the json writer has no form for a pic"):
+        written(held)
 
 
 def test_a_typography_is_written_with_its_five_members(document: dict[str, Any]) -> None:
@@ -121,8 +151,9 @@ def test_every_value_type_the_document_can_hold_is_written() -> None:
         for type_, value in OF_EACH_TYPE.items()
     }
     document = {**small(), "tokens": held}
-    assert json.loads(written(document)) == document
+    assert json.loads(written(document, form=2)) == document
     assert files.shape_problems(json.loads(written(document)), "values") == []
+    assert files.shape_problems(json.loads(written(document, form=2)), "values-2") == []
 
 
 def test_each_set_of_values_is_named_by_the_key_of_its_combination(
@@ -223,26 +254,35 @@ def test_a_document_of_no_token_is_written() -> None:
 # --- the schema ---------------------------------------------------------------------------------
 
 
-def test_the_file_holds_the_schema_of_the_document(document: dict[str, Any]) -> None:
+def test_the_file_holds_the_schema_of_its_form(document: dict[str, Any]) -> None:
     assert files.shape_problems(json.loads(written(document)), "values") == []
+    assert files.shape_problems(json.loads(written(document, form=2)), "values-2") == []
 
 
-def test_the_schema_names_the_version_of_the_document_the_writer_writes() -> None:
-    schema = reading.read_json(CAPABILITY / "schemas" / "values.schema.json")
-    assert schema["properties"]["document"]["const"] == values.DOCUMENT
-    assert schema["properties"]["version"]["const"] == values.VERSION
-    assert set(schema["$defs"]["token"]["properties"]["type"]["enum"]) == set(tokens.TYPES)
-    assert set(schema["$defs"]["typography"]["required"]) == set(tokens.TYPOGRAPHY)
+@pytest.mark.parametrize(
+    ("schema", "version", "types"),
+    [("values", 1, tokens.TYPES), ("values-2", 2, tokens.ROLE_TYPES)],
+    ids=["form-1", "form-2"],
+)
+def test_each_schema_names_the_version_of_the_document_its_form_is(
+    schema: str, version: int, types: tuple[str, ...]
+) -> None:
+    found = reading.read_json(CAPABILITY / "schemas" / f"{schema}.schema.json")
+    assert found["properties"]["document"]["const"] == values.DOCUMENT
+    assert found["properties"]["version"]["const"] == version
+    assert set(found["$defs"]["token"]["properties"]["type"]["enum"]) == set(types)
+    assert set(found["$defs"]["typography"]["required"]) == set(tokens.TYPOGRAPHY)
+    assert values.VERSIONS == (1, 2) and values.VERSION == 2
 
 
 # --- what it refuses ----------------------------------------------------------------------------
 
 
 def test_it_refuses_another_form_or_document_and_a_prefix(document: dict[str, Any]) -> None:
-    with pytest.raises(writer.JsonError, match="form 2"):
-        written(document, form=2)
+    with pytest.raises(writer.JsonError, match="form 3"):
+        written(document, form=3)
     with pytest.raises(writer.JsonError, match="document"):
-        written({**document, "version": 2})
+        written({**document, "version": 1})
     with pytest.raises(writer.JsonError, match="document"):
         written({**document, "document": "another"})
     with pytest.raises(writer.JsonError, match="a token path stays as the brand exports it"):
@@ -269,12 +309,15 @@ def test_its_declaration_is_plain_data_the_seam_ships_as_a_code_writer() -> None
     found = seam.declaration("json", seam.CODE_WRITER)
     assert found is writer_declaration.DECLARATION
     assert found["module"] == "json"
-    assert found["forms"] == [1]
+    assert found["forms"] == [1, 2]
     assert found["prefix"] is False
     assert found["programs"] == [] and found["services"] == []
     assert found["version"] == writer.VERSION
 
 
-def test_it_declares_every_type_and_kind_the_document_can_hold() -> None:
-    assert set(writer_declaration.DECLARATION["kinds"]) == set(tokens.TYPES)
+def test_it_declares_every_type_and_kind_each_form_can_hold() -> None:
+    kinds = writer_declaration.DECLARATION["kinds"]
+    assert set(kinds) == {"1", "2"}
+    assert set(kinds["1"]) == set(tokens.TYPES)
+    assert set(kinds["2"]) == set(tokens.ROLE_TYPES)
     assert set(writer_declaration.DECLARATION["axis-kinds"]) == set(tokens.AXIS_KINDS)

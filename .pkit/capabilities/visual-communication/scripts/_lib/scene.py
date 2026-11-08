@@ -20,8 +20,10 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   the image's frame. One of a picture file holds the file's bare name, `file`, and where it
   lies, `library`: `piece` for the piece's own `pictures/`, else `<library>@<version>`. Its
   name's source is the content's field that names it, or the component's default, and it
-  holds no variants and no points (DEC-025 point 7). A renderer is handed the file each
-  image shows in each combination, whatever its source, never the scene's names.
+  holds no variants and no points (DEC-025 point 7). One of a picture role holds the role,
+  `role`, as a paint holds its colour's, so one scene serves every value mode; its source is
+  the brand's value, `role:<token path>`. A renderer is handed the file each image shows in each
+  combination, whatever its source, never the scene's names.
 - **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
   and `marker-end`, where it draws one. A tie's connector also holds, where its route
   turns, every point of it, `points`, its ends first and last, and `attached`: for each
@@ -484,6 +486,9 @@ class _Emitter:
         self.ctx.add(found)
 
     def _image(self, element: Element, instance: Instance, node: Node) -> None:
+        if node.role:
+            self._picture_role(element, instance, node)
+            return
         if node.read is not None:
             self._picture_file(element, instance, node)
             return
@@ -522,6 +527,14 @@ class _Emitter:
             lies = instance.library or names.PIECE
         element.set("file", node.file, source)
         element.set("library", lies, ENGINE)
+        element.set("preserveAspectRatio", FIT, ENGINE)
+
+    def _picture_role(self, element: Element, instance: Instance, node: Node) -> None:
+        """An image of a picture role (DEC-025 point 7): the role, which stays a role, as a
+        paint's colour does, since its file may follow a value axis, its source the brand's
+        value. It holds no file, no variants and no points: the engine hands each renderer
+        the file the brand gives the role in each combination."""
+        element.set("role", node.role, f"role:{node.role}")
         element.set("preserveAspectRatio", FIT, ENGINE)
 
     def _items(self, element: Element, instance: Instance, node: Node) -> None:

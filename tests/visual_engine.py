@@ -121,7 +121,8 @@ class FakeEnv:
     families are none unless `families` gives them, and its concepts none unless
     `concepts` gives them: each `<notation>/<concept>` mapped to its family, or to None for
     a concept its notation cannot read. A notation the piece names is one a concept of
-    `concepts` comes from."""
+    `concepts` comes from. Its picture roles are none unless `logos` gives them: each role
+    mapped to the file the brand gives it, or to None for none."""
 
     def __init__(
         self,
@@ -132,6 +133,7 @@ class FakeEnv:
         families: Mapping[str, Mapping[str, str]] | None = None,
         concepts: Mapping[str, str | None] | None = None,
         files: Mapping[str, Path] | None = None,
+        logos: Mapping[str, Path | None] | None = None,
     ) -> None:
         self.components = {**COMPONENTS, **(components or {})}
         self.roles = {**ROLES, **(roles or {})}
@@ -141,6 +143,7 @@ class FakeEnv:
         self.concepts = dict(concepts or {})
         # Each picture file, `<holder>/<bare name>`, and the file that holds its bytes.
         self.files = dict(files or {})
+        self.logos = dict(logos or {})
         self.asked: list[str] = []
 
     def component(self, use: str) -> dict:
@@ -181,6 +184,17 @@ class FakeEnv:
                 fix=refused.fix,
             )
             return pictures.Judged(None, (fault,))
+
+    def picture_role(self, token_path: str) -> Any:
+        """The picture of the file `logos` gives the picture role, read by the capability's
+        reader; None where it gives none."""
+        self.asked.append(f"picture role {token_path}")
+        if token_path in self.logos:
+            path = self.logos[token_path]
+            return None if path is None else pictures.read(path.read_bytes(), path.name)
+        if token_path in self.roles:
+            raise ValueError(f"the role @{token_path} is not a picture")
+        raise KeyError(token_path)
 
     def family(self, name: str) -> dict[str, str]:
         self.asked.append(f"family {name}")

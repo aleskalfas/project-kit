@@ -110,8 +110,8 @@ def test_an_image_shows_exactly_one_of_the_engines_sources() -> None:
 
 @pytest.mark.parametrize(
     "image",
-    [{"produced": "text"}, {"content": "text"}, {"file": "logo.png"}],
-    ids=["produced", "content", "file"],
+    [{"produced": "text"}, {"content": "text"}, {"file": "logo.png"}, {"role": "picture.logo"}],
+    ids=["produced", "content", "file", "role"],
 )
 def test_an_image_of_each_source_holds_the_schema_and_the_engine(image: dict[str, str]) -> None:
     data = changed("parts.extra", {"image": image, "width": "=:width"})
@@ -310,7 +310,11 @@ def repeat(**more: Any) -> dict[str, Any]:
             "an image of every source",
             {"image": {"produced": "text", "content": "text", "file": "a.png"}, "width": "=:width"},
         ),
-        ("an image of a picture role", {"image": {"role": "picture.logo"}, "width": "=:width"}),
+        (
+            "an image of a picture role and a picture file",
+            {"image": {"role": "picture.logo", "file": "logo.png"}, "width": "=:width"},
+        ),
+        ("an image of a role that is no path", {"image": {"role": "Logo"}, "width": "=:width"}),
     ],
     ids=lambda value: value if isinstance(value, str) else "",
 )
