@@ -418,22 +418,24 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The reviewer
 
-`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 To use it:
 
 1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names what it did not see. What it did not see is not looked at, never clean.
+2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 
 You may hand it a build pipeline's drawings instead, fetched into a folder of their own ([A pipeline's drawings](outputs.md#a-pipelines-drawings)). It names those images as drawn by the pipeline, at the commit it drew.
 
-Each finding names the page, and the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)). A finding is one of two kinds:
+Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
 - **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
-- **A note,** anything else worth a look.
+- **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
+- **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
+- **A note,** anything else worth a look. A note never fails.
 
 Its findings are advice. They join no validation and hold no merge.
 

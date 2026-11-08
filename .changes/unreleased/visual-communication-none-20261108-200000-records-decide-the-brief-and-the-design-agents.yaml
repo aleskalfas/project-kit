@@ -1,9 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  Two proposed records design ahead (#2885). DEC-029 decides a piece's brief:
-  one file in the piece's folder that says what its pictures must show and why
-  its design is as it is. DEC-030 decides the design agents: `graphic-designer`
-  and a widened `graphic-design-reviewer`. No schema, check, agent, command or
-  library changes in this change, so no surface moves. The Tasks those records
-  name build them, each with its own changeset.
