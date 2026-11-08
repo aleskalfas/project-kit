@@ -182,17 +182,23 @@ def lay_out_drawing(
     return root
 
 
-def write_picture(root: Path, framing: ModuleType, colour: tuple[int, ...] = RED) -> Path:
+def write_picture(
+    root: Path,
+    framing: ModuleType,
+    colour: tuple[int, ...] = RED,
+    by_variant: Mapping[str, tuple[int, ...]] | None = None,
+) -> Path:
     """The callout's picture as `pkit visual produce` keeps it, written directly: a PNG of
-    `colour` for each variant, exposing `tip` at (75, 25), and its record, with the
-    fingerprint of the files as they are now (the test producer registered with the
-    `seam` beside `framing`)."""
+    `colour` for each variant, or of the colour `by_variant` gives it, exposing `tip` at
+    (75, 25), and its record, with the fingerprint of the files as they are now (the test
+    producer registered with the `seam` beside `framing`)."""
     plan = framing.plan(root, "visual", PIECE, OUTPUT)
     folder = root / PIECE_FOLDER / "produced" / OUTPUT
     folder.mkdir(parents=True, exist_ok=True)
-    data = producer.png(100, 100, (colour[0], colour[1], colour[2], colour[3]))
     digests = {}
     for key in plan.variants:
+        red, green, blue, alpha = (by_variant or {}).get(key, colour)
+        data = producer.png(100, 100, (red, green, blue, alpha))
         (folder / f"{key}.png").write_bytes(data)
         digests[key] = reading.sha256(data)
     tip = {key: {"x": 75, "y": 25} for key in plan.variants}
