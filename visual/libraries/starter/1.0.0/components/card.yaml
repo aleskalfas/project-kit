@@ -36,9 +36,11 @@ options:
 colour: neutral
 
 values:
-  # Where what the card holds starts, inside its edge and its bar, and how wide it is.
+  # Where what the card holds starts, inside its edge and its left bar, and how wide it
+  # is. Its top is the same with any bar, so the heads of a row of cards stand at one
+  # height, and it clears a top bar, however thick a brand makes it.
   left: "=bar-left.right + @starter.inset"
-  top: "=bar-top.bottom + @starter.inset"
+  top: "=max(@starter.inset, @starter.bar + @space.2)"
   inner: "=:width - left - @starter.inset"
 
 parts:
