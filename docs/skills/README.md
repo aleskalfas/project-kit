@@ -188,7 +188,17 @@ Write the skill as a file in `.pkit/skills/project/`, and run `pkit sync`. No co
 - **Its helpers.** A skill that needs a template or a script beside it becomes a folder, `<name>/<name>.md`, with the helpers beside it ([COR-015](../../.pkit/decisions/core/COR-015-artifact-file-layout.md)).
 
 > [!WARNING]
-> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Only a capability's upgrade, and its install for some skills, asks you first. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Updates of the replaced skill then reach no session. Each sync names both files, on a `suspended` line. Only a capability's upgrade, and its install for some skills, asks you first ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+
+Below, you copy the methodology's `decision-author` skill into your own skills, to change it. Then you sync, and the sync names the skill yours replaces:
+
+```console
+$ cp .pkit/skills/core/decision-author.md .pkit/skills/project/decision-author.md
+$ pkit sync | grep -e decision-author -e "suspended —"
+  updated    .claude/skills/decision-author/SKILL.md -> ../../../.pkit/skills/project/decision-author.md
+  suspended  .pkit/skills/core/decision-author.md (replaced by .pkit/skills/project/decision-author.md)
+  note: 1 shipped skill(s) suspended — a file of the project's takes each one's name, so no session reaches it.
+```
 
 Below, you write a skill that cites the document holding your notes' format. Then you sync, check where the skill is deployed, and validate:
 

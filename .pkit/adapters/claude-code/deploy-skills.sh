@@ -25,7 +25,11 @@
 # walkthroughs the dispatcher delegates to.
 #
 # Behavior:
-# - Project namespace wins on collision (per COR-005).
+# - Project namespace wins on collision (per COR-005). Each run names each
+#   suspension it applies (COR-071): a `suspended` line for each skill of core
+#   or a registered capability that a file of the project's replaces — its own
+#   skill of that name, or a file at the skill's place the deploy did not make —
+#   naming both files, and a closing note with their count.
 # - Capability skills deploy only for the capabilities registered in the
 #   backbone manifest (.pkit/manifest.yaml), not for every directory under
 #   .pkit/capabilities/: a capability unregistered in place keeps its subtree
@@ -44,7 +48,7 @@
 #   per COR-020) is skipped loudly with remediation — it does NOT abort the
 #   run (#537). Valid skills still deploy; the run exits 0 with a summary.
 # - Output uses tagged status lines: created, updated, exists, removed,
-#   skipped, error.
+#   skipped, suspended, error.
 
 set -euo pipefail
 
@@ -121,6 +125,28 @@ resolve_skill() {
     return 1
 }
 
+# Name each suspension the deploy applies (COR-071): one `suspended` line for
+# each skill of NAME that core or a registered capability ships, naming HOLDER,
+# the file of the project's that takes the name in its place. Each run names it
+# again, for as long as it holds. Counts the lines in `suspended`.
+report_suspensions() {
+    local name="$1"
+    local holder="$2"
+    local dir shadowed
+    while IFS= read -r dir; do
+        [ "$dir" = "$KIT_SKILLS/project" ] && continue
+        if [ -f "$dir/$name.md" ]; then
+            shadowed="$dir/$name.md"
+        elif [ -f "$dir/$name/$name.md" ]; then
+            shadowed="$dir/$name/$name.md"
+        else
+            continue
+        fi
+        status "suspended" "${shadowed#"$ROOT"/} (replaced by $holder)"
+        suspended=$((suspended + 1))
+    done < <(skill_locations)
+}
+
 # Compute the relative path from .claude/skills/<name>/ to a source
 # file inside .pkit/{skills|capabilities}/. The destination directory
 # is 3 levels deep (.claude/skills/<name>/), so the prefix is `../../../`.
@@ -185,6 +211,7 @@ shopt -u nullglob
 # Pass 1: ensure every kit skill has the right .claude/skills/<name>/SKILL.md symlink,
 # plus per-sibling symlinks for composite skills (folder-form with supporting siblings).
 skipped=0
+suspended=0
 while IFS= read -r name; do
     [ -n "$name" ] || continue
     # Guard the resolution: expected_for returns 1 when a name resolves to
@@ -209,6 +236,10 @@ while IFS= read -r name; do
 
     mkdir -p "$target_dir"
 
+    # The file of the project's that takes the name, if any (COR-071): a file
+    # the deploy did not make at the skill's place, or else the project's own
+    # skill when it is the one that deploys.
+    holder=""
     if [ -L "$target" ]; then
         current="$(readlink "$target")"
         if [ "$current" = "$expected" ]; then
@@ -219,12 +250,20 @@ while IFS= read -r name; do
             status "updated" ".claude/skills/$name/SKILL.md -> $expected"
         else
             status "skipped" ".claude/skills/$name/SKILL.md (user symlink -> $current)"
+            holder=".claude/skills/$name/SKILL.md, a file the deploy did not make"
         fi
     elif [ -e "$target" ]; then
         status "skipped" ".claude/skills/$name/SKILL.md (user content)"
+        holder=".claude/skills/$name/SKILL.md, a file the deploy did not make"
     else
         ln -s "$expected" "$target"
         status "created" ".claude/skills/$name/SKILL.md -> $expected"
+    fi
+    if [ -z "$holder" ] && [[ "$expected" == ../../../.pkit/skills/project/* ]]; then
+        holder="${expected#../../../}"
+    fi
+    if [ -n "$holder" ]; then
+        report_suspensions "$name" "$holder"
     fi
 
     # For composite skills (folder-form with supporting siblings per
@@ -322,4 +361,8 @@ echo "Done."
 if [ "$skipped" -gt 0 ]; then
     echo "  note: $skipped skill(s) skipped — unresolved canonical file; the rest deployed."
     echo "        → A composite skill folder needs a <name>/<name>.md dispatcher (COR-020)."
+fi
+if [ "$suspended" -gt 0 ]; then
+    echo "  note: $suspended shipped skill(s) suspended — a file of the project's takes each one's name, so no session reaches it."
+    echo "        → To deploy one again, rename or remove the file its line names as replacing it, then run pkit sync."
 fi

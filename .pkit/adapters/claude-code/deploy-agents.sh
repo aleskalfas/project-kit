@@ -18,7 +18,11 @@
 # Behavior:
 # - Name collision: the project's agent wins, then an installed capability's
 #   (the first by name), then core's (the agents README, "Name-collision
-#   precedence"; COR-026).
+#   precedence"; COR-026). Each run names each suspension it applies
+#   (COR-071): a `suspended` line for each agent of an installed capability or
+#   core that a file of the project's replaces — its own agent of that name,
+#   deployed or skipped, or a file at the agent's place without the deploy's
+#   mark — naming both files, and a closing note with their count.
 # - Overlay placeholders (`<category-name>`) are resolved from
 #   `overlay.yaml`'s top-level categories, with per-agent values in
 #   `overrides.<name>` taking precedence per COR-013.
@@ -45,7 +49,7 @@
 # - A listed agent whose canonical source doesn't resolve (e.g. a folder
 #   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
 #   loudly rather than aborting the run (#537).
-# - Tagged status lines: created, updated, exists, skipped, removed.
+# - Tagged status lines: created, updated, exists, skipped, removed, suspended.
 #
 # Stale-removal pass (now that the marker convention exists): after the
 # deploy pass, a `.claude/agents/<name>.md` that carries our marker but whose
@@ -105,6 +109,23 @@ source_for() {
         source_in "$dir" "$name" && return 0
     done
     return 1
+}
+
+# Name each suspension the deploy applies (COR-071): one `suspended` line for
+# each agent of NAME that an installed capability or core ships, naming HOLDER,
+# the file of the project's that takes the name in its place. Nothing when
+# HOLDER is empty. Each run names it again, for as long as it holds. Counts the
+# lines in `suspended`.
+report_suspensions() {
+    local name="$1"
+    local holder="$2"
+    local dir shadowed
+    [ -n "$holder" ] || return 0
+    for dir in "$KIT_CAPABILITIES"/*/agents "$KIT_AGENTS/core"; do
+        shadowed="$(source_in "$dir" "$name")" || continue
+        status "suspended" "${shadowed#"$ROOT"/} (replaced by $holder)"
+        suspended=$((suspended + 1))
+    done
 }
 
 # Deduped list of agent names across core, project, and capability
@@ -175,6 +196,17 @@ deploy_one() {
     fi
     local dest="$CLAUDE_AGENTS/$name.md"
 
+    # The file of the project's that takes the name, if any (COR-071): a file
+    # at the agent's place without the deploy's mark, or else the project's own
+    # agent, whether this run deploys it or skips it. Named after the line that
+    # reports the agent.
+    local holder=""
+    if [ -e "$dest" ] && ! head -n 5 "$dest" | grep -qF "$MARKER"; then
+        holder=".claude/agents/$name.md, a file the deploy did not make"
+    elif [[ "$source_file" == "$KIT_AGENTS/project/"* ]]; then
+        holder="${source_file#"$ROOT"/}"
+    fi
+
     local tmpfile tmperr
     tmpfile="$(mktemp)"
     tmperr="$(mktemp)"
@@ -209,6 +241,7 @@ deploy_one() {
         fi
         rm -f "$tmpfile" "$tmperr"
         unresolved=$((unresolved + 1))
+        report_suspensions "$name" "$holder"
         return 0
     fi
     # The agent resolved, but the resolver may still have something to report —
@@ -236,6 +269,7 @@ deploy_one() {
     if [ -e "$dest" ] && ! head -n 5 "$dest" | grep -qF "$MARKER"; then
         status "skipped" ".claude/agents/$name.md (no kit marker — adopter content, or a copy from before the marker: it is STALE against agents/$name.md; to regenerate it from source, delete it and rerun this script)"
         rm -f "$tmpfile"
+        report_suspensions "$name" "$holder"
         return 0
     fi
 
@@ -253,6 +287,7 @@ deploy_one() {
         status "created" ".claude/agents/$name.md"
     fi
     rm -f "$tmpfile"
+    report_suspensions "$name" "$holder"
 }
 
 # Pass: deploy every kit agent. An agent with an unresolved overlay category
@@ -260,6 +295,7 @@ deploy_one() {
 # deploy_one. `exit_code` is reserved for genuinely catastrophic failures.
 exit_code=0
 unresolved=0
+suspended=0
 while IFS= read -r name; do
     [ -n "$name" ] || continue
     deploy_one "$name" || exit_code=$?
@@ -289,5 +325,9 @@ if [ "$unresolved" -gt 0 ]; then
     echo "        → Per-agent remediation is printed above; it differs by category."
     echo "        → Conventional doc layout:      pkit agents adopt <agent>"
     echo "        → Anything else:                pkit agents reconcile --write → set paths → pkit sync"
+fi
+if [ "$suspended" -gt 0 ]; then
+    echo "  note: $suspended shipped agent(s) suspended — a file of the project's takes each one's name, so no session reaches it."
+    echo "        → To deploy one again, rename or remove the file its line names as replacing it, then run pkit sync."
 fi
 exit $exit_code

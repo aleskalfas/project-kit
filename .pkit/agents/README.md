@@ -24,7 +24,7 @@ pkit:
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/agents/project/overlay.yaml
         - .pkit/rules/core.md
-      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11"]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, COR-071, ADR-051, ADR-052, "ADR-065#11"]
       artefact:
         - .pkit/agents/hooks.md#
         - .pkit/agents/storyboards.md#
@@ -443,9 +443,10 @@ Each adapter handles its own deploy (COR-005), and future adapters for other har
 5. It ends the body with one sentence, which replaces the session scratch directory the harness's environment names with `.agent-workspace/`.
 6. It writes the copy to `.claude/agents/<name>.md`, with a deploy mark as the front matter's first line: `# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync`.
 
-What it reports, a line for each definition, such as `created`, `updated`, `exists`, `skipped`, `removed` or `warning`:
+What it reports, a line for each definition, such as `created`, `updated`, `exists`, `skipped`, `removed`, `warning` or `suspended`:
 
-- **A file without the mark** at the copy's path is left as it is, and reported `skipped`. It is the project's own, or a copy from before the mark. To have the deploy write its own, delete the file and deploy again.
+- **A file without the mark** at the copy's path is left as it is, and reported `skipped`. It is the project's own, or a copy from before the mark. It keeps out each shipped definition of its name, which a `suspended` line names (below). To have the deploy write its own, delete the file and deploy again.
+- **A suspension** is named on each run, by a `suspended` line for each shipped definition a file of the project's keeps out ([COR-071](../decisions/core/COR-071-suspensions-named.md)). The line names both files, and the run ends with their count, as a report, not a warning. The project's file is its own definition of that name, deployed or skipped.
 - **A marked copy that no source ships any more** is removed. To keep one, delete its mark line, and it reads as the project's.
 - **A folder with no definition named after it,** such as one half written, is skipped, and the rest deploy.
 - **A skipped definition** never stops the others. A copy an earlier deploy wrote stays as it was. The run ends with the count skipped, and the remedies.

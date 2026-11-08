@@ -218,6 +218,114 @@ def test_deploy_takes_the_first_capability_by_name_between_two(mock_kit: Path) -
     assert _deployed_description(mock_kit, "twin") == "From a-cap."
 
 
+# --- suspensions: a project agent of a shipped agent's name (COR-071) ---------
+
+
+def _suspended_lines(output: str) -> list[str]:
+    return [line.strip() for line in output.splitlines() if line.startswith("  suspended ")]
+
+
+def test_a_project_agent_of_a_core_agent_s_name_is_named_with_both_files(mock_kit: Path) -> None:
+    """The project's agent deploys in core's place, and every run names both files."""
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_area_agent(mock_kit, "project", "critic")
+
+    first = _run_deploy(mock_kit)
+    again = _run_deploy(mock_kit)
+
+    assert first.returncode == 0, first.stderr
+    assert _deployed_description(mock_kit, "critic") == "From project."
+    expected = [
+        "suspended  .pkit/agents/core/critic/critic.md"
+        " (replaced by .pkit/agents/project/critic/critic.md)"
+    ]
+    assert _suspended_lines(first.stdout) == expected
+    assert "1 shipped agent(s) suspended" in first.stdout
+    assert "exists     .claude/agents/critic.md" in again.stdout
+    assert _suspended_lines(again.stdout) == expected
+
+
+def test_a_project_agent_of_a_name_no_shipped_agent_has_is_no_suspension(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_area_agent(mock_kit, "project", "release-reviewer")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "suspended" not in result.stdout
+
+
+def test_each_shipped_agent_a_project_agent_replaces_is_named(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    _write_area_agent(mock_kit, "project", "shared")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/capabilities/my-cap/agents/shared.md"
+        " (replaced by .pkit/agents/project/shared/shared.md)",
+        "suspended  .pkit/agents/core/shared/shared.md"
+        " (replaced by .pkit/agents/project/shared/shared.md)",
+    ]
+
+
+def test_an_unmarked_file_at_a_core_agent_s_place_is_named_as_replacing_it(
+    mock_kit: Path,
+) -> None:
+    """A file without the deploy's mark keeps core's agent out, as when a release
+    adds core's agent under a name the project keeps by hand."""
+    _write_area_agent(mock_kit, "core", "critic")
+    own = mock_kit / ".claude" / "agents" / "critic.md"
+    own.parent.mkdir(parents=True)
+    own.write_text("---\nname: critic\ndescription: Kept by hand.\n---\n", encoding="utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "Kept by hand." in own.read_text(encoding="utf-8")
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/critic/critic.md"
+        " (replaced by .claude/agents/critic.md, a file the deploy did not make)"
+    ]
+
+
+def test_a_project_agent_the_deploy_skips_still_suspends_the_shipped_one(
+    mock_kit: Path,
+) -> None:
+    """The project's agent takes the name even on a run that skips it for a gap
+    in the overlay, so core's is named as left out."""
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_agent(
+        mock_kit,
+        "project",
+        "critic",
+        "---\nname: critic\ndescription: From project.\nowns:\n  - <undefined-category>\n"
+        "---\n\n# Critic\n",
+    )
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/critic/critic.md"
+        " (replaced by .pkit/agents/project/critic/critic.md)"
+    ]
+
+
+def test_a_capability_agent_over_core_s_suspends_nothing(mock_kit: Path) -> None:
+    """A capability's agent over core's is precedence between shipped agents."""
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "suspended" not in result.stdout
+
+
 def test_the_python_resolvers_pick_the_agent_the_deploy_writes(mock_kit: Path) -> None:
     """`pkit agents`, the refs ownership check and `pkit new storyboard` name "the
     agent that deploys" through their own resolvers; each must pick the source
