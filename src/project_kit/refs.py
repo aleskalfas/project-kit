@@ -322,7 +322,7 @@ def outcome(target_root: Path) -> Outcome:
     declare — is a **warning**: the artifact deploys and resolves regardless,
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
-    provider answers, two providers at one tier, a missing storyboard, a
+    provider answers, two providers at a hook's winning tier, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
     model or effort the harness does not accept, an agent's `reads.patterns`
     entry that is neither a placeholder nor a path — is an **error**. A citation of
@@ -576,15 +576,51 @@ def _adr_records_dir_or_none(target_root: Path) -> Path | None:
         return None
 
 
-def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
-    """Pick the winning provider for a hook by precedence (project > capability > adapter >
-    core)."""
-    candidates = [p for p in providers if p.hook == hook]
+#: Each provider tier's rank in the precedence a hook binds by, the highest first
+#: (COR-013 point 4, "Provider precedence").
+TIER_RANK = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
+
+
+def by_precedence(providers: list[Provider]) -> list[Provider]:
+    """The providers in precedence order, the highest tier first, then by source."""
+    return sorted(providers, key=lambda p: (TIER_RANK.get(p.tier, 99), p.source))
+
+
+def winning_providers(providers: list[Provider], hook: str) -> list[Provider]:
+    """The providers of `hook` at its winning tier, the highest by precedence that holds
+    one, sorted by source. Empty where no provider declares the hook.
+
+    One binds the hook. Two or more are a same-tier collision, which binds none of them:
+    COR-013 point 4 refuses it rather than pick. A provider at a higher tier binds the
+    hook, so it settles a collision at a tier below it.
+    """
+    candidates = by_precedence([p for p in providers if p.hook == hook])
     if not candidates:
-        return None
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    candidates.sort(key=lambda p: order.get(p.tier, 99))
-    return candidates[0]
+        return []
+    return [p for p in candidates if p.tier == candidates[0].tier]
+
+
+def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
+    """The provider a hook binds to: the one at its winning tier (`winning_providers`).
+    None where no provider declares the hook, or where two collide at that tier."""
+    winners = winning_providers(providers, hook)
+    return winners[0] if len(winners) == 1 else None
+
+
+def collision_diagnosis(winners: list[Provider]) -> str:
+    """Why a hook whose winning tier holds two or more providers binds none, and how the
+    project settles it (COR-013 point 4)."""
+    tier = winners[0].tier
+    sources = ", ".join(p.source for p in winners)
+    remedy = (
+        "Keep the hook in the `answers:` of one of the project's skills"
+        if tier == "project"
+        else "Uninstall all but one, or add a provider of the project's"
+    )
+    return (
+        f"same-tier collision at tier '{tier}': multiple providers ({sources}), "
+        f"so none binds. {remedy} (COR-013 point 4)."
+    )
 
 
 #: The version of the document `pkit refs lookup --json` prints.
@@ -2959,21 +2995,14 @@ def _validate_operational_citations(target_root: Path) -> list[Issue]:
 
 
 def _validate_same_tier_collisions(providers: list[Provider]) -> list[Issue]:
-    """Two providers in the same tier providing the same hook refuse rather than silently pick."""
+    """Each hook whose winning tier holds two providers, which bind neither rather than
+    one picked (COR-013 point 4). A provider at a higher tier binds the hook, so a
+    collision below it is settled and no finding (`winning_providers`)."""
     issues: list[Issue] = []
-    grouped: dict[tuple[str, str], list[Provider]] = {}
-    for p in providers:
-        grouped.setdefault((p.hook, p.tier), []).append(p)
-    for (hook, tier), entries in grouped.items():
-        if len(entries) > 1:
-            sources = ", ".join(sorted(e.source for e in entries))
-            issues.append(
-                Issue(
-                    location=f"hooks/{hook}",
-                    diagnosis=f"same-tier collision at tier '{tier}': "
-                    f"multiple providers ({sources}). Disambiguate.",
-                )
-            )
+    for hook in sorted({p.hook for p in providers}):
+        winners = winning_providers(providers, hook)
+        if len(winners) > 1:
+            issues.append(Issue(location=f"hooks/{hook}", diagnosis=collision_diagnosis(winners)))
     return issues
 
 
