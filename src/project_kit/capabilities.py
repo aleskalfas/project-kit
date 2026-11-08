@@ -973,7 +973,8 @@ def detect_collisions(
 ) -> list[CollisionFinding]:
     """Find naming collisions between a capability's artifacts and already-installed content.
 
-    Today checks: skills + agents. Capability decisions are namespaced
+    Today checks: skills + agents, each in either form on both sides
+    (`artefact_names`, COR-015). Capability decisions are namespaced
     by the capability's directory name, so they cannot collide.
 
     `exclude` is threaded to `_collect_existing_artifact_names` to skip a
@@ -981,42 +982,15 @@ def detect_collisions(
     existing callers default to None and are unaffected.
     """
     findings: list[CollisionFinding] = []
-    # Skills collision: walk capability's skills/ and check against existing skills.
-    cap_skills = capability_source.path / "skills"
-    if cap_skills.is_dir():
-        existing_skill_names = _collect_existing_artifact_names(
-            target_root, "skills", exclude=exclude
-        )
-        for sk_file in sorted(cap_skills.iterdir()):
-            if sk_file.is_file() and sk_file.suffix == ".md":
-                name = sk_file.stem
-                if name in existing_skill_names:
-                    findings.append(
-                        CollisionFinding(
-                            artifact_kind="skill",
-                            artifact_name=name,
-                            source_path=sk_file,
-                            target_path=existing_skill_names[name],
-                        )
-                    )
-    # Agents collision: same.
-    cap_agents = capability_source.path / "agents"
-    if cap_agents.is_dir():
-        existing_agent_names = _collect_existing_artifact_names(
-            target_root, "agents", exclude=exclude
-        )
-        for ag_file in sorted(cap_agents.iterdir()):
-            if ag_file.is_file() and ag_file.suffix == ".md":
-                name = ag_file.stem
-                if name in existing_agent_names:
-                    findings.append(
-                        CollisionFinding(
-                            artifact_kind="agent",
-                            artifact_name=name,
-                            source_path=ag_file,
-                            target_path=existing_agent_names[name],
-                        )
-                    )
+    for kind, area in _ARTEFACT_AREAS.items():
+        shipped = artefact_names(capability_source.path / area)
+        if not shipped:
+            continue
+        existing = _collect_existing_artifact_names(target_root, area, exclude=exclude)
+        for name, source_path in shipped.items():
+            target_path = existing.get(name)
+            if target_path is not None:
+                findings.append(CollisionFinding(kind, name, source_path, target_path))
     return findings
 
 
@@ -2258,41 +2232,25 @@ def _collect_existing_artifact_names(
     """Gather all installed artifact names (skills or agents) keyed by name.
 
     Walks the area's `core/` + `project/` plus every installed
-    capability's `<area>/` directory. Returns name → path mapping.
+    capability's `<area>/` directory, in that order, each artefact in
+    either form (`artefact_names`, COR-015). Where two folders hold one
+    name, the later folder's path is kept. Returns name → path mapping.
 
     `exclude` names a capability directory to skip in the installed-
     capabilities walk. An incubated capability's own tree lives under
     `.pkit/capabilities/<name>/` too, so without this it could shadow
-    another capability's same-named artifact (last-writer-wins over an
-    unsorted `iterdir()`) and mask a genuine collision (#225).
+    another capability's same-named artifact (last-writer-wins) and mask a
+    genuine collision (#225).
     """
     out: dict[str, Path] = {}
-    # Area core + project
     for ns in ("core", "project"):
-        ns_dir = target_root / ".pkit" / area / ns
-        if not ns_dir.is_dir():
-            continue
-        for entry in ns_dir.iterdir():
-            if entry.is_file() and entry.suffix == ".md":
-                out[entry.stem] = entry
-            elif entry.is_dir():
-                inner = entry / f"{entry.name}.md"
-                if inner.is_file():
-                    out[entry.name] = inner
-    # Installed capabilities
+        out.update(artefact_names(target_root / ".pkit" / area / ns))
     caps_dir = target_root / ".pkit" / "capabilities"
     if caps_dir.is_dir():
-        for cap in caps_dir.iterdir():
-            if not cap.is_dir():
+        for cap in sorted(caps_dir.iterdir()):
+            if not cap.is_dir() or (exclude is not None and cap.name == exclude):
                 continue
-            if exclude is not None and cap.name == exclude:
-                continue
-            cap_area = cap / area
-            if not cap_area.is_dir():
-                continue
-            for entry in cap_area.iterdir():
-                if entry.is_file() and entry.suffix == ".md":
-                    out[entry.stem] = entry
+            out.update(artefact_names(cap / area))
     return out
 
 

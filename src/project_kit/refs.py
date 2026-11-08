@@ -12,6 +12,9 @@ queries:
   paths, not placeholders) and cross-agent path overlaps are flagged.
 - Agent policy: every `model:` / `effort:` an agent's front matter declares,
   or the overlay sets for one, is a value the harness accepts (#1047).
+- Pattern form: every `reads.patterns` entry of an agent is a `<category>`
+  placeholder the deploy resolves, or a path; a bare category name is reported
+  (#2481).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -162,6 +165,10 @@ STORYBOARD = "storyboard"
 CITATION = "citation"
 COMPOSES = "composes"
 AGENT_POLICY = "agent-policy"
+# An agent's `reads.patterns` entry that is neither a `<category>` placeholder nor a
+# path: the deploy resolves only a placeholder, so a bare name never reaches its paths
+# (#2481).
+READS_PATTERN = "reads-pattern"
 # A citation of a point its record does not hold (COR-058 point 1): read from prose, so
 # reported and never failed, by the member and by `pkit refs validate` alike.
 POINT_CITATION = "point-citation"
@@ -275,8 +282,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy
-    checks."""
+    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
+    `reads.patterns` form checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -299,6 +306,7 @@ def check_corpus(
     issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
+    issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
     return issues
 
 
@@ -314,9 +322,10 @@ def outcome(target_root: Path) -> Outcome:
     declare — is a **warning**: the artifact deploys and resolves regardless,
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
-    provider answers, two providers at one tier, a missing storyboard, a
+    provider answers, two providers at a hook's winning tier, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
-    model or effort the harness does not accept — is an **error**. A citation of
+    model or effort the harness does not accept, an agent's `reads.patterns`
+    entry that is neither a placeholder nor a path — is an **error**. A citation of
     a point its record does not hold is a **warning** too, read from prose as
     drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
     it fails on any finding but that last.
@@ -567,15 +576,51 @@ def _adr_records_dir_or_none(target_root: Path) -> Path | None:
         return None
 
 
-def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
-    """Pick the winning provider for a hook by precedence (project > capability > adapter >
-    core)."""
-    candidates = [p for p in providers if p.hook == hook]
+#: Each provider tier's rank in the precedence a hook binds by, the highest first
+#: (COR-013 point 4, "Provider precedence").
+TIER_RANK = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
+
+
+def by_precedence(providers: list[Provider]) -> list[Provider]:
+    """The providers in precedence order, the highest tier first, then by source."""
+    return sorted(providers, key=lambda p: (TIER_RANK.get(p.tier, 99), p.source))
+
+
+def winning_providers(providers: list[Provider], hook: str) -> list[Provider]:
+    """The providers of `hook` at its winning tier, the highest by precedence that holds
+    one, sorted by source. Empty where no provider declares the hook.
+
+    One binds the hook. Two or more are a same-tier collision, which binds none of them:
+    COR-013 point 4 refuses it rather than pick. A provider at a higher tier binds the
+    hook, so it settles a collision at a tier below it.
+    """
+    candidates = by_precedence([p for p in providers if p.hook == hook])
     if not candidates:
-        return None
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    candidates.sort(key=lambda p: order.get(p.tier, 99))
-    return candidates[0]
+        return []
+    return [p for p in candidates if p.tier == candidates[0].tier]
+
+
+def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
+    """The provider a hook binds to: the one at its winning tier (`winning_providers`).
+    None where no provider declares the hook, or where two collide at that tier."""
+    winners = winning_providers(providers, hook)
+    return winners[0] if len(winners) == 1 else None
+
+
+def collision_diagnosis(winners: list[Provider]) -> str:
+    """Why a hook whose winning tier holds two or more providers binds none, and how the
+    project settles it (COR-013 point 4)."""
+    tier = winners[0].tier
+    sources = ", ".join(p.source for p in winners)
+    remedy = (
+        "Keep the hook in the `answers:` of one of the project's skills"
+        if tier == "project"
+        else "Uninstall all but one, or add a provider of the project's"
+    )
+    return (
+        f"same-tier collision at tier '{tier}': multiple providers ({sources}), "
+        f"so none binds. {remedy} (COR-013 point 4)."
+    )
 
 
 #: The version of the document `pkit refs lookup --json` prints.
@@ -1148,6 +1193,11 @@ def _rot_candidates(path: str, art: Artifact, target_root: Path, *, link: bool) 
     return [Path(os.path.normpath(base / path)) for base in bases]
 
 
+# The ids of a project's own records, PRJ and ADR: each project numbers its own, so
+# such an id in a record another repository authors names one of that repository's.
+_PROJECT_RECORD_PREFIXES = ("PRJ-", "ADR-")
+
+
 def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = None) -> list[Issue]:
     """Each accepted record whose body cites a record that is still proposed.
 
@@ -1159,12 +1209,19 @@ def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = N
     that capability unless another capability's name stands just before it.
     Fenced code blocks, HTML comments and strikethrough are not read. One
     finding for each record and each proposed record it cites, with the lines.
+
+    A record the project receives as a synced copy (`synced_record_test`), such
+    as a core record in an adopter's project, is authored in another repository.
+    A `PRJ-` or `ADR-` id it cites names a record of that repository, never one
+    of this project, so such a citation is not read. In the methodology's source
+    no record is a synced copy, and every citation is read.
     """
-    from project_kit.decisions_validate import discover_decision_records
+    from project_kit.decisions_validate import discover_decision_records, synced_record_test
 
     if statuses is None:
         statuses = _index_decision_statuses(target_root)
     capabilities = frozenset(key.split(":", 1)[0] for key in statuses if ":" in key)
+    received = synced_record_test(target_root)
     issues: list[Issue] = []
     for record in discover_decision_records(target_root):
         try:
@@ -1182,8 +1239,9 @@ def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = N
             if target_root in record.path.parents
             else str(record.path)
         )
+        foreign = _PROJECT_RECORD_PREFIXES if received(rel) else ()
         for key in sorted(cited):
-            if statuses.get(key) != "proposed":
+            if statuses.get(key) != "proposed" or key.startswith(foreign):
                 continue
             lines = [first_line + line - 1 for line in cited[key]]
             where = f"line {lines[0]}" if len(lines) == 1 else f"lines {', '.join(map(str, lines))}"
@@ -1899,7 +1957,12 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
             else str(art.path)
         )
 
-        declared_paths_all = art.declared.reads_paths | art.declared.owns | art.declared.storyboards
+        # A path written under `reads.patterns` is a declared path like any other,
+        # never a category the pattern block below looks for.
+        pattern_paths = frozenset(p for p in art.declared.reads_patterns if _is_pattern_path(p))
+        declared_paths_all = (
+            art.declared.reads_paths | art.declared.owns | art.declared.storyboards | pattern_paths
+        )
         # Pattern tokens (`<category-name>`) often appear as `owns:` entries
         # and as backticked references in body. The body parser skips
         # template-marker tokens, so backward checks would otherwise demand
@@ -1958,8 +2021,11 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # the placeholder the deploy reads (`<project-conventions>`,
         # `agents_overlay.placeholder_category`); the placeholder must appear
         # in the file — a bare name in the body, a bracketed declaration
-        # already does, like an `owns:` placeholder.
-        pattern_names: set[str] = {p.strip("<>") for p in art.declared.reads_patterns}
+        # already does, like an `owns:` placeholder. A bare name in an agent's
+        # `reads.patterns` is `_validate_reads_patterns`'s finding as well.
+        pattern_names: set[str] = {
+            p.strip("<>") for p in art.declared.reads_patterns if not _is_pattern_path(p)
+        }
         for p in art.declared.reads_paths | art.declared.owns:
             if p.startswith("<") and p.endswith(">"):
                 pattern_names.add(p.strip("<>"))
@@ -2929,21 +2995,14 @@ def _validate_operational_citations(target_root: Path) -> list[Issue]:
 
 
 def _validate_same_tier_collisions(providers: list[Provider]) -> list[Issue]:
-    """Two providers in the same tier providing the same hook refuse rather than silently pick."""
+    """Each hook whose winning tier holds two providers, which bind neither rather than
+    one picked (COR-013 point 4). A provider at a higher tier binds the hook, so a
+    collision below it is settled and no finding (`winning_providers`)."""
     issues: list[Issue] = []
-    grouped: dict[tuple[str, str], list[Provider]] = {}
-    for p in providers:
-        grouped.setdefault((p.hook, p.tier), []).append(p)
-    for (hook, tier), entries in grouped.items():
-        if len(entries) > 1:
-            sources = ", ".join(sorted(e.source for e in entries))
-            issues.append(
-                Issue(
-                    location=f"hooks/{hook}",
-                    diagnosis=f"same-tier collision at tier '{tier}': "
-                    f"multiple providers ({sources}). Disambiguate.",
-                )
-            )
+    for hook in sorted({p.hook for p in providers}):
+        winners = winning_providers(providers, hook)
+        if len(winners) > 1:
+            issues.append(Issue(location=f"hooks/{hook}", diagnosis=collision_diagnosis(winners)))
     return issues
 
 
@@ -3019,6 +3078,45 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                     Issue(
                         location=str(agents_overlay.OVERLAY_PATH),
                         diagnosis=f"`overrides.{agent}.{key}`: {problem}.",
+                    )
+                )
+    return issues
+
+
+def _is_pattern_path(entry: str) -> bool:
+    """Whether a `reads.patterns` entry is a path: no `<category>` placeholder, and
+    holding a `/` or a `.`, such as `docs/` or `CLAUDE.md`.
+
+    The deploy resolves a placeholder through the overlay and writes any other entry
+    as it stands, so a path still names something on disk in the deployed copy.
+    """
+    return agents_overlay.placeholder_category(entry) is None and any(
+        mark in entry for mark in "/."
+    )
+
+
+def _validate_reads_patterns(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every `reads.patterns` entry of an agent is a `<category>` placeholder or a
+    path (#2481).
+
+    The agents README writes each category there as its placeholder, the form the
+    deploy resolves. A bare category name, such as `architecture-docs`, deploys as
+    written: the deployed copy carries the name, never the category's paths. A skill
+    is left out, since the adapter deploys a skill's text unchanged and its
+    `reads.patterns` is not filled (the skills README).
+    """
+    issues: list[Issue] = []
+    for art in artifacts:
+        if art.kind != "agent":
+            continue
+        for entry in sorted(art.declared.reads_patterns):
+            if agents_overlay.placeholder_category(entry) is None and not _is_pattern_path(entry):
+                issues.append(
+                    Issue(
+                        location=_location(art, target_root),
+                        diagnosis=f"`reads.patterns` entry {entry!r} is neither a "
+                        f"`<category>` placeholder nor a path, so the deploy does not "
+                        f"resolve it. Write it `<{entry.strip('<>')}>`.",
                     )
                 )
     return issues

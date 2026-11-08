@@ -914,6 +914,30 @@ def test_detect_no_collisions_when_clean(kit_target: Path, kit_source: Path) -> 
     assert findings == []
 
 
+def test_detect_collisions_reads_the_folder_form_on_both_sides(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A skill or an agent is a file `<name>.md` or a folder `<name>/` holding it
+    (COR-015): the capability's, the project's and another capability's (#2470)."""
+    cap_dir = _stage_capability_in_source(kit_source, "evidence")
+    for area, name in (("skills", "fold"), ("agents", "keeper")):
+        (cap_dir / area / name).mkdir(parents=True)
+        (cap_dir / area / name / f"{name}.md").write_text(f"# {name}\n", encoding="utf-8")
+    project_skill = _project_skill(kit_target, "fold")
+    other = kit_target / ".pkit" / "capabilities" / "audit" / "agents" / "keeper"
+    other.mkdir(parents=True)
+    (other / "keeper.md").write_text("# audit's\n", encoding="utf-8")
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    found = caps.detect_collisions(kit_target, source)
+
+    assert [(c.artifact_kind, c.artifact_name, c.source_path, c.target_path) for c in found] == [
+        ("skill", "fold", cap_dir / "skills" / "fold" / "fold.md", project_skill),
+        ("agent", "keeper", cap_dir / "agents" / "keeper" / "keeper.md", other / "keeper.md"),
+    ]
+
+
 # --- override and skip on a collision (COR-017, #1528) --------------
 
 _PROJECTS_SKILL = "---\nname: shared\n---\n# The project's\n"
@@ -1095,6 +1119,55 @@ def test_cli_install_skip_keeps_the_projects_skill_and_records_it(
     manifest = read_component_manifest(installed / "project" / "manifest.yaml")
     assert manifest is not None
     assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
+
+
+def _stage_folder_skill(kit_source: Path, capability: str, name: str = "shared") -> Path:
+    """Stage `capability` shipping the skill `name` in the folder form, with a helper."""
+    folder = _stage_capability_in_source(kit_source, capability) / "skills" / name
+    folder.mkdir(parents=True)
+    (folder / f"{name}.md").write_text(
+        f"---\nname: {name}\ndescription: t\n---\n# {capability}'s\n", encoding="utf-8"
+    )
+    (folder / "helper.md").write_text("# helper\n", encoding="utf-8")
+    return folder
+
+
+@pytest.mark.parametrize(
+    ("answer", "deployed"),
+    [
+        ("override", ".pkit/capabilities/evidence/skills/shared/shared.md"),
+        ("skip", ".pkit/skills/project/shared.md"),
+    ],
+)
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_install_asks_about_a_folder_form_skill_the_project_names(
+    kit_target: Path, kit_source: Path, monkeypatch, answer: str, deployed: str
+) -> None:
+    """A capability's skill in the folder form whose name the project's own skill has
+    is asked about, as a flat one is (COR-015, COR-017, #2470): the answer, not the
+    deploy's name precedence, picks which skill deploys."""
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_folder_skill(kit_source, "evidence")
+    _deploy_skills_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "evidence", f"{answer}\n")
+
+    assert result.exit_code == 0, result.output
+    assert "1 naming collision(s) detected" in result.output
+    assert "skill 'shared' collides with existing .pkit/skills/project/shared.md" in result.output
+    assert _deployed_skill(kit_target, "shared") == deployed
+    installed = kit_target / ".pkit" / "capabilities" / "evidence"
+    manifest = read_component_manifest(installed / "project" / "manifest.yaml")
+    assert manifest is not None
+    if answer == "override":
+        assert not project_skill.exists()
+        assert (installed / "skills" / "shared" / "helper.md").is_file()
+        assert "skipped" not in manifest.backend_state
+    else:
+        assert project_skill.read_text(encoding="utf-8") == _PROJECTS_SKILL
+        assert not (installed / "skills" / "shared").exists()
+        assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
 
 @pytest.mark.usefixtures("at_a_terminal")
