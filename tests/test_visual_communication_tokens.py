@@ -21,9 +21,9 @@ import pytest
 from tests import visual_communication_logo as logos
 from tests.in_process import load
 from tests.visual_communication_project import (
-    CAPABILITY,
     FOUNDATIONS,
     RELEASED_FOUNDATIONS,
+    RELEASES,
     TEST_BRAND,
     TEST_EDITION,
     TEST_PARTS,
@@ -666,8 +666,13 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
 #: (DEC-021 points 1 and 9).
 DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop")
 
-#: The brand the capability ships to start from, as it is built.
-NEUTRAL = CAPABILITY / "libraries" / "neutral"
+#: The brand the capability ships to start from, as its release 1.0.0 holds it, which gives
+#: no size.
+RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
+
+#: The shared role the foundations being built add to their release 1.0.0, and the role its
+#: default aliases (DEC-022 point 3).
+SITE = tokens.Role("size.site", "dimension", "size.slide")
 
 PHONE = "tokens/phone.tokens.json"
 
@@ -682,18 +687,20 @@ def released() -> Any:
     return tokens.read_declarations(RELEASED_FOUNDATIONS / "roles.yaml")
 
 
-def test_the_foundations_being_built_add_the_size_axis_device_and_nothing_else(
+def test_the_foundations_being_built_add_the_size_axis_device_the_role_size_site_alone(
     foundations: Any, released: Any
 ) -> None:
     """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
-    (DEC-021 point 1). Every other declaration is their release 1.0.0's."""
+    (DEC-021 point 1), and `size.site`, a dimension whose default is `size.slide` (DEC-022
+    point 3). Every other declaration is their release 1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
         released.axes
     )
+    assert "size.site" not in released.roles
     assert (foundations.roles, foundations.families, foundations.pairs) == (
-        released.roles,
+        {**released.roles, "size.site": SITE},
         released.families,
         released.pairs,
     )
@@ -747,13 +754,16 @@ def test_a_brand_built_on_another_keeps_its_bases_values_at_a_mode_it_does_not_g
     assert read.resolve("accent", DARK_MODE) == brand.resolve("accent", DARK_MODE) != ORANGE
 
 
-@pytest.mark.parametrize("folder", [TEST_BRAND, NEUTRAL], ids=["test-brand", "neutral"])
+@pytest.mark.parametrize(
+    "folder", [TEST_BRAND, RELEASED_NEUTRAL], ids=["test-brand", "neutral-1.0.0"]
+)
 def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_their_release(
     foundations: Any, released: Any, folder: Path
 ) -> None:
-    """The test brand and the neutral brand give no size, so on the foundations being built
-    each keeps the axes, the keys and every value it has on their release 1.0.0, and a
-    piece cannot name `device` in either (DEC-021 point 2)."""
+    """The test brand 1.0.0 and the neutral brand's release 1.0.0 give no size, so on the
+    foundations being built each keeps the axes, the keys and every value it has on their
+    release 1.0.0, and a piece cannot name `device` in either (DEC-021 point 2). It gains
+    the role the foundations add, at its slide's width (DEC-022 point 3)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings
@@ -762,10 +772,16 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     assert [keys.key_of(c, read.axes) for c in read.combinations()] == [
         keys.key_of(c, before.axes) for c in before.combinations()
     ]
-    assert (read.roles, read.valued) == (before.roles, before.valued)
-    for path in read.valued:
+    assert "size.site" not in before.roles
+    assert (set(read.roles), set(read.valued)) == (
+        {*before.roles, "size.site"},
+        {*before.valued, "size.site"},
+    )
+    for path in before.valued:
         for combination in read.combinations():
             assert read.resolve(path, combination) == before.resolve(path, combination)
+    for combination in read.combinations():
+        assert read.resolve("size.site", combination) == read.resolve("size.slide", combination)
     with pytest.raises(keys.BadKey, match="`device`"):
         read.resolve("space.3", {"device": "phone"})
 

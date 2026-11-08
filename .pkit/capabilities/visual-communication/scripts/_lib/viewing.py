@@ -18,11 +18,19 @@ is read, and none is used up (DEC-016 point 5).
   long edge, or more where the page's smallest text would land under `SMALLEST_TEXT`. The
   tool may draw a picture without the colour profile it carries, so the report names each
   picture a page shows with one (`with_profiles`, DEC-025 point 5).
+- **Bands** (DEC-022 point 7). A page too tall for one such image is drawn in bands, strips
+  of its height each as wide as the page, at one scale (`bands`). The step computes them
+  once, from the scene's frames, and each tool's module draws the regions it is handed, so
+  both routes cut a page alike. Beside each band lie the frames of the elements it shows, in
+  its own pixels. A page too wide for one image whose smallest text reads is drawn as wide as
+  `LONG_EDGE` allows, and the report says its smallest text may not read (`page_scale`,
+  `too_wide`). Text drawn to nothing is still read on the whole page, once.
 - **The HTML renderer's pages.** `viewing_browser` draws each page file as the renderer wrote
-  it, in one browser start, its pages at one device scale, the largest any of them asks. A
-  file holds every key its group gives it, whichever keys the caller picks, and the start
-  draws each key picked out of it, with no reload: the step takes each key's signals from the
-  renderer's declaration (`signals_of`) and the browser's module sets them (DEC-023 point 6).
+  it, in one browser start, its pages at one device scale, the largest any of them asks, as
+  far as the widest fits `LONG_EDGE` (`device_scale`). A file holds every key its group gives
+  it, whichever keys the caller picks, and the start draws each key picked out of it, with no
+  reload: the step takes each key's signals from the renderer's declaration (`signals_of`)
+  and the browser's module sets them (DEC-023 point 6).
   The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.
@@ -45,7 +53,7 @@ import tempfile
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from _lib import (
     checks,
@@ -95,8 +103,20 @@ BROWSER_KEY = "browser"
 ON_WHITE = "on-white"
 ON_BROWSER_GROUND = "on-browser-ground"
 
+#: What the report says of an image of a page too wide for its smallest text to read at
+#: `LONG_EDGE` pixels wide (DEC-022 point 7).
+TOO_WIDE = "too-wide"
+
 #: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
 SCALE_PLACES = 3
+
+#: How many decimals of a px a band's edge keeps, as the scene's lengths do.
+BAND_PLACES = 2
+
+#: The share of a band the overlap with the next may take at most. Bands of about one height
+#: then each start well below the one before, even on a page whose tallest line is as tall
+#: as a band.
+MOST_OVERLAP = 1 / 4
 
 #: The name a build pipeline keeps a commit's drawings under, and the page that says how one
 #: draws them and how they are fetched (DEC-024 point 5).
@@ -342,7 +362,8 @@ _Shown = Mapping[tuple[str, str], tuple[Mapping[str, Any], list[int]]]
 class _PageFile:
     """A page file a run draws: its name, its language, the keys it holds, the first naming
     it, the renderer's bytes, its scene with the numbers of the pages drawn of it, the device
-    scale they share, and each key drawn out of it with its signals, in the order of its keys."""
+    scale they share, the regions of each page drawn, by its number, and each key drawn out of
+    it with its signals, in the order of its keys."""
 
     name: str
     language: str
@@ -351,6 +372,7 @@ class _PageFile:
     scene: Mapping[str, Any]
     numbers: list[int]
     scale: float
+    bands: Mapping[int, tuple[Region, ...]]
     modes: Mapping[str, Mapping[str, str]]
 
 
@@ -368,14 +390,15 @@ def _through_a_browser(
         scene, numbers = shown[language, project.size_key(held[0])]
         every = pages_of(scene)
         scale = device_scale([every[number - 1] for number in numbers])
+        regions = {number: bands(every[number - 1], scale) for number in numbers}
         for number in numbers:
-            _refuse_a_size(project, every[number - 1], scale)
+            _refuse_a_size(project, every[number - 1], scale, regions[number])
         name = f"{project.piece.name}.{language}.{held[0]}.html"
         modes = {
             key: signals_of(declared, HTML, combinations[key]) for key in held if key in wanted.keys
         }
         planned.append(
-            _PageFile(name, language, held, drawn.document, scene, numbers, scale, modes)
+            _PageFile(name, language, held, drawn.document, scene, numbers, scale, regions, modes)
         )
         made.page_file(language, held, name, drawn.document)
         for key in modes:
@@ -401,7 +424,8 @@ def _drawn(planned: _PageFile, folder: Path, program: Path, local: Path) -> view
     Raises Stopped."""
     file = folder / planned.name
     file.write_bytes(planned.document)
-    pages = [browser_page(pages_of(planned.scene)[number - 1]) for number in planned.numbers]
+    every = pages_of(planned.scene)
+    pages = [browser_page(every[number - 1], planned.bands[number]) for number in planned.numbers]
     signals = signals_read(seam.declaration(HTML, seam.RENDERER), HTML)
     modes = list(planned.modes.values())
     return viewing_browser.draw(
@@ -433,9 +457,10 @@ def signals_of(
     return found
 
 
-def browser_page(page: Mapping[str, Any]) -> viewing_browser.Page:
-    """`page` as the browser's reads take it: its trace id and size, and each of its texts in
-    the tree's order, with the spans of each line."""
+def browser_page(page: Mapping[str, Any], regions: Sequence[Region] = ()) -> viewing_browser.Page:
+    """`page` as the browser's reads take it: its trace id and size, each of its texts in the
+    tree's order, with the spans of each line, and the bands among `regions` it is drawn in,
+    none where one image shows it whole."""
     texts = tuple(
         viewing_browser.Text(
             element["id"],
@@ -447,20 +472,24 @@ def browser_page(page: Mapping[str, Any]) -> viewing_browser.Page:
         for element in _elements(page)
         if element.get("type") == "text"
     )
-    return viewing_browser.Page(page["id"], float(page["width"]), float(page["height"]), texts)
-
-
-def _refuse_a_size(project: pl.Project, page: Mapping[str, Any], scale: float) -> None:
-    """Refuse a page with no size, or one past `viewing_tool.MOST_PIXELS` at `scale` device
-    pixels to a px, as the SVG renderer's pages are refused, before the browser is asked."""
     width, height = float(page["width"]), float(page["height"])
+    return viewing_browser.Page(page["id"], width, height, texts, _handed(regions))
+
+
+def _refuse_a_size(
+    project: pl.Project, page: Mapping[str, Any], scale: float, regions: Sequence[Region]
+) -> None:
+    """Refuse a page with no size, or one whose image, or the image of one of its bands
+    `regions` holds, takes more than `viewing_tool.MOST_PIXELS` at `scale` device pixels to a
+    px, as the SVG renderer's pages are refused, before the browser is asked."""
+    width, height = float(page["width"]), float(page["height"])
+    most = viewing_tool.MOST_PIXELS
+    tallest = max((region.height for region in regions), default=height)
+    what = "the page" if len(regions) < 2 else "a band of the page"
     if min(width, height) <= 0:
         said = f"the page measures {width:g} by {height:g} px"
-    elif width * height * scale**2 > viewing_tool.MOST_PIXELS:
-        said = (
-            f"at {scale:g} device pixels to a px the page takes more than "
-            f"{viewing_tool.MOST_PIXELS}"
-        )
+    elif width * tallest * scale**2 > most:
+        said = f"at {scale:g} device pixels to a px {what} takes more than {most}"
     else:
         return
     raise _cannot_draw(project, page, "the browser", said)
@@ -505,18 +534,28 @@ class _Made:
         faces: Path,
         handed: Mapping[str, seam.Shown],
     ) -> None:
-        """One page of the SVG renderer's, of one language and key: its image and its frames,
-        and what the report says of it, each picture `handed` that carries a colour profile
-        among it."""
+        """One page of the SVG renderer's, of one language and key: its image, or an image of
+        each of its bands, with their frames, and what the report says of it, each picture
+        `handed` that carries a colour profile among it."""
         page = pages_of(scene)[number - 1]
         at = {"language": language, "key": key, "page": page["id"]}
+        drawn_at = page_scale(page)
+        regions = bands(page, drawn_at)
         try:
             image = viewing_tool.draw(
-                drawn.pages[number - 1].svg, long_edge(page), faces, line_widths(page)
+                drawn.pages[number - 1].svg,
+                drawn_at,
+                faces,
+                line_widths(page),
+                regions=_handed(regions),
             )
         except viewing_tool.ToolFailed as exc:
             raise _cannot_draw(self.project, page, "the tool", str(exc)) from exc
-        self._image(scene, language, key, number, image.image, image.width, image.height)
+        narrow = too_wide(page, drawn_at)
+        for band, each in zip(_numbered(regions), image.images, strict=True):
+            self._image(
+                scene, language, key, number, each.image, each.width, each.height, band, narrow
+            )
         self.dropped.extend(
             {**at, "element": each.element, "text": each.text, "whole": each.whole}
             for each in image.dropped
@@ -542,16 +581,21 @@ class _Made:
 
     def _through_in(self, planned: _PageFile, key: str, shown: viewing_browser.Shown) -> None:
         """The pages of one page file a browser drew in the key `key`."""
-        numbers = {pages_of(planned.scene)[number - 1]["id"]: number for number in planned.numbers}
+        every = pages_of(planned.scene)
+        numbers = {every[number - 1]["id"]: number for number in planned.numbers}
         for image in shown.images:
+            number = numbers[image.page]
+            regions = _numbered(planned.bands[number])
             self._image(
                 planned.scene,
                 planned.language,
                 key,
-                numbers[image.page],
+                number,
                 image.image,
                 image.width,
                 image.height,
+                regions[image.band - 1] if image.band else None,
+                too_wide(every[number - 1], planned.scale),
             )
         where = {"language": planned.language, "key": key}
         read = shown.read
@@ -609,22 +653,28 @@ class _Made:
         image: bytes,
         width: int,
         height: int,
+        band: _Band | None = None,
+        narrow: bool = False,
     ) -> None:
-        """One page's image, its frames, and its entry in the report."""
+        """One page's image, or one band's, its frames, and its entry in the report. `narrow`
+        says the page is too wide for its smallest text to read (DEC-022 point 7)."""
         piece = self.project.piece.name
         every = pages_of(scene)
         page = every[number - 1]
         at = {"language": language, "key": key, "page": page["id"]}
         stem = f"{piece}.{language}.{key}" + (f".{number}" if len(every) > 1 else "")
+        stem += f".band-{band.number}" if band else ""
+        held = {"band": band.said()} if band else {}
         self.files[f"{stem}.png"] = image
         self.files[f"{stem}.frames.json"] = _json(
             {
                 **at,
                 "number": number,
+                **held,
                 "image": f"{stem}.png",
                 "pixels": {"width": width, "height": height},
                 "lock": self.project.lock,
-                "elements": frames(page, width, height),
+                "elements": frames(page, width, height, band.region if band else None),
             }
         )
         ground = draws_ground(page, pl.colours_at(self.document, key))
@@ -632,10 +682,12 @@ class _Made:
             {
                 **at,
                 "number": number,
+                **held,
                 "image": f"{stem}.png",
                 "frames": f"{stem}.frames.json",
                 "pixels": {"width": width, "height": height},
                 ON_WHITE if self.renderer == SVG else ON_BROWSER_GROUND: not ground,
+                **({TOO_WIDE: True} if narrow else {}),
             }
         )
 
@@ -750,13 +802,48 @@ def ways_on(piece: str) -> list[str]:
     ]
 
 
-def scale(page: Mapping[str, Any]) -> float:
-    """How many pixels of its image a px of `page` takes: `LONG_EDGE` on its long edge, or more
-    where its smallest text would land under `SMALLEST_TEXT` (DEC-015 point 5). 1 for a page
-    with no size, which is refused, naming its measure."""
-    edge = max(float(page["width"]), float(page["height"]))
-    if edge <= 0:
-        return 1.0
+class Region(NamedTuple):
+    """A strip of a page's height one image shows: its top and its height, in the page's px."""
+
+    top: float
+    height: float
+
+
+@dataclass(frozen=True)
+class _Band:
+    """One band of a page drawn: its number, from 1, how many the page has, and its region."""
+
+    number: int
+    of: int
+    region: Region
+
+    def said(self) -> dict[str, Any]:
+        """The band as the report and its frames name it."""
+        top, height = self.region
+        return {"number": self.number, "of": self.of, "top": top, "height": height}
+
+
+def _numbered(regions: Sequence[Region]) -> list[_Band | None]:
+    """Each of `regions` as an image of it is named: None for one that shows a page whole,
+    and each band with its number otherwise."""
+    if len(regions) < 2:
+        return [None]
+    return [_Band(number, len(regions), each) for number, each in enumerate(regions, 1)]
+
+
+def _handed(regions: Sequence[Region]) -> tuple[tuple[float, float], ...]:
+    """The regions a tool's module is handed: none for a page one image shows whole, so it
+    draws that image as it always has, and each band otherwise."""
+    return tuple((top, height) for top, height in regions) if len(regions) > 1 else ()
+
+
+def pixels(length: float, scale: float) -> int:
+    """How many pixels of an image `length` px take at `scale` pixels to a px, whole."""
+    return math.ceil(round(length * scale, 6))
+
+
+def _smallest_text(page: Mapping[str, Any]) -> float | None:
+    """The size of `page`'s smallest text in px, or None where it holds none."""
     sizes = [
         float(run["font-size"])
         for element in _elements(page)
@@ -764,28 +851,144 @@ def scale(page: Mapping[str, Any]) -> float:
         for run in paragraph
         if run.get("font-size")
     ]
+    return min(sizes) if sizes else None
+
+
+def scale(page: Mapping[str, Any]) -> float:
+    """How many pixels of its image a px of `page` asks: `LONG_EDGE` on its long edge, or more
+    where its smallest text would land under `SMALLEST_TEXT` (DEC-015 point 5). 1 for a page
+    with no size, which is refused, naming its measure."""
+    edge = max(float(page["width"]), float(page["height"]))
+    if edge <= 0:
+        return 1.0
     found = LONG_EDGE / edge
-    if sizes:
-        found = max(found, SMALLEST_TEXT / min(sizes))
+    smallest = _smallest_text(page)
+    if smallest is not None:
+        found = max(found, SMALLEST_TEXT / smallest)
+    return found
+
+
+def page_scale(page: Mapping[str, Any]) -> float:
+    """How many pixels of its images a px of `page` takes through the SVG renderer: what it
+    asks (`scale`), or, where its width would then pass `LONG_EDGE`, as many as let its width
+    fill it, so its smallest text may not read (DEC-022 point 7)."""
+    found = scale(page)
+    width = float(page["width"])
+    if width > 0 and pixels(width, found) > LONG_EDGE:
+        return LONG_EDGE / width
     return found
 
 
 def device_scale(pages: Sequence[Mapping[str, Any]]) -> float:
     """The device scale one browser start draws `pages` at: the largest `scale` any of them
     asks, since a browser's flag binds a whole start (DEC-020 point 5), rounded up to
-    `SCALE_PLACES` decimals."""
-    largest = max(scale(page) for page in pages)
+    `SCALE_PLACES` decimals. Where the widest page would then pass `LONG_EDGE`, as many as let
+    its width fit it, rounded down (DEC-022 point 7)."""
     places = 10**SCALE_PLACES
-    return math.ceil(round(largest * places, 6)) / places
+    found = math.ceil(round(max(scale(page) for page in pages) * places, 6)) / places
+    widest = max(float(page["width"]) for page in pages)
+    if widest > 0:
+        fits = math.floor(round(LONG_EDGE / widest * places, 6)) / places
+        found = min(found, max(fits, 1 / places))
+    return found
 
 
-def long_edge(page: Mapping[str, Any]) -> int:
-    """How many pixels the long edge of `page`'s image takes through the SVG renderer (DEC-015
-    point 5)."""
-    edge = max(float(page["width"]), float(page["height"]))
-    if edge <= 0:
-        return LONG_EDGE  # the tool refuses a page with no size, naming its measure
-    return math.ceil(edge * scale(page))
+def too_wide(page: Mapping[str, Any], scale: float) -> bool:
+    """Whether `page` drawn at `scale` pixels to a px sets its smallest text under
+    `SMALLEST_TEXT`: only a page too wide for one image whose smallest text reads is drawn so
+    small (DEC-022 point 7)."""
+    smallest = _smallest_text(page)
+    return smallest is not None and round(smallest * scale, 6) < SMALLEST_TEXT
+
+
+def bands(page: Mapping[str, Any], scale: float) -> tuple[Region, ...]:
+    """The regions of `page` an image each shows at `scale` pixels to a px, top to bottom: the
+    whole page, where its height fits `LONG_EDGE`, or else its bands (DEC-022 point 7).
+
+    Each band is as wide as the page, and as tall as `LONG_EDGE` allows at most. The bands are
+    of about one height, so none is a sliver. Each overlaps the next by the page's tallest
+    line, and at most by `MOST_OVERLAP` of a band, so a line lies whole in one band. A band
+    ends where the overlap holds a gap between elements, in the middle of the lowest gap
+    there, and at the overlap's bottom otherwise. A gap is a strip no element's frame covers,
+    but a page's ground."""
+    height = float(page["height"])
+    if height <= 0 or pixels(height, scale) <= LONG_EDGE:
+        return (Region(0.0, height),)
+    most = _floored(LONG_EDGE / scale)
+    overlap = min(_tallest_line(page), most * MOST_OVERLAP)
+    covered = _covered(page)
+    found = []
+    top = 0.0
+    while height - top > most:
+        left = height - top
+        count = math.ceil((left - overlap) / (most - overlap))
+        bottom = top + min(most, (left + (count - 1) * overlap) / count)
+        cut = _cut(covered, bottom - overlap, bottom)
+        found.append(Region(top, round(cut - top, BAND_PLACES)))
+        top = max(_floored(cut - overlap), top + 10**-BAND_PLACES)
+    found.append(Region(top, round(height - top, BAND_PLACES)))
+    return tuple(found)
+
+
+def _floored(length: float) -> float:
+    """`length` rounded down to `BAND_PLACES` decimals."""
+    places = 10**BAND_PLACES
+    return math.floor(round(length * places, 6)) / places
+
+
+def _tallest_line(page: Mapping[str, Any]) -> float:
+    """The line height of `page`'s tallest line, in px, 0 where it holds no text."""
+    return max(
+        (
+            float(element.get("line-height") or 0)
+            for element in _elements(page)
+            if element.get("type") == "text"
+        ),
+        default=0.0,
+    )
+
+
+def _covered(page: Mapping[str, Any]) -> list[tuple[float, float]]:
+    """The strips of `page`'s height the frames of its drawn elements cover, top to bottom, each
+    from its top to its bottom, those that touch joined. A group draws nothing, and a box over
+    the whole page is its ground, which covers no gap."""
+    width, height = float(page["width"]), float(page["height"])
+    spans = []
+    for element, x, y in _placed(page):
+        wide, tall = float(element.get("width", 0)), float(element.get("height", 0))
+        ground = x <= 0 and y <= 0 and x + wide >= width and y + tall >= height
+        if element.get("type") == "group" or (element.get("type") == "box" and ground):
+            continue
+        spans.append((y, y + tall))
+    joined: list[tuple[float, float]] = []
+    for top, bottom in sorted(spans):
+        if joined and top <= joined[-1][1]:
+            joined[-1] = (joined[-1][0], max(joined[-1][1], bottom))
+        else:
+            joined.append((top, bottom))
+    return joined
+
+
+def _cut(covered: Sequence[tuple[float, float]], low: float, high: float) -> float:
+    """Where a band ends whose overlap with the next runs from `low` to `high`: in the middle
+    of the lowest gap between `covered` strips there, or at `high` where it holds none."""
+    gaps = []
+    start = low
+    for top, bottom in covered:
+        if bottom < start:
+            continue
+        if top > high:
+            break
+        if top > start:
+            gaps.append((start, top))
+        start = max(start, bottom)
+    if start < high:
+        gaps.append((start, high))
+    for begin, end in reversed(gaps):
+        middle = _floored((begin + end) / 2)
+        if begin < middle < end:
+            return middle
+    return _floored(high)
 
 
 def line_widths(page: Mapping[str, Any]) -> dict[str, list[float]]:
@@ -812,22 +1015,32 @@ def _placed(page: Mapping[str, Any]) -> Iterator[tuple[Mapping[str, Any], float,
     return walk(page, 0.0, 0.0)
 
 
-def frames(page: Mapping[str, Any], width: int, height: int) -> list[dict[str, Any]]:
+def frames(
+    page: Mapping[str, Any], width: int, height: int, region: Region | None = None
+) -> list[dict[str, Any]]:
     """Each element's frame in the pixels of an image of `width` by `height`, with its trace
-    id, the page's own first, in drawing order (DEC-015 point 5)."""
-    across, down = width / float(page["width"]), height / float(page["height"])
+    id, the page's own first, in drawing order (DEC-015 point 5). Of a band, `region`, each
+    element the band shows, a part of it or the whole, in the band's own pixels, so a frame a
+    cut crosses reaches past the image (DEC-022 point 7)."""
+    top, tall = (0.0, float(page["height"])) if region is None else region
+    across, down = width / float(page["width"]), height / tall
 
     def frame(element: Mapping[str, Any], x: float, y: float) -> dict[str, Any]:
         return {
             "id": element["id"],
             "type": element.get("type"),
             "x": round(x * across, 2),
-            "y": round(y * down, 2),
+            "y": round((y - top) * down, 2),
             "width": round(float(element.get("width", 0)) * across, 2),
             "height": round(float(element.get("height", 0)) * down, 2),
         }
 
-    return [frame(page, 0.0, 0.0), *(frame(each, x, y) for each, x, y in _placed(page))]
+    def shows(element: Mapping[str, Any], y: float) -> bool:
+        bottom, reach = top + tall, float(element.get("height", 0))
+        return region is None or (y < bottom and y + reach > top if reach else top <= y <= bottom)
+
+    placed = (frame(each, x, y) for each, x, y in _placed(page) if shows(each, y))
+    return [frame(page, 0.0, 0.0), *placed]
 
 
 def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]]) -> bool:

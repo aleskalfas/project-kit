@@ -24,6 +24,7 @@ from tests.visual_communication_project import (
     bound,
     capability_version,
     copy_library,
+    hold_shipped,
     importable,
     project,
     write,
@@ -664,6 +665,58 @@ def test_the_json_writer_holds_the_keys_of_each_size_the_brand_gives(root: Path)
     assert files.shape_problems(held, "values") == []
     assert written.losses == ()
     assert code.findings(root, "visual") == []
+
+
+def neutral(tmp_path: Path, **fields: Any) -> Any:
+    """What the declaration of the neutral brand being built, on the foundations being
+    built, would hand its writer: the css writer's unless `fields` say otherwise."""
+    root = project(tmp_path)
+    lock = {name: hold_shipped(root, name).version for name in ("foundations", "neutral")}
+    declare(root, brand="neutral", lock=lock, **fields)
+    return code.plan(root, "visual", code.read(root, "visual", NAME))
+
+
+#: The keys of the neutral brand's value axes, with no size.
+VALUE_KEYS = [
+    "default",
+    "colour-scheme.dark",
+    "contrast.high",
+    "colour-scheme.dark+contrast.high",
+]
+
+
+def test_the_neutral_brand_is_written_as_css_at_a_desktops_values_losing_size_site(
+    tmp_path: Path,
+) -> None:
+    """The neutral brand gives the three sizes of `device`, and `size.site` alone changes
+    with them (DEC-022 point 3). The CSS writer spells no size axis, so it writes a
+    desktop's width, and reports the role as approximated (DEC-021 point 8)."""
+    planned = neutral(tmp_path)
+    assert planned.document["keys"] == VALUE_KEYS
+    approximated = [loss.as_dict() for loss in planned.losses if loss.did == "approximated"]
+    assert approximated == [
+        {
+            "plugin": "css",
+            "what": "size.site",
+            "did": "approximated",
+            "why": "form 1 of the css writer spells no size axis, so it writes the value at "
+            "`device`'s default, `desktop`",
+        }
+    ]
+    assert "  --size--site: 1280px;\n" in code.text_of(planned)
+
+
+def test_the_neutral_brand_written_as_json_holds_the_keys_of_device(tmp_path: Path) -> None:
+    planned = neutral(tmp_path, writer="json", out=JSON_OUT)
+    sizes = ["device.tablet", "device.phone"]
+    assert set(planned.document["keys"]) == {
+        "+".join(part for part in (key, size) if part != "default") or "default"
+        for key in VALUE_KEYS
+        for size in ("default", *sizes)
+    }
+    site = planned.document["tokens"]["size.site"]["values"]
+    assert [site[key]["value"] for key in ("default", *sizes)] == [1280, 768, 390]
+    assert planned.losses == ()
 
 
 def test_the_json_writer_refuses_a_prefix_naming_why(root: Path) -> None:

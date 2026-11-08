@@ -1,7 +1,7 @@
 {
   "version": "2025.10",
   "name": "neutral",
-  "description": "The neutral brand's modes: the colour scheme and the contrast, the foundations' two value axes.",
+  "description": "The neutral brand's modes: the colour scheme and the contrast, the foundations' two value axes, and the three sizes of the size axis `device`, desktop, tablet and phone.",
   "sets": {
     "palette": {
       "sources": [
@@ -40,6 +40,22 @@
         ]
       },
       "default": "standard"
+    },
+    "device": {
+      "contexts": {
+        "desktop": [],
+        "tablet": [
+          {
+            "$ref": "tokens/tablet.tokens.json"
+          }
+        ],
+        "phone": [
+          {
+            "$ref": "tokens/phone.tokens.json"
+          }
+        ]
+      },
+      "default": "desktop"
     }
   },
   "resolutionOrder": [
@@ -54,6 +70,9 @@
     },
     {
       "$ref": "#/modifiers/contrast"
+    },
+    {
+      "$ref": "#/modifiers/device"
     }
   ]
 }

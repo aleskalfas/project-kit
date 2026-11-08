@@ -156,12 +156,16 @@ class SceneResult:
     """A scene, what computing it found, and which facts of its export it shows: each fact's
     word with the trace of every element that shows it. `unvalued` names each image of a
     picture role the brand gives no file at the scene's key, by its trace id, with the role:
-    the scene does not draw it, and a move onto that brand names it (DEC-025 point 8)."""
+    the scene does not draw it, and a move onto that brand names it (DEC-025 point 8).
+    `shared` holds, for each page of a top whose layouts are its pages' forms, the trace of
+    each of its parts that draws a field of the top, which every such page draws alike
+    (`Instance.from_the_top`)."""
 
     scene: Scene
     findings: list[Finding]
     facts: dict[str, list[str]]
     unvalued: dict[str, str] = field(default_factory=dict)
+    shared: dict[str, list[str]] = field(default_factory=dict)
 
 
 def compute_scene(
@@ -193,7 +197,10 @@ def compute_scene(
                 run.style.check(run.text, trace)
         children.append(emitter.root(root))
     scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children)
-    return SceneResult(scene, list(ctx.findings), emitter.facts, emitter.unvalued)
+    shared = {page.trace: page.from_the_top() for page in (root.pages if root else [])}
+    return SceneResult(
+        scene, list(ctx.findings), emitter.facts, unvalued=emitter.unvalued, shared=shared
+    )
 
 
 class _Emitter:
@@ -207,8 +214,15 @@ class _Emitter:
         self.unvalued: dict[str, str] = {}
 
     def root(self, top: Instance) -> Element:
+        """The top's group. A top whose layouts are its pages' forms and asks for no height
+        is as tall as its tallest page, which the engine sets (DEC-022 point 3)."""
         preferred = top.component.preferred
-        sizes = tuple(top.source(f"preferred.{s}", preferred.get(s)) for s in ("width", "height"))
+        sizes = tuple(
+            top.source(f"preferred.{s}", preferred.get(s))
+            if s in preferred or not top.component.forms
+            else ENGINE
+            for s in ("width", "height")
+        )
         return self.group(top, (0.0, 0.0), (ENGINE, ENGINE), sizes)
 
     def group(
@@ -243,11 +257,16 @@ class _Emitter:
                 element.children.append(drawn)
             elif node.unvalued:
                 self.unvalued[f"{instance.trace}/{name}"] = node.unvalued
-        # The pages of a top whose layouts are its pages' forms, each at the top's origin.
+        # The pages of a top whose layouts are its pages' forms, each at the top's origin. A
+        # page that takes its own height names where that height comes from (DEC-022 point 3).
         for page in instance.pages:
-            element.children.append(
-                self.group(page, (0.0, 0.0), (ENGINE, ENGINE), (ENGINE, ENGINE))
+            sizes = tuple(
+                page.source(f"preferred.{s}", page.component.preferred.get(s))
+                if page.takes_own(s)
+                else ENGINE
+                for s in ("width", "height")
             )
+            element.children.append(self.group(page, (0.0, 0.0), (ENGINE, ENGINE), sizes))
         for size, gets, asks in attempt(instance.shortfalls, []):
             self._short(instance.trace, size, gets, asks)
         return element

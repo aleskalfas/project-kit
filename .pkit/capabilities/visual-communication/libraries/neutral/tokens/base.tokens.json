@@ -255,6 +255,13 @@
         "value": 1280,
         "unit": "px"
       }
+    },
+    "site": {
+      "$description": "The width of a site's page, on a desktop.",
+      "$value": {
+        "value": 1280,
+        "unit": "px"
+      }
     }
   },
   "stroke": {

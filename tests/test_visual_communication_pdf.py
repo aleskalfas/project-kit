@@ -1,11 +1,13 @@
 """The PDF renderer (visual-communication DEC-005 points 4, 5, 9 and 10, DEC-006 point 7,
 DEC-025 points 5 to 7): what it declares, what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.1.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.2.0. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). Version 1.1.0 came to draw every image, from the picture it is
 handed, whatever its source: a scene of no picture draws as 1.0.0 drew it, but for the
-renderer's version it names. A page's content is pinned whole. An embedded font is pinned
+renderer's version it names. Version 1.2.0 came to draw a page past the largest a reader of
+PDF holds smaller, to fit (DEC-022 point 7): every other page draws as 1.1.0 drew it, but for
+the renderer's version the file names. A page's content is pinned whole. An embedded font is pinned
 by the glyphs its subset holds and the characters its map gives them, not by its bytes,
 which are fontTools'. A picture is pinned by its image's dictionary and its data: a JPEG's
 own bytes, a PNG's image data as the file holds it, or what the decoder gives
@@ -200,7 +202,7 @@ OPENING = "0.75 0 0 -0.75 0 75 cm 4 M\n"
 # --- what it draws ------------------------------------------------------------------------------
 
 
-def test_shapes_are_drawn_as_pinned_for_version_1_1_0() -> None:
+def test_shapes_are_drawn_as_pinned_for_version_1_2_0() -> None:
     drawn = draw(SHAPES)
     assert drawn.losses == []
     assert drawn.pages == ["figure"]
@@ -220,7 +222,7 @@ def test_shapes_are_drawn_as_pinned_for_version_1_1_0() -> None:
     assert resources == "<< /Font <<  >> /ExtGState << /A0 << /Type /ExtGState /CA 0.25 >> >> >>"
 
 
-def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_1_0() -> None:
+def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_2_0() -> None:
     drawn = draw(TIES)
     assert drawn.losses == []
     file, page = page_of(drawn)
@@ -445,7 +447,7 @@ def data_of(data: bytes) -> tuple[bytes, bytes | None]:
     return decoded.data, None
 
 
-def test_a_picture_is_drawn_as_pinned_for_version_1_1_0() -> None:
+def test_a_picture_is_drawn_as_pinned_for_version_1_2_0() -> None:
     """A picture of 4 by 3 pixels in a frame 50 px square: 50 px wide and 37.5 px tall, its
     top 6.25 px down, its first row at the top."""
     drawn = draw(
@@ -870,12 +872,70 @@ def test_each_page_of_the_scene_is_a_page_of_the_file_in_order_at_its_size() -> 
     assert len({font for page in pages for font in file.fonts(page).values()}) == 1
 
 
+def tall(height: float, width: float = 390) -> dict[str, Any]:
+    """A scene of one page, `width` by `height` px, holding the pinned shapes."""
+    return {**SHAPES, "children": [{**SHAPES["children"][0], "width": width, "height": height}]}
+
+
+def test_a_page_past_the_largest_a_reader_holds_is_drawn_smaller_its_proportions_kept() -> None:
+    """A phone's page of 30,000 px is 22,500 pt tall: drawn 0.64 as large, it fits."""
+    drawn = draw(tall(30000))
+    file, page = page_of(drawn)
+    assert re.findall(r"/MediaBox \[([^\]]*)\]", file.value(page)) == ["0 0 187.2 14400"]
+    assert file.content(page).startswith("0.48 0 0 -0.48 0 14400 cm 4 M\n")
+    assert drawn.losses == [
+        seam.Loss(
+            "pdf",
+            "figure",
+            seam.APPROXIMATED,
+            "the page measures 292.5 by 22500 pt, past the 14400 pt a page of PDF takes on a "
+            "side, so it is drawn 0.64 as large, its proportions kept",
+        )
+    ]
+
+
+def test_a_page_too_wide_for_a_reader_is_drawn_smaller_by_its_width() -> None:
+    drawn = draw(tall(100, width=40000))
+    file, page = page_of(drawn)
+    assert re.findall(r"/MediaBox \[([^\]]*)\]", file.value(page)) == ["0 0 14400 36"]
+    assert file.content(page).startswith("0.36 0 0 -0.36 0 36 cm 4 M\n")
+    assert [loss.what for loss in drawn.losses] == ["figure"]
+
+
+def test_a_page_as_large_as_a_reader_holds_draws_as_before() -> None:
+    drawn = draw(tall(pdf.LARGEST / pdf.SCALE))
+    file, page = page_of(drawn)
+    assert pdf.LARGEST / pdf.SCALE == 19200
+    assert re.findall(r"/MediaBox \[([^\]]*)\]", file.value(page)) == ["0 0 292.5 14400"]
+    assert file.content(page).startswith("0.75 0 0 -0.75 0 14400 cm 4 M\n")
+    assert drawn.losses == []
+
+
+def test_beside_a_page_drawn_smaller_every_other_page_of_the_file_draws_as_before() -> None:
+    small = {**SHAPES["children"][0], "id": "deck/small", "page": True}
+    large = {**small, "id": "deck/large", "height": 30000}
+    both = {**SHAPES, "pages": ["deck/small", "deck/large"], "children": [small, large]}
+    alone = {**SHAPES, "pages": ["deck/small"], "children": [small]}
+    drawn = draw(both)
+    file = read(drawn.document)
+    first, second = file.pages()
+    held, page = page_of(draw(alone))
+    assert file.content(first) == held.content(page)
+    boxes = [
+        re.findall(r"/MediaBox \[([^\]]*)\]", each.value(at))
+        for each, at in ((file, first), (held, page))
+    ]
+    assert boxes == [["0 0 150 75"], ["0 0 150 75"]]
+    assert file.content(second).startswith("0.48 0 0 -0.48 0 14400 cm 4 M\n")
+    assert [loss.what for loss in drawn.losses] == ["deck/large"]
+
+
 def test_the_file_names_its_language_and_its_renderer() -> None:
     file = read(draw(SHAPES).document)
     root = int(re.findall(r"/Root (\d+) 0 R", file.trailer)[0])
     assert file.value(root) == "<< /Type /Catalog /Pages 2 0 R /Lang (en) >>"
     info = int(re.findall(r"/Info (\d+) 0 R", file.trailer)[0])
-    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.1.0) >>"
+    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.2.0) >>"
 
 
 # --- the same bytes -----------------------------------------------------------------------------
@@ -1083,7 +1143,7 @@ def test_it_declares_each_property_of_an_image_of_every_source_as_the_svg_render
 def test_it_is_shipped_through_the_seam_as_plain_data_at_the_seams_version() -> None:
     declared = seam.declaration("pdf", seam.RENDERER)
     assert declared == pdf_declaration.DECLARATION
-    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.1.0", seam.SEAM_VERSION)
+    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.2.0", seam.SEAM_VERSION)
     assert (declared["programs"], declared["services"], declared["profile"]) == ([], [], "default")
     assert declared["unit"] == {"scene": "px", "page": "pt", "scale": 0.75}
     assert declared["not-carried"] == ["alternative text", "reading order", "structure"]

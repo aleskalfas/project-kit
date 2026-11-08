@@ -146,9 +146,9 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
-- **The foundations library:** a few shared roles, the shared axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version 1.0.0 is released, under `releases/foundations/1.0.0/`, and its version being built stays under `libraries/foundations/` ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)).
+- **The foundations library:** a few shared roles, the shared axes, six colour families, and three top components: `figure`, for a figure, `deck`, for a presentation, and `site`, for a web page or a portal ([The foundations](files.md#the-foundations)). Its version 1.0.0 is released, under `releases/foundations/1.0.0/`, and its version being built stays under `libraries/foundations/` ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)). Only the version being built holds `site`, so `pkit visual add foundations --being-built` takes it.
 - **The starter library:** patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists each pattern by the question it answers, then each block ([The patterns, by the question they answer](libraries/starter/README.md#the-patterns-by-the-question-they-answer), [The blocks](libraries/starter/README.md#the-blocks)). `pkit visual add starter` brings it in. Its version 1.0.0 is released, under `releases/starter/1.0.0/`, and needs release 0.3.0. Its version being built stays under `libraries/starter/`.
-- **The neutral brand:** a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. `pkit visual add neutral` brings it in. Its version 1.0.0 is released, under `releases/neutral/1.0.0/`, and its version being built stays under `libraries/neutral/`.
+- **The neutral brand:** a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. Its version being built gives a desktop's, a tablet's and a phone's sizes. `pkit visual add neutral` brings it in. Its version 1.0.0 is released, under `releases/neutral/1.0.0/`, and its version being built stays under `libraries/neutral/`.
 - **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes in the HTML exports, and whose pages `pkit visual look` draws through a browser; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
@@ -325,7 +325,8 @@ Takes a final piece up again, as a new piece copied from it: a draft with its lo
 
 Draws a piece's pages as images, for a person or an agent to read ([The viewing step](outputs.md#the-viewing-step)).
 
-- **Draws** every page in the source language, unless flags pick others.
+- **Draws** every page in the source language, unless flags pick others. It draws one size by default, so name each other size with `--key`, a phone's among them ([The viewing step](outputs.md#the-viewing-step)).
+- **Cuts** a page too tall for one image into bands, each as wide as the page, and prints them in order ([The viewing step](outputs.md#the-viewing-step)).
 - **Reads** a piece that declares `html` through the HTML renderer, and any other through the SVG renderer. `--renderer svg` or `--renderer html` names one.
 - **Needs a browser** for the HTML renderer's pages, which no other format needs. The capability installs none ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
 - **Writes** each image and its frames, and one report, in its renderer's folder, replacing what an earlier run left there. Through the HTML renderer it writes each page file too ([What a run writes](outputs.md#what-a-run-writes)).
@@ -420,9 +421,9 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 To use it:
 
-1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. The reviewer runs no command, so it sees only what that run drew.
+1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). The reviewer runs no command, so it sees only what that run drew.
 2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, and names what it did not see. What it did not see is not looked at, never clean.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 
