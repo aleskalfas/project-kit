@@ -4,6 +4,11 @@ library folder and listed, every other byte of the list kept; never over a folde
 does not name; refused where its files lack their binding, or the capability does not ship
 the library. Run in this process (`tests/in_process.py`); it starts no `pkit`.
 
+The tests of the copy and the list read what the capability ships from the tree: the
+newest released version, or the version being built where none is released. Those that
+read a version listed not released, and the text the list takes of it, build a
+capability's folder of their own that releases none.
+
 The tests of the released versions build a capability's folder of their own, with a
 released version of the foundations and a version being built: the newest released version
 taken with its hash, or another the person names, or the version being built; and every
@@ -46,6 +51,7 @@ from tests.visual_communication_project import (
     copy_library,
     importable,
     project,
+    taken,
     write,
     write_list,
     write_piece,
@@ -73,7 +79,8 @@ LOCATION = (
     f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
     f"to move the work, move the folder and change the `location:` line there"
 )
-#: The foundations, as the list names them once the command copied them.
+#: The foundations, as the list names them once the command copied them from a capability
+#: that releases none.
 LISTED = {"source": {"kind": "shipped"}, "versions": {"1.0.0": {"released": False}}}
 
 
@@ -103,15 +110,27 @@ def capability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_the_shipped_version_is_copied_whole_and_listed(tmp_path: Path) -> None:
+    """What the capability ships by default, as the tree holds it: the newest released
+    version, with its record's entry, or the version being built where none is released."""
+    ships = taken("foundations")
+    label = f"foundations@{ships.version}"
+    copy = f"visual/libraries/foundations/{ships.version}"
+    state = "released, with the hash the capability records"
+    if not ships.entry["released"]:
+        state = "not released"
     root = project(tmp_path)
     added = run(root, "foundations")
     assert added.returncode == 0, added.stderr
-    assert tree(root / COPY) == tree(FOUNDATIONS)
-    assert reading.read_yaml(root / LIST) == bound("libraries", libraries={"foundations": LISTED})
+    assert tree(root / copy) == tree(ships.folder)
+    versions = {ships.version: ships.entry}
+    assert reading.read_yaml(root / LIST) == bound(
+        "libraries",
+        libraries={"foundations": {"source": {"kind": "shipped"}, "versions": versions}},
+    )
     assert added.stdout.splitlines() == [
         LOCATION,
-        f"copied foundations@1.0.0, {len(tree(FOUNDATIONS))} files, to {COPY}/",
-        f"listed foundations@1.0.0 in {LIST}, from the source `shipped`, not released",
+        f"copied {label}, {len(tree(ships.folder))} files, to {copy}/",
+        f"listed {label} in {LIST}, from the source `shipped`, {state}",
     ]
     assert libraries.Held(root, "visual").findings() == []
 
@@ -126,7 +145,10 @@ def test_a_list_written_whole_opens_with_its_comment(tmp_path: Path) -> None:
     assert "\n\npkit_schema: visual-communication:libraries\nschema_version: 1\n" in text
 
 
-def test_the_list_takes_the_library_and_keeps_every_other_byte(tmp_path: Path) -> None:
+def test_the_list_takes_the_library_and_keeps_every_other_byte(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     original = (
         "﻿# Our libraries.\r\n"
@@ -154,7 +176,10 @@ def test_the_list_takes_the_library_and_keeps_every_other_byte(tmp_path: Path) -
     )
 
 
-def test_a_version_is_added_to_the_shipped_library_the_list_names(tmp_path: Path) -> None:
+def test_a_version_is_added_to_the_shipped_library_the_list_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     original = (
         "pkit_schema: visual-communication:libraries\n"
@@ -172,7 +197,10 @@ def test_a_version_is_added_to_the_shipped_library_the_list_names(tmp_path: Path
     assert tree(root / COPY) == tree(FOUNDATIONS)
 
 
-def test_an_empty_list_takes_the_library_in_its_flow(tmp_path: Path) -> None:
+def test_an_empty_list_takes_the_library_in_its_flow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     write_list(root, {})
     assert run(root, "foundations").returncode == 0
@@ -209,7 +237,10 @@ def test_a_folder_the_list_does_not_name_is_never_overwritten(tmp_path: Path, he
     assert tree(root) == before
 
 
-def test_a_version_the_list_names_without_its_folder_is_brought_in(tmp_path: Path) -> None:
+def test_a_version_the_list_names_without_its_folder_is_brought_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     write_list(root, {"foundations": LISTED})
     listed = (root / LIST).read_bytes()
@@ -342,11 +373,12 @@ def test_a_write_that_fails_leaves_the_list_as_it_was(
 
 
 def test_the_location_a_person_names_is_recorded_and_takes_the_copy(tmp_path: Path) -> None:
+    ships = taken("foundations")
     root = project(tmp_path)
     added = run(root, "foundations", "--location", "docs/art")
     assert added.returncode == 0, added.stderr
     assert "location: docs/art\n" in (root / CONFIG).read_text(encoding="utf-8")
-    assert tree(root / "docs/art/libraries/foundations/1.0.0") == tree(FOUNDATIONS)
+    assert tree(root / "docs/art/libraries/foundations" / ships.version) == tree(ships.folder)
     assert not (root / "visual").exists()
 
 

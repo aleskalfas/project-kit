@@ -1,0 +1,75 @@
+# The released versions of a library the capability ships (visual-communication
+# DEC-013 point 2), each with its hash. `pkit visual release <library> --shipped` adds
+# each one; nothing changes an entry once it is added.
+
+pkit_schema: visual-communication:libraries
+schema_version: 1
+libraries:
+  starter:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: true
+        hash:
+          form: 1
+          hash: sha256
+          format: 1
+          value: 10fc56ed2d45278c3e6592c1c27f7682cfff916122f97d21cf79f2894c70e036
+          inputs:
+            - library: starter
+              version: 1.0.0
+              path: README.md
+              sha256: dee9e1d5c6c0017471f1263225823cdfa7268a00c15ea46f2323bc44bdb827bf
+            - library: starter
+              version: 1.0.0
+              path: components/aside.yaml
+              sha256: d146fb3313ebe69b310a7110430086d77c3a1730dc629ddd1b9af06a4d7ab36a
+            - library: starter
+              version: 1.0.0
+              path: components/card.yaml
+              sha256: e619126a1660995bdcfc982cb297ce02bd02267150e763bbec3b0348fccd1257
+            - library: starter
+              version: 1.0.0
+              path: components/code.yaml
+              sha256: 3e6a2f4ec3b80615bf9a2c9e4741590f4cca03806e70a289ad36eede5c2e0091
+            - library: starter
+              version: 1.0.0
+              path: components/connector.yaml
+              sha256: 5cd6d3368c7567cac75db10977411e9cda9a6527afb743fbb1d8d105b8af094f
+            - library: starter
+              version: 1.0.0
+              path: components/group.yaml
+              sha256: 143f41db915237bf1043b67b1b4ea6bb6f6ad9520f0b7b4c2e5beccc099af04d
+            - library: starter
+              version: 1.0.0
+              path: components/groups.yaml
+              sha256: 37debaaaaf13cdcbc1f298bbdd4062adf92f586c6a996a0397d6be96da99aa36
+            - library: starter
+              version: 1.0.0
+              path: components/layers.yaml
+              sha256: 0473b6d1ae11ee5d5f7f6bbe39d717f72e6514b2f51cbf9ea8192c6a340be730
+            - library: starter
+              version: 1.0.0
+              path: components/list.yaml
+              sha256: edde107e8f1600bdea6dccab77ec2e0e20f4da1e746441319b2fd46c3cdb91f7
+            - library: starter
+              version: 1.0.0
+              path: components/network.yaml
+              sha256: 574d764434208251df9d59f6a0bb1215722603debb0c7f21c222ab4ba0db47f0
+            - library: starter
+              version: 1.0.0
+              path: components/panels.yaml
+              sha256: e69eacf30582338572ac3329e1c9bf433f479960982f85380a8821e5ebc6e35a
+            - library: starter
+              version: 1.0.0
+              path: components/tag.yaml
+              sha256: adc7ad1f9f74417fcd37f77fea07dfb9534414490847981588ab203143f764d3
+            - library: starter
+              version: 1.0.0
+              path: library.yaml
+              sha256: f95417dd798f27428bc27f91dab7effeecf598e7f8b42b9b9748d6d4628efe90
+            - library: starter
+              version: 1.0.0
+              path: roles.yaml
+              sha256: 79b92318a8086e32ea86f9eea75a246b9283357324492d2cd7a89f6ff9c6c4a0

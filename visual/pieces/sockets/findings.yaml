@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 1e9ffadead3f7e65c453f4749b29345c4942ec0a7cac897d3da5b1d2fc38149b
+  value: 43c102ba20a3cbe9e72d01f0dca31ab9209defd662d575cccc1f9d213272a022
   inputs:
     - file: content.cs.yaml
       sha256: dba4143c6cece44b78b2f02ad0845bfd876313aab71a9a043904434b7e6cbdcb
@@ -27,11 +27,11 @@ key:
     - library: foundations
       version: 1.0.0
       path: library.yaml
-      sha256: 512c6b13c4dbba047fa6d4e8cf11f63727e55689fefc23704bc71694b23a85e7
+      sha256: 5232f7c279e8a693b956b1f7a35e2d2050ef71d1fd95c5722f7784e7c3e1471a
     - library: foundations
       version: 1.0.0
       path: roles.yaml
-      sha256: 648d0134eb0694b4b6daa94eab607fb6e00f9f26558a7c5d24bfccc6bde78ea1
+      sha256: 8c5c29cd8d9797a7527fb2979fc830415c14f09bfa9ed47f96bceeb6d609d92a
     - library: neutral
       version: 1.0.0
       path: fonts/LICENSE-Source-Code-Pro.txt
@@ -55,7 +55,7 @@ key:
     - library: neutral
       version: 1.0.0
       path: library.yaml
-      sha256: d476a59e634cb116e26a287f196a3ba998ead47f95f6cbd3a59bcf8ecbc2580b
+      sha256: ad60b9ab10c1f568c1344041461a62efc635ddd4b36081d67f02cf3aab3e793e
     - library: neutral
       version: 1.0.0
       path: neutral.resolver.json
@@ -87,7 +87,7 @@ key:
     - library: starter
       version: 1.0.0
       path: README.md
-      sha256: 08beca255034af506b2790180a30177cdfcb0f3be7d6435ce38c5a11742e2d9a
+      sha256: dee9e1d5c6c0017471f1263225823cdfa7268a00c15ea46f2323bc44bdb827bf
     - library: starter
       version: 1.0.0
       path: components/aside.yaml
@@ -95,7 +95,7 @@ key:
     - library: starter
       version: 1.0.0
       path: components/card.yaml
-      sha256: 87a63ef9d33bd597a3f48f81eb541b4475182e51be9e26f95e723ed7ebfa75df
+      sha256: e619126a1660995bdcfc982cb297ce02bd02267150e763bbec3b0348fccd1257
     - library: starter
       version: 1.0.0
       path: components/code.yaml
@@ -135,7 +135,7 @@ key:
     - library: starter
       version: 1.0.0
       path: library.yaml
-      sha256: 3e450e67d379137d32c1f2528df6893ce27bc4f9a67b25ac9340bc8ddf1b4f45
+      sha256: f95417dd798f27428bc27f91dab7effeecf598e7f8b42b9b9748d6d4628efe90
     - library: starter
       version: 1.0.0
       path: roles.yaml

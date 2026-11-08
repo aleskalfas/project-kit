@@ -62,6 +62,8 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/**/*.yaml
         - .pkit/capabilities/visual-communication/libraries/neutral/neutral.resolver.json
         - .pkit/capabilities/visual-communication/libraries/neutral/tokens/*.tokens.json
+        - .pkit/capabilities/visual-communication/releases/foundations/releases.yaml
+        - .pkit/capabilities/visual-communication/releases/neutral/releases.yaml
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -615,7 +617,7 @@ The released versions and the record lie outside the version being built, and ea
 
 **How a version is released.** `pkit visual release <library> --shipped` releases the version being built as the last commit holds it, where the capability is authored. A change to it that is not committed refuses the release. It releases the version only:
 
-- **Untouched since the capability's current version was released.** No change has touched the version being built since the release step's change that wrote the version the capability's `package.yaml` carries (DEC-013 point 1). That change is the one that added the changelog's entry for that version. A change since waits for the next release that moves the capability's version. So no library is released while the capability carries a version no release wrote, as 0.1.0 is.
+- **Untouched since the capability's current version was released.** No change has touched the version being built since the release step's change that wrote the version the capability's `package.yaml` carries (DEC-013 point 1). That change is the one that added the changelog's entry for that version. A change since waits for the next release that moves the capability's version. So no library is released while the capability carries a version no release wrote, as before the capability's first release.
 - **Under a number of its own.** The number is not released already. It is below neither the newest released one nor one the version being built carried at an earlier release (DEC-013 point 3). A library's first release takes the number the version being built carries.
 - **On released bases.** It is checked on the newest released version of each major of each library it builds on, a base released earlier in the same change included. A base with no released version of a major the library names is released first.
 - **Read in full and compared** with its previous release ([What a release compares](#what-a-release-compares)). A finding that fails refuses it (*What each run judges* in *What the check reports*).
@@ -626,7 +628,7 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/`. No version of the foundations is released yet, so the command takes the version being built, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`, and carries 1.0.0 until a change raises its number (DEC-013 point 3). A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
@@ -878,9 +880,9 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 
 ### The neutral brand
 
-The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its version being built lies at `.pkit/capabilities/visual-communication/libraries/neutral/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is version 1.0.0, of kind `brand`, needing release 0.1.0, and not yet released, so it may change in any release of the capability.
+The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its released version 1.0.0 lies at `.pkit/capabilities/visual-communication/releases/neutral/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `brand` and needs release 0.3.0. Its version being built stays where it was, at `libraries/neutral/`, and carries 1.0.0 until a change raises its number (DEC-013 point 3).
 
-`pkit visual add neutral` copies it whole to `libraries/neutral/1.0.0/`, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
+`pkit visual add neutral` copies the released version whole to `libraries/neutral/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
 
 - **Its values.** It gives every shared role a value in each of the four combinations of the shared axes ([Keys of combinations](#keys-of-combinations)), but `picture.logo`. It has no logo, which its version states as a fact ([Picture roles](#picture-roles)). Each pair the foundations declare reaches its level in all four.
 - **Its look.** Greys, with a blue accent. The colour families keep their hues in dark and at high contrast.

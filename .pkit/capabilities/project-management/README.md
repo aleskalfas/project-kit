@@ -1259,8 +1259,10 @@ passes the same flag per filed issue when the plan originated from a report.
 Maintainer-side, same-repo: the backbone verb refuses outside the report-target
 repo and the refusal is surfaced verbatim. A link failure after a successful
 create warns loudly with the exact remediation command (`pkit report link N
-<new>`) and exits 4 — the created issue is never rolled back. Requires a
-backbone shipping `report link` (v1.144.0+, the capability's declared floor).
+<new>`) and exits 4 — the created issue is never rolled back. It needs a
+backbone that ships `report link`, as every backbone in the range the
+capability's [`package.yaml`](package.yaml) declares under `requires_backbone`
+does.
 
 Configure the review mode in `project/config.yaml`:
 
