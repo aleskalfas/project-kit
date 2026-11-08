@@ -88,8 +88,8 @@ A note's file is `<YYYY-MM-DD>-<slug>.md` (COR-012):
 
 - **`<YYYY-MM-DD>`** is the day the note was stamped. It never changes when the note moves.
 - **`<slug>`** names the question in two to four words of kebab-case: lower-case letters and digits, joined by single hyphens.
-- **A slug finds every note whose file name ends in `-<slug>.md`,** so `layer` finds `2026-06-03-cache-layer.md` ([the CLI reference, `scratchpad done`](../cli/README.md#scratchpad-done-slug---produced-ref)).
-- **`pkit new scratchpad` refuses a slug** where a state folder holds exactly one note whose file name ends in it. Where each folder holds none or two or more, the note is stamped, unless today's file for the slug exists ([the CLI reference, `new scratchpad`](../cli/README.md#new-scratchpad-slug)).
+- **A slug finds each note whose file name after the date is that whole slug.** So `layer` finds `2026-06-03-layer.md`, and never `2026-06-03-cache-layer.md`. Where a command takes a slug, a note's whole file name finds that note alone ([the CLI reference, `scratchpad done`](../cli/README.md#scratchpad-done-slug---produced-ref)).
+- **`pkit new scratchpad` refuses a slug** that a note in a state folder holds already ([the CLI reference, `new scratchpad`](../cli/README.md#new-scratchpad-slug)).
 
 Examples: `2026-05-12-agent-architecture.md`, `2026-06-03-cache-layer.md`.
 
@@ -210,12 +210,11 @@ Each command has its full entry in the CLI reference, which each name below link
 
 - **No skill pairs `done`, `drop` or `reported`,** since each is mechanical (COR-006).
 - **A report run by an agent** goes through the `report-author` skill. Run with `--yes`, the verb only stages the report. A person posts it at a terminal with `pkit report submit <id>`, and only that post records the send on the note.
-- **`<slug>`** of `done`, `drop` and `reported`, and of `--scratchpad`, is a slug or a whole file name. A slug finds every note whose file name ends in `-<slug>.md` ("File name" above). Give the whole file name where a short slug could find another note.
+- **`<slug>`** of `done`, `drop` and `reported`, and of `--scratchpad`, is a slug or a note's whole file name ("File name" above). Give the whole file name where two notes of one folder hold the slug.
 - **The refusals** write nothing:
   - `new scratchpad`:
     - a slug that is not kebab-case
-    - a slug that ends the file name of exactly one note in a state folder ("File name" above)
-    - a slug whose file of today's date lies in `active/` already
+    - a slug that a note in a state folder holds already ("File name" above)
     - a project with no `active/`
   - `done` and `drop`:
     - no `active/`
