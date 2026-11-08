@@ -139,8 +139,10 @@ def loaded_files(
     registered capability's by name, then the project's.
 
     A layer's file is the one generated from its first loaded set (`first_loaded`). The
-    backbone and the project with no loaded set give their plain file where it is, as a
-    project's `project.md` is before it is converted (COR-068 point 7). Only capabilities
+    backbone and the project with no loaded set give their plain file, as a project's
+    `project.md` is before it is converted (COR-068 point 7), with whether the checkout
+    holds it: the instruction file includes it all the same, as a fresh project's includes
+    a `project.md` that `pkit init` does not create (#2370). Only capabilities
     the backbone manifest registers count, so one unregistered with its files kept is
     left out though its set is still where it was.
     """
@@ -161,8 +163,9 @@ def loaded_files(
                     (target_root / path).is_file(),
                 )
             )
-        elif plain is not None and (target_root / plain).is_file():
-            found.append(LoadedFile(layer, owner, str(plain), None, None, True))
+        elif plain is not None:
+            present = (target_root / plain).is_file()
+            found.append(LoadedFile(layer, owner, str(plain), None, None, present))
 
     add(BACKBONE, BACKBONE, fd.BACKBONE_COMPONENT, lrs.BACKBONE_LOADED_FILE)
     for name in fd.installed_capability_names(target_root):
