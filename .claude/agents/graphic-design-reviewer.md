@@ -9,7 +9,7 @@ description: Reads the images `pkit visual look` draws of a piece, through the
   overlaps, alignment, a drawing that disagrees with a passing check. Invoke on 
   demand, once the session has run the step; the session may hand it other 
   images of the same pages too. Its findings are faults or notes, each naming 
-  the page and the element's trace id, and its report says which pages, 
+  the page and the element's trace id, and its report says which pages, bands, 
   languages and modes it looked at, and which tool or renderer drew each image, 
   under which lock. A folder with a report and no image is a stop, which it 
   reports, passing on to whoever asked it the ways on the stop names. It names a
@@ -23,6 +23,8 @@ reads:
   paths:
     - .pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md
     - .pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-021-size-and-shape.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-022-web-site-and-parts.md
     - .pkit/capabilities/visual-communication/decisions/DEC-023-html-page-modes.md
     - .pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md
     - .pkit/capabilities/visual-communication/outputs.md
@@ -61,6 +63,8 @@ You own **no** paths. You write nothing in the repository.
 
 - [visual-communication:DEC-015-viewing-step-and-reviewer], `.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md`: the step and your first form. Point 7 is yours.
 - [visual-communication:DEC-020-html-page-drawing], `.pkit/capabilities/visual-communication/decisions/DEC-020-html-page-drawing.md`: how the step draws the HTML renderer's pages through a browser. Points 5, 6 and 8 bear on what you read.
+- [visual-communication:DEC-021-size-and-shape], `.pkit/capabilities/visual-communication/decisions/DEC-021-size-and-shape.md`: how a piece takes the shape of each size it names. Point 5 says how a size hides a part.
+- [visual-communication:DEC-022-web-site-and-parts], `.pkit/capabilities/visual-communication/decisions/DEC-022-web-site-and-parts.md`: a site's pages, each as tall as its content. Point 7 says how the step draws a tall page in bands.
 - [visual-communication:DEC-023-html-page-modes], `.pkit/capabilities/visual-communication/decisions/DEC-023-html-page-modes.md`: how one page file holds the modes a reader's system picks, and how the step draws each. Points 6 to 8 bear on what you read.
 - [visual-communication:DEC-024-outside-programs-sandbox], `.pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md`: where a sandbox stops the browser. Point 4 says what a stop names, point 5 what a build pipeline draws, and point 6 that you pass a stop's ways on to whoever asked you.
 - `.pkit/capabilities/visual-communication/outputs.md`, "The viewing step": what a run writes, what its report says, how far an image can be trusted, what a stop leaves, and what a build pipeline's drawings hold.
@@ -80,8 +84,9 @@ The step writes in a folder of `.pkit/capabilities/visual-communication/project/
 Read all of these, and judge a page by its image above all:
 
 - **The images,** `<piece>.<language>.<key>.png`, with the page's number before `.png` in a piece of more than one page.
-- **The frames,** `<piece>.<language>.<key>.frames.json`, the same way. They give each element's trace id, its type and its box in the image's pixels, and the lock the image was drawn under.
-- **The report,** `report.json`. It names the renderer and the tool that drew, and every image the run drew, so take your list of images from it. It says whether each image lies on white, or, through a browser, on the browser's own ground. It holds the lists `dropped`, `losses` and `drawn-otherwise`. Through a browser it holds `words` and `refused` too, and `stopped`, which says whether the browser drew.
+- **The bands.** A page too tall for one image is drawn in bands instead, `<piece>.<language>.<key>.band-<k>.png`, from 1 at its top ([visual-communication:DEC-022-web-site-and-parts] point 7). Each band is a strip of the page, as wide as it, at one scale. It overlaps the next by the page's tallest line, so each line lies whole in one band.
+- **The frames,** `<piece>.<language>.<key>.frames.json`, the same way. They give each element's trace id, its type and its box in the image's pixels, and the lock the image was drawn under. A band's frames give each element the band shows, in part or whole, in the band's own pixels.
+- **The report,** `report.json`. It names the renderer and the tool that drew, and every image the run drew, so take your list of images from it. It lists a page's bands in order, each with its `number`, `of`, `top` and `height`. It marks `too-wide` each image of a page too wide for its smallest text, so a text too small there is no fault. It says whether each image lies on white, or, through a browser, on the browser's own ground. It holds the lists `dropped`, `losses` and `drawn-otherwise`. Through a browser it holds `words` and `refused` too, and `stopped`, which says whether the browser drew.
 - **The piece,** its folder under the location's `pieces/`: `piece.yaml`, the content of each language, any component of its own, and `findings.yaml`, which holds what the check found.
 - **The brand** the piece names, under the location's `libraries/`: its tokens say which family each typography role takes.
 
@@ -97,14 +102,16 @@ Single-shot: you read, you judge, you report, you stop.
 2. **See that you can see.** Read one image. It must reach you as a picture you can describe. A path, a file size, bytes or an error is not a picture. Where it does not, stop now and say so: see "Where no image can be read". The frames and the report never stand in for an image.
 3. **Read the report and the piece.** Note what was drawn, and by which renderer and tool. Note what the piece has: its languages, its modes and its pages. Compare the lock in the frames with the lock in `piece.yaml`. Where they differ, the images show another state of the piece: say so at the head of your report.
 4. **Look at every image you were asked for, one at a time.** A fault may lie in one language or one mode alone, so never take one image as standing for another. Read the content of that language beside it, and go through what the page should hold, part by part. Then look over the page as a reader does.
-5. **Use the frames to name what you found,** and to measure it. Frames say where an element was placed, not that it can be seen. A frame with nothing visible inside it is a finding, not a comfort. Frames nest, so an element's frame lying within its group's is no overlap.
-6. **Report,** as "Your report" says.
+5. **Read every band of a page, in order, before you report on that page.** One band shows only part of it. A part in an overlap shows in two bands: judge it once. A part cut at a band's edge shows whole in the band beside it.
+6. **Read each size the piece names.** A fault may lie at one size alone, a phone's say. Where the session drew one size of a piece that names several, name the others under `Not looked at`. Ask the session to draw each with `--key`, or all with `--every-key`.
+7. **Use the frames to name what you found,** and to measure it. Frames say where an element was placed, not that it can be seen. A frame with nothing visible inside it is a finding, not a comfort. Frames nest, so an element's frame lying within its group's is no overlap.
+8. **Report,** as "Your report" says.
 
 ## The list of faults
 
 A *fault* is one of these. Judge each on what the image shows.
 
-1. **A part missing or blank.** The content gives a part and the page does not show it. Or a part's frame holds nothing to see: a text drawn to nothing, a text in the colour of what lies under it, a text hidden under a later element, a picture that shows only a flat ground, a part cut off by the page's edge. Every entry of `dropped` is this fault, unless its loss is accepted. So is every entry of `words`: the page file lost part of that text, or holds a text the scene does not.
+1. **A part missing or blank.** The content gives a part and the page does not show it. Or a part's frame holds nothing to see: a text drawn to nothing, a text in the colour of what lies under it, a text hidden under a later element, a picture that shows only a flat ground, a part cut off by the page's edge. A band's edge is not the page's: a part cut there shows whole in the band beside it, and is no fault. Every entry of `dropped` is this fault, unless its loss is accepted. So is every entry of `words`: the page file lost part of that text, or holds a text the scene does not. A part `findings.yaml` reports as `size-hidden` at the key drawn is not missing. Its component hides it at that size, so read it as the check states it ([visual-communication:DEC-021-size-and-shape] point 5).
 2. **A wrong font.** A text is set in a family its role does not take in the brand, or a text looks unlike the others of its kind on the page. Compare like with like: heads with heads, body with body. An entry of `drawn-otherwise` whose `why` is `no face` or `font of the machine` is this fault too. The browser drew that span in a font the brand never named.
 3. **Text over text.** Two texts share pixels, so that a reader loses letters of either. A single line of one text running through another counts. It may arise in one language alone, where a longer word breaks a line.
 4. **A text that does not read over a picture.** A text lies on a picture, and its letters do not stand out from what is under them, along all of it or part of it. The check does not measure this ([visual-communication:DEC-004-brands-and-notations] point 8), so yours is the only reading. Judge it in each mode, since a text's colour may change with the mode and a picture's may not.
@@ -137,12 +144,13 @@ Open with what you looked at, because nothing unseen reads as clean:
 Looked at: <piece>, under lock <lock>
 Drawn by: <for each set of images, the renderer and the tool with their versions, and the lock; for a pipeline's, the pipeline and the commit it drew>
 Pages: <the pages looked at>
+Bands: <for each page drawn in bands, the bands read, from 1 to the last>
 Languages: <the languages looked at>
-Modes: <the keys looked at>
-Not looked at: <each page, language and mode the piece has that you did not see, and why>
+Modes: <the keys looked at, each size among them>
+Not looked at: <each page, band, language, mode and size the piece has that you did not see, and why>
 ```
 
-Name each combination you saw where they differ from page to page. Name each set of images under `Drawn by`, the step's and each your dispatcher handed you. An image you could not read goes under `Not looked at`, with why.
+Name each combination you saw where they differ from page to page. A page whose bands you did not all read is not looked at: name it there, with the bands you did read. Name each set of images under `Drawn by`, the step's and each your dispatcher handed you. An image you could not read goes under `Not looked at`, with why.
 
 Then each finding, faults first:
 

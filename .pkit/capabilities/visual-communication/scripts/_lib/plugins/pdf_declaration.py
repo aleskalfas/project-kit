@@ -33,7 +33,7 @@ IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library
 DECLARATION = {
     "name": "pdf",
     "kind": "renderer",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "seam": 5,
     "module": "pdf",
     "about": "A PDF file for each language and combination of modes, its pages in order.",

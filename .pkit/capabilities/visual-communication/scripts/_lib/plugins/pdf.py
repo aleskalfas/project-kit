@@ -8,6 +8,10 @@ point 7).
 - **Pages.** Each page of the scene, in the scene's order, is a page of the file, as large
   as the page's frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the
   inch, as the declaration's `unit` says.
+- **The largest page.** A page of PDF is at most `LARGEST` pt on a side, as readers hold it.
+  A page larger at 0.75 pt to a px, such as a phone's page of a long site, is drawn smaller,
+  its proportions kept, its long side `LARGEST` pt. The page is reported, as drawn otherwise
+  (DEC-022 point 7). Every other page draws as before.
 - **Colours** stay roles in the scene. The renderer takes each from the brand's resolved
   values in the combination it draws (`colours`), as DeviceRGB, with an opacity where the
   colour is translucent. A role with no colour there is left out, and reported.
@@ -45,13 +49,14 @@ point 7).
   image handed no picture, or one that cannot be read or decoded, such as a PNG too large to
   decode, is left out, and reported.
 
-Output is fixed for a version: lengths are written to 1/100 px and colours to 1/10 000,
-objects in one order, the streams uncompressed, with no date and no random id: the file's
-`/ID` is taken from its own bytes. A picture's data is the file's own, and what the
-renderer decodes, a soft mask and the colours of a PNG with alpha, is written uncompressed
-too, so it rests on no build of zlib. So the same scene and values give the same bytes on
-every machine. A change that could give another output raises the version, and the
-reference outputs pinned to it in the tests catch one made without it (DEC-005 point 9).
+Output is fixed for a version: lengths are written to 1/100 px, a page's scale to six
+decimals and colours to 1/10 000, objects in one order, the streams uncompressed, with no
+date and no random id: the file's `/ID` is taken from its own bytes. A picture's data is the
+file's own, and what the renderer decodes, a soft mask and the colours of a PNG with alpha,
+is written uncompressed too, so it rests on no build of zlib. So the same scene and values
+give the same bytes on every machine. A change that could give another output raises the
+version, and the reference outputs pinned to it in the tests catch one made without it
+(DEC-005 point 9).
 """
 
 from __future__ import annotations
@@ -78,6 +83,10 @@ VERSION: str = DECLARATION["version"]
 
 #: How many pt of the page each px of the scene is (the declaration's `unit`).
 SCALE: float = DECLARATION["unit"]["scale"]
+
+#: The most pt a page of the file takes on a side: the largest page readers of PDF hold, at
+#: the user unit every file here keeps. At `SCALE`, 19,200 px of the scene.
+LARGEST = 14400.0
 
 #: A line's two ends, each of which may carry an arrowhead.
 ENDS = ("start", "end")
@@ -540,7 +549,7 @@ class _Document:
         self.shown = shown
         self.losses: list[seam.Loss] = []
         self.traces: list[str] = []
-        self._pages: list[tuple[float, float, list[Part]]] = []
+        self._pages: list[tuple[float, float, list[Part], float]] = []
         self._faces: dict[str, _Face] = {}
         self._fonts: dict[str, _Font] = {}
         # Each opacity the pages take, by the operand it sets and its value: its name.
@@ -558,7 +567,17 @@ class _Document:
     def page(self, element: Mapping[str, Any]) -> None:
         self.traces.append(element["id"])
         parts = [part for child in element.get("children", []) for part in self._element(child)]
-        self._pages.append((float(element["width"]), float(element["height"]), parts))
+        width, height = float(element["width"]), float(element["height"])
+        fit = _fit(width, height)
+        if fit < 1:
+            self._lose(
+                element["id"],
+                seam.APPROXIMATED,
+                f"the page measures {number(width * SCALE)} by {number(height * SCALE)} pt, "
+                f"past the {number(LARGEST)} pt a page of PDF takes on a side, so it is drawn "
+                f"{number(fit, 4)} as large, its proportions kept",
+            )
+        self._pages.append((width, height, parts, fit))
 
     def _element(self, element: Mapping[str, Any]) -> list[Part]:
         kind = element.get("type")
@@ -813,10 +832,10 @@ class _Document:
             name: _embedded_image(image, add, profiles) for name, image in self._images.values()
         }
         kids = []
-        for width, height, parts in self._pages:
-            content = _stream(_content(width, height, parts).encode("latin-1"))
+        for width, height, parts, fit in self._pages:
+            content = _stream(_content(width, height, parts, fit).encode("latin-1"))
             contents = add(content)
-            box = f"[0 0 {number(width * SCALE)} {number(height * SCALE)}]"
+            box = f"[0 0 {number(width * SCALE * fit)} {number(height * SCALE * fit)}]"
             kids.append(
                 add(
                     f"<< /Type /Page /Parent {tree} 0 R /MediaBox {box} "
@@ -942,10 +961,18 @@ def _arrowhead(route: Sequence[tuple[float, float]], which: str, width: float) -
     return f"{_point(*left)} m {_point(*tip)} l {_point(*right)} l h f\n"
 
 
-def _content(width: float, height: float, parts: Sequence[Part]) -> str:
-    """A page's content: the scene's px mapped onto the page's pt, down the page as the
-    scene runs, with SVG's miter limit, then what the page draws."""
-    head = f"{number(SCALE)} 0 0 {number(-SCALE)} 0 {number(height * SCALE)} cm 4 M\n"
+def _fit(width: float, height: float) -> float:
+    """How large a page of `width` by `height` px is drawn, as a share of its size at `SCALE`:
+    1, or less where its long side would pass `LARGEST` pt."""
+    longest = max(width, height) * SCALE
+    return LARGEST / longest if longest > LARGEST else 1.0
+
+
+def _content(width: float, height: float, parts: Sequence[Part], fit: float = 1.0) -> str:
+    """A page's content: the scene's px mapped onto the page's pt, `fit` as large, down the
+    page as the scene runs, with SVG's miter limit, then what the page draws."""
+    scale = SCALE * fit
+    head = f"{number(scale, 6)} 0 0 {number(-scale, 6)} 0 {number(height * scale)} cm 4 M\n"
     drawn = (
         part.font.shown(part.glyphs, part.size) + "\n" if isinstance(part, _Shown) else part
         for part in parts

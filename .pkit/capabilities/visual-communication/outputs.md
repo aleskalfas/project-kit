@@ -102,6 +102,7 @@ pkit:
         - visual-communication:DEC-020#7
         - visual-communication:DEC-020#8
         - visual-communication:DEC-021#8
+        - visual-communication:DEC-022#7
         - visual-communication:DEC-023#1
         - visual-communication:DEC-023#2
         - visual-communication:DEC-023#3
@@ -166,7 +167,7 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
 - the `svg` renderer, at version 1.1.0
-- the `pdf` renderer, at version 1.1.0
+- the `pdf` renderer, at version 1.2.0
 - the `html` renderer, at version 1.2.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
@@ -184,6 +185,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
+- **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
@@ -246,6 +248,7 @@ The third is `refused`: a line that holds neither its ends nor its points, which
 The `pdf` renderer draws a scene as one PDF file for each language and each combination of modes the piece names. The file holds the scene's pages in order, one PDF page for each. It draws the exports a piece declares as `pdf` ([Exports](#exports)); previews stay SVG.
 
 - **Pages.** Each page is as large as its frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the inch. Format 1's top components declare no physical size, so the renderer's declaration states this mapping as its `unit` (DEC-001 point 2).
+- **The largest page.** A PDF reader holds a page of at most 14,400 pt on a side, which is 19,200 px. A larger page, such as a phone's page of a long site, is drawn smaller to fit. It keeps its proportions, and its long side is 14,400 pt. The renderer reports it ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
 - **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
@@ -262,8 +265,9 @@ The PDF is not tagged. It carries no alternative text, no reading order and no s
 
 Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive and property a scene of format 1 holds, the image among them, so this finds no loss in format 1.
 
-While it draws, the renderer reports four losses of its own:
+While it draws, the renderer reports five losses of its own:
 
+- **a page** larger than a PDF reader holds, `approximated`, under the page's trace id. It is drawn smaller, to fit.
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
 - **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
 - **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
@@ -690,7 +694,10 @@ The *viewing step* draws a piece's pages as images, for a person or an agent to 
 - **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss. So is a picture file that is missing or cannot be read.
 - **Which renderer.** It reads a piece that declares `html` through [the HTML renderer](#the-html-renderer), and any other piece through [the SVG renderer](#the-svg-renderer). `--renderer svg` or `--renderer html` names one.
 - **What it draws.** By default, every page in the piece's source language, in the first key in [key order](files.md#keys-of-combinations). That is the combination of defaults wherever the piece names it. `--page`, `--language` and `--key` pick others. `--every-language` and `--every-key` take them all.
-- **The size.** An image takes 1568 pixels on its long edge, or more where the page's smallest text would land under 10 pixels.
+- **Each size.** A piece on a size axis is drawn at one size by default. Name each other size's key with `--key`, a phone's among them, or take every key with `--every-key`.
+- **The size of an image.** A page is drawn 1568 pixels on its long edge, or larger where its smallest text would land under 10 pixels. No image passes 1568 pixels on either edge.
+- **Bands.** A page too tall for one such image is drawn in *bands* (DEC-022 point 7). Each band is a strip of its height as wide as the page, and all share one scale. Each band overlaps the next by the page's tallest line, so every line lies whole in one band. Where a gap between elements lies in that overlap, the band ends in it. Read every band of a page before you judge it, and a band's edge is no fault of the page.
+- **A page too wide** for one image whose smallest text reads is drawn 1568 pixels wide. Its smallest text may not read, and the report says so.
 - **The ground.** Where a page draws no ground of its own, the SVG renderer's image lies on white, which the piece never set. The HTML renderer's lies on the browser's own ground in the mode drawn, which differs between browsers. Judge a text over nothing knowing this.
 - **No promise about pixels.** An image may change with the tool, its version or the machine (DEC-015 point 6).
 
@@ -703,7 +710,7 @@ resvg draws them, with no network. It draws from the fonts the page embeds, neve
 A browser draws them. No other format needs one, and the capability installs none.
 
 - **Which browser.** A browser of the Chromium family: the first found where Chrome and Chromium install themselves, or the one the project names ([The browser](files.md#the-browser)).
-- **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, so a page's image may be larger than its own text needs.
+- **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, as far as the widest page fits 1568 pixels. So a page's image may be larger than its own text needs. The browser draws the same bands of a page as resvg does at that scale.
 - **Each mode.** Each key the run draws out of a file is drawn in that start, with no reload. The step sets every signal the file reads by the browser's emulation, so the machine's own settings play no part. Each read the report names runs in each key drawn.
 - **What an image shows.** One browser's drawing, which stands for no other browser. The report names that browser and its version.
 - **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window and printing. Open the page file in your own browsers to see those.
@@ -738,7 +745,8 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 | File | What it holds |
 |---|---|
 | `<piece>.<language>.<key>.png` | one page drawn. A piece of more than one page adds the page's number, from 1, to this name and the next: `<piece>.<language>.<key>.<n>.png` |
-| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids) |
+| `<piece>.<language>.<key>.band-<k>.png` | one [band](#the-viewing-step) of a page, numbered from 1 at the page's top, in place of the page's one image. A piece of more than one page puts the page's number first: `<piece>.<language>.<key>.<n>.band-<k>.png` |
+| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids). Beside a band, it names the band. It frames each element the band shows, in part or whole, so a frame a band's edge crosses reaches past the image |
 | `<piece>.<language>.<key>.html` | through the HTML renderer, the [page file](#the-html-renderer) the images were drawn from, whichever pages and keys the run draws. Its `<key>` is the file's key ([Modes](#modes)). Open it in your own browser. It is no export, and is never committed |
 | `report.json` | [What the report says](#what-the-report-says) |
 
@@ -747,7 +755,9 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
 - **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white.
-- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`.
+  - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
+  - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
+- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`. Each page is read whole, once, so a text in two bands is listed once.
 - **`losses`:** each [loss](#the-loss-report) the renderer reports. A loss that names a key is listed under that key alone. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
 - **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. resvg may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks. Through the HTML renderer, an entry is a span with `why`:
   - `no face`: the file holds no face of its family at its weight, with that family and weight;
@@ -772,7 +782,7 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 - a renderer other than `svg` and `html`;
 - a brand that cannot be read;
 - a font with no file, or a character no font holds;
-- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;
+- a page with no size, or an image of one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;
 - through the HTML renderer, a `browser` in the configuration that names no path ([The browser](files.md#the-browser)).
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.

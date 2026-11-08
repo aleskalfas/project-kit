@@ -47,9 +47,12 @@ A finding in a library version that the project does not correct asks for attent
 
 - **While you mend a page:** `pkit visual look <piece> --page <page>`, by its number or its trace id. By default that is the source language, in the first key.
 - **A language or a mode you changed:** add `--language <language>` or `--key <key>`, each of which may repeat.
-- **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language or one mode alone, such as a longer word that breaks a line.
+- **Each size the piece names:** a look draws one size by default. Draw each other size with `--key`, a phone's among them, or all with `--every-key`.
+- **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language, one mode or one size alone, such as a longer word that breaks a line.
 
 **How to read them.** Open each image, one at a time, and read it as the piece's `audience` would. Go through what the content gives, part by part, then look over the page as a whole. A frame file beside each image gives each element's trace id and its box in the image's pixels, so you can name what you found.
+
+**A page in bands.** A page too tall for one image, such as a phone's web page, is drawn in bands, each an image as wide as the page. Read every band of the page, in order, before you judge it. Each overlaps the next by a line, so a part cut at a band's edge shows whole in the band beside it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **What `report.json` adds.** It says what the images cannot show ([What the report says](../../outputs.md#what-the-report-says)):
 
@@ -58,6 +61,7 @@ A finding in a library version that the project does not correct asks for attent
 | `dropped` | The tool drew nothing of a text or a run. | Read it as a part missing from the page, even where the image looks whole. Find the element by its frame, and mend what lost it. If you cannot, report it. |
 | `losses` | What the renderer left out, accepted or not. | Treat one the piece does not accept as `loss` in step 4. |
 | `drawn-otherwise` | A run measured in more than one family, which the tool may set in one of them. | Trust the image less on that line. |
+| `band`, on an image | The image is one band of a page too tall for one, with its number and how many the page has. | Read each band the page has before you judge the page. |
 | `on-white`, on an image | Through the SVG renderer, the page draws no ground of its own, so its white is not the piece's. | Judge a text over nothing knowing this. |
 | `on-browser-ground`, on an image | Through the HTML renderer, the page draws no ground of its own. It lies on the browser's own ground in the mode drawn, which differs between browsers. | Judge a text over nothing knowing this, in each mode. No check reads that ground. |
 
@@ -65,7 +69,7 @@ A finding in a library version that the project does not correct asks for attent
 
 - **A browser's drawing.** An image shows this tool's drawing, and no other tool's.
 - **A later drawing.** The pixels may change with the tool, its version or the machine. Keep no image as a reference, and compare none as a contract.
-- **A page you did not draw.** One language or one key stands for no other.
+- **A page you did not draw.** One language, one key or one size stands for no other.
 - **A pass.** A page that looks right has passed nothing. The check still measures it.
 
 ### Where a look stops
