@@ -233,24 +233,26 @@ Install the capability, and its rules reach every session that loads `CLAUDE.md`
 - **A rule you kept yourself.** Where a capability you install ships a rule your `project.md` held, you may delete or shorten yours, keeping what holds only in your project.
 - **The uninstall** renders the index again without the capability's file. Today it refuses while the capability's own deployed agents cite its records, so the fence below shows the refusal, then passes `--force`. `--force` also skips the checks of what depends on the capability ([the lifecycle reference, "Uninstall"](../../.pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)).
 
-Below, `pkit rule-sets loaded` lists the files a session loads, in their order, before and after the uninstall:
+Below, `pkit rule-sets loaded` lists the files a session loads, in their order, before and after the uninstall. It lists your `project.md` too, as missing until you write it:
 
 ```console
 $ pkit capabilities install project-management >/dev/null 2>&1
 $ pkit rule-sets loaded
-Loaded files — 2   (every layer's, in the order a session reads them)
+Loaded files — 3   (every layer's, in the order a session reads them)
 
   backbone    backbone            .pkit/rules/core.md                             backbone:OPS (.pkit/rule-sets/ops.md)
   capability  project-management  .pkit/capabilities/project-management/rules.md  project-management:PM (.pkit/capabilities/project-management/rule-sets/pm.md)
+  project     project             .pkit/rules/project.md                          a plain file, missing
 $ pkit capabilities uninstall project-management 2>&1 | grep Refusing
   Refusing to uninstall 'project-management': <any> reference(s) found:
 $ pkit capabilities uninstall project-management --force | grep -e Removed -e rules/capabilities
   Removed capability 'project-management' from .pkit/capabilities/project-management
   rendered     .pkit/rules/capabilities.md (0 capability file(s))
 $ pkit rule-sets loaded
-Loaded files — 1   (every layer's, in the order a session reads them)
+Loaded files — 2   (every layer's, in the order a session reads them)
 
-  backbone  backbone  .pkit/rules/core.md  backbone:OPS (.pkit/rule-sets/ops.md)
+  backbone  backbone  .pkit/rules/core.md     backbone:OPS (.pkit/rule-sets/ops.md)
+  project   project   .pkit/rules/project.md  a plain file, missing
 ```
 
 ## Keep each rules file within its budget

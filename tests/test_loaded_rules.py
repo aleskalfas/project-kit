@@ -252,6 +252,25 @@ def test_loaded_gives_a_project_s_own_loaded_set(adopter: AdopterRepo) -> None:
     assert (project.path, project.rule_set) == (".pkit/rules/project.md", "OWN")
 
 
+def test_loaded_lists_the_project_s_plain_file_when_it_is_absent(adopter: AdopterRepo) -> None:
+    """A fresh project's instruction file includes `project.md` before it exists, so the
+    project layer is listed, and said to be missing (#2370)."""
+    (adopter.root / ".pkit/rules/project.md").unlink(missing_ok=True)
+    runner = CliRunner()
+    as_json = runner.invoke(main, ["rule-sets", "loaded", "--json"])
+    assert as_json.exit_code == 0, as_json.output
+    (project,) = [e for e in json.loads(as_json.output)["loaded"] if e["layer"] == "project"]
+    assert (project["path"], project["rule_set"], project["present"]) == (
+        ".pkit/rules/project.md",
+        None,
+        False,
+    )
+    human = runner.invoke(main, ["rule-sets", "loaded"])
+    (line,) = [row for row in human.output.splitlines() if ".pkit/rules/project.md" in row]
+    assert line.split()[:3] == ["project", "project", ".pkit/rules/project.md"]
+    assert line.endswith("a plain file, missing")
+
+
 def test_an_unregistered_capability_s_set_is_left_out(adopter: AdopterRepo) -> None:
     folder = incubated(adopter, "alpha", loaded_set("alpha", "ALPHA"))
     lrs.generate(adopter.root)
@@ -260,9 +279,7 @@ def test_an_unregistered_capability_s_set_is_left_out(adopter: AdopterRepo) -> N
     manifest.components = [c for c in manifest.components if c.name != "alpha"]
     write_backbone_manifest(adopter.root, manifest)
     assert (folder / "rules.md").is_file()
-    assert [f.owner for f in lr.loaded_files(adopter.root)] == ["backbone"] + (
-        ["project"] if (adopter.root / ".pkit/rules/project.md").is_file() else []
-    )
+    assert [f.owner for f in lr.loaded_files(adopter.root)] == ["backbone", "project"]
 
 
 def test_the_command_prints_the_list_the_json_and_the_index(adopter: AdopterRepo) -> None:
