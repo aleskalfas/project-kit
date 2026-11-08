@@ -173,7 +173,7 @@ flowchart TD
 
 Run `pkit sync` in each clone after you pull a change. It puts in place what the clone's sessions load: `core.md`, the index and `CLAUDE.md`'s lines. What it does, and what you keep yourself:
 
-- **What it adds to `CLAUDE.md`.** It puts back a missing line of the methodology's rules or of the index, and removes nothing. Your own rules' line comes back only with the methodology's. Without a `CLAUDE.md`, the sync creates one with a heading and the three lines ([the adapter's README, `merge-claude-md.sh`](../../.pkit/adapters/claude-code/README.md#merge-claude-mdsh)).
+- **What it adds to `CLAUDE.md`.** It puts back a missing line of the methodology's rules or of the index, adds no line the file already holds, and removes nothing. Your own rules' line comes back only with the methodology's. Without a `CLAUDE.md`, the sync creates one with a heading and the three lines ([the adapter's README, `merge-claude-md.sh`](../../.pkit/adapters/claude-code/README.md#merge-claude-mdsh)).
 - **When it adds nothing.** Where the methodology's line stands only in a code fence or a code span, the sync inserts nothing and reports it. Move the line out of the code.
 - **What it says.** It names each rule it newly binds, changes or retires. That is information, and stops nothing ([the lifecycle reference, "What a step newly binds"](../../.pkit/lifecycle/README.md#what-a-step-newly-binds)).
 - **When it stops.** Where your `pkit` is at another version than your project records, sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
@@ -197,7 +197,7 @@ $ grep @.pkit CLAUDE.md
 ```
 
 > [!WARNING]
-> `pkit validate` checks only the index's line, so a `CLAUDE.md` without the methodology's line passes it. The next sync then adds all three lines again, and the index's line and yours stand twice. Delete the second copies by hand.
+> `pkit validate` checks only the index's line, so a `CLAUDE.md` without the methodology's line passes it.
 
 ## Add your own rules
 

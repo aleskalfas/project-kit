@@ -1,0 +1,22 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+    revalidated:
+      at: 2026-11-08T22:21:12Z
+      outcome: updated
