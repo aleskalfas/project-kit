@@ -9,9 +9,13 @@ builds-on:
       - {id: TERM-component, name: component}
       - {id: TERM-data-point, name: data point}
       - {id: TERM-documentation-root, name: documentation root}
+      - {id: TERM-finding, name: finding}
       - {id: TERM-install, name: install}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
+      - {id: TERM-reviewer, name: reviewer}
+      - {id: TERM-rule, name: rule}
+      - {id: TERM-rule-set, name: rule set}
       - {id: TERM-system, name: system}
       - {id: TERM-version, name: version}
       - {id: TERM-version-pin, name: version pin}
@@ -36,6 +40,7 @@ builds-on:
           - Use a brand's values in the code of a web page, a game or an app that must look like my project's pieces.
           - Take in a library that another project shares, by its link, and take in its newer library versions when I choose.
           - Add a library component to a library my project owns, and mark it stable once I judge that pieces can rely on it.
+          - Have a piece designed and judged by the principles of visual communication, so it says the right thing and looks right without my project writing those principles again.
       - id: ACT-adopter
         name: Adopter
         needs:
@@ -383,9 +388,13 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
+  - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [install](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-install--install)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
+  - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
+  - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
+  - **Term:** [rule set](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule-set--rule-set)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [version](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version--version)
   - **Term:** [version pin](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version-pin--version-pin)
@@ -407,6 +416,7 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Use a brand's values in the code of a web page, a game or an app that must look like my project's pieces.
     - Take in a library that another project shares, by its link, and take in its newer library versions when I choose.
     - Add a library component to a library my project owns, and mark it stable once I judge that pieces can rely on it.
+    - Have a piece designed and judged by the principles of visual communication, so it says the right thing and looks right without my project writing those principles again.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
     - Have another capability's diagrams drawn in my libraries' look, the rest drawn that capability's own way, and see how much my libraries cover.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
