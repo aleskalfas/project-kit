@@ -564,6 +564,154 @@ def test_is_decision_link_unit() -> None:
     assert not refs._is_decision_link("project/config.yaml")
 
 
+# --- forward citation of a declared path (#2471) --------------------
+#
+# A path the front matter declares must appear in the body. The front matter
+# holds the declaration itself, so what the check reads for it is the body
+# alone, a composite skill's siblings included.
+
+
+def _uncited_paths(root: Path) -> list[str]:
+    issues = refs.validate_corpus(root)
+    return [i.diagnosis for i in issues if "frontmatter declares path" in i.diagnosis]
+
+
+def test_forward_declared_path_the_body_cites_is_not_reported(kit_target: Path) -> None:
+    body = """---
+name: s
+description: t
+reads:
+  paths: [docs/release-notes.md]
+---
+# S
+Append the change to `docs/release-notes.md`.
+"""
+    _write_skill(kit_target, "project", "s", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_declared_path_only_the_front_matter_names_is_reported(kit_target: Path) -> None:
+    body = """---
+name: s
+description: t
+reads:
+  paths: [docs/release-notes.md]
+---
+# S
+Write the release notes.
+"""
+    _write_skill(kit_target, "project", "s", body)
+    assert _uncited_paths(kit_target) == [
+        "frontmatter declares path 'docs/release-notes.md' but body does not cite it."
+    ]
+
+
+def test_forward_bare_file_name_the_body_names_is_not_reported(kit_target: Path) -> None:
+    """A bare file name is no path the parser reads, so the body's text is searched."""
+    body = """---
+name: a
+description: t
+reads:
+  paths: [CONTRIBUTING.md]
+---
+# A
+Read CONTRIBUTING.md before you review.
+"""
+    _write_agent(kit_target, "project", "a", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_bare_file_name_only_the_front_matter_names_is_reported(kit_target: Path) -> None:
+    body = """---
+name: a
+description: t
+reads:
+  paths: [CONTRIBUTING.md]
+---
+# A
+Read the contributing guide before you review.
+"""
+    _write_agent(kit_target, "project", "a", body)
+    assert _uncited_paths(kit_target) == [
+        "frontmatter declares path 'CONTRIBUTING.md' but body does not cite it."
+    ]
+
+
+def test_forward_bare_file_name_a_composite_sibling_names_is_not_reported(
+    kit_target: Path,
+) -> None:
+    folder = kit_target / ".pkit" / "skills" / "project" / "family"
+    folder.mkdir()
+    (folder / "family.md").write_text(
+        "---\nname: family\ndescription: t\ncomposes: [op.md]\n"
+        "reads:\n  paths: [CONTRIBUTING.md]\n---\n# Family\nFollow `op.md`.\n",
+        encoding="utf-8",
+    )
+    (folder / "op.md").write_text("# Op\nRead CONTRIBUTING.md first.\n", encoding="utf-8")
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_relative_link_to_the_declared_file_cites_it(kit_target: Path) -> None:
+    """A link is read from the body's folder, so it names the declared file another way."""
+    (kit_target / ".pkit" / "agents" / "README.md").write_text("# Agents\n", encoding="utf-8")
+    body = """---
+name: s
+description: t
+reads:
+  paths: [.pkit/agents/README.md]
+---
+# S
+See [the agents README](../../agents/README.md#the-reference-graph).
+"""
+    _write_skill(kit_target, "core", "s", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_declared_decision_file_is_cited_by_its_record(kit_target: Path) -> None:
+    """A record's file is cited by the record's id, a capability's decision in brackets."""
+    _write_decision(kit_target, "core", "COR", "001", "a-thing")
+    decisions = kit_target / ".pkit" / "capabilities" / "mycap" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "DEC-002-other.md").write_text("---\nid: DEC-002\n---\n", encoding="utf-8")
+    body = """---
+name: s
+description: t
+reads:
+  records: [COR-001]
+  paths:
+    - .pkit/decisions/core/COR-001-a-thing.md
+    - .pkit/capabilities/mycap/decisions/DEC-002-other.md
+---
+# S
+Per COR-001 and [mycap:DEC-002-other] this holds.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_decision_file_whose_record_the_body_never_cites_is_reported(
+    kit_target: Path,
+) -> None:
+    decisions = kit_target / ".pkit" / "capabilities" / "mycap" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "DEC-002-other.md").write_text("---\nid: DEC-002\n---\n", encoding="utf-8")
+    (decisions / "DEC-003-third.md").write_text("---\nid: DEC-003\n---\n", encoding="utf-8")
+    body = """---
+name: s
+description: t
+reads:
+  paths: [.pkit/capabilities/mycap/decisions/DEC-002-other.md]
+---
+# S
+Per [mycap:DEC-003-third] this holds, and DEC-002 is named bare.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    assert _uncited_paths(kit_target) == [
+        "frontmatter declares path '.pkit/capabilities/mycap/decisions/DEC-002-other.md' "
+        "but body does not cite it."
+    ]
+
+
 def test_storyboard_bare_sibling_resolves(kit_target: Path) -> None:
     """A bare `storyboard.md` declared by a capability agent resolves against the
     agent's own directory, not target-root (#584)."""
