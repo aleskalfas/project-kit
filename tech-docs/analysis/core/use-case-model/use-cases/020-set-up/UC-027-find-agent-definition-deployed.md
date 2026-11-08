@@ -34,6 +34,7 @@ pkit:
         - src/project_kit/cli.py
         - .pkit/adapters/README.md
         - .pkit/adapters/claude-code/deploy-agents.sh
+        - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/agents/README.md
         - .pkit/lifecycle/ownership.py
         - .pkit/permissions/decide.py

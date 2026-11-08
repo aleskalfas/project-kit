@@ -36,6 +36,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - .pkit/adapters/README.md
         - .pkit/adapters/claude-code/deploy-agents.sh
+        - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/adapters/claude-code/deploy-skills.sh
         - .pkit/adapters/claude-code/undeploy-capability.sh
         - .pkit/lifecycle/ownership.py
