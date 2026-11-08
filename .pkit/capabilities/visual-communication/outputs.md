@@ -53,6 +53,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
+        - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
       record:
         - visual-communication:DEC-001#2
@@ -113,6 +114,7 @@ pkit:
         - visual-communication:DEC-024#4
         - visual-communication:DEC-024#5
         - visual-communication:DEC-024#6
+        - visual-communication:DEC-025#4
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
@@ -181,8 +183,9 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer and the code writers draw nothing new, so their versions stay.
-- **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
-- **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes form 1, which is version 1 of the document of values ([The JSON code writer](#the-json-code-writer)).
+- **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
+- **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay.
+- **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
 - **None of these versions** is the format number of the files a project keeps.
 
 ### The loss report
@@ -293,7 +296,7 @@ A page file holds each mode a reader's signal names, such as `prefers-color-sche
 - **One mode alone.** A piece of one mode gives a file of one key, under no signal's rule. So dark alone draws dark for every reader. An axis with no mode named stays at its default.
 - **Its schemes.** CSS `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`, so the browser's own ground follows the mode. A file with no such mode names none.
 - **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade.
-- **Pictures.** A produced picture draws the first key's variant ([What the HTML renderer loses](#what-the-html-renderer-loses)). A picture file is the same in every key, so it draws as it is.
+- **Pictures.** A produced picture draws the first key's variant, and a picture role the first key's file ([What the HTML renderer loses](#what-the-html-renderer-loses)). A picture file is the same in every key, so it draws as it is.
 
 ### What the HTML renderer declares
 
@@ -313,7 +316,7 @@ Before it draws, the capability compares each scene with the renderer's declarat
 In a file of several keys, these losses lie in one key alone (`key` in [The loss report](#the-loss-report)):
 
 - **A role with no colour in one key** draws nothing in that key, and reports the loss there.
-- **A picture** whose variant in another key holds another picture is `approximated` in that key (*Pictures* in [Modes](#modes)).
+- **A picture** that another key shows in another file is `approximated` in that key, such as a dark logo (*Pictures* in [Modes](#modes)).
 - **A picture with no file for a key,** such as a produced picture with no variant for it, is left out in that key.
 
 ## Exports
@@ -412,7 +415,7 @@ An export run is refused, and writes nothing, when:
 - the brand cannot be read, or the piece names a mode its brand lacks;
 - a font has no file, or a character has no font family that can measure it;
 - a produced picture the piece shows is missing: it has no record, or its record names a variant file that is missing;
-- a picture file an image shows is missing or cannot be read, the piece's or a library's (DEC-025 point 9). The refusal names it, and why;
+- a picture file an image shows is missing or cannot be read, the piece's, a library's or a brand's (DEC-025 point 9). The refusal names it, and why;
 - a produced picture is stale (*What makes an output stale* in *What the check reports*), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
 - the piece has no page in one of its languages, so the version would hold no file in it;
@@ -480,12 +483,12 @@ A variant is named by the first key it serves, in key order ([Keys of combinatio
 
 The *hand-over* is what a producer receives. The command writes it as JSON before the producer runs, at `.pkit/capabilities/visual-communication/project/local/handover/<piece>/<output>.json`, local to the clone.
 
-It opens with the *document of values* of the roles the inputs name alone (DEC-005 point 7), which `document` and `version` name: `visual-communication/values`, 1. `lock` holds the versions of the brand and of the foundations library it builds on, and `keys` each combination the piece names, in key order. `tokens` holds each role by its token path, with its value type and its value in each combination. A value is in its DTCG form, made canonical: a colour with `alpha` and without `hex`, a font family a list of names. Three keys follow. `inputs` gives the token path each input reads. `variants` gives each variant's key, the combinations it serves, and its pixels. `frames` holds the measured frames of the scene a producer reads; format 1 hands over none. A variant's values are those of its own key:
+It opens with the *document of values* of the roles the inputs name alone (DEC-005 point 7), which `document` and `version` name: `visual-communication/values`, 2. `lock` holds the versions of the brand and of the foundations library it builds on, and `keys` each combination the piece names, in key order. `tokens` holds each role by its token path, with its value type and its value in each combination. A value is in its DTCG form, made canonical: a colour with `alpha` and without `hex`, a font family a list of names. A [picture role](files.md#picture-roles)'s value is its file's bare name and the brand whose version holds it, such as `{"file": "logo.png", "library": "test-logo"}`. In a combination where the brand gives it none, it is `null`. Three keys follow. `inputs` gives the token path each input reads. `variants` gives each variant's key, the combinations it serves, and its pixels. `frames` holds the measured frames of the scene a producer reads; format 1 hands over none. A variant's values are those of its own key:
 
 ```json
 {
   "document": "visual-communication/values",
-  "version": 1,
+  "version": 2,
   "lock": {"foundations": "1.0.0", "test-brand": "1.0.0"},
   "keys": ["default", "colour-scheme.dark", "contrast.high", "colour-scheme.dark+contrast.high"],
   "tokens": {
@@ -591,7 +594,7 @@ out: web/brand.css
 | Field | What it holds |
 |---|---|
 | `writer` | the code writer: `css` or `json` |
-| `form` | the form of the writer's spelling: `1` |
+| `form` | the form of the writer's spelling: `1`; the `json` writer also takes `2` |
 | `brand` | the brand, by its library's name |
 | `lock` | a version of the brand and of every library it builds on, and of any other library whose roles the code holds, each one the project holds and the capability reads, whose majors fit what each builds on |
 | `out` | where the code goes: a file of the project's tree |
@@ -599,7 +602,7 @@ out: web/brand.css
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it (DEC-005 point 7). So the code changes only when the declaration changes, or when the person names the declaration to `pkit visual add`. Naming it lets the command replace a copy not yet released that the lock names, under the same number ([The lock](files.md#the-lock), DEC-013 point 5). The run that leaves the copy prints the difference in the code first.
-- **What the code holds:** the document of values under the lock: every token the brand exports but a picture role ([Picture roles](files.md#picture-roles)), and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
+- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
@@ -633,21 +636,23 @@ A rule with no token is not written. A rule holds each token once, in the order 
 
 It holds no `[data-contrast="standard"]` rule: every token the contrast axis changes, the colour scheme changes too, and its name comes first. The writer writes each declaration on a line of its own.
 
-**Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 that type is `typography`, such as the test brand's `type.body`. Each other token a size changes is written at the size axis's default, and reported as approximated.
+**Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 those types are `typography`, such as the test brand's `type.body`, and `picture`, such as a brand's logo. Each other token a size changes is written at the size axis's default, and reported as approximated.
 
 ### The JSON code writer
 
-The JSON writer writes the [document of values](#the-hand-over) as one file, for a program that reads data, such as a game's runtime. It adds nothing to the document and leaves nothing out. A declaration names `writer: json`, `form: 1` and an `out` such as `game/brand.json`.
+The JSON writer writes the [document of values](#the-hand-over) as one file, for a program that reads data, such as a game's runtime. It adds nothing to the document, and leaves out only what its form's version does not hold. A declaration names `writer: json`, `form: 2` and an `out` such as `game/brand.json`.
 
-- **Its form.** Form 1 is version 1 of the document. The schema `.pkit/capabilities/visual-communication/schemas/values.schema.json` states that form, so a program can check the file against it. A later version of the document is a new form, and the writer keeps writing this one ([Versions](#versions)).
+- **Its forms.** Each form is that version of the document, and the writer keeps writing each ([Versions](#versions)). A schema states each, so a program can check the file against it:
+  - **Form 2,** version 2, holds a picture role's file. Its schema is `.pkit/capabilities/visual-communication/schemas/values-2.schema.json`.
+  - **Form 1,** version 1, holds no picture role. Its schema is `.pkit/capabilities/visual-communication/schemas/values.schema.json`.
 - **What it holds.** It holds what the code holds ([The declaration](#the-declaration)), in the fields the hand-over opens with, and no others.
 - **Names.** A token keeps its path as the brand exports it, such as `space.1`. So the writer takes no `prefix`, and refuses a declaration that names one, saying why.
 - **Modes.** A token's `values` holds its value under the key of each combination ([Keys of combinations](files.md#keys-of-combinations)). A program picks a set of values by its key. Value axes and size axes are written alike, so the keys of each size the brand gives are among them (DEC-021 point 8).
-- **Values.** Each value is in its DTCG form, as in the hand-over.
+- **Values.** Each value is in the form the hand-over gives it: its DTCG form, or a picture role's file and brand.
 - **The text.** Each key of an object lies on its own line, down to a token's values. Each value then keeps to one line, in the capability's canonical text. So a changed value changes one line, and the same document gives the same file on every machine.
-- **Losses.** The writer takes every value type and every kind of axis, so it reports no loss.
+- **Losses.** Form 2 takes every value type and every kind of axis, so it reports no loss. Form 1 has no form for a picture role, so it leaves each out, as a loss known before the writer runs.
 
-The check reads this code as it reads any written code (*Written code* in *What the check reports*). The test brand gives this file, cut short:
+The check reads this code as it reads any written code (*Written code* in *What the check reports*). The test brand, which gives no picture role, gives this file in form 1, cut short:
 
 ```json
 {

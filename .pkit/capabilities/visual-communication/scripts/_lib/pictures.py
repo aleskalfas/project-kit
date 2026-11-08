@@ -514,26 +514,30 @@ class Folder:
     - `library`: `<name>@<version>` for a library's version, whose findings lie in it, so
       they ask for attention where it is released; "" for a piece.
     - `final`: a final piece, whose pictures are read but take no finding (DEC-002 point 7).
+    - `walked`: its files listed as they lie, for a holder a command built in the clone's
+      local folder, which git ignores (`before_after`), so there git would list none.
 
     Its files are listed once, the first time a name is judged, as version control lists
-    them (`location.listed`); each name is read once."""
+    them (`location.listed`), or as they lie where `walked`; each name is read once."""
 
     holder: Path
     shown: str
     said: str
     library: str = ""
     final: bool = False
+    walked: bool = False
     _read: dict[str, Judged] = field(default_factory=dict, init=False, repr=False)
 
     @cached_property
     def listing(self) -> Listing:
         """The folder's files, by their bare names. Raises location.GitFailed."""
         prefix = f"{FOLDER}/"
-        entries = [
-            rel
-            for rel in location.listed(self.holder, FOLDER)
-            if rel.startswith(prefix) and "/" not in rel[len(prefix) :]
-        ]
+        found = (
+            location.walked(self.holder, FOLDER, links=True)
+            if self.walked
+            else location.listed(self.holder, FOLDER)
+        )
+        entries = [rel for rel in found if rel.startswith(prefix) and "/" not in rel[len(prefix) :]]
         links = {rel for rel in entries if (self.holder / rel).is_symlink()}
         stored = location.in_store(self.holder, [rel for rel in entries if rel not in links])
         return Listing(

@@ -3,8 +3,8 @@
 the in-memory `Env` (`tests/visual_engine.py`), whose picture files are the test pictures
 (`PICTURES`):
 
-- an image's sources: exactly one of `produced`, `content` and `file`; a picture role,
-  which a later format reads, refused as any property the image does not take;
+- an image's sources: exactly one of `produced`, `content`, `file` and `role` (a picture
+  role, which `test_visual_communication_logos.py` shows);
 - a field's picture file of the piece, whichever component draws it, and a field the
   content leaves empty, which draws nothing at zero size; a library's own file by
   `file`, and a local component's, which lies in the piece;
@@ -175,23 +175,16 @@ def shown(content: dict[str, Any], parts: dict[str, Any] | None = None) -> Any:
         {"produced": "photo", "content": "photo"},
         {"content": "photo", "file": "logo.png"},
         {"produced": "photo", "content": "photo", "file": "logo.png"},
+        {"file": "logo.png", "role": "picture.logo"},
     ],
-    ids=["none", "produced-and-content", "content-and-file", "all-three"],
+    ids=["none", "produced-and-content", "content-and-file", "all-three", "file-and-role"],
 )
 def test_an_image_names_exactly_one_source(source: dict[str, Any]) -> None:
     result = shown({"photo": "photo.png"}, {"i": image(source, height="=@space.4")})
 
     refused = finding(result, "component-shape")
-    assert refused.message.endswith("names exactly one of `produced`, `content`, `file`")
+    assert refused.message.endswith("names exactly one of `produced`, `content`, `file`, `role`")
     assert refused.where == "parts.i.image"
-
-
-def test_an_image_of_a_picture_role_is_refused_as_a_property_it_does_not_take() -> None:
-    result = shown({}, {"i": image({"role": "picture.logo"}, height="=@space.4")})
-
-    shapes = [f.where for f in result.findings if f.code == "component-shape"]
-    assert shapes == ["parts.i.image", "parts.i.image.role"]
-    assert result.scene.find("top/i") is None
 
 
 # --- a field's picture file ---------------------------------------------------------------------
