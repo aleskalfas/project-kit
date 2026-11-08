@@ -113,6 +113,10 @@ class BodyRefs:
     # brackets: `pkit::documentation`, `pkit::documentation:readers` — and a
     # malformed one carrying `::`, which validation reports as such.
     addresses: frozenset[str] = field(default_factory=frozenset)
+    # The Markdown link targets among `paths`, which `find_rot` reads from the
+    # folder of the file that holds the link (#2465). An empty frozenset is
+    # immutable, so it serves as the default itself, typed by the annotation.
+    links: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -1048,7 +1052,8 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
       retired to `dropped/` (per COR-012). The thinking was abandoned;
       the reference shouldn't persist.
     - **Missing local paths** — an artifact cites a relative or
-      project-rooted path that no longer resolves on disk.
+      project-rooted path that no longer resolves on disk, read where
+      `_rot_candidates` says, without its `#` fragment.
     - **Proposed grounds** — an accepted record's body cites a record that
       is still `proposed` (`find_proposed_grounds`), against the acceptance
       gate of `.pkit/decisions/README.md`.
@@ -1071,7 +1076,14 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
             | art.body_refs.records
             | {_capability_key(cap, stem) for cap, stem in art.body_refs.capability_citations}
         )
-        all_paths = art.declared.reads_paths | art.declared.owns | art.body_refs.paths
+        other_paths = (
+            art.declared.reads_paths
+            | art.declared.owns
+            | (art.body_refs.paths - art.body_refs.links)
+        )
+        cited = sorted(
+            {(path, True) for path in art.body_refs.links} | {(path, False) for path in other_paths}
+        )
 
         for rec in sorted(all_records):
             status = record_status_index.get(rec)
@@ -1083,34 +1095,57 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
                     )
                 )
 
-        for path in sorted(all_paths):
+        reported: set[str] = set()
+        for path, link in cited:
             # Skip pattern placeholders and anchors.
             if path.startswith(("<", "#", "http://", "https://")):
                 continue
+            candidates = _rot_candidates(path.split("#", 1)[0], art, target_root, link=link)
             # Scratchpad dropped check runs first: even if the file
             # exists at the cited path (it does, in dropped/), the
             # reference is still rotten — the thinking was abandoned.
-            slug = _slug_from_scratchpad_path(path)
-            if slug is not None and slug in dropped_slugs:
-                issues.append(
-                    Issue(
-                        location=loc,
-                        diagnosis=f"references dropped scratchpad note {path!r}.",
-                    )
-                )
+            slugs = (_slug_from_scratchpad_path(_relative_to(c, target_root)) for c in candidates)
+            if any(slug is not None and slug in dropped_slugs for slug in slugs):
+                diagnosis = f"references dropped scratchpad note {path!r}."
+            elif any(candidate.exists() for candidate in candidates):
                 continue
-            candidate = target_root / path if not Path(path).is_absolute() else Path(path)
-            if candidate.exists():
-                continue
-            issues.append(
-                Issue(
-                    location=loc,
-                    diagnosis=f"references missing path {path!r} (file does not exist).",
-                )
-            )
+            else:
+                diagnosis = f"references missing path {path!r} (file does not exist)."
+            # A path declared and linked alike is read both ways; it is listed once.
+            if diagnosis not in reported:
+                reported.add(diagnosis)
+                issues.append(Issue(location=loc, diagnosis=diagnosis))
 
     issues.extend(find_proposed_grounds(target_root, record_status_index))
     return issues
+
+
+def _rot_candidates(path: str, art: Artifact, target_root: Path, *, link: bool) -> list[Path]:
+    """The places `find_rot` reads a path an artifact cites; the path resolves where
+    any of them holds a file.
+
+    A Markdown link's target is read from the folder of the file that holds the link,
+    as a reader following the link reads it. A composite skill's sub-procedures share
+    the artifact's folder, so that is the artifact's own. Any other path is read as the
+    reference graph reads it (the agents README, "The reference graph"):
+
+    - one that opens with `./` or `../` from the artifact's folder
+    - one that opens with `.pkit/` from the project root only, as
+      `_is_intra_capability_path` reads it
+    - any other from the project root and, in a capability's artifact, from the
+      artifact's folder and the capability's root too, where the capability's own
+      files sit
+    """
+    if Path(path).is_absolute():
+        return [Path(path)]
+    here = (target_root / art.path).parent
+    if link or path.startswith(("./", "../")):
+        bases = [here]
+    elif art.capability is None or path == ".pkit" or path.startswith(".pkit/"):
+        bases = [target_root]
+    else:
+        bases = [target_root, here, target_root / ".pkit" / "capabilities" / art.capability]
+    return [Path(os.path.normpath(base / path)) for base in bases]
 
 
 def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = None) -> list[Issue]:
@@ -1663,6 +1698,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         if _is_hook_like(inner):
             hooks.add(inner)
 
+    links: set[str] = set()
     for match in LINK_RE.finditer(stripped):
         target = match.group(1)
         if _is_url(target):
@@ -1670,6 +1706,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         if _TEMPLATE_MARKER_RE.search(target):
             continue
         paths.add(target)
+        links.add(target)
 
     # Bare record IDs always count — the format `(COR|PRJ)-NNN` is too
     # specific to appear by accident.
@@ -1702,6 +1739,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         capability_citations=frozenset(capability_citations),
         rule_citations=frozenset(rule_citations),
         addresses=frozenset(addresses),
+        links=frozenset(links),
     )
 
 
@@ -1805,6 +1843,9 @@ def _load_one(
                 ),
                 rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
                 addresses=body_refs.addresses | sibling_refs.addresses,
+                # The siblings share the dispatcher's folder, so a link in one is
+                # read from the artifact's own folder.
+                links=body_refs.links | sibling_refs.links,
             )
 
     # Name: the file stem (matches both flat and folder layouts).

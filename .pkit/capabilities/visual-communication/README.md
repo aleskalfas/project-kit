@@ -39,6 +39,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
+        - .pkit/capabilities/visual-communication/rule-sets/comm.md
+        - .pkit/capabilities/visual-communication/rule-sets/graphic.md
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
       record:
         - visual-communication:DEC-001#1
@@ -63,9 +65,12 @@ pkit:
         - visual-communication:DEC-020#8
         - visual-communication:DEC-024#4
         - visual-communication:DEC-024#6
+        - visual-communication:DEC-028#2
+        - visual-communication:DEC-028#5
         - COR-017
         - COR-070#1
         - COR-031
+        - COR-051#7
         - COR-054#3
         - COR-054#5
         - COR-055#3
@@ -155,6 +160,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
+- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@1]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
 No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)). A piece shows a picture of its own, such as a photo, from a picture file it holds ([Picture files](files.md#picture-files)).

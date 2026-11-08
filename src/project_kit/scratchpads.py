@@ -200,12 +200,21 @@ def _split_frontmatter(content: str) -> tuple[str, str]:
     return fm_yaml, body
 
 
-def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
-    """Find a scratchpad note by slug (kebab portion) or full filename."""
+def _notes_found_by(state_dir: Path, slug: str) -> list[Path]:
+    """The notes of `state_dir` that `slug` finds: the note whose whole file name
+    it is, or each note whose file name after the date is that whole slug
+    (`note_slug`). A slug never finds a note whose slug merely ends in it."""
     if slug.endswith(".md"):
         candidate = state_dir / slug
-        return candidate if candidate.is_file() else None
-    matches = list(state_dir.glob(f"*-{slug}.md"))
+        return [candidate] if Path(slug).name == slug and candidate.is_file() else []
+    return sorted(
+        path for path in state_dir.glob("*.md") if path.is_file() and note_slug(path.name) == slug
+    )
+
+
+def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
+    """Find a scratchpad note by its whole slug or its whole file name."""
+    matches = _notes_found_by(state_dir, slug)
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -218,17 +227,15 @@ def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
 
 
 def _find_in_any_state(scratchpad_dir: Path, slug: str) -> Path | None:
-    """Search every state folder (incl. the reported side-state) for a note with this slug."""
+    """The first note, searching every state folder (incl. the reported
+    side-state), that holds this whole slug."""
     for state in _ALL_STATES:
         state_dir = scratchpad_dir / state
         if not state_dir.is_dir():
             continue
-        try:
-            match = _resolve_in_state(state_dir, slug)
-        except click.ClickException:
-            continue
-        if match is not None:
-            return match
+        matches = _notes_found_by(state_dir, slug)
+        if matches:
+            return matches[0]
     return None
 
 

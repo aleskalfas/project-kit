@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The scratchpad commands find a note by its whole slug, never by the slug's
+  end (#2439). `pkit scratchpad done`, `drop` and `reported`, and a report's
+  `--scratchpad`, find a note only where the part of its file name after the
+  date is the whole slug given, or by its whole file name, so `layer` no longer
+  finds `2026-06-03-cache-layer.md`. `pkit new scratchpad` refuses a slug only
+  where a note in a state folder holds that whole slug, and now also where two
+  notes of one folder hold it. The scratchpad and CLI references say so.
