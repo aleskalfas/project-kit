@@ -1061,7 +1061,7 @@ def test_a_deck_exported_as_pdf_makes_one_file_for_each_language_its_pages_in_or
     assert version["files"] == {
         name: reading.sha256((root / FOLDER / name).read_bytes()) for name in PDF_FILES
     }
-    assert version["recorded"]["renderers"] == {"pdf": "1.0.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.1.0"}
 
 
 def test_a_pdf_draws_each_combination_in_its_own_colours(tmp_path: Path) -> None:
@@ -1088,7 +1088,7 @@ def test_svg_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     ]
     assert exported(root) == sorted([*svgs, *PDF_FILES])
     [version] = reading.read_yaml(root / RECORD)["versions"]
-    assert version["recorded"]["renderers"] == {"pdf": "1.0.0", "svg": "1.1.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.1.0", "svg": "1.1.0"}
 
 
 def test_the_same_scene_gives_the_same_pdf_under_each_number(tmp_path: Path) -> None:
@@ -1102,11 +1102,39 @@ def test_the_same_scene_gives_the_same_pdf_under_each_number(tmp_path: Path) -> 
     assert list(first["files"].values()) == list(second["files"].values())
 
 
-def test_a_picture_the_pdf_renderer_refuses_leaves_the_rest_drawn(tmp_path: Path) -> None:
+def drawn_pictures(path: Path) -> list[tuple[bytes, bytes | None]]:
+    """What each picture an exported PDF draws holds, page by page, in the order drawn: its
+    image's data, and its soft mask's, where it has one."""
+    file = read_pdf(path.read_bytes())
+    drawn = []
+    for page in file.pages():
+        images = file.images(page)
+        for name in re.findall(r"/(I\d+) Do", file.content(page)):
+            mask = re.search(r"/SMask (\d+) 0 R", file.value(images[name]))
+            drawn.append((file.stream(images[name]), file.stream(int(mask[1])) if mask else None))
+    return drawn
+
+
+def test_a_pdf_draws_the_produced_picture_from_the_variant_that_serves_each_combination(
+    tmp_path: Path,
+) -> None:
+    """Each variant a PNG of 100 by 100 pixels of one colour, the dark one translucent: its
+    colours and its alpha apart, the alpha a soft mask, beside the text drawn as before."""
     root = ready(tmp_path, exports=["pdf"])
-    assert run(root, PIECE).returncode == 0
-    lines = heads(root / FOLDER / "flow.v1.en.default.pdf")
-    assert lines and any("Plan the work." in text for text in lines[0])
+    colours = {"default": (200, 30, 30, 255), "colour-scheme.dark": (30, 60, 200, 128)}
+    write_picture(root, framing, by_variant=colours)
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    for key, (red, green, blue, alpha) in colours.items():
+        path = root / FOLDER / f"flow.v1.en.{key}.pdf"
+        pixels = 100 * 100
+        assert drawn_pictures(path) == [
+            (bytes([red, green, blue]) * pixels, bytes([alpha]) * pixels)
+        ]
+        lines = heads(path)
+        assert lines and any("Plan the work." in text for text in lines[0])
 
 
 #: Names of exported PDF files: one for each language and combination, of no page.
@@ -1182,7 +1210,7 @@ def test_html_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     assert files.shape_problems(record, "exports") == []
     [version] = record["versions"]
     assert sorted(version["files"]) == exported(root)
-    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.0.0"}
+    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.1.0"}
 
 
 @pytest.mark.parametrize(

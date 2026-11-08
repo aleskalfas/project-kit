@@ -3,8 +3,8 @@ and combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10, DE
 point 7).
 
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
-  1's scene but the image. It draws only what it declares, so the losses the capability
-  reads from the declaration before it runs are the ones it makes.
+  1's scene, the image among them. It draws only what it declares, so the losses the
+  capability reads from the declaration before it runs are the ones it makes.
 - **Pages.** Each page of the scene, in the scene's order, is a page of the file, as large
   as the page's frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the
   inch, as the declaration's `unit` says.
@@ -31,10 +31,25 @@ point 7).
   points is refused, and left out.
 - **Shapes.** A box's stroke lies inside its frame. Rounded corners and ellipses are cubic
   Bézier curves.
+- **A picture** is drawn from the file its image shows in the combination drawn
+  (`seam.Shown`), whatever its source, and from nothing else (DEC-025 point 7). It is
+  drawn whole, centred, as large as its frame allows, as the scene's `xMidYMid meet` says
+  (DEC-025 point 6). The picture reader (`_lib.pictures`) reads its size and its colour
+  profile, which goes into the file with it, so a viewer draws it as a browser does
+  (DEC-025 point 5). A JPEG is embedded as its own bytes (`/DCTDecode`). A PNG with no
+  transparency, or a palette's, embeds its image data as the file holds it (`/FlateDecode`
+  with the PNG predictors), and one colour a grey or an RGB PNG names transparent is a
+  colour key (`/Mask`). An alpha channel, and the alpha a palette gives, are decoded
+  (`_lib.png`) and drawn as a soft mask (`/SMask`). A PNG embedded as the file holds it is
+  seen to decode first. Each picture lies once in the file, however often it is drawn. An
+  image handed no picture, or one that cannot be read or decoded, such as a PNG too large to
+  decode, is left out, and reported.
 
 Output is fixed for a version: lengths are written to 1/100 px and colours to 1/10 000,
 objects in one order, the streams uncompressed, with no date and no random id: the file's
-`/ID` is taken from its own bytes. So the same scene and values give the same bytes on
+`/ID` is taken from its own bytes. A picture's data is the file's own, and what the
+renderer decodes, a soft mask and the colours of a PNG with alpha, is written uncompressed
+too, so it rests on no build of zlib. So the same scene and values give the same bytes on
 every machine. A change that could give another output raises the version, and the
 reference outputs pinned to it in the tests catch one made without it (DEC-005 point 9).
 """
@@ -53,6 +68,8 @@ import uharfbuzz as hb
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
+from _lib import pictures, png
+from _lib.canvas import shows, unshown
 from _lib.plugins import seam
 from _lib.plugins.pdf_declaration import DECLARATION
 
@@ -107,10 +124,9 @@ def render(
 ) -> Drawn:
     """`scene` (`Scene.to_dict()`) drawn in the combination `key` as one PDF file: `colours`
     gives each colour role's value there, in canonical form; `font_file` the committed file
-    of a font family. `pictures`, the picture each image shows there by the image's trace id
-    (`seam.Shown`), is handed to every renderer; this one refuses the image, so it reads
-    none."""
-    document = _Document(scene, key, colours, font_file)
+    of a font family; `pictures` the picture each image shows there, by the image's trace id
+    (`seam.Shown`), whatever its source."""
+    document = _Document(scene, key, colours, font_file, pictures)
     for trace in scene.get("pages", []):
         element = _find(scene.get("children", []), trace)
         if element is not None:
@@ -404,6 +420,104 @@ class _Shown:
 Part = str | _Shown
 
 
+# --- pictures -----------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _Image:
+    """A picture as the file embeds it: its size in pixels; its data, and the entries that
+    name the data's filter and its parameters, none for data written as it is; its bits for
+    each sample; whether its colours are grey, else RGB; its palette, where its samples are
+    indices into one; the ICC profile its colours are drawn by; and its transparency, as the
+    one colour it names transparent (`key`), or as an alpha for each pixel, one byte each,
+    row after row (`mask`)."""
+
+    width: int
+    height: int
+    data: bytes
+    filter: str
+    bits: int
+    grey: bool
+    profile: bytes | None
+    palette: bytes = b""
+    key: tuple[int, ...] | None = None
+    mask: bytes | None = None
+
+
+#: Each picture read in this process, by the SHA-256 of its file's bytes, its name and the
+#: kind it was handed as: the picture as a file embeds it, or why it cannot be drawn.
+_IMAGES: dict[tuple[str, str, str], _Image | str] = {}
+
+#: Each kind of picture, as a message names it.
+_KIND_SAID = {seam.PNG: "PNG", seam.JPEG: "JPEG"}
+
+
+def _picture(data: bytes, shown: seam.Shown, mark: str) -> _Image | str:
+    """The picture whose file, handed as `shown`, holds `data`, whose SHA-256 is `mark`, as
+    the file embeds it; or why it cannot be drawn. Each is read once in the process."""
+    held = (mark, shown.file.name, shown.kind)
+    if held not in _IMAGES:
+        _IMAGES[held] = _read_picture(data, shown)
+    return _IMAGES[held]
+
+
+def _read_picture(data: bytes, shown: seam.Shown) -> _Image | str:
+    """A picture read by the picture reader, of the kind it was handed as: a JPEG as its own
+    bytes, a PNG as `_png` embeds it. What cannot be drawn is said in words: a file the
+    reader refuses, or a PNG that cannot be decoded."""
+    name = shown.file.name
+    try:
+        read = pictures.read(data, name)
+    except pictures.Refused as refused:
+        return refused.message
+    except ValueError as exc:
+        return str(exc)
+    if read.kind != shown.kind:
+        return f"`{name}` is no {_KIND_SAID[shown.kind]} by its bytes"
+    if read.kind == pictures.JPEG:
+        return _Image(
+            read.width, read.height, data, " /Filter /DCTDecode", 8, read.grey, read.profile
+        )
+    try:
+        return _png(png.read(data), read)
+    except png.Undecodable as exc:
+        return f"`{name}` cannot be decoded: {exc}"
+
+
+def _png(decoded: png.Png, read: pictures.Picture) -> _Image:
+    """A PNG as the file embeds it. One of a colour type with alpha is decoded, its colours
+    and its alpha apart, each written as it is. Any other keeps its image data as the file
+    holds it, which the PNG predictors undo, once it is seen to decode; a palette's alpha is
+    decoded to a soft mask, and one colour a grey or an RGB picture names transparent is a
+    colour key. So no file holds a picture the decoder refuses. Raises png.Undecodable."""
+    if decoded.colour in png.WITH_ALPHA:
+        colours, alpha = png.alpha_apart(decoded, png.samples(decoded))
+        return _Image(
+            decoded.width, decoded.height, colours, "", 8, read.grey, read.profile, mask=alpha
+        )
+    predicted = (
+        f" /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors {decoded.channels} "
+        f"/BitsPerComponent {decoded.depth} /Columns {decoded.width} >>"
+    )
+    if png.has_palette_alpha(decoded):
+        mask = png.palette_alpha(decoded, png.samples(decoded))
+    else:
+        png.check(decoded)
+        mask = None
+    return _Image(
+        decoded.width,
+        decoded.height,
+        decoded.data,
+        predicted,
+        decoded.depth,
+        read.grey,
+        read.profile,
+        palette=decoded.palette,
+        key=png.colour_key(decoded),
+        mask=mask,
+    )
+
+
 # --- a document ---------------------------------------------------------------------------------
 
 
@@ -417,11 +531,13 @@ class _Document:
         key: str,
         colours: Mapping[str, Mapping[str, Any]],
         font_file: Callable[[str], Path],
+        shown: Mapping[str, seam.Shown],
     ) -> None:
         self.scene = scene
         self.key = key
         self.colours = colours
         self.font_file = font_file
+        self.shown = shown
         self.losses: list[seam.Loss] = []
         self.traces: list[str] = []
         self._pages: list[tuple[float, float, list[Part]]] = []
@@ -429,6 +545,8 @@ class _Document:
         self._fonts: dict[str, _Font] = {}
         # Each opacity the pages take, by the operand it sets and its value: its name.
         self._opacities: dict[tuple[str, str], str] = {}
+        # Each picture the pages draw, by the SHA-256 of its file: its name, and the picture.
+        self._images: dict[str, tuple[str, _Image]] = {}
 
     def _lose(self, what: str, did: str, why: str) -> None:
         loss = seam.Loss(NAME, what, did, why)
@@ -558,6 +676,41 @@ class _Document:
         drawn.append("Q\n")
         return ["".join(drawn)]
 
+    def _image(self, element: Mapping[str, Any]) -> list[Part]:
+        """An image, its picture drawn whole, centred and as large as its frame allows, its
+        first row at the top. Nothing where its frame or the picture fitted has no size. One
+        handed no picture in this combination, or one that cannot be read or decoded, is
+        left out, and reported."""
+        trace = str(element["id"])
+        shown = self.shown.get(trace)
+        if shown is None or not shown.file.is_file():
+            self._lose(trace, seam.LEFT_OUT, unshown(element, self.key, self.scene.get("piece")))
+            return []
+        try:
+            data = shown.file.read_bytes()
+        except OSError as exc:
+            why = f"`{shown.file.name}` cannot be read: {exc.strerror or exc}"
+            self._lose(trace, seam.LEFT_OUT, f"{shows(element)} cannot be drawn: {why}")
+            return []
+        mark = hashlib.sha256(data).hexdigest()
+        image = _picture(data, shown, mark)
+        if isinstance(image, str):
+            self._lose(trace, seam.LEFT_OUT, f"{shows(element)} cannot be drawn: {image}")
+            return []
+        x, y = float(element["x"]), float(element["y"])
+        width, height = float(element["width"]), float(element["height"])
+        scale = min(width / image.width, height / image.height)
+        drawn_width, drawn_height = image.width * scale, image.height * scale
+        if number(drawn_width) == "0" or number(drawn_height) == "0":
+            return []
+        name = self._images.setdefault(mark, (f"I{len(self._images)}", image))[0]
+        left = x + (width - drawn_width) / 2
+        bottom = y + (height + drawn_height) / 2
+        return [
+            f"q {number(drawn_width)} 0 0 {number(-drawn_height)} {_point(left, bottom)} cm "
+            f"/{name} Do Q\n"
+        ]
+
     def _text(self, element: Mapping[str, Any]) -> list[Part]:
         x, width = float(element["x"]), float(element["width"])
         anchor = element.get("text-anchor", "start")
@@ -655,6 +808,10 @@ class _Document:
 
         catalog, tree, info, resources = (add(""), add(""), add(""), add(""))
         fonts = {font.resource: _embedded(font, add) for font in self._fonts.values()}
+        profiles: dict[bytes, int] = {}
+        images = {
+            name: _embedded_image(image, add, profiles) for name, image in self._images.values()
+        }
         kids = []
         for width, height, parts in self._pages:
             content = _stream(_content(width, height, parts).encode("latin-1"))
@@ -681,8 +838,13 @@ class _Document:
             f"/{name} << /Type /ExtGState /{operand} {value} >>"
             for (operand, value), name in self._opacities.items()
         )
+        # A file that draws no picture names no images, so its resources are as before.
+        drawn = " ".join(f"/{name} {ref} 0 R" for name, ref in images.items())
+        xobjects = f" /XObject << {drawn} >>" if images else ""
         objects[resources - 1] = (
-            f"<< /Font << {font_list} >> /ExtGState << {opacities} >> >>".encode("latin-1")
+            f"<< /Font << {font_list} >> /ExtGState << {opacities} >>{xobjects} >>".encode(
+                "latin-1"
+            )
         )
         return _file(objects, catalog, info)
 
@@ -831,6 +993,33 @@ def _embedded(font: _Font, add: Callable[[str | bytes], int]) -> int:
         f"<< /Type /Font /Subtype /Type0 /BaseFont {name} /Encoding /Identity-H "
         f"/DescendantFonts [{descendant} 0 R] /ToUnicode {unicode} 0 R >>"
     )
+
+
+def _embedded_image(
+    image: _Image, add: Callable[[str | bytes], int], profiles: dict[bytes, int]
+) -> int:
+    """A picture, embedded, as its objects: its colour profile, once in the file however many
+    pictures carry it (`profiles`, each profile's number by its bytes), its soft mask, and
+    the image, drawn smoothed where it is scaled, as a browser draws it. Gives the image's
+    number."""
+    space = "/DeviceGray" if image.grey else "/DeviceRGB"
+    if image.profile is not None:
+        if image.profile not in profiles:
+            channels = 1 if image.grey else 3
+            entries = f" /N {channels} /Alternate {space}"
+            profiles[image.profile] = add(_stream(image.profile, entries))
+        space = f"[/ICCBased {profiles[image.profile]} 0 R]"
+    if image.palette:
+        top = len(image.palette) // 3 - 1
+        space = f"[/Indexed {space} {top} <{image.palette.hex().upper()}>]"
+    size = f" /Type /XObject /Subtype /Image /Width {image.width} /Height {image.height}"
+    entries = f"{size} /ColorSpace {space} /BitsPerComponent {image.bits} /Interpolate true"
+    if image.mask is not None:
+        grey = f"{size} /ColorSpace /DeviceGray /BitsPerComponent 8 /Interpolate true"
+        entries += f" /SMask {add(_stream(image.mask, grey))} 0 R"
+    elif image.key is not None:
+        entries += f" /Mask [{' '.join(f'{sample} {sample}' for sample in image.key)}]"
+    return add(_stream(image.data, entries + image.filter))
 
 
 def _widths(widths: Sequence[tuple[int, str]]) -> str:
