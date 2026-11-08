@@ -27,6 +27,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/release.py
+        - src/project_kit/release_answers.py
         - src/project_kit/versioning.py
         - src/project_kit/changesets.py
         - src/project_kit/cli.py
@@ -37,6 +38,7 @@ pkit:
         - PRJ-002#D3
         - PRJ-002#D4
         - PRJ-004
+        - PRJ-014
         - COR-010
         - COR-041
         - COR-059#3
@@ -90,6 +92,7 @@ pkit:
 6. The system raises each floor a changeset declares for the component, on the backbone or on another [capability](../../../glossary.md#term-capability--capability). It also widens each upper bound on a capability that a changeset says the component runs on ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 7. The system adds an entry at the top of `CHANGELOG.md`, headed by the date, since the backbone does not move. The system heads each of the component's notes with `**<component> <version>**`, and states each raised floor, such as `Requires backbone >=1.149.0.`
 8. The system deletes the changesets it consumed.
+11. The system then answers what its version edits ask of the [change check](../../../glossary.md#term-change-check--change-check), as [UC-008](UC-008-release-backbone.md) step 16 says ([PRJ-014](../../../../../../.pkit/decisions/project/PRJ-014-release-answers-its-edits.md)). The author revalidates each [artefact](../../../glossary.md#term-artefact--artefact) the system leaves, with `pkit friction revalidate`, before step 9.
 9. The author commits the [release step](../../../glossary.md#term-release-step--release-step)'s writes, and merges them into the [default branch](../../../glossary.md#term-default-branch--default-branch). They get no [release tag](../../../glossary.md#term-release-tag--release-tag), since a release tag names a backbone version, read from `.pkit/VERSION` ([PRJ-004](../../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md) and `versioning.py`).
 
 **Variants:**

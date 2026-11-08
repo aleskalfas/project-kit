@@ -230,8 +230,8 @@ jobs:
       # Release PRs (from release-pr.yml) need no hatch: the guard recognises a
       # diff that is only what `pkit release apply` writes — versions, the
       # self-host manifest's backbone_version, CHANGELOG, the changesets it
-      # consumed — by its content, whatever the branch is called, and passes
-      # its surface check. The floor tie runs on every PR; a release diff only
+      # consumed — with the answer files the diff adds, by its content, whatever
+      # the branch is called, and passes its surface check. The floor tie runs on every PR; a release diff only
       # deletes changesets, so it declares no floor. So does the range tie: a PR
       # edits the range of an existing requires_capabilities entry only to correct
       # one that excludes the version the tree carries (PRJ-002 D1), and a release

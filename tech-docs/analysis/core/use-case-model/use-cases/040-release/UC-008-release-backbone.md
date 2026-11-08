@@ -27,6 +27,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/release.py
+        - src/project_kit/release_answers.py
         - src/project_kit/versioning.py
         - src/project_kit/changesets.py
         - src/project_kit/cli.py
@@ -42,6 +43,7 @@ pkit:
         - PRJ-002#D4
         - PRJ-004
         - PRJ-007
+        - PRJ-014
         - COR-010
         - COR-004
         - ADR-034#1
@@ -90,6 +92,7 @@ pkit:
    - each floor and upper bound a changeset declares ([UC-009](UC-009-release-component.md))
    - an entry at the top of `CHANGELOG.md`, from the notes of the changesets of the backbone and of each moving component
 5. The system deletes the changesets it consumed.
+16. The system then answers what its version edits ask of the [change check](../../../glossary.md#term-change-check--change-check) ([PRJ-014](../../../../../../.pkit/decisions/project/PRJ-014-release-answers-its-edits.md)). The change check asks about each [artefact](../../../glossary.md#term-artefact--artefact) anchored on a file those edits changed. Where it asks only through version lines, and the artefact states none of the versions they held, the system revalidates the artefact `unchanged`. It writes those answers in one [answer file](../../../glossary.md#term-answer-file--answer-file), and names each artefact it leaves to a person, with why.
 6. The CI pipeline commits `chore(release): v<version>`, pushes the branch and opens the [release pull request](../../../glossary.md#term-release-pull-request--release-pull-request). The [pull request](../../../glossary.md#term-pull-request--pull-request)'s body lists these:
    - the move of the backbone and of each component, with the floors and upper bounds declared for it
    - any warning on a [migration](../../../glossary.md#term-migration--migration)'s folder
@@ -139,6 +142,7 @@ pkit:
 - **15b.** Another run moved `latest` after this run read it, and the remote refuses the leased push. The script reads the remote's tags again. Where `latest` points at that commit, the run passes. Otherwise the run fails, `latest` stays where the other run put it, and the next push to the default branch runs step 15 again.
 - **15c.** The remote holds a branch named `latest`, which uv can take before the tag. The script refuses, pushes nothing, and the run fails until someone deletes the branch.
 - **14a.** The repository is another, and the operator declines. Or nobody can reply, and the maintainer passed no `--allow-foreign-repo`. The system refuses, merges nothing, and the use case ends.
+- **16a.** The system leaves an [artefact](../../../glossary.md#term-artefact--artefact) that states a version a rewritten line held, as a README's Dependencies section may. It leaves one asked about through another write too, or one with a [deferral](../../../glossary.md#term-deferral--deferral) or answers made apart. At step 7, the [change check](../../../glossary.md#term-change-check--change-check) reports [friction](../../../glossary.md#term-friction--friction) on each such artefact. The maintainer revalidates each on the release branch with `pkit friction revalidate` and pushes, and the path rejoins at step 7.
 
 **Postconditions:** The commit that lands the [release](../../../glossary.md#term-release--release)'s [versions](../../../glossary.md#term-version--version) on the [default branch](../../../glossary.md#term-default-branch--default-branch) carries the [release tag](../../../glossary.md#term-release-tag--release-tag) `v<version>`, which adopters <!-- pkit:not-the-term -->install, upgrade to and pin ([PRJ-004](../../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)). The tag `latest` points at the same commit, so `uv tool install` with `@latest` gets this release. That version's changelog section, and the notes of its GitHub release, say what each [change](../../../glossary.md#term-change--change) the release carries means for adopters.
 
