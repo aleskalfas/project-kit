@@ -118,6 +118,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#how-the-files-are-read
         - .pkit/capabilities/visual-communication/files.md#reserved-words
         - .pkit/capabilities/visual-communication/files.md#the-binding
+        - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
         - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-location
@@ -394,7 +395,7 @@ Computing a piece's scenes, one for each language and each key over the size axe
 - **A word wider than its text on every device** is a finding for each key, since the message names the text's width at that key.
 - **`contrast-drawn`** is measured in each combination on the scene of its key. Its message names the combination, so it never reads alike at two keys.
 
-**A finding on several pages.** A page drawn in a layout draws the top's other fields, such as a site's header and footer. A finding in what such a field draws is read alike on each page that draws it, and is reported once (DEC-022 point 8). It lies at the first such page, and its message ends naming each page. A finding in a page's own part is that page's alone.
+**A finding on several pages.** A page drawn in a layout draws the top's other fields ([Layouts](components.md#layouts)), such as a site's header and footer ([The foundations](files.md#the-foundations)). A finding in what such a field draws is read alike on each page that draws it, and is reported once (DEC-022 point 8). It lies at the first such page, and its message ends naming each page. A finding in a page's own part is that page's alone.
 
 Each fails, unless its row says otherwise.
 
