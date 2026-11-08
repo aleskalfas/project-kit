@@ -196,6 +196,9 @@ $ grep @.pkit CLAUDE.md
 @.pkit/rules/project.md
 ```
 
+> [!WARNING]
+> `pkit validate` checks only the index's line, so a `CLAUDE.md` without the methodology's line passes it.
+
 ## Add your own rules
 
 Write your project's own rules in `project.md`, in `.pkit/rules/`. `CLAUDE.md` already includes it after the methodology's rules and the index. What a rule there holds, and may do:
