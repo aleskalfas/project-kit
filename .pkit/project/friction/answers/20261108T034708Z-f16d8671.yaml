@@ -76,8 +76,9 @@ answers:
       - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:32:37Z
+      at: 2026-11-08T03:47:08Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -162,8 +163,9 @@ answers:
       - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:32:45Z
+      at: 2026-11-08T03:47:10Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
@@ -222,8 +224,9 @@ answers:
       - 20261107T203800Z-471a3d6c.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:32:48Z
+      at: 2026-11-08T03:47:12Z
       outcome: unchanged
       unchanged-because: The foundations' version being built now declares the size axis device, and a piece that names a size its brand does not give is refused in new words. The page's switches on a size, its scenes over the size axes and its :device examples already read a size axis the foundations declare, a mode a switch leaves out taking the default's branch, and the page says nothing of a piece's refusal, so each statement holds.
   - artefact: .pkit/capabilities/visual-communication/outputs.md
@@ -303,10 +306,11 @@ answers:
       - 20261108T004550Z-f8bba9dd.yaml
       - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:34:25Z
+      at: 2026-11-08T03:47:14Z
       outcome: unchanged
-      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261108T011854Z-346a8070 updated the page with a6f1ef76, where the PDF renderer came to draw every image: its declaration names the image, so format 1 loses none before it draws, and it reports four losses of its own. 20261108T013532Z-39c81bd6 found it true against the v2026-11-08 release (7cbecf99), which raised only the capability's version, 0.2.0 to 0.3.0, that the page never states: the capability: 0.1.0 in its examples is what a past run recorded, and the renderers' versions are their own. So the two hold together. This change adds the size axis device to the foundations being built, which no shipped brand and no test brand gives, so a brand's combinations and keys, the test brand's four combinations and two variants, the code's modes and the losses of form 1 read as before. The page states a size only of a brand that gives one, and a piece's refusal, whose words this change rewrites, is not on it."
+      unchanged-because: Judged with the answer on main it replaces. 20261108T025310Z-7acd7024 updated the page with 827c91b8, where a picture role came to reach every renderer, the document of values rose to version 2 and the JSON writer gained form 2; it had read 20261108T011854Z-346a8070, the PDF drawing every image, and 20261108T013532Z-39c81bd6, the release of 0.3.0. This change adds the size axis device to the foundations being built, which no shipped brand and no brand of the test fixtures gives, so a brand's combinations and keys, the test brand's four combinations and two variants, the code's modes and the losses of form 1 read as before. The page states a size only of a brand that gives one, and a piece's refusal, whose words this change rewrites, is not on it.
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
       - 20261102T235145Z-1a0d93cb.yaml
@@ -386,8 +390,9 @@ answers:
       - 20261108T011854Z-346a8070.yaml
       - 20261108T013532Z-39c81bd6.yaml
       - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:32:59Z
+      at: 2026-11-08T03:47:16Z
       outcome: unchanged
       unchanged-because: The checks read a brand's axes as before. The size-switch finding already names a size axis the locked foundations declare, and the example of a finding at some sizes names device, now an axis the foundations being built declare. A mode the brand lacks is still piece-unreadable, whose message still names the file and the field, and no finding's name or outcome changes.
   - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
@@ -407,7 +412,7 @@ answers:
       - 20261108T005759Z-29300bbe.yaml
       - 20261108T021821Z-a73154b1.yaml
     revalidated:
-      at: 2026-11-08T03:33:01Z
+      at: 2026-11-08T03:47:18Z
       outcome: unchanged
       unchanged-because: The starter reads the foundations' roles, colour families and pairs, which this change leaves as they were. It only adds the size axis device to the foundations being built, and no starter component switches on a size, so the page's roles, defaults, families and the line that brings the starter in beside the foundations still hold.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
@@ -419,8 +424,9 @@ answers:
       - 20261107T134444Z-767c8326.yaml
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:33:15Z
+      at: 2026-11-08T03:47:19Z
       outcome: unchanged
       unchanged-because: The foundations being built now declare a size axis, device, beside the colour scheme and the contrast, which the term's definition, its device example and its distinction of colour axes from size axes already name; the change to tokens.py words the refusal of a size a brand does not give, and an axis stays a switch of a brand along which its modes lie.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
@@ -433,8 +439,9 @@ answers:
       - 20261107T150704Z-dc1b19d8.yaml
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:33:17Z
+      at: 2026-11-08T03:47:21Z
       outcome: unchanged
       unchanged-because: tokens.py now refuses a size a brand does not give in words naming the brand and its base; a brand still holds the values pieces are drawn in, in each of its modes, so the definition, the example of one talk in two brands and the distinctions from a theme and a mode hold.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
@@ -446,8 +453,9 @@ answers:
       - 20261107T134444Z-767c8326.yaml
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:33:18Z
+      at: 2026-11-08T03:47:23Z
       outcome: unchanged
       unchanged-because: tokens.py now refuses a size of the device axis that a brand does not give, naming the brand; a mode is still one setting on one axis of a brand, with the values that differ in it, and a brand may have more axes than the colour scheme, as the distinctions say.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
@@ -472,8 +480,9 @@ answers:
       - 20261107T152425Z-5df8e941.yaml
       - 20261107T170711Z-36640b86.yaml
       - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:33:20Z
+      at: 2026-11-08T03:47:25Z
       outcome: unchanged
       unchanged-because: pipeline.py now reads a piece's modes through its brand, so a size the brand does not give is refused in clearer words; nothing about a part made inside one piece and used by it alone changes, nor how a local component becomes a library component.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
@@ -502,7 +511,8 @@ answers:
       - 20261107T170711Z-36640b86.yaml
       - 20261107T180629Z-368efe46.yaml
       - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
     revalidated:
-      at: 2026-11-08T03:33:22Z
+      at: 2026-11-08T03:47:28Z
       outcome: unchanged
       unchanged-because: pipeline.py now reads a piece's modes through its brand, which refuses a size the brand does not give in words naming it; a piece still keeps its content as data and takes its look from libraries, and a deck and a talk are still kinds of piece.
