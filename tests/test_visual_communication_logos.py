@@ -15,8 +15,8 @@ light logo and a dark one (`tests/visual_communication_logo.py`), and shows it b
 picture file of the piece and a produced picture (`logo_project`):
 
 - what a renderer is handed for each image in each combination, from one scene;
-- the logo of each colour scheme drawn in a preview, in an SVG and an HTML export, and in a
-  look; a page file of both schemes drawing the light one and reporting the dark one;
+- the logo of each colour scheme drawn in a preview, in an SVG, an HTML and a PDF export, and
+  in a look; a page file of both schemes drawing the light one and reporting the dark one;
 - a phone's own logo, at its own proportions;
 - a brand that gives none, a base's logo kept, and an edition's own where the base opens it;
 - what the check finds of a brand's logo, and where: in the brand's version, or at the lock
@@ -39,6 +39,8 @@ import pytest
 from tests import visual_communication_logo as logo
 from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
+from tests.test_visual_communication_export import drawn_pictures
+from tests.test_visual_communication_pdf import data_of as pdf_data_of
 from tests.test_visual_communication_pipeline import DEVICE, NARROW, TESTS, every_file
 from tests.visual_communication_project import (
     FOUNDATIONS,
@@ -425,6 +427,25 @@ def test_each_modes_logo_draws_in_a_preview_and_an_svg_and_an_html_export(tmp_pa
             assert data_of(root / PIECE_FOLDER / "pictures" / "photo.png") in text
     page = (root / EXPORTS / f"{PIECE}.v1.en.default.html").read_text(encoding="utf-8")
     assert data_of(light) in page and data_of(dark) not in page
+
+
+def test_each_modes_logo_draws_in_a_pdf_export_and_loses_none(tmp_path: Path) -> None:
+    """Each combination's PDF draws, in the scene's order, its own mode's logo, a PNG with an
+    alpha channel, its alpha a soft mask; the picture file of the piece, a palette's PNG; and
+    the produced picture. No image is a loss."""
+    root = logo_project(tmp_path, exports=["pdf"])
+    light, dark = logos_of(root)
+    assert [f for f in checks.computed(project_of(root)) if f.code == "loss"] == []
+
+    exported = run_main(export_script, PIECE, cwd=root)
+
+    assert exported.returncode == 0, exported.stderr
+    photo = pdf_data_of((root / PIECE_FOLDER / "pictures" / "photo.png").read_bytes())
+    produced = pdf_data_of(producer.png(100, 100, (200, 30, 30, 255)))
+    for key, own, other in (("default", light, dark), ("colour-scheme.dark", dark, light)):
+        drawn = drawn_pictures(root / EXPORTS / f"{PIECE}.v1.en.{key}.pdf")
+        assert drawn == [pdf_data_of(own.read_bytes()), photo, produced]
+        assert pdf_data_of(other.read_bytes()) not in drawn
 
 
 def test_a_look_draws_each_modes_logo_and_loses_none(tmp_path: Path) -> None:

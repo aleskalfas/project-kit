@@ -6,8 +6,9 @@ body: >
   A brand gives its logo, and a part shows it (#2858). An `image` part comes to
   name `role`, a picture role such as `picture.logo`, beside `produced`,
   `content` and `file`, exactly one of the four. It draws the file the brand
-  gives the role in each mode and at each size, from one scene, and an image
-  with no height takes that file's proportions. Where the brand gives none,
+  gives the role in each mode and at each size, from one scene, in an SVG, an
+  HTML and a PDF export alike, and an image with no height takes that file's
+  proportions. Where the brand gives none,
   the part is not drawn and takes zero size, and no piece takes a finding. A
   `role` that names no picture role fails, as `unknown-role` or `role-type`. A
   brand that gives a picture role a file in some value combinations of a key

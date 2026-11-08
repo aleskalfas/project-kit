@@ -72,8 +72,11 @@ answers:
       - 20261107T221657Z-71211da2.yaml
       - 20261107T225725Z-d491b7e6.yaml
       - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T01:23:03Z
+      at: 2026-11-08T02:15:48Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
@@ -132,7 +135,7 @@ answers:
       - 20261107T203800Z-471a3d6c.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:23:10Z
+      at: 2026-11-08T02:15:50Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
@@ -208,8 +211,11 @@ answers:
       - 20261107T203800Z-471a3d6c.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T01:23:12Z
+      at: 2026-11-08T02:15:52Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
@@ -286,8 +292,11 @@ answers:
       - 20261107T203800Z-471a3d6c.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T01:23:14Z
+      at: 2026-11-08T02:15:54Z
       outcome: updated
   - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md
     read:
@@ -295,7 +304,7 @@ answers:
       - 20261107T134514Z-b7b499b1.yaml
       - 20261107T150704Z-dc1b19d8.yaml
     revalidated:
-      at: 2026-11-08T01:23:15Z
+      at: 2026-11-08T02:15:55Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -375,10 +384,14 @@ answers:
       - 20261107T203800Z-471a3d6c.yaml
       - 20261107T221657Z-71211da2.yaml
       - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
     revalidated:
-      at: 2026-11-08T01:25:08Z
+      at: 2026-11-08T02:15:57Z
       outcome: unchanged
-      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261107T221657Z-71211da2 updated the page (0d6c06c0: the opening's sentence and steps 2 and 6 on a piece's own pictures/ folder). 20261108T000436Z-9e30da30 found it true as the release raised the capability's version, 0.1.0 to 0.2.0, which the page never states. This change has pipeline.py hand an image the file its brand gives a picture role, and files.md, components.md and outputs.md gain the picture role, the values document's version 2 and the JSON writer's form 2. The README states none of them: a brand holds the values pieces are drawn in, the neutral brand gives no logo, the JSON writer writes a brand's resolved values as one document, write-code prints each loss a declaration does not accept, and the sentences 0d6c06c0 added speak of a piece's own pictures, which this change leaves as they are. Each section it links still holds the detail, and it states no version, so the three hold together."
+      unchanged-because: "Judged with the two answers made apart that this one replaces. 20261108T011854Z-346a8070 found the page true as the PDF renderer came to draw every image (a6f1ef76): the page says it draws a piece as one PDF for each language and combination of modes, and names neither its version nor an image refused. 20261108T013532Z-39c81bd6 found it true against the release of 0.3.0 (7cbecf99), which raised only the capability's version, which the page never states. It had judged 20261108T005759Z-29300bbe, whose 8128295f pinned the scripts' packages and reworded the starter's README, none of which the page repeats. So the two hold together. This change has pipeline.py hand each renderer, the PDF's included, the file a brand gives a picture role, and files.md, components.md and outputs.md gain the picture role, the values document's version 2 and the JSON writer's form 2. The README states none of them: a brand holds the values pieces are drawn in, the neutral brand gives no logo, the JSON writer writes a brand's resolved values as one document, and each section it links holds the detail. So every statement holds."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -389,7 +402,7 @@ answers:
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T203800Z-471a3d6c.yaml
     revalidated:
-      at: 2026-11-08T01:23:35Z
+      at: 2026-11-08T02:15:59Z
       outcome: unchanged
       unchanged-because: tokens.py judges the files a brand gives a picture role within each key, over its value axes, and lets a size axis give another; an axis is still a switch of a brand along which its modes lie.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
@@ -403,7 +416,7 @@ answers:
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T203800Z-471a3d6c.yaml
     revalidated:
-      at: 2026-11-08T01:23:37Z
+      at: 2026-11-08T02:16:01Z
       outcome: unchanged
       unchanged-because: tokens.py judges the files a brand gives a picture role, such as its logo, in each value combination and their proportions; a brand is still the library that holds the values pieces are drawn in.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
@@ -417,7 +430,7 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:23:38Z
+      at: 2026-11-08T02:16:03Z
       outcome: unchanged
       unchanged-because: layout.py and the component schema add an image's source role, the file the brand gives a picture role; a content slot is still a named place a piece fills, and a picture role is no slot.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
@@ -439,7 +452,7 @@ answers:
       - 20261107T154525Z-f94f36f9.yaml
       - 20261107T180629Z-368efe46.yaml
     revalidated:
-      at: 2026-11-08T01:23:40Z
+      at: 2026-11-08T02:16:05Z
       outcome: unchanged
       unchanged-because: libraries.py's Held only keeps whether its folders are listed by walking them, for before-after's ignored clone folder; how a draft's lock moves at each drawing is unchanged.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
@@ -455,7 +468,7 @@ answers:
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:23:42Z
+      at: 2026-11-08T02:16:06Z
       outcome: unchanged
       unchanged-because: The component schema adds only an image's source role; a component's status, and what experimental lets a later library version do, is as it was.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
@@ -469,7 +482,7 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:23:54Z
+      at: 2026-11-08T02:16:08Z
       outcome: unchanged
       unchanged-because: layout.py and the component schema add an image's source role, the file the brand gives a picture role; a layout, a named arrangement of a page that a kind of piece declares and a brand draws, is unchanged.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library
@@ -482,7 +495,7 @@ answers:
       - 20261106T110932Z-3b040a83.yaml
       - 20261107T154525Z-f94f36f9.yaml
     revalidated:
-      at: 2026-11-08T01:23:56Z
+      at: 2026-11-08T02:16:10Z
       outcome: unchanged
       unchanged-because: libraries.py's Held only keeps whether its folders are listed by walking them; a library is still a shared set of one of three kinds that pieces take their look from.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
@@ -496,7 +509,7 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:23:57Z
+      at: 2026-11-08T02:16:12Z
       outcome: unchanged
       unchanged-because: A library component's image may now show the file the brand gives a picture role, by role; it is still a reusable part that arranges and draws the content it is given, shared by pieces.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-version
@@ -512,7 +525,7 @@ answers:
       - 20261106T110932Z-3b040a83.yaml
       - 20261107T154525Z-f94f36f9.yaml
     revalidated:
-      at: 2026-11-08T01:23:59Z
+      at: 2026-11-08T02:16:14Z
       outcome: unchanged
       unchanged-because: libraries.py's Held only keeps whether its folders are listed by walking them; a library version is still a numbered state kept whole and never changed once released.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
@@ -538,7 +551,7 @@ answers:
       - 20261107T170711Z-36640b86.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:24:01Z
+      at: 2026-11-08T02:16:15Z
       outcome: unchanged
       unchanged-because: pipeline.py hands an image the file its brand gives a picture role, and the component schema adds the source role; a local component is still made inside one piece and used by that piece alone.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-lock
@@ -554,7 +567,7 @@ answers:
       - 20261107T154525Z-f94f36f9.yaml
       - 20261107T180629Z-368efe46.yaml
     revalidated:
-      at: 2026-11-08T01:24:03Z
+      at: 2026-11-08T02:16:17Z
       outcome: unchanged
       unchanged-because: libraries.py's Held only keeps whether its folders are listed by walking them; the file a picture role shows is the one in the brand version the lock names, and a lock is still the list of library versions a piece is drawn with.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
@@ -567,7 +580,7 @@ answers:
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T203800Z-471a3d6c.yaml
     revalidated:
-      at: 2026-11-08T01:24:05Z
+      at: 2026-11-08T02:16:19Z
       outcome: unchanged
       unchanged-because: tokens.py judges a picture role's file in each value mode of a key, a dark mode's own logo among them; a mode is still one setting on one axis of a brand, with the values that differ in it.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
@@ -582,7 +595,7 @@ answers:
       - 20261107T161037Z-476db373.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:24:06Z
+      at: 2026-11-08T02:16:21Z
       outcome: unchanged
       unchanged-because: layout.py and the component schema add only an image's source role; an option is still a choice a library component declares, made from the values it lists.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
@@ -612,7 +625,7 @@ answers:
       - 20261107T180629Z-368efe46.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:24:08Z
+      at: 2026-11-08T02:16:22Z
       outcome: unchanged
       unchanged-because: pipeline.py hands a piece's renderers the file its brand gives a picture role, and lists a before-after piece's pictures by walking them; a piece still keeps its content as data and takes its look, its brand's logo included, from libraries.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
@@ -633,7 +646,7 @@ answers:
       - 20261107T154525Z-f94f36f9.yaml
       - 20261107T180629Z-368efe46.yaml
     revalidated:
-      at: 2026-11-08T01:24:10Z
+      at: 2026-11-08T02:16:24Z
       outcome: unchanged
       unchanged-because: libraries.py's Held only keeps whether its folders are listed by walking them; a pinned draft's lock still moves only when a person moves it.
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
@@ -649,6 +662,6 @@ answers:
       - 20261107T162236Z-893f20f2.yaml
       - 20261107T221657Z-71211da2.yaml
     revalidated:
-      at: 2026-11-08T01:24:11Z
+      at: 2026-11-08T02:16:26Z
       outcome: unchanged
       unchanged-because: The component schema adds only an image's source role; what stable promises, that only a library version of a new major number may break it, is unchanged.
