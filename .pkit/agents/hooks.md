@@ -87,8 +87,11 @@ The order mirrors the skill-deploy precedence, where the project's skill wins ov
 
 ## Unsatisfied needs
 
-Every `needs:` entry is required by default (COR-013 point 4). The two validations that fail a same-tier collision also fail a need that no skill answers and no package provides. COR-013 point 4 has install and sync check it too, and today neither does.
+Every `needs:` entry is required by default (COR-013 point 4). The two validations that fail a same-tier collision also fail a need that no skill answers and no package provides.
 
+- **Deployed:** every command that deploys warns of each need whose hook binds no provider, once it has deployed. These are `pkit init`, `pkit sync` and `pkit upgrade`, and a capability's install, register, upgrade and uninstall.
+  - **The warning** names the agent or skill, its file and the hook. A need whose providers collide at the hook's winning tier is named with both providers.
+  - **What it changes:** nothing. It writes nothing more and fails nothing, and a `--dry-run` deploys nothing, so it warns of nothing.
 - **Listed:** `pkit hooks list` shows such a hook as `(no provider)`.
 - **Resolved:** `pkit hooks resolve` refuses it, and says that no provider declares it.
 

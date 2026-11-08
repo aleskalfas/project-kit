@@ -629,6 +629,70 @@ Calls workflow.do-thing.
     assert not any("no provider exists" in i.diagnosis for i in issues)
 
 
+# --- unsatisfied needs, which every deploy warns of (COR-013 point 4, #2467) ---
+
+_CONSUMER_AGENT = """---
+name: consumer-agent
+description: consumes
+needs: [workflow.do-thing]
+---
+# Consumer
+Calls workflow.do-thing.
+"""
+
+
+def _answering_skill(name: str) -> str:
+    return f"""---
+name: {name}
+description: provides
+answers: [workflow.do-thing]
+---
+# Provider
+Implements workflow.do-thing.
+"""
+
+
+def _unsatisfied(root: Path) -> list[refs.UnsatisfiedNeed]:
+    return refs.unsatisfied_needs(refs.load_artifacts(root), refs.load_hook_providers(root))
+
+
+def test_unsatisfied_needs_names_the_agent_and_the_hook_no_provider_answers(
+    kit_target: Path,
+) -> None:
+    _write_agent(kit_target, "project", "consumer-agent", _CONSUMER_AGENT)
+    needs = _unsatisfied(kit_target)
+    assert [(n.artifact.name, n.hook, n.colliding) for n in needs] == [
+        ("consumer-agent", "workflow.do-thing", ())
+    ]
+    assert needs[0].describe(kit_target) == (
+        "agent 'consumer-agent' (.pkit/agents/project/consumer-agent.md) needs hook "
+        "'workflow.do-thing', which no skill answers and no package provides (COR-013 point 4)."
+    )
+
+
+def test_unsatisfied_needs_passes_a_need_a_skill_answers(kit_target: Path) -> None:
+    _write_agent(kit_target, "project", "consumer-agent", _CONSUMER_AGENT)
+    _write_skill(kit_target, "core", "provider-skill", _answering_skill("provider-skill"))
+    assert _unsatisfied(kit_target) == []
+
+
+def test_unsatisfied_needs_names_a_need_whose_providers_collide(kit_target: Path) -> None:
+    """Two providers at the hook's winning tier bind neither, so the need is unsatisfied;
+    validation leaves it to the collision's own finding, which names the hook."""
+    _write_agent(kit_target, "project", "consumer-agent", _CONSUMER_AGENT)
+    for name in ("first-skill", "second-skill"):
+        _write_skill(kit_target, "core", name, _answering_skill(name))
+    [need] = _unsatisfied(kit_target)
+    assert [p.source for p in need.colliding] == ["first-skill", "second-skill"]
+    assert need.describe(kit_target).startswith(
+        "agent 'consumer-agent' (.pkit/agents/project/consumer-agent.md) needs hook "
+        "'workflow.do-thing', which binds no provider: same-tier collision at tier 'core'"
+    )
+    issues = refs.validate_corpus(kit_target)
+    assert not any("no provider exists" in i.diagnosis for i in issues)
+    assert any(i.location == "hooks/workflow.do-thing" for i in issues)
+
+
 # --- lookups --------------------------------------------------------
 
 

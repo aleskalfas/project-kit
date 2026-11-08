@@ -623,6 +623,47 @@ def collision_diagnosis(winners: list[Provider]) -> str:
     )
 
 
+@dataclass(frozen=True)
+class UnsatisfiedNeed:
+    """A `needs:` entry whose hook binds no provider (COR-013 point 4, "Unsatisfied
+    needs"): no skill answers the hook and no package provides it, or the providers at
+    its winning tier collide."""
+
+    artifact: Artifact
+    hook: str
+    #: The providers at the hook's winning tier where two or more collide; empty where no
+    #: provider declares the hook.
+    colliding: tuple[Provider, ...] = ()
+
+    def describe(self, target_root: Path) -> str:
+        """The need as a deploy warns of it: the agent or skill, its file, the hook, and
+        why the hook binds no provider."""
+        path = self.artifact.path
+        where = path.relative_to(target_root) if target_root in path.parents else path
+        need = f"{self.artifact.kind} {self.artifact.name!r} ({where}) needs hook {self.hook!r}"
+        if self.colliding:
+            return f"{need}, which binds no provider: {collision_diagnosis(list(self.colliding))}"
+        return f"{need}, which no skill answers and no package provides (COR-013 point 4)."
+
+
+def unsatisfied_needs(
+    artifacts: list[Artifact], providers: list[Provider]
+) -> list[UnsatisfiedNeed]:
+    """Each `needs:` entry of the artefacts whose hook binds no provider (`resolve_hook`),
+    in the artefacts' order and each one's hooks sorted.
+
+    One check for two readers: `pkit validate` and `pkit refs validate` fail the needs no
+    provider declares (`_validate_hook_closure`), and every deploy warns of them all
+    (`install.report_unsatisfied_needs`).
+    """
+    needs: list[UnsatisfiedNeed] = []
+    for art in artifacts:
+        for hook in sorted(art.declared.needs):
+            if resolve_hook(providers, hook) is None:
+                needs.append(UnsatisfiedNeed(art, hook, tuple(winning_providers(providers, hook))))
+    return needs
+
+
 #: The version of the document `pkit refs lookup --json` prints.
 LOOKUP_VERSION = 1
 
@@ -2257,28 +2298,30 @@ def _via(category: str | None) -> str:
 
 
 def _validate_hook_closure(artifacts: list[Artifact], providers: list[Provider]) -> list[Issue]:
-    """Every `needs:` hook must be answerable by at least one provider."""
+    """Every `needs:` hook must be answerable by at least one provider (`unsatisfied_needs`).
+    A need whose hook has providers that collide is left to the collision's own finding
+    (`_validate_same_tier_collisions`)."""
     issues: list[Issue] = []
-    provided_hooks = {p.hook for p in providers}
-    for art in artifacts:
-        for hook in art.declared.needs:
-            if hook not in provided_hooks:
-                # Use path-based location so capability artifacts surface
-                # under `.pkit/capabilities/<cap>/...`, not under the
-                # synthetic area path.
-                target_root = _infer_target_root(art.path)
-                loc = (
-                    str(art.path.relative_to(target_root))
-                    if target_root is not None and target_root in art.path.parents
-                    else str(art.path)
-                )
-                issues.append(
-                    Issue(
-                        location=loc,
-                        diagnosis=f"declares need for hook {hook!r} but no provider exists "
-                        f"(skill `answers:` or package.yaml `provides:`).",
-                    )
-                )
+    for need in unsatisfied_needs(artifacts, providers):
+        if need.colliding:
+            continue
+        art = need.artifact
+        # Use path-based location so capability artifacts surface
+        # under `.pkit/capabilities/<cap>/...`, not under the
+        # synthetic area path.
+        target_root = _infer_target_root(art.path)
+        loc = (
+            str(art.path.relative_to(target_root))
+            if target_root is not None and target_root in art.path.parents
+            else str(art.path)
+        )
+        issues.append(
+            Issue(
+                location=loc,
+                diagnosis=f"declares need for hook {need.hook!r} but no provider exists "
+                f"(skill `answers:` or package.yaml `provides:`).",
+            )
+        )
     return issues
 
 

@@ -96,6 +96,7 @@ pkit:
         - .pkit/agents/README.md#authoring-a-definition
         - .pkit/agents/storyboards.md#authoring
         - .pkit/agents/hooks.md#provider-precedence
+        - .pkit/agents/hooks.md#unsatisfied-needs
         - .pkit/agents/hooks.md#pkit-hooks-list
         - .pkit/agents/hooks.md#pkit-hooks-resolve-hook
         - .pkit/agents/hooks.md#pkit-hooks-who-provides-hook
@@ -418,6 +419,8 @@ An older or another pkit is a normal state, not a defect, and a version vouches 
 **The capabilities' rules index.** Sync renders `.pkit/rules/capabilities.md` again among the derivable state, self-host included, and its merge keeps the line that reaches it in `CLAUDE.md`. Before it writes anything, it stops on a file at that path whose first line is not the backbone's marker, naming the file; nothing overrides it ([the lifecycle README, "The capabilities' rules index"](../lifecycle/README.md#the-capabilities-rules-index)).
 
 **What the copy newly binds.** After its copy, sync prints, for each loaded set it delivered, the set's name and version and each rule it newly binds, changes or retires, core's included. Where no adapter in use delivers a capability's rules, it says a capability's rules bind no session there ([the lifecycle README, "What a step newly binds"](../lifecycle/README.md#what-a-step-newly-binds)). `init`, `upgrade` and a capability's install, register and upgrade print the same.
+
+**A hook need that no provider binds.** After its deploy, sync warns of each agent's or skill's `needs:` entry whose hook no provider binds, naming the agent and the hook. The warning writes nothing and fails nothing ([the hooks reference, "Unsatisfied needs"](../agents/hooks.md#unsatisfied-needs)). `init`, `upgrade` and a capability's install, register, upgrade and uninstall warn the same.
 
 **In a pipeline.** A project that does not pin a version, run by a pkit installed fresh in each run, meets the stop at every release until it pins. Commit a pin (`pkit pin`, or the pin `pkit upgrade` writes by default), so the router runs the project's version, or install the project's version in the pipeline: `uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>`. The router fetches over SSH, so a pinned pipeline without SSH keys installs the pin's version itself, from the HTTPS URL above.
 
