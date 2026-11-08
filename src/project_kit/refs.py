@@ -1813,40 +1813,24 @@ def _load_one(
     declared = extract_declared(fm)
     body_refs = extract_body_refs(body)
 
-    # For composite skills (folder-form per COR-015 with supporting
-    # sibling files per COR-020), the canonical file is the dispatcher
-    # and per-operation walkthroughs / reference docs live as siblings.
-    # Citations in those siblings belong to the same composite skill
+    # Citations in a composite skill's siblings belong to the same skill
     # — union them into body_refs so the bidirectional rule (COR-013)
     # reconciles them against the dispatcher's frontmatter declarations.
-    #
-    # Discriminator: path.parent.name == path.stem (folder-form).
-    if path.parent.name == path.stem:
-        for sibling in sorted(path.parent.glob("*.md")):
-            if sibling == path:
-                continue
-            try:
-                sibling_text = sibling.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            # Sub-procedure files carry no frontmatter per COR-020, but
-            # _split_frontmatter is safe either way (returns the full
-            # text as body when no `---` block is present).
-            _, sibling_body = _split_frontmatter(sibling_text)
-            sibling_refs = extract_body_refs(sibling_body)
-            body_refs = BodyRefs(
-                paths=body_refs.paths | sibling_refs.paths,
-                records=body_refs.records | sibling_refs.records,
-                hooks=body_refs.hooks | sibling_refs.hooks,
-                capability_citations=(
-                    body_refs.capability_citations | sibling_refs.capability_citations
-                ),
-                rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
-                addresses=body_refs.addresses | sibling_refs.addresses,
-                # The siblings share the dispatcher's folder, so a link in one is
-                # read from the artifact's own folder.
-                links=body_refs.links | sibling_refs.links,
-            )
+    for sibling_body in _sibling_bodies(path):
+        sibling_refs = extract_body_refs(sibling_body)
+        body_refs = BodyRefs(
+            paths=body_refs.paths | sibling_refs.paths,
+            records=body_refs.records | sibling_refs.records,
+            hooks=body_refs.hooks | sibling_refs.hooks,
+            capability_citations=(
+                body_refs.capability_citations | sibling_refs.capability_citations
+            ),
+            rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
+            addresses=body_refs.addresses | sibling_refs.addresses,
+            # The siblings share the dispatcher's folder, so a link in one is
+            # read from the artifact's own folder.
+            links=body_refs.links | sibling_refs.links,
+        )
 
     # Name: the file stem (matches both flat and folder layouts).
     name = path.stem
@@ -1860,6 +1844,38 @@ def _load_one(
         capability=capability,
         policy={key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None},
     )
+
+
+def _sibling_bodies(path: Path) -> list[str]:
+    """The bodies of a composite skill's other Markdown files, which count as its body.
+
+    A composite skill takes the folder form (COR-015), its dispatcher named as its
+    folder, and its per-operation procedures and reference files sit beside the
+    dispatcher (COR-020). Any other artifact has none. A sibling that cannot be read
+    is left out.
+    """
+    if path.parent.name != path.stem:
+        return []
+    bodies: list[str] = []
+    for sibling in sorted(path.parent.glob("*.md")):
+        if sibling == path:
+            continue
+        try:
+            sibling_text = sibling.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        # Sub-procedure files carry no frontmatter per COR-020, but
+        # _split_frontmatter is safe either way (returns the full
+        # text as body when no `---` block is present).
+        bodies.append(_split_frontmatter(sibling_text)[1])
+    return bodies
+
+
+def _body_text(art: Artifact) -> str:
+    """An artifact's whole body as text, its front matter left out: the file's own,
+    and, for a composite skill, its siblings' (`_sibling_bodies`)."""
+    _, body = _split_frontmatter(art.path.read_text(encoding="utf-8"))
+    return "\n".join([body, *_sibling_bodies(art.path)])
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
@@ -1916,19 +1932,46 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # literal text search for paths whose shape the parser doesn't
         # extract (bare filenames like `CONTRIBUTING.md` — too generic
         # for backward-direction tracking, but legitimate forward
-        # references when explicitly declared).
-        file_text_lazy: str | None = None
+        # references when explicitly declared). The search reads the body
+        # alone: the front matter holds the declaration itself, so the
+        # whole file would find every declared path (#2471).
+        body_text_lazy: str | None = None
+        cited_files_lazy: frozenset[Path] | None = None
 
-        def _in_file_text(art: Artifact = art) -> str:
-            nonlocal file_text_lazy
-            if file_text_lazy is None:
-                file_text_lazy = art.path.read_text(encoding="utf-8")
-            return file_text_lazy
+        def _in_body_text(art: Artifact = art) -> str:
+            nonlocal body_text_lazy
+            if body_text_lazy is None:
+                body_text_lazy = _body_text(art)
+            return body_text_lazy
 
+        def _cited_files(art: Artifact = art) -> frozenset[Path]:
+            nonlocal cited_files_lazy
+            if cited_files_lazy is None:
+                cited_files_lazy = frozenset(
+                    file
+                    for cited in art.body_refs.paths
+                    for file in _rot_candidates(
+                        cited.split("#", 1)[0], art, target_root, link=cited in art.body_refs.links
+                    )
+                )
+            return cited_files_lazy
+
+        cited_records = art.body_refs.records | {
+            _capability_key(cap, stem) for cap, stem in art.body_refs.capability_citations
+        }
         for path in declared_paths_all:
             if path in art.body_refs.paths:
                 continue
-            if path in _in_file_text():
+            # A body path written another way, such as a relative link, cites
+            # the declared path where both read to the same file.
+            declared_files = _rot_candidates(path.split("#", 1)[0], art, target_root, link=False)
+            if not _cited_files().isdisjoint(declared_files):
+                continue
+            # A decision record's file is cited by the record's id, as the
+            # backward check reads a link to one (`_is_decision_link`).
+            if any(_record_of_file(file) in cited_records for file in declared_files):
+                continue
+            if path in _in_body_text():
                 continue
             issues.append(
                 Issue(
@@ -2043,6 +2086,27 @@ def _is_decision_link(path: str) -> bool:
     Existence of the linked file is still checked separately by `find_rot`.
     """
     return "/decisions/" in path or bool(_DECISION_LINK_RE.search(path))
+
+
+_CAPABILITY_DECISION_FILE_RE = re.compile(
+    r"(?:^|/)\.pkit/capabilities/([^/]+)/decisions/(DEC-\d+)(?:-[^/]*)?\.md$"
+)
+_RECORD_FILE_RE = re.compile(r"(?:^|/)((?:COR|PRJ|ADR)-\d+)(?:-[^/]*)?\.md$")
+
+
+def _record_of_file(file: Path) -> str | None:
+    """The record a decision record's file holds, keyed as a body's citation of it
+    is: `COR-NNN`, `PRJ-NNN` or `ADR-NNN` by the file's name, and
+    `<capability>:DEC-NNN` for a file under a capability's `decisions/` folder.
+    None for any other file. `file` is read from the project root, as
+    `_rot_candidates` gives it.
+    """
+    text = file.as_posix()
+    match = _CAPABILITY_DECISION_FILE_RE.search(text)
+    if match:
+        return f"{match.group(1)}:{match.group(2)}"
+    match = _RECORD_FILE_RE.search(text)
+    return match.group(1) if match else None
 
 
 def _is_intra_capability_path(path: str, art: Artifact, target_root: Path) -> bool:
