@@ -70,7 +70,7 @@ A session reaches each layer's rules through the project's `CLAUDE.md`, which in
 - **`capabilities.md`** is rendered by the backbone, and nobody edits it ("The capabilities' rules index" below).
 - **`project.md`** is the project's own, and no sync, install or upgrade writes it. `pkit init` writes none, so the project creates it with its first rule.
 - **A capability's two files** arrive with it, by install, sync or upgrade, and the project edits neither. A capability the project authors itself is the exception: there the project writes the set and generates `rules.md` ("A capability's rules" below).
-- **The includes:** `CLAUDE.md` holds `@.pkit/rules/core.md`, `@.pkit/rules/capabilities.md` and `@.pkit/rules/project.md`, in that order. The adapter's merge keeps the first two present, and inserts the third only together with the first.
+- **The includes:** `CLAUDE.md` holds `@.pkit/rules/core.md`, `@.pkit/rules/capabilities.md` and `@.pkit/rules/project.md`, in that order. The adapter's merge keeps the first two present, and inserts the third only together with the first. `pkit validate` fails a `CLAUDE.md` that lacks the first, as it fails one that lacks the second ("The capabilities' rules index" below). An include written only in code counts as lacking (the CLI reference, `validate`).
 - **Sessions that load none of them:** some kinds of session load no rules file, such as Claude Code's built-in Explore and Plan agents. So hand the methodology's work to an agent whose definition does not set `omitClaudeMd` ([the Claude Code adapter's README, "Harness support"](../adapters/claude-code/README.md#harness-support-harness-supportyaml)).
 
 ## How the layers stand

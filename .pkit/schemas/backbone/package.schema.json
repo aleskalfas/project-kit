@@ -827,7 +827,7 @@
     },
     "loaded-rules": {
       "title": "How an adapter's harness reaches the installed capabilities' loaded files (COR-070 point 2; ADR-076 point 4)",
-      "description": "An adapter's delivery of each installed capability's loaded file, `.pkit/capabilities/<name>/rules.md`: the backbone renders one index of them at `.pkit/rules/capabilities.md` in the form `entry` gives, and the adapter's merge primitive keeps `line` present in `host`, so the harness's syntax reaches the backbone only as this data. An adapter without the key delivers no capability's rules, and validation warns of it. Validation fails while registered adapters' `entry` forms differ. A capability declares none.",
+      "description": "An adapter's delivery of each installed capability's loaded file, `.pkit/capabilities/<name>/rules.md`: the backbone renders one index of them at `.pkit/rules/capabilities.md` in the form `entry` gives, and the adapter's merge primitive keeps `line` present in `host`, beside core's include in the same form, so the harness's syntax reaches the backbone only as this data. An adapter without the key delivers no capability's rules, and validation warns of it. Validation fails while registered adapters' `entry` forms differ. A capability declares none.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -846,7 +846,7 @@
           "$ref": "#/$defs/relative-path"
         },
         "line": {
-          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`.",
+          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`. Read for core's loaded file's path in place of the index's, it is core's include, which the host keeps too and validation checks (ADR-082).",
           "type": "string",
           "pattern": "^[^\\n]*\\{index\\}[^\\n]*$"
         }

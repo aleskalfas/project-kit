@@ -1,0 +1,25 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit validate` fails a `CLAUDE.md` that does not include core's rules
+  (#2445; ADR-082). Its `rule-sets` member gives an `error`,
+  `loaded-rules-undelivered`, for each registered adapter's host file in the
+  checkout that does not hold core's include, `@.pkit/rules/core.md` for Claude
+  Code. It takes the line from the adapter's `loaded_rules.line`, and reads the
+  file as the index's check does: a line of its own, outside fenced code. The
+  finding names the line and says that the next `pkit sync` inserts it. Where the
+  include stands only in fenced code or a code span, it says to move it out of
+  the code instead, since the merge inserts nothing there. It holds whether or
+  not the capabilities' rules index is in the checkout. A project whose
+  `CLAUDE.md` lost core's include passed before, and now fails until the next
+  sync puts the include back. The delivery check also reads a host file's bytes
+  as the merge primitive does, so a byte that is not UTF-8 no longer makes the
+  file unreadable. It says to move core's include out of the code only where the
+  merge would refuse, and no longer where the include stands in a longer token
+  outside code. A host file the checkout does not hold is a summary line whether
+  or not the index is there. The warning for an adapter without `loaded_rules:`
+  adds that core's include goes unchecked for its harness. The package schema's
+  description of `loaded_rules.line` says it gives core's include too. Nothing
+  is renamed or removed, so no migration ships.

@@ -12,6 +12,9 @@ These tests hold:
 - **the check** `loaded-rules-undelivered`: an index out of step, an entry whose file is
   missing, an entry for no registered capability, a host without the line, the index
   absent, an adapter with no key, and entry forms that differ;
+- **core's include** in the host (ADR-082): held, absent, only in code, with the index
+  absent, and through `pkit validate`; and where it stands only in code, read as the
+  merge primitive reads it;
 - **an import token** in a loaded set, refused outside code;
 - **the citation form** `<capability>:RS-<SET>-NNN`;
 - **what a step newly binds**, for core's set and a capability's;
@@ -21,6 +24,8 @@ These tests hold:
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import click
@@ -46,6 +51,9 @@ REPO = Path(__file__).resolve().parents[1]
 Kind = rs.RuleSetFindingKind
 INDEX = ".pkit/rules/capabilities.md"
 UNDELIVERED = lr.DeliveryKind.UNDELIVERED.value
+CORE = "@.pkit/rules/core.md"
+INDEX_LINE = "@.pkit/rules/capabilities.md"
+MERGE_SCRIPT = REPO / ".pkit" / "adapters" / "claude-code" / "merge-claude-md.sh"
 
 PACKAGE = """schema_version: 1
 component:
@@ -437,7 +445,7 @@ def test_a_host_whose_core_include_sits_in_code_says_the_project_mends_it(
     adopter: AdopterRepo,
 ) -> None:
     adopter.write({"CLAUDE.md": "# Host\n\n```\n@.pkit/rules/core.md\n```\n"})
-    ((_location, _severity, message),) = delivery_findings(adopter)
+    (message,) = [m for _l, _s, m in delivery_findings(adopter) if f"reaches {INDEX}" in m]
     assert "move the include out of the code" in message
 
 
@@ -449,7 +457,7 @@ def test_a_host_the_checkout_does_not_hold_is_a_summary_line(adopter: AdopterRep
 
 def test_an_index_the_checkout_does_not_hold_is_a_summary_line(adopter: AdopterRepo) -> None:
     (adopter.root / INDEX).unlink()
-    adopter.write({"CLAUDE.md": "# Host\n"})
+    adopter.write({"CLAUDE.md": f"# Host\n\n{CORE}\n"})
     delivery = lr.check_delivery(adopter.root)
     assert delivery.findings == ()
     assert delivery.summary[0].startswith("no capabilities' rules index here")
@@ -493,6 +501,154 @@ def test_validate_s_rule_sets_member_carries_the_delivery(adopter: AdopterRepo) 
     outcome = rs.outcome(adopter.root)
     assert any(line.startswith("capabilities' rules index") for line in outcome.summary)
     assert [f.label for f in outcome.errors] == [UNDELIVERED]
+
+
+# --- core's include in the host (ADR-082) ------------------------------------------------
+
+
+def core_include_messages(adopter: AdopterRepo) -> list[str]:
+    """The messages of the findings on core's include, apart from the index's line."""
+    return [m for _l, _s, m in delivery_findings(adopter) if "that includes core's rules" in m]
+
+
+def test_a_host_that_includes_core_s_rules_passes(adopter: AdopterRepo) -> None:
+    host_with_line(adopter)
+    assert delivery_findings(adopter) == []
+
+
+def test_a_host_without_core_s_include_fails_and_the_sync_mends_it(adopter: AdopterRepo) -> None:
+    adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
+    (finding,) = lr.check_delivery(adopter.root).findings
+    assert (finding.location, finding.severity.value) == ("CLAUDE.md", "error")
+    assert finding.label == UNDELIVERED
+    assert finding.message == (
+        f"CLAUDE.md does not hold the line `{CORE}` that includes core's rules, "
+        ".pkit/rules/core.md, so a session may load none of core's rules (claude-code; "
+        "ADR-082 point 1). The next `pkit sync` inserts it."
+    )
+
+
+@pytest.mark.parametrize(
+    "written",
+    [f"```\n{CORE}\n```\n", f"~~~md\n{CORE}\n~~~\n", f"`{CORE}`\n"],
+    ids=["a backtick fence", "a tilde fence", "a code span"],
+)
+def test_a_host_with_core_s_include_only_in_code_says_the_project_mends_it(
+    adopter: AdopterRepo, written: str
+) -> None:
+    adopter.write({"CLAUDE.md": f"# Host\n\n{written}{INDEX_LINE}\n"})
+    (message,) = core_include_messages(adopter)
+    assert f"writes the line `{CORE}` that includes core's rules" in message
+    assert "only in fenced code or a code span" in message
+    assert message.endswith("move the include out of the code.")
+    assert "inserts it" not in message
+
+
+def test_core_s_include_is_checked_where_the_index_is_absent(adopter: AdopterRepo) -> None:
+    (adopter.root / INDEX).unlink()
+    adopter.write({"CLAUDE.md": "# Host\n"})
+    delivery = lr.check_delivery(adopter.root)
+    assert delivery.summary[0].startswith("no capabilities' rules index here")
+    assert [(f.location, f.severity.value) for f in delivery.findings] == [("CLAUDE.md", "error")]
+    assert len(core_include_messages(adopter)) == 1
+
+
+def test_a_missing_host_is_a_summary_line_where_the_index_is_absent_too(
+    adopter: AdopterRepo,
+) -> None:
+    (adopter.root / INDEX).unlink()
+    delivery = lr.check_delivery(adopter.root)
+    assert delivery.findings == ()
+    assert delivery.summary[0].startswith("no capabilities' rules index here")
+    assert delivery.summary[1].startswith("CLAUDE.md is not in this checkout")
+
+
+def test_a_host_without_either_line_fails_once_for_each(adopter: AdopterRepo) -> None:
+    adopter.write({"CLAUDE.md": "# Host\n"})
+    messages = [m for _l, _s, m in delivery_findings(adopter)]
+    assert len(messages) == 2
+    assert "that includes core's rules" in messages[0]
+    assert f"that reaches {INDEX}" in messages[1]
+
+
+def test_a_host_that_is_not_utf_8_is_read_as_the_merge_reads_it(adopter: AdopterRepo) -> None:
+    """A byte that is not UTF-8 hides no line: the merge primitive reads bytes, and finds the
+    include (ADR-082 point 2)."""
+    (adopter.root / "CLAUDE.md").write_bytes(
+        f"# H\xf4te\n\n{CORE}\n{INDEX_LINE}\n".encode("latin-1")
+    )
+    assert delivery_findings(adopter) == []
+
+
+def test_a_host_that_is_no_file_fails_for_each_line(adopter: AdopterRepo) -> None:
+    (adopter.root / "CLAUDE.md").mkdir()
+    messages = [m for _l, _s, m in delivery_findings(adopter)]
+    assert messages[0].startswith("CLAUDE.md is no file that can be read, so nothing in it")
+    assert messages[0].endswith(f"Make it a file that holds the line `{CORE}`.")
+    assert messages[1].startswith("CLAUDE.md is no file that can be read, so nothing reaches")
+
+
+def test_adapters_that_share_a_host_and_its_line_get_one_finding(adopter: AdopterRepo) -> None:
+    key = 'loaded_rules:\n  entry: "@{file}"\n  host: CLAUDE.md\n  line: "@{index}"\n'
+    register_adapter(adopter, "other", ADAPTER.format(name="other", key=key))
+    adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
+    (message,) = core_include_messages(adopter)
+    assert "(claude-code, other; ADR-082 point 1)" in message
+
+
+def test_an_adapter_without_the_key_has_its_host_left_unchecked(adopter: AdopterRepo) -> None:
+    register_adapter(adopter, "other", ADAPTER.format(name="other", key=""))
+    host_with_line(adopter)
+    ((_location, severity, message),) = delivery_findings(adopter)
+    assert severity == "warning"
+    assert "Nor is core's include checked for its harness (ADR-082 point 5)." in message
+
+
+def test_validate_fails_a_claude_md_without_core_s_include(adopter: AdopterRepo) -> None:
+    """The case of #2445: core's include taken out of `CLAUDE.md`, the index's line kept."""
+    adopter.write({"CLAUDE.md": f"# Host\n\n{CORE}\n{INDEX_LINE}\n"})
+    held = CliRunner().invoke(main, ["validate"])
+    assert "that includes core's rules" not in held.output
+    adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
+    lost = CliRunner().invoke(main, ["validate"])
+    assert lost.exit_code == 1, lost.output
+    assert f"[{UNDELIVERED}]" in lost.output
+    assert f"CLAUDE.md does not hold the line `{CORE}` that includes core's rules" in lost.output
+
+
+#: (name, the text after a host's heading, whether core's include stands only in code)
+ONLY_IN_CODE_CASES: tuple[tuple[str, str, bool], ...] = (
+    ("in a backtick fence", f"```\n{CORE}\n```\n", True),
+    ("in a tilde fence", f"~~~\n{CORE}\n~~~\n", True),
+    ("in a fence never closed", f"```\n{CORE}\n", True),
+    ("in a code span", f"Read `{CORE}` first.\n", True),
+    ("after a closed code span", f"``x`` `{CORE}`\n", True),
+    ("in a fence with CRLF endings", f"```\r\n{CORE}\r\n```\r\n", True),
+    ("in a fence and in prose", f"```\n{CORE}\n```\nSee {CORE} too.\n", False),
+    ("after a closed code span, outside it", f"`x` {CORE}\n", False),
+    ("in a sentence", f"See {CORE} for core's rules.\n", False),
+    ("absent", "Nothing here.\n", False),
+)
+
+
+@pytest.mark.parametrize(
+    ("name", "text", "in_code"), ONLY_IN_CODE_CASES, ids=[c[0] for c in ONLY_IN_CODE_CASES]
+)
+def test_only_in_code_reads_as_the_merge_primitive_refuses(
+    tmp_path: Path, name: str, text: str, in_code: bool
+) -> None:
+    """The check says the merge inserts nothing exactly where the primitive refuses to
+    (ADR-082 point 2): both read the same text, and agree."""
+    assert lr.only_in_code(f"# Host\n\n{text}", CORE) is in_code, name
+    adapter = tmp_path / ".pkit" / "adapters" / "claude-code"
+    adapter.mkdir(parents=True)
+    shutil.copy(MERGE_SCRIPT, adapter / "merge-claude-md.sh")
+    (tmp_path / "CLAUDE.md").write_bytes(f"# Host\n\n{text}".encode())
+    result = subprocess.run(
+        ["bash", str(adapter / "merge-claude-md.sh")], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert ("refused" in result.stdout) is in_code, (name, result.stdout)
 
 
 # --- an import token in a loaded set (ADR-076 point 1) -----------------------------------

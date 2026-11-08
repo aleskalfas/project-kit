@@ -15,7 +15,8 @@ footprint:
 # 4): the backbone renders `.pkit/rules/capabilities.md` with one `entry` per
 # capability's `rules.md`, and `merge-claude-md.sh` keeps `line` present in
 # `host`, after core's include. `{file}` is read from the index's folder, and
-# `{index}` from the host's.
+# `{index}` from the host's. Read for `.pkit/rules/core.md`, `line` is core's
+# include, which validation checks too (ADR-082 point 6).
 loaded_rules:
   entry: "@{file}"
   host: CLAUDE.md
