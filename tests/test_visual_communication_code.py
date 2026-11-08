@@ -610,7 +610,8 @@ def test_the_json_writer_writes_the_document_under_the_lock_with_its_record(root
     assert (written.code, written.record) == (JSON_OUT, f"{JSON_OUT}.record.yaml")
     assert written.losses == ()
     data = (root / JSON_OUT).read_bytes()
-    assert json.loads(data) == document
+    assert json.loads(data) == {**document, "version": 1}
+    assert document["version"] == 2
     assert document["lock"] == LOCK
     assert document["keys"] == [
         "default",

@@ -287,6 +287,7 @@ class Held:
     ) -> None:
         self.root = root
         self.location = location
+        self.walked = walked
         self.release = release if release is not None else installed_release()
         self._libraries: dict[tuple[str, Version], Library | LibraryError] = {}
         self.folders: dict[str, dict[Version, Path]] = {}

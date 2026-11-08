@@ -131,7 +131,7 @@ def test_the_hand_over_holds_the_roles_read_alone_with_the_inputs_and_variants(
     root = producing_project(tmp_path)
     handed = framing.handover(framing.plan(root, "visual", PIECE, OUTPUT))
     assert handed["document"] == "visual-communication/values"
-    assert handed["version"] == 1
+    assert handed["version"] == 2
     assert handed["lock"] == LOCK
     assert list(handed["tokens"]) == ["accent"]
     assert handed["inputs"] == {"fill": "accent"}

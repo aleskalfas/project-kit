@@ -417,7 +417,7 @@ def three_axes() -> tuple[dict[str, Any], dict[str, Any]]:
     }
     doc = {
         "document": "visual-communication/values",
-        "version": 1,
+        "version": 2,
         "lock": {"lab": "1.0.0"},
         "keys": [keys.key_of(c, read) for c in every],
         "tokens": dict(sorted(tokens_.items())),
@@ -461,7 +461,7 @@ def test_it_refuses_a_size_axis_another_form_or_document_and_missing_combination
     with pytest.raises(css.CssError, match="form 2"):
         css.write(doc, axes, form=2)
     with pytest.raises(css.CssError, match="document"):
-        css.write({**doc, "version": 2}, axes)
+        css.write({**doc, "version": 1}, axes)
     with pytest.raises(css.CssError, match="every combination"):
         css.write({**doc, "keys": doc["keys"][:-1]}, axes)
     with pytest.raises(css.CssError, match="typography"):
@@ -491,7 +491,7 @@ def test_the_roles_of_a_library_locked_with_the_brand_are_written_at_their_defau
     scope = tokens.read_scope({"foundations": FOUNDATIONS, "test-parts": TEST_PARTS})
     brand = tokens.read_brand(TEST_BRAND, scope)
     doc = values.document(brand, brand.combinations(), {**LOCK, "test-parts": "1.0.0"})
-    assert doc["version"] == 1
+    assert doc["version"] == 2
     doc["tokens"] = {p: t for p, t in doc["tokens"].items() if t["type"] in css.KINDS}
     sheet = css.write(doc, axes_of(brand))
     root = parsed(sheet)[0].declarations

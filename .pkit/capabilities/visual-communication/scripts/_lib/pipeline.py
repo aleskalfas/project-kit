@@ -414,6 +414,7 @@ class Project:
             fonts=self.root / self.location / FONTS,
             root=self.root,
             locked=locked,
+            walked=held.walked,
         )
         self.notations = {
             name: notations.read_notation(
@@ -432,6 +433,7 @@ class Project:
             for key, combination in zip(self.keys, self.combinations, strict=True)
         }
         self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
+        self._values: dict[str, Any] | None = None
         self.env = ProjectEnv(self)
 
     def label(self, library: str) -> str:
@@ -457,8 +459,10 @@ class Project:
 
     def values(self) -> dict[str, Any]:
         """The document of the brand's resolved values in every combination the piece names
-        (DEC-005 point 7)."""
-        return values.document(self.brand, self.combinations, self.lock)
+        (DEC-005 point 7), computed once."""
+        if self._values is None:
+            self._values = values.document(self.brand, self.combinations, self.lock)
+        return self._values
 
     def size_key(self, key: str) -> str:
         """The key over the size axes of the combination `key` the piece names: the key of
@@ -550,7 +554,7 @@ class ProjectEnv:
     and the piece's own folder, roles and fonts from the brand, colour families from the
     foundations' declarations, concepts from the notations the piece names, produced
     pictures from their records, picture files from the `pictures/` folder of the piece and
-    of each locked version, and the lock.
+    of each locked version, the file the brand gives each picture role, and the lock.
 
     It reads each role at one key over the size axes, `size_key`, which is `default` for
     the project's own (`Project.env`). `at` gives the view that reads roles at another key,
@@ -558,8 +562,8 @@ class ProjectEnv:
 
     It keeps what the engine asked for that a check needs, across every key: why a produced
     picture is missing (`missing`), the records read (`records`), the font files read from
-    the location's `fonts/` (`fonts_read`), and why a picture file a drawn image names
-    cannot be read (`refused`)."""
+    the location's `fonts/` (`fonts_read`), and why a picture file a drawn image names or
+    the brand gives a picture role it shows cannot be read (`refused`)."""
 
     def __init__(
         self, project: Project, size_key: str = keys.DEFAULT_KEY, read: _Read | None = None
@@ -632,6 +636,30 @@ class ProjectEnv:
         KeyErrors, as the engine reads them."""
         return self._project.brand.resolve(token_path, self._combination)
 
+    def picture_role(self, token_path: str) -> pictures.Picture | None:
+        """The picture the brand gives the picture role at `token_path` at the view's key
+        over the size axes, every value axis at its default, as read; None where it gives
+        none, or its file cannot be read, which is the brand's own finding. Within that key,
+        each file the role takes in a combination the piece names that cannot be read is
+        kept in `refused`, so an export refuses it. Raises KeyError for a path no role
+        holds, and ValueError for a role of another type (DEC-025 point 4)."""
+        brand = self._project.brand
+        kind = brand.type_of(token_path)
+        if kind != tokens.PICTURE:
+            raise ValueError(f"the role @{token_path} is a {kind}, not a picture")
+        named = f"the picture role `{token_path}`"
+        project = self._project
+        for key, combination in zip(project.keys, project.combinations, strict=True):
+            given = brand.given(token_path, combination)
+            if given is None or project.size_key(key) != self.size_key:
+                continue
+            judged = brand.picture_of(given, named)
+            if judged.picture is None:
+                said = [f"{f.message} — {f.fix}" if f.fix else f.message for f in judged.findings]
+                self.refused[given.brand, given.name] = "; ".join(said) or "it cannot be read"
+        given = brand.given(token_path, self._combination)
+        return None if given is None else brand.picture_of(given, named).picture
+
     def font_file(self, family: str) -> Path:
         path = self._project.brand.font_file(family)
         fonts = self._project.root / self._project.location / FONTS
@@ -664,13 +692,20 @@ class ProjectEnv:
         folders = self._read.folders
         if holder not in folders:
             piece = self._project.piece
+            walked = self._project.held.walked
             if holder == PIECE:
-                folders[holder] = pictures.Folder(piece.folder, "", "the piece", final=piece.final)
+                folders[holder] = pictures.Folder(
+                    piece.folder, "", "the piece", final=piece.final, walked=walked
+                )
             else:
                 label = self._project.label(holder)
                 folder = self._project.root / self._project.location / FOLDER / holder
                 folders[holder] = pictures.Folder(
-                    folder / self._project.lock[holder], "", f"the version {label}", label
+                    folder / self._project.lock[holder],
+                    "",
+                    f"the version {label}",
+                    label,
+                    walked=walked,
                 )
         return folders[holder]
 
@@ -678,9 +713,11 @@ class ProjectEnv:
         """What a renderer is handed to draw `scene` (`Scene.to_dict()`) in the combination
         `key`: the picture each of its images shows there, by the image's trace id (DEC-025
         point 7). A produced output shows the variant its record maps `key` to, a PNG; a
-        picture file shows itself, of the kind its bytes are. An image of an output whose
-        record maps `key` to no variant, or of a picture file that cannot be read, is left
-        out, and its renderer reports the loss."""
+        picture file shows itself, of the kind its bytes are; a picture role shows the file
+        the document of values gives it in `key`, in the version of the brand that holds it.
+        An image of an output whose record maps `key` to no variant, of a picture file that
+        cannot be read, or of a picture role given no readable file in `key`, is left out,
+        and its renderer reports the loss."""
         found = {}
         for element in _images(scene.get("children", [])):
             trace = str(element.get("id"))
@@ -695,7 +732,26 @@ class ProjectEnv:
                 if read is not None:
                     file = self._folder(holder).holder / pictures.FOLDER / name
                     found[trace] = seam.Shown(file, read.kind)
+            elif "role" in element:
+                shown = self._role_file(str(element["role"]), key)
+                if shown is not None:
+                    found[trace] = shown
         return found
+
+    def _role_file(self, token_path: str, key: str) -> seam.Shown | None:
+        """The file the document of values gives the picture role at `token_path` in the
+        combination `key`, and its kind; None where it gives none, or the file cannot be
+        read (DEC-025 point 7)."""
+        token = self._project.values()["tokens"].get(token_path)
+        value = token["values"].get(key) if token is not None else None
+        if not isinstance(value, Mapping) or value.get("library") not in self._project.lock:
+            return None
+        folder = self._folder(str(value["library"]))
+        name = str(value["file"])
+        read = folder.judge(name, named="", file="", where="").picture
+        if read is None:
+            return None
+        return seam.Shown(folder.holder / pictures.FOLDER / name, read.kind)
 
     def _variant(self, output: str, key: str) -> Path | None:
         """The file of the variant of the produced output `output` that serves the
@@ -803,6 +859,15 @@ class LibraryEnv:
         if kind == "number":
             return 0.0
         return {"$type": kind}
+
+    def picture_role(self, token_path: str) -> pictures.Picture | None:
+        """None: no brand stands behind a library checked alone, so it gives no picture role
+        a file. Raises tokens.UnknownRole, a KeyError, for a path no declaration of the scope
+        holds, and ValueError for a role of another type."""
+        kind = self._scope.type_of(token_path)
+        if kind != tokens.PICTURE:
+            raise ValueError(f"the role @{token_path} is a {kind}, not a picture")
+        return None
 
     def font_file(self, family: str) -> Path:
         raise MissingFont(
@@ -1097,6 +1162,10 @@ class _FitEnv:
 
     def role(self, token_path: str) -> dict:
         raise KeyError(token_path)
+
+    def picture_role(self, token_path: str) -> pictures.Picture | None:
+        """None: no brand stands behind the fit, so no picture role has a file."""
+        return None
 
     def font_file(self, family: str) -> Path:
         raise MissingFont(

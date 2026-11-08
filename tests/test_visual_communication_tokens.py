@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 
+from tests import visual_communication_logo as logos
 from tests.in_process import load
 from tests.visual_communication_project import (
     CAPABILITY,
@@ -1546,8 +1547,8 @@ def test_a_brand_that_gives_its_logo_a_file_it_holds_reads_and_exports_it(
     tmp_path: Path, foundations: Any
 ) -> None:
     """Its value is an empty group at the role's path, naming a file of its version's
-    `pictures/` (DEC-025 point 4). The document of values holds no picture role yet, so
-    the brand's values are those of a brand without one."""
+    `pictures/` (DEC-025 point 4). Only an image shows it (`given`): no formula or paint
+    resolves it, so the brand's other values are those of a brand without one."""
     folder = holding(giving_logo(brand_copy(tmp_path), picture("logo.png")), "logo.png")
     read = tokens.read_brand(folder, foundations)
     assert (read.findings, read.facts) == ((), ())
@@ -1555,19 +1556,91 @@ def test_a_brand_that_gives_its_logo_a_file_it_holds_reads_and_exports_it(
     assert read.type_of("picture.logo") == "picture"
     assert "picture.logo" not in read.valued
     assert read.valued == tokens.read_brand(TEST_BRAND, foundations).valued
+    assert read.pictured == ("picture.logo",)
+    given = [read.given("picture.logo", combination) for combination in read.combinations()]
+    for each in given:
+        assert (each.name, each.library, each.path) == (
+            "logo.png",
+            "test-brand@1.0.0",
+            folder / "pictures" / "logo.png",
+        )
+    assert read.picture_of(given[0]).picture == tokens.pictures.Picture("png", 4, 3, None)
+    with pytest.raises(tokens.UnknownRole):
+        read.resolve("picture.logo", {})
+    with pytest.raises(tokens.UnknownRole):
+        read.given("accent", {})
 
 
 def test_a_value_axis_may_give_a_dark_mode_its_own_logo(tmp_path: Path, foundations: Any) -> None:
     """A dark mode's source gives its logo over the default's, as a token's value merges
-    (DEC-025 point 4). A brand that gives a logo in the dark mode alone exports it too."""
+    (DEC-025 point 4)."""
     folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
     giving_logo(folder, picture("logo-dark.png"), DARK)
     read = tokens.read_brand(holding(folder, "logo.png", "logo-dark.png"), foundations)
     assert (read.findings, read.facts) == ((), ())
-    dark = giving_logo(brand_copy(tmp_path / "dark"), picture("logo-dark.png"), DARK)
+    assert {
+        keys.key_of(combination, read.axes): read.given("picture.logo", combination).name
+        for combination in read.combinations()
+    } == {
+        "default": "logo.png",
+        "contrast.high": "logo.png",
+        "colour-scheme.dark": "logo-dark.png",
+        "colour-scheme.dark+contrast.high": "logo-dark.png",
+    }
+
+
+def test_a_logo_given_in_some_value_modes_of_a_key_and_not_in_others_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """Within one key over the size axes, a picture role takes a file in every combination
+    of the value axes, or in none, so one scene draws it in every value mode (DEC-025
+    point 4). The brand still exports it."""
+    dark = giving_logo(brand_copy(tmp_path), picture("logo-dark.png"), DARK)
     read = tokens.read_brand(holding(dark, "logo-dark.png"), foundations)
-    assert (read.findings, read.facts) == ((), ())
+    [finding] = read.findings
+    assert (finding.code, finding.level, finding.where, finding.library) == (
+        "picture-role-modes",
+        findings.FAILS,
+        "picture.logo",
+        "test-brand@1.0.0",
+    )
+    assert finding.message == (
+        "the brand gives the picture role `picture.logo` a file in `colour-scheme.dark`, "
+        "`colour-scheme.dark+contrast.high`, and none in `default`, `contrast.high`: within one "
+        "key over the size axes, a picture role takes a file in every combination of the value "
+        "axes, or in none"
+    )
+    assert finding.fix == (
+        "give `picture.logo` a file in every combination of the value axes, or in none"
+    )
     assert "picture.logo" in read.roles
+
+
+def test_a_dark_logo_at_twice_the_pixels_passes_and_one_of_another_proportion_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """The files a picture role takes over the value axes share one proportion of width to
+    height, since an image's height may come from it; a mode's file may hold more pixels
+    (DEC-025 point 4)."""
+    folder = giving_logo(brand_copy(tmp_path), picture("logo.png"))
+    giving_logo(folder, picture("logo-dark.png"), DARK)
+    logos.hold(folder, "logo.png", logos.logo())
+    logos.hold(folder, "logo-dark.png", logos.logo(2, dark=True))
+    assert tokens.read_brand(folder, foundations).findings == ()
+
+    logos.hold(folder, "logo-dark.png", logos.mark(96, dark=True))
+    [finding] = tokens.read_brand(folder, foundations).findings
+    assert (finding.code, finding.level, finding.where) == (
+        "picture-role-proportion",
+        findings.FAILS,
+        "picture.logo",
+    )
+    assert finding.message == (
+        "the picture role `picture.logo` takes files of 2 proportions of width to height: "
+        "`logo.png`, 160 × 48 pixels, in `default`; `logo-dark.png`, 96 × 96 pixels, in "
+        "`colour-scheme.dark`. The files a picture role takes over the value axes share one "
+        "proportion, since an image's height may come from it"
+    )
 
 
 @pytest.mark.parametrize(
@@ -1715,6 +1788,73 @@ def test_a_brand_built_on_a_base_keeps_its_bases_logo(tmp_path: Path, foundation
     read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
     assert (read.findings, read.facts) == ((), ())
     assert "picture.logo" in read.roles
+    given = read.given("picture.logo", {})
+    assert (given.library, given.path) == ("test-brand@1.0.0", base / "pictures" / "logo.png")
+    assert read.picture_of(given).picture is not None
     holding(giving_logo(edition, picture("edition.png"), EDITION), "edition.png")
     read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
     assert [(f.code, f.where) for f in read.findings] == [("role-not-open", "picture.logo")]
+
+
+def test_where_the_base_opens_the_logo_the_brand_built_on_it_gives_its_own(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A fault of the two together is the brand's own where its file takes part, and its
+    base's alone where only the base's do (DEC-025 point 4)."""
+    base, edition = chain_copy(tmp_path)
+    holding(giving_logo(base, picture("logo.png")), "logo.png")
+    text = (base / "library.yaml").read_text(encoding="utf-8")
+    (base / "library.yaml").write_text(
+        text.replace("open: [accent, space]", "open: [accent, space, picture.logo]"),
+        encoding="utf-8",
+    )
+    logos.hold(
+        giving_logo(edition, picture("edition.png"), "tokens/dark.tokens.json"),
+        "edition.png",
+        logos.mark(),
+    )
+    read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
+    assert [f.code for f in read.findings] == ["picture-role-proportion"]
+    assert read.findings[0].library == "test-edition@1.0.0"
+    logos.hold(edition, "edition.png", logos.logo())
+    logos.hold(base, "logo.png", logos.logo(2))
+    read = tokens.read_brand(edition, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    by_key = {
+        keys.key_of(combination, read.axes): read.given("picture.logo", combination).library
+        for combination in read.combinations()
+    }
+    assert by_key == {
+        "default": "test-brand@1.0.0",
+        "contrast.high": "test-brand@1.0.0",
+        "colour-scheme.dark": "test-edition@1.0.0",
+        "colour-scheme.dark+contrast.high": "test-edition@1.0.0",
+    }
+
+
+def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
+    tmp_path: Path, sized: Any
+) -> None:
+    """Each key over the size axes takes its logo in every value combination or in none,
+    and at one proportion, apart from the others (DEC-025 point 4)."""
+    folder = giving_device(giving_logo(brand_copy(tmp_path), picture("logo.png")))
+    logos.hold(folder, "logo.png", logos.logo())
+    giving_logo(folder, picture("phone.png"), PHONE)
+    logos.hold(folder, "phone.png", logos.mark())
+    read = tokens.read_brand(folder, sized)
+    assert read.findings == ()
+    assert read.given("picture.logo", {"device": "phone", "colour-scheme": "dark"}).name == (
+        "phone.png"
+    )
+    edit_json(folder / PHONE, lambda data: data.pop("picture"))
+    edit_json(folder / BASE, lambda data: data.pop("picture"))
+    giving_logo(folder, picture("phone.png"), PHONE)
+    giving_logo(folder, picture("logo.png"), DARK)
+    [finding] = tokens.read_brand(folder, sized).findings
+    assert finding.code == "picture-role-modes"
+    assert finding.message.startswith(
+        "the brand gives the picture role `picture.logo` a file in `colour-scheme.dark`, "
+    )
+    assert finding.fix == (
+        "give `picture.logo` a file in every combination of the value axes, or in none"
+    )

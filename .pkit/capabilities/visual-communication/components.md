@@ -71,6 +71,7 @@ pkit:
         - visual-communication:DEC-021#7
         - visual-communication:DEC-025#1
         - visual-communication:DEC-025#3
+        - visual-communication:DEC-025#4
         - visual-communication:DEC-025#6
         - visual-communication:DEC-025#7
       artefact:
@@ -454,18 +455,21 @@ A primitive's properties lie in its own mapping, under SVG's names.
 | `ellipse` | `fill`, `stroke`, `stroke-width` | an ellipse in its frame |
 | `text` | `content` or `fact` (one of the two required), `style` (required), `fill`, `text-anchor` | the text of a field or of a fact of its export, in lines, each run in its own role and paint |
 | `line` | `stroke` (required), `stroke-width`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends |
-| `image` | `produced`, `content` or `file` (exactly one required) | the picture of a produced output of the piece, or a picture file |
+| `image` | `produced`, `content`, `file` or `role` (exactly one required) | the picture of a produced output of the piece, a picture file, or the file the brand gives a picture role |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
 - **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them. A connector's frame holds every point of its route.
 - **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke.
-- **An image** names exactly one of three properties, each a source of its picture (DEC-025 point 1):
+- **An image** names exactly one of four properties, each a source of its picture (DEC-025 point 1):
   - **`produced`** names a field whose value is a produced output of the piece (*outputs*).
   - **`content`** names a field whose value is the bare name of a picture file of the piece ([Content files](files.md#content-files)). A field the content leaves empty draws nothing, and the part has zero size at its place.
   - **`file`** gives the bare name of a picture file of the component's own library ([Picture files](files.md#picture-files)).
-- **An image's frame.** It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. The picture is drawn whole, centred, as large as its frame allows, at every size (DEC-025 point 6). A produced output's points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order.
+  - **`role`** names a picture role, such as `picture.logo`. The image shows the file the brand gives that role, in each mode and at each size ([Picture roles](files.md#picture-roles)).
+- **An image's frame.** It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. A picture role's files share one proportion at each size, so its height is the same in every value mode. The picture is drawn whole, centred, as large as its frame allows, at every size (DEC-025 point 6). A produced output's points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order.
 - **An image not drawn.** An output the piece lacks is not drawn, and is reported. So is a picture file that is missing or cannot be read ([Picture files](files.md#picture-files)).
+- **A picture role the brand gives no file** is not drawn, and the part has zero size at its place. No piece takes a finding for it, since no brand owes one.
+- **A `role` that names no picture role** is refused in the component, whether it names no role or a role of another type.
 - **Another file at a size** takes a part for each file, each with a `when` by the size ([Switches](#switches)).
 
 ### Placing a component: `use` and `slot`
@@ -583,6 +587,7 @@ The *scene* is every element's final frame, values and source, for one language 
 - **Each scene reads each role at its key.** So a frame, a width or a text's lines may differ from one size to another.
 - **And each switch on a size at its key.** So a part drawn at one size may be hidden at another, and a list may change direction ([Switches](#switches)).
 - **A piece drawn only in each size axis's default** has one scene for each language, at the key `default`.
+- **A picture role stays its role,** as a colour does. For each combination it draws, the engine takes the role's file from the brand's values, and hands it to the renderer (DEC-025 point 7).
 
 A scene is computed, never committed. Under one release of the capability, the same files and facts give the same scene on every machine.
 
@@ -635,6 +640,7 @@ An `image` adds `preserveAspectRatio` (`xMidYMid meet`), and what it shows (DEC-
 
 - **A produced output:** `output`, `variants` by key with each file and pixel size, and `points` mapped into its frame.
 - **A picture file:** `file`, its bare name, and `library`, where it lies: `piece`, or the library's version as `<library>@<version>`. It holds no variants and no points.
+- **A picture role:** `role`, its token path. It holds no file, no variants and no points, so one scene serves every value mode.
 
 Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes at its key (*outputs*). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
 
@@ -673,7 +679,7 @@ Each drawn property names its source in `sources`:
 - **`option:<name>`:** a value a switch on that option chose.
 - **`size:<axis>`:** a value a switch on that size axis chose, such as `size:device`.
 - **`default:<library>/<component>`:** the component's own value, such as the picture file an image names by `file`. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
-- **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes.
+- **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes. It is also the source of the picture role an image shows.
 - **`engine`:** a value the engine computed, such as a text's measured height or an item's frame, or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
 
 ## Text

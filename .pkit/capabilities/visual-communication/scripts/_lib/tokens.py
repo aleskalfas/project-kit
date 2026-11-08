@@ -76,6 +76,15 @@ of the version's `pictures/`, found by its exact name as version control lists t
 and read as any picture file is (`pictures.Folder`), or that is a finding in the version.
 Open roles name roles the brand may give values, or groups of them by whole segments.
 
+**A picture role's file in each combination** (`Brand.given`, DEC-025 point 4) is the file
+of the brand version that gives the role its value there, the brand's own or a base's,
+since a picture role aliases nothing. Within one key over the size axes, a brand gives a
+picture role a file in every combination of the value axes, or in none, and the files it
+gives there share one proportion of width to height, so one scene serves every value mode.
+A brand that breaks either is at fault where its own values take part
+(`picture-role-modes`, `picture-role-proportion`); where its base's alone do, the base's
+own finding says so.
+
 **A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
 
 - *reached only where named:* a brand reaches a library's roles, to give one a value, open
@@ -91,9 +100,9 @@ Open roles name roles the brand may give values, or groups of them by whole segm
   in every combination, or that is a finding;
 - *exports:* a brand exports, beside the shared roles, each role of a library it names
   that it or its base gives a value (`roles`). It exports a shared picture role only
-  where it or its base gives it a value (DEC-025 point 4). Every role with a value under
-  it but a picture role, a role left at its default included, is `valued`, which the
-  document of values holds;
+  where it or its base gives it a value (DEC-025 point 4), and such a role is `pictured`.
+  Every role with a value under it but a picture role, a role left at its default
+  included, is `valued`. The document of values holds both;
 - *pairs:* a library's pair is judged at a brand only where the brand's values reach it,
   through a value the brand or its base gives a library's role along either role's chain
   of defaults, and then in every combination; at its defaults it is its library's to
@@ -123,7 +132,9 @@ its major is the one the entry names. In each combination:
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
 not have, a value for a role its base does not open, a font file nothing holds, a picture
-file nothing holds or the capability does not read, a declared pair below its contrast, a
+file nothing holds or the capability does not read, a picture role given in some value
+combinations of a key and not in others or given files of two proportions there, a
+declared pair below its contrast, a
 token under a library's name that gives none of its roles a value, a role of a library it
 names that it leaves with no value. Its `facts` hold what its version alone states: each
 shared picture role it gives no value (DEC-025 point 9). A library's own `roles.yaml` is
@@ -140,6 +151,7 @@ Knows nothing of the working folder, pieces, the list or the configuration.
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -257,6 +269,26 @@ class Pair:
     @property
     def minimum(self) -> float:
         return LEVELS[self.level]
+
+
+@dataclass(frozen=True)
+class GivenPicture:
+    """The file a brand gives a picture role in one combination (DEC-025 point 4): its bare
+    name, `name`, and the brand version whose `pictures/` holds it, the brand's own or a
+    base's, as `<brand>@<version>` and by its folder."""
+
+    name: str
+    library: str
+    folder: Path
+
+    @property
+    def brand(self) -> str:
+        """The name of the brand whose version holds the file."""
+        return self.library.partition("@")[0]
+
+    @property
+    def path(self) -> Path:
+        return self.folder / PICTURES / self.name
 
 
 @dataclass(frozen=True)
@@ -909,9 +941,11 @@ class Brand:
       picture role only where it or its base gives it a value (DEC-025 point 4), and each
       role of a library it names that it or its base gives a value (DEC-008 point 5).
     - `valued`: every role with a value in every combination, in path order: its exports,
-      and each other role of the scope's libraries, at its default. The document of values
-      holds these (DEC-005 point 7). A picture role is none of them, since the document
-      has no form for a file yet (DEC-025 point 4).
+      and each other role of the scope's libraries, at its default. A picture role is none
+      of them, since no brand owes one (DEC-025 point 4).
+    - `pictured`: each picture role it or its base gives a file in some combination, in
+      path order (`given`). The document of values holds these beside `valued` (DEC-005
+      point 7, DEC-025 point 4).
     - `open`: its open roles, as its `library.yaml` lists them.
     - `opened`: the roles a brand built on it may give values: those its open roles name,
       narrowed to those its base opens to it.
@@ -933,12 +967,15 @@ class Brand:
         named: frozenset[str],
         roles: tuple[str, ...],
         valued: tuple[str, ...],
+        pictured: tuple[str, ...],
         open_roles: tuple[str, ...],
         opened: frozenset[str],
         base: Brand | None,
         views: dict[str, _View],
         resolved: dict[str, dict[str, _Resolved]],
         hidden: dict[str, dict[str, _Resolved]],
+        given: dict[str, dict[str, GivenPicture]],
+        pictures_folder: pictures.Folder,
         fonts: dict[str, Path | None],
         findings: tuple[Finding, ...],
         facts: tuple[Finding, ...],
@@ -951,6 +988,7 @@ class Brand:
         self.named = named
         self.roles = roles
         self.valued = valued
+        self.pictured = pictured
         self.open = open_roles
         self.opened = opened
         self.base = base
@@ -959,6 +997,8 @@ class Brand:
         self._views = views
         self._resolved = resolved
         self._hidden = hidden
+        self._given = given
+        self._pictures = pictures_folder
         self._fonts = fonts
 
     @property
@@ -971,8 +1011,8 @@ class Brand:
         components, alpha}`, a dimension `{value, unit}`, a font family a list of names, a
         typography its five members so, a number. Raises RoleWithoutValue for a library's
         role that has no value under the brand, UnknownRole for a path it holds no role at
-        or a picture role, which no part shows yet, and keys.BadKey for a combination the
-        axes do not hold."""
+        or a picture role, whose file only an image shows (`given`), so no formula or paint
+        reads it, and keys.BadKey for a combination the axes do not hold."""
         if token_path not in self.valued:
             if token_path in self.scope.roles and self.scope.owner[token_path]:
                 library = self.scope.owner[token_path]
@@ -980,6 +1020,23 @@ class Brand:
             raise UnknownRole(token_path)
         key = keys.key_of(combination, self.axes)
         return self._resolved[key][token_path].value
+
+    def given(self, token_path: str, combination: Mapping[str, str]) -> GivenPicture | None:
+        """The file the brand, or a base below it, gives the picture role at `token_path` in
+        `combination` (an axis left out takes its default); None where it gives the role
+        none there, which no brand owes (DEC-025 point 4). Raises UnknownRole for a path
+        that holds no picture role, and keys.BadKey for a combination the axes do not hold."""
+        if self.scope.roles.get(token_path, Role("", "")).type != PICTURE:
+            raise UnknownRole(token_path)
+        return self._given[keys.key_of(combination, self.axes)].get(token_path)
+
+    def picture_of(self, given: GivenPicture, named: str = "") -> pictures.Judged:
+        """The file `given` names, read from the `pictures/` of the brand version that holds
+        it, as that version judges it (`pictures.Folder.judge`), with its findings, which
+        `named` names in words."""
+        if given.library != self.label and self.base is not None:
+            return self.base.picture_of(given, named)
+        return self._pictures.judge(given.name, named=named, file="", where="")
 
     def names(self, library: str) -> bool:
         """Whether the brand, or a brand of the chain below it, names the library `library`
@@ -1063,12 +1120,15 @@ def read_brand(
     fonts: Path | None = None,
     root: Path | None = None,
     locked: Mapping[str, Path] | None = None,
+    walked: bool = False,
 ) -> Brand:
     """The brand whose version folder is `folder`, read and checked against `scope`, or
     against the foundations' declarations alone, over its base when it marks one. `fonts`
     is the location's folder of fonts a brand names by hash. `locked` gives the version
     folder of each library the lock names, by its name; a base is read from it. Findings
     name files relative to `root` when given, else to the version folder they lie in.
+    `walked` finds each picture file as it lies, not as git lists it, for a location a
+    command built in the clone's local folder, which git ignores (`pictures.Folder`).
     Raises TokenError."""
     shown = _shown(folder, root)
     try:
@@ -1077,7 +1137,7 @@ def read_brand(
         raise TokenError([_unreadable(exc, folder, shown)]) from exc
     if isinstance(scope, Declarations):
         scope = Scope(scope)
-    reader = _BrandReader(folder, scope, library, shown, fonts, root, locked or {}, ())
+    reader = _BrandReader(folder, scope, library, shown, fonts, root, locked or {}, (), walked)
     return reader.read()
 
 
@@ -1126,6 +1186,7 @@ class _BrandReader:
         root: Path | None,
         locked: Mapping[str, Path],
         chain: tuple[str, ...],
+        walked: bool = False,
     ) -> None:
         self.folder = folder
         self.scope = scope
@@ -1140,6 +1201,10 @@ class _BrandReader:
         self.chain = chain
         self.pictures = frozenset(
             path for path, role in scope.foundations.roles.items() if role.type == PICTURE
+        )
+        self.walked = walked
+        self.picture_folder = pictures.Folder(
+            folder, shown, "the brand's version", self.label, walked=walked
         )
         self.fatal: list[Finding] = []
         self.kept: list[Finding] = []
@@ -1239,6 +1304,8 @@ class _BrandReader:
         self._check_library_tokens()
         self._check_library_roles(resolved, base)
         self._check_pictures()
+        given = self._given(views, resolved, base)
+        self._check_given(axes, given, base)
         open_roles, opened = self._check_open(library.get("open", []), base)
         fonts = self._read_fonts(resolved, hidden, base)
         self._check_pairs(views, resolved, base)
@@ -1247,7 +1314,7 @@ class _BrandReader:
             for path in sorted(self.scope.roles)
             if path not in self.pictures and all(path in r for r in resolved.values())
         )
-        pictures = {path for path in self.pictures if any(path in r for r in resolved.values())}
+        pictures = {path for path in self.pictures if any(path in g for g in given.values())}
         exported = tuple(
             sorted(
                 {
@@ -1268,12 +1335,15 @@ class _BrandReader:
             named=self.named,
             roles=exported,
             valued=valued,
+            pictured=tuple(sorted(pictures)),
             open_roles=open_roles,
             opened=opened,
             base=base,
             views=views,
             resolved=resolved,
             hidden=hidden,
+            given=given,
+            pictures_folder=self.picture_folder,
             fonts=fonts,
             findings=(*self._unique(self.kept), *(base.findings if base is not None else ())),
             facts=tuple(
@@ -1374,6 +1444,7 @@ class _BrandReader:
             self.root,
             self.locked,
             (*self.chain, self.name),
+            self.walked,
         )
         try:
             return reader.read()
@@ -2273,7 +2344,7 @@ class _BrandReader:
         (DEC-025 points 2, 5 and 9): found by its exact name as version control lists the
         version's `pictures/`, no link, its bytes committed and of an encoding read. Each
         finding lies in the version. A base's values are its base's to judge."""
-        folder = pictures.Folder(self.folder, self.shown, "the brand's version", self.label)
+        folder = self.picture_folder
         for file, tokens in sorted(self.flat.items()):
             for path, token in sorted(tokens.items()):
                 if token.type == PICTURE:
@@ -2284,6 +2355,104 @@ class _BrandReader:
                         where=path,
                     )
                     self.kept.extend(judged.findings)
+
+    def _given(
+        self,
+        views: Mapping[str, _View],
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
+    ) -> dict[str, dict[str, GivenPicture]]:
+        """The file each picture role takes in each combination, by its key: the one its
+        token there names, in the `pictures/` of the brand version that writes the token,
+        this one or a base below it, since a picture role aliases nothing (DEC-025 point 4)."""
+        folders = {self.label: self.folder}
+        below = base
+        while below is not None:
+            folders[below.label] = below.folder
+            below = below.base
+        given: dict[str, dict[str, GivenPicture]] = {}
+        for key, values in resolved.items():
+            given[key] = {}
+            for path, found in values.items():
+                owner = views[key].roles[path].owner
+                if found.type == PICTURE and owner in folders:
+                    given[key][path] = GivenPicture(found.value, owner, folders[owner])
+        return given
+
+    def _check_given(
+        self,
+        axes: Mapping[str, Axis],
+        given: Mapping[str, Mapping[str, GivenPicture]],
+        base: Brand | None,
+    ) -> None:
+        """Within one key over the size axes, a picture role takes a file in every
+        combination of the value axes or in none, and the files it takes there share one
+        proportion of width to height (DEC-025 point 4), so one scene draws its image alike
+        in every value mode. Judged where the brand's own values take part; where its base's
+        alone do, the base's own check says so. A file that cannot be read has its own
+        finding, and takes no part in the proportion."""
+        by_size: dict[str, list[str]] = {}
+        for key in given:
+            combination = keys.parse_key(key, axes)
+            sized = {name: mode for name, mode in combination.items() if axes[name].kind == "size"}
+            by_size.setdefault(keys.key_of(sized, axes), []).append(key)
+        for path in sorted(self.pictures):
+            for size, group in by_size.items():
+                files = {key: given[key][path] for key in group if path in given[key]}
+                if not any(each.library == self.label for each in files.values()):
+                    continue
+                at = "" if size == keys.DEFAULT_KEY else f" at `{size}`"
+                if len(files) < len(group):
+                    some = ", ".join(f"`{key}`" for key in group if key in files)
+                    none = ", ".join(f"`{key}`" for key in group if key not in files)
+                    self._keep(
+                        "picture-role-modes",
+                        f"the brand gives the picture role `{path}` a file in {some}, and none "
+                        f"in {none}: within one key over the size axes, a picture role takes a "
+                        f"file in every combination of the value axes, or in none",
+                        "",
+                        path,
+                        fix=f"give `{path}` a file in every combination of the value axes{at}, "
+                        f"or in none",
+                    )
+                self._check_proportion(path, at, files, base)
+
+    def _check_proportion(
+        self, path: str, at: str, files: Mapping[str, GivenPicture], base: Brand | None
+    ) -> None:
+        """The files the picture role at `path` takes in the combinations of one key over
+        the size axes, `files` by key, share one proportion of width to height: a dark logo
+        may hold twice the pixels, never another shape (DEC-025 point 4)."""
+        shapes: dict[tuple[int, int], list[str]] = {}
+        seen: set[GivenPicture] = set()
+        for key, each in files.items():
+            if each in seen:
+                continue
+            seen.add(each)
+            if each.library == self.label or base is None:
+                read = self.picture_folder.judge(each.name, named="", file="", where="").picture
+            else:
+                read = base.picture_of(each).picture
+            if read is None or read.width <= 0 or read.height <= 0:
+                continue
+            divisor = math.gcd(read.width, read.height)
+            shape = (read.width // divisor, read.height // divisor)
+            shapes.setdefault(shape, []).append(
+                f"`{each.name}`, {read.width} × {read.height} pixels, in `{key}`"
+            )
+        if len(shapes) < 2:
+            return
+        said = "; ".join(said for held in shapes.values() for said in held)
+        self._keep(
+            "picture-role-proportion",
+            f"the picture role `{path}` takes files of {len(shapes)} proportions of width to "
+            f"height{at}: {said}. The files a picture role takes over the value axes share one "
+            f"proportion, since an image's height may come from it",
+            "",
+            path,
+            fix=f"save each file `{path}` takes{at} at one proportion of width to height: a "
+            f"mode's file may hold more pixels, never another shape",
+        )
 
     def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
         """The open roles as `open` lists them, and the roles they open: those each entry
