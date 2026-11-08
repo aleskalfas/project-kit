@@ -11,6 +11,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/scripts/add.py
       record:
+        - visual-communication:DEC-003#6
         - visual-communication:DEC-003#7
         - visual-communication:DEC-003#9
         - visual-communication:DEC-004#10
@@ -27,12 +28,12 @@ pkit:
         - visual-communication:DEC-010#4
         - visual-communication:DEC-010#6
         - visual-communication:DEC-011#1
+        - visual-communication:DEC-011#3
         - visual-communication:DEC-012#1
         - visual-communication:DEC-012#2
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
-        - .pkit/capabilities/visual-communication/files.md#the-library-folder
 ---
 
 # The starter
@@ -45,7 +46,7 @@ Bring it into the location beside the foundations:
 pkit visual add starter
 ```
 
-A released version of it never changes: a change is a new version ([The library folder](../../files.md#the-library-folder)). Every component is experimental, so a later version may change it, and a piece that draws one is told so.
+A released version of it never changes: a change is a new version (visual-communication DEC-003 point 6). Every component is experimental, so a later version may change it, and a piece that draws one is told so.
 
 ## The patterns, by the question they answer
 
@@ -94,7 +95,7 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 - **Lists:**
   - `left`, `middle` and `right`, each drawn by the `card`, unless the component field `item` names another;
   - `ties`, a list of ties with the end fields `from` and `to`, each drawn by the `connector`, unless the component field `tie` names another.
-- **Ends:** an end names its item by its key path, such as `right[groups].groups[project-management].items[doc-check]` ([Content files](../../files.md#content-files)). So a tie reaches an item that a pattern in a column draws, such as an item of a group.
+- **Ends:** an end names its item by its key path, such as `right[groups].groups[project-management].items[doc-check]` (visual-communication DEC-011 point 3). So a tie reaches an item that a pattern in a column draws, such as an item of a group.
 - **Its boundaries:** ties say what is connected, where groups say only what belongs together. The content sets each item's column and its place there, and no tie moves an item.
 
 ### `panels`: which views, side by side, show one point?
@@ -166,7 +167,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
-- **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations ([The foundations](../../files.md#the-foundations)). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
+- **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations (the capability's `files.md`, under *The foundations*). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
 | Role | What it sizes or sets | Its default |
