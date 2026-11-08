@@ -32,6 +32,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
+        - .pkit/capabilities/visual-communication/files.md#the-library-folder
 ---
 
 # The starter
@@ -44,7 +45,7 @@ Bring it into the location beside the foundations:
 pkit visual add starter
 ```
 
-Its version 1.0.0 is not released yet. Every component is experimental, so a later version may change it, and a piece that draws one is told so.
+A released version of it never changes: a change is a new version ([The library folder](../../files.md#the-library-folder)). Every component is experimental, so a later version may change it, and a piece that draws one is told so.
 
 ## The patterns, by the question they answer
 
