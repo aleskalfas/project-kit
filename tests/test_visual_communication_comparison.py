@@ -24,6 +24,7 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import (
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     add_library,
     bound,
@@ -257,8 +258,9 @@ def write_parts(root: Path, version: str, spec: Mapping[str, Any]) -> Path:
 
 
 def foundations(root: Path, version: str = "1.0.0", change: Change | None = None) -> Path:
-    """The shipped foundations, copied at `version`, their `roles.yaml` changed by `change`."""
-    folder = copy_library(root, FOUNDATIONS, "foundations", version)
+    """The shipped foundations' released version 1.0.0, copied at `version`, their
+    `roles.yaml` changed by `change`."""
+    folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", version)
     edit(folder / "library.yaml", lambda data: data.update(version=version))
     if change is not None:
         edit(folder / "roles.yaml", change)
@@ -792,6 +794,24 @@ def compared_foundations(tmp: Path, later: Change, earlier: Change | None = None
     foundations(root, "1.0.0", earlier)
     foundations(root, "1.1.0", later)
     return compared(root, "foundations", "1.0.0", "1.1.0")
+
+
+def test_the_foundations_being_built_add_the_size_axis_device_and_need_a_minor(
+    tmp_path: Path,
+) -> None:
+    """The version being built of the foundations, compared with their release 1.0.0, adds
+    the shared size axis `device` and changes nothing else. No brand can hold an axis of its
+    own yet, so a new shared axis is an addition (DEC-021 point 9, DEC-004 point 5)."""
+    root = project(tmp_path)
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
+    built = str(libraries.read_library(FOUNDATIONS).version)
+    copy_library(root, FOUNDATIONS, "foundations", built)
+
+    found = compared(root, "foundations", "1.0.0", built)
+
+    assert said(found.breaks) == []
+    assert said(found.additions) == ["shared axis `device`: is new (DEC-004 point 5)"]
+    assert found.segment == "minor"
 
 
 def roles(data: Any) -> Any:

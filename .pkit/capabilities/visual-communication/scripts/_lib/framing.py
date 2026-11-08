@@ -322,7 +322,7 @@ def plan(
     if not isinstance(modes, Mapping):
         raise Refused(f"the `modes` of `{piece}` is not a mapping of axes to their modes")
     try:
-        combinations = keys.combinations(modes, brand.axes)
+        combinations = brand.combinations_of(modes)
     except keys.BadKey as exc:
         raise Refused(f"the `modes` of `{piece}`: {exc}") from exc
     document = values.document(

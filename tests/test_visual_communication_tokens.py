@@ -1,8 +1,10 @@
-"""Brands and the foundations' declarations (DEC-004): the shipped foundations, the test
-brand resolved in every combination, the test edition resolved over the test brand, its
-base (point 6), the picture role a brand may give a file, judged as any picture file is
-(DEC-025 points 2, 4, 5 and 9), and what a brand or a declarations file is refused for,
-each refusal built in the test's own folder from a copy of a valid one."""
+"""Brands and the foundations' declarations (DEC-004): the shipped foundations, the size
+axis their version being built adds to their release 1.0.0, which changes nothing of a
+brand that gives no size (DEC-021 points 1, 2 and 9), the test brand resolved in every
+combination, the test edition resolved over the test brand, its base (point 6), the
+picture role a brand may give a file, judged as any picture file is (DEC-025 points 2, 4,
+5 and 9), and what a brand or a declarations file is refused for, each refusal built in
+the test's own folder from a copy of a valid one."""
 
 from __future__ import annotations
 
@@ -18,7 +20,9 @@ import pytest
 
 from tests.in_process import load
 from tests.visual_communication_project import (
+    CAPABILITY,
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_EDITION,
     TEST_PARTS,
@@ -97,7 +101,7 @@ def test_the_foundations_declare_the_shared_roles_axes_and_pairs(foundations: An
     assert foundations.roles["text-primary"] == tokens.Role("text-primary", "color")
     assert foundations.roles["space.3"].type == "dimension"
     assert foundations.roles["type.body"].type == "typography"
-    assert set(foundations.axes) == {"colour-scheme", "contrast"}
+    assert set(foundations.axes) == {"colour-scheme", "contrast", "device"}
     assert foundations.axes["contrast"] == tokens.Axis(
         "contrast", "value", ("standard", "high"), "standard"
     )
@@ -641,12 +645,12 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
     tmp_path: Path,
 ) -> None:
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_EDITION, "test-edition", "1.0.0")
     write_piece(root, "card", brand="test-edition", modes={"colour-scheme": ["light", "dark"]})
     write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
-    held = libraries.Held(root, "visual", (0, 1, 0))
+    held = libraries.Held(root, "visual")
     piece = pl.read_piece(root, "visual", "card")
     lock = libraries.move_lock(held, pl.needed(piece)).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
@@ -655,10 +659,14 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
     assert document["tokens"]["space.4"]["values"]["default"] == {"value": 40, "unit": "px"}
 
 
-# --- the axes a brand has (DEC-021 point 2) ------------------------------------------------------
+# --- the axes a brand has (DEC-021 points 1, 2 and 9) ------------------------------------------
 
-#: The size axis the foundations come to declare (DEC-021 point 1), as a line of `axes`.
-DEVICE = "  device: {kind: size, modes: [desktop, tablet, phone], default: desktop}\n"
+#: The size axis the foundations declare from the version built after their release 1.0.0
+#: (DEC-021 points 1 and 9).
+DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop")
+
+#: The brand the capability ships to start from, as it is built.
+NEUTRAL = CAPABILITY / "libraries" / "neutral"
 
 PHONE = "tokens/phone.tokens.json"
 
@@ -666,18 +674,28 @@ PHONE = "tokens/phone.tokens.json"
 WIDE, NARROW = {"value": 16, "unit": "px"}, {"value": 8, "unit": "px"}
 
 
-def with_device(text: str) -> str:
-    """The text of a `roles.yaml` with the size axis `device` beside its other axes."""
-    assert "axes:\n" in text
-    return text.replace("axes:\n", "axes:\n" + DEVICE)
-
-
 @pytest.fixture(scope="module")
-def sized(tmp_path_factory: pytest.TempPathFactory) -> Any:
-    """The shipped foundations' declarations, with the size axis `device`."""
-    path = tmp_path_factory.mktemp("sized") / "roles.yaml"
-    path.write_text(with_device(ROLES.read_text(encoding="utf-8")), encoding="utf-8")
-    return tokens.read_declarations(path)
+def released() -> Any:
+    """The declarations of the foundations' released version 1.0.0, which declare no size
+    axis."""
+    return tokens.read_declarations(RELEASED_FOUNDATIONS / "roles.yaml")
+
+
+def test_the_foundations_being_built_add_the_size_axis_device_and_nothing_else(
+    foundations: Any, released: Any
+) -> None:
+    """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
+    (DEC-021 point 1). Every other declaration is their release 1.0.0's."""
+    assert foundations.findings == ()
+    assert foundations.axes["device"] == DEVICE
+    assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
+        released.axes
+    )
+    assert (foundations.roles, foundations.families, foundations.pairs) == (
+        released.roles,
+        released.families,
+        released.pairs,
+    )
 
 
 def giving_device(folder: Path, contexts: dict[str, Any] | None = None) -> Path:
@@ -728,25 +746,36 @@ def test_a_brand_built_on_another_keeps_its_bases_values_at_a_mode_it_does_not_g
     assert read.resolve("accent", DARK_MODE) == brand.resolve("accent", DARK_MODE) != ORANGE
 
 
-def test_a_brand_that_gives_no_size_keeps_its_axes_and_combinations(sized: Any, brand: Any) -> None:
-    assert sized.axes["device"].kind == "size"
-    read = tokens.read_brand(TEST_BRAND, sized)
-    assert read.findings == ()
-    assert read.axes == brand.axes
+@pytest.mark.parametrize("folder", [TEST_BRAND, NEUTRAL], ids=["test-brand", "neutral"])
+def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_their_release(
+    foundations: Any, released: Any, folder: Path
+) -> None:
+    """The test brand and the neutral brand give no size, so on the foundations being built
+    each keeps the axes, the keys and every value it has on their release 1.0.0, and a
+    piece cannot name `device` in either (DEC-021 point 2)."""
+    before = tokens.read_brand(folder, released)
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == before.findings
+    assert read.axes == before.axes
+    assert "device" not in read.axes
     assert [keys.key_of(c, read.axes) for c in read.combinations()] == [
-        keys.key_of(c, brand.axes) for c in brand.combinations()
+        keys.key_of(c, before.axes) for c in before.combinations()
     ]
+    assert (read.roles, read.valued) == (before.roles, before.valued)
+    for path in read.valued:
+        for combination in read.combinations():
+            assert read.resolve(path, combination) == before.resolve(path, combination)
     with pytest.raises(keys.BadKey, match="`device`"):
         read.resolve("space.3", {"device": "phone"})
 
 
 def test_a_brand_has_a_size_axis_with_the_modes_its_modifier_gives(
-    tmp_path: Path, sized: Any
+    tmp_path: Path, foundations: Any
 ) -> None:
-    read = tokens.read_brand(giving_device(brand_copy(tmp_path)), sized)
+    read = tokens.read_brand(giving_device(brand_copy(tmp_path)), foundations)
     assert read.findings == ()
     assert read.axes["device"] == tokens.Axis("device", "size", ("desktop", "phone"), "desktop")
-    assert read.axes["colour-scheme"] == sized.axes["colour-scheme"]
+    assert read.axes["colour-scheme"] == foundations.axes["colour-scheme"]
     assert len(read.combinations()) == 8
     assert read.resolve("space.3", {}) == WIDE
     assert read.resolve("space.3", {"device": "phone", "contrast": "high"}) == NARROW
@@ -754,19 +783,19 @@ def test_a_brand_has_a_size_axis_with_the_modes_its_modifier_gives(
         read.resolve("space.3", {"device": "tablet"})
 
 
-def test_a_size_axis_a_brand_gives_holds_its_default(tmp_path: Path, sized: Any) -> None:
+def test_a_size_axis_a_brand_gives_holds_its_default(tmp_path: Path, foundations: Any) -> None:
     folder = giving_device(brand_copy(tmp_path), {"phone": [{"$ref": PHONE}]})
     with pytest.raises(tokens.TokenError) as raised:
-        tokens.read_brand(folder, sized)
+        tokens.read_brand(folder, foundations)
     (finding,) = raised.value.findings
     assert finding.code == "brand-axis"
     assert "must give the axis's default, `desktop`" in finding.message
 
 
-def test_a_brand_built_on_another_has_its_bases_sizes(tmp_path: Path, sized: Any) -> None:
+def test_a_brand_built_on_another_has_its_bases_sizes(tmp_path: Path, foundations: Any) -> None:
     base, folder = chain_copy(tmp_path)
     giving_device(base)
-    read = tokens.read_brand(folder, sized, locked={"test-brand": base})
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
     assert read.findings == ()
     assert read.axes == read.base.axes
     assert read.axes["device"].modes == ("desktop", "phone")
@@ -776,17 +805,16 @@ def test_a_brand_built_on_another_has_its_bases_sizes(tmp_path: Path, sized: Any
     bare, edition = chain_copy(tmp_path / "bare")
     giving_device(edition, {"desktop": []})
     with pytest.raises(tokens.TokenError) as raised:
-        tokens.read_brand(edition, sized, locked={"test-brand": bare})
+        tokens.read_brand(edition, foundations, locked={"test-brand": bare})
     (finding,) = [f for f in raised.value.findings if f.code == "base-axis"]
     assert "the modifier `device` adds an axis" in finding.message
 
 
 def piece_on_device(tmp_path: Path, brand: Path, modes: dict[str, list[str]]) -> Any:
-    """A project whose foundations declare `device`, holding `brand` as `test-brand`, and
-    a piece in it drawn in `modes`: its lock, and what it is read with."""
+    """A project that holds the foundations being built, which declare `device`, and `brand`
+    as `test-brand`, and a piece in it drawn in `modes`: its lock, and what it is read with."""
     root = project(tmp_path)
-    roles = copy_library(root, FOUNDATIONS, "foundations", "1.0.0") / "roles.yaml"
-    roles.write_text(with_device(roles.read_text(encoding="utf-8")), encoding="utf-8")
+    copy_library(root, FOUNDATIONS, "foundations", str(libraries.read_library(FOUNDATIONS).version))
     copy_library(root, brand, "test-brand", "1.0.0")
     write_piece(root, "card", brand="test-brand", modes=modes)
     write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
@@ -796,19 +824,67 @@ def piece_on_device(tmp_path: Path, brand: Path, modes: dict[str, list[str]]) ->
 
 
 def test_a_piece_names_only_a_size_its_brand_gives(tmp_path: Path) -> None:
+    """The refusal names the size and the brand that does not give it, and how the piece is
+    drawn without it."""
     piece, lock, held = piece_on_device(tmp_path / "none", TEST_BRAND, {"device": ["phone"]})
-    with pytest.raises(pl.Refused, match="`modes`: `device` is not an axis"):
+    with pytest.raises(pl.Refused) as refused:
         pl.Project(piece, lock, held)
+    assert str(refused.value) == (
+        "visual/pieces/card/piece.yaml: `modes`: `device` is a size axis that the brand "
+        "test-brand@1.0.0 does not give: leave it out to draw the piece at its default, "
+        "`desktop`, or draw it in a brand that gives the axis"
+    )
 
     given = giving_device(brand_copy(tmp_path))
     piece, lock, held = piece_on_device(tmp_path / "some", given, {"device": ["tablet"]})
-    with pytest.raises(pl.Refused, match="`modes`: `tablet` is not a mode of `device`"):
+    with pytest.raises(pl.Refused) as refused:
         pl.Project(piece, lock, held)
+    assert str(refused.value) == (
+        "visual/pieces/card/piece.yaml: `modes`: `tablet` is a size of `device` that the brand "
+        "test-brand@1.0.0 does not give (the brand's sizes: desktop, phone)"
+    )
 
     piece, lock, held = piece_on_device(tmp_path / "phone", given, {"device": ["desktop", "phone"]})
     document = pl.Project(piece, lock, held).values()
     assert document["keys"] == ["default", "device.phone"]
     assert document["tokens"]["space.3"]["values"]["device.phone"] == NARROW
+
+
+def test_a_size_a_brand_lacks_names_its_base_where_it_builds_on_one(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A brand built on another has its base's sizes (DEC-021 point 2), so the refusal names
+    both."""
+    edition = tokens.read_brand(TEST_EDITION, foundations, locked={"test-brand": TEST_BRAND})
+    with pytest.raises(keys.BadKey) as refused:
+        edition.combinations_of({"device": ["phone"]})
+    assert str(refused.value).startswith(
+        "`device` is a size axis that neither the brand test-edition@1.0.0 nor its base "
+        "test-brand@1.0.0 gives: "
+    )
+
+    base, folder = chain_copy(tmp_path)
+    giving_device(base)
+    edition = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    with pytest.raises(keys.BadKey) as refused:
+        edition.combinations_of({"device": ["tablet"]})
+    assert str(refused.value) == (
+        "`tablet` is a size of `device` that neither the brand test-edition@1.0.0 nor its base "
+        "test-brand@1.0.0 gives (the brand's sizes: desktop, phone)"
+    )
+
+
+def test_a_mode_the_foundations_lack_is_no_mode_whatever_the_brand_gives(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    """Only a size the foundations declare is one a brand may lack."""
+    sized = tokens.read_brand(giving_device(brand_copy(tmp_path)), foundations)
+    with pytest.raises(keys.BadKey, match="`watch` is not a mode of `device`"):
+        sized.combinations_of({"device": ["watch"]})
+    with pytest.raises(keys.BadKey, match="`sepia` is not a mode of `colour-scheme`"):
+        brand.combinations_of({"colour-scheme": ["sepia"]})
+    with pytest.raises(keys.BadKey, match="`weight` is not an axis"):
+        brand.combinations_of({"weight": ["bold"]})
 
 
 # --- contrast -----------------------------------------------------------------------------------

@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     copy_library,
     project,
@@ -147,7 +147,7 @@ def producing_project(
     64 × 64 pixels, drawn in every mode of both axes unless `modes` says otherwise; and
     accepting `accept_losses`, when given."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     fields: dict[str, Any] = {
         "modes": dict(EVERY_MODE if modes is None else modes),

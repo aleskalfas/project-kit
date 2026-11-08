@@ -137,6 +137,7 @@ pkit:
         - visual-communication:DEC-019#10
         - visual-communication:DEC-019#11
         - visual-communication:DEC-020#7
+        - visual-communication:DEC-021#1
         - visual-communication:DEC-021#2
         - visual-communication:DEC-025#1
         - visual-communication:DEC-025#2
@@ -628,7 +629,7 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`, and carries 1.0.0 until a change raises its number (DEC-013 point 3). A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`. It carries 1.1.0, since it adds the size axis `device` ([Axes and modes](#axes-and-modes)), an addition, which needs a minor ([What a release compares](#what-a-release-compares)). It is not released yet, so only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
@@ -658,6 +659,7 @@ roles:
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}
+  device: {kind: size, modes: [desktop, tablet, phone], default: desktop}
 families:
   blue: {fill: family.blue.fill, line: family.blue.line, text: family.blue.text}
 pairs:
@@ -869,7 +871,7 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 
 ### Axes and modes
 
-An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Both are value axes. The foundations declare no size axis.
+An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their version being built, 1.1.0, adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop` (DEC-021 point 1).
 
 - **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no axis of its own and no mode, and changes no default.
 - **A value axis** changes only colours and pictures. A mode of a value axis that changes another value fails.
@@ -883,7 +885,7 @@ The capability ships `neutral`, a brand to start from, so a project can draw bef
 
 `pkit visual add neutral` copies the released version whole to `libraries/neutral/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
 
-- **Its values.** It gives every shared role a value in each of the four combinations of the shared axes ([Keys of combinations](#keys-of-combinations)), but `picture.logo`. It has no logo, which its version states as a fact ([Picture roles](#picture-roles)). Each pair the foundations declare reaches its level in all four.
+- **Its values.** It gives every shared role a value in each of the four combinations of the shared value axes ([Keys of combinations](#keys-of-combinations)), but `picture.logo`. It has no logo, which its version states as a fact ([Picture roles](#picture-roles)). Each pair the foundations declare reaches its level in all four.
 - **Its look.** Greys, with a blue accent. The colour families keep their hues in dark and at high contrast.
 - **The libraries it names.** It builds on the foundations alone, so the starter draws at its defaults ([`roles.yaml`](#rolesyaml)), and a project need not hold the starter to use it.
 - **Its open roles.** `open` is empty, so a brand built on it can change no value. A project that wants other values writes its own brand.
@@ -918,7 +920,7 @@ A *combination* takes one mode on each axis. Its *key* names it (DEC-004 point 3
 
 - **A key names the modes that are not their axis's default,** each as `<axis>.<mode>`, the axes in the order of their names, joined by `+`.
 - **The combination of every default** is `default`. No other key spells it, since every other key holds a `.`.
-- **The shared axes give four keys:** `default`, `colour-scheme.dark`, `contrast.high` and `colour-scheme.dark+contrast.high`.
+- **The shared value axes give four keys:** `default`, `colour-scheme.dark`, `contrast.high` and `colour-scheme.dark+contrast.high`.
 - **A key that names a default mode,** or names its axes out of order, is no key.
 - **Adding an axis with a default** changes no key: every combination that existed takes the new axis's default, which its key leaves out.
 - **Keys are kept in one order** wherever a list of them is kept: by their count of segments, then by their spelling. `default` comes first.

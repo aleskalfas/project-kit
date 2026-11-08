@@ -17,7 +17,7 @@ import pytest
 
 from tests.in_process import load
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_EDITION,
     TEST_PARTS,
@@ -72,7 +72,7 @@ def declare(root: Path, name: str = NAME, **fields: Any) -> Path:
 def root(tmp_path: Path) -> Path:
     """A project holding the foundations and the test brand, and one declaration."""
     found = project(tmp_path)
-    copy_library(found, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(found, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(found, TEST_BRAND, "test-brand", "1.0.0")
     declare(found)
     return found
@@ -268,7 +268,7 @@ def test_a_lock_that_does_not_hold_is_refused(root: Path, lock: dict[str, str], 
 
 
 def test_a_lock_whose_majors_do_not_fit_is_refused(root: Path) -> None:
-    copy_library(root, FOUNDATIONS, "foundations", "2.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "2.0.0")
     library = root / "visual/libraries/foundations/2.0.0/library.yaml"
     library.write_text(library.read_text().replace("version: 1.0.0", "version: 2.0.0"))
     declare(root, lock={**LOCK, "foundations": "2.0.0"})

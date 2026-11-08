@@ -65,7 +65,8 @@ format may add:
 - *a shared size axis only where it gives one:* a brand with no base has one where a
   modifier varies it, with the modes that modifier gives. A brand built on another has
   its base's sizes. So a brand that gives no size keeps its combinations when the
-  foundations declare a size axis, and a piece that names a size it lacks is refused.
+  foundations declare a size axis, and a piece that names a size it lacks is refused,
+  the refusal naming the brand, and its base, that do not give it (`combinations_of`).
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
 roles' defaults, then resolves aliases. Every shared role but a picture role must resolve
@@ -1020,6 +1021,39 @@ class Brand:
     def combinations(self) -> list[dict[str, str]]:
         """Every combination of the axes' modes, in key order."""
         return keys.combinations({axis.name: axis.modes for axis in self.axes.values()}, self.axes)
+
+    def combinations_of(self, named: Mapping[str, Iterable[str]]) -> list[dict[str, str]]:
+        """Every combination of the modes a piece names for each axis, `named`, an axis it
+        names none of taken at its default, in key order (`keys.combinations`). Raises
+        keys.BadKey for an axis or a mode the brand does not have. Of a shared size axis it
+        lacks, or a size of one, the refusal says the brand does not give it, since a brand
+        has a size only where it or its base gives it (DEC-021 point 2)."""
+        for axis, modes in named.items():
+            shared = self.scope.axes.get(axis)
+            if shared is None or shared.kind != "size":
+                continue
+            if axis not in self.axes:
+                raise keys.BadKey(
+                    f"`{axis}` is a size axis that {self._not_giving()}: leave it out to draw "
+                    f"the piece at its default, `{shared.default}`, or draw it in a brand that "
+                    f"gives the axis"
+                )
+            given = self.axes[axis].modes
+            if isinstance(modes, (list, tuple)):
+                for mode in modes:
+                    if mode in shared.modes and mode not in given:
+                        raise keys.BadKey(
+                            f"`{mode}` is a size of `{axis}` that {self._not_giving()} (the "
+                            f"brand's sizes: {', '.join(given)})"
+                        )
+        return keys.combinations(named, self.axes)
+
+    def _not_giving(self) -> str:
+        """Who does not give a size the brand lacks, in words: the brand, and its base where
+        it builds on one."""
+        if self.base is None:
+            return f"the brand {self.label} does not give"
+        return f"neither the brand {self.label} nor its base {self.base.label} gives"
 
 
 def read_brand(

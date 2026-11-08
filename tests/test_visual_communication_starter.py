@@ -41,14 +41,16 @@ from tests.visual_communication_project import (
     bound,
     copy_library,
     hold_shipped,
+    importable,
+    locked_at,
     project,
     taken,
     version_folder,
     write_list,
 )
 
-add, checks, pl, reading, tokens = load(
-    "visual-communication", "add.py", "checks", "pipeline", "reading", "tokens"
+add, checks, pl, reading, tokens, svg = load(
+    "visual-communication", "add.py", "checks", "pipeline", "reading", "tokens", "plugins.svg"
 )
 
 STARTER = CAPABILITY / "libraries" / "starter"
@@ -218,8 +220,13 @@ def test_each_default_of_its_own_roles_is_an_alias_never_a_value() -> None:
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A location that holds the foundations and the starter being built as the capability
     ships them, the released version of their number where it is released, the test brand
-    and the test notation, and the starter's reference pieces."""
-    root = project(tmp_path_factory.mktemp("starter"))
+    and the test notation, and the starter's reference pieces, each locked at the versions
+    being built."""
+    return reference_location(project(tmp_path_factory.mktemp("starter")))
+
+
+def reference_location(root: Path) -> Path:
+    """The location of `location`, laid out in the project at `root`."""
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(
@@ -229,9 +236,10 @@ def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
             "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
         },
     )
-    hold_shipped(root, "foundations")
-    hold_shipped(root, "starter")
+    built = {name: hold_shipped(root, name).version for name in ("foundations", "starter")}
     shutil.copytree(PIECES, root / "visual" / "pieces")
+    for folder in (root / "visual" / "pieces").iterdir():
+        locked_at(folder, built)
     return root
 
 
@@ -275,6 +283,56 @@ def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> 
         assert piece["pinned"] is True
         assert piece["languages"] == LANGUAGES
         assert piece["lock"]["starter"] == "1.0.0"
+
+
+def previews(drawn: Any) -> dict[str, str]:
+    """Each preview the SVG renderer draws of a piece, by its file's name, with its text."""
+    found: dict[str, str] = {}
+    results = drawn.scenes(facts=drawn.piece.stand_ins)
+    for language, (key,), made in pl.drawn(drawn, results, "svg"):
+        found.update(pl.preview_files(drawn.piece.name, language, key, made.pages))
+    return found
+
+
+def on_each_foundations(root: Path, released: str = "1.0.0") -> dict[str, dict[str, Any]]:
+    """Each piece of the location at `root` drawn on the foundations being built and on their
+    release `released`, both of which the location holds: by the foundations' version, each
+    piece's document of values and its previews, by the piece's name. Each piece's lock
+    names the version being built. What names the version drawn on is left out: the lock
+    the document of values holds, and the version a preview's trace gives each component of
+    the foundations."""
+    built = taken("foundations", being_built=True).version
+    held = pl.Held(root, "visual")
+    drawn: dict[str, dict[str, Any]] = {released: {}, built: {}}
+    for folder in sorted((root / "visual" / "pieces").iterdir()):
+        piece = pl.read_piece(root, "visual", folder.name)
+        assert piece.lock["foundations"] == built
+        for version, pieces in drawn.items():
+            on = pl.Project(piece, {**piece.lock, "foundations": version}, held)
+            values = {field: value for field, value in on.values().items() if field != "lock"}
+            named = re.escape(version)
+            traced = re.compile(rf'(data-component="foundations/[^"]*" data-version="){named}"')
+            files = {name: traced.sub(r'\1"', text) for name, text in previews(on).items()}
+            pieces[folder.name] = (values, files)
+    return drawn
+
+
+def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The foundations being built add the size axis `device` to their release 1.0.0, and
+    the test brand gives no size (DEC-021 points 2 and 9). So each reference piece draws on
+    them as on that release, byte for byte: its values and each preview, but for the
+    foundations' version they name."""
+    importable(monkeypatch, svg)
+    root = reference_location(project(tmp_path))
+    hold_shipped(root, "foundations", being_built=False)
+    drawn = on_each_foundations(root)
+    released, built = drawn.values()
+    assert sorted(built) == sorted(COMPONENTS)
+    for name, (values, files) in built.items():
+        assert files, name
+        assert (values, files) == released[name], name
 
 
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
@@ -433,10 +491,13 @@ def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
     assert checked > 0
 
 
-#: Every combination of the foundations' modes: a piece drawn in each mode of each axis is
-#: drawn in all of them.
+#: Every combination of the modes of the foundations' value axes, which every brand has
+#: whole: a piece drawn in each of their modes is drawn in all of them. The test brand gives
+#: no size (DEC-021 point 2).
 COMBINATIONS = math.prod(
-    len(axis["modes"]) for axis in read(FOUNDATIONS / "roles.yaml")["axes"].values()
+    len(axis["modes"])
+    for axis in read(FOUNDATIONS / "roles.yaml")["axes"].values()
+    if axis["kind"] == "value"
 )
 #: How many points of each stretch of a connector's route are measured.
 SAMPLES = 16

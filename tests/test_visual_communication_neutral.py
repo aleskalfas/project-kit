@@ -28,6 +28,7 @@ from typing import Any
 import pytest
 from fontTools.ttLib import TTFont
 
+from tests import test_visual_communication_starter as starter
 from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
@@ -37,6 +38,8 @@ from tests.visual_communication_project import (
     bound,
     copy_library,
     hold_shipped,
+    importable,
+    locked_at,
     project,
     taken,
     write_list,
@@ -245,15 +248,22 @@ def pinned_with_neutral(folder: Path) -> None:
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A location that holds the foundations, the starter and the neutral brand being built
     as the capability ships them, the released version of their number where it is
-    released, the test notation, and the starter's reference pieces."""
-    root = project(tmp_path_factory.mktemp("neutral"))
+    released, the test notation, and the starter's reference pieces, each locked at the
+    versions being built."""
+    return reference_location(project(tmp_path_factory.mktemp("neutral")))
+
+
+def reference_location(root: Path) -> Path:
+    """The location of `location`, laid out in the project at `root`."""
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(root, {"test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED}})
-    for name in ("foundations", "starter", "neutral"):
-        hold_shipped(root, name)
+    built = {
+        name: hold_shipped(root, name).version for name in ("foundations", "starter", "neutral")
+    }
     shutil.copytree(PIECES, root / "visual" / "pieces")
     for folder in (root / "visual" / "pieces").iterdir():
         pinned_with_neutral(folder)
+        locked_at(folder, built)
     return root
 
 
@@ -304,6 +314,23 @@ def test_every_reference_render_passes_the_check_under_it(location: Path) -> Non
         ("fact", "picture-role-unvalued", "visual/libraries/neutral/1.0.0/", "picture.logo")
     ]
     assert not report.failed()
+
+
+def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The neutral brand gives no size, so the size axis `device`, which the foundations
+    being built add to their release 1.0.0, changes nothing it draws (DEC-021 points 2 and
+    9). Each reference piece draws under it on them as on that release, byte for byte: its
+    values and each preview, but for the foundations' version they name."""
+    importable(monkeypatch, starter.svg)
+    root = reference_location(project(tmp_path))
+    hold_shipped(root, "foundations", being_built=False)
+    released, built = starter.on_each_foundations(root).values()
+    assert sorted(built) == sorted(path.name for path in PIECES.iterdir())
+    for name, (values, files) in built.items():
+        assert files, name
+        assert (values, files) == released[name], name
 
 
 def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combination(

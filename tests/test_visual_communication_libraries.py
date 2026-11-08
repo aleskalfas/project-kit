@@ -19,10 +19,12 @@ from tests.in_process import load
 from tests.visual_communication_project import (
     CAPABILITY,
     FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_EDITION,
     add_library,
     bound,
+    built_as_released,
     copy_library,
     project,
     version_folder,
@@ -46,6 +48,8 @@ libraries, fingerprint, files, reading, checks, pl, copies, shipped = load(
 
 V = libraries.Version.parse
 RELEASE = (0, 1, 0)
+#: The installed capability's release, which the foundations' released version reads at.
+INSTALLED = libraries.installed_release()
 PROJECT = {"kind": "project"}
 UNRELEASED = {"released": False}
 
@@ -103,7 +107,7 @@ def test_the_shipped_foundations_and_the_test_brand_read() -> None:
     foundations = libraries.read_library(FOUNDATIONS)
     assert (foundations.name, foundations.version, foundations.kind) == (
         "foundations",
-        V("1.0.0"),
+        V("1.1.0"),
         "components",
     )
     assert foundations.needs_release == (0, 1, 0)
@@ -321,7 +325,7 @@ def test_a_version_that_needs_a_newer_release_fails_released_or_not_and_names_th
 
 def test_a_released_version_that_changed_is_a_finding(tmp_path: Path) -> None:
     root = project(tmp_path)
-    folder = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     write_list(
         root,
         {
@@ -331,12 +335,12 @@ def test_a_released_version_that_changed_is_a_finding(tmp_path: Path) -> None:
             }
         },
     )
-    assert held(root).findings() == []
+    assert held(root, INSTALLED).findings() == []
     roles = folder / "roles.yaml"
     roles.write_text(roles.read_text(encoding="utf-8") + "# a comment changes no value\n")
-    assert held(root).findings() == []
+    assert held(root, INSTALLED).findings() == []
     roles.write_text(roles.read_text(encoding="utf-8").replace("space.4", "space.5"))
-    (finding,) = held(root).findings()
+    (finding,) = held(root, INSTALLED).findings()
     assert finding.code == "library-changed"
     assert "`roles.yaml` of foundations@1.0.0 changed" in finding.message
 
@@ -354,7 +358,7 @@ def test_a_released_version_with_no_fingerprint_is_a_finding(tmp_path: Path) -> 
 
 def test_the_shipped_foundations_and_the_test_brand_lock_together(tmp_path: Path) -> None:
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     lock = libraries.move_lock(libraries.Held(root, "visual"), ["foundations", "test-brand"]).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0"}
@@ -363,7 +367,7 @@ def test_the_shipped_foundations_and_the_test_brand_lock_together(tmp_path: Path
 def edition_project(tmp_path: Path) -> Path:
     """The shipped foundations, the test brand, and the test edition built on it."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_EDITION, "test-edition", "1.0.0")
     return root
@@ -372,11 +376,11 @@ def edition_project(tmp_path: Path) -> Path:
 def test_a_brands_lock_names_its_base(tmp_path: Path) -> None:
     root = edition_project(tmp_path)
     roots = ["foundations", "test-edition"]
-    lock = libraries.move_lock(held(root), roots).lock
+    lock = libraries.move_lock(held(root, INSTALLED), roots).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
     without_base = {"foundations": "1.0.0", "test-edition": "1.0.0"}
     with pytest.raises(libraries.LockRefused, match="needs `test-brand`, which the lock"):
-        libraries.move_lock(held(root), roots, without_base, pinned=True)
+        libraries.move_lock(held(root, INSTALLED), roots, without_base, pinned=True)
 
 
 def test_the_check_finds_a_lock_that_leaves_out_a_brands_base(tmp_path: Path) -> None:
@@ -384,7 +388,7 @@ def test_the_check_finds_a_lock_that_leaves_out_a_brands_base(tmp_path: Path) ->
     lock = {"foundations": "1.0.0", "test-edition": "1.0.0"}
     write_piece(root, "card", brand="test-edition", lock=lock)
     write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
-    (finding,) = checks.lock_findings(held(root), pl.read_piece(root, "visual", "card"))
+    (finding,) = checks.lock_findings(held(root, INSTALLED), pl.read_piece(root, "visual", "card"))
     assert finding.code == "lock-incomplete"
     assert "test-edition@1.0.0 builds on `test-brand`" in finding.message
 
@@ -714,8 +718,7 @@ def test_what_the_capability_ships_under_a_number_is_its_release_before_its_vers
     tmp_path: Path,
 ) -> None:
     folder = tmp_path / "capability"
-    built = folder / "libraries" / "foundations"
-    shutil.copytree(FOUNDATIONS, built)
+    built = built_as_released(folder / "libraries" / "foundations")
     [library] = shipped.read(folder)
     being_built = copies.under(library, V("1.0.0"))
     assert (being_built.folder, being_built.entry, being_built.released) == (
@@ -724,7 +727,7 @@ def test_what_the_capability_ships_under_a_number_is_its_release_before_its_vers
         None,
     )
     assert sorted(being_built.files) == sorted(
-        path.relative_to(FOUNDATIONS).as_posix() for path in FOUNDATIONS.rglob("*.yaml")
+        path.relative_to(built).as_posix() for path in built.rglob("*.yaml")
     )
     assert copies.under(library, V("1.1.0")) is None
     place = shipped.place_of(folder, "foundations", V("1.0.0"))
@@ -1349,11 +1352,12 @@ def capability(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, release: bool, building: str = "1.0.0"
 ) -> Path:
     """A capability's folder the test controls, in place of the capability's own for the
-    length of the test: it builds the foundations at `building`, and releases
-    foundations@1.0.0, as it was built, where `release` says so."""
+    length of the test: it builds the foundations at `building`, their files those of their
+    release 1.0.0, and releases foundations@1.0.0, as it was built, where `release` says
+    so."""
     folder = tmp_path / "capability"
     built = folder / "libraries" / "foundations"
-    shutil.copytree(FOUNDATIONS, built)
+    shutil.copytree(RELEASED_FOUNDATIONS, built)
     if release:
         shutil.copytree(built, shipped.place_of(folder, "foundations", V("1.0.0")))
         entry = shipped.entry_of(folder, "foundations", V("1.0.0"))
@@ -1383,7 +1387,7 @@ def test_library_changed_names_the_command_only_on_a_copy_of_a_version_the_capab
 ) -> None:
     capability(tmp_path, monkeypatch, release=release)
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     add_library(root, "charts", "1.0.0")
     entries = {name: released_entry(root, name, "1.0.0") for name in ("charts", "foundations")}
     write_list(
@@ -1449,7 +1453,7 @@ def test_a_copy_not_released_that_is_not_what_the_capability_ships_asks_for_atte
     building = "1.1.0" if case == "unshipped" else "1.0.0"
     capability(tmp_path, monkeypatch, release=case == "released", building=building)
     root = project(tmp_path)
-    folder = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     write_list(root, {"foundations": {"source": SHIPPED, "versions": {"1.0.0": UNRELEASED}}})
     if case == "files":
         assert judged(root, "copy-not-shipped") == []
@@ -1468,7 +1472,7 @@ def test_a_released_copy_whose_hash_differs_from_the_capabilitys_names_both(
     folder = capability(tmp_path, monkeypatch, release=True)
     recorded = shipped.entry_of(folder, "foundations", V("1.0.0"))["hash"]["value"]
     root = project(tmp_path)
-    copy = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     roles = copy / "roles.yaml"
     role = "  space.4: {type: dimension}\n"
     added = role + "  space.5: {type: dimension}\n"

@@ -422,7 +422,7 @@ class Project:
             for name in piece.notations
         }
         try:
-            self.combinations = keys.combinations(piece.modes, self.brand.axes)
+            self.combinations = self.brand.combinations_of(piece.modes)
         except keys.BadKey as exc:
             raise Refused(f"{piece.file(PIECE_FILE)}: `modes`: {exc}") from exc
         axes = self.brand.axes
