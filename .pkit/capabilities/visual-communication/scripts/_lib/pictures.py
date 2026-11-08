@@ -14,8 +14,8 @@ among them, found by its bare name, and read by its encoding.
   sample, of any colour type, and a JPEG of 8 bits, in grey or in colour, baseline or
   progressive. A PNG of 16 bits, an interlaced or an animated one, a JPEG in CMYK, one an
   orientation tag turns, and every other encoding, are refused, each with its fix. A
-  picture gives its kind, its size in pixels, and the ICC profile it carries, whole, which
-  each renderer passes on with it.
+  picture gives its kind, its size in pixels, whether its colours are grey, and the ICC
+  profile it carries, whole, which each renderer passes on with it.
 - **Judged where it lies** (`Folder.judge`, `Folder.read`): each finding fails, and lies in
   the piece for a piece's picture, or in the version for a library's or a brand's, so it
   asks for attention where that version is released (`findings.as_read`). A final piece's
@@ -161,14 +161,17 @@ def is_bare_name(name: object) -> TypeGuard[str]:
 
 @dataclass(frozen=True)
 class Picture:
-    """A picture file read: its kind, `PNG` or `JPEG`; its size in pixels, as stored; and
-    the ICC profile it carries, whole, or None where it carries none. Each renderer is
-    handed these, and the file's bytes, to draw it."""
+    """A picture file read: its kind, `PNG` or `JPEG`; its size in pixels, as stored; the
+    ICC profile it carries, whole, or None where it carries none; and whether its colours
+    are grey, a JPEG of one component or a PNG of a grey colour type, so a profile it
+    carries is for grey colours, not RGB. Each renderer is handed these, and the file's
+    bytes, to draw it."""
 
     kind: str
     width: int
     height: int
     profile: bytes | None = None
+    grey: bool = False
 
 
 class Refused(Exception):
@@ -316,7 +319,7 @@ def _png(data: bytes, name: str) -> Picture:
         raise _refused(name, faults)
     if profile is not None:
         _check_profile(profile, name, grey=colour in _PNG_GREY)
-    return Picture(PNG, width, height, profile)
+    return Picture(PNG, width, height, profile, grey=colour in _PNG_GREY)
 
 
 def _png_header(body: bytes, name: str) -> tuple[int, int, int, int, int]:
@@ -416,7 +419,7 @@ def _jpeg(data: bytes, name: str) -> Picture:
     profile = _jpeg_profile(icc, name) if icc else None
     if profile is not None:
         _check_profile(profile, name, grey=components == 1)
-    return Picture(JPEG, width, height, profile)
+    return Picture(JPEG, width, height, profile, grey=components == 1)
 
 
 def _orientation(tiff: bytes) -> int | None:

@@ -40,6 +40,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/png.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/html.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/html_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css.py
@@ -163,7 +164,7 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
 - the `svg` renderer, at version 1.1.0
-- the `pdf` renderer, at version 1.0.0
+- the `pdf` renderer, at version 1.1.0
 - the `html` renderer, at version 1.2.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
@@ -180,7 +181,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **The seam's version** is 5. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). Version 5 hands a renderer, for each language and combination it draws, the picture each image shows there, by the image's trace id: the file and its kind, a PNG or a JPEG (DEC-025 point 7). It is handed one for every source of an image, and reads nothing else for a picture. What a producer and a code writer are handed and return is as version 1 had it.
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
-- **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer and the code writers draw nothing new, so their versions stay.
+- **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
 - **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes form 1, which is version 1 of the document of values ([The JSON code writer](#the-json-code-writer)).
 - **None of these versions** is the format number of the files a project keeps.
@@ -246,8 +247,9 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
 - **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each keeps a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
+- **Pictures.** Each picture lies in its frame as the SVG renderer draws it ([Primitives](components.md#primitives)). A produced picture draws the variant that serves the combination drawn ([Variants](#variants)), and a picture file draws itself. A JPEG is embedded as its own data. A PNG keeps its transparency: an alpha channel's or a palette's as a soft mask, and one transparent colour as a colour key. A colour profile a picture carries goes into the file with it, so a PDF viewer draws its colours as a browser does (DEC-025 point 5). Each picture lies once in the file, however often it is drawn.
 - **The file** names its language, `/Lang`, and the renderer with its version, `/Producer`.
-- **The same bytes.** The file holds no date, and its streams are not compressed. So the same scene and values give the same file on every machine.
+- **The same bytes.** The file holds no date. A picture keeps its file's own data, and what the renderer decodes, such as a soft mask, it writes uncompressed, as it writes its other streams. So the same scene and values give the same file on every machine.
 
 ### What the PDF renderer does not carry yet
 
@@ -255,13 +257,14 @@ The PDF is not tagged. It carries no alternative text, no reading order and no s
 
 ### What the PDF renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive of format 1's scene but the image. So an image is `refused`, whatever it shows, and left out of the file; a later version draws it. The capability reports the loss before the renderer runs, unless the piece accepts it (DEC-005 point 9; *Losses* in *What the check reports*).
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive and property a scene of format 1 holds, the image among them, so this finds no loss in format 1.
 
-While it draws, the renderer reports three losses of its own:
+While it draws, the renderer reports four losses of its own:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
 - **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
 - **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
+- **an image** with no picture for the combination drawn, `left-out`, as for the SVG renderer. So is a picture the renderer cannot read or decode, such as a PNG whose image data is damaged, or one that would take more than 128 MiB decoded. The message says which.
 
 ## The HTML renderer
 

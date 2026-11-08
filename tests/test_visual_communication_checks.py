@@ -71,7 +71,18 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-checks, pl, framing, seam, findings_, svg_declaration, fingerprint, copies, reading = load(
+(
+    checks,
+    pl,
+    framing,
+    seam,
+    findings_,
+    svg_declaration,
+    pdf_declaration,
+    fingerprint,
+    copies,
+    reading,
+) = load(
     "visual-communication",
     "checks",
     "pipeline",
@@ -79,6 +90,7 @@ checks, pl, framing, seam, findings_, svg_declaration, fingerprint, copies, read
     "plugins.seam",
     "findings",
     "plugins.svg_declaration",
+    "plugins.pdf_declaration",
     "fingerprint",
     "copies",
     "reading",
@@ -1301,9 +1313,17 @@ def test_a_piece_is_checked_against_its_previews_renderer_and_each_it_exports_in
     assert checks.renderers(piece_of(root)) == renderers
 
 
-def test_a_piece_exported_as_pdf_is_told_what_the_pdf_renderer_loses(tmp_path: Path) -> None:
+def test_a_piece_exported_as_pdf_is_told_what_the_pdf_renderer_loses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The renderer draws every image (DEC-025 point 7), so a piece of a produced picture loses
+    nothing in a PDF. Its declaration, the image taken out of it for the length of the test,
+    stands for one that would lose it."""
     root = drawing_project(tmp_path, exports=["svg", "pdf"])
     write_picture(root, framing)
+    assert [found for found, _ in checks.check(root).judged if found.code == "loss"] == []
+
+    monkeypatch.delitem(pdf_declaration.DECLARATION["draws"], "image")
     report = checks.check(root)
     assert not report.failed()
     [(lost, level)] = [(f, level) for f, level in report.judged if f.code == "loss"]
