@@ -33,6 +33,8 @@ pkit:
         - src/project_kit/install.py
         - .pkit/permissions/decide.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
+        - .pkit/adapters/claude-code/deploy-agents.sh
+        - .pkit/lifecycle/ownership.py
       record:
         - COR-001
         - COR-002
@@ -106,7 +108,7 @@ pkit:
 - **8b.** The [overlay](../../../glossary.md#term-overlay--overlay) defines every [overlay category](../../../glossary.md#term-overlay-category--overlay-category) the [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) refer to. The system prints `overlay is complete — every referenced category is defined.`, and the path goes on at step 10.
 - **8c.** The overlay is missing. The system says so, and step 9 creates it from its template, as first [install](../../../glossary.md#term-install--install) does.
 - **9a.** A category carries writes, such as `process-authoring-targets`. The system fills it with an empty list, so the agent definition deploys with no path to write until the adopter names one.
-- **9b.** A missing category has no conventional folder in the project. The system appends it commented out, for the adopter to set. Until the adopter sets it, the [adapter](../../../glossary.md#term-adapter--adapter) skips each agent definition that needs it, and names `pkit agents adopt <agent>` ([UC-020](../010-develop/UC-020-own-skill-or-agent.md) variant 9a).
+- **9b.** A missing category has no conventional folder in the project, so the system appends it commented out, for the adopter to set. Until the adopter sets it, the [adapter](../../../glossary.md#term-adapter--adapter) skips each agent definition that needs it. Where each unset overlay category of such an agent definition has a conventional folder, the adapter names `pkit agents adopt <agent>`, which creates the folder. Otherwise it names setting the paths in the overlay, or `pkit agents reconcile --write` ([UC-020](../010-develop/UC-020-own-skill-or-agent.md) variant 9a).
 - **10a.** The adopter changed only the [harness](../../../glossary.md#term-harness--harness)'s settings, and runs `pkit merge` instead. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) of the settings alone, and prints `Merge complete.`.
 - **10b.** The adopter runs `pkit merge --dry-run`. The system prints `would run` and each adapter's script of merge delivery, and runs none of them (REQ-009).
 - **10c.** The adopter runs `pkit merge <adapter>` for an adapter the project does not hold. The system refuses with `no installed adapter matches the requested target(s): <names>`, and runs nothing.
