@@ -65,6 +65,7 @@ from tests.visual_communication_project import (
     add_library,
     bound,
     copy_library,
+    hold_shipped,
     write,
     write_list,
     yaml_text,
@@ -1357,7 +1358,10 @@ def test_scene_findings_name_the_component_file_and_the_command_that_makes_a_pic
 
 
 def test_the_skeleton_piece_with_its_picture_fails_nothing(tmp_path: Path) -> None:
+    """With the foundations held as the capability ships them, so their copy raises no
+    finding of its own."""
     root = drawing_project(tmp_path)
+    hold_shipped(root, "foundations")
     write_picture(root, framing)
     report = checks.check(root)
     assert not report.failed()

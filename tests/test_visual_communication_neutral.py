@@ -36,7 +36,9 @@ from tests.visual_communication_project import (
     TEST_NOTATION,
     bound,
     copy_library,
+    hold_shipped,
     project,
+    taken,
     write_list,
     yaml_text,
 )
@@ -101,14 +103,18 @@ def brand() -> Any:
 
 
 def test_add_copies_it_whole_and_lists_it_shipped(tmp_path: Path) -> None:
+    """What the capability ships by default, as the tree holds it: the newest released
+    version, with its record's entry, or the version being built where none is released."""
+    ships = taken("neutral")
     root = project(tmp_path)
     added = run_main(add, "neutral", cwd=root)
     assert added.returncode == 0, added.stderr
-    assert files_of(root / "visual" / "libraries" / "neutral" / "1.0.0") == files_of(NEUTRAL)
+    copy = root / "visual" / "libraries" / "neutral" / ships.version
+    assert files_of(copy) == files_of(ships.folder)
     listed = read(root / "visual" / "libraries" / "libraries.yaml")
+    versions = {ships.version: ships.entry}
     assert listed == bound(
-        "libraries",
-        libraries={"neutral": {"source": {"kind": "shipped"}, "versions": UNRELEASED}},
+        "libraries", libraries={"neutral": {"source": {"kind": "shipped"}, "versions": versions}}
     )
 
 
@@ -237,22 +243,14 @@ def pinned_with_neutral(folder: Path) -> None:
 
 @pytest.fixture(scope="module")
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A location that holds the foundations, the starter and the neutral brand as the
-    capability ships them, the test notation, and the starter's reference pieces."""
+    """A location that holds the foundations, the starter and the neutral brand being built
+    as the capability ships them, the released version of their number where it is
+    released, the test notation, and the starter's reference pieces."""
     root = project(tmp_path_factory.mktemp("neutral"))
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
-    copy_library(root, NEUTRAL, "neutral", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "neutral": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
-        },
-    )
+    write_list(root, {"test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED}})
+    for name in ("foundations", "starter", "neutral"):
+        hold_shipped(root, name)
     shutil.copytree(PIECES, root / "visual" / "pieces")
     for folder in (root / "visual" / "pieces").iterdir():
         pinned_with_neutral(folder)

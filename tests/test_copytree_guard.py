@@ -29,6 +29,7 @@ DATA_FOLDERS = (
     ".pkit/capabilities/project-management/schemas",
     ".pkit/capabilities/project-management/templates",
     ".pkit/capabilities/visual-communication/libraries",
+    ".pkit/capabilities/visual-communication/releases",
     ".pkit/permissions/profiles",
     "tests/fixtures/visual-communication",
 )
@@ -75,7 +76,7 @@ HOLDS_NO_PYTHON = {
     },
     "test_visual_communication_starter.py": {"PIECES", "location"},
     "test_visual_communication_tokens.py": {"TEST_BRAND", "TEST_EDITION", "edition", "naming"},
-    "visual_communication_project.py": {"source"},
+    "visual_communication_project.py": {"source", "held.folder"},
 }
 
 

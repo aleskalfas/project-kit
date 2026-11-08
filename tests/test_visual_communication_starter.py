@@ -40,7 +40,9 @@ from tests.visual_communication_project import (
     TEST_NOTATION,
     bound,
     copy_library,
+    hold_shipped,
     project,
+    taken,
     version_folder,
     write_list,
 )
@@ -136,14 +138,18 @@ def files_of(folder: Path) -> dict[str, bytes]:
 
 
 def test_add_copies_the_starter_whole_and_lists_it_shipped(tmp_path: Path) -> None:
+    """What the capability ships by default, as the tree holds it: the newest released
+    version, with its record's entry, or the version being built where none is released."""
+    ships = taken("starter")
     root = project(tmp_path)
     added = run_main(add, "starter", cwd=root)
     assert added.returncode == 0, added.stderr
-    assert files_of(root / "visual" / "libraries" / "starter" / "1.0.0") == files_of(STARTER)
+    copy = root / "visual" / "libraries" / "starter" / ships.version
+    assert files_of(copy) == files_of(ships.folder)
     listed = read(root / "visual" / "libraries" / "libraries.yaml")
+    versions = {ships.version: ships.entry}
     assert listed == bound(
-        "libraries",
-        libraries={"starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED}},
+        "libraries", libraries={"starter": {"source": {"kind": "shipped"}, "versions": versions}}
     )
 
 
@@ -210,22 +216,21 @@ def test_each_default_of_its_own_roles_is_an_alias_never_a_value() -> None:
 
 @pytest.fixture(scope="module")
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A location that holds the foundations and the starter as the capability ships them,
-    the test brand and the test notation, and the starter's reference pieces."""
+    """A location that holds the foundations and the starter being built as the capability
+    ships them, the released version of their number where it is released, the test brand
+    and the test notation, and the starter's reference pieces."""
     root = project(tmp_path_factory.mktemp("starter"))
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(
         root,
         {
-            "foundations": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
             "test-brand": {"source": {"kind": "project"}, "versions": UNRELEASED},
             "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
         },
     )
+    hold_shipped(root, "foundations")
+    hold_shipped(root, "starter")
     shutil.copytree(PIECES, root / "visual" / "pieces")
     return root
 

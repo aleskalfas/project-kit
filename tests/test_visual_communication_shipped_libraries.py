@@ -617,12 +617,16 @@ def add_library(folder: Path, name: str, builds_on: Mapping[str, int], version: 
     write(built(folder, name) / "library.yaml", yaml_text(library))
 
 
-def release(folder: Path, name: str = libraries.FOUNDATIONS) -> Any:
+def release(folder: Path, name: str = libraries.FOUNDATIONS, needs: str | None = None) -> Any:
     """Release the version being built of `name` as it stands: its files copied to its place,
-    and its entry added to its record."""
+    its `library.yaml` naming `needs` as the release it needs where given, as the release
+    writes it, and its entry added to its record."""
     version = libraries.read_library(built(folder, name)).version
     place = shipped.place_of(folder, name, version)
     shutil.copytree(built(folder, name), place)
+    if needs is not None:
+        written = shipped.needs_written(place / "library.yaml", needs)
+        (place / "library.yaml").write_bytes(written)
     rewrite_entry(folder, name, version)
     return version
 
@@ -653,8 +657,11 @@ def test_a_folder_that_releases_nothing_passes_every_check(tmp_path: Path) -> No
 
 
 def test_a_released_version_as_its_record_keeps_it_passes(tmp_path: Path) -> None:
+    """Released as the release writes it, naming the capability's current version. Where
+    the capability's own folder releases that number too, the two are one content, and a
+    version that differed from it would be reported as `copy-hash-differs`."""
     folder = capability(tmp_path)
-    release(folder)
+    release(folder, needs=shipped.current_version())
 
     [library] = shipped.read(folder)
     [released] = library.released
