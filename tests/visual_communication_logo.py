@@ -166,13 +166,14 @@ def logo_brand(
     dark: bool = True,
     version: str = VERSION,
     location: str = "visual",
+    source: Path = TEST_BRAND,
 ) -> Path:
     """The brand `test-logo` at `version`, by default 1.0.0, in the location at `root`: the
-    test brand under that name, giving `picture.logo` the light logo in every combination
-    where `light`, and the dark logo, twice its pixels, in the dark colour scheme where
-    `dark`."""
+    test brand under that name, or the version of it at `source`, giving `picture.logo` the
+    light logo in every combination where `light`, and the dark logo, twice its pixels, in
+    the dark colour scheme where `dark`."""
     folder = version_folder(root, NAME, version, location)
-    shutil.copytree(TEST_BRAND, folder, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(source, folder, ignore=shutil.ignore_patterns("__pycache__"))
     library = folder / "library.yaml"
     text = library.read_text(encoding="utf-8").replace("name: test-brand", f"name: {NAME}", 1)
     library.write_text(text.replace("version: 1.0.0", f"version: {version}", 1), encoding="utf-8")

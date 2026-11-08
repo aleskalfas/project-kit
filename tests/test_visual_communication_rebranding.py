@@ -15,6 +15,9 @@ local component names by `file`; the brand's logo, `picture.logo`; the mark of t
   says the same, looking ahead or back, wherever its two locks name different brands.
 - **A move that keeps the brand** says none of it. No record keeps what a move says, and the
   check is silent on it.
+- **A site** names what each of its pages shows, each by its trace id: the logo its shared
+  header shows, on each page drawn in a layout, and none on a page drawn by its own component,
+  which takes no header (`tests/test_visual_communication_site.py`'s portal, DEC-022).
 
 Run in this process, the SVG renderer standing in for the import a run makes when it draws, the
 test producer registered, and `pkit` answered in this process. A look back runs in a git
@@ -50,11 +53,14 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
+from tests.test_visual_communication_site import SIZED_BRAND, site_location
 from tests.visual_communication_project import (
     TEST_PICTURES,
     add_library,
     importable,
+    project,
     write,
+    write_list,
     yaml_text,
 )
 
@@ -315,6 +321,66 @@ def test_a_picture_at_some_size_keys_alone_names_them() -> None:
         f"not following `{PLAIN}`: `en`: `{LOGO}`: the picture role `picture.logo`, which "
         f"`{PLAIN}` gives no file, so it is not drawn, at `{phone}`",
     ]
+
+
+#: The portal of the site location, and the version of `test-logo` made from the test brand
+#: that gives the sizes the portal is drawn at.
+PORTAL = "portal"
+PORTAL_FOLDER = f"visual/pieces/{PORTAL}"
+SIZED = "1.1.0"
+
+
+def site_project(tmp_path: Path) -> Path:
+    """The site location's portal, on a desktop and on a phone, under `test-logo` made from the
+    test brand that gives those sizes. Its shared header shows the brand's logo, and its home
+    page a picture file of the piece. Its guide takes the header too, and its notice, drawn by
+    its own component, takes none."""
+    root = site_location(project(tmp_path))
+    logo.logo_brand(root, version=SIZED, source=SIZED_BRAND)
+    path = root / "visual" / "libraries" / "libraries.yaml"
+    held_now = reading.read_yaml(path)["libraries"]
+    unreleased = {"source": {"kind": "project"}, "versions": {SIZED: {"released": False}}}
+    write_list(root, {**held_now, LOGO_BRAND: unreleased})
+    piece = root / PORTAL_FOLDER
+    write(piece / "components" / "logo.yaml", yaml_text(LOGO_COMPONENT))
+    write(piece / "components" / "shot.yaml", yaml_text(SHOT_COMPONENT))
+    held(piece, "photo.png", "palette.png")
+    data = reading.read_yaml(piece / "content.en.yaml")
+    data["header"] = {"use": "piece/logo"}
+    data["pages"][0]["main"] = {"use": "piece/shot", "photo": "photo.png"}
+    write(piece / "content.en.yaml", yaml_text(data))
+    data = reading.read_yaml(piece / "piece.yaml")
+    lock = {name: number for name, number in data["lock"].items() if name != "neutral"}
+    data.update(brand=LOGO_BRAND, lock={**lock, LOGO_BRAND: SIZED})
+    write(piece / "piece.yaml", yaml_text(data))
+    return root
+
+
+def test_a_site_onto_a_brand_with_no_logo_names_what_each_page_shows(tmp_path: Path) -> None:
+    """The header is written once, and each page in a layout draws it, so its logo is named on
+    each such page by its own trace id (DEC-025 point 8). The notice takes no header, and names
+    nothing. Each is left out at both sizes, so none names a key."""
+    root = site_project(tmp_path)
+    assert said(lines(render_script, root, PORTAL)) == []
+    data = reading.read_yaml(root / PORTAL_FOLDER / "piece.yaml")
+    data["brand"] = PLAIN
+    write(root / PORTAL_FOLDER / "piece.yaml", yaml_text(data))
+
+    shown = said(lines(render_script, root, PORTAL))
+
+    page = "site/pages"
+    assert shown == [
+        f"another brand: `{LOGO_BRAND}` to `{PLAIN}`",
+        f"not following `{PLAIN}`: `en`: `{page}[home]/main/image`: the picture file `photo.png` "
+        f"of the piece, which stays as it was",
+        *(
+            f"not following `{PLAIN}`: `en`: `{page}[{id_}]/header/image`: the picture role "
+            f"`picture.logo`, which `{PLAIN}` gives no file, so it is not drawn"
+            for id_ in ("home", "guide")
+        ),
+    ]
+    lock = reading.read_yaml(root / PORTAL_FOLDER / "piece.yaml")["lock"]
+    assert (lock.get(PLAIN), LOGO_BRAND in lock) == (SIZED, False)
 
 
 def test_a_move_with_nothing_that_does_not_follow_says_so() -> None:
