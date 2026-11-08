@@ -26,8 +26,7 @@ reads:
     - .pkit/process/connections.md
     - .pkit/cli/README.md
     - .pkit/agents/project/overlay.yaml
-  patterns:
-    - process-authoring-targets
+  patterns: []
 owns: []
 ---
 
