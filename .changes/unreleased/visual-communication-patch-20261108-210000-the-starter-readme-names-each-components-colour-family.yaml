@@ -1,0 +1,10 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The starter's README, in its version being built, 1.1.0, names the colour
+  family each component declares (#2898). It no longer says that every block
+  declares `neutral`: the `button` declares `blue`, a field in `error` takes
+  `red`, and a `disabled` button `neutral`. The patterns, and the web parts and
+  web blocks that take no colour from a family, declare none.
