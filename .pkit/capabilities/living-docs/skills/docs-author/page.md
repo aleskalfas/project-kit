@@ -10,7 +10,7 @@ The space is the reader's audience. The user space serves people who use the sys
 
 - **`signpost`**: an index-like file that says what a folder holds and where to go, never a summary of what the files say (RS-LDOC-005).
 - **`reference`**: the page that describes one surface, such as an area, a capability or a command set, to the reader who uses it.
-- **`guide`**: the page that explains one subject to the reader who uses it: why it exists, what it solves for them and how they do its tasks (DEC-003). Detail the reader looks up stays on the page that describes the subject.
+- **`guide`**: the page that explains one subject to the reader who uses it: why it exists, what it solves for them and how they do its tasks ([living-docs:DEC-003-guide-kind]). Detail the reader looks up stays on the page that describes the subject.
 
 The stamp takes a kind the capability declares. A kind the project adds has its own template, so write that page by hand from it.
 
