@@ -1148,6 +1148,11 @@ def _rot_candidates(path: str, art: Artifact, target_root: Path, *, link: bool) 
     return [Path(os.path.normpath(base / path)) for base in bases]
 
 
+# The ids of a project's own records, PRJ and ADR: each project numbers its own, so
+# such an id in a record another repository authors names one of that repository's.
+_PROJECT_RECORD_PREFIXES = ("PRJ-", "ADR-")
+
+
 def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = None) -> list[Issue]:
     """Each accepted record whose body cites a record that is still proposed.
 
@@ -1159,12 +1164,19 @@ def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = N
     that capability unless another capability's name stands just before it.
     Fenced code blocks, HTML comments and strikethrough are not read. One
     finding for each record and each proposed record it cites, with the lines.
+
+    A record the project receives as a synced copy (`synced_record_test`), such
+    as a core record in an adopter's project, is authored in another repository.
+    A `PRJ-` or `ADR-` id it cites names a record of that repository, never one
+    of this project, so such a citation is not read. In the methodology's source
+    no record is a synced copy, and every citation is read.
     """
-    from project_kit.decisions_validate import discover_decision_records
+    from project_kit.decisions_validate import discover_decision_records, synced_record_test
 
     if statuses is None:
         statuses = _index_decision_statuses(target_root)
     capabilities = frozenset(key.split(":", 1)[0] for key in statuses if ":" in key)
+    received = synced_record_test(target_root)
     issues: list[Issue] = []
     for record in discover_decision_records(target_root):
         try:
@@ -1182,8 +1194,9 @@ def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = N
             if target_root in record.path.parents
             else str(record.path)
         )
+        foreign = _PROJECT_RECORD_PREFIXES if received(rel) else ()
         for key in sorted(cited):
-            if statuses.get(key) != "proposed":
+            if statuses.get(key) != "proposed" or key.startswith(foreign):
                 continue
             lines = [first_line + line - 1 for line in cited[key]]
             where = f"line {lines[0]}" if len(lines) == 1 else f"lines {', '.join(map(str, lines))}"
