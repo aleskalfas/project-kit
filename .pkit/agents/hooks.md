@@ -80,10 +80,10 @@ project > capability > adapter > core
 The order mirrors the skill-deploy precedence, where the project's skill wins over core's ([the Claude Code adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)).
 
 - **The tiers:** a skill in `.pkit/skills/project/` is of the `project` tier. A capability's `provides:` is of the `capability` tier, and an adapter's is of the `adapter` tier. Every other skill is of the `core` tier, a skill a capability ships among them.
-- **Two providers at one tier:** COR-013 point 4 decides that the collision is refused, never settled by picking one. The record has the project disambiguate them by uninstalling one, or by adding a provider of its own. What the code does today:
+- **Two providers at one tier:** where the highest tier that holds a provider of a hook holds two, neither binds. COR-013 point 4 decides that the collision is refused, never settled by picking one:
   - `pkit validate` and `pkit refs validate` fail the collision, naming both providers.
-  - Uninstalling one clears the finding. A provider of the project's binds the hook, but the finding stays.
-  - `pkit hooks resolve` names the first provider it reads, rather than refuse.
+  - `pkit hooks resolve` refuses the hook, naming both, and `pkit hooks list` marks it.
+- **Settling a collision:** a provider at a higher tier binds the hook, so a collision below it no longer fails. The project adds a provider of its own, or uninstalls one of the two. Where two of the project's own skills collide, it keeps the hook in the `answers:` of one.
 
 ## Unsatisfied needs
 
@@ -102,11 +102,11 @@ Four commands query hooks. `list`, `resolve` and `who-provides` read the precede
 
 ### `pkit hooks list`
 
-Lists every hook that is declared or needed, with the provider it binds to, or `(no provider)`.
+Lists every hook that is declared or needed, with the provider it binds to, or `(no provider)`. A same-tier collision is listed with both its providers, and binds to neither.
 
 ### `pkit hooks resolve <hook>`
 
-Names the provider the hook binds to, the first by precedence, and its implementation. It exits 1 where no provider declares the hook.
+Names the provider the hook binds to, the first by precedence, and its implementation. It exits 1 where no provider declares the hook, and where two collide at the tier it binds by, naming both.
 
 ### `pkit hooks who-provides <hook>`
 

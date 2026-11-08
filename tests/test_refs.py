@@ -11,6 +11,9 @@ from click.testing import CliRunner
 
 from project_kit import refs
 from project_kit.cli import main
+from tests.adopter_repo import MakeAdopterRepo
+
+REPO = Path(__file__).resolve().parents[1]
 
 # --- fixtures -------------------------------------------------------
 
@@ -431,6 +434,27 @@ Mentions COR-999 without declaring it.
     assert any("body cites record 'COR-999'" in i.diagnosis for i in issues)
 
 
+def test_validate_flags_a_bare_reads_patterns_entry_of_an_agent(kit_target: Path) -> None:
+    """An agent's bare `reads.patterns` name is reported, and a placeholder or a path
+    passes; a skill's is not, as a skill's `reads.patterns` is never filled (#2481)."""
+    front = """reads:
+  patterns: [code-paths, <project-conventions>, docs/notes.md]
+---
+# {name}
+Reads `<project-conventions>`, `<code-paths>` and `docs/notes.md`.
+"""
+    _write_agent(kit_target, "core", "agent-a", "---\nname: agent-a\n" + front.format(name="A"))
+    _write_skill(kit_target, "core", "skill-b", "---\nname: skill-b\n" + front.format(name="B"))
+    issues = refs.validate_corpus(kit_target)
+    assert [(i.kind, i.location) for i in issues] == [
+        (refs.READS_PATTERN, ".pkit/agents/core/agent-a.md")
+    ]
+    assert issues[0].diagnosis == (
+        "`reads.patterns` entry 'code-paths' is neither a `<category>` placeholder nor a "
+        "path, so the deploy does not resolve it. Write it `<code-paths>`."
+    )
+
+
 # --- backward-citation exemptions (#584) ----------------------------
 #
 # The backward check must not flag references that are not overlay-resolved
@@ -690,6 +714,107 @@ def test_resolve_hook_picks_project_over_core(kit_target: Path) -> None:
     winner = refs.resolve_hook(providers, "x.y")
     assert winner is not None
     assert winner.tier == "project"
+
+
+# --- same-tier collisions (COR-013 point 4, #2480) ------------------
+
+
+def _write_capability_package(root: Path, name: str, provides: dict[str, str]) -> None:
+    folder = root / ".pkit" / "capabilities" / name
+    folder.mkdir(parents=True)
+    lines = [f"component:\n  name: {name}\n", "provides:\n"]
+    lines += [f"  {hook}: {impl}\n" for hook, impl in provides.items()]
+    (folder / "package.yaml").write_text("".join(lines), encoding="utf-8")
+
+
+def _two_capabilities_provide(root: Path, hook: str) -> None:
+    _write_capability_package(root, "tracker-b", {hook: "scripts/b.py"})
+    _write_capability_package(root, "tracker-a", {hook: "scripts/a.py"})
+
+
+def _project_skill_answers(root: Path, hook: str) -> None:
+    body = f"---\nname: own-tracker\ndescription: own\nanswers: [{hook}]\n---\n# Own\n{hook}.\n"
+    _write_skill(root, "project", "own-tracker", body)
+
+
+def _collisions(root: Path) -> list[refs.Issue]:
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.COLLISION]
+
+
+def test_a_same_tier_collision_binds_neither_provider() -> None:
+    providers = [
+        refs.Provider(hook="x.y", tier="core", source="below", implementation="/below"),
+        refs.Provider(hook="x.y", tier="capability", source="b", implementation="b.py"),
+        refs.Provider(hook="x.y", tier="capability", source="a", implementation="a.py"),
+    ]
+    assert [p.source for p in refs.winning_providers(providers, "x.y")] == ["a", "b"]
+    assert refs.resolve_hook(providers, "x.y") is None
+    assert refs.winning_providers(providers, "x.unknown") == []
+
+
+def test_a_higher_tier_provider_settles_a_collision_below_it() -> None:
+    providers = [
+        refs.Provider(hook="x.y", tier="core", source="b", implementation="/b"),
+        refs.Provider(hook="x.y", tier="core", source="a", implementation="/a"),
+        refs.Provider(hook="x.y", tier="adapter", source="harness", implementation="h.sh"),
+    ]
+    winner = refs.resolve_hook(providers, "x.y")
+    assert winner is not None
+    assert (winner.tier, winner.source) == ("adapter", "harness")
+
+
+def test_validate_fails_a_same_tier_collision_naming_both_providers(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    collisions = _collisions(kit_target)
+    assert [i.location for i in collisions] == ["hooks/tracker.create-issue"]
+    assert "tier 'capability'" in collisions[0].diagnosis
+    assert "(tracker-a, tracker-b)" in collisions[0].diagnosis
+
+
+def test_validate_passes_a_collision_a_project_provider_settles(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    _project_skill_answers(kit_target, "tracker.create-issue")
+    assert _collisions(kit_target) == []
+
+
+def test_validate_fails_a_collision_at_the_project_tier(kit_target: Path) -> None:
+    _project_skill_answers(kit_target, "project.do-thing")
+    body = "---\nname: other\ndescription: o\nanswers: [project.do-thing]\n---\n# O\n"
+    _write_skill(kit_target, "project", "other", body + "project.do-thing.\n")
+    collisions = _collisions(kit_target)
+    assert len(collisions) == 1
+    assert "tier 'project'" in collisions[0].diagnosis
+    assert "`answers:`" in collisions[0].diagnosis
+
+
+def test_cli_hooks_resolve_refuses_a_same_tier_collision(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    result = CliRunner().invoke(main, ["hooks", "resolve", "tracker.create-issue"])
+    assert result.exit_code == 1
+    assert "same-tier collision at tier 'capability'" in result.output
+    assert "(tracker-a, tracker-b)" in result.output
+
+
+def test_cli_hooks_list_marks_a_same_tier_collision(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    result = CliRunner().invoke(main, ["hooks", "list"])
+    assert result.exit_code == 0
+    assert (
+        "tracker.create-issue (same-tier collision at capability: tracker-a, tracker-b)"
+        in result.output
+    )
+
+
+def test_cli_hooks_resolve_and_list_name_the_project_provider_that_settles_one(
+    kit_target: Path,
+) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    _project_skill_answers(kit_target, "tracker.create-issue")
+    resolved = CliRunner().invoke(main, ["hooks", "resolve", "tracker.create-issue"])
+    assert resolved.exit_code == 0
+    assert "tracker.create-issue -> project:own-tracker (/own-tracker)" in resolved.output
+    listed = CliRunner().invoke(main, ["hooks", "list"])
+    assert "tracker.create-issue -> project:own-tracker" in listed.output
 
 
 def test_who_references_finds_declared_and_body_mentions(kit_target: Path) -> None:
@@ -1305,6 +1430,60 @@ def test_rot_flags_accepted_record_citing_proposed_record_of_another_namespace(
     _cap_record(kit_target, "cap-a", "001", "lanes", "accepted", "Rests on PRJ-001.\n")
     issues = _resting(kit_target)
     assert [i.location for i in issues] == [".pkit/capabilities/cap-a/decisions/DEC-001-lanes.md"]
+    assert "'PRJ-001'" in issues[0].diagnosis
+
+
+def test_rot_reads_no_project_record_in_a_record_the_project_receives(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A core record an adopter receives is authored in the methodology's source, so a
+    `PRJ-` or `ADR-` id it cites names a record of the source: COR-021 cites the PRJ-001
+    that names the CLI, and COR-037 cites ADR-022. The adopter's own proposed PRJ-001
+    and ADR-022 are no grounds of theirs, while its own accepted record citing them
+    still rests on proposals (#2484)."""
+    root = make_adopter_repo().root
+    core = root / ".pkit" / "decisions" / "core"
+    received = {
+        ".pkit/decisions/core/" + path.name: key
+        for pattern, key in (("COR-021-*.md", "PRJ-001"), ("COR-037-*.md", "ADR-022"))
+        for path in core.glob(pattern)
+    }
+    for rel, key in received.items():
+        assert key in refs.record_citations((root / rel).read_text(encoding="utf-8"), None)
+    assert len(received) == 2
+
+    (root / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
+        "adr-records:\n  - docs/architecture/decisions/\n", encoding="utf-8"
+    )
+    adrs = root / "docs" / "architecture" / "decisions"
+    _record(adrs / "ADR-022-own.md", "ADR-022", "proposed")
+    project = root / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-own.md", "PRJ-001", "proposed")
+    _record(project / "PRJ-002-on-own.md", "PRJ-002", "accepted", "Per PRJ-001 and ADR-022.\n")
+
+    issues = _resting(root)
+    assert [i for i in issues if i.location in received] == []
+    own = [i.diagnosis for i in issues if i.location == ".pkit/decisions/project/PRJ-002-on-own.md"]
+    assert len(own) == 2
+    assert "'ADR-022'" in own[0]
+    assert "'PRJ-001'" in own[1]
+
+
+def test_rot_reads_a_core_records_project_citation_in_the_methodologys_source(
+    kit_target: Path,
+) -> None:
+    """In the methodology's source the core records are authored, so a `PRJ-` id one
+    cites names the project's own record, and a proposed one is listed."""
+    for marker in ("src/project_kit/__init__.py", ".pkit/lifecycle/ownership.py"):
+        (kit_target / marker).parent.mkdir(parents=True, exist_ok=True)
+        (kit_target / marker).write_bytes((REPO / marker).read_bytes())
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-cli.md", "PRJ-001", "proposed")
+    core = kit_target / ".pkit" / "decisions" / "core"
+    _record(core / "COR-021-dispatch.md", "COR-021", "accepted", "Named per PRJ-001.\n")
+
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/core/COR-021-dispatch.md"]
     assert "'PRJ-001'" in issues[0].diagnosis
 
 

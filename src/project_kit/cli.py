@@ -5894,8 +5894,16 @@ def hooks_list() -> None:
         + "   (bound provider by precedence)"
     ]
     for hook in declared_hooks:
-        winner = refs_mod.resolve_hook(providers, hook)
-        marker = f" -> {winner.tier}:{winner.source}" if winner else " (no provider)"
+        winners = refs_mod.winning_providers(providers, hook)
+        if not winners:
+            marker = " (no provider)"
+        elif len(winners) > 1:
+            sources = ", ".join(p.source for p in winners)
+            marker = cli_render.style(
+                "danger", f" (same-tier collision at {winners[0].tier}: {sources})"
+            )
+        else:
+            marker = f" -> {winners[0].tier}:{winners[0].source}"
         lines.append(f"  {hook}{marker}")
     click.echo("\n".join(lines) + "\n", nl=False)
 
@@ -5903,14 +5911,17 @@ def hooks_list() -> None:
 @hooks.command("resolve")
 @click.argument("hook")
 def hooks_resolve(hook: str) -> None:
-    """Show the currently-bound provider for a hook (by precedence)."""
+    """Show the provider a hook binds to (by precedence); refuse a same-tier collision."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    winner = refs_mod.resolve_hook(providers, hook)
-    if winner is None:
+    winners = refs_mod.winning_providers(providers, hook)
+    if not winners:
         raise click.ClickException(f"no provider declared for hook {hook!r}.")
+    if len(winners) > 1:
+        raise click.ClickException(f"{hook}: {refs_mod.collision_diagnosis(winners)}")
+    winner = winners[0]
     click.echo(f"  {hook} -> {winner.tier}:{winner.source} ({winner.implementation})")
 
 
@@ -5939,12 +5950,10 @@ def hooks_who_provides(hook: str) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    matches = [p for p in providers if p.hook == hook]
+    matches = refs_mod.by_precedence([p for p in providers if p.hook == hook])
     if not matches:
         click.echo(f"  no provider declared for hook {hook!r}.")
         return
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    matches.sort(key=lambda p: order.get(p.tier, 99))
     click.echo(cli_render.style("strong", f"{len(matches)} provider(s) for {hook!r}:"))
     for p in matches:
         click.echo(f"  {p.tier:8} {p.source:30} {p.implementation}")
