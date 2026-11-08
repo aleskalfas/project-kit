@@ -29,7 +29,7 @@ This module is the one home of both answers:
   (`only_in_code`) is read as the merge primitive reads it before it refuses.
 - **The check** (`check_delivery`), part of validation's `rule-sets` member:
   `loaded-rules-undelivered` where the host file is in the checkout and does not
-  hold core's include (ADR-082), where the index is in the checkout and does not
+  hold core's include (ADR-083), where the index is in the checkout and does not
   carry each registered capability's loaded file as it is, or the host file lacks
   the index's line, and a warning for each registered adapter that declares no
   delivery (ADR-076 point 5).
@@ -219,7 +219,7 @@ class DeliveryForm:
     def core_line(self) -> str:
         """The same form's line for core's loaded file: the host's include of core's rules,
         which the check holds the host file to, and after which the merge keeps the index's
-        line (ADR-082 point 6)."""
+        line (ADR-083 point 6)."""
         return self._line_to(str(lrs.BACKBONE_LOADED_FILE))
 
     def _line_to(self, path: str) -> str:
@@ -459,7 +459,7 @@ def check_delivery(target_root: Path) -> Delivery:
       capability that ships a loaded set: its harness's sessions load none of them
     - a host file in the checkout that does not hold core's include, the adapter's
       `line:` read for core's loaded file, fails wherever it is, whether or not the
-      index is there (ADR-082)
+      index is there (ADR-083)
     - adapters whose entries differ fail, and the index is compared with nothing
     - an index that is not in the checkout is a summary line: its sessions load no
       capability's rules, and the next sync renders it
@@ -470,7 +470,7 @@ def check_delivery(target_root: Path) -> Delivery:
       not hold its line (`holds_line`)
     - a host file the checkout does not hold at all is a summary line on every path, as
       the index's absence is: its sessions load no layer's rules through it, core's
-      included, so no layer's delivery is out of step there (ADR-082 point 5)
+      included, so no layer's delivery is out of step there (ADR-083 point 5)
     """
     loaded = loaded_files(target_root)
     capabilities = [f.owner for f in capability_files(loaded)]
@@ -484,7 +484,7 @@ def check_delivery(target_root: Path) -> Delivery:
                 f"adapter {adapter} declares no `{LOADED_RULES_KEY}:`, so it delivers no "
                 f"capability's rules, and its harness's sessions load none of them "
                 f"(capabilities that ship a loaded set: {shipping}; COR-070 point 6). Nor is "
-                f"core's include checked for its harness (ADR-082 point 5).",
+                f"core's include checked for its harness (ADR-083 point 5).",
                 validators.Severity.WARNING,
                 DeliveryKind.UNDECLARED.value,
             )
@@ -551,7 +551,7 @@ def check_delivery(target_root: Path) -> Delivery:
 
 def _absent_hosts(target_root: Path, deliveries: Deliveries) -> tuple[str, ...]:
     """A summary line for each declared host file the checkout does not hold, once each
-    (ADR-082 point 5)."""
+    (ADR-083 point 5)."""
     hosts = dict.fromkeys(form.host for form in deliveries.forms)
     return tuple(
         f"{host} is not in this checkout, so its sessions load no layer's rules through it, "
@@ -593,7 +593,7 @@ def _read_host(target_root: Path, host_file: str) -> tuple[bool, str | None]:
     there and is no file that can be read, such as a folder.
 
     A byte that is not UTF-8 is kept as an escape, never refused, so every line reads as the
-    merge primitive reads it, byte by byte (ADR-082 point 2)."""
+    merge primitive reads it, byte by byte (ADR-083 point 2)."""
     host = target_root / host_file
     if not os.path.lexists(host):
         return False, None
@@ -607,7 +607,7 @@ def _read_host(target_root: Path, host_file: str) -> tuple[bool, str | None]:
 
 def _core_include_findings(target_root: Path, deliveries: Deliveries) -> list[validators.Finding]:
     """A finding for each declared host file in the checkout that does not hold core's
-    include (ADR-082 points 1 and 5), one for each host file and line, naming every adapter
+    include (ADR-083 points 1 and 5), one for each host file and line, naming every adapter
     that declares them. A host file the checkout does not hold is no finding."""
     adapters: dict[tuple[str, str], list[str]] = {}
     for form in deliveries.forms:
@@ -639,7 +639,7 @@ def _host_lacks_core(host: str, adapters: str, line: str, text: str | None) -> s
         where = f"{host} does not hold the line `{line}` that includes core's rules, {core}"
         mend = "The next `pkit sync` inserts it."
     return (
-        f"{where}, so a session may load none of core's rules ({adapters}; ADR-082 point 1). {mend}"
+        f"{where}, so a session may load none of core's rules ({adapters}; ADR-083 point 1). {mend}"
     )
 
 

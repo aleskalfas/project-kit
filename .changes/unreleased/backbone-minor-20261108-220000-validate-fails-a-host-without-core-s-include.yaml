@@ -4,7 +4,7 @@ custom:
   category: Added
 body: >
   `pkit validate` fails a `CLAUDE.md` that does not include core's rules
-  (#2445; ADR-082). Its `rule-sets` member gives an `error`,
+  (#2445; ADR-083). Its `rule-sets` member gives an `error`,
   `loaded-rules-undelivered`, for each registered adapter's host file in the
   checkout that does not hold core's include, `@.pkit/rules/core.md` for Claude
   Code. It takes the line from the adapter's `loaded_rules.line`, and reads the

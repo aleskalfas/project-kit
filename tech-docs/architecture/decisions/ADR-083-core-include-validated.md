@@ -1,5 +1,5 @@
 ---
-id: ADR-082
+id: ADR-083
 title: Validation fails a host file that does not include core's rules
 status: proposed
 date: 2026-11-08

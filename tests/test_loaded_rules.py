@@ -12,7 +12,7 @@ These tests hold:
 - **the check** `loaded-rules-undelivered`: an index out of step, an entry whose file is
   missing, an entry for no registered capability, a host without the line, the index
   absent, an adapter with no key, and entry forms that differ;
-- **core's include** in the host (ADR-082): held, absent, only in code, with the index
+- **core's include** in the host (ADR-083): held, absent, only in code, with the index
   absent, and through `pkit validate`; and where it stands only in code, read as the
   merge primitive reads it;
 - **an import token** in a loaded set, refused outside code;
@@ -503,7 +503,7 @@ def test_validate_s_rule_sets_member_carries_the_delivery(adopter: AdopterRepo) 
     assert [f.label for f in outcome.errors] == [UNDELIVERED]
 
 
-# --- core's include in the host (ADR-082) ------------------------------------------------
+# --- core's include in the host (ADR-083) ------------------------------------------------
 
 
 def core_include_messages(adopter: AdopterRepo) -> list[str]:
@@ -524,7 +524,7 @@ def test_a_host_without_core_s_include_fails_and_the_sync_mends_it(adopter: Adop
     assert finding.message == (
         f"CLAUDE.md does not hold the line `{CORE}` that includes core's rules, "
         ".pkit/rules/core.md, so a session may load none of core's rules (claude-code; "
-        "ADR-082 point 1). The next `pkit sync` inserts it."
+        "ADR-083 point 1). The next `pkit sync` inserts it."
     )
 
 
@@ -573,7 +573,7 @@ def test_a_host_without_either_line_fails_once_for_each(adopter: AdopterRepo) ->
 
 def test_a_host_that_is_not_utf_8_is_read_as_the_merge_reads_it(adopter: AdopterRepo) -> None:
     """A byte that is not UTF-8 hides no line: the merge primitive reads bytes, and finds the
-    include (ADR-082 point 2)."""
+    include (ADR-083 point 2)."""
     (adopter.root / "CLAUDE.md").write_bytes(
         f"# H\xf4te\n\n{CORE}\n{INDEX_LINE}\n".encode("latin-1")
     )
@@ -593,7 +593,7 @@ def test_adapters_that_share_a_host_and_its_line_get_one_finding(adopter: Adopte
     register_adapter(adopter, "other", ADAPTER.format(name="other", key=key))
     adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
     (message,) = core_include_messages(adopter)
-    assert "(claude-code, other; ADR-082 point 1)" in message
+    assert "(claude-code, other; ADR-083 point 1)" in message
 
 
 def test_an_adapter_without_the_key_has_its_host_left_unchecked(adopter: AdopterRepo) -> None:
@@ -601,7 +601,7 @@ def test_an_adapter_without_the_key_has_its_host_left_unchecked(adopter: Adopter
     host_with_line(adopter)
     ((_location, severity, message),) = delivery_findings(adopter)
     assert severity == "warning"
-    assert "Nor is core's include checked for its harness (ADR-082 point 5)." in message
+    assert "Nor is core's include checked for its harness (ADR-083 point 5)." in message
 
 
 def test_validate_fails_a_claude_md_without_core_s_include(adopter: AdopterRepo) -> None:
@@ -638,7 +638,7 @@ def test_only_in_code_reads_as_the_merge_primitive_refuses(
     tmp_path: Path, name: str, text: str, in_code: bool
 ) -> None:
     """The check says the merge inserts nothing exactly where the primitive refuses to
-    (ADR-082 point 2): both read the same text, and agree."""
+    (ADR-083 point 2): both read the same text, and agree."""
     assert lr.only_in_code(f"# Host\n\n{text}", CORE) is in_code, name
     adapter = tmp_path / ".pkit" / "adapters" / "claude-code"
     adapter.mkdir(parents=True)

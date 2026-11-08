@@ -846,7 +846,7 @@
           "$ref": "#/$defs/relative-path"
         },
         "line": {
-          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`. Read for core's loaded file's path in place of the index's, it is core's include, which the host keeps too and validation checks (ADR-082).",
+          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`. Read for core's loaded file's path in place of the index's, it is core's include, which the host keeps too and validation checks (ADR-083).",
           "type": "string",
           "pattern": "^[^\\n]*\\{index\\}[^\\n]*$"
         }
