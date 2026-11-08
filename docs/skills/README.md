@@ -188,7 +188,7 @@ Write the skill as a file in `.pkit/skills/project/`, and run `pkit sync`. No co
 - **Its helpers.** A skill that needs a template or a script beside it becomes a folder, `<name>/<name>.md`, with the helpers beside it ([COR-015](../../.pkit/decisions/core/COR-015-artifact-file-layout.md)).
 
 > [!WARNING]
-> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Only a capability's upgrade, and its install for some skills, asks you first. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Only a capability's install and its upgrade ask you first, each about a skill it brings that has your skill's name. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
 
 Below, you write a skill that cites the document holding your notes' format. Then you sync, check where the skill is deployed, and validate:
 
