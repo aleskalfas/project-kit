@@ -1,0 +1,18 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit visual release` reads a library in full again (#2869). Its script runs
+  as a `uv run --script` program, and its header did not declare `jsonschema`
+  or `referencing`, which the read imports to judge each file against its
+  schema. So the release stopped there with `ModuleNotFoundError`. Its header
+  now pins both, at the versions `uv.lock` holds, and `pkit visual add` and
+  `pkit visual write-code` pin `referencing` beside `jsonschema`. The
+  `library.yaml` of the foundations, the starter and the neutral brand, and the
+  starter's README, no longer say that their version is not released, which
+  their release would have kept for good. Each says that a released version
+  never changes, and that a change is a new version. The starter's README no
+  longer links out of its folder, so none of its links breaks where `pkit
+  visual add` or a release copies it: it cites the records instead, and names
+  the section of the capability's `files.md` in words.
