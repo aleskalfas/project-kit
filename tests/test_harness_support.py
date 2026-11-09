@@ -1,9 +1,10 @@
 """Harness support (COR-047 points 2 to 5; #1853): each adapter's support declaration,
 and the report of what the project's harness leaves unmet.
 
-- every shipped adapter answers every core harness requirement, and its declaration
-  passes its schema; the Claude Code adapter's version bound on the confined run is the
-  runner's tested range;
+- every shipped adapter answers every core harness requirement but those nobody has
+  measured on its harness yet, and its declaration passes its schema; the Claude Code
+  adapter's version bound on the confined run is the runner's tested range, and it answers
+  a session's agent withheld tools from the measurement and leaves a helper unanswered;
 - each requirement resolves to exactly one of satisfied, unsatisfied or indeterminate.
   The pass reads files only, so it confirms nothing: silence, an answer for no version or
   for versions it cannot check, and a `supported` or `at-cost` answer are indeterminate,
@@ -50,6 +51,12 @@ INSIDE = Requirement("inside", "Seen from inside", "in-session")
 HOOKED = Requirement("hooked", "Seen at the hooks", "interposed-runtime")
 
 
+#: The requirements each shipped adapter leaves unanswered until someone measures them
+#: on its harness, so they read as indeterminate (COR-047 point 3): a helper's tools are
+#: visible only inside a session (ADR-085 point 3).
+UNANSWERED: dict[str, tuple[str, ...]] = {"claude-code": ("helper-withheld-tools",)}
+
+
 def _shipped_adapters() -> list[str]:
     return sorted(p.name for p in ADAPTERS.iterdir() if (p / "package.yaml").is_file())
 
@@ -71,7 +78,9 @@ def test_every_shipped_adapter_answers_every_core_requirement(adapter: str) -> N
     assert harness_support.shape_problems(REPO, adapter) == []
     document = harness_support.load_declaration(REPO, adapter)
     assert document is not None, f"{adapter} ships no {harness_support.DECLARATION}"
-    assert list(document["requirements"]) == [r.id for r in known]
+    unanswered = UNANSWERED.get(adapter, ())
+    assert list(document["requirements"]) == [r.id for r in known if r.id not in unanswered]
+    assert set(unanswered) <= {r.id for r in known}
 
 
 def test_the_shipped_schema_pair_validates() -> None:
@@ -116,6 +125,25 @@ def test_that_a_session_loads_the_rules_is_reported_indeterminate() -> None:
     (report,) = harness_support.report(REPO, ["claude-code"])
     (result,) = [r for r in report.results if r.requirement.id == "session-loads-rules"]
     assert result.result == harness_support.INDETERMINATE
+
+
+def test_a_session_agent_withheld_tools_is_answered_and_a_helper_left_indeterminate() -> None:
+    """Claude Code's answer for a session's agent rests on the 2.1.319 measurement, and
+    costs a withheld list of whole built-in tools; nobody has measured a helper, so it
+    reads indeterminate (ADR-085 point 3)."""
+    points = {r.id: r.observation_point for r in harness_support.requirements(REPO)}
+    assert points["session-agent-withheld-tools"] == "out-of-session"
+    assert points["helper-withheld-tools"] == "in-session"
+    document = harness_support.load_declaration(REPO, "claude-code")
+    assert document is not None
+    answer = document["requirements"]["session-agent-withheld-tools"]
+    assert (answer["grade"], answer["harness_versions"]) == ("at-cost", ["2.1.319", "2.1.319"])
+    assert "whole built-in tool" in answer["cost"]
+    assert "helper-withheld-tools" not in document["requirements"]
+    (report,) = harness_support.report(REPO, ["claude-code"])
+    (result,) = [r for r in report.results if r.requirement.id == "helper-withheld-tools"]
+    assert result.result == harness_support.INDETERMINATE
+    assert "no declaration" in result.reason
 
 
 # --- resolution -------------------------------------------------------------------------

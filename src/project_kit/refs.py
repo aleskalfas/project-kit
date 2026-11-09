@@ -12,6 +12,9 @@ queries:
   paths, not placeholders) and cross-agent path overlaps are flagged.
 - Agent policy: every `model:` / `effort:` an agent's front matter declares,
   or the overlay sets for one, is a value the harness accepts (#1047).
+- Tool access: every agent's tool access is one the tree's reader,
+  `.pkit/agents/tool_access.py`, reads, and a reader the command cannot reach is
+  reported; a key outside an agent definition's fields is warned of (ADR-086).
 - Pattern form: every `reads.patterns` entry of an agent is a `<category>`
   placeholder the deploy resolves, or a path; a bare category name is reported
   (#2481).
@@ -51,11 +54,12 @@ from prose, so the warning never fails a command.
 from __future__ import annotations
 
 import fnmatch
+import functools
 import io
 import itertools
 import os
 import re
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Literal
@@ -65,6 +69,7 @@ from ruamel.yaml import YAML
 
 from project_kit import (
     agent_policy,
+    agent_tool_access,
     agents_overlay,
     connections,
     lifecycle_ownership,
@@ -100,6 +105,31 @@ class Declared:
     # (sub-procedure markdown, script, template, reference doc).
     # Validated for existence; not bidirectional-checked against body refs.
     composes: frozenset[str] = field(default_factory=frozenset)
+
+
+#: The fields of an agent's definition (ADR-066 point 3; the agents README,
+#: "Frontmatter schema"): those of `Declared`, the shape agents and skills share
+#: (COR-013 point 2, COR-016), with `reads` holding its three lists, and an
+#: agent's name, description, tool access (COR-013 point 7), model and effort.
+#: The validator warns on any other key of an agent's definition (ADR-086 point
+#: 2), and the agent runner refuses one; a test holds the runner's set to this.
+DEFINITION_FIELDS = frozenset(
+    {
+        "name",
+        "description",
+        "tools",
+        "withheld",
+        "model",
+        "effort",
+        "reads",
+        "owns",
+        "needs",
+        "answers",
+        "gates",
+        "storyboards",
+        "composes",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -144,6 +174,9 @@ class Artifact:
     # The execution-policy keys the front matter sets (`model`, `effort` —
     # #1047), as written. Not references: carried for the value check only.
     policy: dict[str, Any] = field(default_factory=dict)
+    # Every top-level key of the front matter, as written: an agent's key outside
+    # `DEFINITION_FIELDS` is reported (ADR-086 point 2).
+    fields: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -184,8 +217,18 @@ OPERATIONAL_CITATION = "operational-rule-citation"
 # (#2468). The agent deploys as if it were absent, so a warning.
 UNKNOWN_OVERRIDE = "unknown-override"
 
+# An agent's tool access the tree's reader refuses, or a reader the command cannot
+# reach where it has a definition to read (ADR-086 points 2 and 5): the deploy and
+# the runner refuse the agent, so an error.
+TOOL_ACCESS = "tool-access"
+
+# A key of an agent's definition that is none of a definition's fields
+# (`DEFINITION_FIELDS`), such as a harness's own key. The deploy copies it through
+# and the agent deploys, so a warning (ADR-086 point 2).
+UNKNOWN_FIELD = "unknown-field"
+
 #: The kinds of finding that warn and never fail `pkit refs validate`.
-WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE})
+WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE, UNKNOWN_FIELD})
 
 
 @dataclass(frozen=True)
@@ -290,8 +333,9 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
-    `reads.patterns` form + unknown-override checks."""
+    tool-access + definition-field + storyboard + capability-, rule-, address- and
+    point-citation + composes + agent-policy + `reads.patterns` form + unknown-override
+    checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -306,7 +350,10 @@ def check_corpus(
     issues.extend(_kind(_validate_ownership(artifacts, target_root), OWNERSHIP))
     issues.extend(_kind(_validate_hook_closure(artifacts, providers), HOOK_CLOSURE))
     issues.extend(_kind(_validate_same_tier_collisions(providers), COLLISION))
-    issues.extend(_kind(_validate_storyboards(artifacts, target_root), STORYBOARD))
+    holds, access_issues = _tool_accesses(artifacts, target_root)
+    issues.extend(_kind(access_issues, TOOL_ACCESS))
+    issues.extend(_kind(_validate_definition_fields(artifacts, target_root), UNKNOWN_FIELD))
+    issues.extend(_kind(_validate_storyboards(artifacts, target_root, holds), STORYBOARD))
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
@@ -331,14 +378,16 @@ def outcome(target_root: Path) -> Outcome:
     declare — is a **warning**: the artifact deploys and resolves regardless,
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
-    provider answers, two providers at a hook's winning tier, a missing storyboard, a
+    provider answers, two providers at a hook's winning tier, an agent's tool access
+    the reader refuses or a reader the command cannot reach, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
     model or effort the harness does not accept, an agent's `reads.patterns`
     entry that is neither a placeholder nor a path — is an **error**. A citation of
     a point its record does not hold is a **warning** too, read from prose as
-    drift is, and so is an override the deploy ignores, since the agent deploys as
-    if it were absent. `pkit refs validate`, the focused surface, keeps its
-    stricter exit: it fails on any finding but those last two.
+    drift is, and so are an override the deploy ignores and a key outside an agent
+    definition's fields, since the agent deploys regardless. `pkit refs validate`,
+    the focused surface, keeps its stricter exit: it fails on any finding but those
+    warnings.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -1952,6 +2001,7 @@ def _load_one(
         body_refs=body_refs,
         capability=capability,
         policy={key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None},
+        fields=tuple(str(key) for key in fm),
     )
 
 
@@ -2412,13 +2462,78 @@ def _infer_target_root(path: Path) -> Path | None:
     return None
 
 
-def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+def _tool_accesses(
+    artifacts: list[Artifact], target_root: Path
+) -> tuple[dict[Path, Callable[[str], bool]], list[Issue]]:
+    """Whether each agent holds a tool, by its file, as the tree's reader answers it.
+
+    The reader, `.pkit/agents/tool_access.py`, reads each definition's tool access
+    from its text (ADR-086 point 2). Its findings come back beside: a definition it
+    refuses, and, where there is an agent to read, a reader the command cannot
+    reach, as one finding at the reader's path (point 5). An agent whose access
+    could not be read is left out of the answer, so no check reads it.
+    """
+    agents = [art for art in artifacts if art.kind == "agent"]
+    if not agents:
+        return {}, []
+    try:
+        reader = agent_tool_access.load_reader(target_root, ("tool_access", "holds", "Refused"))
+    except agent_tool_access.Unreachable as exc:
+        return {}, [Issue(location=agent_tool_access.READER.as_posix(), diagnosis=f"{exc}.")]
+    holds: dict[Path, Callable[[str], bool]] = {}
+    issues: list[Issue] = []
+    for art in agents:
+        try:
+            access = reader.tool_access(art.path.read_text(encoding="utf-8"))
+        except reader.Refused as exc:
+            issues.append(
+                Issue(
+                    location=_location(art, target_root),
+                    diagnosis=f"its tool access is refused: {exc}. The deploy and the agent "
+                    "runner refuse the agent until it is mended (COR-013 point 7).",
+                )
+            )
+            continue
+        holds[art.path] = functools.partial(reader.holds, access)
+    return holds, issues
+
+
+def _validate_definition_fields(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Each key of an agent's definition that is none of a definition's fields (ADR-086
+    point 2), such as a harness's own key."""
+    issues: list[Issue] = []
+    for art in artifacts:
+        if art.kind != "agent":
+            continue
+        for key in art.fields:
+            if key in DEFINITION_FIELDS:
+                continue
+            issues.append(
+                Issue(
+                    location=_location(art, target_root),
+                    diagnosis=f"holds `{key}`, which is none of an agent definition's fields "
+                    '(the agents README, "Frontmatter schema"). The deploy copies it through '
+                    "unread, a confined run refuses it, and no check reads it as the agent's "
+                    "tool access.",
+                )
+            )
+    return issues
+
+
+def _validate_storyboards(
+    artifacts: list[Artifact],
+    target_root: Path,
+    holds: Mapping[Path, Callable[[str], bool]],
+) -> list[Issue]:
     """Validate the storyboard relationship per COR-016 (two-sided).
 
     Consumer side (today: agents):
     - Each declared storyboard path exists on disk.
     - The consumer body cites the path (load-bearing reference).
-    - `Read` is in `tools` so the runtime can load the file.
+    - The agent's tool access gives it `Read`, so the runtime can load the file:
+      its grant names `Read`, or it names no grant and does not withhold `Read`
+      (ADR-085 point 2). *holds* answers it, from the tree's reader; an agent
+      whose access could not be read is reported by the tool-access check.
 
     Storyboard side (frontmatter `consumers:`), for every storyboard in an
     agent folder — the agents area's or a capability's:
@@ -2441,14 +2556,15 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
             continue
         loc = _location(art, target_root)
         file_text = art.path.read_text(encoding="utf-8")
-        fm, body = _split_frontmatter(file_text)
-        tools = fm.get("tools") or []
-        if isinstance(tools, list) and "Read" not in tools:
+        _, body = _split_frontmatter(file_text)
+        holds_tool = holds.get(art.path)
+        if holds_tool is not None and not holds_tool("Read"):
             issues.append(
                 Issue(
                     location=loc,
-                    diagnosis="declares storyboards but `Read` is not in `tools`. "
-                    "The runtime needs Read to load storyboards at session start.",
+                    diagnosis="declares storyboards but its tool access does not give it "
+                    "`Read`: its grant leaves `Read` out, or its withheld list names it. The "
+                    "runtime needs Read to load storyboards at session start.",
                 )
             )
         for sb_path in sorted(art.declared.storyboards):

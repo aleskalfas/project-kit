@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parents[1]
+READER = REPO / ".pkit" / "agents" / "tool_access.py"
 
 # --- fixtures -------------------------------------------------------
 
@@ -25,6 +27,8 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for area in ("agents", "skills", "decisions"):
         for ns in ("core", "project"):
             (tmp_path / ".pkit" / area / ns).mkdir(parents=True)
+    # The reader of an agent's tool access, as sync copies it (ADR-086 point 1).
+    shutil.copy2(READER, tmp_path / ".pkit" / "agents" / READER.name)
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
@@ -1295,7 +1299,8 @@ Body never mentions the storyboard path.
 
 
 def test_validate_storyboards_flags_missing_read_tool(kit_target: Path) -> None:
-    """Declaring storyboards without Read in tools is a violation — runtime can't load them."""
+    """Declaring storyboards under a grant without Read is a violation — runtime can't load
+    them."""
     storyboard = kit_target / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
     storyboard.parent.mkdir(parents=True)
     storyboard.write_text("# Storyboard\n", encoding="utf-8")
@@ -1316,7 +1321,118 @@ Body cites `.pkit/agents/project/a/storyboard.md`.
     )
 
     issues = refs.validate_corpus(kit_target)
-    assert any("Read" in i.diagnosis and "tools" in i.diagnosis for i in issues)
+    assert any("tool access does not give it `Read`" in i.diagnosis for i in issues)
+
+
+def _storyboarded(root: Path, access: str) -> list[refs.Issue]:
+    """The storyboard findings for agent `a`, which declares and cites its storyboard,
+    with *access* as its tool access."""
+    storyboard = root / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
+    storyboard.parent.mkdir(parents=True)
+    storyboard.write_text(
+        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n",
+        encoding="utf-8",
+    )
+    (storyboard.parent / "a.md").write_text(
+        f"---\nname: a\ndescription: test\n{access}storyboards:\n"
+        "  - .pkit/agents/project/a/storyboard.md\n---\n"
+        "Load `.pkit/agents/project/a/storyboard.md` at session start.\n",
+        encoding="utf-8",
+    )
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.STORYBOARD]
+
+
+@pytest.mark.parametrize(
+    "access",
+    ["", "withheld: [Workflow, SendMessage]\n", "tools: [Read(src/**), Edit]\n", "withheld:\n"],
+)
+def test_the_storyboard_check_passes_an_agent_its_tool_access_gives_read(
+    kit_target: Path, access: str
+) -> None:
+    """No grant gives `Read`, and neither does a withheld list that leaves it out; a
+    grant naming `Read` with an argument holds it (ADR-085 point 2)."""
+    assert _storyboarded(kit_target, access) == []
+
+
+@pytest.mark.parametrize(
+    "access", ["withheld: [Workflow, Read]\n", "tools: []\n", "tools: Edit, Bash\n"]
+)
+def test_the_storyboard_check_fails_an_agent_its_tool_access_denies_read(
+    kit_target: Path, access: str
+) -> None:
+    issues = _storyboarded(kit_target, access)
+    assert [i.diagnosis.split(":")[0] for i in issues] == [
+        "declares storyboards but its tool access does not give it `Read`"
+    ]
+
+
+# --- tool access (ADR-086) --------------------------------------------
+
+
+def test_a_tool_access_the_reader_refuses_is_an_error(kit_target: Path) -> None:
+    _write_agent(
+        kit_target,
+        "project",
+        "both",
+        "---\nname: both\ntools: [Read]\nwithheld: [Workflow]\n---\n# Both\n",
+    )
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert [i.location for i in found] == [".pkit/agents/project/both.md"]
+    assert "its tool access is refused: it names both `tools` and `withheld`" in found[0].diagnosis
+    outcome = refs.outcome(kit_target)
+    assert any(f.severity.value == "error" and "names both" in f.message for f in outcome.findings)
+
+
+def test_a_tool_access_in_a_form_the_reader_does_not_read_is_an_error(kit_target: Path) -> None:
+    _write_agent(kit_target, "project", "a", "---\nname: a\ntools: [Read,\n  Grep]\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert len(found) == 1
+    assert "goes on over more than one line" in found[0].diagnosis
+
+
+def test_a_key_outside_a_definitions_fields_is_a_warning(kit_target: Path) -> None:
+    _write_agent(
+        kit_target,
+        "project",
+        "a",
+        "---\nname: a\ndescription: x\ndisallowedTools: [Workflow]\ncolor: blue\n---\n# A\n",
+    )
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.UNKNOWN_FIELD]
+    assert [i.diagnosis.split(",")[0] for i in found] == [
+        "holds `disallowedTools`",
+        "holds `color`",
+    ]
+    assert refs.UNKNOWN_FIELD in refs.WARNING_KINDS
+    outcome = refs.outcome(kit_target)
+    assert {f.severity.value for f in outcome.findings} == {"warning"}
+
+
+def test_a_skills_own_keys_are_no_definition_fields_finding(kit_target: Path) -> None:
+    _write_skill(kit_target, "project", "s", "---\nname: s\nargument-hint: x\n---\n# S\n")
+    assert not [i for i in refs.validate_corpus(kit_target) if i.kind == refs.UNKNOWN_FIELD]
+
+
+def test_an_unreachable_reader_is_one_error_where_there_is_an_agent_to_read(
+    kit_target: Path,
+) -> None:
+    (kit_target / ".pkit" / "agents" / "tool_access.py").unlink()
+    assert not [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    for name in ("a", "b"):
+        _write_agent(kit_target, "project", name, f"---\nname: {name}\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert [i.location for i in found] == [".pkit/agents/tool_access.py"]
+    assert "holds no reader of an agent's tool access" in found[0].diagnosis
+    assert "run `pkit sync`" in found[0].diagnosis
+
+
+def test_a_reader_without_a_function_the_validator_calls_is_an_error(kit_target: Path) -> None:
+    (kit_target / ".pkit" / "agents" / "tool_access.py").write_text(
+        "def tool_access(text):\n    return None\n", encoding="utf-8"
+    )
+    _write_agent(kit_target, "project", "a", "---\nname: a\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert len(found) == 1
+    assert "has no holds, Refused, which this command calls" in found[0].diagnosis
 
 
 def _make_storyboarded_agent(
