@@ -186,7 +186,7 @@ Below, `grep` keeps the line of the report on whole results:
 
 ```console
 $ pkit harness report | grep delegated-result-complete
-  indeterminate  delegated-result-complete  at-cost  its truth is visible only to an agent inside a session of the harness (in-session); this pass reads only files, so nothing was read to confirm the declared grade · cost: Holds for every helper while the harness's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper's result arrives cut at 4064 characters, the rest reachable only through a messaging tool the delegating agent may not hold. The methodology dispatches its helpers without a name (project-management DEC-029).
+  indeterminate  delegated-result-complete     at-cost  its truth is visible only to an agent inside a session of the harness (in-session); this pass reads only files, so nothing was read to confirm the declared grade · cost: Holds for every helper while the harness's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper's result arrives cut at 4064 characters, the rest reachable only through a messaging tool the delegating agent may not hold. The methodology dispatches its helpers without a name (project-management DEC-029).
 ```
 
 > [!WARNING]
