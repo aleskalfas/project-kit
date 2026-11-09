@@ -38,6 +38,8 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 
 **Not reached:** a Mac set to light, Linux, and the Chromium builds a project may name. A real forced palette on Windows, and Firefox's own. A browser that reports its scheme apart from its forced palette. A file the renderer wrote with a contrast mode, a picture, or a translucent fill over a text.
 
+**Reached since, without the flag:** Chrome for Testing 149 and 154 on a Mac, and Google Chrome 156 on Linux, force the text under the emulation alone, so the first read passes there, as point 4 decides. Chrome 157 does not.
+
 ## Decision
 
 **Where its caller asks, the viewing step draws each page file it reads of the HTML renderer in the browser's two forced palettes too. A second start draws them, under the browser's flag that forces its colours, each forced palette set by emulation. Each shows the key the file holds for the signals a browser sets with it. The forced images lie apart, and the report names each one's forced palette.**
