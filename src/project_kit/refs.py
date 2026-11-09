@@ -15,6 +15,9 @@ queries:
 - Pattern form: every `reads.patterns` entry of an agent is a `<category>`
   placeholder the deploy resolves, or a path; a bare category name is reported
   (#2481).
+- Unknown overrides: every entry under the overlay's `overrides:` names an agent
+  some source ships, and a category its definition references; one the deploy
+  ignores is warned of (#2468).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -176,8 +179,13 @@ POINT_CITATION = "point-citation"
 # point 8): read from prose too, so a warning.
 OPERATIONAL_CITATION = "operational-rule-citation"
 
+# An entry under the overlay's `overrides:` that the deploy ignores: a block for an
+# agent no source ships, or a category the agent's definition does not reference
+# (#2468). The agent deploys as if it were absent, so a warning.
+UNKNOWN_OVERRIDE = "unknown-override"
+
 #: The kinds of finding that warn and never fail `pkit refs validate`.
-WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION})
+WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE})
 
 
 @dataclass(frozen=True)
@@ -283,7 +291,7 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
     storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
-    `reads.patterns` form checks."""
+    `reads.patterns` form + unknown-override checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -307,6 +315,7 @@ def check_corpus(
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
+    issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
     return issues
 
 
@@ -327,8 +336,9 @@ def outcome(target_root: Path) -> Outcome:
     model or effort the harness does not accept, an agent's `reads.patterns`
     entry that is neither a placeholder nor a path — is an **error**. A citation of
     a point its record does not hold is a **warning** too, read from prose as
-    drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
-    it fails on any finding but that last.
+    drift is, and so is an override the deploy ignores, since the agent deploys as
+    if it were absent. `pkit refs validate`, the focused surface, keeps its
+    stricter exit: it fails on any finding but those last two.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -621,6 +631,47 @@ def collision_diagnosis(winners: list[Provider]) -> str:
         f"same-tier collision at tier '{tier}': multiple providers ({sources}), "
         f"so none binds. {remedy} (COR-013 point 4)."
     )
+
+
+@dataclass(frozen=True)
+class UnsatisfiedNeed:
+    """A `needs:` entry whose hook binds no provider (COR-013 point 4, "Unsatisfied
+    needs"): no skill answers the hook and no package provides it, or the providers at
+    its winning tier collide."""
+
+    artifact: Artifact
+    hook: str
+    #: The providers at the hook's winning tier where two or more collide; empty where no
+    #: provider declares the hook.
+    colliding: tuple[Provider, ...] = ()
+
+    def describe(self, target_root: Path) -> str:
+        """The need as a deploy warns of it: the agent or skill, its file, the hook, and
+        why the hook binds no provider."""
+        path = self.artifact.path
+        where = path.relative_to(target_root) if target_root in path.parents else path
+        need = f"{self.artifact.kind} {self.artifact.name!r} ({where}) needs hook {self.hook!r}"
+        if self.colliding:
+            return f"{need}, which binds no provider: {collision_diagnosis(list(self.colliding))}"
+        return f"{need}, which no skill answers and no package provides (COR-013 point 4)."
+
+
+def unsatisfied_needs(
+    artifacts: list[Artifact], providers: list[Provider]
+) -> list[UnsatisfiedNeed]:
+    """Each `needs:` entry of the artefacts whose hook binds no provider (`resolve_hook`),
+    in the artefacts' order and each one's hooks sorted.
+
+    One check for two readers: `pkit validate` and `pkit refs validate` fail the needs no
+    provider declares (`_validate_hook_closure`), and every deploy warns of them all
+    (`install.report_unsatisfied_needs`).
+    """
+    needs: list[UnsatisfiedNeed] = []
+    for art in artifacts:
+        for hook in sorted(art.declared.needs):
+            if resolve_hook(providers, hook) is None:
+                needs.append(UnsatisfiedNeed(art, hook, tuple(winning_providers(providers, hook))))
+    return needs
 
 
 #: The version of the document `pkit refs lookup --json` prints.
@@ -2321,28 +2372,30 @@ def _via(category: str | None) -> str:
 
 
 def _validate_hook_closure(artifacts: list[Artifact], providers: list[Provider]) -> list[Issue]:
-    """Every `needs:` hook must be answerable by at least one provider."""
+    """Every `needs:` hook must be answerable by at least one provider (`unsatisfied_needs`).
+    A need whose hook has providers that collide is left to the collision's own finding
+    (`_validate_same_tier_collisions`)."""
     issues: list[Issue] = []
-    provided_hooks = {p.hook for p in providers}
-    for art in artifacts:
-        for hook in art.declared.needs:
-            if hook not in provided_hooks:
-                # Use path-based location so capability artifacts surface
-                # under `.pkit/capabilities/<cap>/...`, not under the
-                # synthetic area path.
-                target_root = _infer_target_root(art.path)
-                loc = (
-                    str(art.path.relative_to(target_root))
-                    if target_root is not None and target_root in art.path.parents
-                    else str(art.path)
-                )
-                issues.append(
-                    Issue(
-                        location=loc,
-                        diagnosis=f"declares need for hook {hook!r} but no provider exists "
-                        f"(skill `answers:` or package.yaml `provides:`).",
-                    )
-                )
+    for need in unsatisfied_needs(artifacts, providers):
+        if need.colliding:
+            continue
+        art = need.artifact
+        # Use path-based location so capability artifacts surface
+        # under `.pkit/capabilities/<cap>/...`, not under the
+        # synthetic area path.
+        target_root = _infer_target_root(art.path)
+        loc = (
+            str(art.path.relative_to(target_root))
+            if target_root is not None and target_root in art.path.parents
+            else str(art.path)
+        )
+        issues.append(
+            Issue(
+                location=loc,
+                diagnosis=f"declares need for hook {need.hook!r} but no provider exists "
+                f"(skill `answers:` or package.yaml `provides:`).",
+            )
+        )
     return issues
 
 
@@ -3145,6 +3198,25 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                     )
                 )
     return issues
+
+
+def _validate_unknown_overrides(target_root: Path) -> list[Issue]:
+    """Each entry under the overlay's `overrides:` that the deploy ignores, at
+    `overlay.yaml` and naming its key (#2468).
+
+    A block for an agent no source ships, or a category its definition does not
+    reference, changes no deployed agent, so a typo in either would pass with no
+    sign (`agents_overlay.unknown_overrides`). The agent deploys as if the entry
+    were absent, so a warning.
+    """
+    return [
+        Issue(
+            location=str(agents_overlay.OVERLAY_PATH),
+            diagnosis=f"`{unknown.key}` is ignored: {unknown.reason}. "
+            f"Correct the name, or remove the entry.",
+        )
+        for unknown in agents_overlay.unknown_overrides(target_root)
+    ]
 
 
 def _is_pattern_path(entry: str) -> bool:

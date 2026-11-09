@@ -11,6 +11,7 @@ from click.testing import CliRunner
 
 from project_kit import capabilities as caps
 from project_kit import install as install_mod
+from project_kit.agents import agent_locations
 from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
@@ -1502,6 +1503,86 @@ def test_find_references_empty_when_no_refs(kit_target: Path, kit_source: Path) 
     assert refs == []
 
 
+def _deploy_mark(root: Path) -> str:
+    """The mark line the Claude Code adapter's agents deploy writes, read from its script."""
+    script = root / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
+    return next(
+        line.removeprefix('MARKER="').removesuffix('"')
+        for line in script.read_text(encoding="utf-8").splitlines()
+        if line.startswith('MARKER="')
+    )
+
+
+def _deploy_agents(root: Path) -> dict[str, Path]:
+    """Write a copy of each agent to `.claude/agents/`, as `deploy-agents.sh` writes it,
+    and return each copy by its agent's name.
+
+    Each name is taken from the first folder that ships it, in the deploy's order,
+    and the copy is its source with the deploy's mark after the opening line. The
+    overlay's placeholders stay unresolved: what the reference scan reads in a copy
+    comes from its source.
+    """
+    mark = _deploy_mark(root)
+    folder = root / ".claude" / "agents"
+    folder.mkdir(parents=True, exist_ok=True)
+    copies: dict[str, Path] = {}
+    for _namespace, agents_dir in agent_locations(root):
+        for name, source in caps.artefact_names(agents_dir).items():
+            if name in copies:
+                continue
+            first, rest = source.read_text(encoding="utf-8").split("\n", 1)
+            copy = folder / f"{name}.md"
+            copy.write_text(f"{first}\n{mark}\n{rest}", encoding="utf-8")
+            copies[name] = copy
+    return copies
+
+
+_CITING_AGENT = (
+    "---\nname: ev-agent\ndescription: t\n---\n# ev-agent\n\n"
+    "Per [evidence:DEC-001-x], read .pkit/capabilities/evidence/agents/ev-agent.md.\n"
+)
+
+
+def test_find_references_skips_the_deployed_copies_of_its_agents(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A copy the deploy wrote of the capability's agent is not the project's file (#2366)."""
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("ev-agent",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    agent = kit_target / ".pkit" / "capabilities" / "evidence" / "agents" / "ev-agent.md"
+    agent.write_text(_CITING_AGENT, encoding="utf-8")
+
+    copy = _deploy_agents(kit_target)["ev-agent"]
+
+    assert "[evidence:DEC-001-x]" in copy.read_text(encoding="utf-8")
+    assert caps.find_references(kit_target, "evidence") == []
+
+
+def test_find_references_counts_the_projects_own_agent_files(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A file of the project's that cites the capability still counts: an agent file
+    without the deploy's mark, which the deploy leaves alone, and a definition under
+    `.pkit/agents/project/`, even one copied there with the mark."""
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("ev-agent",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    unmarked = kit_target / ".claude" / "agents" / "ev-agent.md"
+    unmarked.parent.mkdir(parents=True, exist_ok=True)
+    unmarked.write_text(_CITING_AGENT, encoding="utf-8")
+    first, rest = _CITING_AGENT.split("\n", 1)
+    definition = kit_target / ".pkit" / "agents" / "project" / "ev-agent.md"
+    definition.parent.mkdir(parents=True, exist_ok=True)
+    definition.write_text(f"{first}\n{_deploy_mark(kit_target)}\n{rest}", encoding="utf-8")
+
+    refs = caps.find_references(kit_target, "evidence")
+
+    assert sorted({path for path, _ in refs}) == sorted({unmarked, definition})
+
+
 # --- CLI wiring ------------------------------------------------------
 
 
@@ -1602,11 +1683,112 @@ def test_cli_uninstall_clean_proceeds(kit_target: Path, kit_source: Path, monkey
     assert "Removed capability 'evidence'" in result.output
 
 
+@pytest.fixture
+def deployed_engineering(make_adopter_repo: MakeAdopterRepo, monkeypatch) -> Path:
+    """A fresh project with project-management and software-engineering installed and
+    every agent deployed, software-engineering's own citing its records (#2366)."""
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    root = make_adopter_repo(capabilities=("project-management", "software-engineering")).root
+    copies = _deploy_agents(root)
+    assert "[software-engineering:" in copies["docs-reviewer"].read_text(encoding="utf-8")
+    return root
+
+
+def test_cli_uninstall_is_not_held_back_by_the_capability_s_deployed_agents(
+    deployed_engineering: Path,
+) -> None:
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", "software-engineering"])
+
+    assert result.exit_code == 0, result.output
+    assert "Removed capability 'software-engineering'" in result.output
+    assert not caps.is_installed(deployed_engineering, "software-engineering")
+
+
+def test_cli_uninstall_still_refuses_a_reference_from_the_project_s_file(
+    deployed_engineering: Path,
+) -> None:
+    notes = deployed_engineering / "docs" / "notes.md"
+    notes.parent.mkdir()
+    notes.write_text(
+        "See [software-engineering:DEC-001-producer-agent-and-conventions-seam].\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", "software-engineering"])
+
+    assert result.exit_code != 0
+    assert "Refusing to uninstall 'software-engineering': 1 reference(s) found:" in result.output
+    assert "docs/notes.md: [software-engineering:DEC-001-" in result.output
+    assert caps.is_installed(deployed_engineering, "software-engineering")
+
+
 def test_cli_uninstall_not_installed_errors(kit_target: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "uninstall", "nothing"])
     assert result.exit_code != 0
     assert "not installed" in result.output
+
+
+# --- the runtime-ignore render on install and uninstall (ADR-009 rule 7, #2367) ---
+
+#: The runtime-ignore line project-management declares, as `.pkit/.gitignore` renders it.
+_PM_IGNORE_LINE = "capabilities/project-management/project/instance/*.json"
+
+
+@pytest.fixture
+def committed_target(make_adopter_repo: MakeAdopterRepo, monkeypatch) -> GitRepo:
+    """A project with the backbone installed and committed, as after `pkit init`.
+    Provisioning is stubbed out, so neither an install nor a sync here asks uv
+    to resolve a query command."""
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    monkeypatch.setattr(install_mod, "provision_query_commands", lambda *_a, **_k: None)
+    repo = make_adopter_repo()
+    repo.commit("adopter: pkit init")
+    return repo
+
+
+def _ignore_lines(root: Path) -> list[str]:
+    return (root / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def _what_sync_changes(repo: GitRepo) -> str:
+    """Run `pkit sync` and return what it changed, as `git status --porcelain` lists it."""
+    result = CliRunner().invoke(main, ["sync"])
+    assert result.exit_code == 0, result.output
+    return repo.git("status", "--porcelain").stdout
+
+
+def test_cli_install_writes_the_ignore_lines_so_the_next_sync_changes_nothing(
+    committed_target: GitRepo,
+) -> None:
+    """The install renders `.pkit/.gitignore` with the capability's lines, as sync
+    does, so a sync after the committed install leaves git status clean."""
+    result = CliRunner().invoke(main, ["capabilities", "install", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert "rendered      .pkit/.gitignore" in result.output
+    assert _PM_IGNORE_LINE in _ignore_lines(committed_target.root)
+    committed_target.commit("adopter: install project-management")
+    assert _what_sync_changes(committed_target) == ""
+
+
+def test_cli_uninstall_drops_the_ignore_lines_so_the_next_sync_changes_nothing(
+    committed_target: GitRepo,
+) -> None:
+    """The uninstall renders `.pkit/.gitignore` without the capability's lines, so
+    a sync after the committed uninstall leaves git status clean."""
+    runner = CliRunner()
+    assert runner.invoke(main, ["capabilities", "install", "project-management"]).exit_code == 0
+    _what_sync_changes(committed_target)
+    committed_target.commit("adopter: install project-management")
+    assert _PM_IGNORE_LINE in _ignore_lines(committed_target.root)
+
+    result = runner.invoke(main, ["capabilities", "uninstall", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert _PM_IGNORE_LINE not in _ignore_lines(committed_target.root)
+    committed_target.commit("adopter: uninstall project-management")
+    assert _what_sync_changes(committed_target) == ""
 
 
 # --- pkit capabilities upgrade (per COR-017) ---------------------------
