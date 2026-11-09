@@ -54,9 +54,9 @@ pkit:
         - .pkit/decisions/README.md#two-further-id-spaces
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
         - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
-        - .pkit/lifecycle/README.md#a-new-collision
-        - .pkit/lifecycle/README.md#a-data-points-question
-        - .pkit/lifecycle/README.md#what-ships-a-migration
+        - .pkit/lifecycle/upgrade-flow.md#a-new-collision
+        - .pkit/lifecycle/manifest.md#a-data-points-question
+        - .pkit/lifecycle/migrations.md#what-ships-a-migration
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#init
@@ -148,7 +148,7 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 ```
 
 > [!WARNING]
-> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command behind an allowed wrapper, such as `find . -exec rm -rf {} +`, still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command given to an allowed `ssh` still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
 
 ### No change leaves a document stale without saying so
 
@@ -367,7 +367,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
      - the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant))
      - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
 
-     A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+     A name collision, or a capability's question, waits for your answer ([the lifecycle reference](.pkit/lifecycle/upgrade-flow.md#a-new-collision), and [on questions](.pkit/lifecycle/manifest.md#a-data-points-question)).
 4. **[Versioned, upgrades in one command](#the-methodology-upgrades-like-a-dependency).** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached. The project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
@@ -395,7 +395,7 @@ $ pkit capabilities install project-management | grep -e "^  Installed" -e "crea
   created    .claude/agents/project-manager.md
 ```
 
-Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle reference, on questions](.pkit/lifecycle/manifest.md#a-data-points-question)).
 
 **The tool enforces the process, so you need not remember it: `create-issue` refuses to file an issue before `bootstrap` has run.**
 

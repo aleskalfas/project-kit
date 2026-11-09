@@ -59,7 +59,7 @@ Side-effects:
     changes since, exactly as for any later push; the native reviews are
     skipped, since GitHub would attach them to a head the reviewers never
     saw. When the head cannot be read the verdicts name none and are judged
-    by the latest commit's time. Each reviewer's lines print together, in
+    by when the PR's head arrived. Each reviewer's lines print together, in
     the order of the required set; one reviewer that fails or times out does
     not stop the others.
   - Skips a required reviewer whose verdict is still fresh (#1178): its
@@ -1103,13 +1103,13 @@ def _report_head_check(name: str, reviewed: str, now: str) -> bool:
 
     A verdict is posted against the head it reviewed either way (#1179) — the
     freshness rule judges what changed since. When the head was never read the
-    verdict names none, is judged by the latest commit's time, and nothing is
-    claimed about a head, so the check passes.
+    verdict names none, is judged by when the PR's head arrived, and nothing
+    is claimed about a head, so the check passes.
     """
     if not reviewed:
         print(
             f"  [{name}] the PR's head could not be read — the verdict names no "
-            "reviewed head and is judged by the latest commit's time."
+            "reviewed head and is judged by when the PR's head arrived."
         )
         return True
     if now == reviewed:

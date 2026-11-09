@@ -59,9 +59,11 @@ DW_PATH = SCRIPTS_DIR / "done-work.py"
 RPR_PATH = SCRIPTS_DIR / "review-pr.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
-# A commit timestamp every verdict comment post-dates (the gate's freshness
-# anchor); a fresh timestamp strictly after it for the verdicts.
+# When the PR's head arrived on the host, which every verdict comment
+# post-dates (the gate's anchor for a verdict naming no head); a fresh
+# timestamp strictly after it for the verdicts.
 _COMMIT_TS = "2026-06-01T00:00:00Z"
+_HEAD = "f" * 40
 _FRESH_TS = "2026-06-02T00:00:00Z"
 
 
@@ -394,7 +396,12 @@ def _run_gate(
     def fake_gh_run(args, config, **kwargs):
         if "closingIssuesReferences" in " ".join(args):
             return _closing_refs_response(args, labels, refs_rc)
-        # gh pr view --json author,comments,commits
+        if args[:2] == ["gh", "api"] and "/activity" in " ".join(args):
+            moved = [{"after": _HEAD, "timestamp": _COMMIT_TS}]
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=json.dumps(moved), stderr=""
+            )
+        # gh pr view --json author,comments,commits,headRefOid,...
         return subprocess.CompletedProcess(
             args=args,
             returncode=0,
@@ -403,6 +410,9 @@ def _run_gate(
                     "author": {"login": "author"},
                     "comments": comments,
                     "commits": [{"committedDate": _COMMIT_TS}],
+                    "headRefOid": _HEAD,
+                    "headRefName": "feat/99-x",
+                    "headRepository": {"nameWithOwner": "owner/repo"},
                 }
             ),
             stderr="",

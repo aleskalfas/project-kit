@@ -371,6 +371,78 @@ def test_sync_invokes_installed_adapter_primitives(
     assert "deploy-agents.sh" in calls
 
 
+# --- hook needs, which every deploy warns of (COR-013 point 4, #2467) ---
+
+_CONSUMER_AGENT = (
+    "---\nname: consumer\ndescription: Test.\nneeds: [workflow.do-thing]\n---\n\n"
+    "# Consumer\n\nCalls `workflow.do-thing`.\n"
+)
+
+
+def _need_warnings(output: str) -> list[str]:
+    return [line for line in output.splitlines() if "needs hook" in line]
+
+
+def test_sync_warns_of_a_hook_need_no_provider_answers(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The deploy names the agent and the hook, and the sync still completes."""
+    agent = installed_target / ".pkit" / "agents" / "project" / "consumer.md"
+    agent.write_text(_CONSUMER_AGENT, encoding="utf-8")
+    capsys.readouterr()
+
+    sync.run_sync(installed_target, dry_run=True)
+    assert _need_warnings(capsys.readouterr().out) == [], "a dry run deploys nothing"
+
+    sync.run_sync(installed_target)
+
+    output = capsys.readouterr().out
+    assert _need_warnings(output) == [
+        "  warning      agent 'consumer' (.pkit/agents/project/consumer.md) needs hook "
+        "'workflow.do-thing', which no skill answers and no package provides (COR-013 point 4)."
+    ]
+    assert "Sync complete." in output
+
+
+def test_sync_says_nothing_of_a_hook_need_a_skill_answers(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (installed_target / ".pkit" / "agents" / "project" / "consumer.md").write_text(
+        _CONSUMER_AGENT, encoding="utf-8"
+    )
+    skills = installed_target / ".pkit" / "skills" / "project"
+    skills.mkdir(parents=True, exist_ok=True)
+    (skills / "doer.md").write_text(
+        "---\nname: doer\ndescription: Test.\nanswers: [workflow.do-thing]\n---\n\n"
+        "# Doer\n\nAnswers `workflow.do-thing`.\n",
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    sync.run_sync(installed_target)
+
+    output = capsys.readouterr().out
+    assert _need_warnings(output) == []
+    assert "Sync complete." in output
+
+
+def test_the_hook_need_report_fails_nothing_on_a_front_matter_it_cannot_read(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    skills = installed_target / ".pkit" / "skills" / "project"
+    skills.mkdir(parents=True, exist_ok=True)
+    (skills / "broken.md").write_text("---\nname: [broken\n---\n\n# Broken\n", encoding="utf-8")
+    ctx = install.InstallContext(
+        target_root=installed_target, source_kit=install.find_source_kit(), dry_run=False
+    )
+
+    install.report_unsatisfied_needs(ctx)
+
+    assert capsys.readouterr().out.startswith(
+        "  warning      hook needs not checked: a front matter or package.yaml could not be read ("
+    )
+
+
 # Each seed path a project deleted (ADR-065 point 11), relative to the project root.
 _SEED_PATHS = (
     ".pkit/agents/project",

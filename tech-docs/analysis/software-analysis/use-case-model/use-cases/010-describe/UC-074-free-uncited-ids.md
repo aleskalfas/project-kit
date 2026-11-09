@@ -13,11 +13,14 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/software-analysis/scripts/_lib/numbering.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/numbers.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/stamp.py
         - .pkit/capabilities/software-analysis/scripts/check-numbers.py
         - .pkit/capabilities/software-analysis/schemas/config.schema.json
         - .pkit/capabilities/software-analysis/skills/analysis-author/analysis-author.md
       record:
         - software-analysis:DEC-001#3
+        - software-analysis:DEC-002#2
         - COR-017
         - COR-031
         - COR-054#3

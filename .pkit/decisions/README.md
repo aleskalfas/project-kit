@@ -24,8 +24,8 @@ pkit:
       artefact:
         - RS-OPS-019
         - RS-LDOC-003
-        - .pkit/lifecycle/README.md#the-steps-of-a-transition
-        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#the-steps-of-a-transition
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
         - .pkit/lifecycle/README.md#what-sync-writes
 ---
 
@@ -61,7 +61,7 @@ A record's folder and prefix say who owns it, and each namespace numbers its rec
 | Folder | Prefix | Owner | How it changes |
 |---|---|---|---|
 | `core/` | **COR** | core | Refreshed by every sync, and never edited in a project |
-| `project/` | **PRJ** | the project | Written by the project alone. The folder is a [seed path](../lifecycle/README.md#seed-paths), created where it is missing |
+| `project/` | **PRJ** | the project | Written by the project alone. The folder is a [seed path](../lifecycle/upgrade-flow.md#seed-paths), created where it is missing |
 
 - **Numbering:** `COR-001` and the project's first record are separate decisions about separate things, numbered apart, and neither blocks the other.
 - **A prefix names its side.** An id such as `COR-NNN` or `PRJ-NNN` says whether core or the project holds it, with no folder named.
@@ -122,7 +122,7 @@ Every file has exactly one owner, core or the project, and the two never share a
 
 - **Core's files** are refreshed by every sync. A project never edits one, since the next sync overwrites the edit.
 - **The project's files:** sync reads from them what it needs, such as the versions the project records. It writes into one only through merge delivery's tier that asks nothing, which adds core's entries and never removes one the project wrote. What sync writes, and what it never writes, is the lifecycle reference's ([its "What sync writes"](../lifecycle/README.md#what-sync-writes)).
-- **A version transition,** such as an upgrade, creates each seed path that is missing, never over one that exists ([the lifecycle reference, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside a transition ([the lifecycle reference, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)). A migration changes a project's file only within what the record that owns the file allows ([COR-059](core/COR-059-version-transition.md) point 3).
+- **A version transition,** such as an upgrade, creates each seed path that is missing, never over one that exists ([the lifecycle reference, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)). Every migration runs inside a transition ([the lifecycle reference, "The steps of a transition"](../lifecycle/upgrade-flow.md#the-steps-of-a-transition)). A migration changes a project's file only within what the record that owns the file allows ([COR-059](core/COR-059-version-transition.md) point 3).
 - **Extending core's content:** the same `core/` and `project/` pattern governs other areas, such as `.pkit/agents/` and `.pkit/rules/`. To extend core's content, add sibling files in the matching `project/` folder, and never edit a core file.
 - **A file at a fixed path** that the project extends, such as `CLAUDE.md`, stays the project's. Core ships its content at a separate path, and merge delivery adds what is missing into the project's file in place. It never removes or rewrites what the project wrote ([COR-002](core/COR-002-merge-delivery.md)).
 - **Note:** when each file is first written and when it is updated is COR-001's.

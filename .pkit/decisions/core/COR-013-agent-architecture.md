@@ -22,13 +22,13 @@ Each concern admits multiple viable shapes. Settling them piecemeal would force 
 
 ## Decision
 
-The methodology's agent layer is structured by six interlocking rules. The agents area is materialised as a first-class area per COR-011; agents declare references and operations in a unified frontmatter shape; a reference graph spans agents and skills with bidirectional consistency; a hook pattern decouples agents from concrete implementations; an overlay mechanism lets adopter-specific paths populate core-shipped agent templates at deploy time; and a small set of universal agents ships in core under the universal-applicability test.
+The methodology's agent layer is structured by seven interlocking rules. The agents area is materialised as a first-class area per COR-011; agents declare references and operations in a unified frontmatter shape; an agent declares its tool access as tools granted, tools withheld, or neither; a reference graph spans agents and skills with bidirectional consistency; a hook pattern decouples agents from concrete implementations; an overlay mechanism lets adopter-specific paths populate core-shipped agent templates at deploy time; and a small set of universal agents ships in core under the universal-applicability test.
 
 ### 1. The agents area
 
 Agents live in a first-class area at `.pkit/agents/`, in the universal variant of COR-003 (`core/` for core-shipped content, `project/` for adopter additions). The area's README is the spec. Each agent is a self-contained directory carrying a single canonical file describing the role; the file's frontmatter holds machine-readable metadata, and the body is the role description and instructions.
 
-Agent file content is harness-neutral per COR-006. Translation to a specific harness's expected deployment paths is the responsibility of that harness's adapter (per COR-005).
+Agent file content is harness-neutral per COR-006, save the tool names of an agent's tool access (point 7). Translation to a specific harness's expected deployment paths is the responsibility of that harness's adapter (per COR-005).
 
 ### 2. Unified frontmatter shape (agents and skills)
 
@@ -51,6 +51,14 @@ gates:                          # records whose accepted-status is load-bearing 
 - `gates` carries the acceptance-gate semantic from `.pkit/decisions/README.md` for skills; an entry there asserts the skill refuses to run unless the named records are `accepted`.
 
 Fields that don't apply to a particular artifact are omitted. The body of the artifact is the role description (for agents) or the procedure (for skills); it cites the same references with a strict convention so the graph walker can extract them.
+
+### 7. An agent's tool access
+
+An agent's frontmatter declares its tool access in one of three forms. `tools` names the tools it is granted, and it has only those. `withheld` names the tools it is withheld, and it has every other tool the harness would give it. With neither, it has what the harness gives it: as a whole session's agent, the session's tools; as a helper, those the session gives a helper. A definition never names both, since the two would say the same thing twice and could disagree.
+
+Where the harness runs an agent as a whole session's agent, the session's own agent has only the tools its access gives it, so a grant there narrows what the session's agent can use.
+
+The tool names are the harness's own, and the adapter writes the tool access in its harness's form (point 1). A grant fails closed: a tool it does not name is not given. A withheld list fails open: a tool it does not name is given, a tool a later harness release adds among them. So an adapter refuses to deploy a definition that withholds tools where its harness cannot withhold them, or where it cannot translate the names, rather than deploy it with tools it should lack.
 
 ### 3. Reference graph and bidirectional consistency
 

@@ -12,15 +12,21 @@ These tests hold:
 - **the check** `loaded-rules-undelivered`: an index out of step, an entry whose file is
   missing, an entry for no registered capability, a host without the line, the index
   absent, an adapter with no key, and entry forms that differ;
+- **core's include** in the host (ADR-083): held, absent, only in code, with the index
+  absent, and through `pkit validate`; and where it stands only in code, read as the
+  merge primitive reads it;
 - **an import token** in a loaded set, refused outside code;
 - **the citation form** `<capability>:RS-<SET>-NNN`;
-- **what a step newly binds**, for core's set and a capability's;
+- **what a step newly binds**, for core's set and a capability's, and an upgrade from
+  a version with no core set, whose plain file tells nothing of what bound before;
 - **`pkit status`**, which reports the index.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import click
@@ -31,7 +37,7 @@ from project_kit import capabilities as caps
 from project_kit import install as install_mod
 from project_kit import loaded_rule_sets as lrs
 from project_kit import loaded_rules as lr
-from project_kit import refs, sync
+from project_kit import refs, sync, upgrade
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from project_kit.manifest import (
@@ -46,6 +52,9 @@ REPO = Path(__file__).resolve().parents[1]
 Kind = rs.RuleSetFindingKind
 INDEX = ".pkit/rules/capabilities.md"
 UNDELIVERED = lr.DeliveryKind.UNDELIVERED.value
+CORE = "@.pkit/rules/core.md"
+INDEX_LINE = "@.pkit/rules/capabilities.md"
+MERGE_SCRIPT = REPO / ".pkit" / "adapters" / "claude-code" / "merge-claude-md.sh"
 
 PACKAGE = """schema_version: 1
 component:
@@ -252,6 +261,25 @@ def test_loaded_gives_a_project_s_own_loaded_set(adopter: AdopterRepo) -> None:
     assert (project.path, project.rule_set) == (".pkit/rules/project.md", "OWN")
 
 
+def test_loaded_lists_the_project_s_plain_file_when_it_is_absent(adopter: AdopterRepo) -> None:
+    """A fresh project's instruction file includes `project.md` before it exists, so the
+    project layer is listed, and said to be missing (#2370)."""
+    (adopter.root / ".pkit/rules/project.md").unlink(missing_ok=True)
+    runner = CliRunner()
+    as_json = runner.invoke(main, ["rule-sets", "loaded", "--json"])
+    assert as_json.exit_code == 0, as_json.output
+    (project,) = [e for e in json.loads(as_json.output)["loaded"] if e["layer"] == "project"]
+    assert (project["path"], project["rule_set"], project["present"]) == (
+        ".pkit/rules/project.md",
+        None,
+        False,
+    )
+    human = runner.invoke(main, ["rule-sets", "loaded"])
+    (line,) = [row for row in human.output.splitlines() if ".pkit/rules/project.md" in row]
+    assert line.split()[:3] == ["project", "project", ".pkit/rules/project.md"]
+    assert line.endswith("a plain file, missing")
+
+
 def test_an_unregistered_capability_s_set_is_left_out(adopter: AdopterRepo) -> None:
     folder = incubated(adopter, "alpha", loaded_set("alpha", "ALPHA"))
     lrs.generate(adopter.root)
@@ -260,9 +288,7 @@ def test_an_unregistered_capability_s_set_is_left_out(adopter: AdopterRepo) -> N
     manifest.components = [c for c in manifest.components if c.name != "alpha"]
     write_backbone_manifest(adopter.root, manifest)
     assert (folder / "rules.md").is_file()
-    assert [f.owner for f in lr.loaded_files(adopter.root)] == ["backbone"] + (
-        ["project"] if (adopter.root / ".pkit/rules/project.md").is_file() else []
-    )
+    assert [f.owner for f in lr.loaded_files(adopter.root)] == ["backbone", "project"]
 
 
 def test_the_command_prints_the_list_the_json_and_the_index(adopter: AdopterRepo) -> None:
@@ -437,7 +463,7 @@ def test_a_host_whose_core_include_sits_in_code_says_the_project_mends_it(
     adopter: AdopterRepo,
 ) -> None:
     adopter.write({"CLAUDE.md": "# Host\n\n```\n@.pkit/rules/core.md\n```\n"})
-    ((_location, _severity, message),) = delivery_findings(adopter)
+    (message,) = [m for _l, _s, m in delivery_findings(adopter) if f"reaches {INDEX}" in m]
     assert "move the include out of the code" in message
 
 
@@ -449,7 +475,7 @@ def test_a_host_the_checkout_does_not_hold_is_a_summary_line(adopter: AdopterRep
 
 def test_an_index_the_checkout_does_not_hold_is_a_summary_line(adopter: AdopterRepo) -> None:
     (adopter.root / INDEX).unlink()
-    adopter.write({"CLAUDE.md": "# Host\n"})
+    adopter.write({"CLAUDE.md": f"# Host\n\n{CORE}\n"})
     delivery = lr.check_delivery(adopter.root)
     assert delivery.findings == ()
     assert delivery.summary[0].startswith("no capabilities' rules index here")
@@ -493,6 +519,154 @@ def test_validate_s_rule_sets_member_carries_the_delivery(adopter: AdopterRepo) 
     outcome = rs.outcome(adopter.root)
     assert any(line.startswith("capabilities' rules index") for line in outcome.summary)
     assert [f.label for f in outcome.errors] == [UNDELIVERED]
+
+
+# --- core's include in the host (ADR-083) ------------------------------------------------
+
+
+def core_include_messages(adopter: AdopterRepo) -> list[str]:
+    """The messages of the findings on core's include, apart from the index's line."""
+    return [m for _l, _s, m in delivery_findings(adopter) if "that includes core's rules" in m]
+
+
+def test_a_host_that_includes_core_s_rules_passes(adopter: AdopterRepo) -> None:
+    host_with_line(adopter)
+    assert delivery_findings(adopter) == []
+
+
+def test_a_host_without_core_s_include_fails_and_the_sync_mends_it(adopter: AdopterRepo) -> None:
+    adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
+    (finding,) = lr.check_delivery(adopter.root).findings
+    assert (finding.location, finding.severity.value) == ("CLAUDE.md", "error")
+    assert finding.label == UNDELIVERED
+    assert finding.message == (
+        f"CLAUDE.md does not hold the line `{CORE}` that includes core's rules, "
+        ".pkit/rules/core.md, so a session may load none of core's rules (claude-code; "
+        "ADR-083 point 1). The next `pkit sync` inserts it."
+    )
+
+
+@pytest.mark.parametrize(
+    "written",
+    [f"```\n{CORE}\n```\n", f"~~~md\n{CORE}\n~~~\n", f"`{CORE}`\n"],
+    ids=["a backtick fence", "a tilde fence", "a code span"],
+)
+def test_a_host_with_core_s_include_only_in_code_says_the_project_mends_it(
+    adopter: AdopterRepo, written: str
+) -> None:
+    adopter.write({"CLAUDE.md": f"# Host\n\n{written}{INDEX_LINE}\n"})
+    (message,) = core_include_messages(adopter)
+    assert f"writes the line `{CORE}` that includes core's rules" in message
+    assert "only in fenced code or a code span" in message
+    assert message.endswith("move the include out of the code.")
+    assert "inserts it" not in message
+
+
+def test_core_s_include_is_checked_where_the_index_is_absent(adopter: AdopterRepo) -> None:
+    (adopter.root / INDEX).unlink()
+    adopter.write({"CLAUDE.md": "# Host\n"})
+    delivery = lr.check_delivery(adopter.root)
+    assert delivery.summary[0].startswith("no capabilities' rules index here")
+    assert [(f.location, f.severity.value) for f in delivery.findings] == [("CLAUDE.md", "error")]
+    assert len(core_include_messages(adopter)) == 1
+
+
+def test_a_missing_host_is_a_summary_line_where_the_index_is_absent_too(
+    adopter: AdopterRepo,
+) -> None:
+    (adopter.root / INDEX).unlink()
+    delivery = lr.check_delivery(adopter.root)
+    assert delivery.findings == ()
+    assert delivery.summary[0].startswith("no capabilities' rules index here")
+    assert delivery.summary[1].startswith("CLAUDE.md is not in this checkout")
+
+
+def test_a_host_without_either_line_fails_once_for_each(adopter: AdopterRepo) -> None:
+    adopter.write({"CLAUDE.md": "# Host\n"})
+    messages = [m for _l, _s, m in delivery_findings(adopter)]
+    assert len(messages) == 2
+    assert "that includes core's rules" in messages[0]
+    assert f"that reaches {INDEX}" in messages[1]
+
+
+def test_a_host_that_is_not_utf_8_is_read_as_the_merge_reads_it(adopter: AdopterRepo) -> None:
+    """A byte that is not UTF-8 hides no line: the merge primitive reads bytes, and finds the
+    include (ADR-083 point 2)."""
+    (adopter.root / "CLAUDE.md").write_bytes(
+        f"# H\xf4te\n\n{CORE}\n{INDEX_LINE}\n".encode("latin-1")
+    )
+    assert delivery_findings(adopter) == []
+
+
+def test_a_host_that_is_no_file_fails_for_each_line(adopter: AdopterRepo) -> None:
+    (adopter.root / "CLAUDE.md").mkdir()
+    messages = [m for _l, _s, m in delivery_findings(adopter)]
+    assert messages[0].startswith("CLAUDE.md is no file that can be read, so nothing in it")
+    assert messages[0].endswith(f"Make it a file that holds the line `{CORE}`.")
+    assert messages[1].startswith("CLAUDE.md is no file that can be read, so nothing reaches")
+
+
+def test_adapters_that_share_a_host_and_its_line_get_one_finding(adopter: AdopterRepo) -> None:
+    key = 'loaded_rules:\n  entry: "@{file}"\n  host: CLAUDE.md\n  line: "@{index}"\n'
+    register_adapter(adopter, "other", ADAPTER.format(name="other", key=key))
+    adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
+    (message,) = core_include_messages(adopter)
+    assert "(claude-code, other; ADR-083 point 1)" in message
+
+
+def test_an_adapter_without_the_key_has_its_host_left_unchecked(adopter: AdopterRepo) -> None:
+    register_adapter(adopter, "other", ADAPTER.format(name="other", key=""))
+    host_with_line(adopter)
+    ((_location, severity, message),) = delivery_findings(adopter)
+    assert severity == "warning"
+    assert "Nor is core's include checked for its harness (ADR-083 point 5)." in message
+
+
+def test_validate_fails_a_claude_md_without_core_s_include(adopter: AdopterRepo) -> None:
+    """The case of #2445: core's include taken out of `CLAUDE.md`, the index's line kept."""
+    adopter.write({"CLAUDE.md": f"# Host\n\n{CORE}\n{INDEX_LINE}\n"})
+    held = CliRunner().invoke(main, ["validate"])
+    assert "that includes core's rules" not in held.output
+    adopter.write({"CLAUDE.md": f"# Host\n\n{INDEX_LINE}\n"})
+    lost = CliRunner().invoke(main, ["validate"])
+    assert lost.exit_code == 1, lost.output
+    assert f"[{UNDELIVERED}]" in lost.output
+    assert f"CLAUDE.md does not hold the line `{CORE}` that includes core's rules" in lost.output
+
+
+#: (name, the text after a host's heading, whether core's include stands only in code)
+ONLY_IN_CODE_CASES: tuple[tuple[str, str, bool], ...] = (
+    ("in a backtick fence", f"```\n{CORE}\n```\n", True),
+    ("in a tilde fence", f"~~~\n{CORE}\n~~~\n", True),
+    ("in a fence never closed", f"```\n{CORE}\n", True),
+    ("in a code span", f"Read `{CORE}` first.\n", True),
+    ("after a closed code span", f"``x`` `{CORE}`\n", True),
+    ("in a fence with CRLF endings", f"```\r\n{CORE}\r\n```\r\n", True),
+    ("in a fence and in prose", f"```\n{CORE}\n```\nSee {CORE} too.\n", False),
+    ("after a closed code span, outside it", f"`x` {CORE}\n", False),
+    ("in a sentence", f"See {CORE} for core's rules.\n", False),
+    ("absent", "Nothing here.\n", False),
+)
+
+
+@pytest.mark.parametrize(
+    ("name", "text", "in_code"), ONLY_IN_CODE_CASES, ids=[c[0] for c in ONLY_IN_CODE_CASES]
+)
+def test_only_in_code_reads_as_the_merge_primitive_refuses(
+    tmp_path: Path, name: str, text: str, in_code: bool
+) -> None:
+    """The check says the merge inserts nothing exactly where the primitive refuses to
+    (ADR-083 point 2): both read the same text, and agree."""
+    assert lr.only_in_code(f"# Host\n\n{text}", CORE) is in_code, name
+    adapter = tmp_path / ".pkit" / "adapters" / "claude-code"
+    adapter.mkdir(parents=True)
+    shutil.copy(MERGE_SCRIPT, adapter / "merge-claude-md.sh")
+    (tmp_path / "CLAUDE.md").write_bytes(f"# Host\n\n{text}".encode())
+    result = subprocess.run(
+        ["bash", str(adapter / "merge-claude-md.sh")], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert ("refused" in result.stdout) is in_code, (name, result.stdout)
 
 
 # --- an import token in a loaded set (ADR-076 point 1) -----------------------------------
@@ -607,6 +781,69 @@ def test_a_capability_s_set_newly_bound_and_where_no_adapter_delivers(
     nowhere = lr.render_bound([bound], capabilities_delivered=False)
     assert "its rules bind no session in this project" in nowhere
     assert "RS-ALPHA-001" not in nowhere
+
+
+def test_a_set_in_place_of_a_plain_file_cannot_tell_what_bound_before(
+    adopter: AdopterRepo,
+) -> None:
+    """Where the project held no core set and loaded `core.md` as a plain file, as a
+    project before core's set does, the reading before is that file, and the step lists
+    each rule the set holds, none as newly binding (#2369)."""
+    (adopter.root / ".pkit/rule-sets/ops.md").unlink()
+    before = lr.read_delivered(adopter.root)
+    assert before["backbone"] == lr.PlainReading(".pkit/rules/core.md")
+    (bound,) = lr.bound_by(before, [("backbone", REPO / ".pkit")])
+    assert bound.first and bound.replaces == ".pkit/rules/core.md"
+    assert (bound.binds, bound.changes, bound.retires) == ((), (), ())
+    assert bound.holds[0] == ("RS-OPS-001", "The no-shared-files invariant")
+    rendered = lr.render_bound([bound], capabilities_delivered=True)
+    assert "Which of its rules bound before cannot be told." in rendered
+    assert "holds    RS-OPS-001  The no-shared-files invariant" in rendered
+    assert "binds    " not in rendered
+
+
+def test_an_upgrade_from_a_version_with_no_rule_set_cannot_tell_what_bound_before(
+    adopter: AdopterRepo, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project from before core's set, as at v1.149.0, holds no `.pkit/rule-sets/`
+    and loads `.pkit/rules/core.md` as a plain file. The upgrade delivers `OPS` for the
+    first time, says it cannot tell which of its rules bound before, and why, and lists
+    each rule it holds, none as newly binding (#2369)."""
+    # The tool step's lookup of the latest release finds none, so nothing reaches the
+    # network.
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    recorded = read_backbone_manifest(adopter.root)
+    assert recorded is not None
+    recorded.backbone_version = "0.1.0"
+    write_backbone_manifest(adopter.root, recorded)
+    shutil.rmtree(adopter.root / ".pkit" / "rule-sets")
+    (adopter.root / ".pkit" / "rules" / "core.md").write_text(
+        "## Hard rules\n\n1. **The no-shared-files invariant.** Every file has one owner.\n",
+        encoding="utf-8",
+    )
+
+    upgrade.run_upgrade(adopter.root, pin=False)
+
+    out = capsys.readouterr().out
+    assert "    backbone:OPS " in out and "(first delivered):" in out
+    assert "Which of its rules bound before cannot be told." in out
+    assert "sessions loaded .pkit/rules/core.md as a plain file, whose rules carry no ids" in out
+    assert "holds    RS-OPS-001  The no-shared-files invariant" in out
+    assert "binds    RS-OPS-" not in out
+    assert (adopter.root / ".pkit" / "rule-sets" / "ops.md").is_file()
+
+
+def test_with_neither_a_set_nor_a_plain_file_every_rule_newly_binds(
+    adopter: AdopterRepo,
+) -> None:
+    (adopter.root / ".pkit/rule-sets/ops.md").unlink()
+    (adopter.root / ".pkit/rules/core.md").unlink()
+    before = lr.read_delivered(adopter.root)
+    assert before["backbone"] is None
+    (bound,) = lr.bound_by(before, [("backbone", REPO / ".pkit")])
+    assert bound.first and bound.replaces is None
+    assert bound.binds[0] == ("RS-OPS-001", "The no-shared-files invariant")
+    assert not bound.holds
 
 
 def test_a_step_that_changes_no_rule_says_so() -> None:

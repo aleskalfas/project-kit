@@ -18,7 +18,7 @@ pkit:
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#report-bug--report-feedback--report-change-request
         - .pkit/cli/README.md#report-submit-id
-        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
 ---
 
 # Scratchpad notes
@@ -56,7 +56,7 @@ Each note is the file `<state>/<YYYY-MM-DD>-<slug>.md` ("File name" below).
 
 - <a id="adopter-relevance"></a>**The notes are the project's.** Sync updates this README, and never reads or writes a note (COR-012).
 - **Only `.md` files are notes.** A command moves a note's own file and nothing beside it, and `pkit scratchpad list` lists `.md` files only.
-- **`active/`, `done/` and `dropped/`** are seed paths. The first install and each transition of the backbone create each one that is missing, with an empty `.gitkeep` ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)).
+- **`active/`, `done/` and `dropped/`** are seed paths. The first install and each transition of the backbone create each one that is missing, with an empty `.gitkeep` ([the lifecycle reference, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)).
 - **`reported/` is lazy.** It is created when the first note enters it, and removed when a retirement empties it (COR-043 point 2).
 - **`.report-drafts/`** holds each report that `pkit report feedback --yes`, or the `bug` or `change-request` verb, stages until `pkit report submit` posts it. The folder keeps itself out of git ([the CLI reference, "report submit"](../cli/README.md#report-submit-id)).
 
@@ -154,7 +154,8 @@ reported_hash: sha256:<hex>
 - **`reported_hash`:** `sha256:` and the SHA-256 of the note as sent, without the fields that recording a send writes ([the CLI reference, `scratchpad reported`](../cli/README.md#scratchpad-reported-slug-ref)). The listing compares it with the note as it is now.
 - **`project` and `workstream`:** the report's context, where the report named it. Only a report's post writes them.
 - **Who writes these fields:** the successful post of a report composed with `--scratchpad <slug>`, or `pkit scratchpad reported <slug> <ref>...`. A report staged or filed in a browser writes nothing until one of the two runs.
-- **A later send** of a reported note adds each new issue to `reported_to`, and records the hash again. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
+- **A field the note holds already:** recording a send never leaves a key twice in the front matter. A first send is refused where the note holds one of these fields, and `project` and `workstream` count only where the send writes them. Any send is refused where the front matter holds a key twice already. The refusal names the key, and comes before the report posts, stages or prints a link, or before `pkit scratchpad reported` writes ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
+- **A later send** of a reported note adds each new issue to `reported_to`, and records the hash again. It changes only the `reported_to` and `reported_hash` its first send wrote, and leaves every other line as it was. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
 
 ### `done/`
 
@@ -220,11 +221,15 @@ Each command has its full entry in the CLI reference, which each name below link
     - no `active/`
     - a slug that finds no note in `active/` or `reported/`, or that finds two in one folder
     - a note with no front matter, or with front matter that is no mapping
+    - a note whose front matter holds a key twice, the refusal naming the key, or does not read as YAML
     - a file of the same name in the target folder already
   - `reported`:
     - a ref that is neither `owner/repo#N` nor a GitHub issue's web address
     - a note that lies in neither `active/` nor `reported/`
     - a slug that finds two notes in one folder
     - a note with no front matter
+    - a note whose front matter holds a key twice
+    - a note in `active/` that holds a field the send writes ("Front matter" above)
+    - a note in `reported/`, when the send adds an issue, whose fields of the first send no longer lie in the order it wrote them
     - a file of the same name in `reported/` already
 - **Not built yet:** a command that reopens a note (COR-007). Move its file from `done/` or `dropped/` back to `active/` by hand, with `git mv`. Then remove each front-matter field `active/` does not hold, and a dropped note's closing paragraph on why it stopped.

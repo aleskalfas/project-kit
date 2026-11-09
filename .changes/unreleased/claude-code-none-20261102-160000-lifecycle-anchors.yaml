@@ -1,0 +1,7 @@
+component: claude-code
+kind: none
+body: >
+  The Claude Code adapter's README anchors "Uninstall: origin-aware
+  removal" on the lifecycle reference's `component-registry.md`, where the
+  lifecycle README held it before it split (#2473). Nothing the adapter
+  ships or runs changes.

@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  Only the README's wording moves (#2374). Beside its sentence that branch
+  naming and a branch's related issue are core's (COR-008), it says that here
+  the issue is the GitHub issue of the Task the branch closes, whose number
+  the branch name carries, as DEC-013 and the `branch-name` entry of
+  `schemas/git-conventions.yaml` already give it. The schema, the commands and
+  the rules stay as they were, so no surface moves.

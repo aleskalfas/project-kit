@@ -32,8 +32,8 @@ privileges:
       reopen-issue, open-pr, edit-pr, merge-pr, close-pr, reopen-pr) run the
       methodology's gates (validation, checkbox close-gate, approval gate).
       NOTE: this is a speed-bump, not a security boundary — per ADR-004 a
-      tool-call denylist is porous (a `bash -c '…'` wrapper or
-      `gh api -X PATCH … state=closed` evades it). The genuine gate
+      tool-call denylist is porous (a code runner such as `python3 -c '…'`
+      or `gh api -X PATCH … state=closed` evades it). The genuine gate
       enforcement lives inside the scripts; this only removes the reflexive
       direct-typed bypass.
     recognize:
@@ -60,9 +60,9 @@ privileges:
       any mutation (those stay open here; mutations are covered by
       issue-tracker-write). NOTE: like issue-tracker-write this is a speed-bump,
       not a security boundary — per ADR-004 a tool-call denylist is porous
-      (a `bash -c '…'` wrapper or `gh api` evades it); it only removes the
-      reflexive direct-typed raw-view bypass so the clean verb is the path of
-      least resistance.
+      (a code runner such as `python3 -c '…'` or `gh api` evades it); it only
+      removes the reflexive direct-typed raw-view bypass so the clean verb is
+      the path of least resistance.
     recognize:
       bash:
         # Matches the three raw read views the show-* verbs replace:
@@ -142,11 +142,10 @@ privileges:
     description: >-
       Run a program in the project's Python environment through `uv run`, such
       as `uv run pytest`. `uv run` runs any program it is given and confines
-      nothing, so a grant allows whatever that program does. A deny reads the
-      command as the wrapper, `uv`, never as the program behind it (ADR-025
-      point 5), so no guardrail reaches `uv run rm -rf ~` (#1990). No shipped
-      profile grants it (ADR-005 point 5): a project may grant it in its
-      `grants.yaml`.
+      nothing, so a grant allows whatever that program does, where the core
+      can read which program it is. A deny reads that program too (ADR-025
+      point 5), so `uv run rm -rf ~` is denied. No shipped profile grants it
+      (ADR-005 point 5): a project may grant it in its `grants.yaml`.
     recognize:
       bash:
         - cmd: uv
