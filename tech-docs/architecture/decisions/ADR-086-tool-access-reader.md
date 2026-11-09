@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 **In plain terms:** several parts of pkit read which tools an agent's definition gives it, each in its own way, and they disagree. One module does that reading, and every part that needs it calls it. It is kept in the agents area of the `.pkit/` tree that sync copies into each project, so the scripts that run in a project and the `pkit` command reach the same code.
 
-The module applies the rules the core agents record states (COR-013 point 7), such as that a definition holding both forms is refused. The Claude Code adapter keeps what is Claude Code's own: its keys, its tool names, and which withheld entries it can enforce. A definition refused for its tool access deploys nothing, and the copy deployed before it is removed, so no agent keeps tools its definition no longer gives.
+The module applies the rules the core agents record states (COR-013 point 7), such as that a definition holding both forms is refused. The Claude Code adapter keeps what is Claude Code's own: its keys, its tool names, and which withheld entries it can enforce. Each adapter declares these as data, so the validator refuses what the deploy and the runner refuse. A definition refused for its tool access deploys nothing, and the copy deployed before it is removed, so no agent keeps tools its definition no longer gives.
 
 ## Context
 
@@ -53,14 +53,18 @@ A definition refused for its tool access is not written. The deploy names the ca
 
 ### 4. The harness's keys and names stay in the adapter
 
-The map from the methodology's forms to a harness's keys is one constant in a standard-library module of that harness's adapter, which both its resolver and its runner import. The resolver keeps the methodology's form in what it gives the runner, and writes the harness's keys only in what it gives the deploy.
+The map from the methodology's forms to a harness's keys is kept in that harness's adapter, in its declaration of tool access below, which both its resolver and its runner read. The resolver keeps the methodology's form in what it gives the runner, and writes the harness's keys only in what it gives the deploy.
 
 The adapter refuses what its harness cannot enforce or translate (COR-013 point 7):
 
-- **A withheld name it does not know** as one of its harness's built-in tools. The adapter keeps its harness's known tool names, and its README says where.
-- **A withheld entry its harness was not measured to withhold.** An entry measured to be withheld where the harness runs the agent as a whole session's agent is admitted, and the requirement for a helper stays unanswered until it is measured (ADR-085 point 3). The adapter's support declaration says which entries were measured.
+- **A withheld name it does not know** as one of its harness's built-in tools. The adapter keeps its harness's known tool names in its declaration of tool access, below.
+- **A withheld entry its harness was not measured to withhold.** An entry measured to be withheld where the harness runs the agent as a whole session's agent is admitted, and the requirement for a helper stays unanswered until it is measured (ADR-085 point 3). Its declaration of tool access says which entries it admits, and its support declaration what was measured.
 - **A tool's name in a form its harness does not take.**
 - **A harness's own key held beside the form that translates to it,** such as Claude Code's `disallowedTools` beside `withheld`.
+
+The adapter's refusals are made by the reader, against the adapter's declaration of tool access: a data file of a fixed name, `tool-access.json`, in the adapter's folder, whose presence is the declaration. Everything those refusals read is declared there as data: the map to the harness's keys, its known tool names, the forms a tool's name may take, and the withheld entries it admits, which may be none. Its shape is the reader's contract, owned by the backbone with a schema beside the other schemas it owns. The file carries a schema version, and the reader refuses a declaration whose version or keys it does not know, naming which side is behind. A change of shape takes a new version and ships its migration. A pattern a declaration gives is in Python's dialect and matches a whole name, and the reader's own grammar of an entry bounds what any harness can declare. So the adapter's deploy and runner, which give the reader their own adapter's declaration, and the reference validator refuse alike.
+
+An adapter that deploys agents declares its tool access. The validator reads the declaration of every registered adapter that deploys agents, and refuses a definition any of them would refuse, naming the adapter and the cause. So a definition passes only where every such adapter takes it, and registering a second harness's adapter can refuse definitions that passed before. It reports as an error an adapter that deploys agents and declares none, or whose declaration cannot be read. It also reports an adapter that admits a withheld entry while its support declaration does not answer the requirement for a session's agent withheld tools as achievable for some version (ADR-085 point 3).
 
 ### 5. A command that cannot reach the reader
 
@@ -80,6 +84,8 @@ A function of the reader keeps its name and its answer. A function whose answer 
 
 **The adapter keeps what is its harness's.** Neutral code carries no knowledge of one harness's keys or tool names (ADR-003). Only the adapter knows which names its harness has and which withheld entries it was measured to enforce, so a second adapter brings its own.
 
+**The validator reads the adapter's declaration, not its code.** Neutral code and the command import no adapter, and harness knowledge reaches them as data, not as code (ADR-003). A declaration lets the validator refuse what the deploy and the runner refuse, before either runs, without running adapter code or keeping a second copy of the names. A fixed name lets every reader find it the same way, as the adapter's other declarations are found. JSON, because the runner reads it under the system's Python. A schema version, because three parts meet at the file at their own versions, and a reader that misread a newer declaration's admitted entries would fail open.
+
 **Writers write the reader's answer.** The harness then sees only the forms the reader settled, never an author's text the harness might read another way.
 
 **A refused definition removes its earlier copy.** Leaving the earlier copy would run an agent with tools its definition no longer gives, which COR-013 point 7 refuses. A missing agent is visible, and its cause is named.
@@ -95,7 +101,11 @@ A function of the reader keeps its name and its answer. A function whose answer 
 - **A shared library folder for propagated neutral code.** Rejected: it would group modules by their language, not their subject. ADR-003 and ADR-020 state the rule this record follows.
 - **Keep a refused definition's earlier copy,** as the deploy keeps one for every other skip. Rejected: the earlier copy may give tools the definition no longer gives.
 - **Read a harness's key for a withheld list as the methodology's.** Rejected: neutral code would carry one harness's key.
-- **Refuse a harness's key in a definition.** Rejected for now: agents written with one would stop deploying. To be revisited when a second harness's adapter deploys agents, since one harness's key in a definition then deploys wrongly to the other.
+- **Refuse a harness's key in a definition.** Rejected for now: agents written with one would stop deploying. To be revisited when a second harness's adapter deploys agents, since one harness's key in a definition then deploys wrongly to the other. The declarations' maps then give the validator every registered harness's keys, so its warning can name the harness a key belongs to.
+- **The validator runs a check the adapter provides,** as a hook the adapter's package manifest names. Rejected: validation would run adapter code, and a declaration in data can be read, diffed and tested where a check cannot.
+- **Name the declaration's path in the adapter's package manifest.** Rejected: the runner reads no YAML, so it would find the file by a name of its own, and two sources of one path can drift.
+- **Fold the declaration into the adapter's support declaration.** Rejected: the support declaration detects and never drives (COR-047), and the runner cannot read it. The validator's cross-check keeps the two agreeing.
+- **A copy of the adapter's names in the command's code.** Rejected: two lists of one harness's names, which drift.
 - **Number the reader's interface.** Rejected: nothing would own the number. A function's name is its version, owned by whoever changes the function.
 
 ## Implications
@@ -106,4 +116,5 @@ A function of the reader keeps its name and its answer. A function whose answer 
 - **The agents README** documents the reader, its place in the area's layout, the warning on other keys, and the deploy's removal of a refused definition's copy, as an exception to its rule that a skip leaves the earlier copy.
 - **Sync** copies the module, as it copies the ownership module, and the lifecycle's manifest lists it. The runner gains its first import from the tree, as the permission hook has.
 - **A capability whose script loads the reader** declares the backbone release that ships it.
+- **The adapters README** gains a section on what an adapter declares as data, its declaration of tool access beside its support and enforcement declarations, and says under "Adding a new harness" that an adapter that deploys agents declares its tool access. The agents README's "Tool access" says the validator makes the adapter's refusals too. The Claude Code adapter keeps its declaration as data, in place of a constant in its code. [project-kit#2949](https://github.com/aleskalfas/project-kit/issues/2949) decides whether its probed table writes the known names into the declaration, held equal by a check, or keeps them apart. Until then they are written by hand.
 - **An agent that stops deploying.** One whose tool access breaks a rule is removed, and the deploy names the cause.
