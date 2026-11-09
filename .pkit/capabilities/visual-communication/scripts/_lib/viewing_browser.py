@@ -1,6 +1,6 @@
 """The viewing step's browser: a page file as images, and what the browser dropped
-(visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-015 point 2, DEC-024 points 1
-and 4).
+(visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-031 point 5, DEC-015 point 2,
+DEC-024 points 1 and 4).
 
 This module alone calls the browser. It reads the HTML renderer's page files. It stands on the
 standard library and on the marks the renderer's declaration holds, so every other format
@@ -11,8 +11,12 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
 - **One start serves one file.** `draw` starts the browser over a pipe, with no port and no
   driver: messages of JSON, each ended by a NUL, on file descriptors 3 and 4. The pages share
   the one device scale the caller gives, set by the browser's own flag, since an emulated
-  scale leaves HTML text on whole pixels. The window stays at the width of the widest page,
-  so no page shrinks.
+  scale leaves HTML text on whole pixels. The window holds each page at its own size: it is
+  as wide as the widest page, with the renderer's declared gutter on each side, so no page
+  shrinks where the file shows fixed pages on a backdrop (DEC-031 point 5). It widens so for
+  every file, and needs no knowledge of which pages are fixed.
+- **One page an image.** Each image is cut to its page, or to a band of it, so the keyline
+  and the backdrop around a fixed page lie outside every image.
 - **Regions.** A page the caller hands with regions of its height, its bands, is drawn as an
   image of each, as wide as the page, in order (DEC-022 point 7). The reads read the whole
   page, once.
@@ -78,6 +82,10 @@ from _lib.plugins import html_declaration
 
 #: The marks of the file, as the renderer that writes them declares them.
 MARKS = html_declaration.MARKS
+
+#: The width of backdrop the file may show at each side of a page, in px of the window, as
+#: the renderer declares it: the window takes it on each side, for every file.
+GUTTER: float = html_declaration.DECLARATION["pages"]["fixed"]["gutter"]["width"]
 
 #: How long the browser has to start, for one call, and to close, in seconds. A start after an
 #: update is the slowest. A page's image is the longest call: a tall page takes a second or two.
@@ -408,7 +416,7 @@ def draw(
     folder.mkdir(parents=True, exist_ok=True)
     place = Path(tempfile.mkdtemp(prefix="browser-", dir=folder))
     try:
-        started = _Started(browser, place, max(page.width for page in pages), scale)
+        started = _Started(browser, place, window_width(pages), scale)
         try:
             drawing = _drawn(started, place, file, pages, read, modes)
         except BaseException:
@@ -419,6 +427,12 @@ def draw(
         return drawing
     finally:
         _remove(place)
+
+
+def window_width(pages: Sequence[Page]) -> float:
+    """The width of the window that holds each of `pages` at its own size: the widest, with
+    the gutter on each side (DEC-031 point 5)."""
+    return max(page.width for page in pages) + 2 * GUTTER
 
 
 def _drawn(
