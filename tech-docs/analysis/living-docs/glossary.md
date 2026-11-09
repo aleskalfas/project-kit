@@ -158,6 +158,8 @@ TERM-page:
         record:
           - living-docs:DEC-001#1
           - living-docs:DEC-001#4
+          - COR-006
+          - COR-025
           - COR-050#1
           - COR-050#14
           - COR-051#2
