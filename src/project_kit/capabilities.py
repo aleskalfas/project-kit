@@ -47,6 +47,7 @@ from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import treecopy
+from project_kit.agents import agent_locations, carries_deploy_mark
 from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
@@ -972,7 +973,8 @@ def detect_collisions(
 ) -> list[CollisionFinding]:
     """Find naming collisions between a capability's artifacts and already-installed content.
 
-    Today checks: skills + agents. Capability decisions are namespaced
+    Today checks: skills + agents, each in either form on both sides
+    (`artefact_names`, COR-015). Capability decisions are namespaced
     by the capability's directory name, so they cannot collide.
 
     `exclude` is threaded to `_collect_existing_artifact_names` to skip a
@@ -980,42 +982,15 @@ def detect_collisions(
     existing callers default to None and are unaffected.
     """
     findings: list[CollisionFinding] = []
-    # Skills collision: walk capability's skills/ and check against existing skills.
-    cap_skills = capability_source.path / "skills"
-    if cap_skills.is_dir():
-        existing_skill_names = _collect_existing_artifact_names(
-            target_root, "skills", exclude=exclude
-        )
-        for sk_file in sorted(cap_skills.iterdir()):
-            if sk_file.is_file() and sk_file.suffix == ".md":
-                name = sk_file.stem
-                if name in existing_skill_names:
-                    findings.append(
-                        CollisionFinding(
-                            artifact_kind="skill",
-                            artifact_name=name,
-                            source_path=sk_file,
-                            target_path=existing_skill_names[name],
-                        )
-                    )
-    # Agents collision: same.
-    cap_agents = capability_source.path / "agents"
-    if cap_agents.is_dir():
-        existing_agent_names = _collect_existing_artifact_names(
-            target_root, "agents", exclude=exclude
-        )
-        for ag_file in sorted(cap_agents.iterdir()):
-            if ag_file.is_file() and ag_file.suffix == ".md":
-                name = ag_file.stem
-                if name in existing_agent_names:
-                    findings.append(
-                        CollisionFinding(
-                            artifact_kind="agent",
-                            artifact_name=name,
-                            source_path=ag_file,
-                            target_path=existing_agent_names[name],
-                        )
-                    )
+    for kind, area in _ARTEFACT_AREAS.items():
+        shipped = artefact_names(capability_source.path / area)
+        if not shipped:
+            continue
+        existing = _collect_existing_artifact_names(target_root, area, exclude=exclude)
+        for name, source_path in shipped.items():
+            target_path = existing.get(name)
+            if target_path is not None:
+                findings.append(CollisionFinding(kind, name, source_path, target_path))
     return findings
 
 
@@ -2020,6 +1995,13 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     Scans the project tree but skips `.pkit/capabilities/<name>/` itself
     (the capability's own files don't count as "references to it"), and
     skips `.git/`, `.venv/`, `node_modules/`, etc.
+
+    It also skips each copy an adapter deployed of an agent definition, such as
+    one of the capability's own agents in the harness's agents folder
+    (`_is_deployed_agent_copy`). The copy is not the project's file, since the
+    deploy writes it again from its source. The scan judges that source where it
+    lies: a definition under `.pkit/agents/project/` counts, and one that core
+    or a capability ships does not.
     """
     findings: list[tuple[Path, str]] = []
     # Imported here: the rule-set reader imports this module.
@@ -2034,6 +2016,9 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     citation_re = re.compile(rf"\[{re.escape(capability_name)}:[^\]]+\]")
     path_re = re.compile(rf"\.pkit/capabilities/{re.escape(capability_name)}/")
     self_path = (target_root / ".pkit" / "capabilities" / capability_name).resolve()
+    shipped_agents = frozenset(
+        name for _, folder in agent_locations(target_root) for name in artefact_names(folder)
+    )
 
     ignored_dirs = {".git", ".venv", "node_modules", "__pycache__", ".pytest_cache"}
 
@@ -2058,6 +2043,8 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
             continue
         if path.resolve() in inheriting:
             continue
+        if _is_deployed_agent_copy(target_root, path, shipped_agents):
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
@@ -2067,6 +2054,30 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
         for match in path_re.finditer(text):
             findings.append((path, match.group(0)))
     return findings
+
+
+def _is_deployed_agent_copy(target_root: Path, path: Path, shipped_agents: Collection[str]) -> bool:
+    """True if the file is a copy an adapter deployed of an agent definition.
+
+    The deploy writes each copy outside `.pkit/`, where its harness reads
+    agents, under the definition's name and with the deploy mark in its front
+    matter (the agents README, "Deploy mechanics"). Which folder that is, is the
+    adapter's knowledge (COR-013), so the copy is known by its name and its mark.
+    *shipped_agents* are the names the agents folders ship (`agent_locations`).
+
+    A file under `.pkit/` is never such a copy, even with the mark: where the
+    reference scan reads one, it is the project's own, such as a definition
+    copied into `.pkit/agents/project/` to override another.
+    """
+    if path.suffix != ".md" or path.stem not in shipped_agents:
+        return False
+    try:
+        parts = path.relative_to(target_root).parts
+    except ValueError:
+        return False
+    if parts[:1] == (".pkit",):
+        return False
+    return carries_deploy_mark(path)
 
 
 def _is_kit_propagated_path(target_root: Path, path: Path) -> bool:
@@ -2221,41 +2232,25 @@ def _collect_existing_artifact_names(
     """Gather all installed artifact names (skills or agents) keyed by name.
 
     Walks the area's `core/` + `project/` plus every installed
-    capability's `<area>/` directory. Returns name → path mapping.
+    capability's `<area>/` directory, in that order, each artefact in
+    either form (`artefact_names`, COR-015). Where two folders hold one
+    name, the later folder's path is kept. Returns name → path mapping.
 
     `exclude` names a capability directory to skip in the installed-
     capabilities walk. An incubated capability's own tree lives under
     `.pkit/capabilities/<name>/` too, so without this it could shadow
-    another capability's same-named artifact (last-writer-wins over an
-    unsorted `iterdir()`) and mask a genuine collision (#225).
+    another capability's same-named artifact (last-writer-wins) and mask a
+    genuine collision (#225).
     """
     out: dict[str, Path] = {}
-    # Area core + project
     for ns in ("core", "project"):
-        ns_dir = target_root / ".pkit" / area / ns
-        if not ns_dir.is_dir():
-            continue
-        for entry in ns_dir.iterdir():
-            if entry.is_file() and entry.suffix == ".md":
-                out[entry.stem] = entry
-            elif entry.is_dir():
-                inner = entry / f"{entry.name}.md"
-                if inner.is_file():
-                    out[entry.name] = inner
-    # Installed capabilities
+        out.update(artefact_names(target_root / ".pkit" / area / ns))
     caps_dir = target_root / ".pkit" / "capabilities"
     if caps_dir.is_dir():
-        for cap in caps_dir.iterdir():
-            if not cap.is_dir():
+        for cap in sorted(caps_dir.iterdir()):
+            if not cap.is_dir() or (exclude is not None and cap.name == exclude):
                 continue
-            if exclude is not None and cap.name == exclude:
-                continue
-            cap_area = cap / area
-            if not cap_area.is_dir():
-                continue
-            for entry in cap_area.iterdir():
-                if entry.is_file() and entry.suffix == ".md":
-                    out[entry.stem] = entry
+            out.update(artefact_names(cap / area))
     return out
 
 

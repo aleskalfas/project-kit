@@ -288,7 +288,6 @@ from _lib.agent_verdicts import (
     gate_candidates,
     gate_membership,
     gate_verdicts,
-    latest_commit_timestamp,
     pr_author,
 )
 
@@ -492,19 +491,6 @@ def _bypass_audit_key(writer: str, reason: str, head: str) -> str:
     """The idempotency key for a whole-gate or CI bypass (#902) — the shared
     `_lib.audit.bypass_audit_key`: the stripped reason and the PR head commit."""
     return bypass_audit_key(writer, reason, head)
-
-
-def _head_key(commits: list) -> str:
-    """A stable identifier for the HEAD the gate evaluated against (DEC-050 D3).
-
-    Prefers the last commit's `oid` — HEAD's own identity — and falls back to its
-    timestamp, which is the freshness anchor the gate already requires, so this
-    is never empty on any path that reaches an audit build.
-    """
-    last = commits[-1] if commits else None
-    if not isinstance(last, dict):
-        return ""
-    return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
 
 
 @escaping
@@ -2252,17 +2238,17 @@ def _check_agent_gate(
         return refuse("error: gh pr view returned malformed JSON.")
     author_login = pr_author(data)
     comments = data.get("comments") or []
-    commits = data.get("commits") or []
 
-    # Latest commit timestamp — the freshness anchor for a verdict that names
-    # no reviewed head (DEC-028 "Stale-verdict handling"), read by the SHARED
-    # `latest_commit_timestamp`. If it cannot be established (no commits
-    # returned, or the last commit carries neither committedDate nor
-    # authoredDate) the PR's head is UNKNOWN — so the gate REFUSES rather than
-    # judge any verdict against it. Fail-closed per DEC-032 D5; an
-    # unestablishable head is not "no freshness check".
-    if not latest_commit_timestamp(commits):
-        return refuse(_freshness_unresolvable_refusal(pr_number))
+    # The PR's head — what every verdict is judged against (DEC-028
+    # "Stale-verdict handling"), the key of an override's audit (DEC-050 D3)
+    # and the head the merge is pinned to. If `gh pr view` names none (no
+    # `headRefOid`, and no listed commit with an oid), the gate REFUSES
+    # rather than judge any verdict against it. Fail-closed per DEC-032 D5;
+    # an unknown head is not "no freshness check". When the head arrived is
+    # read later, by the freshness rule, for a verdict that names no head.
+    head = head_sha(data)
+    if not head:
+        return refuse(_head_unresolvable_refusal(pr_number))
 
     # The PR's author, which a remote verdict must not come from (DEC-028
     # step 3). One that cannot be read leaves no remote reviewer known to be
@@ -2278,12 +2264,13 @@ def _check_agent_gate(
         name for name in remote_baseline if name not in required_local or name in override_set
     ]
     if not author_login and unjudged:
-        return refuse(_author_unread_refusal(pr_number, unjudged), head_oid=head_sha(data))
+        return refuse(_author_unread_refusal(pr_number, unjudged), head_oid=head)
 
     # The one freshness rule (#1179), shared with `review-pr`'s skip and
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
     # until the author's changes since reach what its reviewer is required
-    # for; one naming no head falls back to the commit-time anchor above.
+    # for; one naming no head stands only when it was posted after the head
+    # arrived on the host, and is stale where that arrival cannot be read.
     freshness = review.freshness_rule(data)
 
     # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
@@ -2338,7 +2325,7 @@ def _check_agent_gate(
 
     if any(not slot.satisfied for slot in slots):
         return refuse(
-            head_oid=head_sha(data),
+            head_oid=head,
             message=_agent_gate_refusal(
                 issue_number=issue_number,
                 mode_source=mode_source,
@@ -2375,13 +2362,13 @@ def _check_agent_gate(
             slots=slots,
             comments=comments,
             freshness=freshness,
-            head=_head_key(commits),
+            head=head,
             contributed_by=contributed_by,
             remote_reviewer_ok=remote_reviewer_ok,
             local_reviewer_ok=local_reviewer_ok,
         ),
         warnings=gate_warnings,
-        head_oid=head_sha(data),
+        head_oid=head,
     )
 
 
@@ -2747,20 +2734,19 @@ def _not_code_invalid_refusal(details: tuple[str, ...]) -> str:
     return "\n".join(lines)
 
 
-def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
-    """Refusal text when the PR's latest commit cannot be read.
+def _head_unresolvable_refusal(pr_number: int | None) -> str:
+    """Refusal text when the PR's head cannot be read.
 
     DEC-028 judges a verdict against the PR's head: the changes since the head
-    it reviewed, or — for a verdict naming no head — the latest commit's time.
-    If no commit timestamp can be established, the head is unknown — the gate
-    refuses rather than accept a possibly-stale APPROVED as fresh
-    (fail-closed, DEC-032 D5).
+    it reviewed, or — for a verdict naming no head — when the head arrived on
+    the host. If the head is unknown, the gate refuses rather than accept a
+    possibly-stale APPROVED as fresh (fail-closed, DEC-032 D5).
     """
     return "\n".join(
         [
             f"[refused] agent-mode approval gate cannot be resolved for PR "
-            f"#{pr_number} — the latest-commit freshness anchor is unknown.",
-            "            → `gh pr view` returned no commit with a committedDate or authoredDate.",
+            f"#{pr_number} — the PR's head is unknown.",
+            "            → `gh pr view` named no headRefOid and no commit with an oid.",
             "            Verdict freshness is judged against the PR's head "
             "(DEC-028); without it a stale APPROVED cannot be distinguished from "
             "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",

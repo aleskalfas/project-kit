@@ -4,7 +4,7 @@ component:
   name: claude-code
   version: 0.7.0
 description: The Claude Code harness — permissions and settings, the rules include in CLAUDE.md, deployed skills and agents, and the permission enforcement hook.
-requires_backbone: ">=2.0.0,<2.1.0"
+requires_backbone: ">=2.0.0,<2.2.0"
 # Git-footprint paths this adapter deploys outside `.pkit/` (per ADR-009).
 # `pkit visibility private` routes these into `.git/info/exclude`.
 footprint:
@@ -15,7 +15,8 @@ footprint:
 # 4): the backbone renders `.pkit/rules/capabilities.md` with one `entry` per
 # capability's `rules.md`, and `merge-claude-md.sh` keeps `line` present in
 # `host`, after core's include. `{file}` is read from the index's folder, and
-# `{index}` from the host's.
+# `{index}` from the host's. Read for `.pkit/rules/core.md`, `line` is core's
+# include, which validation checks too (ADR-083 point 6).
 loaded_rules:
   entry: "@{file}"
   host: CLAUDE.md

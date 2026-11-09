@@ -13,8 +13,10 @@ against its run styles, skipped by the check of ids, each run measured against t
 under it (DEC-012 points 1, 3 and 8). A tie's component, the shape of its ends and their
 key paths, read in the content; an end the scene does not find, reported at its tie; a
 list of ties whose default takes no ends, or declares an end field, checked alone
-(DEC-011 point 8). A failing finding in a copy of a library the capability ships, released
-or not, and in a released one whose files changed (DEC-013 point 6). A final piece, read by
+(DEC-011 point 8). A brand's logo, judged as any picture file is, by git's listing and
+its encoding (DEC-025 points 2, 5 and 9). A failing finding in a copy of a library the
+capability ships, released or not, and in a released one whose files changed (DEC-013
+point 6). A final piece, read by
 its files and its lock alone, each finding at a lock sorted by the piece's state, and a
 version not yet released (DEC-002 point 7, DEC-003 point 9, DEC-017 point 4). The command
 around it is `test_visual_communication_check.py`."""
@@ -23,6 +25,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -56,17 +59,30 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_PARTS,
+    TEST_PICTURES,
     add_library,
     bound,
     copy_library,
+    hold_shipped,
     write,
     write_list,
     yaml_text,
 )
 
-checks, pl, framing, seam, findings_, svg_declaration, fingerprint, copies, reading = load(
+(
+    checks,
+    pl,
+    framing,
+    seam,
+    findings_,
+    svg_declaration,
+    pdf_declaration,
+    fingerprint,
+    copies,
+    reading,
+) = load(
     "visual-communication",
     "checks",
     "pipeline",
@@ -74,6 +90,7 @@ checks, pl, framing, seam, findings_, svg_declaration, fingerprint, copies, read
     "plugins.seam",
     "findings",
     "plugins.svg_declaration",
+    "plugins.pdf_declaration",
     "fingerprint",
     "copies",
     "reading",
@@ -354,10 +371,11 @@ def not_released(root: Path, name: str, **more: str) -> None:
 
 @pytest.fixture
 def capability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A capability's folder the test controls, building a copy of the foundations and
-    releasing none, in place of the capability's own for the length of the test."""
+    """A capability's folder the test controls, building the foundations at 1.0.0, the files
+    of their release, and releasing none, in place of the capability's own for the length
+    of the test."""
     folder = tmp_path / "capability"
-    shutil.copytree(FOUNDATIONS, folder / "libraries" / "foundations")
+    shutil.copytree(RELEASED_FOUNDATIONS, folder / "libraries" / "foundations")
     monkeypatch.setattr(copies, "SHIPPED", folder)
     monkeypatch.setattr(checks, "SHIPPED", folder)
     return folder
@@ -758,7 +776,7 @@ def test_a_shipped_copy_a_final_piece_locks_names_the_command_that_restores_it(
     entry = release(capability)
     copy = root / "visual/libraries/foundations/1.0.0"
     shutil.rmtree(copy)
-    shutil.copytree(FOUNDATIONS, copy)
+    shutil.copytree(RELEASED_FOUNDATIONS, copy)
     path = root / "visual/libraries/libraries.yaml"
     data = reading.read_yaml(path)
     data["libraries"]["foundations"]["versions"]["1.0.0"] = entry
@@ -1296,9 +1314,17 @@ def test_a_piece_is_checked_against_its_previews_renderer_and_each_it_exports_in
     assert checks.renderers(piece_of(root)) == renderers
 
 
-def test_a_piece_exported_as_pdf_is_told_what_the_pdf_renderer_loses(tmp_path: Path) -> None:
+def test_a_piece_exported_as_pdf_is_told_what_the_pdf_renderer_loses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The renderer draws every image (DEC-025 point 7), so a piece of a produced picture loses
+    nothing in a PDF. Its declaration, the image taken out of it for the length of the test,
+    stands for one that would lose it."""
     root = drawing_project(tmp_path, exports=["svg", "pdf"])
     write_picture(root, framing)
+    assert [found for found, _ in checks.check(root).judged if found.code == "loss"] == []
+
+    monkeypatch.delitem(pdf_declaration.DECLARATION["draws"], "image")
     report = checks.check(root)
     assert not report.failed()
     [(lost, level)] = [(f, level) for f, level in report.judged if f.code == "loss"]
@@ -1353,7 +1379,10 @@ def test_scene_findings_name_the_component_file_and_the_command_that_makes_a_pic
 
 
 def test_the_skeleton_piece_with_its_picture_fails_nothing(tmp_path: Path) -> None:
+    """With the foundations held as `pkit visual add foundations` takes them, so their copy
+    raises no finding of its own."""
     root = drawing_project(tmp_path)
+    hold_shipped(root, "foundations", being_built=False)
     write_picture(root, framing)
     report = checks.check(root)
     assert not report.failed()
@@ -1912,25 +1941,68 @@ def test_a_picture_role_a_library_other_than_the_foundations_declares_fails(
     assert checks.place(finding) == f"{PARTS_FOLDER}/1.0.0/roles.yaml#roles.test-parts.logo"
 
 
+def giving_a_logo(root: Path) -> Path:
+    """The project's test brand gives `picture.logo` the file `logo.png`, and the path where
+    that file lies."""
+    path = root / BRAND_FOLDER / "tokens" / "base.tokens.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["picture"] = {"logo": {"$extensions": {"pkit.visual-communication": {"file": "logo.png"}}}}
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return root / BRAND_FOLDER / "pictures" / "logo.png"
+
+
 def test_a_logo_the_brand_names_its_version_does_not_hold_fails_and_one_it_holds_passes(
     tmp_path: Path,
 ) -> None:
     """A brand that gives `picture.logo` a value names a file of its version's `pictures/`
     (DEC-025 point 9). Giving one, it states no fact."""
     root = parts_project(tmp_path)
-    path = root / BRAND_FOLDER / "tokens" / "base.tokens.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    data["picture"] = {"logo": {"$extensions": {"pkit.visual-communication": {"file": "logo.png"}}}}
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    logo = giving_a_logo(root)
     report = checks.check(root)
     assert report.failed()
     [(finding, level)] = judged(report, "picture-missing")
     assert level == "fails"
     assert checks.place(finding) == f"{BRAND_FOLDER}/tokens/base.tokens.json#picture.logo"
-    write(root / BRAND_FOLDER / "pictures" / "logo.png", "")
+    logo.parent.mkdir()
+    shutil.copyfile(TEST_PICTURES / "palette.png", logo)
     report = checks.check(root)
     assert not report.failed()
     assert judged(report, "picture-missing") == judged(report, "picture-role-unvalued") == []
+
+
+def test_a_brands_logo_of_an_encoding_refused_fails_validation_once_at_the_file(
+    tmp_path: Path,
+) -> None:
+    """Judged by its reading, its encoding and its bytes (DEC-025 points 5 and 9), checked
+    alone and under the piece's lock alike, so it is reported once, in the brand's version."""
+    root = drawing_project(tmp_path, picture=False)
+    logo = giving_a_logo(root)
+    logo.parent.mkdir()
+    shutil.copyfile(TEST_PICTURES / "deep.png", logo)
+    report = checks.check(root)
+    assert report.failed()
+    [(finding, level)] = judged(report, "picture-encoding")
+    assert level == "fails"
+    assert checks.place(finding) == f"{BRAND_FOLDER}/pictures/logo.png"
+    assert finding.library == "test-brand@1.0.0"
+    assert finding.fix == "save it at 8 bits for each sample, not interlaced"
+
+
+def test_a_brands_logo_git_ignores_fails_validation(tmp_path: Path) -> None:
+    """A brand's file is found as version control lists its folder (DEC-025 point 2)."""
+    root = drawing_project(tmp_path, picture=False)
+    logo = giving_a_logo(root)
+    logo.parent.mkdir()
+    shutil.copyfile(TEST_PICTURES / "alpha.png", logo)
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True, capture_output=True)
+    assert judged(checks.check(root), "picture-missing") == []
+    (root / ".gitignore").write_text("*.png\n", encoding="utf-8")
+    report = checks.check(root)
+    assert report.failed()
+    [(finding, level)] = judged(report, "picture-missing")
+    assert level == "fails"
+    assert checks.place(finding) == f"{BRAND_FOLDER}/tokens/base.tokens.json#picture.logo"
+    assert finding.message.endswith("git ignores it, so no clone holds it")
 
 
 # --- a part that reads a library's role with no value (DEC-008 points 8 and 9) -----------------

@@ -7,7 +7,8 @@ DEC-013 point 5).
   produced pictures it drew stale or could not find (`drawing`), which it draws as they lie
   and never makes again (DEC-019 point 5), and where it shows a version's number or its
   date. Both sides take one filling of those facts, which the caller works out, and a run
-  says where that is a stand-in (`stand_ins_said`, DEC-016 point 5).
+  says where that is a stand-in (`stand_ins_said`, DEC-016 point 5). It also holds what its
+  scenes show that does not follow their brand (`rebranding.unfollowed`, DEC-025 point 8).
 - **Each side is read from a location of its own,** which it builds in the clone's local
   folder (`_built`): the piece or the declaration, the location's fonts, and each version the
   lock names, as the project holds it or, for a version `sources` gives, as the capability
@@ -34,7 +35,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from _lib import code, copies, exports, layout, tokens
+from _lib import code, copies, exports, layout, rebranding, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change, FileError, refuse_links
@@ -63,13 +64,16 @@ _FAULTS = (pl.Refused, tokens.TokenError, MissingFont, code.CodeRefused)
 class Side:
     """What one set of versions gives: each file's name and text; where it gives none, why;
     each produced picture a piece's side read that is stale or missing, with what changed or
-    why it is missing; and each element its scenes show a version's number or its date at,
-    as `exports.shown_stand_ins` words it."""
+    why it is missing; each element its scenes show a version's number or its date at, as
+    `exports.shown_stand_ins` words it; and what its scenes show that does not follow their
+    brand, which a look names where its two locks name different brands
+    (`rebranding.unfollowed`, DEC-025 point 8)."""
 
     files: Mapping[str, str] = field(default_factory=dict)
     why: str = ""
     stale: Mapping[str, Sequence[str]] = field(default_factory=dict)
     facts: Sequence[str] = ()
+    unfollowed: Sequence[rebranding.Unfollowed] = ()
 
 
 def drawing(
@@ -94,9 +98,14 @@ def drawing(
         results = project.scenes(facts=facts)
         _refuse_no_page(results)
         found: dict[str, str] = {}
-        for language, key, drawn in pl.drawn(project, results, "svg"):
+        for language, (key,), drawn in pl.drawn(project, results, "svg"):
             found.update(pl.preview_files(name, language, key, drawn.pages))
-        return Side(found, stale=_stale(project, built), facts=exports.shown_stand_ins(results))
+        return Side(
+            found,
+            stale=_stale(project, built),
+            facts=exports.shown_stand_ins(results),
+            unfollowed=rebranding.unfollowed(results),
+        )
 
     return _read(root, {**own, **_version_files(root, location, lock, sources)}, previews)
 

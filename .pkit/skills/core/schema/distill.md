@@ -127,7 +127,7 @@ When the field is a mapping key whose membership is constrained by another names
 }
 ```
 
-The resolver pass walks both forms — see the schemas area README's "What the resolver pass checks" section.
+The resolver pass walks both forms — see the schemas area README's "What the resolver pass checks" section (`.pkit/schemas/README.md`).
 
 ### 7. Capture qualitative content as DECs (not schemas)
 

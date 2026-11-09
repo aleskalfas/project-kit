@@ -54,7 +54,8 @@ def exports_with_copy(**fields: Any) -> dict[str, Any]:
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    assert names == wanted | {"defs.schema.json", "values.schema.json", ".gitkeep"}
+    alone = {"defs.schema.json", "values.schema.json", "values-2.schema.json", ".gitkeep"}
+    assert names == wanted | alone
 
 
 @pytest.mark.parametrize("path", COMPANIONS, ids=lambda path: path.name)
@@ -137,6 +138,18 @@ def test_format_1_takes_no_other_state() -> None:
     assert refused(exports_in("retired"), "exports") != []
 
 
+@pytest.mark.parametrize("formats", [["html"], ["svg", "pdf", "html"], []])
+def test_format_1_takes_each_format_a_piece_exports_in(formats: list[str]) -> None:
+    """`html` came after the format's first release, an addition that leaves its number as
+    it is (DEC-003 point 1)."""
+    assert refused({**instance("piece"), "exports": formats}, "piece") == []
+
+
+@pytest.mark.parametrize("formats", [["png"], ["htm"], ["html", "html"]])
+def test_format_1_takes_no_other_format_and_each_once(formats: list[str]) -> None:
+    assert refused({**instance("piece"), "exports": formats}, "piece") != []
+
+
 def test_the_record_of_exports_may_name_the_version_handed_out() -> None:
     record = instance("exports")
     assert record["handed-out"] == 1
@@ -164,6 +177,7 @@ def test_the_record_of_exports_may_name_who_wrote_a_current_copy() -> None:
         "current-copy/flow.en.default.svg",
         "current-copy/flow.en.colour-scheme.dark.2.svg",
         "current-copy/flow.pt-br.default.pdf",
+        "current-copy/flow.en.colour-scheme.dark.html",
         "docs/images/flow.en.default.svg",
         "docs/flow.en.colour-scheme.dark.2.svg",
         "current-copy/nested/flow.en.default.svg",
@@ -178,6 +192,7 @@ def test_a_current_copys_file_lies_in_its_folder_or_at_a_place_with_no_number(pa
     [
         "flow.en.default.svg",
         "current-copy/flow.v1.en.default.svg",
+        "current-copy/flow.en.default.1.html",
         "current-copy/../flow.en.default.svg",
         "../docs/flow.en.default.svg",
         "/docs/flow.en.default.svg",

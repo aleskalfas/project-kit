@@ -42,8 +42,10 @@ says what it draws.
   and names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a
   marker the page defines once for each colour a line draws one in. A line that holds
   neither its ends nor its points is refused, and left out.
-- **A produced picture** is embedded as the variant that serves the combination drawn;
-  where the record maps the combination to none, the picture is left out, and reported.
+- **A picture** is embedded whole, as the picture its image shows in the combination drawn
+  (`seam.Shown`), whatever its source: PNG data for a PNG and JPEG data for a JPEG, its bytes
+  as they are, so a colour profile it carries stays with it (DEC-025 points 5 and 7). An
+  image handed no picture there is left out, and reported (`unshown`).
 - **Every element carries its trace id** (`data-id`), and a group the component that drew
   it (`data-component`) with its library's version (`data-version`), the page's own group
   included, so a reader of the file finds where each element came from.
@@ -83,6 +85,9 @@ ANCHORED = {"middle": 0.5, "end": 1.0}
 
 #: The spans of a line, each with the run it is part of.
 Spans = list[tuple[Mapping[str, Any], Mapping[str, Any]]]
+
+#: The media type each kind of picture is embedded as.
+MEDIA = {seam.PNG: "image/png", seam.JPEG: "image/jpeg"}
 
 logging.getLogger("fontTools.subset").setLevel(logging.ERROR)
 
@@ -145,6 +150,34 @@ def _attribute(value: Any) -> str:
     return escape(str(value), quote=False).replace('"', "&quot;")
 
 
+def shows(element: Mapping[str, Any]) -> str:
+    """What an image shows, in words, by its source: a produced output, a picture file and
+    where it lies, or a picture role."""
+    if "output" in element:
+        return f"the produced output `{element['output']}`"
+    if "file" in element:
+        return f"the picture file `{element['file']}` of `{element.get('library')}`"
+    return f"the picture role `{element.get('role')}`"
+
+
+def unshown(element: Mapping[str, Any], key: str, piece: Any) -> str:
+    """Why an image is handed no picture to draw in the combination `key`, by its source,
+    with what mends it: a produced output with no variant for it, a picture file not found, a
+    picture role the brand gives no file there."""
+    if "output" in element:
+        output = element["output"]
+        return (
+            f"the produced output `{output}` has no variant for `{key}`: run "
+            f"`pkit visual produce {piece} {output}`"
+        )
+    if "file" in element:
+        return (
+            f"{shows(element)} is not found to draw in `{key}`: `pkit visual check {piece}` "
+            f"names why"
+        )
+    return f"the brand gives {shows(element)} no file in `{key}`"
+
+
 def find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
     """The element of the trace id `trace`, in the tree under `elements`."""
     stack = list(reversed(elements))
@@ -167,7 +200,7 @@ class Canvas:
         key: str,
         colours: Mapping[str, Mapping[str, Any]],
         font_file: Callable[[str], Path],
-        pictures: Mapping[str, Path],
+        pictures: Mapping[str, seam.Shown],
     ) -> None:
         self.declaration = declaration
         self.scene = scene
@@ -437,17 +470,14 @@ class Canvas:
         ]
 
     def _image(self, element: Mapping[str, Any]) -> str:
-        output = element.get("output")
-        path = self.pictures.get(str(output))
-        if path is None or not path.is_file():
-            self._lose(
-                element["id"],
-                seam.LEFT_OUT,
-                f"the produced output `{output}` has no variant for `{self.key}`: run "
-                f"`pkit visual produce {self.scene.get('piece')} {output}`",
-            )
+        """An image, its picture embedded whole as the data of its kind. One handed no
+        picture in this combination is left out, and reported."""
+        shown = self.pictures.get(str(element["id"]))
+        if shown is None or not shown.file.is_file():
+            why = unshown(element, self.key, self.scene.get("piece"))
+            self._lose(element["id"], seam.LEFT_OUT, why)
             return ""
-        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        data = base64.b64encode(shown.file.read_bytes()).decode("ascii")
         attributes = attribute_text(
             [
                 ("data-id", element["id"]),
@@ -456,7 +486,7 @@ class Canvas:
                 ("width", number(element["width"])),
                 ("height", number(element["height"])),
                 ("preserveAspectRatio", element.get("preserveAspectRatio")),
-                ("href", f"data:image/png;base64,{data}"),
+                ("href", f"data:{MEDIA[shown.kind]};base64,{data}"),
             ]
         )
         return f"<image {attributes}/>"

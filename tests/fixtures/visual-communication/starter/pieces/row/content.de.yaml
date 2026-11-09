@@ -1,0 +1,19 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: spans
+    layout: standard
+    main:
+      use: starter/table
+      rows:
+        - id: normal
+          cells:
+            - {id: one, text: Zeichnen}
+            - {id: two, text: Prüfen}
+            - {id: three, text: Freigeben}
+        - id: mixed
+          cells:
+            - {id: one, span: narrow, text: "1"}
+            - {id: two, text: Zeichnen}
+            - {id: three, span: wide, text: "Jeder Teil, in jeder Größe, die die Marke gibt."}

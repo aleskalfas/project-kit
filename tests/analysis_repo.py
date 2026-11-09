@@ -38,7 +38,7 @@ import pytest
 from ruamel.yaml import YAML
 from scripts import prose_lint as pl
 
-from project_kit import document_parts
+from project_kit import document_parts, release
 from project_kit.friction_check import BASE_ENV
 from tests import in_process
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
@@ -148,6 +148,18 @@ def actor_at(actor_id: str) -> str:
 
 def load(text: str) -> Any:
     return _yaml.load(text)
+
+
+def release_reaches() -> str:
+    """The version of the capability its release reaches: the one the release of the
+    pending changesets writes for it, where one moves it, and the one its `package.yaml`
+    carries otherwise (PRJ-002 D3). An upgrade runs a migration only under a version no
+    later than its target (`migrations.pending_migration_scripts`)."""
+    written = release.compute_release(REPO / ".pkit").versions.writes.get(CAPABILITY.name)
+    if written is not None:
+        return written
+    package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    return str(package["component"]["version"])
 
 
 def prepare(repo: AdopterRepo) -> AdopterRepo:

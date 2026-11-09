@@ -29,6 +29,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/looks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/rebranding.py
         - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
         - .pkit/capabilities/visual-communication/scripts/_lib/taking_up.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pruning.py
@@ -37,6 +38,10 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
+        - .pkit/capabilities/visual-communication/rule-sets/vis.md
+        - .pkit/capabilities/visual-communication/rule-sets/comm.md
+        - .pkit/capabilities/visual-communication/rule-sets/graphic.md
+        - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
@@ -58,8 +63,14 @@ pkit:
         - visual-communication:DEC-019#10
         - visual-communication:DEC-020#5
         - visual-communication:DEC-020#8
+        - visual-communication:DEC-024#4
+        - visual-communication:DEC-024#6
+        - visual-communication:DEC-028#2
+        - visual-communication:DEC-028#5
         - COR-017
+        - COR-070#1
         - COR-031
+        - COR-051#7
         - COR-054#3
         - COR-054#5
         - COR-055#3
@@ -67,6 +78,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
+        - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
@@ -87,6 +99,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-patterns-by-the-question-they-answer
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-blocks
+        - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-web-parts-by-their-job-on-a-page
         - .pkit/capabilities/visual-communication/components.md#
         - .pkit/capabilities/visual-communication/components.md#how-the-engine-computes-a-scene
         - .pkit/capabilities/visual-communication/components.md#the-facts-of-an-export
@@ -115,6 +128,8 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
         - .pkit/capabilities/visual-communication/outputs.md#the-html-renderers-pages
         - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
+        - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
+        - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
         - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
@@ -137,16 +152,18 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
-- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)).
-- **The starter library,** under `libraries/starter/`: patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists them by the question each answers ([The starter](libraries/starter/README.md)). `pkit visual add starter` brings it in, and its version is not released yet either.
-- **The neutral brand,** under `libraries/neutral/`: a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. `pkit visual add neutral` brings it in, and its version is not released yet either.
-- **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes, and whose pages `pkit visual look` draws through a browser; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
+- **The foundations library:** a few shared roles, the shared axes, six colour families, and three top components: `figure`, for a figure, `deck`, for a presentation, and `site`, for a web page or a portal ([The foundations](files.md#the-foundations)). Its version 1.0.0 is released, under `releases/foundations/1.0.0/`, and its version being built stays under `libraries/foundations/` ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)). Only the version being built holds `site`, so `pkit visual add foundations --being-built` takes it.
+- **The starter library:** patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists each pattern by the question it answers, then each block ([The patterns, by the question they answer](libraries/starter/README.md#the-patterns-by-the-question-they-answer), [The blocks](libraries/starter/README.md#the-blocks)). `pkit visual add starter` brings it in. Its version 1.0.0 is released, under `releases/starter/1.0.0/`, and needs release 0.3.0. Its version being built stays under `libraries/starter/`. It adds the web parts, such as `header` and `form`, which draw a site's pages at every size ([The web parts, by their job on a page](libraries/starter/README.md#the-web-parts-by-their-job-on-a-page)). So `pkit visual add starter --being-built` takes them. They need the foundations' version being built, which `pkit visual add foundations --being-built` takes.
+- **The neutral brand:** a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. Its version being built gives a desktop's, a tablet's and a phone's sizes. `pkit visual add neutral` brings it in. Its version 1.0.0 is released, under `releases/neutral/1.0.0/`, and its version being built stays under `libraries/neutral/`.
+- **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes in the HTML exports, and whose pages `pkit visual look` draws through a browser; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
+- **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
+- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@1]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
-No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
+No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)). A piece shows a picture of its own, such as a photo, from a picture file it holds ([Picture files](files.md#picture-files)).
 
 The pages beside this README are the reference:
 
@@ -179,11 +196,11 @@ A library the capability ships reaches the location only through [`pkit visual a
 The skill `visual-author` walks steps 1 to 6 with you, or with the agent that draws for you. `pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/visual-author/` ([the Claude Code adapter's README, `deploy-skills.sh`](../../adapters/claude-code/README.md#deploy-skillssh)). Its `piece.md` starts a piece, and its `build-loop.md` renders, checks, reads and mends it until it can stop.
 
 1. **Bring the libraries.** [`pkit visual add <library>`](#pkit-visual-add-library) copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand: bring the neutral brand, or write the project's own ([Brands](files.md#brands)).
-2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
+2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)). A picture it shows, such as a photo, lies in its `pictures/` folder ([Picture files](files.md#picture-files)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
-6. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
+6. **Commit the piece's folder:** `piece.yaml`, the content, its `pictures/` and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
 7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
@@ -245,6 +262,7 @@ Draws a piece in each of its languages and each combination of modes it names.
 
 - **Moves the lock** of a draft and writes it into `piece.yaml`. It only checks the lock of a pinned draft, a final piece or a published piece, and a refusal of a final or a published piece's lock says its state ([The lock](files.md#the-lock)).
 - **States** the facts of the lock's move ([The lock](files.md#the-lock)), which no `findings.yaml` keeps ([Content against components](checks.md#content-against-components)).
+- **Names what does not follow a new brand,** where the lock it writes names another brand than the lock it replaces ([The lock](files.md#the-lock)).
 - **Computes every scene,** or refuses where a font cannot measure the text ([How the engine computes a scene](components.md#how-the-engine-computes-a-scene)).
 - **Writes `findings.yaml`** beside `piece.yaml` ([The findings record](checks.md#the-findings-record)).
 - **Draws the previews** with the SVG renderer, and replaces the piece's previews from before ([Previews](outputs.md#previews)).
@@ -279,8 +297,9 @@ Makes a numbered export of a piece in each format it declares.
 - **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
 - **Keeps a published piece's current copy,** replacing it whole in the piece's folder, or writing it at the place the piece names, and naming each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
+- **Shows** the run's own number and date in every file, where a component shows them ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
+- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and `--use-overflowing <fact>` a version's number or its date that does not fit. Each may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual mark-final <piece> <version>`
@@ -288,7 +307,8 @@ Makes a numbered export of a piece in each format it declares.
 Marks a piece final, and names the version handed out, whatever changed since ([The lock](files.md#the-lock)).
 
 - **Puts back the lock** that version was made under, and names it. It puts back nothing else.
-- **Says what else changed,** each input that still does not verify, and stops on none of it.
+- **Names what does not follow a new brand,** where the lock it puts back names another brand than the lock it replaces ([The lock](files.md#the-lock)). It stops on none of it.
+- **Says what else changed,** each input that still does not verify, and each number or date the version let through. It stops on none of it.
 - **Says what no longer holds of the lock,** and goes on.
 - **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
 - **Names the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
@@ -312,7 +332,8 @@ Takes a final piece up again, as a new piece copied from it: a draft with its lo
 
 Draws a piece's pages as images, for a person or an agent to read ([The viewing step](outputs.md#the-viewing-step)).
 
-- **Draws** every page in the source language, unless flags pick others.
+- **Draws** every page in the source language, unless flags pick others. It draws one size by default, so name each other size with `--key`, a phone's among them ([The viewing step](outputs.md#the-viewing-step)).
+- **Cuts** a page too tall for one image into bands, each as wide as the page, and prints them in order ([The viewing step](outputs.md#the-viewing-step)).
 - **Reads** a piece that declares `html` through the HTML renderer, and any other through the SVG renderer. `--renderer svg` or `--renderer html` names one.
 - **Needs a browser** for the HTML renderer's pages, which no other format needs. The capability installs none ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
 - **Writes** each image and its frames, and one report, in its renderer's folder, replacing what an earlier run left there. Through the HTML renderer it writes each page file too ([What a run writes](outputs.md#what-a-run-writes)).
@@ -320,6 +341,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
 - **Exits** 0 when it drew, whatever the report says. It exits 1 when it refused, with its renderer's folder left as it was, or when a write failed ([Commands](#commands)). It exits 2 on a usage error. It exits 3 when the browser stopped, leaving the page files and a report, and no image ([When the browser stops](outputs.md#when-the-browser-stops)).
+- **Names the ways on** where it stops ([When the browser stops](outputs.md#when-the-browser-stops)): a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages.
 
 ### `pkit visual pages <piece>`
 
@@ -344,6 +366,7 @@ Draws each of a piece's pages under two locks, and prints each page that differs
 - **Draws** both sides with today's engine, from the piece's files and [produced pictures](outputs.md#produced-pictures) as they lie, and it runs no program. Both sides fill what a piece shows of its export in one way, as a preview does, so a number the piece shows does not differ ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Writes** each page in `before/` and `after/`, under `before-after/<piece>/` in [the clone's local folder](files.md#the-clones-local-folder), each file named as its [preview](outputs.md#previews). It replaces what an earlier run left there, and writes nothing else.
 - **Prints** each lock, each page that differs, and each picture that is stale or missing. It says where the two locks are one, and where the engine's release differs from the one the copy's version recorded. Last, it prints each stand-in the sides show, with why ([The facts of an export](components.md#the-facts-of-an-export)).
+- **Names what does not follow the after's brand,** looking ahead or back, where the two locks name different brands ([The lock](files.md#the-lock)).
 - **Goes on** past a drawing it cannot make, such as where a library version left the project. It says why, and draws the other side.
 - **Refuses** a piece with no lock yet, a draft with no version named, and a final piece with one. It refuses a version a move cannot take, and a base that resolves to nothing.
 - **Exits** 0 when it drew a side or said why not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
@@ -354,12 +377,13 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 
 - **Takes** a published piece, and reads the lock its `piece.yaml` holds, whoever wrote it. It refuses any other piece, and names what moves that lock.
 - **Moves the lock** to the newest released versions that fit, within the lock's majors. It prints each newer version it did not take, with why.
+- **Names what does not follow a new brand,** where the lock it proposes names another brand than the lock the piece holds, or than the lock the copy was made under ([The lock](files.md#the-lock)).
 - **`<library>@<version>` names versions instead,** in the form `pkit visual add` takes, and may repeat. The run then moves what you name, and only what that needs.
 - **Looks ahead** as [`pkit visual before-after --ahead`](#pkit-visual-before-after-piece) does, and prints each page that differs. The drawing lies in [the clone's local folder](files.md#the-clones-local-folder).
 - **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.
 - **Commits nothing,** and makes no branch. Land the diff as you land any change, or discard it.
 - **Says so and writes nothing** where nothing moves.
-- **Stops** on an edit since the copy and on a stale picture, and prints the line that goes on. `--edited <input>` names an input that changed, and `--use-stale <output>` a picture to use as it is. Each may repeat.
+- **Stops** on an edit since the copy, on a stale picture, and on a number or a date that does not fit, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, and `--use-overflowing <fact>` a fact whose text to use as it is. Each may repeat.
 - **Says** where no file of the copy stood, so the change shows only an after, and names each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Names** each finding that fails under the moved lock, and stops on none of them.
 - **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.
@@ -381,10 +405,10 @@ Lists what each lock a person moves could still take, across majors ([The lock](
 
 Removes each library version that lies behind, with its entry in the list, once it has shown its list and asked ([A version that lies behind](files.md#a-version-that-lies-behind)).
 
-- **Prints its list first:** each version it would remove, with the newer one that serves in its place, and each version it spares, with why. Then each kept export made under a version it would remove, and each kept export whose lock it cannot read.
+- **Prints its list first:** what it would remove and what it spares, with why, and each kept export made under one it would remove ([A version that lies behind](files.md#a-version-that-lies-behind)). Then each kept export whose lock it cannot read.
 - **`--dry-run`** prints that list, and removes nothing.
 - **Asks** a terminal once whether to remove the versions listed. `--yes` gives that consent up front. With no terminal and no `--yes`, it refuses and removes nothing.
-- **Removes** each version's folder, and its entry in `libraries/libraries.yaml`, from the working tree alone. It stages nothing: land the removal as a change of its own. It prints each version it removed, and how to bring one back.
+- **Removes** the versions listed, and prints each version it removed, and how to bring one back. How it removes them, how to land the removal and how to undo it are under [A version that lies behind](files.md#a-version-that-lies-behind).
 - **Says so** where no version lies behind.
 - **Stops,** removing nothing and naming the file, on a lock it cannot read, a record of exports it cannot read, or a fingerprint it cannot read of the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)). It stops on a list it cannot read, or whose text cannot lose an entry ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
 - **Exits** 0 when it removed what lies behind, found nothing to remove, ended a dry run, or was answered no; 1 when it stopped or refused, with nothing removed, or a removal failed ([Commands](#commands)); 2 on a usage error.
@@ -400,20 +424,24 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The reviewer
 
-`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 To use it:
 
-1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, and names what it did not see. What it did not see is not looked at, never clean.
+1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). The reviewer runs no command, so it sees only what that run drew.
+2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
-Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)).
+Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 
-Each finding names the page, and the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)). A finding is one of two kinds:
+You may hand it a build pipeline's drawings instead, fetched into a folder of their own ([A pipeline's drawings](outputs.md#a-pipelines-drawings)). It names those images as drawn by the pipeline, at the commit it drew.
+
+Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
 - **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
-- **A note,** anything else worth a look.
+- **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
+- **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
+- **A note,** anything else worth a look. A note never fails.
 
 Its findings are advice. They join no validation and hold no merge.
 

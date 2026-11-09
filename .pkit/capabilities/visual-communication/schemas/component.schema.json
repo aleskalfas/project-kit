@@ -896,7 +896,7 @@
       }
     },
     "layout": {
-      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
+      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, `preferred` the height of its page by a formula on its parts, which it says where the top asks for no height and never a width (DEC-022 point 3), `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
       "type": "object",
       "required": [
         "slots"
@@ -917,6 +917,16 @@
             "$ref": "defs.schema.json#/$defs/name"
           },
           "uniqueItems": true
+        },
+        "preferred": {
+          "description": "The height of a page in this layout, by a formula on its parts. It says no width, since a page gets the top's (DEC-022 point 3).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "height": {
+              "$ref": "#/$defs/number-value"
+            }
+          }
         },
         "lists": {
           "description": "The fields of each list among the slots that a part of the layout repeats over, by the slot (DEC-010 point 5, DEC-011 point 5).",
@@ -988,6 +998,11 @@
             {
               "required": [
                 "lists"
+              ]
+            },
+            {
+              "required": [
+                "preferred"
               ]
             }
           ]
@@ -1110,18 +1125,49 @@
       }
     },
     "image": {
-      "description": "An image's properties: the produced output it shows.",
+      "description": "An image's properties: what it shows, exactly one of a produced output, a picture file the content names, a picture file of the component's own library, and a picture role, whose file the brand gives (visual-communication DEC-025 points 1 and 4).",
       "type": "object",
-      "required": [
-        "produced"
-      ],
       "additionalProperties": false,
       "properties": {
         "produced": {
           "description": "The field naming a produced output of the piece.",
           "$ref": "defs.schema.json#/$defs/name"
+        },
+        "content": {
+          "description": "The field whose text is the bare name of a picture file in the piece's `pictures/`; each language's content names its own, and an empty field draws nothing.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "file": {
+          "description": "The bare name of a picture file in the `pictures/` of the component's own library version, or of the piece for a local component: the same in every mode and under every brand.",
+          "type": "string"
+        },
+        "role": {
+          "description": "A picture role, such as `picture.logo`: the brand's file for it in each mode; where the brand gives it none, the image is not drawn.",
+          "$ref": "defs.schema.json#/$defs/token-path"
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "produced"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        },
+        {
+          "required": [
+            "file"
+          ]
+        },
+        {
+          "required": [
+            "role"
+          ]
+        }
+      ]
     },
     "operator": {
       "description": "How a list's items are arranged along a row or a column, by CSS flexible layout's names.",
@@ -1303,7 +1349,7 @@
       ]
     },
     "image-part": {
-      "description": "An image of a produced output: its height keeps the picture's proportions where none is given.",
+      "description": "An image of a produced output, a picture file or a picture role: its height keeps the picture's proportions where none is given.",
       "type": "object",
       "required": [
         "image",

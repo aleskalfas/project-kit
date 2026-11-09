@@ -4,9 +4,9 @@ points 9 and 10, DEC-006 point 7).
 The PDF renderer writes one file for each language and combination of modes, its pages in
 order, so it draws, and only draws: it updates nothing in place and reads nothing back. A
 primitive or a property it does not name here is a loss the capability knows before it
-runs: a primitive it refuses, a property it leaves out. It refuses the image for now. It
-draws in the default font profile, from the brand's committed font files, calls no
-outside program and reaches no service.
+runs: a primitive it refuses, a property it leaves out. It draws every primitive of format
+1's scene, the image of every source among them, in the default font profile, from the
+brand's committed font files, calls no outside program and reaches no service.
 
 - `unit`: how it maps the scene's unit onto a page (DEC-001 point 2). Each px of the scene
   is 0.75 pt of the page, CSS's 96 px to the inch, since format 1's top components declare
@@ -25,11 +25,16 @@ DRAWS = "draws"
 #: The properties each element of the scene holds whatever its type.
 _FRAME = ("x", "y", "width", "height")
 
+#: The properties of an image of every source (DEC-025 point 7): a produced output, with its
+#: variants and its points; a picture file, by its name and where it lies; a picture role.
+#: The renderer draws each from the picture it is handed, whatever its source.
+IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library", "role")
+
 DECLARATION = {
     "name": "pdf",
     "kind": "renderer",
-    "version": "1.0.0",
-    "seam": 3,
+    "version": "1.2.0",
+    "seam": 5,
     "module": "pdf",
     "about": "A PDF file for each language and combination of modes, its pages in order.",
     "profile": "default",
@@ -73,5 +78,6 @@ DECLARATION = {
             ),
             DRAWS,
         ),
+        "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
     },
 }

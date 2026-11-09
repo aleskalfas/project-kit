@@ -1,0 +1,53 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  What the items are: items of equal standing, in no order, side by side in one row,
+  under a head where the content gives one. By default each item is as wide as the
+  others and as tall as the tallest, drawn by the card. Or each takes the size it asks
+  for, as a row of tags does.
+
+fields:
+  type: object
+  required: [items]
+  properties:
+    head:
+      type: string
+      description: What the items have in common, in a sentence.
+      x-pkit-prose: true
+    items:
+      type: array
+      minItems: 1
+      description: The items, each with the fields of the component that draws it.
+      items: {type: object}
+    item:
+      type: object
+      description: >-
+        The component that draws each item that names none, with words for its options:
+        the card unless the content names another.
+
+lists:
+  items: {component: item}
+
+options:
+  # Each item as wide as the others and as tall as the tallest, or as large as it asks.
+  widths: [equal, own]
+
+parts:
+  head:
+    when: head
+    text: {content: head, style: starter.type.head, fill: text-primary}
+    width: "=:width"
+  items:
+    repeat: items
+    draw: starter/card
+    y: "=head.bottom + min(head.height, @starter.gap)"
+    width: "=:width"
+    row:
+      gap: "=@starter.gap"
+      sizes: {by: widths, equal: equal, own: own}
+      align-items: {by: widths, equal: stretch, own: start}
+
+preferred:
+  height: "=items.bottom"

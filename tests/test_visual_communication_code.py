@@ -17,12 +17,14 @@ import pytest
 
 from tests.in_process import load
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_EDITION,
     TEST_PARTS,
     bound,
+    capability_version,
     copy_library,
+    hold_shipped,
     importable,
     project,
     write,
@@ -71,7 +73,7 @@ def declare(root: Path, name: str = NAME, **fields: Any) -> Path:
 def root(tmp_path: Path) -> Path:
     """A project holding the foundations and the test brand, and one declaration."""
     found = project(tmp_path)
-    copy_library(found, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(found, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(found, TEST_BRAND, "test-brand", "1.0.0")
     declare(found)
     return found
@@ -112,7 +114,7 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
         "programs": {},
         "machine": record["recorded"]["machine"],
         "time": "2026-11-02T10:30:00Z",
-        "capability": "0.1.0",
+        "capability": capability_version(),
     }
     text = (root / "web/brand.css.record.yaml").read_text(encoding="utf-8")
     assert text.startswith("# The record of the code `pkit visual write-code brand-css` writes")
@@ -267,7 +269,7 @@ def test_a_lock_that_does_not_hold_is_refused(root: Path, lock: dict[str, str], 
 
 
 def test_a_lock_whose_majors_do_not_fit_is_refused(root: Path) -> None:
-    copy_library(root, FOUNDATIONS, "foundations", "2.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "2.0.0")
     library = root / "visual/libraries/foundations/2.0.0/library.yaml"
     library.write_text(library.read_text().replace("version: 1.0.0", "version: 2.0.0"))
     declare(root, lock={**LOCK, "foundations": "2.0.0"})
@@ -609,7 +611,8 @@ def test_the_json_writer_writes_the_document_under_the_lock_with_its_record(root
     assert (written.code, written.record) == (JSON_OUT, f"{JSON_OUT}.record.yaml")
     assert written.losses == ()
     data = (root / JSON_OUT).read_bytes()
-    assert json.loads(data) == document
+    assert json.loads(data) == {**document, "version": 1}
+    assert document["version"] == 2
     assert document["lock"] == LOCK
     assert document["keys"] == [
         "default",
@@ -662,6 +665,58 @@ def test_the_json_writer_holds_the_keys_of_each_size_the_brand_gives(root: Path)
     assert files.shape_problems(held, "values") == []
     assert written.losses == ()
     assert code.findings(root, "visual") == []
+
+
+def neutral(tmp_path: Path, **fields: Any) -> Any:
+    """What the declaration of the neutral brand being built, on the foundations being
+    built, would hand its writer: the css writer's unless `fields` say otherwise."""
+    root = project(tmp_path)
+    lock = {name: hold_shipped(root, name).version for name in ("foundations", "neutral")}
+    declare(root, brand="neutral", lock=lock, **fields)
+    return code.plan(root, "visual", code.read(root, "visual", NAME))
+
+
+#: The keys of the neutral brand's value axes, with no size.
+VALUE_KEYS = [
+    "default",
+    "colour-scheme.dark",
+    "contrast.high",
+    "colour-scheme.dark+contrast.high",
+]
+
+
+def test_the_neutral_brand_is_written_as_css_at_a_desktops_values_losing_size_site(
+    tmp_path: Path,
+) -> None:
+    """The neutral brand gives the three sizes of `device`, and `size.site` alone changes
+    with them (DEC-022 point 3). The CSS writer spells no size axis, so it writes a
+    desktop's width, and reports the role as approximated (DEC-021 point 8)."""
+    planned = neutral(tmp_path)
+    assert planned.document["keys"] == VALUE_KEYS
+    approximated = [loss.as_dict() for loss in planned.losses if loss.did == "approximated"]
+    assert approximated == [
+        {
+            "plugin": "css",
+            "what": "size.site",
+            "did": "approximated",
+            "why": "form 1 of the css writer spells no size axis, so it writes the value at "
+            "`device`'s default, `desktop`",
+        }
+    ]
+    assert "  --size--site: 1280px;\n" in code.text_of(planned)
+
+
+def test_the_neutral_brand_written_as_json_holds_the_keys_of_device(tmp_path: Path) -> None:
+    planned = neutral(tmp_path, writer="json", out=JSON_OUT)
+    sizes = ["device.tablet", "device.phone"]
+    assert set(planned.document["keys"]) == {
+        "+".join(part for part in (key, size) if part != "default") or "default"
+        for key in VALUE_KEYS
+        for size in ("default", *sizes)
+    }
+    site = planned.document["tokens"]["size.site"]["values"]
+    assert [site[key]["value"] for key in ("default", *sizes)] == [1280, 768, 390]
+    assert planned.losses == ()
 
 
 def test_the_json_writer_refuses_a_prefix_naming_why(root: Path) -> None:
