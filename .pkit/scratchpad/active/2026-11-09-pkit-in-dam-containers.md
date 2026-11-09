@@ -210,7 +210,7 @@ Within the bounds, the repository is seeded into `work/`, as only a seed puts it
 
 ## Next steps
 
-- Gap 1's records are drafted, proposed: COR-013 point 7 (an agent's tool access: granted, withheld, or neither), ADR-085 (the Claude Code adapter writes a withheld list) and [project-management:DEC-068-session-agent-tools] (`project-manager` keeps the session's tools, less those it is withheld). Building them follows their acceptance, with #2948 and #2949.
+- Gap 1's records are accepted: COR-013 point 7 (an agent's tool access: granted, withheld, or neither), ADR-085 (the Claude Code adapter writes a withheld list) and [project-management:DEC-068-session-agent-tools] (`project-manager` keeps the session's tools, less those it is withheld). Building them follows their acceptance, with #2948 and #2949.
 - Ask the architect where pkit keeps DAM support (gap 6).
 - On one DAM agent, seed a small public repository that uses pkit, install pkit by hand in the terminal, and settle questions 1 to 5 in one chat session and one Slack turn.
 - Add the HTTPS install line to the CLI reference, as PRJ-004 already allows.

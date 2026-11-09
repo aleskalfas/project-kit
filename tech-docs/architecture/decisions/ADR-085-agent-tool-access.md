@@ -1,7 +1,7 @@
 ---
 id: ADR-085
 title: The Claude Code adapter writes an agent's withheld tools in Claude Code's form
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

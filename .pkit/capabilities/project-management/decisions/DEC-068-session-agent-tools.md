@@ -1,7 +1,7 @@
 ---
 id: DEC-068
 title: project-manager keeps the session's tools, less those it is withheld
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
