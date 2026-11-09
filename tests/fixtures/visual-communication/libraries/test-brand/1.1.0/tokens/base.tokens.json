@@ -226,6 +226,13 @@
         "value": 1440,
         "unit": "px"
       }
+    },
+    "line": {
+      "$description": "The length of a line of text, at most.",
+      "$value": {
+        "value": 640,
+        "unit": "px"
+      }
     }
   },
   "stroke": {

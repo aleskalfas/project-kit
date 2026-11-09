@@ -72,6 +72,7 @@ HOLDS_NO_PYTHON = {
     "test_visual_communication_site.py": {"PIECES"},
     "test_visual_communication_starter.py": {"PIECES", "location"},
     "test_visual_communication_tokens.py": {"TEST_BRAND", "TEST_EDITION", "edition", "naming"},
+    "test_visual_communication_web_parts.py": {"location"},
     "visual_communication_project.py": {"source", "held.folder", "RELEASED_FOUNDATIONS"},
 }
 

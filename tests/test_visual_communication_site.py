@@ -555,7 +555,6 @@ def as_released_location(root: Path) -> Path:
     that gives sizes, and a figure, each piece locked at the versions being built."""
     starter.reference_location(root)
     hold_shipped(root, "foundations", being_built=False)
-    copy_library(root, SIZED_BRAND, "test-brand", "1.1.0")
     built = {name: hold_shipped(root, name).version for name in ("foundations", "starter")}
     write_piece(
         root,

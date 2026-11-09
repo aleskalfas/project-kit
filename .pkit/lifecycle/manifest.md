@@ -995,6 +995,8 @@ A name in more than one place is read from the first, in that order. Where the r
 
 **`show`.** `show` reads the package metadata alone, `connections.roles`, `extension-points` and `extensions`, as the resolver reads them, with the same parser, descriptions included. It also gives what would connect here. For an installed capability, that is the live wiring's bindings to and from it. For one not installed, it is the bindings of the wiring the resolver computes with it added.
 
+What else `show` lists beside its connections is in [the CLI reference's section on it](../cli/README.md#discovery-show-the-plans-and-suggestions) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
+
 **A plan is exact because it runs the resolver.** A plan runs the live resolution over the installed set plus or minus one capability. Everything else is read from the tree as the live wiring reads it: the selections, the installed backbone version, the project's filler files.
 
 - A candidate is read where it is, its companion schemas and its definitions. It is located where the operation will put it (`.pkit/capabilities/<name>/package.yaml`), with the version its package declares: the version install stamps and register reads. It comes after the installed components, where install appends it to the registry.

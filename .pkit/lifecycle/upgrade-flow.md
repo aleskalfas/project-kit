@@ -158,6 +158,7 @@ Install, sync and upgrade, and a capability's install, register and upgrade, pri
 
 - **Which sets:** core's `OPS` and each capability's alike.
 - **What they print:** for each set, its name and version, and each rule it newly binds, changes or retires since the copy it replaces. A first install lists every accepted rule.
+- **An upgrade from a version before core's rule set:** it cannot tell which of `OPS`'s rules bound before. Until then, the project's sessions loaded `.pkit/rules/core.md` <!-- unanchored: names the file the step reads or writes, not its content --> as a plain file, whose rules carry no ids to compare by. So the upgrade says so, and lists each rule the set holds after `holds`, none as newly bound.
 - **The comparison:** one comparison, for every step, of two readings of a set's accepted rules, by id, status and statement. The readings are the set the project holds, read before the copy, and the set the step copies.
 - **Rules that bind no session:** where no adapter in use declares `loaded_rules:`, a capability's set says that its rules bind no session in the project. It does not list them as bound.
 - **The lines inform, and stop nothing:** installing the capability is the consent to its rules.

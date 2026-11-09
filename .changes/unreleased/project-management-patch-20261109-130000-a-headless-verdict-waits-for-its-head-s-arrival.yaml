@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The merge gate holds a verdict that names no reviewed head fresh only when
+  it was posted after the PR's head arrived on GitHub (#2930). It reads the
+  arrival from GitHub's record of pushes to the PR's head branch, not from
+  the head commit's own dates, which the committer's clock sets and a rebase
+  or an amend keeps. So a commit made before such a verdict and pushed after
+  it no longer reads as judged, and the gate refuses it. Where the arrival
+  cannot be read, the verdict is stale, and the gate, `show-pr --field
+  review` and `review-pr` say why. The gate refuses outright only when the
+  PR's head itself is unknown, no longer when its commit carries no date.

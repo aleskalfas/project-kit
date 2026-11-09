@@ -1,0 +1,143 @@
+answers:
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-08T22:42:19Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-process
+    revalidated:
+      at: 2026-11-08T22:42:34Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. The term defines a process as a course through states with a condition on each move that the backbone's engine checks; it says nothing of how a sign-off condition is read, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-process-definition
+    revalidated:
+      at: 2026-11-08T22:42:40Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. The term defines the file in a capability's schemas folder that declares a process, addressed as capability:id; how the engine reads a gate's answer is no part of it, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-process-subject
+    revalidated:
+      at: 2026-11-08T22:42:54Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. The term defines the thing a process moves, whose state the engine reads from what it observes; it says nothing of gates, so it holds.
+  - artefact: .pkit/process/engine.md
+    read:
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-08T22:43:06Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer, with a reason saying so. The engine page lists the operations, can-move's refusal with a reason that explains itself, and --actor as the actor whose gates are checked; it states no rule for reading produced_by, which the README's predicate runner holds, so it holds.
+  - artefact: .pkit/process/shape.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-08T22:43:12Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. The shape page names authorisation-artifact as a gate kind that takes a predicate, and says a sign-off folded into a deterministic predicate would lose the check on who signed; both stay true, and it states no rule for reading produced_by, so it holds.
+  - artefact: .pkit/process/connections.md
+    revalidated:
+      at: 2026-11-08T22:43:18Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. The connections page covers composition, cascades, declared connections and hand-offs, whose gates the engine computes without any produced_by; nothing on it reads a sign-off's producer, so it holds.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+    revalidated:
+      at: 2026-11-08T22:43:30Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. The CLI reference specs process can-move's flags and exit, defers each operation's behaviour to the process engine page and the predicate contract to the process README, and names authorisation-artifact only as a gate kind the stamp can scaffold; none of that moves, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-08T22:43:35Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer. UC-017's 12b has a gate script that still fails as stamped, which exits 1 and is refused as before; no step reads a produced_by a script answers, so the use case holds.
+  - artefact: docs/process/README.md
+    read:
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-08T22:43:39Z
+      outcome: unchanged
+      unchanged-because: process.py's change keeps a sign-off gate shut when its predicate names no producer, and the process README's predicate runner now says so. The guide says a sign-off gate prints exists and a produced_by login, links that section for what a check answers, and its review.txt example names ana, whose refusal and pass are unchanged; so it holds.
