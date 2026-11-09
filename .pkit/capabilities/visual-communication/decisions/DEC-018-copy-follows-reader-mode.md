@@ -1,7 +1,7 @@
 ---
 id: DEC-018
 title: One file follows the reader's mode, and a copy holds its version's bytes
-status: proposed
+status: accepted
 date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
