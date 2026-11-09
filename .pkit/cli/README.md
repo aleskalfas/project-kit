@@ -116,6 +116,7 @@ pkit:
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#a-new-collision
         - .pkit/lifecycle/README.md#a-clash-of-area-names
+        - .pkit/lifecycle/README.md#what-a-step-newly-binds
         - .pkit/capabilities/software-analysis/README.md#commits-off-the-default-branch-pkit-analysis-check-pointers
         - .pkit/lifecycle/README.md#the-dependency-gates
         - .pkit/lifecycle/README.md#two-recorded-states-and-an-interrupted-upgrade
@@ -453,6 +454,7 @@ Compares the version of the core layer recorded in your project against the vers
 - **A new collision** is asked about at a terminal, as `capabilities install` asks, and refused without one, before anything is written ([the lifecycle README, "A new collision"](../lifecycle/README.md#a-new-collision)).
 - **`--force`** overrides the dependency gates' two warnings and nothing else ([the lifecycle README, "The dependency gates"](../lifecycle/README.md#the-dependency-gates)).
 - **The report and `--dry-run`** say what the upgrade moves and runs, and `--dry-run` writes nothing ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)).
+- **What the copy newly binds** is printed as `sync` prints it ([`sync`](#sync)). From a version before core's rule set, the upgrade lists each rule the set holds, none as newly bound. It says it cannot tell which of them bound before, and why ([the lifecycle README, "What a step newly binds"](../lifecycle/README.md#what-a-step-newly-binds)).
 - **The questions data points declare** come last, once the upgrade is complete and the pin written ([COR-061](../decisions/core/COR-061-point-questions.md)). At a terminal, each runs its capability's command, which asks you and records your answer. Without one, nothing is asked or recorded, and each is printed as `not asked <point>: pkit <capability> <command>`, the command to run at a terminal later. `--dry-run` names them as `would ask`. A question that fails, or that you stop, leaves the upgrade complete ([the lifecycle README, "A data point's question"](../lifecycle/README.md#a-data-points-question)).
 - **Already current:** only once the backbone and every adapter and capability this pkit ships are at its release does `upgrade` say "Already at backbone" and write or raise no more than its pin. Short of that it runs, even at the same backbone version ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)).
 
