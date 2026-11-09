@@ -1,0 +1,24 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `land-work`'s merge check names the merge of the base where the merge
+  requires a reviewer the head does not (#2661, DEC-064 points 1 and 8). A
+  rule the base accepted after the head left it can bring the change's text
+  under it, and the head's required reviewers resolve from the rules where the
+  head left the base. Where the change check fails nothing at the merge, the
+  base has moved on and, in agent review mode, a contribution in force names
+  the `touches-ruled-artefact` floor whose reviewer the head does not require,
+  the step asks the backbone once, through `pkit rule-sets altered --json`,
+  from the base's tip to the merge it builds. Where the answer lists an
+  artefact an accepted rule binds on, the run stops with nothing merged (exit
+  1), naming each reviewer the head lacks and the merge to make; where it lists
+  none, the step's line says the merge requires no reviewer the head does not.
+  An answer that cannot be read stops the run (exit 2) and names no merge. In
+  human review mode, without a contribution of the floor, where the head
+  requires every reviewer of it already, and where the head holds the base's
+  tip, nothing is asked. `_lib.required_reviewers` gains `floor_reviewers`,
+  which names the reviewers the contributions in force require on a floor,
+  read and failing as the resolution reads them. DEC-064 is refined in place,
+  and the capability README lists the case.
