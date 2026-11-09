@@ -92,7 +92,7 @@ loaded_rules:
   line: "@{index}"      # the line it keeps, read from the host's folder
 ```
 
-The backbone renders `.pkit/rules/capabilities.md` from it, one `@../capabilities/<name>/rules.md` per registered capability that ships a loaded set, and `pkit validate` checks the index and the line against it. A capability's rules then reach a session by the route core's do, two imports from `CLAUDE.md`, so they load in exactly the sessions core's load. The index's syntax enters the backbone only as this data: `@` is the token a loaded set may not write outside code.
+The backbone renders `.pkit/rules/capabilities.md` from it, one `@../capabilities/<name>/rules.md` per registered capability that ships a loaded set, and `pkit validate` checks the index, the line and core's include, `@.pkit/rules/core.md`, against it. A capability's rules then reach a session by the route core's do, two imports from `CLAUDE.md`, so they load in exactly the sessions core's load. The index's syntax enters the backbone only as this data: `@` is the token a loaded set may not write outside code.
 
 ### `deploy-skills.sh`
 
