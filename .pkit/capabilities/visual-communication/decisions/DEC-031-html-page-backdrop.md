@@ -1,7 +1,7 @@
 ---
 id: DEC-031
 title: A deck's HTML page shows each slide inside a keyline, on a backdrop of the browser's colours
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
