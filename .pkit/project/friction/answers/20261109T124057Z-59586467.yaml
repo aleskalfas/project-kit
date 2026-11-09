@@ -1,0 +1,1563 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-overlay
+    read:
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T12:40:57Z
+      outcome: unchanged
+      unchanged-because: Point 5 of COR-013 is unchanged; the record's summary now counts seven rules, adding the proposed tool access. The overlay is still the project's file whose paths the adapter writes in place of each placeholder at deploy, which is all the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-definition
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+    revalidated:
+      at: 2026-11-09T12:41:06Z
+      outcome: unchanged
+      unchanged-because: "COR-013's points 1, 2 and 5 changed through the summary, now seven rules, and point 1 now excepts a definition's tool names from its harness neutrality; point 7 on tool access is proposed. The term says what a definition is, a remit with boundaries deployed for a harness, and names no tools, so it holds. Judged with 0b404379 and 4db535f7, answered apart: one changed only the deploy's remedy for a skipped definition, the other only moved the deploy mark's reader into agents.py. Neither touches what a definition is, so the term holds with all three."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-overlay-category
+    read:
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T12:41:08Z
+      outcome: unchanged
+      unchanged-because: COR-013 point 5 changed only through the record's summary, which now counts seven rules with the proposed tool access. The overlay text of point 5 is as it was, and the term, a named kind of path whose paths fill each placeholder of that name, rests on it alone.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-placeholder
+    read:
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T12:41:10Z
+      outcome: unchanged
+      unchanged-because: Only COR-013's summary moved for point 5, now counting seven rules with the proposed tool access. A placeholder is still replaced in the front matter with the overlay's paths for its category, as point 5 says, and the term names no tools.
+  - artefact: tech-docs/analysis/core/domain-model/020-parts-of-the-system.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+    revalidated:
+      at: 2026-11-09T12:41:11Z
+      outcome: unchanged
+      unchanged-because: "COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. The view's agent definition lists reads, owns and needs and leaves tools out, as it did beside the grant before, and its skill rests on points 2 and 3, which are unchanged. Nothing the view states is untrue against the change."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+    revalidated:
+      at: 2026-11-09T12:41:13Z
+      outcome: unchanged
+      unchanged-because: "DEC-029 changes only in its dispatch paragraph: the messaging tool a named helper's remainder needs is now one project-manager's definition withholds, by DEC-068, proposed. A batch plan, approved whole by a person before the agent files any of it, rests on DEC-029's approval, which the change leaves as it was."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-09T12:41:15Z
+      outcome: unchanged
+      unchanged-because: A seat names the agent definition its clone's agent follows. DEC-029's edit only moves the messaging tool from outside project-manager's grant to its definition's withheld list, and COR-013 gains point 7 on how a definition names its tools, proposed, with point 1 excepting those names from neutrality. Neither changes what a seat holds, or that it names one definition.
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T000405Z-f16023ec.yaml
+    revalidated:
+      at: 2026-11-09T12:41:17Z
+      outcome: unchanged
+      unchanged-because: The view names the project-manager agent as the definition a seat's agent follows by default, and the helpers a lead starts as its instance. DEC-029 changes only in its dispatch paragraph, where the messaging tool a named helper's remainder needs is now withheld by the agent's definition (DEC-068, proposed). No passage of the view names that tool or the agent's tools, so seats, pools and helpers hold.
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-09T12:41:19Z
+      outcome: unchanged
+      unchanged-because: The view rests on DEC-029 for the batch plan a person approves whole and the adversarial review before it. The change edits only DEC-029's dispatch paragraph, where the messaging tool is now one the agent's definition withholds (DEC-068, proposed), so the plan's states and its approval hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-09T12:41:21Z
+      outcome: unchanged
+      unchanged-because: The lead agent cites DEC-029 for the project-manager agent as a role holder, and for the harness's limit on how deep agents start agents. Only DEC-029's dispatch paragraph changed, to say the messaging tool is withheld by the agent's definition (DEC-068, proposed); the depth limit and the no-name dispatch stand, so the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-09T12:41:23Z
+      outcome: unchanged
+      unchanged-because: The planner approves the batch plan the project-manager agent files from, as DEC-029 still has it. DEC-029's change only says the messaging tool is withheld by the agent's definition (DEC-068, proposed) rather than left out of its grant, which the actor does not mention.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-09T12:41:25Z
+      outcome: unchanged
+      unchanged-because: The planning agent files nothing before the planner approves the batch plan, and the project-manager agent holds the role, both as DEC-029 still says. The change edits only DEC-029's dispatch paragraph on the messaging tool (DEC-068, proposed), which the actor does not mention.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-09T12:41:27Z
+      outcome: unchanged
+      unchanged-because: The worker agent's role holder, the project-manager agent on its seat's direction, is as DEC-029 had it. DEC-029's edit only says the messaging tool is one the agent's definition withholds (DEC-068, proposed), which the actor does not name.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+    revalidated:
+      at: 2026-11-09T12:41:29Z
+      outcome: unchanged
+      unchanged-because: Step 2 and the guarantee rest on DEC-029's rule that the lead passes a helper no name, so its whole result comes back. The change keeps that rule, and only says the messaging tool a named helper's remainder needs is withheld by the definition (DEC-068, proposed). COR-013's proposed point 7 leaves the deploy of helper definitions as it is. Judged with 344be429, which added step 6 and the Review postcondition, and 3c4c3246, which found start-work's docstring changed nothing, answered apart; with all three the steps hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+    revalidated:
+      at: 2026-11-09T12:41:31Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of building a presentation from library components, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+      - 20261106T024508Z-5f0b1c44.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+    revalidated:
+      at: 2026-11-09T12:41:33Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of putting a figure in a page, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261108T215357Z-e935f32b.yaml
+    revalidated:
+      at: 2026-11-09T12:41:35Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of drawing views of the system, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T165308Z-ced38a91.yaml
+    revalidated:
+      at: 2026-11-09T12:41:36Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of adding a visual as data, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read. The tools the use case names are the engine's, not an agent's."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-097-put-produced-picture.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T165308Z-ced38a91.yaml
+    revalidated:
+      at: 2026-11-09T12:41:38Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of putting a produced picture in a piece, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read. A person or an agent still runs the program, never the engine."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+    revalidated:
+      at: 2026-11-09T12:41:40Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of improving a library component, and no step names an agent definition or its tools; COR-013's proposed point 7 and point 1's exception for tool names leave the steps as they read. Judged with 7a8e773a, which kept the deferral on variant 4a's move that shows only an after, and a68f64d0, which since added that move to variant 4a, answered apart: both edits stand. This revalidation keeps the deferral on DEC-003 point 8 as written, since whether a68f64d0's edit settles it is not this change's answer to give."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Variant 4a says the system proposes the move as a change of its own, with the piece before and after. DEC-003 point 8 now says a move none of whose copy's files stand shows only an after, so the variant is false of such a move, as UC-109's variant 6b and the glossary's definition of published are. No piece can be published yet, and the Task of open Feature #2572 that builds the proposal mends it, as DEC-019's Implications charge."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md
+    read:
+      - 20261103T140411Z-459661c4.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T214150Z-676eef59.yaml
+    revalidated:
+      at: 2026-11-09T12:41:42Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of adding a kind of piece, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md
+    read:
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T025310Z-7acd7024.yaml
+    revalidated:
+      at: 2026-11-09T12:41:44Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of making a brand, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+    revalidated:
+      at: 2026-11-09T12:41:46Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of building a brand on another brand, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T214150Z-676eef59.yaml
+    revalidated:
+      at: 2026-11-09T12:41:48Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of using a brand in code, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+    revalidated:
+      at: 2026-11-09T12:41:49Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of taking in a shared library, and no step names an agent definition or its tools; COR-013's proposed point 7 and point 1's exception for tool names leave the steps as they read. Judged with 7a8e773a, which kept the deferral on variant 6b's move that shows only an after, and a68f64d0, which since added that move to variant 6b, answered apart: both edits stand. This revalidation keeps the deferral on DEC-003 point 8 as written, since whether a68f64d0's edit settles it is not this change's answer to give."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Variant 6b says the system proposes the move with the piece before and after. DEC-003 point 8 now says a move none of whose copy's files stand shows only an after, so the variant is false of such a move, as the glossary's definition of published is. No piece can be published yet, and the Task of open Feature #2572 that builds the proposal mends it, as DEC-019's Implications charge."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T165308Z-ced38a91.yaml
+    revalidated:
+      at: 2026-11-09T12:41:51Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of adding a library component, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-011-move-component-into-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T165308Z-ced38a91.yaml
+    revalidated:
+      at: 2026-11-09T12:41:53Z
+      outcome: unchanged
+      unchanged-because: "The journey strings the use cases of moving a component into a library together, and names no agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality, which changes none of its steps."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T215357Z-e935f32b.yaml
+    revalidated:
+      at: 2026-11-09T12:41:55Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of switching a brand or a mode, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+    revalidated:
+      at: 2026-11-09T12:41:57Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of drawing through a renderer, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-100-take-back-edits.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+    revalidated:
+      at: 2026-11-09T12:41:58Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of taking back edits, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-101-give-second-language.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+    revalidated:
+      at: 2026-11-09T12:42:00Z
+      outcome: unchanged
+      unchanged-because: "The AI agent translates each page and never accepts its own translation; no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy admits a withheld list yet, so the use case holds."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+    revalidated:
+      at: 2026-11-09T12:42:02Z
+      outcome: unchanged
+      unchanged-because: "The AI agent may run any step of handing out a PDF, and no step names an agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality. No deploy, runner or check admits a withheld list yet, so the steps hold as they read."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+    revalidated:
+      at: 2026-11-09T12:42:04Z
+      outcome: unchanged
+      unchanged-because: "The journey strings the use cases of giving a talk together, and names no agent definition or its tools. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality, which changes none of its steps."
+  - artefact: tech-docs/analysis/core/domain-model/080-agents-and-permissions.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+    revalidated:
+      at: 2026-11-09T12:42:06Z
+      outcome: unchanged
+      unchanged-because: The view rests on COR-013 for the overlay, its categories and its placeholders, point 5, which is unchanged. Point 7, proposed, adds how a definition names the whole tools it has; the view describes no definition's tools, and its permission model still decides each call by grant and privilege, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md
+    read:
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+    revalidated:
+      at: 2026-11-09T12:42:08Z
+      outcome: unchanged
+      unchanged-because: The actor's role holders are the main session, or an agent it dispatches under one agent definition, the six core ones listed. COR-013's proposed point 7 changes how a definition names its tools, not which definitions ship or who holds the role, and the actor names no tools.
+  - artefact: tech-docs/analysis/demo-recording/use-case-model/use-cases/010-record-demos/UC-035-record-demo.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T205735Z-53dde51c.yaml
+      - 20261105T234807Z-9035c0e0.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+    revalidated:
+      at: 2026-11-09T12:42:10Z
+      outcome: unchanged
+      unchanged-because: The AI agent writes the demo bundle or runs steps 2 and 4 through the demo-recording skill, one skill with an operation per task, which the use case cites COR-013 for. Point 7's tool access, proposed, binds agent definitions alone, and point 1's exception names no skill, so the use case holds.
+  - artefact: tech-docs/analysis/evidence/use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:12Z
+      outcome: unchanged
+      unchanged-because: The AI agent runs steps 1 to 5 through the evidence skill's operations, which the use case cites COR-013 for. The change adds a definition's tool access, point 7, proposed, which binds agent definitions and no skill, so the steps hold.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:14Z
+      outcome: unchanged
+      unchanged-because: The living-docs agent definition grants no tool that edits a file in place, a grant in point 7's first form, which still gives only the tools it names. Point 7 and point 1's exception for tool names are proposed and change no deployed definition, so the agent still drafts the onboarding plan and applies nothing.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:15Z
+      outcome: unchanged
+      unchanged-because: The reader-review rests on the living-docs agent changing nothing it judges, its definition granting no tool that edits a file in place. COR-013's proposed point 7 keeps a grant as the form that gives only the tools it names, so that guarantee stands, and the deploy of the definition is unchanged.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:17Z
+      outcome: unchanged
+      unchanged-because: The guarantee that the living-docs agent applies no fix rests on its definition granting no tool that edits a file in place. Point 7, proposed, keeps a grant giving only what it names, the form a check needs to show an agent lacks a tool, so the guarantee and the unattended start through a work-tracking capability's command hold.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-09T12:42:19Z
+      outcome: unchanged
+      unchanged-because: The AI agent looks for what cites the ids and proposes the entry, never writing one to pass a check, and no step names an agent definition's tools. COR-013's proposed point 7 on tool access and point 1's exception leave the use case as it reads.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:21Z
+      outcome: unchanged
+      unchanged-because: The adapter still deploys software-engineer and docs-reviewer, which the use case cites COR-013 for; point 7, proposed, only adds how a definition names its tools. The software-engineer naming each unasked answer and writing none rests on its remit, not its tools, so the steps hold.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:23Z
+      outcome: unchanged
+      unchanged-because: The docs-reviewer's definition is deployed as COR-013 has it, and its writing no answer rests on its remit and the verdict path, not on a tool list. COR-013's proposed point 7 on tool access changes no deployed definition, so the steps hold.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-043-set-up-space.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:25Z
+      outcome: unchanged
+      unchanged-because: The AI agent runs the steps through the docs-author skill, cited with COR-005 and COR-013 for a skill paired with its command. Point 7's tool access binds agent definitions only, and is proposed, so setting up the space holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-044-write-page.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:27Z
+      outcome: unchanged
+      unchanged-because: The AI agent writes the page through the docs-author skill's page operation, cited with COR-005 and COR-013. COR-013's proposed point 7 governs an agent definition's tools and no skill, and point 1's exception names none of the page's steps, so they hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+    revalidated:
+      at: 2026-11-09T12:42:29Z
+      outcome: unchanged
+      unchanged-because: The project-manager agent drafts the batch plan, has it reviewed and files it only once the planner approves, as DEC-029 still says; the change edits only its dispatch paragraph's account of the messaging tool (DEC-068, proposed). The adapter still deploys the agent and the pm skill (COR-013), whose proposed point 7 changes no deployed definition, so the steps hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+    revalidated:
+      at: 2026-11-09T12:42:30Z
+      outcome: unchanged
+      unchanged-because: Filing a Task runs create-issue through the pm skill, and the backbone resolves a cited decision id by COR-013 point 3, which is unchanged. The change adds point 7 on a definition's tool access, proposed, which no step names.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-09T12:42:32Z
+      outcome: unchanged
+      unchanged-because: Steps 6 and 7 rest on DEC-029's review and the planner's approval, which the change leaves as they were; it edits only the dispatch paragraph on the messaging tool (DEC-068, proposed). The critic and the architect are deployed as COR-013 has it, and its proposed point 7 changes none of their definitions.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-070-choose-parts.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-09T12:42:34Z
+      outcome: unchanged
+      unchanged-because: The AI agent walks the choice through the analysis-author skill, cited with COR-005 and COR-013 for a skill paired with its stamp. COR-013's change, point 7 on an agent definition's tools, proposed, binds no skill, so the use case holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-09T12:42:36Z
+      outcome: unchanged
+      unchanged-because: The AI agent derives the candidates through the analysis-author skill, and runs the whole-repository check and the link run; none of it rests on an agent definition's tools. COR-013's proposed point 7 and point 1's exception leave the use case as it reads.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-09T12:42:38Z
+      outcome: unchanged
+      unchanged-because: The AI agent revises artefacts and drafts the revalidation record through a skill, and names itself with --by-agent. COR-013's proposed point 7, on how a definition names its tools, binds no skill and no stamp, so the use case holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:42:40Z
+      outcome: unchanged
+      unchanged-because: The analysis-resolver definition grants no tool that edits a file in place, point 7's grant form, which gives only the tools it names; that is the form a check needs to show a fixer lacks a tool. Point 7 and point 1's exception are proposed and change no deployed definition, so the agent still proposes and writes nothing.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+    revalidated:
+      at: 2026-11-09T12:42:41Z
+      outcome: unchanged
+      unchanged-because: Each required reviewer is deployed as COR-013 has it, and posts its verdict and changes nothing it reviews (DEC-028). Point 7's tool access, proposed, changes no reviewer's definition, so the review and the landing hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+    revalidated:
+      at: 2026-11-09T12:42:43Z
+      outcome: unchanged
+      unchanged-because: The session follows the agent definition it is started with, the project-manager agent's by default, as COR-013 and DEC-029 have it. DEC-068, proposed, would give that agent the session's tools less a withheld list, and DEC-029 now names the messaging tool among them; neither changes which seat a definition takes or the loop it runs.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+    revalidated:
+      at: 2026-11-09T12:42:45Z
+      outcome: unchanged
+      unchanged-because: Reviewers whose verdict does not stand run again on the new head, and the fixers run after the merge; neither rests on how a definition names its tools. COR-013's proposed point 7 leaves each deployed reviewer as it is, so the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T144714Z-e8754301.yaml
+    revalidated:
+      at: 2026-11-09T12:42:47Z
+      outcome: unchanged
+      unchanged-because: The AI agent runs the commands for the planner and lists a Milestone's open issues; no step names an agent definition or its tools. COR-013's proposed point 7 and point 1's exception leave the use case as it reads.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-09T12:42:49Z
+      outcome: unchanged
+      unchanged-because: The AI agent moves the issue through the pm skill's transition-state procedure. COR-013's proposed point 7 covers an agent definition's tools alone, and no step names them, so the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+    revalidated:
+      at: 2026-11-09T12:42:51Z
+      outcome: unchanged
+      unchanged-because: The builder agent the build command starts leaves each write to GitHub to the worker (DEC-063 point 4). DEC-029 changes only in its dispatch paragraph on the messaging tool (DEC-068, proposed), and COR-013 only gains point 7 on tool access, proposed; no step names either, so the use case holds.
+  - artefact: .pkit/lifecycle/manifest.md
+    revalidated:
+      at: 2026-11-09T12:42:53Z
+      outcome: unchanged
+      unchanged-because: The reference cites COR-013 for the reserved `provides` mapping of hooks, which point 4 still describes, and ADR-066 for an agent run's bound and runner. ADR-066 point 3 now says the runner passes the tool access, granted or withheld (ADR-085, proposed), which the reference does not describe, so it holds.
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:42:55Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 point 3 now says the runner passes an agent's tool access, granted or withheld, by ADR-085, proposed, and DEC-029 says project-manager's definition withholds the messaging tool. No runner or deploy admits a withheld list until ADR-085's change, so the fields the runner checks, the tools it passes, the deploy and the no-name dispatch hold as written. Judged with 5e6cbb22, which rewrote when the hook asks, and 9e478090, which added the probe of a working run and its requirement, answered apart: separate sections, both standing, so the page holds with all three."
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T053408Z-3b52273c.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:42:57Z
+      outcome: unchanged
+      unchanged-because: "COR-013 point 1 now excepts a definition's tool names from its harness neutrality. The page calls the methodology's content harness-agnostic per COR-006 and has adapters translate it; those names were already Claude Code's in each `tools` list, and the adapter still writes them, so that framing stands. ADR-066 point 3's tool access, proposed, is not run yet, so the agent runner section holds. Judged with 5e6cbb22, which found no primitive changed, and 9e478090, which counted four harness requirements, answered apart: the page holds with all three."
+  - artefact: .pkit/agents/hooks.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T12:42:59Z
+      outcome: unchanged
+      unchanged-because: Point 4 changed only through COR-013's summary, now counting seven rules with the proposed tool access; the hook pattern, its providers, collisions and unbound needs are as before. Judged with a02a7160, a16af972, 08c0f8b6 and 33dd8c89, answered apart, whose commits list a capability's rules before its install, write its ignore lines, refuse a doubled front-matter key and warn of an ignored overlay override. None changes a hook, so the page holds with all five.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-09T12:43:00Z
+      outcome: unchanged
+      unchanged-because: "The software-engineer definition is deployed with the conventions corpus path in its front matter, as before. COR-013 gains point 7, proposed: a definition names the tools it is granted, those it is withheld, or neither, and point 1 excepts those tool names from harness neutrality, both proposed, and neither touches how the overlay fills a read, so the steps hold."
+  - artefact: .pkit/rule-sets/ops.md#RS-OPS-012
+    revalidated:
+      at: 2026-11-09T12:43:02Z
+      outcome: unchanged
+      unchanged-because: The rule has the adapter deploy skills and agents, agents as copies with their placeholders resolved. COR-013's proposed point 7 has the adapter also write a definition's tool access in its harness's form, still at deploy and still in the deployed copy, so the rule holds as written.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:43:04Z
+      outcome: unchanged
+      unchanged-because: "The spec documents `tools` as the tools the harness grants, which the adapter writes in its harness's form: point 7's grant form. Point 7's withheld list is proposed, and nothing deploys, validates or runs one yet; ADR-085 has this page document it with that change. Every field the page lists works as it says."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+    revalidated:
+      at: 2026-11-09T12:43:06Z
+      outcome: unchanged
+      unchanged-because: "The capability's decisions gain DEC-068, proposed, DEC-029's dispatch paragraph now says the messaging tool is withheld, and ADR-066 point 3 says the runner passes tool access, granted or withheld. The page indexes no record and says nothing of project-manager's tools, and its fixer check still counts a definition listing no tools as doing more than propose, so it holds. Judged with 2a5e1da3 (a branch's related issue), 5e6cbb22 (the code runner in the porosity example) and 579a84ef (land-work's reviewer stop), answered apart: each a passage of its own and all standing, so the page holds with the four."
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T132436Z-bef131f7.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:43:08Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 point 3 now says the runner passes the tool access, granted or withheld, by ADR-085, proposed. The page's agents run row and Agent runs section name the request, the two forms and the flags, never the definition's fields, so they hold. Judged with b22c8186, on COR-043's and COR-069's wording, and 9e478090, on the harness report's requirements, answered apart: separate passages, so the page holds with all three."
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T12:43:10Z
+      outcome: unchanged
+      unchanged-because: "ADR-066's change is to point 3, the definition the runner passes, now its tool access, granted or withheld (ADR-085, proposed). The page cites ADR-066 for the rules of an agent run and how the hook judges a run that names its agent, which point 3 leaves as they were. Judged with 5e6cbb22, which rewrote how a guardrail reads a runner's command, and bee9e107, which found only CLI rows and pointers changed, answered apart: both stand, so the page holds with all three."
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T014227Z-338d7992.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T203336Z-317aab12.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T12:43:12Z
+      outcome: unchanged
+      unchanged-because: "The guide rests on COR-013 for agent variance and for the deployed agents' check, which compares each tracked copy with the deploy's output; point 7, proposed, adds a tool access no deploy writes yet, so that check reads as before. Judged with 5e6cbb22, which found who checks the answers and how console fences run unchanged, and bee9e107, which pointed sync's guard to the upgrade-flow page, answered apart: both stand, so the guide holds with all three."
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T12:43:14Z
+      outcome: unchanged
+      unchanged-because: A skill's front matter shares point 2's shape, and its hooks and citations rest on points 3 and 4, all unchanged but for the summary's count of seven rules. Point 7, proposed, governs an agent definition's tool access and no skill field, and Claude Code's `allowed-tools` stays a harness's own field.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:43:16Z
+      outcome: unchanged
+      unchanged-because: Step 5 has the author write deploy-agents.sh among the scripts, and steps 9 and the postconditions have it deploy the definitions. COR-013's proposed point 7 has a deploy write a definition's tool access in its harness's form, and refuse a withheld list it cannot enforce, which the use case does not detail, so no step becomes untrue.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:43:18Z
+      outcome: unchanged
+      unchanged-because: The steps write, deploy and validate a project's definition by COR-013 points 3 and 5, which are unchanged. Point 7's tool access, proposed, adds a withheld form that no stamp writes and no deploy admits yet, and no step names it, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+    revalidated:
+      at: 2026-11-09T12:43:20Z
+      outcome: unchanged
+      unchanged-because: Steps 7 and 13 have the overlay's paths fill each placeholder as the definitions deploy (COR-013), which is unchanged. Point 7, proposed, on a definition's whole-tool access, is no project addition the use case covers, and permission grants stay the model's, so it holds.
+  - artefact: docs/skills/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T12:43:22Z
+      outcome: unchanged
+      unchanged-because: The guide says a skill shares the front-matter shape and is checked against its body, as COR-013 points 2 and 3 still say. Point 7's tool access, proposed, binds agent definitions only, so the guide holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:43:24Z
+      outcome: unchanged
+      unchanged-because: Steps 10 and 11a say the harness gives the agent only the tools its `tools:` list names, true of every deployed definition, since no deploy admits point 7's withheld list, proposed with this change. Point 1 still has the adapter's deploy-agents.sh deploy each definition for its harness, now save its tool names, and ADR-066's point 3 edit leaves the hook naming the agent. Judged with 5e6cbb22 and 9e478090, answered apart, which each found no step moved; with all three the steps hold.
+  - artefact: docs/agents/README.md
+    read:
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T12:43:25Z
+      outcome: unchanged
+      unchanged-because: The guide says Claude Code gives an agent only the tools its `tools:` list names, true of every definition deployed, since no deploy admits point 7's withheld list, proposed. DEC-029 still has helpers dispatched without a name, and the guide's messaging tool 'the delegating agent may not hold' fits a definition that withholds it.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+    revalidated:
+      at: 2026-11-09T12:43:27Z
+      outcome: unchanged
+      unchanged-because: "The page rests on COR-013 for the agents it ships and the conventions corpus each reads through the overlay's category, which point 5 still covers; point 7, proposed, changes no field the page names. Judged with bee9e107 and 579a84ef, answered apart, which found its section links and floor reviewers unchanged: both stand, so the page holds with all three."
