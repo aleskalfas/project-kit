@@ -312,6 +312,32 @@ def test_a_number_let_through_is_named_and_stops_nothing(tmp_path: Path) -> None
     assert record_of(root)["handed-out"] == 1
 
 
+def test_an_element_of_a_switching_file_let_through_is_named_and_stops_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As a number let through, an element of a switching file let through is named, and no
+    check judges it once the piece is final (DEC-017 point 1, DEC-018 point 1)."""
+    root = drawing_project(tmp_path, picture=False, released=True, exports=["svg-modes"])
+    with monkeypatch.context() as patched:
+        patched.setattr(svg.Switching, "_key_rules", lambda self, key: "")
+        done = run_main(export_script, PIECE, cwd=root)
+        assert done.returncode == 1
+        named = [
+            part
+            for line in done.stderr.split("; ")
+            for part in ("--use-differing", line.split("`")[1])
+        ]
+        done = run_main(export_script, PIECE, *named, cwd=root)
+    assert done.returncode == 0, done.stderr
+    said = marked(root)
+    assert (
+        "let through: version 1's switching file paints `figure/background` of "
+        "`flow.v1.en.default.svg` in `colour-scheme.dark` otherwise than the SVG renderer's "
+        "file of that combination, and no check judges it once the piece is final"
+    ) in said
+    assert piece_of(root)["state"] == "final"
+
+
 def test_a_version_that_let_nothing_through_names_none(tmp_path: Path) -> None:
     root = exported(tmp_path)
     assert not [line for line in marked(root) if line.startswith("let through")]

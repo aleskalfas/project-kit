@@ -11,6 +11,7 @@ piece owes of the version handed out, read after a real mark (DEC-006 point 8, D
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -606,7 +607,7 @@ def test_a_published_piece_with_no_format_fails_and_the_fix_names_declaring_one(
         "location": f"{PIECE_FILE}#exports",
         "message": (
             "the published piece `flow` declares no format under `exports` — declare one there: "
-            "`svg`, `pdf` or `html`"
+            "`svg`, `svg-modes`, `pdf` or `html`"
         ),
         "label": "published-no-format",
     }
@@ -958,6 +959,154 @@ def test_a_published_piece_exported_as_html_owes_nothing_of_its_copy(tmp_path: P
     found = owed(root)
     assert [each["label"] for each in found] == ["current-copy-file-missing"]
     assert found[0]["location"] == f"{PIECE_FOLDER}/current-copy/flow.en.default.html"
+
+
+# --- a piece exported as switching files (DEC-018 points 1, 2, 4 and 5) --------------------------
+
+MODES = "svg-modes"
+BRAND_TOKENS = "visual/libraries/test-brand/1.0.0/tokens/base.tokens.json"
+BOTH_SCHEMES_AND_CONTRAST = {"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]}
+
+
+def labelled(root: Path, label: str) -> list[dict[str, str]]:
+    return [finding for finding in document(root)["findings"] if finding["label"] == label]
+
+
+def test_a_piece_that_names_both_svg_formats_fails_at_its_exports(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=["svg", MODES])
+    assert labelled(root, "exports-same-name") == [
+        {
+            "severity": "error",
+            "location": f"{PIECE_FILE}#exports",
+            "message": (
+                "`flow` names both `svg` and `svg-modes` under `exports`, which write files of "
+                "one name — name one of them; a piece that needs a file of one fixed mode names "
+                "`svg`, and a second piece serves a page"
+            ),
+            "label": "exports-same-name",
+        }
+    ]
+    assert run(root).returncode == 1
+
+
+@pytest.mark.parametrize("form", ["svg", "html", MODES])
+def test_each_format_alone_passes(tmp_path: Path, form: str) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=[form])
+    assert labelled(root, "exports-same-name") == []
+    assert labelled(root, "exports-unpaired-mode") == []
+
+
+def test_a_mode_of_no_pair_the_format_reads_fails_at_the_pieces_modes(tmp_path: Path) -> None:
+    root = drawing_project(
+        tmp_path, picture=False, modes=BOTH_SCHEMES_AND_CONTRAST, exports=[MODES]
+    )
+    found = labelled(root, "exports-unpaired-mode")
+    assert [(each["severity"], each["location"]) for each in found] == [
+        ("error", f"{PIECE_FILE}#modes")
+    ] * 2
+    assert found[1]["message"] == (
+        "`flow` exports as `svg-modes`, whose switching file holds a value axis's modes by the "
+        "reader's signals, and reads no pair of `contrast`'s mode `high`, which its "
+        "combinations differ in — draw `contrast`'s mode `high` in a piece of its own, or "
+        "export this piece as `svg`"
+    )
+    assert "`standard`" in found[0]["message"]
+    assert run(root).returncode == 1
+
+
+@pytest.mark.parametrize(
+    ("modes", "form"),
+    [
+        ({"colour-scheme": ["light", "dark"], "contrast": ["high"]}, MODES),
+        (BOTH_SCHEMES_AND_CONTRAST, "html"),
+        (BOTH_SCHEMES_AND_CONTRAST, "svg"),
+    ],
+    ids=["a-mode-held-alike", "html", "svg"],
+)
+def test_a_mode_that_parts_no_switching_file_passes(
+    tmp_path: Path, modes: dict[str, list[str]], form: str
+) -> None:
+    root = drawing_project(tmp_path, picture=False, modes=modes, exports=[form])
+    assert labelled(root, "exports-unpaired-mode") == []
+
+
+def no_ground(root: Path) -> Path:
+    """The brand's background made clear, so the figure draws no ground of its own."""
+    tokens = root / BRAND_TOKENS
+    held = json.loads(tokens.read_text(encoding="utf-8"))
+    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
+    tokens.write_text(json.dumps(held), encoding="utf-8")
+    return root
+
+
+def test_a_switching_file_with_no_ground_asks_for_attention_naming_the_page(
+    tmp_path: Path,
+) -> None:
+    root = no_ground(drawing_project(tmp_path, picture=False, exports=[MODES]))
+    assert labelled(root, "switching-no-ground") == [
+        {
+            "severity": "warning",
+            "location": f"{PIECE_FILE}#figure",
+            "message": (
+                "the page `figure` draws no ground of its own in `default` and "
+                "`colour-scheme.dark`, so a page that shows its switching file shows its own "
+                "ground under it, and a text may meet a ground of its own colour — for the "
+                "piece's author — give the page a ground of an opaque colour over its whole "
+                "frame, in its component or its brand, in each mode its file holds"
+            ),
+            "label": "switching-no-ground",
+        }
+    ]
+    assert run(root).returncode == 0
+
+
+@pytest.mark.parametrize("form", ["svg", "html"])
+def test_a_page_with_no_ground_asks_nothing_of_another_format(tmp_path: Path, form: str) -> None:
+    root = no_ground(drawing_project(tmp_path, picture=False, exports=[form]))
+    assert labelled(root, "switching-no-ground") == []
+
+
+def test_a_switching_file_with_a_ground_asks_nothing(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=[MODES])
+    assert labelled(root, "switching-no-ground") == []
+
+
+def differing_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The piece published as switching files, its copy made with the switching file's
+    background let through where the renderer, for the length of the run, painted it
+    otherwise than its one-key file."""
+    root = drawing_project(tmp_path, state="published", picture=False, exports=[MODES])
+    with monkeypatch.context() as patched:
+        patched.setattr(svg.Switching, "_key_rules", lambda self, key: "")
+        refused = run_main(export, PIECE, cwd=root)
+        assert refused.returncode == 1
+        elements = re.findall(r"`([^`]+)` of `flow\.v1\.en\.default\.svg`", refused.stderr)
+        named = [part for element in elements for part in ("--use-differing", element)]
+        exported(root, *named)
+    return root
+
+
+def test_a_copy_made_with_an_element_let_through_asks_for_attention_naming_the_capability(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = differing_copy(tmp_path, monkeypatch)
+    found = [each for each in owed(root) if each["label"] == "current-copy-differing"]
+    assert found
+    assert found[0] == {
+        "severity": "warning",
+        "location": AT_THE_RECORD,
+        "message": (
+            "the current copy of `flow`, which version 1 wrote, was made with "
+            "`figure/background` of `flow.v1.en.default.svg` in `colour-scheme.dark` let "
+            "through, which paints that combination otherwise than the SVG renderer's file of "
+            "it — for whoever maintains the capability, who corrects the SVG renderer in a "
+            f"release — once a release of the capability draws it alike, {EXPORT_AGAIN}"
+        ),
+        "label": "current-copy-differing",
+    }
+    assert run(root).returncode == 0
+    exported(root)
+    assert "current-copy-differing" not in {each["label"] for each in owed(root)}
 
 
 # --- what a final piece owes of the version handed out ------------------------------------------

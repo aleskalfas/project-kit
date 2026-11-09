@@ -68,6 +68,7 @@ from _lib import (
     viewing_tool,
 )
 from _lib import pipeline as pl
+from _lib.checks import draws_ground
 from _lib.env import MissingFont
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
@@ -1041,21 +1042,6 @@ def frames(
 
     placed = (frame(each, x, y) for each, x, y in _placed(page) if shows(each, y))
     return [frame(page, 0.0, 0.0), *placed]
-
-
-def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]]) -> bool:
-    """Whether `page` draws a ground of its own: a box of an opaque colour over its whole
-    frame. Where it draws none, its image lies on white through the SVG renderer, and on the
-    browser's own ground in the mode drawn through the HTML renderer, neither of which the
-    piece set (DEC-015 point 5, DEC-023 point 7)."""
-    width, height = float(page["width"]), float(page["height"])
-    for element, x, y in _placed(page):
-        colour = colours.get(element.get("fill") or "")
-        if element.get("type") == "box" and colour and float(colour.get("alpha", 1)) >= 1:
-            right, bottom = x + float(element["width"]), y + float(element["height"])
-            if x <= 0 and y <= 0 and right >= width and bottom >= height:
-                return True
-    return False
 
 
 def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:

@@ -1,8 +1,10 @@
 # The record of a piece's exports, `pieces/<piece>/exports.yaml` (visual-communication
 # DEC-006 point 7): each numbered export, the fingerprint of what it was made from, each
 # file it made with its hash, and what is only recorded, among it each produced output the
-# version used, by its record's fingerprint, and each number or date it let through, though
-# it does not fit (DEC-016 point 6); who wrote a published piece's current copy
+# version used, by its record's fingerprint, each number or date it let through, though it
+# does not fit (DEC-016 point 6), and each element of a switching file it let through,
+# though it paints a combination otherwise than the one-key file (DEC-018 point 1); who
+# wrote a published piece's current copy
 # (DEC-017 point 7), each of its files by its path from the piece's folder, or from the
 # repository's root at the place the piece names; and which version was handed out
 # (DEC-017 point 2). `pkit visual export` rewrites it, and `pkit visual mark-final` adds its
@@ -59,4 +61,8 @@ versions:
           element: example/stamp/number
           component: test-brand/stamp
           version: 1.0.0
+      differing:
+        - file: example.v1.en.default.svg
+          key: colour-scheme.dark
+          element: example/body/marker
 handed-out: 1

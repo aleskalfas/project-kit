@@ -294,12 +294,12 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
+- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)). In `svg-modes` it makes a switching file, which follows the reader's mode, and holds it to the one-key file of each combination it holds ([The switching file](outputs.md#the-switching-file)).
 - **Keeps a published piece's current copy,** replacing it whole in the piece's folder, or writing it at the place the piece names, and naming each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
 - **Shows** the run's own number and date in every file, where a component shows them ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and `--use-overflowing <fact>` a version's number or its date that does not fit. Each may repeat.
+- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, `--use-overflowing <fact>` a version's number or its date that does not fit, and `--use-differing <element>` an element of a switching file that paints a combination otherwise than the one-key file. Each may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual mark-final <piece> <version>`
@@ -308,7 +308,7 @@ Marks a piece final, and names the version handed out, whatever changed since ([
 
 - **Puts back the lock** that version was made under, and names it. It puts back nothing else.
 - **Names what does not follow a new brand,** where the lock it puts back names another brand than the lock it replaces ([The lock](files.md#the-lock)). It stops on none of it.
-- **Says what else changed,** each input that still does not verify, and each number or date the version let through. It stops on none of it.
+- **Says what else changed,** each input that still does not verify, and each number or date and each element of a switching file the version let through. It stops on none of it.
 - **Says what no longer holds of the lock,** and goes on.
 - **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
 - **Names the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
@@ -383,7 +383,7 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 - **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.
 - **Commits nothing,** and makes no branch. Land the diff as you land any change, or discard it.
 - **Says so and writes nothing** where nothing moves.
-- **Stops** on an edit since the copy, on a stale picture, and on a number or a date that does not fit, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, and `--use-overflowing <fact>` a fact whose text to use as it is. Each may repeat.
+- **Stops** on an edit since the copy, on a stale picture, on a number or a date that does not fit, and on an element of a switching file that differs, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, `--use-overflowing <fact>` a fact whose text to use as it is, and `--use-differing <element>` an element to write as it is. Each may repeat.
 - **Says** where no file of the copy stood, so the change shows only an after, and names each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Names** each finding that fails under the moved lock, and stops on none of them.
 - **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.

@@ -40,7 +40,9 @@ It stops on an edit of the piece since the copy, naming each input that changed,
 writes it. It stops on a produced picture stale under the moved lock, naming what changed,
 unless `--use-stale <output>` names it. It runs no program. It stops on a number or a date
 that overflows where its export fills it, unless `--use-overflowing <fact>` names the fact
-(DEC-016 point 6). Each refusal prints the line that names them all. A fingerprint it cannot
+(DEC-016 point 6). It stops on an element of a switching file that paints a combination
+otherwise than the SVG file of it, unless `--use-differing <element>` names the element
+(DEC-018 point 1). Each refusal prints the line that names them all. A fingerprint it cannot
 read refuses, and names the record. With no copy standing, or none of its own, it goes on,
 writes the copy whole, and says no file stood.
 
@@ -56,8 +58,8 @@ could not put back.
 
 Usage:
   pkit visual upgrade <piece> [<library>@<version>]... [--edited <input>]...
-                      [--use-stale <output>]... [--use-overflowing <fact>]... [--dry-run]
-                      [--location <path>]
+                      [--use-stale <output>]... [--use-overflowing <fact>]...
+                      [--use-differing <element>]... [--dry-run] [--location <path>]
 
 Exit codes:
   0  proposed, nothing to move, or a dry run that would propose, whatever findings it names
@@ -123,6 +125,14 @@ def main() -> int:
         "may repeat",
     )
     parser.add_argument(
+        "--use-differing",
+        action="append",
+        default=[],
+        metavar="ELEMENT",
+        help="carry a switching file as it is, though this element, by its trace id, paints a "
+        "combination otherwise than the SVG file of it; may repeat",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="stop where the run would, and say what it would write, writing nothing",
@@ -151,7 +161,9 @@ def _upgrade(root: Path, args: argparse.Namespace) -> int:
         for line in proposals.settled(move):
             print(line)
         return 0
-    named = proposals.Named(args.versions, args.edited, args.use_stale, args.use_overflowing)
+    named = proposals.Named(
+        args.versions, args.edited, args.use_stale, args.use_overflowing, args.use_differing
+    )
     planned = proposals.plan(move, named)
     # The drawing shows what the run's export fills: its number and its date (DEC-016 point 5).
     before, after = looks.sides(move.look, planned.export.facts)
