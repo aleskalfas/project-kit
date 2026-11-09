@@ -74,8 +74,8 @@ A small page in DEC-020's form held four keys over the foundations' two value ax
 ### 6. The step sets a mode through the browser
 
 - **By the browser's emulation of a key's signals.** A file holds no switch for the step, so the step reads what a reader's browser reads. It takes a key's signals from the declaration, and hands them to the browser's module, which knows no axis.
-- **Every key it draws, in the file's one start,** with no reload (DEC-020 point 5). A file holds every key point 1 gives it, whichever the caller picks. The step sets each signal the file reads, so the machine's light or dark plays no part.
-- **Each read of the check for dropped text runs in each key drawn** (DEC-020 point 6).
+- **Every key it draws, in the file's one start,** with no reload (DEC-020 point 5). A file holds every key point 1 gives it, whichever the caller picks. The step sets each signal the file reads, so the machine's light or dark plays no part. Forced images take a start of their own (refinement per [visual-communication:DEC-027-forced-colours-viewing] point 3).
+- **Each read of the check for dropped text runs in each key drawn** (DEC-020 point 6), and in each forced palette drawn (refinement per [visual-communication:DEC-027-forced-colours-viewing]).
 - **The first read holds this too.** Its small page holds a mode for each signal the file reads, and the run stops if setting one does not repaint it, since those keys would then read as one (DEC-020 point 7).
 
 ### 7. A page with no ground lies on the browser's own ground
