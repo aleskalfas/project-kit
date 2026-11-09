@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  A design-ahead record only (#2633). DEC-068, proposed, decides what each
+  measure of a coming report on how merged pull requests flowed means: a
+  review round, a blocking finding, a merge of the base and whether it
+  conflicted, a failed CI run and a re-run, the answers a pull request added,
+  and two times. The report itself ships in a later change, with a changeset
+  of its own, so no command, file or behaviour of the capability moves here.
