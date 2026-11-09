@@ -128,6 +128,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
         - .pkit/capabilities/visual-communication/outputs.md#the-html-renderers-pages
         - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
+        - .pkit/capabilities/visual-communication/outputs.md#under-forced-colours
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
         - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
