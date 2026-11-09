@@ -6,7 +6,7 @@ date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** where its caller asks, the viewing step also draws the HTML renderer's pages as a reader who forces their own colours sees them. The browser draws each page file in its own two forced palettes: dark text on light, and light text on dark. Each forced palette shows the mode a browser gives with it, so the dark one shows a file's dark mode where it holds one. A second start of the browser draws them, under the browser's own flag that forces its colours. Its emulation alone leaves text in the file's colours, so it never stands in. That start's first read checks that the forced palette reached the text. The forced images lie apart, and the report names each one's forced palette. Nothing is drawn under forced colours unasked, and the SVG renderer's pages never are.
+**In plain terms:** where its caller asks, the viewing step also draws the HTML renderer's pages as a reader who forces their own colours sees them. The browser draws each page file in its own two forced palettes: dark text on light, and light text on dark. Each forced palette shows the mode a browser gives with it, so the dark one shows a file's dark mode where it holds one. A second start of the browser draws them, under the browser's own flag that forces its colours. Its emulation alone forces the text in some browsers and leaves it in the file's colours in others, so it never stands in: only the flag forces the colours the same way in every browser the step reached. That start's first read checks that the forced palette reached the text. The forced images lie apart, and the report names each one's forced palette. Nothing is drawn under forced colours unasked, and the SVG renderer's pages never are.
 
 ## Context
 
@@ -64,7 +64,7 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 
 - **A second start of each page file draws its forced images,** after the start that draws its keys. Under the flag, a page drawn without forced colours is no page a reader gets (Context). So no start mixes the two.
 - **By the flag, and by emulation.** The start passes the browser its flag that forces its colours. Every emulation in it sets `forced-colors: active` with the forced palette's signals.
-- **The emulation never stands in for the flag,** since alone it leaves text in the file's colours.
+- **The emulation never stands in for the flag,** since alone it forces the text in some browsers and not in others: Chrome 157 leaves the text in the file's colours (Context). Only the flag forces the colours the same way in every browser the step reached.
 - **As the first start in all else:** one open of the file with no reload, at the same device scale and bounds (DEC-020 points 5 and 8). Its sandbox is any start's (DEC-024).
 - **The browser's module owns both starts,** as it owns the one (DEC-020 point 9).
 

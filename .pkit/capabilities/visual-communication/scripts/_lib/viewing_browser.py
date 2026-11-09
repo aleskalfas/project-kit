@@ -46,12 +46,14 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   palettes (`PALETTES`), in a start of its own: the browser's flag forces its colours
   (`FORCING`), and every emulation sets `forced-colors: active` with the palette's signals.
   Under the flag, a page drawn without forced colours is no page a reader gets, so no start
-  mixes the two. The emulation alone leaves text in the file's colours, so it never stands in
-  for the flag. That start's first read keeps the planted page's mode boxes and its spans
-  with no paint out of forcing, so its reads name each planted fault in each forced palette.
-  It stops where one more span with no paint, left to forcing, shows no ink, since the forced
-  palette did not reach the text, and where a forced palette's ground is not lighter than its
-  text in the light one, and darker in the dark.
+  mixes the two. The emulation alone forces the text in some browsers and leaves it in the
+  file's colours in others, Chrome 157 among them, so it never stands in for the flag: only
+  the flag forces the colours the same way in every browser the step reached. That start's
+  first read keeps the planted page's mode boxes and its spans with no paint out of forcing,
+  so its reads name each planted fault in each forced palette. It stops where one more span
+  with no paint, left to forcing, shows no ink, since the forced palette did not reach the
+  text, and where a forced palette's ground is not lighter than its text in the light one,
+  and darker in the dark.
 - **Bounds.** The browser's start has `START_SECONDS`, each call `CALL_SECONDS`, and its close
   `CLOSE_SECONDS`. A browser that hangs counts as one that stopped, at its close too, and is
   ended: its own process group, which only its start made, and no other process.
