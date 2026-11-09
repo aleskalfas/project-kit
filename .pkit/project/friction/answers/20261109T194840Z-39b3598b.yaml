@@ -656,7 +656,7 @@ answers:
         - anchor:
             kind: record
             value: COR-052#6
-          reason: "COR-052 point 6 adds the query that answers a capability's default for its agents' write category to the query commands, and COR-073 point 3 runs it within a command filler's limits, its time bound among them. REQ-006's applies-to names only commands for anchors, data points, validation and processes; it gains that query when #2895 builds it."
+          reason: "COR-052 point 6 adds the query that answers a capability's default for its agents' write category to the query commands, and COR-073 point 3 runs it within a command filler's limits, its time bound among them. REQ-006's applies-to names only commands for anchors, data points, validation and processes; it gains that query when #2961 builds it."
   - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
     read:
       - 20261029T003116Z-3df0ccea.yaml
@@ -675,7 +675,7 @@ answers:
         - anchor:
             kind: record
             value: COR-052#6
-          reason: "COR-052 point 6 and COR-073 point 3 put the query that answers a capability's default under a query command's obligations: no network, no write, the same answer for the same state. REQ-007's applies-to names only commands that resolve an anchor, fill a data point or join validation; it gains that query when #2895 builds it."
+          reason: "COR-052 point 6 and COR-073 point 3 put the query that answers a capability's default under a query command's obligations: no network, no write, the same answer for the same state. REQ-007's applies-to names only commands that resolve an anchor, fill a data point or join validation; it gains that query when #2961 builds it."
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -888,11 +888,11 @@ answers:
         - anchor:
             kind: record
             value: COR-001
-          reason: "COR-013 point 5 and COR-001 have the commands that fill missing overlay categories write a capability's declared default, and move a value still exactly as written to the default's current answer, showing the move first. Steps 8 and 9 and variants 9a and 9b describe what `pkit agents reconcile` fills without that; they gain it when #2895 builds it."
+          reason: "COR-013 point 5 and COR-001 have the commands that fill missing overlay categories write a capability's declared default, and move a value still exactly as written to the default's current answer, showing the move first. Steps 8 and 9 and variants 9a and 9b describe what `pkit agents reconcile` fills without that; they gain it when #2961 builds it."
         - anchor:
             kind: record
             value: COR-013
-          reason: "COR-013 point 5 and COR-001 have the commands that fill missing overlay categories write a capability's declared default, and move a value still exactly as written to the default's current answer, showing the move first. Steps 8 and 9 and variants 9a and 9b describe what `pkit agents reconcile` fills without that; they gain it when #2895 builds it."
+          reason: "COR-013 point 5 and COR-001 have the commands that fill missing overlay categories write a capability's declared default, and move a value still exactly as written to the default's current answer, showing the move first. Steps 8 and 9 and variants 9a and 9b describe what `pkit agents reconcile` fills without that; they gain it when #2961 builds it."
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -932,7 +932,7 @@ answers:
         - anchor:
             kind: record
             value: COR-017
-          reason: "COR-017 now has install write each default the capability declares for its agents' write categories into the overlay before it deploys, and ask over a path that already holds content. The main path goes from the project rule set (step 9) to the deploy (step 10) without that write; it gains the step, and the question, when #2895 builds it."
+          reason: "COR-017 now has install write each default the capability declares for its agents' write categories into the overlay before it deploys, and ask over a path that already holds content. The main path goes from the project rule set (step 9) to the deploy (step 10) without that write; it gains the step, and the question, when #2961 builds it."
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -1020,7 +1020,7 @@ answers:
         - anchor:
             kind: record
             value: COR-013#5
-          reason: "COR-013 point 5 widens the deploy's check against what sync overwrites to every category a capability's agent owns, and has a capability's install write its agents' defaults so they deploy at once. Variant 6c names only categories that carry writes, and the path has the adopter alone name the paths; both gain COR-073's rule when #2895 builds it."
+          reason: "COR-013 point 5 widens the deploy's check against what sync overwrites to every category a capability's agent owns, and has a capability's install write its agents' defaults so they deploy at once. Variant 6c names only categories that carry writes, and the path has the adopter alone name the paths; both gain COR-073's rule when #2961 builds it."
   - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
     read:
       - 20261026T013021Z-befdc31c.yaml
@@ -1375,15 +1375,15 @@ answers:
         - anchor:
             kind: record
             value: COR-001
-          reason: "COR-013 point 5, COR-017 and COR-001 add a capability's declared write categories under a dotted name, their defaults written by install and by `pkit agents reconcile --write`, the move of a value still as written, and the deploy's check widened to every category a capability's agent owns. The README states the rules for core's write-carrying categories and the fill commands without these; #2895 adds them to \"Write-carrying categories\" and \"pkit agents reconcile\" with the build."
+          reason: "COR-013 point 5, COR-017 and COR-001 add a capability's declared write categories under a dotted name, their defaults written by install and by `pkit agents reconcile --write`, the move of a value still as written, and the deploy's check widened to every category a capability's agent owns. The README states the rules for core's write-carrying categories and the fill commands without these; #2961 adds them to \"Write-carrying categories\" and \"pkit agents reconcile\" with the build."
         - anchor:
             kind: record
             value: COR-013
-          reason: "COR-013 point 5, COR-017 and COR-001 add a capability's declared write categories under a dotted name, their defaults written by install and by `pkit agents reconcile --write`, the move of a value still as written, and the deploy's check widened to every category a capability's agent owns. The README states the rules for core's write-carrying categories and the fill commands without these; #2895 adds them to \"Write-carrying categories\" and \"pkit agents reconcile\" with the build."
+          reason: "COR-013 point 5, COR-017 and COR-001 add a capability's declared write categories under a dotted name, their defaults written by install and by `pkit agents reconcile --write`, the move of a value still as written, and the deploy's check widened to every category a capability's agent owns. The README states the rules for core's write-carrying categories and the fill commands without these; #2961 adds them to \"Write-carrying categories\" and \"pkit agents reconcile\" with the build."
         - anchor:
             kind: record
             value: COR-017
-          reason: "COR-013 point 5, COR-017 and COR-001 add a capability's declared write categories under a dotted name, their defaults written by install and by `pkit agents reconcile --write`, the move of a value still as written, and the deploy's check widened to every category a capability's agent owns. The README states the rules for core's write-carrying categories and the fill commands without these; #2895 adds them to \"Write-carrying categories\" and \"pkit agents reconcile\" with the build."
+          reason: "COR-013 point 5, COR-017 and COR-001 add a capability's declared write categories under a dotted name, their defaults written by install and by `pkit agents reconcile --write`, the move of a value still as written, and the deploy's check widened to every category a capability's agent owns. The README states the rules for core's write-carrying categories and the fill commands without these; #2961 adds them to \"Write-carrying categories\" and \"pkit agents reconcile\" with the build."
   - artefact: .pkit/lifecycle/manifest.md
     read:
       - 20261109T103219Z-76953beb.yaml
@@ -1393,26 +1393,26 @@ answers:
         - anchor:
             kind: record
             value: COR-013
-          reason: "COR-017 lets a capability's package metadata declare the overlay categories its agents write, each with an owning agent and an optional default query, COR-052 point 6 lists that query among the query commands, and COR-013 point 5 names the declaration. This page is the package-metadata reference, which COR-073 says gives the declaration's layout; #2895's build and its architecture record decide the layout, and the page takes it then."
+          reason: "COR-017 lets a capability's package metadata declare the overlay categories its agents write, each with an owning agent and an optional default query, COR-052 point 6 lists that query among the query commands, and COR-013 point 5 names the declaration. This page is the package-metadata reference, which COR-073 says gives the declaration's layout; #2961's build and its architecture record decide the layout, and the page takes it then."
         - anchor:
             kind: record
             value: COR-017
-          reason: "COR-017 lets a capability's package metadata declare the overlay categories its agents write, each with an owning agent and an optional default query, COR-052 point 6 lists that query among the query commands, and COR-013 point 5 names the declaration. This page is the package-metadata reference, which COR-073 says gives the declaration's layout; #2895's build and its architecture record decide the layout, and the page takes it then."
+          reason: "COR-017 lets a capability's package metadata declare the overlay categories its agents write, each with an owning agent and an optional default query, COR-052 point 6 lists that query among the query commands, and COR-013 point 5 names the declaration. This page is the package-metadata reference, which COR-073 says gives the declaration's layout; #2961's build and its architecture record decide the layout, and the page takes it then."
         - anchor:
             kind: record
             value: COR-052
-          reason: "COR-017 lets a capability's package metadata declare the overlay categories its agents write, each with an owning agent and an optional default query, COR-052 point 6 lists that query among the query commands, and COR-013 point 5 names the declaration. This page is the package-metadata reference, which COR-073 says gives the declaration's layout; #2895's build and its architecture record decide the layout, and the page takes it then."
+          reason: "COR-017 lets a capability's package metadata declare the overlay categories its agents write, each with an owning agent and an optional default query, COR-052 point 6 lists that query among the query commands, and COR-013 point 5 names the declaration. This page is the package-metadata reference, which COR-073 says gives the declaration's layout; #2961's build and its architecture record decide the layout, and the page takes it then."
   - artefact: .pkit/lifecycle/component-registry.md
     revalidated:
       deferred:
         - anchor:
             kind: record
             value: COR-001
-          reason: "COR-017 has install write each declared default into the agents overlay before it deploys, asking over a path that already holds content, and COR-001 names install a writer of it. This page sets out install's checks and steps, which gain that write when #2895 builds it."
+          reason: "COR-017 has install write each declared default into the agents overlay before it deploys, asking over a path that already holds content, and COR-001 names install a writer of it. This page sets out install's checks and steps, which gain that write when #2961 builds it."
         - anchor:
             kind: record
             value: COR-017
-          reason: "COR-017 has install write each declared default into the agents overlay before it deploys, asking over a path that already holds content, and COR-001 names install a writer of it. This page sets out install's checks and steps, which gain that write when #2895 builds it."
+          reason: "COR-017 has install write each declared default into the agents overlay before it deploys, asking over a path that already holds content, and COR-001 names install a writer of it. This page sets out install's checks and steps, which gain that write when #2961 builds it."
   - artefact: .pkit/lifecycle/README.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -1448,15 +1448,15 @@ answers:
         - anchor:
             kind: record
             value: COR-001
-          reason: "COR-073, through COR-017, COR-001 and COR-052 point 6, widens the write-authority check that the ownership predicates serve to every category a capability's agent owns, counting a copy pulled from an external source, and adds a default query and an install write. The page's ownership section describes the check for write-carrying categories alone; it takes the widened check when #2895 builds it."
+          reason: "COR-073, through COR-017, COR-001 and COR-052 point 6, widens the write-authority check that the ownership predicates serve to every category a capability's agent owns, counting a copy pulled from an external source, and adds a default query and an install write. The page's ownership section describes the check for write-carrying categories alone; it takes the widened check when #2961 builds it."
         - anchor:
             kind: record
             value: COR-017
-          reason: "COR-073, through COR-017, COR-001 and COR-052 point 6, widens the write-authority check that the ownership predicates serve to every category a capability's agent owns, counting a copy pulled from an external source, and adds a default query and an install write. The page's ownership section describes the check for write-carrying categories alone; it takes the widened check when #2895 builds it."
+          reason: "COR-073, through COR-017, COR-001 and COR-052 point 6, widens the write-authority check that the ownership predicates serve to every category a capability's agent owns, counting a copy pulled from an external source, and adds a default query and an install write. The page's ownership section describes the check for write-carrying categories alone; it takes the widened check when #2961 builds it."
         - anchor:
             kind: record
             value: COR-052#6
-          reason: "COR-073, through COR-017, COR-001 and COR-052 point 6, widens the write-authority check that the ownership predicates serve to every category a capability's agent owns, counting a copy pulled from an external source, and adds a default query and an install write. The page's ownership section describes the check for write-carrying categories alone; it takes the widened check when #2895 builds it."
+          reason: "COR-073, through COR-017, COR-001 and COR-052 point 6, widens the write-authority check that the ownership predicates serve to every category a capability's agent owns, counting a copy pulled from an external source, and adds a default query and an install write. The page's ownership section describes the check for write-carrying categories alone; it takes the widened check when #2961 builds it."
   - artefact: .pkit/decisions/README.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
