@@ -18,7 +18,6 @@ reads:
   paths:
     - .pkit/rules/core.md
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
     - .pkit/lifecycle/manifest.md
     - .pkit/permissions/README.md
     - .pkit/decisions/README.md

@@ -25,7 +25,6 @@ reads:
     - .pkit/schemas/README.md
     - .pkit/schemas/_defs/refs.schema.json
     - .pkit/lifecycle/README.md
-    - .pkit/lifecycle/manifest.md
     - .pkit/decisions/core/COR-018-capability-schemas.md
     - .pkit/decisions/core/COR-019-schema-reference-form.md
     - .pkit/decisions/core/COR-020-skill-folder-form.md

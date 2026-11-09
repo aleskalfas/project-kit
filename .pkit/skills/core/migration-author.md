@@ -13,7 +13,6 @@ reads:
     - COR-027
   paths:
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
     - .pkit/lifecycle/migrations.md
     - .pkit/decisions/README.md
 ---

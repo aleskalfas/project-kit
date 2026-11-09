@@ -14,7 +14,6 @@ reads:
     - COR-002
   paths:
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
     - .pkit/lifecycle/manifest.md
     - .pkit/adapters/README.md
     - .pkit/decisions/README.md
