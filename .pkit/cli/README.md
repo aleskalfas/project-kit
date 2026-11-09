@@ -106,6 +106,7 @@ pkit:
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/README.md#the-agent-runner
         - .pkit/adapters/README.md#harness-requirements
+        - .pkit/adapters/README.md#what-an-adapter-declares-as-data
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#checking-what-a-change-lands

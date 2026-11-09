@@ -179,7 +179,7 @@ How it is written:
 
 **The adapter** writes the reader's answer in its harness's keys, never the author's text. It declares its harness's terms as data, in `tool-access.json` in its folder. They are the harness's keys, the forms a tool's name takes, its built-in tools, and the withheld entries it was measured to withhold.
 
-**What the adapter refuses.** Against its declaration the reader makes the adapter's refusals, since a withheld list fails open. It refuses a withheld list the harness cannot withhold, or whose names it cannot translate. [The adapters README, "What an adapter declares as data"](../adapters/README.md#what-an-adapter-declares-as-data), says what the declaration holds. The adapter's README says what it refuses, and "Deploy mechanics" below what a refusal does at deploy.
+**What the adapter refuses.** Against the adapter's declaration, the reader makes the adapter's refusals, since a withheld list fails open. The reader refuses a withheld list the harness cannot withhold, or whose names the adapter cannot translate. [The adapters README, "What an adapter declares as data"](../adapters/README.md#what-an-adapter-declares-as-data), says what the declaration holds. The adapter's README says what it refuses, and "Deploy mechanics" below what a refusal does at deploy.
 
 **The validator** reports as an error each definition whose tool access the reader refuses. It makes the adapter's refusals too, reading the declaration of every registered adapter that deploys agents, and names the adapter that refuses. It also reports an error for such an adapter with no declaration the reader reads. It does so too for one whose declaration admits a withheld entry its support declaration does not answer as achievable.
 
@@ -498,7 +498,7 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
 - **A file without the mark** at the copy's path is left as it is, and reported `skipped`. It is the project's own, or a copy from before the mark. To have the deploy write its own, delete the file and deploy again.
 - **A marked copy that no source ships any more** is removed. To keep one, delete its mark line, and it reads as the project's.
 - **A folder with no definition named after it,** such as one half written, is skipped, and the rest deploy.
-- **A skipped definition** never stops the others. A copy an earlier deploy wrote stays as it was. The run ends with the count skipped, and the remedies.
+- **A skipped definition** never stops the others. A copy an earlier deploy wrote stays as it was, but for the one skip below. The run ends with the count skipped, and the remedies.
 - **A definition refused for its tool access** is skipped, and the deploy names the cause. It is the one skip that removes the earlier copy, where that copy carries the mark. That copy may give tools the definition no longer gives (COR-013 point 7). The agent is missing until its definition is mended.
 
 Beside the deploy:
