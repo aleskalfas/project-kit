@@ -70,7 +70,7 @@ pkit:
 1. The agent finds an answer the change check did not ask for, or an `unanchored-because` reason (COR-050 points [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [16](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)). It may find:
    - an answer on an artefact the change check did not ask about, or for a debt the whole-repository check reports
    - a revisit entry for a link target the change asks no revisit of, or one whose outcome alone changed
-   - a reason for having no anchors, which goes through the steps below as an answer does ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides))
+   - an `unanchored-because` reason, which goes through the steps below as an answer does ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides))
 2. The agent writes none of these (`software-engineer.md`).
 3. The agent names each in its hand-off, for the developer, or the delegate a person named, to decide (`software-engineer.md`).
 4. The developer is shown each answer's words, and accepts them or declines the answer, as `core:UC-002` describes in its variant 5c (COR-050 point 3).
