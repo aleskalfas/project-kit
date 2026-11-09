@@ -1,7 +1,7 @@
 ---
 id: COR-074
 title: The deploy names each suspension it applies
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
