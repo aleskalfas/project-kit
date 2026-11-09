@@ -1,0 +1,37 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+    revalidated:
+      at: 2026-11-09T00:07:22Z
+      outcome: unchanged
+      unchanged-because: The change adds DEC-068, a proposed record that decides the measures of a pull-request flow report not yet built. The README documents accepted records and the commands that ship; it names no proposed record and no flow report, and no command, option or behaviour it states changes, so every statement in it still holds.
