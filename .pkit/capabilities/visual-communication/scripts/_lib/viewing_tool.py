@@ -27,8 +27,12 @@ step works today, not what the step is, so nothing else of the step reads an SVG
   holds whatever the cause: a font the tool could not match, no paint, a colour with no
   opacity, a line off the page. Over the page's other elements it asks nothing: a text
   under a later box, or in the colour of what lies beneath it, was drawn.
-- **What it is not asked.** A page with no size, or one past `MOST_PIXELS`, fails here. The
-  tool's own failure at such a size takes the process down, which no caller can catch.
+- **Regions.** The caller hands it the bands of a page too tall for one image, each a top
+  and a height in the page's px, and it draws each as an image as wide as the page, at the
+  one scale the caller gives (DEC-022 point 7). Handed none, it draws the page whole. What
+  it dropped it reads on the whole page, once.
+- **What it is not asked.** A page with no size, or an image past `MOST_PIXELS`, fails here.
+  The tool's own failure at such a size takes the process down, which no caller can catch.
 """
 
 from __future__ import annotations
@@ -71,7 +75,7 @@ STYLE = f"{{{SVG_NAMESPACE}}}style"
 TEXT = f"{{{SVG_NAMESPACE}}}text"
 SPAN = f"{{{SVG_NAMESPACE}}}tspan"
 
-#: A CSS string as `plugins/svg.py` writes one.
+#: A CSS string as the canvas (`canvas.py`) writes one.
 CSS_STRING = r'"(?:[^"\\]|\\.)*"'
 
 #: An `@font-face` rule of the SVG renderer's.
@@ -107,23 +111,50 @@ class Dropped:
 
 
 @dataclass(frozen=True)
-class Drawing:
-    """A page drawn: the PNG file's bytes, its size in pixels, and what the tool dropped."""
+class Image:
+    """A page drawn whole, or one of its bands: the PNG file's bytes, and its size in pixels."""
 
     image: bytes
     width: int
     height: int
+
+
+@dataclass(frozen=True)
+class Drawing:
+    """A page drawn: an image of the whole page, or of each region handed, in order, and what
+    the tool dropped on the page."""
+
+    images: tuple[Image, ...]
     dropped: tuple[Dropped, ...]
 
 
-def draw(svg: str, long_edge: int, folder: Path, widths: Mapping[str, Sequence[float]]) -> Drawing:
-    """The SVG page `svg` as an image `long_edge` pixels on its long edge, on the ground.
-    `widths` gives the width the engine measured of each line of each text, by its trace id.
-    Writes the page's faces in `folder`, which the caller removes. Raises ToolFailed."""
+def draw(
+    svg: str,
+    scale: float,
+    folder: Path,
+    widths: Mapping[str, Sequence[float]],
+    *,
+    regions: Sequence[tuple[float, float]] = (),
+) -> Drawing:
+    """The SVG page `svg` at `scale` image pixels to a px, on the ground: an image of each of
+    `regions`, each a top and a height in the page's px, as wide as the page, or one image of
+    the whole page where it holds none. `widths` gives the width the engine measured of each
+    line of each text, by its trace id. Writes the page's faces in `folder`, which the caller
+    removes. Raises ToolFailed."""
     page = _Page(svg, folder, widths)
-    image = page.image(long_edge)
-    width, height = struct.unpack(">II", image[PNG_SIZE])
-    return Drawing(image, width, height, tuple(page.dropped(width / page.width)))
+    if regions:
+        images = tuple(
+            page.region(top, height, scale, number)
+            for number, (top, height) in enumerate(regions, 1)
+        )
+    else:
+        images = (page.image(scale),)
+    return Drawing(images, tuple(page.dropped(images[0].width / page.width)))
+
+
+def _pixels(length: float, scale: float) -> int:
+    """How many pixels of an image `length` px take at `scale`, whole."""
+    return math.ceil(round(length * scale, 6))
 
 
 class _Page:
@@ -171,17 +202,50 @@ class _Page:
                     line.set("x", str(float(line.attrib["x"]) - before * width))
                     line.set("text-anchor", "start")
 
-    def image(self, long_edge: int) -> bytes:
+    def image(self, scale: float) -> Image:
+        """The whole page at `scale`, its long edge set whole."""
+        self._sized()
         longest = max(self.width, self.height)
-        if min(self.width, self.height) <= 0:
-            raise ToolFailed(f"the page measures {self.width:g} by {self.height:g} px")
+        long_edge = _pixels(longest, scale)
         if self.width * self.height * (long_edge / longest) ** 2 > MOST_PIXELS:
             raise ToolFailed(
                 f"at {long_edge} pixels on its long edge the page takes more than {MOST_PIXELS}"
             )
         side = "width" if self.width >= self.height else "height"
         svg = ET.tostring(self.root, encoding="unicode")
-        return self._tool(svg, background=GROUND, **{side: long_edge})
+        return _image(self._tool(svg, background=GROUND, **{side: long_edge}))
+
+    def region(self, top: float, height: float, scale: float, number: int) -> Image:
+        """Band `number` of the page, from `top` down `height` px, as wide as the page, at
+        `scale`: the page's own view of it, stretched to whole pixels."""
+        self._sized()
+        size = (_pixels(self.width, scale), _pixels(height, scale))
+        if size[0] * size[1] > MOST_PIXELS:
+            raise ToolFailed(
+                f"at {scale:g} pixels to a px band {number} of the page takes more than "
+                f"{MOST_PIXELS}"
+            )
+        view = {
+            "width": str(size[0]),
+            "height": str(size[1]),
+            "viewBox": f"0 {top!r} {self.width!r} {height!r}",
+            "preserveAspectRatio": "none",
+        }
+        held = {name: self.root.get(name) for name in view}
+        self.root.attrib.update(view)
+        try:
+            svg = ET.tostring(self.root, encoding="unicode")
+        finally:
+            for name, value in held.items():
+                if value is None:
+                    self.root.attrib.pop(name, None)
+                else:
+                    self.root.set(name, value)
+        return _image(self._tool(svg, background=GROUND))
+
+    def _sized(self) -> None:
+        if min(self.width, self.height) <= 0:
+            raise ToolFailed(f"the page measures {self.width:g} by {self.height:g} px")
 
     def dropped(self, scale: float) -> Iterator[Dropped]:
         """What the tool drew nothing of on this page, at `scale` image pixels to a px."""
@@ -269,6 +333,11 @@ class _Page:
             )
         except ValueError as exc:
             raise ToolFailed(str(exc)) from exc
+
+
+def _image(png: bytes) -> Image:
+    width, height = struct.unpack(">II", png[PNG_SIZE])
+    return Image(png, width, height)
 
 
 def _spans(line: ET.Element) -> list[ET.Element]:

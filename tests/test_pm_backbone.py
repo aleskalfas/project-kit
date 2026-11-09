@@ -214,9 +214,8 @@ def test_the_change_check_s_readers_give_pkit_the_argument_lists_they_gave(
     assert _calls(recorded, lambda: fa._run_check(None, "main", cwd=None)) == [
         (check, {**bounded, "cwd": None})
     ]
-    own = {**bounded, "cwd": tmp_path, "env": {**unrouted, "PKIT_CHECK_HEAD": HEAD}}
     assert _calls(recorded, lambda: fa._run_check(BASE, "main", cwd=tmp_path, own_head=HEAD)) == [
-        ([*check, "--head", BASE], own)
+        ([*check, "--head", BASE, "--own-head", HEAD], {**bounded, "cwd": tmp_path})
     ]
     monkeypatch.setattr(fa, "_refresh_base", lambda _base: None)
     monkeypatch.setattr(fa, "refresh_base", lambda _base: None)
@@ -298,4 +297,4 @@ def test_a_route_answers_every_call_in_this_process(
         ["pkit", "friction", "check", "--json", "--base", "main"],
     ]
     with pytest.raises(TypeError, match="routing off"):
-        fa._run_check(BASE, "main", cwd=None, own_head=HEAD)
+        fa.backbone.run(["pkit", "friction", "check"], env={**os.environ, "ADDED": "more"})

@@ -35,6 +35,7 @@ pkit:
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
+        - scripts/release_pr.py
       record:
         - PRJ-002#D2
         - PRJ-002#D3
@@ -72,7 +73,7 @@ pkit:
 
 **Assumptions:**
 
-- Each [changeset](../../../glossary.md#term-changeset--changeset)'s [bump segment](../../../glossary.md#term-bump-segment--bump-segment) is a person's judgement of the [change](../../../glossary.md#term-change--change)'s surface, and the [release step](../../../glossary.md#term-release-step--release-step) takes the bump segment as written ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- Each [changeset](../../../glossary.md#term-changeset--changeset)'s [bump segment](../../../glossary.md#term-bump-segment--bump-segment) is a person's judgement of the [change](../../../glossary.md#term-change--change)'s [surface](../../../glossary.md#term-surface--surface), and the [release step](../../../glossary.md#term-release-step--release-step) takes the bump segment as written ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - Where the [release](../../../glossary.md#term-release--release) ships a [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration) that adds a missing default, the changelog entry names that default, from a pending changeset. No command checks for that sentence, so the maintainer looks for it at step 8 ([COR-010](../../../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
 
 **Trigger:** The maintainer starts `release-pr.yml` by hand.
@@ -93,7 +94,7 @@ pkit:
    - the move of the backbone and of each component, with the floors and upper bounds declared for it
    - any warning on a [migration](../../../glossary.md#term-migration--migration)'s folder
    - the new changelog entry
-7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) reads the release pull request's diff as only what `pkit release apply` writes, with any answers those writes need. The guard exempts that diff from the surface check ([UC-003](../030-change/UC-003-declare-changeset.md)).
+7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) reads the release pull request's diff as only what `pkit release apply` writes, with any answers those writes need. The guard exempts that diff from the [surface](../../../glossary.md#term-surface--surface) check ([UC-003](../030-change/UC-003-declare-changeset.md)).
 8. The maintainer reviews the new versions and the changelog entry.
 9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` head branch under a `chore(release):` title.
 14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
@@ -122,6 +123,8 @@ pkit:
 - **2d.** The release step would leave a [capability](../../../glossary.md#term-capability--capability) whose [range](../../../glossary.md#term-range--range) excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - **2e.** A [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration)'s folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning ([UC-010](UC-010-migrate-backbone-change.md)).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
+- **3b.** A run that failed after its push left the branch `release/v<version>` on the remote, and no release pull request is open from it. The CI pipeline creates the branch `release/v<version>-<run id>` instead, and the path goes on (`scripts/release_pr.py`). Step 9 takes that branch too, as a `release/` branch.
+- **6a.** The new changelog entry would take the pull request's body past the 65,536 characters GitHub keeps. The body then holds each move and warning whole, and links `CHANGELOG.md` on the pushed branch instead of the entry (`scripts/release_pr.py`).
 - **7a.** The [project](../../../glossary.md#term-project--project) gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
 - **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's head branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
 - **10a.** The release pull request has a conflict, or a check that is red or still running. The system refuses with the reason, and merges nothing. The path rejoins at step 8.

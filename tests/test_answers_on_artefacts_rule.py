@@ -126,11 +126,12 @@ def test_the_readme_bullet_agrees(words):
 
 
 def test_the_readme_leaves_any_other_entry_to_a_person():
+    writers = _friction_writers()
     assert (
-        "Any other answer — on an artefact or for a target a change was not asked about —"
-        " and every reason for having no anchors is written by any agent only under the"
-        " four conditions above."
-    ) in _friction_writers()
+        "Any agent writes any other answer, on an artefact or for a target a change was not"
+        " asked about, only under the four conditions above."
+    ) in writers
+    assert "The same holds for every reason for having no anchors." in writers
 
 
 @pytest.mark.parametrize(

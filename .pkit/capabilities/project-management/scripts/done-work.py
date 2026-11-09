@@ -67,8 +67,12 @@ predicate.
 
 CI-status gate (#498): in front of the merge, the PR's `statusCheckRollup`
 must be green — a failing or still-pending check refuses the merge (an
-APPROVED verdict is not evidence CI passed). A rollup with no checks, which
-GitHub answers for a project that runs none, passes. A rollup that cannot be
+APPROVED verdict is not evidence CI passed). A rollup with no checks is what
+GitHub answers for a project that runs none, and for a head just pushed,
+before its checks started: it passes only where the PR's base branch requires
+no check, by its protection and its rulesets, and is refused as a pending
+check otherwise, naming the cause — the checks the base requires, or why they
+could not be read (#1965). A rollup that cannot be
 read, or that GitHub's answer does not carry, is no answer, never one of no
 checks: the gate refuses, names why and writes nothing, and `--bypass-ci` does
 not clear it (#1946). The general `--bypass` NEVER
@@ -284,7 +288,6 @@ from _lib.agent_verdicts import (
     gate_candidates,
     gate_membership,
     gate_verdicts,
-    latest_commit_timestamp,
     pr_author,
 )
 
@@ -304,11 +307,12 @@ from _lib.author_delta import author_delta, base_kept
 # predicate.
 from _lib.checkbox_gate import refusal_message as _checkbox_refusal
 from _lib.checkbox_gate import unticked_box_lines
-from _lib.ci_checks import evaluate_ci_gate
+from _lib.ci_checks import RequiredChecks, evaluate_ci_gate, read_required_checks
 
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import fetch_comments, post_audit_once
 from _lib.criteria import checkbox_headings, tick_hints
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -489,19 +493,7 @@ def _bypass_audit_key(writer: str, reason: str, head: str) -> str:
     return bypass_audit_key(writer, reason, head)
 
 
-def _head_key(commits: list) -> str:
-    """A stable identifier for the HEAD the gate evaluated against (DEC-050 D3).
-
-    Prefers the last commit's `oid` — HEAD's own identity — and falls back to its
-    timestamp, which is the freshness anchor the gate already requires, so this
-    is never empty on any path that reaches an audit build.
-    """
-    last = commits[-1] if commits else None
-    if not isinstance(last, dict):
-        return ""
-    return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
-
-
+@escaping
 def main(argv: list[str] | None = None) -> int:
     """Run done-work on `argv` (default: the command line); its exit code."""
     return run(argv).exit_code
@@ -1071,20 +1063,28 @@ def run(
     # the PR before merging (bypassable-with-audit per validation-severity).
     # Checks that cannot be read are no answer, never an answer of no checks:
     # the gate refuses before anything is written, `--bypass-ci` or not (#1946).
+    # No check reported is also what GitHub answers for a head just pushed,
+    # before its checks started, so it passes only where the base requires
+    # none, and is pending otherwise (#1965).
     rollup = _gh_get_status_rollup(pr_number, config)
     if rollup.problem:
         return _ended(UNREADABLE, 2, _ci_unreadable_refusal(pr_number, rollup.problem))
-    ci_gate = evaluate_ci_gate(list(rollup.checks))
+    required = (
+        None if rollup.checks else _gh_get_required_checks(str(pr.get("baseRefName") or ""), config)
+    )
+    ci_gate = evaluate_ci_gate(list(rollup.checks), required)
     if not ci_gate.passing:
         if not args.bypass_ci:
             # Checks still running are a wait, which a re-run can outlast; a
             # failed check needs a change.
+            cause = f"          {ci_gate.cause}.\n" if ci_gate.cause else ""
             return _ended(
                 REFUSED,
                 1,
                 f"[refused] CI-status gate for PR #{pr_number}: checks are "
                 "not all green.\n"
                 f"          failing/pending: {', '.join(ci_gate.failing_checks)}\n"
+                f"{cause}"
                 "          → wait for the checks to pass, or override this CI "
                 'gate explicitly with `--bypass-ci "<reason>"` (--bypass does '
                 "not clear a red CI).",
@@ -1096,8 +1096,10 @@ def run(
             "  ci-status: [bypass-ci] checks not green "
             f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
         )
+    elif ci_gate.no_checks:
+        print(f"  ci-status: green (no check reported, and {base} requires none)")
     else:
-        print(f"  ci-status: green{' (no checks configured)' if ci_gate.no_checks else ''}")
+        print("  ci-status: green")
 
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
@@ -2236,17 +2238,17 @@ def _check_agent_gate(
         return refuse("error: gh pr view returned malformed JSON.")
     author_login = pr_author(data)
     comments = data.get("comments") or []
-    commits = data.get("commits") or []
 
-    # Latest commit timestamp — the freshness anchor for a verdict that names
-    # no reviewed head (DEC-028 "Stale-verdict handling"), read by the SHARED
-    # `latest_commit_timestamp`. If it cannot be established (no commits
-    # returned, or the last commit carries neither committedDate nor
-    # authoredDate) the PR's head is UNKNOWN — so the gate REFUSES rather than
-    # judge any verdict against it. Fail-closed per DEC-032 D5; an
-    # unestablishable head is not "no freshness check".
-    if not latest_commit_timestamp(commits):
-        return refuse(_freshness_unresolvable_refusal(pr_number))
+    # The PR's head — what every verdict is judged against (DEC-028
+    # "Stale-verdict handling"), the key of an override's audit (DEC-050 D3)
+    # and the head the merge is pinned to. If `gh pr view` names none (no
+    # `headRefOid`, and no listed commit with an oid), the gate REFUSES
+    # rather than judge any verdict against it. Fail-closed per DEC-032 D5;
+    # an unknown head is not "no freshness check". When the head arrived is
+    # read later, by the freshness rule, for a verdict that names no head.
+    head = head_sha(data)
+    if not head:
+        return refuse(_head_unresolvable_refusal(pr_number))
 
     # The PR's author, which a remote verdict must not come from (DEC-028
     # step 3). One that cannot be read leaves no remote reviewer known to be
@@ -2262,12 +2264,13 @@ def _check_agent_gate(
         name for name in remote_baseline if name not in required_local or name in override_set
     ]
     if not author_login and unjudged:
-        return refuse(_author_unread_refusal(pr_number, unjudged), head_oid=head_sha(data))
+        return refuse(_author_unread_refusal(pr_number, unjudged), head_oid=head)
 
     # The one freshness rule (#1179), shared with `review-pr`'s skip and
     # `show-pr`'s stale marker: a verdict naming its reviewed head stands
     # until the author's changes since reach what its reviewer is required
-    # for; one naming no head falls back to the commit-time anchor above.
+    # for; one naming no head stands only when it was posted after the head
+    # arrived on the host, and is stale where that arrival cannot be read.
     freshness = review.freshness_rule(data)
 
     # --- Steps 1–5: latest verdict per agent per path, selected by TIMESTAMP
@@ -2322,7 +2325,7 @@ def _check_agent_gate(
 
     if any(not slot.satisfied for slot in slots):
         return refuse(
-            head_oid=head_sha(data),
+            head_oid=head,
             message=_agent_gate_refusal(
                 issue_number=issue_number,
                 mode_source=mode_source,
@@ -2359,13 +2362,13 @@ def _check_agent_gate(
             slots=slots,
             comments=comments,
             freshness=freshness,
-            head=_head_key(commits),
+            head=head,
             contributed_by=contributed_by,
             remote_reviewer_ok=remote_reviewer_ok,
             local_reviewer_ok=local_reviewer_ok,
         ),
         warnings=gate_warnings,
-        head_oid=head_sha(data),
+        head_oid=head,
     )
 
 
@@ -2731,20 +2734,19 @@ def _not_code_invalid_refusal(details: tuple[str, ...]) -> str:
     return "\n".join(lines)
 
 
-def _freshness_unresolvable_refusal(pr_number: int | None) -> str:
-    """Refusal text when the PR's latest commit cannot be read.
+def _head_unresolvable_refusal(pr_number: int | None) -> str:
+    """Refusal text when the PR's head cannot be read.
 
     DEC-028 judges a verdict against the PR's head: the changes since the head
-    it reviewed, or — for a verdict naming no head — the latest commit's time.
-    If no commit timestamp can be established, the head is unknown — the gate
-    refuses rather than accept a possibly-stale APPROVED as fresh
-    (fail-closed, DEC-032 D5).
+    it reviewed, or — for a verdict naming no head — when the head arrived on
+    the host. If the head is unknown, the gate refuses rather than accept a
+    possibly-stale APPROVED as fresh (fail-closed, DEC-032 D5).
     """
     return "\n".join(
         [
             f"[refused] agent-mode approval gate cannot be resolved for PR "
-            f"#{pr_number} — the latest-commit freshness anchor is unknown.",
-            "            → `gh pr view` returned no commit with a committedDate or authoredDate.",
+            f"#{pr_number} — the PR's head is unknown.",
+            "            → `gh pr view` named no headRefOid and no commit with an oid.",
             "            Verdict freshness is judged against the PR's head "
             "(DEC-028); without it a stale APPROVED cannot be distinguished from "
             "a fresh one, so the gate refuses (fail-closed, DEC-032 D5).",
@@ -3185,7 +3187,7 @@ def _post_bypass_audit_idempotent(
 @dataclass(frozen=True)
 class _RollupReading:
     """What `gh pr view --json statusCheckRollup` answered: the PR's checks —
-    none for a project that runs no checks — or, in `problem`, why there is no
+    none where no check has reported — or, in `problem`, why there is no
     answer, which is not an answer of no checks (#1946)."""
 
     checks: tuple[dict, ...] = ()
@@ -3196,9 +3198,10 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> _RollupReading
     """Read the PR's `statusCheckRollup` for the CI-status gate (#498).
 
     GitHub answers an empty rollup for a PR no check reported on, which the
-    gate passes as a project that runs no checks. A call that fails, an answer
-    that is not JSON, and one that carries no list of checks are no answer:
-    `problem` names which, and the gate refuses on it (#1946).
+    gate passes only where the PR's base requires no check (#1965). A call
+    that fails, an answer that is not JSON, and one that carries no list of
+    checks are no answer: `problem` names which, and the gate refuses on it
+    (#1946).
     """
     if pr_number is None:
         return _RollupReading(problem="the PR has no number to read its checks by")
@@ -3222,6 +3225,12 @@ def _gh_get_status_rollup(pr_number: int | None, config: dict) -> _RollupReading
     if not isinstance(rollup, list) or not all(isinstance(check, dict) for check in rollup):
         return _RollupReading(problem="gh's answer carries no statusCheckRollup")
     return _RollupReading(tuple(rollup))
+
+
+def _gh_get_required_checks(base: str, config: dict) -> RequiredChecks:
+    """Read the checks the PR's base branch requires, for a rollup with no
+    check (#1965), through the pm `gh` helper (`_lib.ci_checks`)."""
+    return read_required_checks(base, config, gh_run)
 
 
 def _ci_unreadable_refusal(pr_number: int | None, problem: str) -> str:
@@ -3571,7 +3580,10 @@ def _merge_moves_to_done(workflow: dict, state: str, structural_type: str) -> bo
 
 # The fields each PR lookup asks for: an open PR's, to gate and merge it; a
 # merged one's, to complete what follows its merge (#1011).
-_OPEN_PR_FIELDS = "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName"
+_OPEN_PR_FIELDS = (
+    "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName,"
+    "headRepository,headRepositoryOwner"
+)
 _MERGED_PR_FIELDS = "number,headRefName,headRefOid,mergedAt,isCrossRepository,body"
 
 

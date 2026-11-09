@@ -25,18 +25,22 @@ This module is the one home of both answers:
 - **Whether a host file holds a line** (`holds_line`): a trimmed line of its own,
   a CRLF ending read as `\\n`, outside fenced code. The adapter's merge primitive
   tests its copy of the line by the same definition, and one set of test cases
-  holds the two to it (ADR-076 point 2).
+  holds the two to it (ADR-076 point 2). Where a line stands only in code
+  (`only_in_code`) is read as the merge primitive reads it before it refuses.
 - **The check** (`check_delivery`), part of validation's `rule-sets` member:
-  `loaded-rules-undelivered` where the index is in the checkout and does not carry
-  each registered capability's loaded file as it is, or the host file lacks the
-  line, and a warning for each registered adapter that declares no delivery
-  (ADR-076 point 5).
+  `loaded-rules-undelivered` where the host file is in the checkout and does not
+  hold core's include (ADR-083), where the index is in the checkout and does not
+  carry each registered capability's loaded file as it is, or the host file lacks
+  the index's line, and a warning for each registered adapter that declares no
+  delivery (ADR-076 point 5).
 - **An import token in a loaded set** (`import_token_findings`): a token outside
   code that opens with the prefix a registered adapter's `entry:` declares, which
   the harness would read as an import of its own (ADR-076 point 1).
 - **What a lifecycle step newly binds** (`compare`): two readings of one set's
   accepted rules, by id, status and statement, whatever its layer. Install, sync
-  and upgrade print it for each loaded set they deliver (ADR-076 point 6).
+  and upgrade print it for each loaded set they deliver (ADR-076 point 6). Where
+  the project held no set before and its sessions loaded a plain file, whose rules
+  carry no ids, the step says it cannot tell which rules bound before (#2369).
 """
 
 from __future__ import annotations
@@ -139,8 +143,10 @@ def loaded_files(
     registered capability's by name, then the project's.
 
     A layer's file is the one generated from its first loaded set (`first_loaded`). The
-    backbone and the project with no loaded set give their plain file where it is, as a
-    project's `project.md` is before it is converted (COR-068 point 7). Only capabilities
+    backbone and the project with no loaded set give their plain file, as a project's
+    `project.md` is before it is converted (COR-068 point 7), with whether the checkout
+    holds it: the instruction file includes it all the same, as a fresh project's includes
+    a `project.md` that `pkit init` does not create (#2370). Only capabilities
     the backbone manifest registers count, so one unregistered with its files kept is
     left out though its set is still where it was.
     """
@@ -161,8 +167,9 @@ def loaded_files(
                     (target_root / path).is_file(),
                 )
             )
-        elif plain is not None and (target_root / plain).is_file():
-            found.append(LoadedFile(layer, owner, str(plain), None, None, True))
+        elif plain is not None:
+            present = (target_root / plain).is_file()
+            found.append(LoadedFile(layer, owner, str(plain), None, None, present))
 
     add(BACKBONE, BACKBONE, fd.BACKBONE_COMPONENT, lrs.BACKBONE_LOADED_FILE)
     for name in fd.installed_capability_names(target_root):
@@ -216,7 +223,8 @@ class DeliveryForm:
     @property
     def core_line(self) -> str:
         """The same form's line for core's loaded file: the host's include of core's rules,
-        after which the merge keeps the index's line."""
+        which the check holds the host file to, and after which the merge keeps the index's
+        line (ADR-083 point 6)."""
         return self._line_to(str(lrs.BACKBONE_LOADED_FILE))
 
     def _line_to(self, path: str) -> str:
@@ -405,6 +413,32 @@ def holds_line(text: str, line: str) -> bool:
     return False
 
 
+def only_in_code(text: str, token: str) -> bool:
+    """Whether `token` appears in `text`, and only inside fenced code or a code span: the
+    test by which the merge primitive refuses to insert anything where core's include sits
+    only in code (ADR-076 point 3), read as the primitive reads it.
+
+    On a line that opens or closes a fence, or inside one, the token is in code. On any
+    other line, each occurrence with an odd number of backticks before it on its line is
+    in a code span, and each other occurrence is outside code. A CRLF ending is read as
+    `\\n`."""
+    in_code = outside_code = False
+    for candidate, outside in document_parts.lines_outside_fences(universal_newlines(text)):
+        if token not in candidate:
+            continue
+        if not outside:
+            in_code = True
+            continue
+        at = candidate.find(token)
+        while at >= 0:
+            if candidate.count("`", 0, at) % 2:
+                in_code = True
+            else:
+                outside_code = True
+            at = candidate.find(token, at + len(token))
+    return in_code and not outside_code
+
+
 # --- the check (ADR-076 point 5) ---------------------------------------------------------
 
 
@@ -428,6 +462,9 @@ def check_delivery(target_root: Path) -> Delivery:
 
     - a registered adapter without `loaded_rules:` is a warning naming it and each
       capability that ships a loaded set: its harness's sessions load none of them
+    - a host file in the checkout that does not hold core's include, the adapter's
+      `line:` read for core's loaded file, fails wherever it is, whether or not the
+      index is there (ADR-083)
     - adapters whose entries differ fail, and the index is compared with nothing
     - an index that is not in the checkout is a summary line: its sessions load no
       capability's rules, and the next sync renders it
@@ -436,9 +473,9 @@ def check_delivery(target_root: Path) -> Delivery:
       `\\n`, an entry for a capability no longer registered among the differences; an
       entry naming a loaded file the checkout does not hold; and a host file that does
       not hold its line (`holds_line`)
-    - a host file the checkout does not hold at all is a summary line, as the index's
-      absence is: its sessions load no layer's rules through it, core's included, so
-      no capability's delivery is out of step with core's there
+    - a host file the checkout does not hold at all is a summary line on every path, as
+      the index's absence is: its sessions load no layer's rules through it, core's
+      included, so no layer's delivery is out of step there (ADR-083 point 5)
     """
     loaded = loaded_files(target_root)
     capabilities = [f.owner for f in capability_files(loaded)]
@@ -451,15 +488,18 @@ def check_delivery(target_root: Path) -> Delivery:
                 f".pkit/adapters/{adapter}/package.yaml",
                 f"adapter {adapter} declares no `{LOADED_RULES_KEY}:`, so it delivers no "
                 f"capability's rules, and its harness's sessions load none of them "
-                f"(capabilities that ship a loaded set: {shipping}; COR-070 point 6).",
+                f"(capabilities that ship a loaded set: {shipping}; COR-070 point 6). Nor is "
+                f"core's include checked for its harness (ADR-083 point 5).",
                 validators.Severity.WARNING,
                 DeliveryKind.UNDECLARED.value,
             )
         )
+    findings.extend(_core_include_findings(target_root, deliveries))
+    absent = _absent_hosts(target_root, deliveries)
     if deliveries.differing:
         findings.append(_undelivered(str(INDEX_FILE), differing_message(deliveries)))
         return Delivery(
-            (f"capabilities' rules index {INDEX_FILE}: not compared.",), tuple(findings)
+            (f"capabilities' rules index {INDEX_FILE}: not compared.", *absent), tuple(findings)
         )
     path = target_root / INDEX_FILE
     if not os.path.lexists(path):
@@ -467,6 +507,7 @@ def check_delivery(target_root: Path) -> Delivery:
             (
                 f"no capabilities' rules index here ({INDEX_FILE}): this checkout's sessions "
                 f"load no capability's rules; `pkit sync` renders it.",
+                *absent,
             ),
             tuple(findings),
         )
@@ -495,33 +536,34 @@ def check_delivery(target_root: Path) -> Delivery:
                         f"capability's install, brings it.",
                     )
                 )
-    absent: list[str] = []
     for each in deliveries.forms:
-        host = target_root / each.host
         line = each.rendered_line
-        if not os.path.lexists(host):
-            absent.append(each.host)
+        present, text = _read_host(target_root, each.host)
+        if not present:
             continue
-        try:
-            text = host.read_bytes().decode("utf-8") if host.is_file() else None
-        except (OSError, UnicodeDecodeError):
-            text = None
         if text is not None and holds_line(text, line):
             continue
         findings.append(_undelivered(each.host, _host_lacks(each, line, text)))
     names = ", ".join(capabilities) if capabilities and form is not None else ""
     count = len(capabilities) if form is not None else 0
     hosts = ", ".join(f"{f.host} ({f.adapter})" for f in deliveries.forms) or "no host file"
-    summary = [
+    summary = (
         f"capabilities' rules index {INDEX_FILE}: {count} capability file(s)"
         f"{f' ({names})' if names else ''}, reached from {hosts}."
-    ]
-    summary.extend(
+    )
+    return Delivery((summary, *absent), tuple(findings))
+
+
+def _absent_hosts(target_root: Path, deliveries: Deliveries) -> tuple[str, ...]:
+    """A summary line for each declared host file the checkout does not hold, once each
+    (ADR-083 point 5)."""
+    hosts = dict.fromkeys(form.host for form in deliveries.forms)
+    return tuple(
         f"{host} is not in this checkout, so its sessions load no layer's rules through it, "
         f"core's included; the next `pkit sync` writes it."
-        for host in absent
+        for host in hosts
+        if not os.path.lexists(target_root / host)
     )
-    return Delivery(tuple(summary), tuple(findings))
 
 
 def _differs(actual: str | None, expected: str, adapters: str) -> str:
@@ -551,14 +593,69 @@ def _differs(actual: str | None, expected: str, adapters: str) -> str:
     )
 
 
+def _read_host(target_root: Path, host_file: str) -> tuple[bool, str | None]:
+    """Whether the checkout holds an adapter's host file, and its text: None where it is
+    there and is no file that can be read, such as a folder.
+
+    A byte that is not UTF-8 is kept as an escape, never refused, so every line reads as the
+    merge primitive reads it, byte by byte (ADR-083 point 2)."""
+    host = target_root / host_file
+    if not os.path.lexists(host):
+        return False, None
+    try:
+        if not host.is_file():
+            return True, None
+        return True, host.read_bytes().decode("utf-8", errors="surrogateescape")
+    except OSError:
+        return True, None
+
+
+def _core_include_findings(target_root: Path, deliveries: Deliveries) -> list[validators.Finding]:
+    """A finding for each declared host file in the checkout that does not hold core's
+    include (ADR-083 points 1 and 5), one for each host file and line, naming every adapter
+    that declares them. A host file the checkout does not hold is no finding."""
+    adapters: dict[tuple[str, str], list[str]] = {}
+    for form in deliveries.forms:
+        adapters.setdefault((form.host, form.core_line), []).append(form.adapter)
+    found: list[validators.Finding] = []
+    for (host, line), names in adapters.items():
+        present, text = _read_host(target_root, host)
+        if not present or (text is not None and holds_line(text, line)):
+            continue
+        found.append(_undelivered(host, _host_lacks_core(host, ", ".join(names), line, text)))
+    return found
+
+
+def _host_lacks_core(host: str, adapters: str, line: str, text: str | None) -> str:
+    core = lrs.BACKBONE_LOADED_FILE
+    if text is None:
+        where = f"{host} is no file that can be read, so nothing in it reaches core's rules, {core}"
+        mend = f"Make it a file that holds the line `{line}`."
+    elif only_in_code(text, line):
+        where = (
+            f"{host} writes the line `{line}` that includes core's rules, {core}, only in fenced "
+            f"code or a code span, where the harness imports nothing"
+        )
+        mend = (
+            "The merge inserts nothing while it sits there, so `pkit sync` does not mend it: "
+            "move the include out of the code."
+        )
+    else:
+        where = f"{host} does not hold the line `{line}` that includes core's rules, {core}"
+        mend = "The next `pkit sync` inserts it."
+    return (
+        f"{where}, so a session may load none of core's rules ({adapters}; ADR-083 point 1). {mend}"
+    )
+
+
 def _host_lacks(form: DeliveryForm, line: str, text: str | None) -> str:
     if text is None:
-        where = f"{form.host} cannot be read as text, so nothing reaches {INDEX_FILE}"
+        where = f"{form.host} is no file that can be read, so nothing reaches {INDEX_FILE}"
     else:
         where = f"{form.host} does not hold the line `{line}` that reaches {INDEX_FILE}"
     mend = "The next `pkit sync` inserts it."
     core = form.core_line
-    if text is not None and core in text and not holds_line(text, core):
+    if text is not None and only_in_code(text, core):
         mend = (
             f"Its include of core's rules, `{core}`, sits only in fenced code or a code "
             f"span, where the harness imports nothing, so the merge inserts nothing: move "
@@ -642,6 +739,16 @@ def read_set(rule_set: rs.RuleSet | None) -> SetReading | None:
     return SetReading(rule_set.citation, rule_set.component, rule_set.version, rules)
 
 
+@dataclass(frozen=True)
+class PlainReading:
+    """A layer that held no loaded set, whose sessions loaded a plain file as it stood
+    (COR-068 point 7), as the backbone's earlier versions kept core's rules. The file's
+    rules carry no ids, and its numbers need not be a later set's, so `compare` cannot
+    tell which of a set's rules bound before."""
+
+    path: str
+
+
 def read_component(component: str, component_dir: Path) -> SetReading | None:
     """The loaded set a component's files hold where they are now, read as
     `rs.component_rule_sets` reads them, or None: the backbone's at `.pkit/`, a
@@ -662,17 +769,34 @@ class Bound:
     binds: tuple[tuple[str, str], ...] = ()
     changes: tuple[tuple[str, str], ...] = ()
     retires: tuple[tuple[str, str], ...] = ()
+    # Where the set takes the place of a plain file (`PlainReading`): that file, and
+    # every accepted rule the set holds, none said to newly bind.
+    replaces: str | None = None
+    holds: tuple[tuple[str, str], ...] = ()
 
     @property
     def any(self) -> bool:
-        return bool(self.binds or self.changes or self.retires)
+        return bool(self.binds or self.changes or self.retires or self.holds)
 
 
-def compare(before: SetReading | None, after: SetReading) -> Bound:
+def compare(before: SetReading | PlainReading | None, after: SetReading) -> Bound:
     """The rules `after` newly binds, changes or retires since `before`, by id, status and
     statement: accepted now and not then, accepted both times with another statement or
     title, and accepted then and not now. With no `before`, every accepted rule newly
-    binds. It knows no layer."""
+    binds. Where `before` is a plain file, no rule is said to newly bind, change or
+    retire: each is one the set holds, since which bound before cannot be told. It knows
+    no layer."""
+    if isinstance(before, PlainReading):
+        held = tuple((i, t) for i, (t, _s) in after.rules.items())
+        return Bound(
+            after.citation,
+            after.component,
+            None,
+            after.version,
+            True,
+            replaces=before.path,
+            holds=held,
+        )
     was: Mapping[str, tuple[str, str]] = before.rules if before is not None else {}
     binds = tuple((i, t) for i, (t, _s) in after.rules.items() if i not in was)
     changes = tuple((i, t) for i, (t, s) in after.rules.items() if i in was and was[i] != (t, s))
@@ -693,7 +817,9 @@ def render_bound(bound: Sequence[Bound], *, capabilities_delivered: bool) -> str
     """What install, sync and upgrade print: for each loaded set delivered, its name and
     version and each rule it newly binds, changes or retires. Where no adapter in use
     declares a delivery, a capability's set says that its rules bind no session here,
-    rather than list them as bound (COR-070 point 3). Information, not a gate."""
+    rather than list them as bound (COR-070 point 3). A set that takes the place of a
+    plain file says that which of its rules bound before cannot be told, and why, and
+    lists each rule it holds. Information, not a gate."""
     if not bound:
         return ""
     lines = ["", "  " + "Loaded rules — what this step newly binds (COR-070 point 3):"]
@@ -716,10 +842,18 @@ def render_bound(bound: Sequence[Bound], *, capabilities_delivered: bool) -> str
             lines.append(f"{head}: no rule newly binds, changes or retires.")
             continue
         lines.append(f"{head}:")
+        if item.replaces is not None:
+            lines.append(
+                f"      Which of its rules bound before cannot be told. Until this step, "
+                f"sessions loaded {item.replaces} as a plain file, whose rules carry no ids "
+                f"to compare by."
+            )
+            lines.append("      Compare that file's earlier text with the rules the set holds:")
         for verb, rules in (
             ("binds", item.binds),
             ("changes", item.changes),
             ("retires", item.retires),
+            ("holds", item.holds),
         ):
             lines.extend(f"      {verb:<8} {rule_id}  {title}" for rule_id, title in rules)
     return "\n".join(lines)
@@ -741,15 +875,25 @@ def component_folder(target_root: Path, component: str) -> Path:
     return target_root / fd.CAPABILITIES_DIR / component
 
 
-def read_delivered(target_root: Path) -> dict[str, SetReading | None]:
+def read_delivered(target_root: Path) -> dict[str, SetReading | PlainReading | None]:
     """Each component's loaded set as the project holds it now, the backbone's and each
-    registered capability's: what a step reads before it copies (ADR-076 point 6)."""
+    registered capability's: what a step reads before it copies (ADR-076 point 6).
+
+    Where the backbone holds no loaded set and its plain file is there, as a project at
+    a version before core's set holds `.pkit/rules/core.md`, the backbone's reading is
+    that file (`PlainReading`), as `loaded_files` gives it."""
     names = [fd.BACKBONE_COMPONENT, *fd.installed_capability_names(target_root)]
-    return {name: read_component(name, component_folder(target_root, name)) for name in names}
+    found: dict[str, SetReading | PlainReading | None] = {
+        name: read_component(name, component_folder(target_root, name)) for name in names
+    }
+    plain = lrs.BACKBONE_LOADED_FILE
+    if found[fd.BACKBONE_COMPONENT] is None and (target_root / plain).is_file():
+        found[fd.BACKBONE_COMPONENT] = PlainReading(str(plain))
+    return found
 
 
 def bound_by(
-    before: Mapping[str, SetReading | None], delivered: Sequence[tuple[str, Path]]
+    before: Mapping[str, SetReading | PlainReading | None], delivered: Sequence[tuple[str, Path]]
 ) -> tuple[Bound, ...]:
     """What a step newly binds: each component it delivers, read where the step copies it
     from (or, for a step that copies nothing, where it is), compared with its reading

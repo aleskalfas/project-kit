@@ -94,11 +94,13 @@ from _lib import (
     default_branch,
     doc_impact,
     friction_answers,
+    pr_head,
     pr_validation,
     provenance,
     session_guard,
 )
 from _lib import lifecycle_inference as infer
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
@@ -110,6 +112,7 @@ from _lib.membership import (
 from _lib.placeholder_detection import PHASE_TRANSITION
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -585,11 +588,13 @@ def _answers(branch: str, base: str, sentences: Mapping[str, str]) -> _Answers:
     for the warnings on the author's `sentences` alone: each `updated` document with
     none, and each sentence on a document the check does not mark `updated`, which
     no reviewer checks. Never refuses: review-work refuses a missing sentence, and a
-    check that cannot be run draws one warning line (DEC-065 point 3)."""
+    check that cannot be run draws one warning line (DEC-065 point 3). It takes no
+    temporary checkout, for any head, so a refusal to run an anchor's resolver is
+    such a warning, and nothing the head holds starts (DEC-067 point 2)."""
     head, why = _pushed_head(branch)
     if head is None:
         return _not_derived(why)
-    derived = friction_answers.checked(head, base)
+    derived = friction_answers.checked(head, base, from_checkout=False)
     if derived.document is None:
         return _not_derived(derived.problem or "the change check gave no document")
     for location in friction_answers.unlisted(derived.document, sentences):
@@ -619,7 +624,7 @@ def _not_derived(why: str) -> _Answers:
 def _pushed_head(branch: str) -> tuple[str | None, str]:
     """The commit `branch`'s remote-tracking reference names — what the pull
     request opens at, not local HEAD, which may be ahead of it — or why none."""
-    remote = friction_answers.branch_remote(branch)
+    remote = pr_head.branch_remote(branch)
     oid = _git_out("rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/{branch}^{{commit}}")
     if not oid:
         return None, f"{remote}/{branch} names no commit — push the branch first"

@@ -54,6 +54,10 @@ consumers share:
   * naming which required reviewers' whole remit is their diff floors, and
     those floors (`Resolution.floors_by_reviewer`, #1179) — what the verdict
     freshness rule (`_lib.verdict_freshness`) keys on.
+  * naming the reviewers the contributions in force require on a change that
+    reaches one floor (`floor_reviewers`), read as the resolution reads them —
+    what land-work's check of the merge compares with the head's required set
+    before it asks the backbone about the merge (#2661).
 
 Fail-closed posture (DEC-032 D5)
 --------------------------------
@@ -537,20 +541,11 @@ def resolve_required_local_reviewers(
             )
         )
 
-    installed = collect_contributions(repo_root)
-    collection = opt_outs.apply(installed)
-    if not collection.ok:
-        return Resolution(
-            error=RequiredReviewersError(
-                kind=ERROR_COLLECTION,
-                message="reviewer contribution collection failed",
-                collection=collection,
-            )
-        )
-
-    problems = opt_outs.problems_against(installed)
-    if problems:
-        return _opt_out_error(tuple(message for _entry, message in problems))
+    collection = _in_force(
+        repo_root, opt_outs=opt_outs, collect_contributions=collect_contributions
+    )
+    if isinstance(collection, RequiredReviewersError):
+        return Resolution(error=collection)
 
     classifications = _closing_issue_classifications(
         pr_number,
@@ -638,13 +633,76 @@ def _floor_only_reviewers(
 
 def _opt_out_error(details: tuple[str, ...]) -> Resolution:
     """A fail-closed `Resolution` for an invalid opt-out list (#148)."""
-    return Resolution(
-        error=RequiredReviewersError(
-            kind=ERROR_OPT_OUT,
-            message="the reviewer-contribution opt-out list is invalid",
-            details=details,
-        )
+    return Resolution(error=_opt_out_problem(details))
+
+
+def _opt_out_problem(details: tuple[str, ...]) -> RequiredReviewersError:
+    """Why the required set cannot be resolved where the opt-out list is invalid (#148)."""
+    return RequiredReviewersError(
+        kind=ERROR_OPT_OUT,
+        message="the reviewer-contribution opt-out list is invalid",
+        details=details,
     )
+
+
+def _in_force(
+    repo_root: Path,
+    *,
+    opt_outs: OptOuts,
+    collect_contributions: Callable[[Path], ContributionCollection],
+) -> ContributionCollection | RequiredReviewersError:
+    """The contributions in force: those installed, less the adopter's opt-outs — or
+    why they cannot be told (DEC-032 D5). The caller checks the opt-out list's shape
+    first.
+
+    The collection is read with the opt-outs applied, so an opted-out contribution
+    cannot fail it on an undeployed agent. Each opt-out must then name an installed
+    contribution, checked after the collection, so a broken declaration is reported
+    as itself rather than as an opt-out naming nothing."""
+    installed = collect_contributions(repo_root)
+    collection = opt_outs.apply(installed)
+    if not collection.ok:
+        return RequiredReviewersError(
+            kind=ERROR_COLLECTION,
+            message="reviewer contribution collection failed",
+            collection=collection,
+        )
+    problems = opt_outs.problems_against(installed)
+    if problems:
+        return _opt_out_problem(tuple(message for _entry, message in problems))
+    return collection
+
+
+def floor_reviewers(
+    floor: str,
+    repo_root: Path,
+    *,
+    opt_outs: OptOuts = NO_OPT_OUTS,
+    collect_contributions: Callable[
+        [Path], ContributionCollection
+    ] = _default_collect_contributions,
+) -> tuple[str, ...] | RequiredReviewersError:
+    """The reviewers the contributions in force require on a change that reaches
+    `floor` (DEC-032 D1), whatever else requires them, in the collection's order;
+    none where no contribution in force names it. Or why they cannot be told.
+
+    The contributions are read as `resolve_required_local_reviewers` reads them, the
+    opt-outs applied, and fail as that resolution fails on them (DEC-032 D5): an
+    opt-out list that is invalid or names a contribution not installed, and a
+    collection that is not ok. Nothing about a change is read: which floors a change
+    reaches is `reached_floors`'. land-work's check of the merge asks it for the
+    ruled-artefact floor, to learn which of that floor's reviewers the head does not
+    require before it asks the backbone about the merge
+    ([project-management:DEC-064-base-merge-named] point 8).
+    """
+    if not opt_outs.ok:
+        return _opt_out_problem(opt_outs.errors)
+    collection = _in_force(
+        repo_root, opt_outs=opt_outs, collect_contributions=collect_contributions
+    )
+    if isinstance(collection, RequiredReviewersError):
+        return collection
+    return tuple(rule.reviewer for rule in collection.reviewers_for_floors({floor}))
 
 
 def _floor_rules(

@@ -14,6 +14,7 @@ pkit:
         - .pkit/capabilities/doc-examples/project/config.yaml
         - scripts/page_contents.py
         - scripts/short_check.py
+        - scripts/visual_drawings.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
         - .github/workflows/friction-report.yml
@@ -28,10 +29,11 @@ pkit:
         - RS-OPS-020
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
         - .pkit/capabilities/doc-examples/README.md
+        - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#writing-a-record
-        - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
+        - .pkit/lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over
 ---
 
 # Contributing to project-kit
@@ -57,15 +59,18 @@ The same aggregator runs in two places, so the gate can't drift:
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
 - **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on clean Linux runners for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
 
-**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as three parts side by side, each a job on a runner of its own, and the aggregator defines them:
+**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as four parts side by side, each a job on a runner of its own, and the aggregator defines them:
 - **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs its share of the suite's parallel pass, cut where a committed table of measured test times balances the two.
-- **the remainder,** `./scripts/check.sh --rest`: every other line, with the tests marked `serial`.
+- **the quick checks,** `./scripts/check.sh --quick`: every line but the test step and the console fences. They end within a few minutes, and the reviewers start on them.
+- **the remainder,** `./scripts/check.sh --rest`: the console fences, with the tests marked `serial`.
 
 A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
 
 Each part names its own failures in its job's summary, and a slice names each failing test and how to run the slice again. Run any part by hand with the same argument. The hook runs the aggregator whole, so it runs what the parts run. [`tests/README.md`](tests/README.md), "Running the suite", says how the suite is cut and how the table of times is kept.
 
-**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
+**The drawings job.** On a pull request, CI runs one more job, `drawings`, once the quick checks end. It draws each piece's HTML pages on the runner's Chrome, through `scripts/visual_drawings.py`, and keeps them as the artefact `visual-drawings-<commit>`. [The visual-communication outputs page, "A pipeline's drawings"](.pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings), says what it keeps and how an agent fetches it. `checks` does not wait on it, and `main` does not require it. A look that stops fails the job all the same, so the pull request shows a failing check.
+
+**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, beside the quick checks, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
 - **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the answer files the change adds, where its answers to friction live (COR-062 point 1). A merge of the base counts only for what differs from git's merge of it.
 
@@ -211,7 +216,7 @@ Name pages to check only those, such as `uv run python scripts/page_contents.py 
 1. **Install** — `mise run pkit:pinned-install` (or `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git` directly). Installs/refreshes the global pkit from main's head and puts `pkit` on PATH via `uv tool dir --bin`. That is the development install, which no version vouches for ([PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)). To run a release outside your checkouts instead, add its tag, `@v<version>`.
 2. **Verify** — `command -v pkit` should resolve to that bin dir; `mise run pkit:which` reports the active binary, its version, and what bare `pkit` runs from this checkout (route 1).
 
-Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version. Both are set out in [the lifecycle README, "Sync's guard"](.pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over) ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
+Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version. Both are set out in [the lifecycle reference's upgrade flow, "Sync's guard"](.pkit/lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over) ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
 
 > **Retiring the old `pkit-router` shim.** Earlier setups installed a separate `scripts/pkit-router` shim at `~/.pkit/shim/pkit` and put it ahead of the pinned binary on PATH. That shim is gone — the binary now routes natively. If you have one, remove it (`rm ~/.pkit/shim/pkit`) and drop the `export PATH="$HOME/.pkit/shim:$PATH"` line from your shell profile so bare `pkit` resolves to the global install.
 

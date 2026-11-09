@@ -281,11 +281,66 @@ def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
     assert "skipped" in result.stdout and "broken" in result.stdout
     assert "<undefined-category>" in result.stdout  # the missing category named
     assert "overlay.yaml" in result.stdout  # remediation pointer
-    assert "pkit agents adopt" in result.stdout  # lead command: adopt
-    assert "pkit agents reconcile --write" in result.stdout  # custom-layout fallback named
+    assert "pkit agents reconcile --write" in result.stdout  # remediation named
     assert "1 agent(s) skipped" in result.stdout  # end-of-run summary
     assert (mock_kit / ".claude" / "agents" / "fine.md").is_file()  # rest deployed
     assert not (mock_kit / ".claude" / "agents" / "broken.md").exists()  # the gap one skipped
+
+
+# --- the remedy a skip names (#2469) -----------------------------------------
+#
+# `pkit agents adopt` serves an agent only when every required category it lacks
+# has a conventional folder for `adopt` to create; for any other it refuses. So
+# the skip names `adopt` only then, and otherwise the remedies that work.
+
+
+def _owning_agent(root: Path, *categories: str) -> None:
+    owns = "".join(f"  - <{c}>\n" for c in categories)
+    _write_agent(root, "project", "gapped", f"---\nname: gapped\nowns:\n{owns}---\n\n# Gapped\n")
+
+
+def test_deploy_names_adopt_for_a_category_with_a_conventional_folder(mock_kit: Path) -> None:
+    _owning_agent(mock_kit, "architecture-docs")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "gapped: category <architecture-docs> referenced but not defined" in result.stdout
+    assert "Deploy it:  pkit agents adopt gapped" in result.stdout
+    assert "Conventional doc layout:      pkit agents adopt <agent>" in result.stdout
+
+
+def test_deploy_names_no_adopt_for_a_category_with_no_conventional_folder(
+    mock_kit: Path,
+) -> None:
+    """The issue's case: a project agent owning `<release-notes>`."""
+    _owning_agent(mock_kit, "release-notes")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "gapped: category <release-notes> referenced but not defined" in result.stdout
+    assert "<release-notes> has no conventional folder to create." in result.stdout
+    assert "set its paths in .pkit/agents/project/overlay.yaml" in result.stdout
+    assert "pkit agents reconcile --write" in result.stdout
+    # Neither under the skip nor in the closing note. (The run prints the overlay's
+    # path, which holds this test's name, so the bare word cannot be asserted.)
+    assert "pkit agents adopt" not in result.stdout
+
+
+def test_deploy_names_no_adopt_when_any_category_lacks_a_conventional_folder(
+    mock_kit: Path,
+) -> None:
+    """`adopt` refuses an agent while one category it lacks has no folder, so the
+    skip names every undefined category and the remedy of the one without."""
+    _owning_agent(mock_kit, "architecture-docs", "release-notes")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert (
+        "gapped: categories <architecture-docs>, <release-notes> referenced but not defined"
+        in result.stdout
+    )
+    assert "<release-notes> has no conventional folder to create." in result.stdout
+    assert "pkit agents adopt" not in result.stdout
 
 
 # --- write-carrying categories (ADR-051) -------------------------------------

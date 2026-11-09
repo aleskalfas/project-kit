@@ -1,6 +1,6 @@
 ---
 id: VIEW-versions-and-copies
-title: Versions and copies
+title: Versions and synced copies
 status: active
 explains:
   - TERM-manifest
@@ -51,9 +51,9 @@ pkit:
         - TERM-component-origin
 ---
 
-# VIEW-versions-and-copies — Versions and copies
+# VIEW-versions-and-copies — Versions and synced copies
 
-A [project](../glossary.md#term-project--project) holds copies of the [methodology](../glossary.md#term-methodology--methodology)'s files so improvements reach it ([COR-001](../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)). It also needs a routine repair that rebuilds those copies, and moves no [version](../glossary.md#term-version--version) ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). If its files move to a newer version without the [migrations](../glossary.md#term-migration--migration) between, it holds content they never reached, and nothing says so (COR-059).
+A [project](../glossary.md#term-project--project) holds the [methodology](../glossary.md#term-methodology--methodology)'s files so improvements reach it ([COR-001](../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)). It also needs a routine repair that rebuilds those files, and moves no [version](../glossary.md#term-version--version) ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). If its files move to a newer version without the [migrations](../glossary.md#term-migration--migration) between, it holds content they never reached, and nothing says so (COR-059).
 
 So manifests keep the [recorded versions](../glossary.md#term-recorded-version--recorded-version) of the [backbone](../glossary.md#term-backbone--backbone) and of each [component](../glossary.md#term-component--component), each naming the content the project holds ([COR-010](../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md), COR-059). Only a [version transition](../glossary.md#term-version-transition--version-transition) moves one, and it runs the migrations between (COR-059). [Propagation](../glossary.md#term-propagation--propagation) writes the [synced copies](../glossary.md#term-synced-copy--synced-copy), and [sync](../glossary.md#term-sync--sync) runs it at the recorded versions as the routine repair (COR-059).
 
@@ -61,8 +61,8 @@ Before it refreshes a copy, the [system](../glossary.md#term-system--system) mus
 
 ```mermaid
 classDiagram
-  accTitle: Versions and copies
-  accDescr: A project keeps manifests, which record the recorded version of the backbone and of each shipped component, and each component's origin. The backbone's manifest also records the completion. A recorded version names the release whose content the project holds, and a release tag names a release. A version transition moves recorded versions, runs migrations and writes its target's content by propagation. It records its completion last, and a dependency gate checks it before it writes. Sync runs propagation at the recorded versions. Propagation writes synced copies, whose originals lie in a source repository. A distribution ships releases from one source repository.
+  accTitle: Versions and synced copies
+  accDescr: A project keeps manifests, which record the recorded version of the backbone and of each shipped component, and each component's origin. The backbone's manifest also records the completion. A recorded version of the backbone or of a shipped component names the release whose content the project holds. A release tag names a release. A version transition moves recorded versions, runs migrations and writes its target's content by propagation. A version transition of the backbone records its completion last, and a dependency gate checks each version transition before it writes. Sync runs propagation at the recorded versions. Propagation writes synced copies, whose originals lie in a source repository. A distribution ships releases from one source repository.
   class Project["Project"]
   class Manifest["Manifest"]
   class RecordedVersion["Recorded version"]
@@ -84,11 +84,11 @@ classDiagram
   Project "1" --> "*" Manifest : keeps
   Manifest --> RecordedVersion : records
   Manifest --> ComponentOrigin : records
-  RecordedVersion ..> Release : names the content of
+  RecordedVersion ..> Release : for the backbone and shipped components, names the content of
   VersionTransition --> RecordedVersion : moves
   VersionTransition --> Migration : runs each pending
   VersionTransition --> Propagation : writes its target by
-  VersionTransition --> Completion : records last
+  VersionTransition --> Completion : for the backbone, records last
   Manifest --> Completion : records
   DependencyGate ..> VersionTransition : checks before it writes
   ReleaseTag ..> Release : names
@@ -124,13 +124,13 @@ A manifest is the file where a project records what it installed, and at which v
 
 **Attributes:**
 
-- the backbone's: its [recorded version](../glossary.md#term-recorded-version--recorded-version), and the [completion](../glossary.md#term-completion--completion) of its last [version transition](../glossary.md#term-version-transition--version-transition) ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)). It also lists every installed component, with its origin and the path of its own manifest ([ADR-065 point 2](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
+- the backbone's: its [recorded version](../glossary.md#term-recorded-version--recorded-version), and its [completion](../glossary.md#term-completion--completion) ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)). It also lists every installed component, with its origin and the path of its own manifest ([ADR-065 point 2](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
 - a shipped component's: its recorded version, and the files its [install](../glossary.md#term-install--install) skipped (ADR-065 point 2, [COR-059 point 7](../../../../.pkit/decisions/core/COR-059-version-transition.md#7-a-transition-of-the-backbone-moves-every-component-the-methodology-ships-together))
 
 **Relations:**
 
 - Install adds a component's entry and creates its manifest, and removing the component deletes both (COR-010).
-- Only a version transition moves a recorded version in it ([COR-059 point 3](../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version)).
+- Only a [version transition](../glossary.md#term-version-transition--version-transition) moves a recorded version in it ([COR-059 point 3](../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version)).
 
 **States:** None.
 
@@ -156,7 +156,7 @@ A release is a set of versions shipped together, named by its [backbone](../glos
 **Relations:**
 
 - A [distribution](../glossary.md#term-distribution--distribution) ships many releases.
-- A project's [recorded versions](../glossary.md#term-recorded-version--recorded-version) name the release whose content it holds (COR-059 point 1).
+- A project's [recorded versions](../glossary.md#term-recorded-version--recorded-version) of the backbone and of each shipped component name the release whose content it holds (COR-059 point 1).
 
 **States:** None.
 
@@ -203,23 +203,23 @@ A recorded version is the number or ref a project keeps for the [backbone](../gl
 **Relations:**
 
 - A [manifest](../glossary.md#term-manifest--manifest) holds it, for the backbone and for each shipped component. A [capability](../glossary.md#term-capability--capability) the project authors keeps its own in its `package.yaml`, and the project moves it by editing it ([ADR-065 point 2](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
-- It names the [release](../glossary.md#term-release--release) whose content the project holds (COR-059 point 1).
+- For the backbone and a shipped component, it names the [release](../glossary.md#term-release--release) whose content the project holds (COR-059 point 1).
 - [Sync](../glossary.md#term-sync--sync) reads it, and a [version transition](../glossary.md#term-version-transition--version-transition) moves it (COR-059 points [2](../../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none) and [3](../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version)).
 
-**States:** The backbone's recorded version is complete when its target and its [completion](../glossary.md#term-completion--completion) name the same version. A version transition records its target first, and its completion last. In between, the recorded version is incomplete and names that target (COR-059 points 1 and [6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
+**States:** The backbone's recorded version is complete when its target and its [completion](../glossary.md#term-completion--completion) name the same version. A version transition of the backbone records its target first, and its completion last. In between, the recorded version is incomplete and names that target (COR-059 points 1 and [6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
 
 ```mermaid
 stateDiagram-v2
   accTitle: The states of the backbone's recorded version
-  accDescr: The first install or a version transition records a target, and the recorded version is incomplete. Once every migration has run, the completion is recorded, and the recorded version is complete until the next version transition records a new target.
+  accDescr: The first install or a version transition of the backbone records a target, and the recorded version is incomplete. Once every migration has run, the completion is recorded, and the recorded version is complete until the next version transition of the backbone records a new target.
   [*] --> incomplete : the first install records its target
   incomplete --> complete : the completion is recorded
-  complete --> incomplete : a version transition records a new target
+  complete --> incomplete : a version transition of the backbone records a new target
 ```
 
 **Always true:**
 
-- Only a version transition moves it, and sync moves none (COR-059 points 2 and 3).
+- No operation but a version transition moves it, and sync moves none (COR-059 points 2 and 3).
 - A project is at a version only when its target and its completion both name it (COR-059 point 6).
 - No copying of the [methodology](../glossary.md#term-methodology--methodology)'s content writes or removes it (COR-059 point 1).
 
@@ -252,13 +252,13 @@ A migration is a script that carries a project's state across a version of the [
 
 Defined in [TERM-version-transition](../glossary.md#term-version-transition--version-transition).
 
-**Why:** If two operations could move a [version](../glossary.md#term-version--version) and only one ran [migrations](../glossary.md#term-migration--migration), the other would strand them, and none would run later ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). One operation that moves versions and runs every migration between leaves no path that skips one (COR-059). It records its [completion](../glossary.md#term-completion--completion) last, so an interrupted version transition is never mistaken for a finished one (COR-059).
+**Why:** If two operations could move a [version](../glossary.md#term-version--version) and only one ran [migrations](../glossary.md#term-migration--migration), the other would strand them, and none would run later ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). One operation that moves versions and runs every migration between leaves no path that skips one (COR-059). A transition of the [backbone](../glossary.md#term-backbone--backbone) records its [completion](../glossary.md#term-completion--completion) last, so an interrupted one is never mistaken for a finished one (COR-059).
 
-A version transition moves a [project](../glossary.md#term-project--project)'s [recorded versions](../glossary.md#term-recorded-version--recorded-version) to a target. It runs every migration that is pending, and records its completion only after they have run. `pkit upgrade` runs a transition of the [backbone](../glossary.md#term-backbone--backbone).
+A version transition moves a [project](../glossary.md#term-project--project)'s [recorded versions](../glossary.md#term-recorded-version--recorded-version) to a target. It runs every migration that is pending. `pkit upgrade` runs a transition of the backbone, which records its completion only after they have run.
 
 **Attributes:**
 
-- its target: a [release](../glossary.md#term-release--release), for a version transition of the backbone, or one [component](../glossary.md#term-component--component)'s version ([COR-059 point 3](../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version))
+- its target: a [release](../glossary.md#term-release--release), for a version transition of the backbone. For one [component](../glossary.md#term-component--component), its version or the ref it is pulled at ([COR-059 point 3](../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version))
 - its form: a transition of the backbone, or of one component (COR-059 point 3)
 
 **Relations:**
@@ -267,12 +267,12 @@ A version transition moves a [project](../glossary.md#term-project--project)'s [
 - It writes its target's content by [propagation](../glossary.md#term-propagation--propagation) (COR-059 point 3, [ADR-065 point 1](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#1-syncs-propagation-step-has-two-callers)).
 - A version transition of the backbone moves every component the [methodology](../glossary.md#term-methodology--methodology) ships with it ([COR-059 point 7](../../../../.pkit/decisions/core/COR-059-version-transition.md#7-a-transition-of-the-backbone-moves-every-component-the-methodology-ships-together)).
 
-**States:** A version transition is incomplete from the moment it records its target, before it writes anything else. It is complete once every migration has run and it records its completion. A migration that fails stops it, and the next transition of the backbone finishes it ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
+**States:** A version transition of the backbone is incomplete from the moment it records its target, before it writes anything else. It is complete once every migration has run and it records its completion. A migration that fails stops it, and the next transition of the backbone finishes it ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
 
 ```mermaid
 stateDiagram-v2
-  accTitle: The states of a version transition
-  accDescr: A transition records its target and is incomplete. When every migration has run, it records its completion and is complete. A failed migration leaves it incomplete, and the next transition of the backbone finishes it.
+  accTitle: The states of a version transition of the backbone
+  accDescr: A transition of the backbone records its target and is incomplete. When every migration has run, it records its completion and is complete. A failed migration leaves it incomplete, and the next transition of the backbone finishes it.
   [*] --> incomplete : it records its target
   incomplete --> complete : every migration has run, and it records its completion
   incomplete --> incomplete : a migration fails, and the next transition resumes it
@@ -314,9 +314,9 @@ The completion is the state that first [install](../glossary.md#term-install--in
 
 Defined in [TERM-dependency-gate](../glossary.md#term-dependency-gate--dependency-gate).
 
-**Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install), upgrade and uninstall makes that failure loud there instead (COR-030).
+**Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install) and at a [version transition](../glossary.md#term-version-transition--version-transition) makes that failure loud there instead (COR-030).
 
-A dependency gate is a check made before an install or a [version transition](../glossary.md#term-version-transition--version-transition) writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
+A dependency gate is a check made before an install or a version transition writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
 
 **Attributes:** None.
 
@@ -340,7 +340,7 @@ Defined in [TERM-propagation](../glossary.md#term-propagation--propagation).
 
 **Why:** Improvements to the [methodology](../glossary.md#term-methodology--methodology)'s files must keep reaching each [project](../glossary.md#term-project--project), or the methodology helps only once, when first installed ([COR-001](../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)). No file is shared between the methodology and the project, so propagation writes each file whole (COR-001).
 
-Propagation writes the methodology's files into a project verbatim, at the [recorded versions](../glossary.md#term-recorded-version--recorded-version) or at a [version transition](../glossary.md#term-version-transition--version-transition)'s target. It writes over whatever stands at those paths.
+Propagation writes the methodology's files into a project verbatim, at the [recorded versions](../glossary.md#term-recorded-version--recorded-version) or at a [version transition](../glossary.md#term-version-transition--version-transition)'s target. It also writes the files of a [component](../glossary.md#term-component--component) pulled from an external source. It writes over whatever stands at those paths.
 
 **Attributes:** None.
 
@@ -354,7 +354,7 @@ Propagation writes the methodology's files into a project verbatim, at the [reco
 **Always true:**
 
 - It checks no [version](../glossary.md#term-version--version), runs no [migration](../glossary.md#term-migration--migration) and writes no [manifest](../glossary.md#term-manifest--manifest) ([ADR-065 point 1](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#1-syncs-propagation-step-has-two-callers)).
-- It leaves out a [capability](../glossary.md#term-capability--capability) the project authors ([COR-031 point D1](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d1--the-lifecycle-excludes-incubated-capabilities-from-source-reconciliation-but-not-from-self-consistency-checks)), and copies a [component](../glossary.md#term-component--component) pulled from an external source only from that source ([COR-041](../../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
+- It leaves out a [capability](../glossary.md#term-capability--capability) the project authors ([COR-031 point D1](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d1--the-lifecycle-excludes-incubated-capabilities-from-source-reconciliation-but-not-from-self-consistency-checks)), and copies a component pulled from an external source only from that source ([COR-041](../../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 
 ## Sync
 
@@ -615,6 +615,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)

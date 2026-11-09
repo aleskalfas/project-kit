@@ -25,7 +25,7 @@ from typing import Any
 
 import click
 
-from project_kit import treecopy, workspace
+from project_kit import project_config, treecopy, workspace
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
@@ -658,11 +658,12 @@ def _source_gap_causes(target_root: Path) -> list[str]:
     return causes
 
 
-def install_kit(target_root: Path, dry_run: bool = False) -> None:
+def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool = False) -> None:
     """Run `pkit init` against `target_root`. Refuses to run if `.pkit/`
     already exists, if the source kit doesn't look like a real source
     tree, or if the target is the source itself (project-kit
-    self-hosts).
+    self-hosts). With `refuse_proposals`, the explicit flag, it writes the
+    key that turns the landing check's refusal on (ADR-081 point 5).
     """
     source_kit = find_source_kit()
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
@@ -692,6 +693,8 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     # The seed paths, before deploy reads the overlay and merge the adapter's
     # project settings (ADR-065 point 11).
     seed_missing_paths(ctx)
+    if refuse_proposals:
+        _write_refuse_proposals(ctx)
 
     # Every adapter the copy placed is registered, and recorded at the version
     # it ships, before deploy, the render and provisioning read the registry.
@@ -1113,6 +1116,21 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
 _SCRATCHPAD_STATE_DIRS = ("active", "done", "dropped")
 
 
+def _write_refuse_proposals(ctx: InstallContext) -> None:
+    """Write the key that turns the landing check's refusal on. The flag that asked for it
+    is the consent (COR-048 point 5), and the install makes no offer (ADR-081 point 5)."""
+    if ctx.dry_run:
+        click.echo(f"  would write {project_config.REFUSE_PROPOSALS_KEY}: true")
+        return
+    segments = tuple(project_config.REFUSE_PROPOSALS_KEY.split("."))
+    project_config.write_config(
+        ctx.target_root,
+        lambda data: project_config.set_path(data, segments, True),
+        consent=project_config.Consent(yes=True),
+    )
+    click.echo(f"  wrote {project_config.REFUSE_PROPOSALS_KEY}: true")
+
+
 def seed_missing_paths(ctx: InstallContext, *, capabilities: Iterable[str] = ()) -> None:
     """Create each seed path that is missing, and never write over one that exists.
 
@@ -1299,11 +1317,46 @@ def run_installed_adapter_primitives(ctx: InstallContext) -> None:
     `pkit sync` after the refresh pass — both need the harness side
     (re-)materialised. Adapters are discovered by walking
     `.pkit/adapters/<name>/`; the scripts must be idempotent so re-runs
-    on a stable state report "exists" rather than "created".
+    on a stable state report "exists" rather than "created". Every deploy
+    then warns of the hook needs no provider binds
+    (`report_unsatisfied_needs`).
     """
     for adapter_dir in _installed_adapter_dirs(ctx.target_root):
         for name in _ADAPTER_PRIMITIVES:
             _run_adapter_primitive(adapter_dir / name, ctx)
+    report_unsatisfied_needs(ctx)
+
+
+def report_unsatisfied_needs(ctx: InstallContext) -> None:
+    """Warn of each `needs:` entry whose hook binds no provider (COR-013 point 4).
+
+    The check is the one `pkit refs validate` makes (`refs.unsatisfied_needs`), over
+    the agents and skills on disk once they are deployed. Each need is one `warning`
+    line naming the agent or skill and the hook: a hook no skill answers and no
+    package provides, or one whose providers collide at its winning tier. The report
+    writes nothing and fails nothing, as the deploy's other reports. A front matter or
+    a `package.yaml` that cannot be read is one `warning` line in its place. A dry run
+    deploys nothing, so it reports nothing. Local import: the reference graph imports
+    this module.
+    """
+    if ctx.dry_run:
+        return
+    from ruamel.yaml.error import YAMLError
+
+    from project_kit import refs
+
+    try:
+        artifacts = refs.load_artifacts(ctx.target_root)
+        needs = refs.unsatisfied_needs(artifacts, refs.load_hook_providers(ctx.target_root))
+    except (OSError, UnicodeDecodeError, YAMLError) as exc:
+        reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        click.echo(
+            f"  {'warning':<12} hook needs not checked: a front matter or package.yaml "
+            f"could not be read ({reason})."
+        )
+        return
+    for need in needs:
+        click.echo(f"  {'warning':<12} {need.describe(ctx.target_root)}")
 
 
 def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> tuple[str, ...]:

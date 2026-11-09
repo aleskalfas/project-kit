@@ -18,7 +18,7 @@ reads:
   paths:
     - .pkit/rules/core.md
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/manifest.md
     - .pkit/permissions/README.md
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-017-capability-pattern.md
@@ -86,7 +86,7 @@ A capability registered under any of these names before it was reserved stays re
 
 Read `.pkit/decisions/core/COR-017-capability-pattern.md`. Every capability ships:
 
-- `package.yaml` — component metadata (`schema_version`, `kind: capability`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
+- `package.yaml` — component metadata (`schema_version`, `kind: capability`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/manifest.md`, "Package metadata (`package.yaml`)").
 - `README.md` — adopter-facing intro: the discipline, the commands, the conventions.
 - Some non-empty subset of `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/`. A capability with no decisions and no skills is suspicious — at minimum, you'd expect one decision establishing the discipline's invariant plus one skill or script operationalising it.
 - `migrations/` — the capability's migrations, one folder for each version they bring an installed project to (`<major>.<minor>.0/`). It stays empty until the capability lands a change that breaks against an installed project's state. That change ships its migration here, stamped with `pkit new migration --tier capability --component <name> --name <slug>` through the `migration-author` skill (COR-010). A version transition runs it when it moves the project to that version (COR-059).

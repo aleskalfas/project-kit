@@ -54,9 +54,9 @@ pkit:
         - .pkit/decisions/README.md#two-further-id-spaces
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
         - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
-        - .pkit/lifecycle/README.md#a-new-collision
-        - .pkit/lifecycle/README.md#a-data-points-question
-        - .pkit/lifecycle/README.md#what-ships-a-migration
+        - .pkit/lifecycle/upgrade-flow.md#a-new-collision
+        - .pkit/lifecycle/manifest.md#a-data-points-question
+        - .pkit/lifecycle/migrations.md#what-ships-a-migration
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#init
@@ -66,6 +66,7 @@ pkit:
         - docs/permissions/README.md#turning-it-on
         - docs/rules/README.md#why-they-exist
         - docs/scratchpad/README.md#
+        - docs/agents/README.md#why-they-exist
         - docs/skills/README.md#why-they-exist
         - docs/decisions/README.md#why-they-exist
         - docs/schemas/README.md#why-they-exist
@@ -147,7 +148,7 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 ```
 
 > [!WARNING]
-> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command behind an allowed wrapper, such as `find . -exec rm -rf {} +`, still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command given to an allowed `ssh` still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
 
 ### No change leaves a document stale without saying so
 
@@ -366,7 +367,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
      - the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant))
      - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
 
-     A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+     A name collision, or a capability's question, waits for your answer ([the lifecycle reference](.pkit/lifecycle/upgrade-flow.md#a-new-collision), and [on questions](.pkit/lifecycle/manifest.md#a-data-points-question)).
 4. **[Versioned, upgrades in one command](#the-methodology-upgrades-like-a-dependency).** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached. The project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
@@ -394,7 +395,7 @@ $ pkit capabilities install project-management | grep -e "^  Installed" -e "crea
   created    .claude/agents/project-manager.md
 ```
 
-Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle reference, on questions](.pkit/lifecycle/manifest.md#a-data-points-question)).
 
 **The tool enforces the process, so you need not remember it: `create-issue` refuses to file an issue before `bootstrap` has run.**
 
@@ -426,6 +427,7 @@ The friction check asks nothing of your documents until you declare where they l
 - **The permission model, explained:** [`docs/permissions/README.md`](docs/permissions/README.md) — why it exists, and how to turn it on.
 - **The operational rules, explained:** [`docs/rules/README.md`](docs/rules/README.md) — why sessions load them, and how to add your own.
 - **Scratchpad notes, explained:** [`docs/scratchpad/README.md`](docs/scratchpad/README.md) — why to think a question through in a note before a record decides it, and how to start, send and retire one.
+- **Agent definitions, explained:** [`docs/agents/README.md`](docs/agents/README.md) — why work goes to agents with fixed roles, and how to call the reviewers and write your own.
 - **Skills, explained:** [`docs/skills/README.md`](docs/skills/README.md) — why recurring work becomes a skill, and how to write your own.
 - **Decision records, explained:** [`docs/decisions/README.md`](docs/decisions/README.md) — why to keep your decisions as records a person accepts, and how to record, accept and refine one.
 - **Schemas, explained:** [`docs/schemas/README.md`](docs/schemas/README.md) — why your configuration, your rule sets and your capability's data are checked against schemas, and how to declare, write and check each.

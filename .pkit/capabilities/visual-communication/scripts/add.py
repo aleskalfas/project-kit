@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "jsonschema==4.26.0",
+#   "referencing==0.37.0",
 #   "ruamel.yaml==0.19.1",
 #   "uharfbuzz==0.57.0",
 #   "fonttools==4.68.0",
@@ -32,15 +33,16 @@ kept. Running the command is the consent for each copy it writes: no version tra
 copies a library into the location (DEC-003 point 5).
 
 A copy not yet released is replaced only where every lock that names it is an unpinned
-draft's, or the person names the piece or the declaration it locks: `--piece <name>` and
-`--declaration <name>` name each pinned draft and each declaration of written code. Naming
-it is the move on purpose: the lock keeps its number, no `piece.yaml` and no declaration is
-written, and what it draws, or the code it writes, changes only then. Where any such lock is
-left unnamed, or cannot be read, the copy stays as it is, the command names each left, and
-the rest of the run goes on.
+draft's or a final piece's, or the person names the piece or the declaration it locks:
+`--piece <name>` and `--declaration <name>` name each pinned draft, each published piece and
+each declaration of written code. Naming it is the move on purpose: the lock keeps its
+number, no `piece.yaml` and no declaration is written, and what it draws, or the code it
+writes, changes only then. Where any such lock is left unnamed, or cannot be read, the copy
+stays as it is, the command names each left, and the rest of the run goes on.
 
 For each lock left that it can read, the run shows what replacing the copy would change: a
-pinned draft's scenes drawn with the copy as it is and with what the capability ships, in
+pinned draft's or a published piece's scenes drawn with the copy as it is and with what the
+capability ships, in
 `.pkit/capabilities/visual-communication/project/local/before-after/<piece>/`, local to the
 clone; and a declaration's difference in the code its writer writes with each. Where it
 cannot draw or write a side, it says why, and goes on.
@@ -114,7 +116,7 @@ def main() -> int:
         action="append",
         default=[],
         metavar="<name>",
-        help="a pinned draft whose copy the run may replace; repeat for each",
+        help="a pinned draft or a published piece whose copy the run may replace; repeat for each",
     )
     parser.add_argument(
         "--declaration",

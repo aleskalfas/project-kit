@@ -1,6 +1,6 @@
-"""software-analysis 0.3.0: each requirement an earlier release wrote gets its fingerprint.
+"""software-analysis 1.0.0: each requirement an earlier release wrote gets its fingerprint.
 
-From 0.3.0 each requirement carries `obligation`, and the check fails one without it,
+From 1.0.0 each requirement carries `obligation`, and the check fails one without it,
 whatever any rule's status (software-analysis DEC-006 point 6). The migration writes it on
 each requirement that holds none, withdrawn ones included, from the plan the capability's
 command prints and writes nothing by, `pkit analysis obligation --dry-run --json`
@@ -22,12 +22,19 @@ from ruamel.yaml import YAML
 
 from project_kit import migrations
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.analysis_repo import CONSTRAINTS, QUALITY, fingerprint, installed, requirement
+from tests.analysis_repo import (
+    CONSTRAINTS,
+    QUALITY,
+    fingerprint,
+    installed,
+    release_reaches,
+    requirement,
+)
 from tests.test_software_analysis_check import check, errors
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "software-analysis"
-MIGRATION = CAPABILITY / "migrations" / "0.3.0" / "001-write-each-obligation.sh"
+MIGRATION = CAPABILITY / "migrations" / "1.0.0" / "001-write-each-obligation.sh"
 
 #: Two requirements an earlier release wrote, one of them withdrawn, each without the field.
 QUICK = f"{QUALITY}/REQ-004-quick-result.md"
@@ -158,9 +165,10 @@ def test_the_migration_never_fails_the_upgrade_when_the_plan_cannot_be_read(
 
 def test_the_migration_lies_where_the_fingerprint_first_ships() -> None:
     """A project installed at or after the version that first writes the field never runs
-    it: its stamp and its command write the field. That is the capability's next release,
-    0.3.0, so the package still records the release before it, or that release."""
+    it: its stamp and its command write the field. That is the capability's 1.0.0, so the
+    migration lies there, under a version the capability's release reaches, or no upgrade
+    runs it."""
     package = YAML(typ="safe").load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     assert "obligation" in package["commands"]
-    assert MIGRATION.parent.name == "0.3.0"
-    assert Version(package["component"]["version"]) <= Version("0.3.0")
+    assert MIGRATION.parent.name == "1.0.0"
+    assert Version(MIGRATION.parent.name) <= Version(release_reaches())

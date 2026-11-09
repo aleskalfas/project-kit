@@ -1,0 +1,8 @@
+component: claude-code
+kind: none
+body: >
+  The adapter's README, and the comment on `loaded_rules:` in its package
+  metadata, say that `pkit validate` checks core's include in `CLAUDE.md`
+  against the key, beside the index and its line (#2445; ADR-083). The check is
+  the backbone's, and the adapter's key and its merge primitive are unchanged, so
+  no surface of the adapter moves.

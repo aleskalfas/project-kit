@@ -68,13 +68,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import answers_told, bootstrap_gate, fixers, friction_answers
+from _lib import answers_told, bootstrap_gate, fixers, friction_answers, pr_head
 from _lib.agent_verdicts import (
     all_verdicts,
     latest_verdicts_per_reviewer,
     reduce_latest_per_reviewer,
 )
 from _lib.author_delta import author_delta, base_kept
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -94,6 +95,7 @@ from _lib.verdict_freshness import FreshnessRule
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -233,7 +235,7 @@ def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | N
     if not head or not base:
         print(f"error: GitHub named no head or no base for PR #{number}.", file=sys.stderr)
         return None
-    source = friction_answers.pull_request_source(
+    source = pr_head.pull_request_source(
         str(pr.get("headRefName") or ""),
         number,
         cross_repository=bool(pr.get("isCrossRepository")),
@@ -269,7 +271,8 @@ def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | N
 def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     """The PR's methodology view. `freshness` judges each verdict; by default
     it is the rule for this PR with no floor-only reviewer, under which every
-    verdict is held to any change since the head it reviewed."""
+    verdict is held to any change since the head it reviewed, and one naming
+    no head is stale, as no reader of when the head arrived is given."""
     if freshness is None:
         freshness = PrReview(
             Resolution(),
@@ -431,8 +434,8 @@ NOTHING_TOLD_MESSAGE = "nothing to tell the person who authorises the merge"
 HEAD_PROGRAMS_MESSAGE = (
     "An anchor at this head needs its resolver, a program the head holds, and this view "
     "starts none. Running this command from a checkout at {head}, with nothing "
-    "uncommitted, reads the answers. Such a run starts the head's own programs under "
-    "your account, so make it only on a head you trust."
+    "uncommitted, reads the answers. There the command is the head's own, and it starts "
+    "the head's programs under your account, so make such a run only on a head you trust."
 )
 
 # Appended to a shown verdict the freshness rule holds stale (#1179), naming

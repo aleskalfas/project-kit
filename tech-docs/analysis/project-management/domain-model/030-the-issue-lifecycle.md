@@ -80,8 +80,8 @@ flowchart LR
   inprogress -->|a Task| review[Review]
   review -->|authorisation| done[Done]
   inprogress -->|authorisation, a parent issue or a completed close| done
-  todo -->|authorisation, won't do or a completed close| done
-  backlog -->|authorisation, won't do or a completed close| done
+  todo -->|authorisation, a won't-do close or a completed close| done
+  backlog -->|authorisation, a won't-do close or a completed close| done
   inprogress -.-> forward([Issues above brought forward])
   done -.->|a completed close| forward
   done -.-> eligible([A parent with no open child eligible to close])
@@ -108,7 +108,7 @@ The issue lifecycle is the [process](../../core/glossary.md#term-process--proces
 **Relations:**
 
 - Each issue moves through it, and only a [Task](../glossary.md#term-task--task) enters Review (DEC-006).
-- The core's engine checks each move against its definition ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
+- The [backbone](../../core/glossary.md#term-backbone--backbone)'s engine checks each move against its definition ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 **States:** An issue is in Todo when it is filed, and in Backlog once a person schedules it. It is in In Progress once its work starts, and a Task is in Review while its [pull request](../../core/glossary.md#term-pull-request--pull-request) is open. A person moves an issue whose work stopped back from In Progress, to Backlog or to Todo. An issue is in Done once it closes (DEC-006).
 
@@ -140,7 +140,7 @@ Defined in [TERM-authorisation](../glossary.md#term-authorisation--authorisation
 
 **Why:** Scheduling and ending the work are commitments an agent must not make on its own. A move back from In Progress settles what becomes of the scheduling, so a person holds that move too. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does ending a [Task](../glossary.md#term-task--task)'s work, by a merge of the Task's [pull request](../../core/glossary.md#term-pull-request--pull-request) or by a completed close. A completed close closes a Task whose work was not a pull request, as completed. Closing an issue as won't do, or a finished parent issue, needs one too, and so does moving back an issue whose work stopped.
+An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does ending a [Task](../glossary.md#term-task--task)'s work, by a merge of the Task's [pull request](../../core/glossary.md#term-pull-request--pull-request) or by a [completed close](../glossary.md#term-completed-close--completed-close). A completed close closes a Task whose work was not a pull request, as completed. A [won't-do close](../glossary.md#term-wont-do-close--wont-do-close) needs one too, and so do closing a finished parent issue and moving back an issue whose work stopped.
 
 The person gives an authorisation in the session, for the issue at hand, and it never stands for a later move.
 
@@ -160,7 +160,7 @@ The person gives an authorisation in the session, for the issue at hand, and it 
 
 **Always true:**
 
-- A move a person holds is never made without its authorisation (DEC-006).
+- A move a person holds, asked for directly, is never made without its authorisation (DEC-006).
 - A [bypass](../glossary.md#term-bypass--bypass)'s reason goes into an [audit comment](../glossary.md#term-audit-comment--audit-comment) before the move, where the [project](../../core/glossary.md#term-project--project)'s settings keep such comments (DEC-014 and [DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 - An authorisation to merge is the person's, and no [reviewer](../../core/glossary.md#term-reviewer--reviewer)'s approval gives it (DEC-055 point 3).
 
@@ -186,7 +186,7 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 - It moves an issue above only forward, and never past In Progress (DEC-006).
 - It never moves a child because its parent moved (DEC-006).
 - A move back from In Progress moves no other issue. A parent issue moves back only while no child of it is In Progress or in Review, so it never stands behind its children (DEC-006).
-- A won't-do close from Todo or Backlog moves no issue above. A completed close brings each issue above that is behind up to In Progress, since completed work is progress (DEC-006).
+- A [won't-do close](../glossary.md#term-wont-do-close--wont-do-close) from Todo or Backlog moves no issue above. A [completed close](../glossary.md#term-completed-close--completed-close) brings each issue above that is behind up to In Progress, since completed work is progress (DEC-006).
 - A parent issue closes only once its [checkboxes](../glossary.md#term-checkbox--checkbox) are ticked and its children are done ([DEC-034](../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
 
 ## Audit comment
@@ -264,7 +264,6 @@ A journal is the record the [backbone](../../core/glossary.md#term-backbone--bac
 **Always true:**
 
 - A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1).
-- Where the backbone's engine cannot run, a command reads where the issue stands itself, and warns that the move went into no journal ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 ## What is built on these concepts
 
@@ -277,7 +276,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
@@ -288,7 +287,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
-- [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
+- [REQ-042 · Functional · A move a person holds, asked for directly, is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 
 **Cascade:**
 
@@ -303,14 +302,15 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
-- [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
+- [REQ-042 · Functional · A move a person holds, asked for directly, is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 
 **Bypass:**
 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
+- [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
-- [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
+- [REQ-042 · Functional · A move a person holds, asked for directly, is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 
 **Journal:**
 

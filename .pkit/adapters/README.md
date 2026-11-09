@@ -19,13 +19,13 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, COR-070, ADR-066, ADR-076]
+      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
-        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
+        - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
 ---
 
 # Adapters
@@ -83,13 +83,13 @@ A capability may ship operational rules of its own, as a loaded file at `.pkit/c
 
 - `entry:` the index's line for one capability's loaded file, with `{file}` for its path read from the index's folder. The part before `{file}` is the harness's import token.
 - `host:` the file that reaches the index, a path relative to the project's root and inside it.
-- `line:` the line the host keeps, with `{index}` for the index's path read from the host's folder.
+- `line:` the line the host keeps, with `{index}` for the index's path read from the host's folder. With core's loaded file's path in place of the index's, it is core's include, which the host keeps too.
 
 **The backbone renders the index**, `.pkit/rules/capabilities.md`, from that key and `pkit rule-sets loaded`, one entry per capability the manifest registers that ships a loaded set, wherever the lifecycle regenerates derivable state. The adapter's merge primitive keeps `line:` present in `host:`. So no adapter names a path under `.pkit/`, and the backbone names no harness's syntax.
 
 **What takes a capability out.** Its uninstall, and an unregistration that keeps its files, renders the index without it. The host's line stays, since the index carries every install and uninstall.
 
-**Validation checks it**, for each registered adapter: `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a host without the line, and warns of an adapter that declares no `loaded_rules:`, whose harness's sessions then load no capability's rules. While registered adapters declare different `entry:` forms, the index is not rendered and validation fails, until the record that adds the second adapter decides how one index serves both. An adapter whose harness reaches the files another way needs a key of its own or a validator it registers.
+**Validation checks it**, for each registered adapter: `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a host without the line or without core's include, and warns of an adapter that declares no `loaded_rules:`, whose harness's sessions then load no capability's rules, and for whose harness core's include goes unchecked. While registered adapters declare different `entry:` forms, the index is not rendered and validation fails, until the record that adds the second adapter decides how one index serves both. An adapter whose harness reaches the files another way needs a key of its own or a validator it registers.
 
 ## The agent runner
 
@@ -97,8 +97,8 @@ Some commands start an agent with nobody watching: project-management's `review-
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by file name:
 
-- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
-- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner, which the lifecycle README states: no arguments, the request on standard input, from the project root.
+- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
+- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner, which the lifecycle reference's manifest schema states: no arguments, the request on standard input, from the project root.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
 **The request**, one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort` (a level, or `null`). A runner refuses a request with any other key, rather than run it without that key, so a runner that does not know the confined form refuses it. Then one of two forms:
@@ -128,7 +128,7 @@ A confined run's answer adds two keys: `refused_calls`, each call the harness re
 **What a runner owes:**
 
 - **No bypass.** It passes the harness only flags from a closed set, which its adapter's README lists. No member of the set approves a call, or loads configuration other than the run's own (ADR-066 point 4).
-- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
+- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
 - **The environment.** It does not pass on the backbone's own variables for its run of the runner.
 - **The marker** (ADR-066 point 8). It refuses when `PKIT_AGENT_RUN` is in its own environment, even empty, and sets `PKIT_AGENT_RUN=1` in the harness's, for both forms. So no route around the backbone's run command starts an agent from a run.
 - **For a confined run, as its adapter's README states:** the harness's version within the range its author tested the confined form on, and the platform's sandbox, or a refusal (ADR-066 point 2); only its own settings and a checked definition (point 3); no flag, setting, definition field or variable that bypasses the run's rules (point 4); the run's rules in native rules, which fail closed (point 5); and the shell writing only the workspace, with no host allowed (point 6).
@@ -171,7 +171,7 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds three entries: `delegated-result-complete`; `unattended-confined-run`, which the drift command depends on (ADR-066 point 13); and `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to it names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost". The Claude Code adapter answers all three ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds four entries: `delegated-result-complete`; `unattended-confined-run`, which the drift command depends on (ADR-066 point 13); `unattended-working-run`, which the build command depends on (ADR-073); and `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to `session-loads-rules` names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost". The Claude Code adapter answers all four ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 

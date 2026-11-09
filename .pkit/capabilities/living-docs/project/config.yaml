@@ -29,6 +29,8 @@ places:
   .pkit/adapters/README.md: user
   .pkit/adapters/claude-code/README.md: user
   .pkit/agents/README.md: user
+  .pkit/agents/hooks.md: user
+  .pkit/agents/storyboards.md: user
   .pkit/capabilities/demo-recording/README.md: user
   .pkit/capabilities/doc-examples/README.md: user
   .pkit/capabilities/evidence/README.md: user
@@ -49,6 +51,10 @@ places:
   .pkit/cli/README.md: user
   .pkit/decisions/README.md: user
   .pkit/lifecycle/README.md: user
+  .pkit/lifecycle/manifest.md: user
+  .pkit/lifecycle/component-registry.md: user
+  .pkit/lifecycle/migrations.md: user
+  .pkit/lifecycle/upgrade-flow.md: user
   .pkit/permissions/README.md: user
   .pkit/process/README.md: user
   .pkit/process/shape.md: user

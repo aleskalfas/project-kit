@@ -1,0 +1,399 @@
+answers:
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T134448Z-e94c9244.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261101T165439Z-652f8733.yaml
+      - 20261101T235104Z-b5f09514.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:32:44Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's process rows came to link the process area's pages, its schemas validate section came to name the schemas reference's page on backbone files, and project-management's read-only diagnostics gained show-pr's answers field and an example of it. This reference names show-pr only as the clean verb an agent's read is routed to, and that stands. Here only the surface table's four hooks rows change, each now linking the agents reference's hooks.md. No permissions command, flag or ignored path this reference rests on changed, so it holds.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:34:41Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's validate section and its friction pointers came to name the process and schemas pages. Its friction sections and COR-050 point 7 came to change the over-broad warning and what an excluded artefact shows, and the documents the agent reads gained bar and share on each finding and stayed at version 1, so it reads them as before. The validation reference's What it reports gained a bullet on links and citations read, which this page does not state. DEC-056 changed only citations, so what the agent is told of a run the project granted, that it only proposes friction fixes, stands beside the warning, which touches neither. Here the adapter's section on deploy-agents.sh changes one pointer, to the agents reference's storyboards.md, Frontmatter declaration. This page says that pkit sync deploys the living-docs agent and that the adapter's deploy-agents.sh writes .claude/agents/living-docs.md, and both still hold. What the agent reads and proposes is as it was.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T21:33:02Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch this README became a reference for the AI agent, and the process and schema skills came to point to their references' pages. COR-066 gained point 5, and the decisions README's acceptance gate came to say that a new record's edits to accepted records follow its acceptance in its change. decision-author gained the steps that name those edits, show them and make them, and now reads COR-066 and COR-039. The CLI reference's process rows came to link the process area's pages. Here the agent-author and storyboard-author skills read and point to the agents reference's hooks.md and storyboards.md, and the CLI reference's four hooks rows link hooks.md. What this reference states of a skill's layout, front matter, gates and deployment holds against both.
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+    revalidated:
+      at: 2026-11-05T21:33:08Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch ACT-operator came to call the gate the cross-repository guard, and UC-022, UC-023 and UC-026 changed only words, UC-023's steps 18 and 19 and a postcondition now naming a capability's loaded file by its term, with the same behaviour. The rules reference's Converting project.md into a loaded set came to send the reader to the schemas reference, its steps as they were, and the CLI reference's process rows came to link the process area's pages. Here only the CLI reference's four hooks rows change, each now linking the agents reference's hooks.md. What this guide says of a capability's rules, and each command, member and step it relies on, still hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:33:11Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch UC-027 gained a precondition from UC-022 for the project's grants, cited ADR-066 for the harness naming the dispatched agent, and named its concepts by their terms. REQ-010 and REQ-016 changed in wording and anchors, REQ-010's Verified by now naming the version transition in full, and they ask the same of these steps. Here the agents README becomes a reference, and its deploy section now says what the code did before: placeholders resolve in the front matter only, a name goes to the project's definition, then a capability's by name, then core's, and a skip keeps an earlier copy. The use case states each of these, in steps 5 and 6, variant 6a and its assumptions, so it holds against both."
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T21:33:17Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch COR-066 gained point 5: a new record's Implications name its edits to accepted records, and those edits follow its acceptance in its change. The decisions reference, decision-author, the architect, UC-037 and UC-040 came to say so, and this guide was updated with them. COR-066's check came to read what a change would land, and the guide's warning that nothing enforces COR-066 yet stays true while #2665 is open. ACT-developer, ACT-merge-authoriser and TERM-acceptance-gate changed only words, and the CLI reference's process rows came to link the process area's pages. Here only the CLI reference's four hooks rows change, each now linking the agents reference's hooks.md. The rows of new decision, decisions validate, decisions check-diff and refs records-for are as they were, so the guide holds."
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:34:48Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the CLI reference's friction check changed only its two pointers for a place's links and derived links, and COR-050 point 7 added only a warning of over-broad anchors, so what the change check asks and how it reads a link are as they were. A pull request's description came to carry no list of the answers (project-management DEC-065), docs-reviewer came to read each sentence from the sentences' section alone, and this README was updated to say so and to say what the person is told. review-work refusing an updated document with no sentence, land-work's holds on a missing sentence and on one no reviewer checks, its stops on a head behind its base, and DEC-064's rule on when a branch takes in its base leave that check, an authorisation's cover and the links as written. Taken with the warning, they leave the answers the engineer writes for its change, and those it leaves to a person, as the README says. Here the agents README becomes a reference. Its Adopter overlay still has the project's overlay name each category's paths, its Diagnosing + repairing the overlay still has reconcile append a commented stub for an optional category, its Body conventions still keep a reviewer's working files in the workspace, and The rule-set reviewer still stands in the stack. This README also says an agent's text keeps its placeholder, as the reference now says, so it holds.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T091216Z-b5483b71.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:34:54Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch ACT-developer and ACT-merge-authoriser changed only their wording and citations. UC-001, UC-080 and UC-081 came to leave a finding marked for a person to the merge authoriser, to say a blocking verdict withholds approval, and to name the link target and the revisit entry by the core's terms, as this guide teaches the findings. UC-001 also lost variant 2a's aside that project-kit names no conventions corpus, which the guide never said. A pull request's description came to carry no list of the answers (project-management DEC-065), UC-080 and docs-reviewer came to read each sentence as the commands read it, and this guide was updated to say what the landing command shows and that show-pr's answers field prints it. review-work refusing an updated document with no sentence, land-work's holds and its stops on a head behind its base, DEC-064's rule on when a branch takes in its base, and COR-050 point 7's warning of over-broad anchors contradict nothing it says. Here the agents reference's Adopter overlay and Diagnosing + repairing the overlay are rewritten as a reference, and this change gives the guide an anchor on its pkit agents section, which its proof's mention of pkit agents rests on, leaving its text as it was. Its statements on the overlay, the agents report, the agent's build task, the answers it writes and leaves to you, and the panel still hold.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:33:32Z
+      outcome: updated
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T134448Z-e94c9244.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T014109Z-bd846f15.yaml
+      - 20261103T020421Z-0bcddb3a.yaml
+      - 20261103T023611Z-a9448c1a.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+    revalidated:
+      at: 2026-11-05T21:33:35Z
+      outcome: updated
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T154833Z-45114068.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T133609Z-a3edfa39.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261102T140536Z-ff2d2c9f.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T215329Z-f5d52865.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T014145Z-5f96d643.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113759Z-36cfe195.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+    revalidated:
+      at: 2026-11-05T21:33:43Z
+      outcome: updated

@@ -16,8 +16,10 @@ in the location, the library folder and its list, each piece's lock, the brand i
 the ids of its content and its content against the components it fills. A piece's scenes
 are judged from its findings record, `findings.yaml`, while the record's key verifies
 against the files; otherwise they are computed now, while the validation's bound allows.
-A finding fails, asks for attention, or states a fact; a finding that would fail in a
-released library version asks for attention instead.
+A final piece is read by its files and its lock alone (DEC-017 point 4). A published piece
+is held to the version that wrote its current copy, and a draft is told of a file of that
+copy still standing (DEC-017 points 5 to 7). A finding fails, asks for attention, or states
+a fact; a finding that would fail in a released library version asks for attention instead.
 
 The backbone runs it as this capability's validator, the `visual-communication:check`
 member of `pkit validate` (COR-055 point 3): from the project root, with `--json` alone,

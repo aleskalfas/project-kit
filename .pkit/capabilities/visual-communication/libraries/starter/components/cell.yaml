@@ -1,0 +1,37 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  One cell of a table's row: a head in a strong type, such as the name of a column, or a
+  text, or both, one under the other, each broken to the cell's width. It is as wide as
+  it is given, and as tall as what it holds.
+
+fields:
+  type: object
+  properties:
+    head:
+      type: string
+      description: What the cell names, in a word or a few, such as the name of its column.
+      x-pkit-prose: true
+    text:
+      type: string
+      description: What the cell holds, in a word or a sentence.
+      x-pkit-prose: true
+
+parts:
+  # Each of the head and the text keeps a gap from what stands above it only where both
+  # are drawn: a part not drawn has no height.
+  head:
+    when: head
+    text: {content: head, style: type.strong, fill: text-primary}
+    y: "=@space.2"
+    width: "=:width"
+  text:
+    when: text
+    text: {content: text, style: type.body, fill: text-primary}
+    y: "=head.bottom + min(head.height, text.height, @space.1)"
+    width: "=:width"
+
+preferred:
+  height: "=text.bottom + @space.2"

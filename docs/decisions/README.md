@@ -32,6 +32,7 @@ pkit:
         - .pkit/decisions/README.md#writing-a-record
         - .pkit/decisions/README.md#refining-an-accepted-record
         - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/decisions/README.md#checking-what-a-change-lands
         - .pkit/decisions/README.md#checking-a-records-points
         - .pkit/decisions/README.md#finding-the-records-a-path-leads-to
         - .pkit/cli/README.md#init
@@ -262,7 +263,7 @@ Install project-kit
 ```
 
 > [!WARNING]
-> Nothing enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) yet ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)). No check refuses a merge that lands a record still `proposed`, and none lists the records a change makes accepted. So before the merge, accept each such record in the change, and look again at any work that rested on it.
+> The landing check enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) only where a merge runs it ([the reference, "Checking what a change lands"](../../.pkit/decisions/README.md#checking-what-a-change-lands)). `pkit decisions check-landing` lists the records a change makes accepted. With `decisions.refuse-proposals` on, it refuses a merge that lands a record still `proposed`. Elsewhere, before the merge, accept each such record in the change, and look again at any work that rested on it.
 
 ## Refine a record, or supersede it
 

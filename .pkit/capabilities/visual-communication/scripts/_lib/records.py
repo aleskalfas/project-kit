@@ -13,13 +13,17 @@ written code, a piece's lock and the list of libraries (DEC-002 points 3 and 5).
   its comments, its order, its line endings and a byte-order mark. The text must read
   back as it was with that key, or it is refused.
 - **One entry added to a mapping of a file** (`with_entry`): the file's text with a new
-  entry last in the mapping that a path of keys leads to, such as a library in the list,
-  written in the style of that mapping, every other byte kept. The text must read back as
-  it was with that entry, or it is refused.
+  entry last in the mapping that a path of keys leads to, such as a library in the list, or
+  last in the file, written in the style of that mapping, every other byte kept. The text
+  must read back as it was with that entry, or it is refused.
 - **One entry's value replaced** (`with_value`): the file's text with the value of an
   entry that a path of keys leads to written again in its place, such as a version of the
   list or the release a library's file names, in the style it was written in, every other
   byte kept. The text must read back as it was with that value, or it is refused.
+- **One entry taken out** (`without_entry`): the file's text without the lines of an entry
+  that a path of keys leads to, such as the place a piece names for its current copy at the
+  file's top, or a version of the list, every other byte kept. The text must read back as it
+  was without that entry, or it is refused.
 """
 
 from __future__ import annotations
@@ -127,24 +131,25 @@ def with_mapping(original: str, key: str, mapping: Mapping[str, str], *, each: s
 
 def with_entry(original: str, path: Sequence[str], name: str, value: Any, *, each: str) -> str:
     """`original`, the text of a YAML file, with `name: value` added as the last entry of
-    the mapping the keys of `path` lead to from its top. Where the mapping's entries lie
-    on the lines below its key, the entry is written there as block YAML, at their indent;
-    where the mapping is written in flow on its key's line, such as `{}`, it is written in
-    flow before the closing brace. Every other byte is kept: its comments, its order, its
-    line endings and a byte-order mark. Raises RecordError where `original` cannot be
-    read, the mapping holds `name` already, or the text would not read back as it was with
-    the entry added; `each` names what one entry of the mapping holds, in the refusal. A
-    key on the way that the text writes in quotes is found by no line, and the refusal
-    names it, to be written without them."""
+    the mapping the keys of `path` lead to from its top; an empty `path` names the file's
+    top, so the entry ends the file. Where the mapping's entries lie on the lines below its
+    key, the entry is written there as block YAML, at their indent; where the mapping is
+    written in flow on its key's line, such as `{}`, it is written in flow before the
+    closing brace. Every other byte is kept: its comments, its order, its line endings and a
+    byte-order mark. Raises RecordError where `original` cannot be read, the mapping holds
+    `name` already, or the text would not read back as it was with the entry added; `each`
+    names what one entry of the mapping holds, in the refusal. A key on the way that the
+    text writes in quotes is found by no line, and the refusal names it, to be written
+    without them."""
     bom, lines, newline = _lines(original)
     before = _loaded(original[len(bom) :])
-    dotted = ".".join(path)
-    refusal = f"write `{dotted}` as a block mapping, one {each} an entry"
+    shown = f"`{'.'.join(path)}`" if path else "the file"
+    refusal = f"write {shown} as a block mapping, one {each} an entry"
     held = _at(before, path)
     if not isinstance(held, Mapping):
-        raise RecordError(f"`{dotted}` is not a mapping: {refusal}")
+        raise RecordError(f"{shown} is not a mapping: {refusal}")
     if name in held:
-        raise RecordError(f"`{dotted}` holds `{name}` already")
+        raise RecordError(f"{shown} holds `{name}` already")
     entered = _entered(lines, path, name, value, newline)
     if entered is None:
         quoted = _quoted(lines, path)
@@ -198,6 +203,59 @@ def with_value(original: str, path: Sequence[str], name: str, value: Any, *, eac
     if not path:
         raise RecordError(f"write `{name}:` at the top of the file, on a line of its own")
     raise RecordError(f"write `{dotted}` as a block mapping, one {each} an entry")
+
+
+def without_entry(
+    original: str, name: str, path: Sequence[str] = (), *, each: str = "entry"
+) -> str:
+    """`original`, the text of a YAML file, with the entry `name` taken out of the mapping the
+    keys of `path` lead to from its top; an empty `path` names the file's top. It takes out
+    the line that opens the entry, and each line its value takes below, with the comments
+    among them. Every other byte is kept: its comments, its order, its line endings and a
+    byte-order mark. Raises RecordError where `original` cannot be read, the mapping does not
+    hold `name`, a mapping below the top holds no other entry, which would leave it empty, or
+    the text would not read back as it was without it; `each` names what one entry of a
+    mapping below the top holds, in the refusal. A key the text writes in quotes is found by
+    no line, and the refusal names it, to be written without them."""
+    bom, lines, _ = _lines(original)
+    before = _loaded(original[len(bom) :])
+    held = _at(before, path)
+    shown = f"`{'.'.join(path)}`" if path else "the file"
+    if not isinstance(held, Mapping) or name not in held:
+        raise RecordError(f"{shown} holds no `{name}`")
+    if path and len(held) == 1:
+        raise RecordError(f"{shown} holds no {each} but `{name}`, so it keeps it")
+    if path:
+        refusal = f"write {shown} as a block mapping, one {each} an entry"
+    else:
+        refusal = f"write `{name}:` at the top of the file, on a line of its own"
+    found = _key_lines(lines, [*path, name])
+    if found is None:
+        quoted = _quoted(lines, [*path, name])
+        if quoted:
+            keys = ", ".join(f"`{key}`" for key in quoted)
+            plural = "s" if len(quoted) > 1 else ""
+            raise RecordError(f"write the key{plural} {keys} without quotes")
+        raise RecordError(refusal)
+    start = found[-1]
+    end = _block_end(lines, start, _indent(lines[start]))
+    written = bom + "".join([*lines[:start], *lines[end + 1 :]])
+    try:
+        # A text that holds no entry left reads as nothing.
+        after = load_yaml(written[len(bom) :]) or {}
+    except ReadError:
+        after = None
+    if after != _taken_out(before, path, name):
+        raise RecordError(refusal)
+    return written
+
+
+def _taken_out(data: Mapping[str, Any], path: Sequence[str], name: str) -> dict[str, Any]:
+    """`data` with the entry `name` taken out of the mapping the keys of `path` lead to."""
+    if not path:
+        return {key: value for key, value in data.items() if key != name}
+    head, *rest = path
+    return {**data, head: _taken_out(data[head], rest, name)}
 
 
 def _with_value(data: Mapping[str, Any], keys: Sequence[str], value: Any) -> dict[str, Any]:
@@ -322,7 +380,13 @@ def _entered(
     lines: list[str], path: Sequence[str], name: str, value: Any, newline: str
 ) -> list[str] | None:
     """`lines` with `name: value` added last to the mapping the keys of `path` lead to, or
-    None where the lines do not show where its entries lie."""
+    None where the lines do not show where its entries lie. An empty `path` names the file's
+    top, whose entries end with the file."""
+    if not path:
+        block = [text + newline for text in _dumped({name: value}).splitlines()]
+        if lines and not lines[-1].endswith(("\n", "\r")):
+            return [*lines[:-1], lines[-1] + newline, *block]
+        return [*lines, *block]
     found = _key_lines(lines, path)
     if found is None:
         return None

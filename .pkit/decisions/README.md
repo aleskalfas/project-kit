@@ -8,6 +8,7 @@ pkit:
       path:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_check_diff.py
+        - src/project_kit/decisions_landing.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/default_branch.py
         - src/project_kit/docs_roots.py
@@ -19,12 +20,12 @@ pkit:
         - src/project_kit/validate.py
         - .pkit/skills/core/decision-author.md
         - .pkit/agents/core/architect.md
-      record: [COR-001, COR-002, COR-003, COR-012, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", COR-065, COR-066, COR-068]
+      record: [COR-001, COR-002, COR-003, COR-012, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", COR-065, COR-066, COR-068, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7"]
       artefact:
         - RS-OPS-019
         - RS-LDOC-003
-        - .pkit/lifecycle/README.md#the-steps-of-a-transition
-        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#the-steps-of-a-transition
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
         - .pkit/lifecycle/README.md#what-sync-writes
 ---
 
@@ -50,6 +51,7 @@ A decision record states one choice among alternatives, with its context and rea
 - [Finding the records a path leads to](#finding-the-records-a-path-leads-to)
 - [Checking a record's points](#checking-a-records-points)
 - [Checking a change's numbering](#checking-a-changes-numbering)
+- [Checking what a change lands](#checking-what-a-change-lands)
 <!-- /pkit:contents -->
 
 ## Two namespaces, two prefixes
@@ -59,7 +61,7 @@ A record's folder and prefix say who owns it, and each namespace numbers its rec
 | Folder | Prefix | Owner | How it changes |
 |---|---|---|---|
 | `core/` | **COR** | core | Refreshed by every sync, and never edited in a project |
-| `project/` | **PRJ** | the project | Written by the project alone. The folder is a [seed path](../lifecycle/README.md#seed-paths), created where it is missing |
+| `project/` | **PRJ** | the project | Written by the project alone. The folder is a [seed path](../lifecycle/upgrade-flow.md#seed-paths), created where it is missing |
 
 - **Numbering:** `COR-001` and the project's first record are separate decisions about separate things, numbered apart, and neither blocks the other.
 - **A prefix names its side.** An id such as `COR-NNN` or `PRJ-NNN` says whether core or the project holds it, with no folder named.
@@ -120,7 +122,7 @@ Every file has exactly one owner, core or the project, and the two never share a
 
 - **Core's files** are refreshed by every sync. A project never edits one, since the next sync overwrites the edit.
 - **The project's files:** sync reads from them what it needs, such as the versions the project records. It writes into one only through merge delivery's tier that asks nothing, which adds core's entries and never removes one the project wrote. What sync writes, and what it never writes, is the lifecycle reference's ([its "What sync writes"](../lifecycle/README.md#what-sync-writes)).
-- **A version transition,** such as an upgrade, creates each seed path that is missing, never over one that exists ([the lifecycle reference, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside a transition ([the lifecycle reference, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)). A migration changes a project's file only within what the record that owns the file allows ([COR-059](core/COR-059-version-transition.md) point 3).
+- **A version transition,** such as an upgrade, creates each seed path that is missing, never over one that exists ([the lifecycle reference, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)). Every migration runs inside a transition ([the lifecycle reference, "The steps of a transition"](../lifecycle/upgrade-flow.md#the-steps-of-a-transition)). A migration changes a project's file only within what the record that owns the file allows ([COR-059](core/COR-059-version-transition.md) point 3).
 - **Extending core's content:** the same `core/` and `project/` pattern governs other areas, such as `.pkit/agents/` and `.pkit/rules/`. To extend core's content, add sibling files in the matching `project/` folder, and never edit a core file.
 - **A file at a fixed path** that the project extends, such as `CLAUDE.md`, stays the project's. Core ships its content at a separate path, and merge delivery adds what is missing into the project's file in place. It never removes or rewrites what the project wrote ([COR-002](core/COR-002-merge-delivery.md)).
 - **Note:** when each file is first written and when it is updated is COR-001's.
@@ -236,7 +238,7 @@ Work depends only on accepted records: code, content, tooling, and records that 
   - **Read before the merge:** these edits are shown beside the list above ("Before the merge"), by whoever shows it. The person who authorises the merge reads each before the change lands. They are the edits the numbering check lists, and those the list above shows for a record accepted in a change this one builds on.
   - **A record the project receives from elsewhere:** the new record decides nothing against it. A change it needs there is proposed where that record is kept, and nothing rests on that change until the project receives it accepted.
   - **A rule:** an edit the new record forces on a rule of the project's own rule sets is named and made like its edits to records ([COR-051](core/COR-051-rule-sets.md)). An example is the edit to an origin that cites a record the new record supersedes. An edit to a rule set the project receives is proposed where that set is kept.
-- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). So, before the change lands, have a person accept each record it adds.
+- **Not enforced yet:** the landing check refuses a merge that lands a proposed record, and lists what a change makes accepted (COR-066 points 2 and 3). It binds only where a project turns its key on, and a merge component or the host runs it ("Checking what a change lands" below). Until then, have a person accept each record a change adds before it lands.
 
 ## Adding a record
 
@@ -462,3 +464,46 @@ pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
 - **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names.
   - **No clash:** a point the default branch holds under that id with the change's very text is the change's own work landed, such as a parent branch's. So is a record the default branch holds at the change's own path.
   - **A parent's point edited since** fails, and merging the default branch in clears it.
+
+## Checking what a change lands
+
+The landing check judges what a change's merge would land, and lists what the change makes accepted (COR-066 points 2 and 3). It is a command of its own, apart from the numbering check:
+
+```
+pkit decisions check-landing --base <ref> [--head <rev>] [--json]
+```
+
+- **What it judges** is the *landing state*: git's merge of the head into the base's tip. It compares each record and rule there with its state at that tip, so one the merge leaves alone lands nothing.
+- **What the change cannot move.** The key and the default branch's name are read at the base's tip. Which files the project receives is read at that tip and at the landing state. The working tree is never read, though its copy of the synced-copy test runs.
+- **It reports** each record and rule proposed at the landing state and not proposed at the tip. One proposed at both is already on the base, and blocks nothing.
+  - **A record** is paired by the numbering check's pairing, so a record moved to another path is not added.
+  - **A rule** is judged on its own, however many rules its file holds. A rule moved to another set takes a new id, so it is judged as added.
+  - **What it cannot read counts as proposed,** with why. That holds for each of these:
+    - a file that is not text
+    - front matter that does not parse
+    - a status its kind lacks
+    - a rule-set file the reader cannot read, or one with no mapping of rules or a key written twice, which counts as one proposal
+    - an overlay at the landing state whose ADR folder cannot be read, which counts as one proposal even where the tip's cannot be read either
+- **It skips** a record or rule set the project receives by sync, which is judged where it is kept. The synced-copy test tells such a file, not the kind of set, so a method rule set a project authors is judged.
+  - **Two readings.** The test is asked of the tip and of the landing state. A file either skips is skipped, and each file they disagree on is reported for the person to see.
+  - **A state that cannot tell** skips no capability's file, and the check says why. A manifest that does not read is one such state.
+- **The refusal.** `decisions.refuse-proposals` at the base's tip decides whether a reported proposal fails the landing. Only a landing on the default branch can fail, told by the name the run gives its base. Otherwise the check passes and says why.
+  - **A doubt counts as the default branch.** A base named by anything but a branch counts, such as a commit or `origin/HEAD`. So does any base while the default branch's declared name does not read.
+- **A change to the key** is reported, with its value at each state, and counts once it has landed. On the run whose landing turns it on, the check also lists the proposals the tip holds. They block nothing, and a person settles each.
+- **The list** gives, for each record and rule the change makes accepted:
+  - each commit that accepted it, with the rest of that commit's work
+  - the change's commits before that one that touch anything else, one on a parallel line among them. For a rule, an edit to another rule in its file counts.
+  - how its text at the landing state differs from its text at that commit, a record's point by point
+- **Only what lands is shown** of a commit's work, so a parent's work the base already holds is not shown again. A commit left with nothing to show stays listed, and says so.
+- **A second list** gives each record and rule the tip holds accepted and the branch point does not, where the merge changes it. It shows how it differs at the landing state from the tip.
+- **No answer** is never a pass, never an empty list and never the refusal off. The check gives none where it cannot compute what lands, and exits apart from a refusal. A caller holds the merge on it, whatever the key says.
+
+Its options, exits, document and no-answer cases are in [the CLI reference](../cli/README.md#decisions-check-landing---base-ref---head-rev---json). Where a project runs it:
+
+- **Through a merge component,** a component that carries out merges on a person's authority. It runs the check before it merges, after the reviewers have judged the change, and shows the person the list. It does not merge while the check refuses or gives no answer. The backbone's own merge commands are not one.
+- **A project without one** has its host require the check, on a pipeline line of its own. The line names the pull request's target by its branch name as base, and its own head as head. It fetches their history first.
+  - **With the key off,** only no answer fails that line, so it can be wired before the key is turned on.
+  - **Its pass can go stale.** It holds for the tip it ran against. A project that wants no stale pass requires each change to be up to date with its base, or merges through a queue.
+- **A direct commit.** A person accepts each record and rule the commit makes accepted before the commit. Whoever commits straight to the default branch then runs the check before the push, and pushes only on a pass. The check's head is the commit, and its base is the fetched default branch. A project may wire a hook for such a push, and the backbone installs none.
+- **Never in the check gate.** The check gate, a hook run on every push and the numbering check never run it. So the refusal blocks no push and hides no other check.
+- **What meets no refusal.** A merge sent past those places meets neither the refusal nor the list. It may go by the host's own controls, or by a backbone command such as `pkit pull-request land` or the release merge. So does an administrator merge past a host check.

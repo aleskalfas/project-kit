@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.8.0
+version: 3.10.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -24,6 +24,10 @@ scope:
     - docs/capabilities/software-engineering/README.md
     - .pkit/rules/README.md
     - docs/rules/README.md
+    - .pkit/agents/README.md
+    - .pkit/agents/hooks.md
+    - .pkit/agents/storyboards.md
+    - docs/agents/README.md
     - .pkit/skills/README.md
     - docs/skills/README.md
     - .pkit/decisions/README.md
@@ -38,6 +42,12 @@ scope:
     - .pkit/process/engine.md
     - .pkit/process/connections.md
     - docs/process/README.md
+    # The lifecycle README joins once #1862 settles what the passages it keeps
+    # word for word state: until then the scope leaves it out (COR-060 point 2).
+    - .pkit/lifecycle/manifest.md
+    - .pkit/lifecycle/component-registry.md
+    - .pkit/lifecycle/migrations.md
+    - .pkit/lifecycle/upgrade-flow.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:

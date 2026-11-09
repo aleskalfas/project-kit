@@ -18,8 +18,8 @@ pkit:
         - RS-OPS-012
         - .pkit/decisions/README.md#the-acceptance-gate
         - .pkit/adapters/claude-code/README.md#deploy-skillssh
-        - .pkit/lifecycle/README.md#install-pre-flight-checks
-        - .pkit/lifecycle/README.md#a-new-collision
+        - .pkit/lifecycle/component-registry.md#install-pre-flight-checks
+        - .pkit/lifecycle/upgrade-flow.md#a-new-collision
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#status
@@ -104,8 +104,9 @@ What the body cites is checked against the front matter, in both directions (COR
 - **A record:** an id of the form `COR-`, `PRJ-` or `ADR-` and its number, in backticks or in prose. A capability's decision is cited as `[<capability>:DEC-NNN]`, and validation checks that it resolves, with no declaration.
 - **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook, and warns. Put it in a code fence, or reword it: declared under `needs`, it fails, since nothing answers it.
 - **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
-- **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares a record or a hook that the body never cites, but not a file. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
-- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record or a dropped scratchpad note ([the CLI reference, "Surface"](../cli/README.md#surface)). It lists files it cannot find too, but reads each path from the project's root. So it may list a relative path whose file is there, such as one in a capability's skill.
+- **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares a record, a file or a hook that the body never cites. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
+- **A declared file the body cites another way.** A path in the body cites it where the path leads to that file, such as a relative link. A decision record's file is cited by the record's id. A declared file counts, too, where its text stands anywhere in the body, as a bare name such as `CONTRIBUTING.md` does. The front matter is never searched for it.
+- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record, a dropped scratchpad note or a missing file ([the CLI reference, "Surface"](../cli/README.md#surface)).
 
 ## The body
 
@@ -156,8 +157,8 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 - **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two ship one name, the project's is deployed first, then core's is, then a capability's is, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Suspension.** Skills are suspendable ([COR-003](../decisions/core/COR-003-artifact-mechanisms.md)). A project skill that takes the name of core's skill, or of a capability's, replaces it in the harness by the order above. Updates of the replaced skill then reach no session. No project file disables a skill without replacing it.
 - **What warns of a suspension:** only a capability's questions below. Otherwise the deploy prints the link it makes, and `pkit status` lists the skill as the project's.
-- **A capability's upgrade** asks a person about each skill new in its version whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). A skill its installed copy holds, or one the project skipped, is not new. The answers are override, skip or inspect. With nobody to answer, it refuses.
-- **A capability's install** asks the same, but only about a skill of the capability's in the flat form ([the lifecycle reference, "Install pre-flight checks"](../lifecycle/README.md#install-pre-flight-checks)). A project skill that takes the name of a skill the capability already holds is asked about by neither.
+- **A capability's upgrade** asks a person about each skill new in its version whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/upgrade-flow.md#a-new-collision)). A skill its installed copy holds, or one the project skipped, is not new. The answers are override, skip or inspect. With nobody to answer, it refuses.
+- **A capability's install** asks the same about each of its skills whose name is already in use ([the lifecycle reference, "Install pre-flight checks"](../lifecycle/component-registry.md#install-pre-flight-checks)). It reads both forms of a skill, the capability's and those installed. A project skill that takes the name of a skill the capability already holds is asked about by neither.
 - **Edit the source, never the deployed link** (core rule 12). An edit to the source needs no new deploy, since the link leads to it.
 - **A new or removed skill** reaches the harness at the next `pkit sync`. The sync removes the deploy's own links to a skill that has gone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
 - **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)). No skill of that name is deployed over it, and the deploy reports it skipped.

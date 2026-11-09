@@ -190,7 +190,7 @@ def project(
     cap = root / ".pkit" / "capabilities" / "project-management"
     shutil.copytree(CAP_SRC / "schemas", cap / "schemas")
     if as_processes:
-        shutil.copytree(CAP_SCRIPTS, cap / "scripts")
+        shutil.copytree(CAP_SCRIPTS, cap / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
         for script in (cap / "scripts").glob("*.py"):
             body = script.read_text(encoding="utf-8").split("\n", 1)[1]
             script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")

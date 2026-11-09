@@ -58,7 +58,7 @@ A fragment recogniser may match a command another privilege also matches (e.g. `
 
 ### 7. A denylist is a speed-bump, not a boundary
 
-A capability-contributed deny shapes a *non-adversarial* agent's reflexive behaviour — it stops a researcher subagent from habitually reaching for `curl`. It is **not** a security boundary: per [ADR-004](ADR-004-autonomy-intent-confinement.md) a tool-call denylist is porous (a `bash -c '…'` wrapper evades the recogniser). The decision is justified on behaviour-shaping value, and claims nothing stronger.
+A capability-contributed deny shapes a *non-adversarial* agent's reflexive behaviour — it stops a researcher subagent from habitually reaching for `curl`. It is **not** a security boundary: per [ADR-004](ADR-004-autonomy-intent-confinement.md) a tool-call denylist is porous (a code runner such as `python3 -c '…'` evades the recogniser). The decision is justified on behaviour-shaping value, and claims nothing stronger.
 
 ## Rationale
 

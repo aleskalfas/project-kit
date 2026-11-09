@@ -1,0 +1,1466 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-dead-anchor
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:18Z
+      outcome: unchanged
+      unchanged-because: The entry's example is a deleted file that a path anchor names, and the change check failing until the change mends the page. The flag naming the own head and the refusal document touch neither how an anchor resolves nor when a dead one fails the check. 20261105T215309Z-ce6c0935 found that a dead anchor stays out of the new reading of a whole anchor beside its parts, and is reported as before. Neither change moves what makes an anchor dead, so the entry and its distinctions hold.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:19Z
+      outcome: unchanged
+      unchanged-because: The entry's example is friction reported on a page until a change answers it. friction_check.py's change reaches how a caller names a head and how a refusal is printed, not what counts as friction. 20261105T215309Z-ce6c0935 found that a whole anchor beside its parts flags nothing new and owes nothing, so that change leaves it too. Friction stays what the term says it is, and debt stays apart from it.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction-mode
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T020441Z-7e50a784.yaml
+    revalidated:
+      at: 2026-11-06T02:55:21Z
+      outcome: unchanged
+      unchanged-because: The entry says `enforcing` fails a branch that leaves friction unanswered. The refusal to run a resolver away from its commit already failed the run in either mode, and printing it as a document under `--json` leaves the exit code as it was. 20261106T020441Z-7e50a784, which replaces 20261105T221812Z-ca40c14b, found that friction_discovery.py only gains `read_mapping_at`, a public name for a reading it had, and that the term reads none of it. That name decides no failure either, so the entry holds against both changes.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+    revalidated:
+      at: 2026-11-06T02:55:22Z
+      outcome: unchanged
+      unchanged-because: The requirement asks each reading document to carry its version, and a reader to refuse one it does not know. 20261105T221812Z-ca40c14b found that friction_discovery.py gains `read_mapping_at` and friction_since.py moves its git helpers to `commit_contributions`, with no document's version or keys changed. 20261106T004535Z-7b0f01ce found that the renderer reads `answers.prunable`, a key added at version 1, and that the key `parts` of 20261105T215309Z-ce6c0935 is added at that version too. Together they add keys and change no meaning, so the documents stay at version 1, and the report still refuses another. This change's refusal document carries `schema_version`. Only a caller naming `--own-head` gets it, and project-management's reader checks that version before it reads `refused.kind`. tests/test_friction_check.py pins the document, so the requirement holds of all three.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+    revalidated:
+      at: 2026-11-06T02:55:24Z
+      outcome: unchanged
+      unchanged-because: "The requirement asks for the same bytes from the same state, keys sorted, and no age. 20261105T215309Z-ce6c0935 found that `parts` is read from HEAD's anchors in their written order, so one state gives one document. 20261105T221812Z-ca40c14b found that `read_mapping_at` and the move of friction_since.py's git helpers to `commit_contributions` leave the bytes for a state as they were. They hold together: one adds a key read from the state, and the other moves code and no output. This change's refusal document now sorts its keys as `render_json` does, and tests/test_friction_check.py pins its bytes. It holds the head, the anchor, how the working tree stands against that head, and the message. All of those come from the state and none from a clock, so the requirement holds of all three."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:25Z
+      outcome: unchanged
+      unchanged-because: This use case re-pins an inherited rule set after its new version is reviewed, through `pkit status`, `pkit validate` and `pkit rule-sets reach`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b judged cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs any of those commands, so the use case holds against both changes.
+  - artefact: .pkit/process/engine.md
+    read:
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:27Z
+      outcome: unchanged
+      unchanged-because: The page describes the operations of the process engine, whose code runs as `pkit`'s `process` commands. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that cli.py's gain of `decisions check-landing` and `init --refuse-proposals` changes nothing the page says. The page names none of those commands, and neither change touches a `process` command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:28Z
+      outcome: unchanged
+      unchanged-because: This use case tells an author a capability is ready to share, through `pkit release check-shareable`, which reads the capability's package metadata. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115109Z-58e99185.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:30Z
+      outcome: unchanged
+      unchanged-because: The requirement keeps a dead anchor an error in both checks and in validation. The tests added to tests/test_friction_check.py cover the own head's flag and the refusal document, and friction_check.py resolves anchors as it did. 20261105T215309Z-ce6c0935 found that a dead anchor stays out of the whole-and-parts reading and is reported as an error as before, the test's expected finding only gaining the `parts` key. Both leave the measure and what verifies it standing, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:31Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, made apart, and this change. The steps run `pkit release lint` and `pkit release check`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. 20261106T003428Z-6de85d99 found that steps 7 and 7a hold: the guard's step moves to the quick checks' job with its command, condition and environment as they stood, and the use case names no job. One reaches commands no step runs, and the other where CI runs the guard, so they hold together. This change's flag and refusal document belong to `pkit friction check`, which no step runs either, so the use case holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:33Z
+      outcome: unchanged
+      unchanged-because: This use case challenges a draft and checks a diff against the conventions, its reviewer running `pkit rule-sets altered`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. The critic and the two reviewers run none of those commands, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:34Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T001934Z-0af931c1, which replaces 20261105T221812Z-ca40c14b and 20261105T234348Z-1f64d843. It found that the journey reads neither of UC-062's additions, the list at step 8 and the run of `pkit decisions check-landing` at step 13, and that a refusal at step 13 merges nothing. It also judged 20261105T215849Z-25d2581b, on `review-work`'s audit comment, and 20261105T220122Z-9823200c, on the order of checks and review, neither of which the journey relies on. This change gives UC-061 variant 7b and UC-062 variants 3a to 3c and 9e. They start nothing a head holds until a person names it, or stop where two pull requests share a branch's name. None merges another head, so the postcondition's head is still the one the gate judged. The hand-off by the Task in Review, step 14's move to Done and variant 7a keep their numbers, so the journey's needs stand.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:36Z
+      outcome: unchanged
+      unchanged-because: This use case shows what a capability would connect to before it is installed, through `pkit status`, `pkit capabilities show` and the install plan. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. None of those commands is a step here, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:37Z
+      outcome: unchanged
+      unchanged-because: This use case authors a project's own rule sets, through `pkit validate` and `pkit rule-sets reach`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, the `decisions` key the page on backbone files names, or ADR-057 point 2's new homes. Step 9 commits a rule as proposed on its way to UC-040, and the landing check judges only what would land. So the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:39Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, made apart, and this change. 20261105T221812Z-ca40c14b found that default_branch.py only gains `branch_named` and `Base.warning`, that every resolution stays as it was, and that no step reads them. 20261106T003428Z-6de85d99 found that the whole aggregator and `--short` keep every line, and that `--quick` only divides CI's run, whose parts still add up to the whole, so each step holds. One leaves the base a check reads and the other which checks run, so they hold together. Step 6 has CI name the head through `PKIT_CHECK_HEAD`, which the quick checks' job sets too, and ADR-068 point 6's refinement keeps that variable's rule. A check before pushing runs on the working tree, which the flag cannot be given with, so the use case holds.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T053408Z-3b52273c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:40Z
+      outcome: unchanged
+      unchanged-because: The page describes the adapters and their agent runner. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. The page's account of a confined run and of `review-pr` starting an agent is not touched by it. 20261105T221812Z-ca40c14b found that cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, and install.py's write of that key behind the flag, change nothing the page says. `pkit init` still runs each adapter's scripts by name, with the flag or without it, so the page holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:42Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, made apart, and this change. 20261105T215309Z-ce6c0935 updated the use case with variant 5b, where a document anchors a target whole and parts of it too, and `pkit friction check --all` warns of it as `whole-and-parts`, owing no answer. 20261106T001934Z-0af931c1 judged 20261104T172329Z-94c162f9, 20261105T132805Z-5c89a281 and 20261105T221812Z-ca40c14b together: variant 5a's warning counts what the anchors declare, those anchors read as they did, and `read_mapping_at` reads no anchor. They hold together: 5b adds a warning beside 5a, reads the anchors as declared, and fails nothing. This change adds a flag naming the own head and a refusal document to friction_check.py. Those reach neither step 3's dead anchor nor variants 5a and 5b, both of `--all`, so the use case holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:43Z
+      outcome: unchanged
+      unchanged-because: "This use case makes a drafted record or rule binding only through review. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b updated it: variant 7a now has the merge authoriser run `pkit decisions check-landing` before a direct push, and variant 7b lists what a change makes accepted. No step or variant runs `pkit friction check`, and the own head's flag reaches neither of those, so the use case holds against both changes."
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:45Z
+      outcome: updated
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:46Z
+      outcome: unchanged
+      unchanged-because: The page says the capability routes its agent to `show-issue` and `show-pr` for reads, and names `review-pr`'s runs. The CLI reference's surface table gains `--own-head`, and the section on those two views gains that `show-pr` escapes `--field body`. 20261106T001934Z-0af931c1, which replaces 20261105T221812Z-ca40c14b, found that `show-pr`'s answers field, the landing check's row and the `init` flag are no verb this page denies, routes or grants. A flag on a read-only check and an escaped view are none either. What the permission model grants and denies is the same, so the page holds against both changes.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+    revalidated:
+      at: 2026-11-06T02:55:48Z
+      outcome: unchanged
+      unchanged-because: Judged with the three answers it replaces, each made apart from the others, and this change. 20261106T001934Z-0af931c1 found that four earlier answers reach different passages, and that this page names no landing check and lists it as no line of the aggregator. 20261106T003428Z-6de85d99 updated 'How CI splits a full run' to four parts, the quick checks among them, and 'When CI runs the short check', which now runs beside them. 20261106T004535Z-7b0f01ce found that a due prune gets an issue of its own, which leaves 'Running checks' true, and that the tracking issue's list stands, with 20261105T215309Z-ce6c0935's `whole-and-parts` line in it. The three reach the landing check's absence, CI's parts and the tracking issue, and none contradicts another. ADR-068 point 6 now gains a flag beside `--head`, and DEC-065 points 2, 3 and 6 say what a temporary checkout of a head runs and who may start it. On a head that passes, `review-work` and `land-work` still do what the friction gate's paragraph says. A head they stop reaches neither line, and the page says nothing of such a head, so the page holds.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:50Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, made apart, and this change. 20261105T215309Z-ce6c0935 found that the CLI reference's friction sections gain a finding kind and a key, that this page's summary of the check lists no kinds this makes untrue, and that the block's schema is untouched. 20261105T221812Z-ca40c14b updated the page's list of the configuration's keys with `decisions`, the key that turns the landing check's refusal on, and anchored COR-066 point 4. One reaches the page's summary of the checks and the other its list of keys, so they hold together. The page sets out the files the backbone reads, and links the CLI reference only for what the checks measure. The own head's flag and the refusal document change no file's schema and no measure, so the page holds.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:51Z
+      outcome: unchanged
+      unchanged-because: The page links the CLI reference's section on the change check for how an anchor on one part is judged, and says a resolver is what the checks run. That judgement is the same, and the section's new flag and refusal document ask nothing of a page or of its source's resolver, which still runs from a checkout of the head. 20261105T221812Z-ca40c14b found that the reference's `validate` section only gains a bullet saying the landing check is no validator. Nothing the page says rests on that bullet, so it holds against both changes.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:53Z
+      outcome: unchanged
+      unchanged-because: The page rests on the check for its discovery of where documents are, through `pkit friction artefacts --json`. The change check's section gained a flag and a refusal document, and that discovery did not move. 20261105T221812Z-ca40c14b found that the reference's `validate` section only gains a bullet saying the landing check is no validator. That bullet names nothing of living-docs' validation, so the page holds against both changes.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:54Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, made apart, and this change. 20261105T224638Z-004832b8 found that `parts` and a finding that owes nothing join `bar` and `share` at version 1, so the agent reads the same documents by the same keys and only proposes friction fixes. 20261106T001934Z-0af931c1 found that the over-broad keys, DEC-056's two citations and the `validate` bullet on the landing check share nothing, so what the agent is told of a fixer run holds. They hold together: the first judges what the agent reads, and the second what it is told and what it leaves to `pkit validate`. The two CLI sections the page links now gain a flag naming the own head and a refusal document. The measures and findings the agent reads are the same, so the page holds."
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:56Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, made apart, and this change. 20261105T224638Z-004832b8 found that `parts` and a finding that leaves a page's state alone join the earlier keys at version 1, so the documentation check reads its stale pages and surface as before, and a page's answer in the diff meets its obligation. 20261106T001934Z-0af931c1 found that the landing check reads no answer and raises no obligation, so the doc-check and fixers contributions hold. Together the keys added and the bullet on the landing check leave what `fill-doc-check` reads as it was. The sections on the change check now gain a flag and a refusal document, and `fill-doc-check` reads the whole-repository check, where `--all` takes no `--head`, so the reference holds.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:57Z
+      outcome: unchanged
+      unchanged-because: The page describes how skills are shipped and deployed, and links the CLI reference's surface table for the commands. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. The table's new signature touches no skill command. 20261105T221812Z-ca40c14b found that install.py's opt-in key, the acceptance gate's narrower `Not enforced yet` bullet, and the reference's `init`, surface and `validate` additions change nothing the page says. A skill still deploys at `pkit init`, and a skill's `gates` still read a record's acceptance, so the page holds against both changes.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:55:59Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261105T224638Z-004832b8, which replaces 20261105T215309Z-ce6c0935 and 20261105T220508Z-1d737509. It found that `explain` names the anchor that changed and its commits, and that the page's grant and the agent's command stand. The CLI section now gains a flag used only beside `--head`, and a refusal document under `--json` the guide does not read. Its `explain` output and its run of `pkit friction check` on a working tree meet neither, so its fences and steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:00Z
+      outcome: unchanged
+      unchanged-because: This use case develops the methodology in its source repository. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that install.py's opt-in key and cli.py's gain of `decisions check-landing` and `init --refuse-proposals` reach no step. Variant 2b's `pkit init` still refuses in the checkout before any write, the flag or not, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:02Z
+      outcome: unchanged
+      unchanged-because: This use case packages a recurring discipline as a capability, through `pkit new capability` and the stamps of step 6. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:04Z
+      outcome: unchanged
+      unchanged-because: This use case keeps a capability in its author's own repository, through `pkit capabilities register`, `pkit sync` and `pkit capabilities uninstall`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:05Z
+      outcome: unchanged
+      unchanged-because: This use case gives a capability roles, data points and processes others connect to, through `pkit process`, `pkit validate` and `pkit connections graph`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:07Z
+      outcome: unchanged
+      unchanged-because: This use case adapts the system to another harness, through `pkit new adapter`, `pkit sync` and `pkit harness report`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, or install.py's write of that key behind the flag. No step runs those commands, and an adapter's scripts run as before, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:09Z
+      outcome: unchanged
+      unchanged-because: This use case turns recurring work into a project's own skill or agent, through `pkit new agent` and `pkit sync`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, or install.py's write of that key behind the flag. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-006-gate-merges.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T011742Z-95ba1392.yaml
+    revalidated:
+      at: 2026-11-06T02:56:11Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, made apart, and this change. 20261105T221812Z-ca40c14b updated the use case with variant 3e, where a project with no component that merges adds a required job of its own running `pkit decisions check-landing`, and anchored ADR-081 point 7. 20261106T011742Z-95ba1392, which replaces 20261106T003428Z-6de85d99, found that ADR-055 point 5's over-broad finding, REQ-020's measure and the division of project-kit's CI run leave a required job holding the merge on what the use case says. They hold together: 3e adds a job beside step 3's, and `checks` stays the status project-kit requires. ADR-068 point 6 now adds a flag that does for `--head` what `PKIT_CHECK_HEAD` does for a working tree. Step 3's job sets the variable and names no flag, so that job and variant 3d's merge queue work as written, and the use case holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:13Z
+      outcome: unchanged
+      unchanged-because: This use case declares a project's backbone configuration once. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that the configuration gains one more single-valued key, `decisions.refuse-proposals`, that step 1 gives its keys as examples, and that `pkit config set` and validation treat the new key as the others. The own head's flag reads no key and adds none, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:15Z
+      outcome: unchanged
+      unchanged-because: This use case adds a project's own rules, settings and grants, through `pkit permissions grant`, `pkit agents reconcile` and `pkit sync`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, or install.py's write of that key behind the flag. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:16Z
+      outcome: unchanged
+      unchanged-because: This use case adds or removes a capability and tells of a name collision, through `pkit capabilities install` and `uninstall`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:18Z
+      outcome: unchanged
+      unchanged-because: This use case chooses which installed capability provides a role, through `pkit connections providers set`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, or the new key's name as a constant in project_config.py. That key is no `connections` entry, so the use case holds against both changes.
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:20Z
+      outcome: unchanged
+      unchanged-because: The page says what operational rules are, and links the CLI reference's surface table among its commands. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. The rule commands it documents are not touched. 20261105T221812Z-ca40c14b found that install.py's opt-in write, and the reference's surface, `init` and `validate` additions, change nothing the page says. `pkit init` still writes the three lines the page names, with the flag or without it, so the page holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:21Z
+      outcome: unchanged
+      unchanged-because: This use case finds an agent definition deployed with the project's paths, through `pkit sync` and each adapter's deploy scripts. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, or install.py's write of that key behind the flag. Variant 1c's `pkit init` deploys as before, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+    revalidated:
+      at: 2026-11-06T02:56:23Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, made apart, and this change. 20261105T221812Z-ca40c14b found that default_branch.py only gains `branch_named` and `Base.warning`, that every resolution stays as it was, and that no step reads them. 20261106T003428Z-6de85d99 found that step 9's line moves to the quick checks' job, whose step sets `PKIT_CHECK_BASE` and `PKIT_CHECK_HEAD` from the same values, and that the use case names no job. One leaves how the base resolves and the other only where CI runs the check, so they hold together. Step 1 runs the check on the branch, and step 9 has CI name the head through `PKIT_CHECK_HEAD`. `--own-head` serves a caller that names a commit with `--head`, which neither the developer nor the CI pipeline here does, and ADR-068 point 6 keeps the variable's rule. The refusal document goes only to such a caller, so it changes no step this use case describes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:24Z
+      outcome: unchanged
+      unchanged-because: "Judged with 20261105T224638Z-004832b8, which replaces 20261105T215309Z-ce6c0935 and 20261105T220508Z-1d737509. It found that the over-broad warning and `whole-and-parts` are no debt and hold nothing open, and that the check reports the same debt from the same history. This change's flag and refusal document belong to the change check: step 1's `--all` excludes `--head`, and so `--own-head`. So resolving debt reads as it did, and the steps hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:26Z
+      outcome: unchanged
+      unchanged-because: This use case lands a change on the default branch, through `pkit pull-request land` or a direct commit. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b updated variant 1a, so a direct commit is pushed only on a pass of `pkit decisions check-landing`, and anchored ADR-081 point 7. The answer this replaces said the landing runs no check. That holds of `pkit pull-request land`, which keeps none of its caller's gates, and no longer of variant 1a. `pkit friction check` is a step of neither path, and the own head's flag reaches neither, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T020441Z-7e50a784.yaml
+    revalidated:
+      at: 2026-11-06T02:56:28Z
+      outcome: unchanged
+      unchanged-because: This use case records a decision beside the methodology's, through `pkit new decision`, `pkit decisions validate` and `pkit decisions check-diff`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261106T020441Z-7e50a784, which replaces 20261105T221812Z-ca40c14b, found that decisions.py only gains a forgiving reading of the ADR folder from an overlay's mapping, that the numbering check checks, prints and exits as it did, and that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. Step 9 commits a record as `proposed`, and the landing check judges only what would land. So the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:29Z
+      outcome: unchanged
+      unchanged-because: This use case thinks a question through in a scratchpad note and retires it, through `pkit new scratchpad` and `pkit scratchpad done`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. Variant 3b only names `pkit init`, as before, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:31Z
+      outcome: unchanged
+      unchanged-because: This use case keeps each core record true for any project, through the `methodology-reviewer` and `pkit decisions validate`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. Step 6 hands acceptance and landing to UC-040 and UC-034, each answered in its own right, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:32Z
+      outcome: unchanged
+      unchanged-because: This use case releases the backbone, through `pkit release plan`, `apply` and `merge`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. Step 7 runs the project's checks with the working tree as head, so it names no flag, and the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:34Z
+      outcome: unchanged
+      unchanged-because: This use case releases a component on its own version, through `pkit release plan` and `apply`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:36Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, made apart, and this change. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. 20261106T003428Z-6de85d99 found that step 7's `pkit migrations check-diff` moves to the quick checks, which run on every pull request in both forms, and stays a line of `scripts/check.sh`. One reaches commands no step runs, and the other where CI runs a step's command, so they hold together. This use case keeps a backbone change from breaking installed projects through migrations. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. The new flag is an addition, which owes no migration, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-011-migrate-component-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:38Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, made apart, and this change. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. 20261106T003428Z-6de85d99 found that step 7's wiring stands: the line stays in `scripts/check.sh` and runs in the quick checks' job on every pull request. One reaches commands no step runs, and the other where CI runs a step's command, so they hold together. This use case carries a component's adopters across a breaking change. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. No step runs that command, so the use case holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:40Z
+      outcome: unchanged
+      unchanged-because: This use case puts the CLI on a machine at a release, through `uv tool install`, `pkit version` and `pkit upgrade`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:41Z
+      outcome: unchanged
+      unchanged-because: "This use case installs the system with one command. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b updated it with variant 1g, where `--refuse-proposals` writes `decisions.refuse-proposals: true` and an install without it writes no key, and anchored COR-066 point 4 and ADR-081 point 5. No step runs `pkit friction check`, and the own head's flag reaches nothing `pkit init` does, so the use case holds against both changes."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:43Z
+      outcome: unchanged
+      unchanged-because: The journey's need on the check is the places the backbone configuration declares, which the check reads as it did. The flag naming the own head and the refusal document reach no need between the journey's steps. 20261105T221812Z-ca40c14b found that install.py's opt-in write, the key's name in project_config.py, UC-049's variant and UC-006's variant leave the steps standing. Step 5's CI job names no flag, so the journey holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:44Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, made apart, and this change. 20261105T224638Z-004832b8 found that a record is accepted before the change builds on it, and that `whole-and-parts` owes nothing and holds no tracking issue open. 20261106T001934Z-0af931c1 found that the landing check judges what lands, not what a change builds on, so the step's sentence that no check of the backbone fails a change for what it builds on stands. They hold together: one finding owes nothing, and the other check reports a record that would land proposed. This change's flag and refusal document alter neither the list of answers at the authorised head nor a landing that merges nothing but the head named, so the needs stand."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-005-package-and-share-capability.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:46Z
+      outcome: unchanged
+      unchanged-because: The journey packages a discipline as a capability and makes it ready to share. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, and UC-049's variant of the opt-in flag, leave the journey's steps standing. What it needs from UC-049 is the installed system and an adapter, which that flag does not change. No step of it runs these commands, so its steps and needs hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:48Z
+      outcome: unchanged
+      unchanged-because: This use case readies a fresh clone with one sync. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, or install.py's write of that key behind the flag. `pkit sync` writes no such key, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:49Z
+      outcome: unchanged
+      unchanged-because: This use case upgrades the system like a dependency, through `pkit upgrade`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:51Z
+      outcome: unchanged
+      unchanged-because: This use case runs each project at the version it pins, through `pkit pin` and `pkit unpin`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. Step 5's command is any `pkit` command, and the router runs it as before, so the use case holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:52Z
+      outcome: unchanged
+      unchanged-because: This use case upgrades one capability on its own, through `pkit capabilities upgrade`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-012-report-problem.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:54Z
+      outcome: unchanged
+      unchanged-because: This use case files a report on the system and follows it, through `pkit report`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: docs/scratchpad/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:56Z
+      outcome: unchanged
+      unchanged-because: The page says how a scratchpad note starts and retires. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. The scratchpad commands it documents are not touched. 20261105T221812Z-ca40c14b found that cli.py's gain of `decisions check-landing` and `init --refuse-proposals`, and the acceptance gate's narrower `Not enforced yet` bullet, change nothing the page says. A note still binds nothing until a person accepts a record that states it, so the page holds against both changes.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:56:59Z
+      outcome: unchanged
+      unchanged-because: "The page says how decision records are written and read, and links the CLI reference's surface table. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b and 20261106T001934Z-0af931c1, the second replacing the first, answer main's rewrite of the page's warning: the landing check enforces COR-066 only where a merge runs it. `land-work` runs no landing check yet, so that stays true beside this change's edits of `land-work`. The flag touches none of the `pkit decisions` commands the page's fences run, so the page holds against both changes."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-013-link-reports.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:57:00Z
+      outcome: unchanged
+      unchanged-because: This use case receives adopters' reports and links each to its fix, through `pkit report inbox` and `pkit report link`. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. No step runs those commands, so it holds against both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:57:02Z
+      outcome: unchanged
+      unchanged-because: This use case asks before an agent changes another repository. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. That command writes nothing, so the guard this use case describes is not reached. 20261105T221812Z-ca40c14b found that no step reads cli.py's gain of `decisions check-landing` and `init --refuse-proposals`. Neither change alters what the guard compares, so the use case holds against both.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:57:03Z
+      outcome: unchanged
+      unchanged-because: The page explains the permission model and links the CLI reference's surface table. cli.py changed only `pkit friction check`, by a flag naming the own head and a refusal printed as a document under `--json`. 20261105T221812Z-ca40c14b found that the table's landing check row and `init` flag change nothing the page says. What a person is asked and what the model approves are the same under both, so the page holds.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:57:05Z
+      outcome: unchanged
+      unchanged-because: The page shows `pkit friction check` flagging a document until a change answers it, on a working tree. The CLI section gained a flag used only beside `--head` and a refusal document under `--json`, and friction_check.py's findings are the same. 20261106T001934Z-0af931c1, which replaces 20261105T221812Z-ca40c14b, found that resvg-py joins the dev dependency group alone, and that cli.py, install.py, decisions.py and default_branch.py only gain the landing check, its opt-in flag and what they read for it. It found the prerequisites stay `uv` and `jq`. Neither that answer nor this change reaches the page's fences, its promise, or what it says of `pkit init` and of accepted decisions, so the page holds.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-06T02:57:07Z
+      outcome: unchanged
+      unchanged-because: The guide's fences run `pkit friction check` on a working tree and read its first lines and exit code. The CLI section's additions change neither. 20261105T215309Z-ce6c0935 found that `explain` gains only a key and a finding that owes nothing, so the comparison row on what it names for a stale page holds. Neither change reaches the other, so the guide's output and what it says of friction checks hold.

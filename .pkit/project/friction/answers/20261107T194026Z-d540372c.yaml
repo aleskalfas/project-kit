@@ -1,0 +1,231 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-07T19:40:26Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-051-id-names-one-artefact.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T155747Z-06175c8e.yaml
+    revalidated:
+      at: 2026-11-07T19:40:27Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T19:40:29Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T19:40:31Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+    revalidated:
+      at: 2026-11-07T19:40:33Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-code-review-panel
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-07T19:40:40Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T115925Z-6c703c63.yaml, made apart. There docs-reviewer.md reads each sentence from the author's section alone and adds DEC-065 to what it reads. Here the entry's anchors grow by the records behind reviewer, pull request and required reviewer. Neither moves the panel's members or what they judge, a pull request's correctness, security and documentation, so the definition and its entry hold with both.
+  - artefact: docs/capabilities/living-docs/010-set-up-your-spaces.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T011619Z-e405542a.yaml
+    revalidated:
+      at: 2026-11-07T19:40:44Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T214520Z-1bee3213.yaml and 20261106T011619Z-e405542a.yaml, made apart. The first found that ACT-adopter's reworded install need moves no word the page rests on. The second found that the CLI reference's `decisions` key and its consent rule leave how `friction.surface` is declared, the one thing the page sends its reader there for. Here UC-043 is reworded, and its refusal of mixed line endings moves into a variant 9c that adds a lone carriage return, which the page does not state. None reaches what another judged, so the page's spaces, its declared places and the write put back on a validation error hold with all three.
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+    revalidated:
+      at: 2026-11-07T19:40:46Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T214520Z-1bee3213.yaml, made apart, which found that ACT-developer's reworded need moves no word the page rests on. Here UC-044 says captured source, the words the page already uses, and its box names a worked example of a site, which the page never promised. Neither reaches what the other judged, so the page's stamping, filling and checking of a page hold with both.
+  - artefact: docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+    revalidated:
+      at: 2026-11-07T19:40:50Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T214520Z-1bee3213.yaml, made apart, which found that ACT-developer's reworded need moves no word the page rests on. Here UC-046 names reader path as a term, its box says the reader-review has no step on a text alternative, which the page never promised, and UC-046 and REQ-022 say that in a session nothing at run time confines the agent to the agent workspace. The page says the agent writes its record there and changes nothing it reviews, which none of these contradicts, so the review, its record and the agent changing nothing hold with both.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-07T19:40:53Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T150914Z-b8b0a9c1.yaml, made apart, which found that the guide's `explain` output, its run of the check and its grant stand, and that only the outdated-base row of the friction check's section moves, which fixing a stale page does not touch. Here UC-045 and REQ-022 name each check, the agent and each command that writes an answer in full, UC-045 links the delegate to its term, and both say that in a session nothing at run time confines the agent to the agent workspace. The page has the agent write its diff there and apply nothing, which none of these contradicts, so its steps and its run with nobody watching hold with both.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-07T19:40:56Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T150914Z-b8b0a9c1.yaml, made apart, which found that onboarding reaches neither the check's new flag nor its refusal document, that ACT-adopter's reworded need moves no word the page rests on, and that the page says nothing of an outdated base. Here UC-047 says code-to-doc mapping and its entries where it said a mapping from code to documents and its rules, and UC-047 and REQ-022 say that in a session nothing at run time confines the agent to the agent workspace. The page's plain mapping and rules name the same thing for its reader, and the agent writes its plan and changes there and applies nothing, so the plan and the review of each change hold with both.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-07T19:41:00Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T150914Z-b8b0a9c1.yaml, made apart, which found that the guide's fences, the reworded needs of ACT-adopter and ACT-developer and the outdated-base report's lost remedy move nothing the page rests on. Here UC-043 to UC-047 and REQ-022 change their words and anchors, UC-043 gains a variant 9c on line endings, which the page does not state, and UC-045 to UC-047 and REQ-022 say that in a session nothing at run time confines the agent to the agent workspace, where the system only stops prompting for writes. That agrees with the page's warning that nothing at run time stops the agent's shell or its Write tool from changing a tracked file, so what it says of the agent, its proposals and the spaces holds with both.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-07T19:41:03Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T150914Z-b8b0a9c1.yaml, made apart, which found that the build task, the overlay and the landing path stand, and that the outdated-base report's lost remedy is one the guide never describes. Here UC-001 says passage for a person and drops project-kit's signing line, which the guide never stated, and UC-080 and UC-081 treat a reason for having no anchors beside the answers, which the guide already lists as the person's to decide. Neither reaches what the other judged, so the agent's build task, the answers it writes and those it leaves to you hold with both.

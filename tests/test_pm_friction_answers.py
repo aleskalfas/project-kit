@@ -53,6 +53,7 @@ from tests.test_friction_revisit import (
 )
 from tests.test_friction_revisit import entry as revisit_entry
 from tests.test_pm_backbone import route_every_backbone
+from tests.test_pm_pr_head import HEAD_OID, clone_git
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -830,82 +831,18 @@ def test_checked_reads_the_answers_and_no_friction_settings(
     assert found.settings == ()
 
 
-HEAD_OID = "c" * 40
-
-
-def _clone_git(monkeypatch, fa: ModuleType, *, holds: bool, fetch_brings: bool) -> list[tuple]:
-    """`git` as a clone answers it, recorded: whether it holds `HEAD_OID`, and
-    whether a fetch brings it."""
-    held = {HEAD_OID} if holds else set()
-    calls: list[tuple] = []
-
-    def git(*argv: str) -> subprocess.CompletedProcess[str]:
-        calls.append(argv)
-        if argv[0] == "cat-file":
-            return subprocess.CompletedProcess(argv, 0 if HEAD_OID in held else 1, "", "")
-        if argv[0] == "fetch":
-            if not fetch_brings:
-                return subprocess.CompletedProcess(argv, 128, "", "fatal: couldn't find ref\n")
-            held.add(HEAD_OID)
-        return subprocess.CompletedProcess(argv, 0, "", "")
-
-    monkeypatch.setattr(fa, "_git", git)
-    return calls
-
-
-def _base_resolved(fa: ModuleType, monkeypatch, ref: str, resolved: str | None) -> None:
-    """The backbone resolves every base named to `ref`, `resolved` as it says."""
-    base = fa.default_branch.Base(ref, "e" * 40, None, None, resolved)
-    monkeypatch.setattr(fa.default_branch, "check_base", lambda _named=None: base)
-
-
-@pytest.mark.parametrize(
-    ("cross_repository", "remote", "ref"),
-    [(False, "fork", "refs/heads/feat/7-x"), (True, "upstream", "refs/pull/7/head")],
-    ids=["same-repository", "fork"],
-)
-def test_a_head_this_clone_lacks_is_fetched_from_its_source(
-    fa: ModuleType, monkeypatch, cross_repository: bool, remote: str, ref: str
-) -> None:
-    """A PR from the base's own repository is fetched from its branch, on the remote
-    the branch is pushed to. One from a fork is fetched by the ref the base repository
-    keeps for it, on the base's remote as the base is fetched, never the branch's."""
-    calls = _clone_git(monkeypatch, fa, holds=False, fetch_brings=True)
-    _base_resolved(fa, monkeypatch, "upstream/main", "remote")
-    source = fa.pull_request_source(
-        "feat/7-x", 7, cross_repository=cross_repository, base="main", remote="fork"
-    )
-    assert source == fa.Source(remote, ref)
-    assert fa.fetch_head(HEAD_OID, source) is None
-    assert ("fetch", "--quiet", remote, ref) in calls
-
-
-@pytest.mark.parametrize("resolved", ["local", None], ids=["local-branch", "revision"])
-def test_a_base_that_names_no_remote_s_branch_is_fetched_from_origin(
-    fa: ModuleType, monkeypatch, resolved: str | None
-) -> None:
-    _base_resolved(fa, monkeypatch, "main", resolved)
-    assert fa.base_remote("main") == "origin"
-
-
-def test_a_head_this_clone_holds_is_not_fetched(fa: ModuleType, monkeypatch) -> None:
-    calls = _clone_git(monkeypatch, fa, holds=True, fetch_brings=True)
-    assert fa.fetch_head(HEAD_OID, fa.Source("origin", "refs/heads/feat/7-x")) is None
-    assert [argv for argv in calls if argv[0] == "fetch"] == []
-
-
 def test_a_head_no_fetch_brings_makes_the_derivation_unreadable(
     fa: ModuleType, monkeypatch
 ) -> None:
     """Never a pass on a guess: the check is not run on a head the clone lacks."""
-    _clone_git(monkeypatch, fa, holds=False, fetch_brings=False)
+    clone_git(monkeypatch, fa.pr_head, holds=False, fetch_brings=False)
     monkeypatch.setattr(fa, "_refresh_base", lambda base: None)
 
     def run_check(*_args: Any, **_kwargs: Any) -> Any:
         raise AssertionError("the check ran on a head the clone lacks")
 
     monkeypatch.setattr(fa, "_run_check", run_check)
-    found = fa.checked(HEAD_OID, "main", source=fa.Source("origin", "refs/heads/feat/7-x"))
+    found = fa.checked(HEAD_OID, "main", source=fa.pr_head.Source("origin", "refs/heads/feat/7-x"))
     assert found.document is None
     assert found.problem == (
         "the head ccccccc is not in this clone, and fetching refs/heads/feat/7-x from origin "
@@ -958,7 +895,18 @@ def test_enforcing_modes_exit_1_still_carries_the_document(
     monkeypatch.setattr(fa.subprocess, "run", run)
     assert fa._run_check(HEAD, "integration/7-x", cwd=None) == {"schema_version": 1, "answers": []}
     assert seen == [
-        ["pkit", "friction", "check", "--json", "--base", "integration/7-x", "--head", HEAD]
+        [
+            "pkit",
+            "friction",
+            "check",
+            "--json",
+            "--base",
+            "integration/7-x",
+            "--head",
+            HEAD,
+            "--own-head",
+            HEAD,
+        ]
     ]
 
 
@@ -1021,23 +969,24 @@ def test_the_check_runs_unrouted_with_the_base_named_whatever_the_environment(
 def test_only_the_resolver_refusal_is_answered_from_a_checkout(
     fa: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The backbone's refusal to run a resolver away from the head is told apart
-    from every other failure, which is kept as the first run gave it."""
-    refusal = (
-        "Error: --head 1a2b3c4: the anchor source 'alpha' is resolved by its capability's "
-        "command, which runs in the working tree and reads what is there — and the working\n"
-        "tree is not 1a2b3c4 (HEAD is at 0000000). Run from a checkout at 1a2b3c4: HEAD at "
-        "1a2b3c4, nothing uncommitted.\n"
-    )
-    stderr = [refusal]
+    """The backbone's refusal to run a resolver away from the head is told apart from
+    every other failure by the kind its document states, never by its words."""
+    refused = {"schema_version": 1, "failed": True, "refused": {"kind": fa.RESOLVER_ELSEWHERE}}
+    outputs = [(json.dumps(refused), "Error: --head 1a2b3c4: whatever it says\n")]
 
     def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(argv, 1, "", stderr[0])
+        stdout, stderr = outputs[0]
+        return subprocess.CompletedProcess(argv, 1, stdout, stderr)
 
     monkeypatch.setattr(fa.subprocess, "run", run)
     found = fa._run_check(HEAD, "main", cwd=None)
     assert isinstance(found, fa._NoDocument) and found.elsewhere
-    stderr[0] = "Error: the base main does not resolve\n"
+    assert "whatever it says" in found.why
+    # The sentence alone, with no document, is another failure: nothing reads it for a kind.
+    outputs[0] = ("", "Error: Run from a checkout at 1a2b3c4: HEAD at 1a2b3c4\n")
+    found = fa._run_check(HEAD, "main", cwd=None)
+    assert isinstance(found, fa._NoDocument) and not found.elsewhere
+    outputs[0] = ("", "Error: the base main does not resolve\n")
     found = fa._run_check(HEAD, "main", cwd=None)
     assert isinstance(found, fa._NoDocument) and not found.elsewhere
 
@@ -1818,41 +1767,93 @@ def test_a_head_that_holds_the_tip_its_own_check_read_is_not_checked_again(
         fa.merged(engine, "main", checked=moved)
 
 
-def test_the_check_runs_at_the_merge_with_the_head_as_its_own_head(
-    fa: ModuleType,
-    make_adopter_repo: MakeAdopterRepo,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """From a checkout of the merge, against the tip, unrouted, with the head named as
-    the change's own head, as a pull request's checks run it (COR-062 point 4). The
-    reading of the base is answered by the backbone's CLI in this process."""
-    repo, _anchor, engine = _race(make_adopter_repo)
-    landed = _land_elsewhere(repo, "anchor")
+def _merge_check_runs(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch, *, refused_at: str | None = None
+) -> list[tuple[list[str], str, str, str | None]]:
+    """Each change check `friction_answers.merged` runs, stood in for: its command, the
+    folder it ran from, the commit that folder is at, and whether routing is off. The
+    reading of the base is answered by the backbone's CLI in this process. A run from the
+    folder `refused_at` names, the repository's, is refused as the backbone refuses a
+    resolver away from the commit named."""
     real = subprocess.run
     pkit = InProcessPkit()
-    seen: list[tuple[list[str], str, str, str | None, str | None]] = []
+    seen: list[tuple[list[str], str, str, str | None]] = []
 
     def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         if argv[:3] == ["pkit", "repository", "base"]:
             return pkit(argv, **{key: kwargs[key] for key in MODELLED if key in kwargs})
         if argv[:3] != ["pkit", "friction", "check"]:
             return real(argv, **kwargs)
-        cwd = str(kwargs.get("cwd"))
+        cwd = str(kwargs.get("cwd") or Path.cwd())
         at = real(["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True, text=True)
         env = kwargs.get("env") or {}
-        seen.append(
-            (argv, cwd, at.stdout.strip(), env.get("PKIT_CHECK_HEAD"), env.get("PKIT_NO_ROUTE"))
-        )
+        seen.append((argv, cwd, at.stdout.strip(), env.get("PKIT_NO_ROUTE")))
+        if refused_at is not None and cwd == refused_at:
+            document: dict[str, Any] = {
+                "schema_version": 1,
+                "failed": True,
+                "refused": {"kind": fa.RESOLVER_ELSEWHERE},
+            }
+            return subprocess.CompletedProcess(argv, 1, json.dumps(document), "Error: refused\n")
         document = {"schema_version": 1, "failed": False, "findings": [], "answers": []}
         return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
 
     monkeypatch.setattr(fa.subprocess, "run", run)
+    return seen
+
+
+def test_the_check_reads_the_merge_from_git_objects_with_the_head_as_its_own_head(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """From the working directory, against the tip, unrouted, the merge named and the head
+    named as the change's own head, as a pull request's checks run it (COR-062 point 4).
+    No temporary checkout is made where the backbone does not refuse, for any head
+    (DEC-067)."""
+    repo, _anchor, engine = _race(make_adopter_repo)
+    landed = _land_elsewhere(repo, "anchor")
+    seen = _merge_check_runs(fa, monkeypatch)
     found = fa.merged(engine, "main")
     assert found.problem is None, found.problem
-    ((argv, cwd, at, own, unrouted),) = seen
-    assert argv == ["pkit", "friction", "check", "--json", "--base", landed]
-    assert (at, own, unrouted) == (found.merge, engine, "1")
-    assert cwd != str(repo.root) and not Path(cwd).exists()
+    ((argv, cwd, at, unrouted),) = seen
+    assert argv == [
+        "pkit", "friction", "check", "--json", "--base", landed,
+        "--head", found.merge, "--own-head", engine,
+    ]  # fmt: skip
+    assert (cwd, at, unrouted) == (str(repo.root), repo.head(), "1")
+
+
+def test_only_the_refusal_takes_a_checkout_of_the_merge(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The backbone's refusal sends the check to a temporary checkout of the merge, the
+    same command run there, and the checkout is removed afterwards."""
+    repo, _anchor, engine = _race(make_adopter_repo)
+    _land_elsewhere(repo, "anchor")
+    seen = _merge_check_runs(fa, monkeypatch, refused_at=str(repo.root))
+    found = fa.merged(engine, "main")
+    assert found.problem is None and not found.needs_checkout, found.problem
+    first, second = seen
+    assert first[0] == second[0] and first[1] == str(repo.root)
+    assert second[2] == found.merge and not Path(second[1]).exists()
+
+
+def test_a_merge_read_for_a_head_that_may_start_nothing_keeps_the_refusal(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With `from_checkout=False` the refusal stands and no checkout is made, so nothing
+    the merge holds starts, and a caller can ask or stop (DEC-067 point 3)."""
+    repo, _anchor, engine = _race(make_adopter_repo)
+    _land_elsewhere(repo, "anchor")
+    seen = _merge_check_runs(fa, monkeypatch, refused_at=str(repo.root))
+    found = fa.merged(engine, "main", from_checkout=False)
+    assert found.needs_checkout and found.document is None and found.problem
+    assert len(seen) == 1
 
 
 def test_a_merge_that_conflicts_names_its_files_and_checks_nothing(
