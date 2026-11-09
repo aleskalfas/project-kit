@@ -107,7 +107,7 @@ pkit:
 14. The system checks that no installed capability requires the capability, and that no installed [process](../../../glossary.md#term-process--process) waits on it as mandatory. It also checks that nothing in the project refers to it (COR-017). A citation `[<name>:DEC-001]` refers to it, and so does a rule set that inherits its method rule set.
 15. The system says that the subtree is the capability's source, and asks `Unregister '<name>' and keep .pkit/capabilities/<name>/?` (ADR-059).
 16. On a yes, the system has each adapter take back what it deployed for the capability, and takes the capability out of the manifest. It deletes nothing, and prints `Unregistered capability '<name>'; nothing was deleted: its source stays at .pkit/capabilities/<name>/.`
-19. The system renders the capabilities' rules index again, without the capability's loaded file. So the instruction file reaches none of the capability's operational rules (COR-070 point 2). It renders `.pkit/.gitignore` again too, without the lines the capability declares (ADR-009 point 7).
+19. The system renders the capabilities' rules index again, without the capability's loaded file. So the instruction file reaches none of the capability's operational rules (COR-070 point 2). The system renders `.pkit/.gitignore` again too, without the lines the capability declares (ADR-009 point 7).
 
 **Variants:**
 
