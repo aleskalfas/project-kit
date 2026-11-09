@@ -35,6 +35,11 @@ The overlay's per-agent block carries one more thing than categories: the
 agent's model and effort (#1047). :func:`load_overlay_values` sets those keys
 apart, and ``pkit agents`` reports each agent's effective setting, resolved by
 :mod:`project_kit.agent_policy`.
+
+The deploy ignores an override for an agent no source ships, and one naming a
+category the agent's definition does not reference. :func:`unknown_overrides`
+finds each from the same resolution, and ``pkit agents`` and the reference
+graph's validation warn of it (#2468).
 """
 
 from __future__ import annotations
@@ -411,6 +416,59 @@ def agent_overlay_statuses(target_root: Path) -> list[AgentOverlayStatus]:
     return out
 
 
+@dataclass(frozen=True)
+class UnknownOverride:
+    """An entry under the overlay's ``overrides:`` that the deploy ignores (#2468).
+
+    Either the block names an agent no source ships (``category`` is None), or it
+    names a category the agent's definition does not reference, ``source`` being
+    the definition that deploys under that name.
+    """
+
+    agent: str
+    category: str | None = None
+    source: str | None = None  # the deploying definition, relative to the project root
+
+    @property
+    def key(self) -> str:
+        """The overlay key, ``overrides.<agent>`` or ``overrides.<agent>.<category>``."""
+        if self.category is None:
+            return f"overrides.{self.agent}"
+        return f"overrides.{self.agent}.{self.category}"
+
+    @property
+    def reason(self) -> str:
+        """Why the deploy ignores it."""
+        if self.category is None:
+            return f"no source ships an agent named {self.agent}"
+        return f"{self.agent}'s definition, {self.source}, names no category <{self.category}>"
+
+
+def unknown_overrides(target_root: Path) -> list[UnknownOverride]:
+    """Each entry under ``overrides:`` that resolves nothing, sorted by key (#2468).
+
+    Read from the same resolution the deploy applies: the overlay as
+    :func:`load_overlay_values` reads it, and the definition that deploys under
+    each name (:func:`discover_kit_agents`). A block for an agent no source ships
+    is one finding, whatever keys it holds, ``model`` and ``effort`` among them. In
+    a known agent's block, each category key its definition does not reference is
+    one. The policy keys are no categories, so they are never one of those.
+    """
+    values = load_overlay_values(target_root)
+    shipped = discover_kit_agents(target_root)
+    found: list[UnknownOverride] = []
+    for agent in sorted(set(values.overrides) | set(values.policy)):
+        if agent not in shipped:
+            found.append(UnknownOverride(agent=agent))
+            continue
+        _ns, src = shipped[agent]
+        referenced = agent_referenced_categories(src)
+        source = src.relative_to(target_root).as_posix()
+        for category in sorted(set(values.overrides.get(agent, {})) - referenced):
+            found.append(UnknownOverride(agent=agent, category=category, source=source))
+    return found
+
+
 def _policy_cell(setting: agent_policy.Setting) -> str:
     """One `pkit agents` cell: ``model inherit``, ``effort high (overlay)``, or
     the refused value when the deploy drops it."""
@@ -482,15 +540,28 @@ def render_status(target_root: Path) -> str:
         for s in statuses
     ]
     gloss = "deploy via `pkit sync`; configure paths in .pkit/agents/project/overlay.yaml"
-    sections = [
-        cli_render.section(
-            rows=rows,
-            columns=["name", "namespace", "status", *agent_policy.POLICY_KEYS, "missing"],
-            header="AGENTS",
-            gloss="kit-shipped; resolved against the project overlay",
-            empty="(no kit-shipped agents found)",
-        )
+    tables: list[dict[str, Any]] = [
+        {
+            "rows": rows,
+            "columns": ["name", "namespace", "status", *agent_policy.POLICY_KEYS, "missing"],
+            "header": "AGENTS",
+            "gloss": "kit-shipped; resolved against the project overlay",
+            "empty": "(no kit-shipped agents found)",
+        }
     ]
+    # Each override the deploy ignores (#2468), as a warning: nothing else changes.
+    unknown = unknown_overrides(target_root)
+    if unknown:
+        tables.append(
+            {
+                "rows": [{"override": f"⚠ {u.key}", "reason": u.reason} for u in unknown],
+                "columns": ["override", "reason"],
+                "header": "UNKNOWN OVERRIDES",
+                "gloss": "ignored by the deploy; correct or remove each in "
+                f"{OVERLAY_PATH.as_posix()}",
+            }
+        )
+    sections = [cli_render.section(**table) for table in tables]
     # Undefined *optional* categories (ADR-052): patterns-only reads no agent
     # references hard. Their absence never skips an agent — surface them as a
     # non-blocking enrichment, not a gap.
