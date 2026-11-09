@@ -66,6 +66,7 @@ pkit:
         - project-management:DEC-055#5
         - project-management:DEC-055#6
         - project-management:DEC-063#8
+        - project-management:DEC-064#8
         - project-management:DEC-065#1
         - project-management:DEC-065#2
         - project-management:DEC-065#4
@@ -211,6 +212,7 @@ pkit:
 - **9c.** The pull request's description carries a list of the answers, which an earlier run wrote. The system removes the list before it stops ready, asks or merges. A start marker with no end marker draws a warning, and the description stays as it is ([DEC-065 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#1-the-description-carries-no-list)).
 - **9d.** A sentence in the description reads as a closing reference. The system refuses it, merges nothing and exits `1` ([DEC-065 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#5-what-goes-with-the-list-and-what-stays)).
 - **9e.** The merge with the base needs a program its head did not. Nobody named the head, and the system cannot show the two things 3a names. So the system asks or stops as in 3a and 3b ([DEC-067 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#3-what-a-head-from-elsewhere-gets)).
+- **9f.** A [rule](../../../../core/glossary.md#term-rule--rule) the base accepted after the head left it binds on what the change alters. So the merge with the base requires a reviewer the head does not. The system names each such reviewer and the merge of the base, merges nothing and exits `1` ([DEC-064 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#8-when-the-reviewers-the-merge-requires-are-read)). The developer merges the base into the branch and pushes, and the path rejoins at step 1.
 - **12a.** The head is not the one the [authorisation](../../../glossary.md#term-authorisation--authorisation) named. The system stops before it checks anything, unless each edit since that head lies in answer files the change adds. Then the authorisation covers the later head ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **12b.** An updated document has no sentence, or a later head leaves out of date what the authorised head did not. The system stops ready, and merges nothing ([DEC-065 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#4-what-the-landing-command-prints)).
 - **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N>`, with the [Task](../../../glossary.md#term-task--task)'s number, to run them again ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).

@@ -3,7 +3,9 @@ DEC-007): `pkit visual add starter` copies and lists it; every role of its own e
 its defaults, at a shared role (DEC-008 point 2); each pattern declares a component field
 for each list it repeats (DEC-010, Implications); it holds no raw value; and each
 component's reference renders, under the test brand, pass the check and draw each word of
-each option and of each field of runs (DEC-007 point 3). A run that reads a colour family
+each option and of each field of runs (DEC-007 point 3). The header's, on three axes, is
+previewed by `pkit visual render` and checked by `pkit visual check` in each of its twelve
+combinations, with nothing failing (DEC-005 point 6). A run that reads a colour family
 lies on that family's fill (`components.md`, *Values, states and colour*). A connector's
 line reaches 3:1 against what it lies on in every mode, and crosses no item but its ends;
 a strong run keeps the body's size and line height. The README names what the components
@@ -25,7 +27,7 @@ import json
 import math
 import re
 import shutil
-from collections.abc import Collection, Iterator, Mapping
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -49,9 +51,11 @@ from tests.visual_communication_project import (
     write_list,
 )
 
-add, checks, keys, pl, reading, tokens, svg = load(
+add, render, check, checks, keys, pl, reading, tokens, svg = load(
     "visual-communication",
     "add.py",
+    "render.py",
+    "check.py",
     "checks",
     "keys",
     "pipeline",
@@ -410,6 +414,120 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
         f"record, of {len(COMPONENTS)} computed now, of 0 not checked."
+    ]
+
+
+#: The reference piece drawn on three axes, one of them a size axis: the header's, on
+#: `colour-scheme`, `contrast` and `device`.
+THREE_AXES = "header"
+
+#: The width the test brand's version that gives sizes gives a site's page, its `size.site`,
+#: at each mode of `device`.
+SITE_WIDTHS = {"desktop": 1440.0, "tablet": 768.0, "phone": 320.0}
+
+#: An attribute of a preview's root element.
+ATTRIBUTE = re.compile(r'([a-z-]+)="([^"]*)"')
+
+
+def named_combinations(name: str) -> dict[str, dict[str, str]]:
+    """Each combination of the modes the reference piece `name` names, one mode on each
+    axis, by its key as DEC-004 point 3 spells it: each axis whose mode is not the
+    foundations' default for it, as `<axis>.<mode>`, in the order of the axes' names and
+    joined by `+`, or `default` where every mode is its axis's default."""
+    modes = read(PIECES / name / "piece.yaml")["modes"]
+    defaults = {
+        axis: each["default"] for axis, each in read(FOUNDATIONS / "roles.yaml")["axes"].items()
+    }
+    axes = sorted(modes)
+    found = {}
+    for chosen in itertools.product(*(modes[axis] for axis in axes)):
+        combination = dict(zip(axes, chosen, strict=True))
+        spelled = [f"{axis}.{mode}" for axis, mode in combination.items() if mode != defaults[axis]]
+        found["+".join(spelled) or "default"] = combination
+    return found
+
+
+def root_attributes(text: str) -> dict[str, str]:
+    """The attributes of the root element of a preview, by name."""
+    found = re.match(r"<svg ([^>]*)>", text)
+    assert found is not None
+    return dict(ATTRIBUTE.findall(found.group(1)))
+
+
+def test_a_piece_on_three_axes_has_a_preview_for_each_language_in_each_combination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit visual render` draws the header in each of the twelve combinations it names, in
+    each language: a preview of each page, which names its language and its key, at its
+    device's width (DEC-005 point 6, DEC-021 point 1). No two previews of one page in one
+    language are alike but for the key they name, so each draws its own combination."""
+    importable(monkeypatch, svg)
+    root = reference_location(project(tmp_path))
+    shown = run_main(render, THREE_AXES, cwd=root)
+    assert shown.returncode == 0, shown.stderr
+    combinations = named_combinations(THREE_AXES)
+    assert len(combinations) == 12
+    # Each preview's file name, with its language, its key, its page and its width.
+    expected: dict[str, tuple[str, str, int, float]] = {}
+    for language in LANGUAGES:
+        pages = read(PIECES / THREE_AXES / f"content.{language}.yaml")["pages"]
+        for key, combination in combinations.items():
+            for page in range(1, len(pages) + 1):
+                width = SITE_WIDTHS[combination["device"]]
+                expected[f"{THREE_AXES}.{language}.{key}.{page}.svg"] = (language, key, page, width)
+    folder = root / render.PREVIEWS / THREE_AXES
+    drawn = {path.name: path.read_text(encoding="utf-8") for path in folder.glob("*.svg")}
+    assert sorted(drawn) == sorted(expected)
+    said = f"previews: {len(expected)} file(s) in {render.PREVIEWS}/{THREE_AXES}/"
+    assert said in shown.stdout.splitlines()
+    unkeyed: dict[tuple[str, int], set[str]] = {}
+    for name, (language, key, page, width) in expected.items():
+        attributes = root_attributes(drawn[name])
+        named = (attributes["data-language"], attributes["data-key"], float(attributes["width"]))
+        assert named == (language, key, width), name
+        text = drawn[name].replace(f' data-key="{key}"', "", 1)
+        unkeyed.setdefault((language, page), set()).add(text)
+    assert {at: len(texts) for at, texts in unkeyed.items()} == {
+        at: len(combinations) for at in unkeyed
+    }
+
+
+def test_a_piece_on_three_axes_is_checked_in_each_combination_and_nothing_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit visual check` computes the header's scene at each size in each language, and
+    measures its texts' contrast in each combination that scene serves (DEC-005 point 13,
+    DEC-004 point 8): each of the twelve, once in each language. Nothing it finds fails, and
+    once the render keeps the findings record, the check reads the same findings from it."""
+    importable(monkeypatch, svg)
+    root = reference_location(project(tmp_path))
+    measured: list[tuple[str, str]] = []
+    measure = checks.drawn_contrast
+
+    def measuring(
+        scene: Mapping[str, Any], colours: Mapping[str, Any], served: Sequence[str]
+    ) -> Any:
+        measured.extend((scene["language"], key) for key in served)
+        return measure(scene, colours, served)
+
+    monkeypatch.setattr(checks, "drawn_contrast", measuring)
+    unbounded = {"PKIT_COMMAND_DEADLINE": None}
+    computed = run_main(check, THREE_AXES, cwd=root, env=unbounded)
+    assert computed.returncode == 0, computed.stdout
+    summary, *found = computed.stdout.splitlines()
+    assert summary == (
+        f"the piece `{THREE_AXES}` in `visual`: the scenes of 0 read from their findings "
+        f"record, of 1 computed now, of 0 not checked."
+    )
+    assert found and not [line for line in found if line.startswith("  error ")]
+    assert sorted(measured) == sorted(itertools.product(LANGUAGES, named_combinations(THREE_AXES)))
+    assert run_main(render, THREE_AXES, cwd=root).returncode == 0
+    recorded = run_main(check, THREE_AXES, cwd=root, env=unbounded)
+    assert recorded.returncode == 0, recorded.stdout
+    assert recorded.stdout.splitlines() == [
+        f"the piece `{THREE_AXES}` in `visual`: the scenes of 1 read from their findings "
+        f"record, of 0 computed now, of 0 not checked.",
+        *found,
     ]
 
 

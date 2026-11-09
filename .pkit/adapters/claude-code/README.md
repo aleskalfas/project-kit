@@ -18,7 +18,7 @@ pkit:
         - .pkit/schemas/harness-requirements.yaml
       record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
       artefact:
-        - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks]
 ---
 
@@ -68,7 +68,7 @@ Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/set
 Ensures the adopter's root `CLAUDE.md` loads every layer's rules via Claude Code's `@<path>` include mechanism, in the order of their layers: core's (`@.pkit/rules/core.md`), the capabilities' rules index (`@.pkit/rules/capabilities.md`), which imports each installed capability's `rules.md`, and the project's (`@.pkit/rules/project.md`). Per the COR-002 merge contract (insert-if-absent / create-if-none posture), core's include and the index's line are kept present, each inserted wherever it is absent, and the project's include is inserted only together with core's ([ADR-076](../../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 3):
 
 - **No CLAUDE.md:** creates a minimal one with an H1 and the three `@`-includes.
-- **CLAUDE.md without core's include:** inserts the three after the first H1 outside fenced code (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
+- **CLAUDE.md without core's include:** inserts only the lines the file does not hold, keeping the three in their order, so none stands twice. Where the file holds the index's line, core's include goes directly before it, and the project's include, if absent, directly after it. Where it holds the project's include alone, core's include and the index's line go directly before it. Where it holds none of the three, inserts them after the first H1 outside fenced code (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
 - **CLAUDE.md with core's include but not the index's line:** inserts `@.pkit/rules/capabilities.md` directly after core's include. A project that removed its `project.md` include does not find it back.
 - **Core's include only in fenced code or a code span,** where Claude Code imports nothing: inserts nothing and reports it (`refused`), naming the file. Move the include out of the code, and the next sync inserts the index's line after it.
 - **CLAUDE.md with both:** no-op (idempotent).
@@ -334,11 +334,13 @@ The realizer that makes declared permissions *bite* at runtime (per [COR-028](..
 
 `permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`, or `ask` in the cases "When the hook asks" names) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI reach the same verdict (ADR-002's same-code invariant), and the hook then answers an abstain with `ask` in those cases.
 
-**When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a form of a guardrail, which the core's `hook_hidden_guardrails()` names. The core's abstain on such a doubt is a prompt (ADR-025 point 2), and how this hook carries out an abstain is the adapter's to say (ADR-002, Implications).
+**When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a guardrail, which the core's `hook_hidden_guardrails()` names (ADR-025 point 7). Such a call may hold a form of a guardrail's command, or git configuration the call sets or writes, as `git -c alias.p='push --force' p` does. It may run a command through a runner whose command the core cannot read, as `find . -exec sh -c 'rm "$1"' _ {} \;` does, which `Bash(find:*)` would run.
+
+A guardrail behind a runner the core reads is denied in every mode, as `find . -exec rm -rf {} +` and `xargs rm -rf` are.
 
 Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository, in every permission mode (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
 
-**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail's form.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
+**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
 
 The core never reads the mode, so its allow and deny, a strict posture's deny included, are the same in every mode. The hook reads the mode from the payload's `permission_mode` field. The hooks reference's "Common input fields" gives `auto` for auto mode and `bypassPermissions` for bypass mode. A missing field, or a value the hook does not know, keeps the ask.
 

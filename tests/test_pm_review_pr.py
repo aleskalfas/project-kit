@@ -1386,17 +1386,27 @@ def test_review_says_why_it_stopped_short(rpr, monkeypatch, tmp_path) -> None:
 
 _HEAD = [
     {"committedDate": "2026-06-01T00:00:00Z"},
-    {"oid": "head", "committedDate": "2026-06-02T00:00:00Z"},
+    # The head commit's own date, after every verdict below: it is not read.
+    {"oid": "head", "committedDate": "2026-06-09T00:00:00Z"},
 ]
+# When the head arrived on the host.
+_ARRIVED = "2026-06-02T00:00:00Z"
 
 
-def _rule(rpr, commits=_HEAD):
+def _rule(rpr, commits=_HEAD, arrived=_ARRIVED):
     """The freshness rule for a PR whose verdicts name no head: they are
-    judged by the latest commit's time."""
+    judged by when the head arrived, unread where `arrived` is empty."""
+    from _lib.head_arrival import HeadArrival
+
     return rpr.PrReview(
         rpr.Resolution(),
         author_delta=lambda *a, **k: pytest.fail("no head is named"),
         base_kept=lambda *a, **k: pytest.fail("no base is named"),
+        head_arrival=lambda pr_view, head: (
+            HeadArrival(timestamp=arrived)
+            if arrived and head
+            else HeadArrival(error=f"GitHub's latest activity on feat/x records no move to {head}")
+        ),
     ).freshness_rule({"commits": commits})
 
 
@@ -1438,18 +1448,21 @@ def test_local_verdict_states_read_the_latest_verdict(rpr) -> None:
     assert states.bodies == {"reviewer": comments[1]["body"]}
 
 
-def test_local_verdict_states_without_a_head_timestamp_are_stale(rpr) -> None:
-    # A verdict naming no head is fresh only after the latest commit; with
-    # that commit's time unknown it is stale, so the reviewer runs again.
+def test_local_verdict_states_without_the_head_s_arrival_are_stale(rpr) -> None:
+    # A verdict naming no head is fresh only after the head arrived; with
+    # that arrival unread it is stale, so the reviewer runs again.
     comments = [_verdict_comment("reviewer", "APPROVED", "2026-06-03T00:00:00Z")]
     assert rpr._local_verdict_states(comments, _rule(rpr, []), ["reviewer"]).fresh == {}
-    states = rpr._local_verdict_states(comments, _rule(rpr, [{"oid": "x"}]), ["reviewer"])
+    states = rpr._local_verdict_states(
+        comments, _rule(rpr, [{"oid": "head"}], arrived=""), ["reviewer"]
+    )
     assert states.fresh == {}
-    # The re-run says why: the latest commit's time is unknown.
+    # The re-run says why: when the head arrived cannot be read.
     assert states.stale == {
         "reviewer": (
             "APPROVED",
-            "no reviewed head recorded; the latest commit's time is unknown",
+            "no reviewed head recorded; when the head head arrived cannot be read: "
+            "GitHub's latest activity on feat/x records no move to head",
         ),
     }
 
@@ -1500,10 +1513,13 @@ def test_read_verdict_states_fetches_comments_head_and_base(rpr, monkeypatch) ->
         return _Proc(0, _json.dumps(payload))
 
     monkeypatch.setattr(rpr, "gh_run", fake)
+    from _lib.head_arrival import HeadArrival
+
     review = rpr.PrReview(
         rpr.Resolution(required_local=("reviewer",)),
         author_delta=rpr.author_delta,
         base_kept=rpr.base_kept,
+        head_arrival=lambda pr_view, head: HeadArrival(timestamp=_ARRIVED),
     )
     assert rpr._read_verdict_states(99, review, {}) == rpr._VerdictStates(
         fresh={"reviewer": "APPROVED"},
@@ -1515,7 +1531,7 @@ def test_read_verdict_states_fetches_comments_head_and_base(rpr, monkeypatch) ->
             "view",
             "99",
             "--json",
-            "comments,commits,headRefOid,baseRefOid",
+            "comments,commits,headRefOid,baseRefOid,headRefName,headRepository",
         ]
     ]
 
