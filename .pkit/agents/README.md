@@ -352,7 +352,7 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 **Where a conventional folder lies.** It is a sub-path of the project's internal documentation root ([COR-049](../decisions/core/COR-049-documentation-roots.md) point 4):
 
 - `architecture-docs` is `<root>/architecture`, and `adr-records` is `<root>/architecture/decisions`. With the default root, `docs/`, they are `docs/architecture/` and `docs/architecture/decisions/`. A project that set `docs.internal: tech-docs` gets `tech-docs/architecture/…` instead.
-- **A new category.** Adding a sub-path for it, in `src/project_kit/docs_roots.py`, is the authoring step that enables `reconcile`'s fill and `adopt` for that category. Its name goes in `.pkit/lifecycle/ownership.py` too, where the deploy reads which categories `adopt` serves. A test holds the two lists equal.
+- **A new category.** Adding a sub-path for it, in `src/project_kit/docs_roots.py`, is the authoring step that enables `reconcile`'s fill and `adopt` for that category. Its name goes in `.pkit/lifecycle/ownership.py` too, where the deploy reads which categories `adopt` serves.
 - **A recorded path stays.** `reconcile --write` and `adopt` write the path uncommented, with a `recorded by` note, and a later change of the root never moves it (COR-049 point 5).
 
 #### `pkit agents`
