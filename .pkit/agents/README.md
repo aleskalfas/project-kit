@@ -133,7 +133,7 @@ You are the **release checker** for this project. …
 What each field holds:
 
 - **`name`, `description`:** the agent's name, and the one line that tooling shows of it.
-- **`tools` or `withheld`:** the agent's tool access, the tools it is granted or withheld. Each names the harness's tools, such as Claude Code's `Read`, `Edit` and `Bash`. A definition names one of them or neither, never both. The adapter writes the tool access in the harness's form at deploy ("Tool access" below).
+- **`tools` or `withheld`:** the agent's tool access, the tools it is granted or withheld. Each names the harness's tools, such as Claude Code's `Read`, `Edit` and `Bash`. A definition names one of the two keys or neither, never both. The adapter writes the tool access in the harness's form at deploy ("Tool access" below).
 - **`model`, `effort`:** the model the agent runs on, and the effort it reasons at. Both are optional, and absent means inherit ("Model and effort" below). Agents only.
 - **`reads`:** what the agent consults at task time, in three channels:
   - **`paths`** names files and folders, and **`records`** names decision records by id, such as `COR-NNN` or `PRJ-NNN`. A category named in either is a required read: while the overlay leaves it undefined, the deploy skips the agent.
@@ -175,7 +175,7 @@ How the tool access is written:
 - **It answers two questions.** An agent holds a tool where its grant names the tool, or where the agent names no grant and does not withhold the tool. An agent lacks a tool only where its grant leaves the tool out. Each question reads the tool an entry names, whatever the entry's argument.
 - **It uses only the standard library,** since the adapter's scripts run the reader under the system's Python. A caller loads it from the reader's own file, and writes no bytecode into the tree.
 - **A function of the reader keeps its name and its answer.** One whose answer changes takes a new name, so an older command never reads a newer reader's answer as the command's own.
-- **A command that cannot reach it** refuses that step, where the tree holds no reader, or holds a reader without the function the command calls. Inside the validator, that is an error finding. The message says which side is behind. A project at the command's backbone version or older needs `pkit sync`, and a newer one needs the command upgraded.
+- **A command that cannot reach the reader** refuses that step, where the tree lacks the reader or the function the command calls. Inside the validator, that is an error finding. The message says which side is behind. A project at the command's backbone version or older needs `pkit sync`, and a newer one needs the command upgraded.
 
 **The adapter** writes the reader's answer in the keys of the adapter's harness, never the author's text. The adapter declares that harness's terms as data, in `tool-access.json` in the adapter's folder. Those terms are the harness's keys, the forms a tool's name takes and the harness's built-in tools. The terms also give the withheld entries the harness was measured to withhold.
 

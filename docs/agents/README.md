@@ -170,7 +170,7 @@ flowchart TD
 - **Refused for its tool access.** A definition that names both `tools` and `withheld`, or withholds a tool Claude Code cannot withhold, is skipped too, and the deploy says why. The definition's earlier copy is removed, since that copy may give tools the definition no longer gives. Mend the definition and run `pkit sync` again ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)).
 - **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". The definition's tool access decides which tools Claude Code gives the agent ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)):
   - **With `tools:`,** the agent holds only the tools that list names.
-  - **With `withheld:`,** the agent holds every tool the session would give it, but those that list names. That rests on `helper-withheld-tools`, a requirement on Claude Code that nobody has measured yet (ADR-085 point 3).
+  - **With `withheld:`,** the agent holds every tool the session would give it, but those that list names. That rests on `helper-withheld-tools`, a requirement on Claude Code that nobody has measured yet.
   - **With neither,** the agent holds the tools the session gives a helper.
 - **What the agent may run.** Where the permission model is turned on, the model decides each of the agent's calls under the grants you give that agent ([the permissions guide](../permissions/README.md#deny-something-to-one-agent)).
 

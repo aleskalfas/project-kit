@@ -81,7 +81,7 @@ The scripts:
 
 ## What an adapter declares as data
 
-Beside its scripts, an adapter states what its harness does in declarations: data files of fixed names in its folder, each shaped by a schema in `.pkit/schemas/`. The backbone's commands read them and run none of the adapter's code:
+Beside its scripts, an adapter states what its harness does in declarations: data files of fixed names in its folder. The backbone's commands read them and run none of the adapter's code:
 
 - **Its support declaration,** `harness-support.yaml`: how far its harness meets each harness requirement the core declares ("Harness requirements" below). It detects, and never drives what a command does (COR-047).
 - **Its enforcement declaration,** `permission-enforcement.yaml`: where its harness enforces each dimension of the permission model (COR-028 point 3), which `pkit permissions diff` reads.
