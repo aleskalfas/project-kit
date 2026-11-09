@@ -1,0 +1,7 @@
+component: project-management
+kind: none
+body: >
+  The README's Permissions section no longer names a `bash -c` wrapper as a way
+  past the deny on raw `gh` mutations, since a deny now reads the script a
+  shell given `-c` runs. A code runner such as `python3 -c` and `gh api` still
+  evade it. What the capability ships is unchanged.
