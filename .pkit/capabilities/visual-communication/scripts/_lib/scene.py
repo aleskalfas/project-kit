@@ -44,7 +44,12 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   component leaves to the engine, such as a text's `text-anchor` where it gives none, is
   the engine's.
 - **The root** holds the piece, its lock, the language, the key over its size axes, the
-  seam's version, and the trace ids of its pages in order.
+  seam's version, the trace ids of its pages in order, and whether they are fixed pages
+  (DEC-031 point 2): the pages of a top whose layouts are its pages' forms, where that top
+  asks for a height, so each page gets it, as a deck's slides do. A site's pages, a page
+  alone and the pages a top's slot declares are none, so a scene's pages are all fixed
+  pages or none is. The top's name decides nothing. A renderer that does not read the fact
+  draws every page as before, so the seam's version stands.
 
 Computed, never committed: `Scene.to_dict()` gives one ordered value, so under one
 release the same files and facts give the same scene on every machine, and two such
@@ -128,6 +133,8 @@ class Scene:
     seam_version: int
     pages: list[str]
     children: list[Element]
+    #: Whether the scene's pages are fixed pages (DEC-031 point 2).
+    fixed_pages: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -137,6 +144,7 @@ class Scene:
             "size-key": self.size_key,
             "seam": self.seam_version,
             "pages": list(self.pages),
+            "fixed-pages": self.fixed_pages,
             "children": [child.to_dict() for child in self.children],
         }
 
@@ -196,11 +204,20 @@ def compute_scene(
             for run in node.runs:
                 run.style.check(run.text, trace)
         children.append(emitter.root(root))
-    scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children)
+    fixed = root is not None and fixed_pages(root)
+    scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children, fixed)
     shared = {page.trace: page.from_the_top() for page in (root.pages if root else [])}
     return SceneResult(
         scene, list(ctx.findings), emitter.facts, unvalued=emitter.unvalued, shared=shared
     )
+
+
+def fixed_pages(top: Instance) -> bool:
+    """Whether the pages of the top `top` are fixed pages (DEC-031 point 2): its layouts are
+    its pages' forms, and it asks for a height, which each page then gets (DEC-022 point 3).
+    A top that asks for none, as a site does, lets each page take its own. A top that is a
+    page alone, or whose slot declares its pages, has no pages' forms."""
+    return top.component.forms and "height" in top.component.preferred
 
 
 class _Emitter:

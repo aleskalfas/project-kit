@@ -18,6 +18,8 @@ produced picture with a label at the point the picture exposes.
   component's;
 - a top whose layouts are its pages' forms: the scene's `pages` names each page in
   order, each a group of the top at its origin, as large as the top;
+- fixed pages (DEC-031 point 2): the root says a deck's slides are, and that a page alone,
+  the pages a slot declares and a site's pages are not;
 - a text's runs (DEC-012 points 3, 4 and 8, DEC-005 point 14): its paragraphs of runs,
   each with its role, its paint, its fonts and its sources, and its lines of spans; a
   run that names a concept and shows it in no colour; a text measured in part otherwise
@@ -37,6 +39,8 @@ from typing import Any
 
 import pytest
 
+from tests.test_visual_communication_site import drawn_site
+from tests.test_visual_communication_site import page as site_page
 from tests.visual_communication_project import CAPABILITY
 from tests.visual_engine import (
     FAMILY,
@@ -154,13 +158,23 @@ def test_the_root_says_what_the_scene_is_and_to_dict_is_stable_and_ordered() -> 
     first, second = figure().scene.to_dict(), figure().scene.to_dict()
 
     assert json.dumps(first) == json.dumps(second)
-    assert list(first) == ["piece", "lock", "language", "size-key", "seam", "pages", "children"]
+    assert list(first) == [
+        "piece",
+        "lock",
+        "language",
+        "size-key",
+        "seam",
+        "pages",
+        "fixed-pages",
+        "children",
+    ]
     assert (first["piece"], first["language"], first["size-key"], first["seam"]) == (
         "test-piece",
         "en",
         "default",
         5,
     )
+    assert first["fixed-pages"] is False
     assert list(first["lock"]) == sorted(first["lock"])
     group = first["children"][0]
     assert list(group)[:8] == ["type", "id", "x", "y", "width", "height", "component", "version"]
@@ -419,6 +433,53 @@ def test_a_decks_scene_names_each_page_in_order_each_a_group_of_the_top() -> Non
         assert page["component"] == "foundations/deck"
         assert (page["x"], page["y"], page["width"], page["height"]) == (0, 0, 1280, 720)
         assert {page["sources"][key] for key in ("x", "y", "width", "height")} == {"engine"}
+
+
+# --- fixed pages (DEC-031 point 2) -------------------------------------------------------------
+
+#: A top of one layout whose slot declares its pages, as format 1 has it, which asks for a
+#: height: its slides are no fixed pages.
+SLOT_DECK = top(
+    {"slides": {"repeat": "slides", "draw": "tests/card", "width": "=:width", "column": {}}},
+    fields={"slides": {"type": "array", "items": {"type": "object"}}},
+    layouts={"slide": {"slots": {"slides": {"pages": True}}}},
+)
+
+
+def test_a_decks_root_says_its_slides_are_fixed_pages() -> None:
+    """The deck's layouts are its pages' forms, and it asks for a height, which each slide
+    gets: a slide its own component draws too."""
+    own = {"id": "own", "use": "tests/card", "head": "Its own"}
+    result = draw({"slides": [*DECK["slides"], own]}, use="foundations/deck")
+
+    assert result.findings == []
+    assert result.scene.fixed_pages is True
+    assert result.scene.to_dict()["fixed-pages"] is True
+    assert result.scene.pages[-1] == "deck/slides[own]"
+
+
+#: How each scene of pages that are no fixed pages is drawn: a page alone, the figure; the pages
+#: a top's slot declares, of a top that asks for a height; and a site's pages, of a top whose
+#: layouts are their forms and asks for no height, so each takes its own.
+OTHER_PAGES = {
+    "a page alone": lambda: figure(),
+    "the pages a slot declares": lambda: draw(
+        {"slides": [{"id": "one", "head": "One"}]},
+        use="lab/deck",
+        components={"lab/deck": SLOT_DECK},
+    ),
+    "a site's pages": lambda: drawn_site({"pages": [site_page("home")]}),
+}
+
+
+@pytest.mark.parametrize("drawn", OTHER_PAGES.values(), ids=list(OTHER_PAGES))
+def test_a_root_says_no_other_pages_are_fixed_pages(drawn: Any) -> None:
+    """Whatever the top is named: the slot's top is named `deck`."""
+    result = drawn()
+
+    assert result.findings == []
+    assert result.scene.pages
+    assert result.scene.to_dict()["fixed-pages"] is False
 
 
 # --- a text's runs ------------------------------------------------------------------------------

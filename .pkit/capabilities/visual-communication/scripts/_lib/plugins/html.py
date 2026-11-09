@@ -1,6 +1,7 @@
 """The HTML renderer: a scene drawn as one page file for each language and each key over the
 size axes, holding the modes a reader's signal names, each page real HTML text over SVG
-shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-005 points 4, 5, 9 and 10).
+shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to 4, DEC-005
+points 4, 5, 9 and 10).
 
 - **What it draws** is its declaration (`html_declaration.py`): every primitive the SVG
   renderer draws. It draws only what it declares, so the losses the capability reads from
@@ -48,7 +49,21 @@ shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-005 points 4, 5
 - **The file** holds all it needs: each face once, subset to every character the file draws
   in it, each arrowhead once for its role, and every picture. It asks for nothing. Its
   head declares its encoding, its language and its viewport. Its pages follow each other
-  down the document with the gap the declaration names, and it sets no colour around them.
+  down the document with the gap the declaration names, and it sets no colour value
+  around them.
+- **Fixed pages** (DEC-031 points 1 to 4). Where the scene's root says its pages are fixed
+  pages, as a deck's slides are, the file shows each inside a keyline, on a backdrop that
+  fills the window around and between them, as the declaration's `pages.fixed` names them.
+  Each is a mix of the browser's text colour into its ground colour, so it follows the
+  scheme the file names, and a browser that cannot mix keeps the text colour for the
+  keyline and the ground for the backdrop. The keyline is an outline, so it takes no room
+  and keeps its width in px as a page shrinks. Inside it each page lies on the browser's
+  ground. The backdrop shows at the gutter on every side, which narrows with the window, and
+  a page shrinks with the room the gutter leaves it. Under more contrast the keyline takes
+  the text colour, and under forced colours the backdrop and each page take the reader's
+  background colour, and the keyline their text colour. Each rule is for a screen alone, so
+  a print holds none of them. Only the sheet gains these rules, and no element changes. A
+  file of other pages holds none of them.
 - **The text of the file** is HTML and well-formed XML alike. Whatever a brand or a piece
   names is escaped, so it can neither end the style element nor start another element.
 
@@ -103,6 +118,11 @@ SCHEMES = "prefers-color-scheme"
 #: The paint of a role with no colour in one key: it draws nothing there.
 NOTHING = "transparent"
 
+#: The browser's own colours, CSS's system colours: its text colour and its ground colour. A
+#: fixed page's keyline and backdrop mix them (DEC-031 point 3).
+TEXT_COLOUR = "CanvasText"
+GROUND_COLOUR = "Canvas"
+
 #: The rules every page file holds, after its faces. None sets a colour or clips anything.
 SHEET = "".join(
     (
@@ -117,6 +137,37 @@ SHEET = "".join(
         f"[{MARKS['strut']}]{{display:inline-block;width:0}}",
     )
 )
+
+
+def mixed(share: float) -> str:
+    """`share` percent of the browser's text colour mixed into its ground colour, in sRGB."""
+    return f"color-mix(in srgb,{TEXT_COLOUR} {number(share)}%,{GROUND_COLOUR})"
+
+
+def fixed_sheet(fixed: Mapping[str, Any]) -> str:
+    """The rules a file of fixed pages holds, as `fixed`, the declaration's `pages.fixed`,
+    names them (DEC-031 points 1 to 4), each for a screen alone. The backdrop is the
+    document's background, and the gutter the body's padding. Each page lies on the browser's
+    ground inside its keyline, an outline. A browser that cannot mix colours keeps the plain
+    colour written before each mix."""
+    page = f"[{MARKS['page']}]"
+    keyline, backdrop, gutter = fixed["keyline"], fixed["backdrop"], fixed["gutter"]
+    plain = "".join(
+        (
+            f"html{{background:{GROUND_COLOUR};background:{mixed(backdrop['share'])}}}",
+            f"body{{padding:min({number(gutter['width'])}px,{number(gutter['window-share'])}vw)}}",
+            f"{page}{{background:{GROUND_COLOUR};"
+            f"outline:{number(keyline['width'])}px solid {TEXT_COLOUR};"
+            f"outline-color:{mixed(keyline['share'])}}}",
+        )
+    )
+    more = f"{page}{{outline-color:{TEXT_COLOUR}}}"
+    forced = f"html,{page}{{background:{GROUND_COLOUR}}}{page}{{outline-color:{TEXT_COLOUR}}}"
+    return (
+        f"@media screen{{{plain}}}"
+        f"@media screen and (prefers-contrast:more){{{more}}}"
+        f"@media screen and (forced-colors:active){{{forced}}}"
+    )
 
 
 @dataclass(frozen=True)
@@ -326,6 +377,7 @@ class PageFile(Canvas):
             ]
         )
         title = escape(str(self.scene.get("piece", "")), quote=False)
+        fixed = fixed_sheet(self.declaration["pages"]["fixed"]) if self._fixed() else ""
         return (
             "<!DOCTYPE html>\n"
             f"<html {head}>\n"
@@ -333,11 +385,16 @@ class PageFile(Canvas):
             '<meta charset="utf-8"/>\n'
             f'<meta name="viewport" content="{VIEWPORT}"/>\n'
             f"<title>{title}</title>\n"
-            f"<style>{self._font_faces()}{self._modes()}{SHEET}{self._forced()}</style>\n"
+            f"<style>{self._font_faces()}{self._modes()}{SHEET}{fixed}{self._forced()}</style>\n"
             "</head>\n"
             f"<body>{self._arrowheads()}{pages}</body>\n"
             "</html>\n"
         ).encode()
+
+    def _fixed(self) -> bool:
+        """Whether the scene's root says its pages are fixed pages (DEC-031 point 2). A root
+        that does not say so holds none."""
+        return self.scene.get("fixed-pages") is True
 
     def _modes(self) -> str:
         """The values of every role the file paints in each key it holds: the plain rule the
