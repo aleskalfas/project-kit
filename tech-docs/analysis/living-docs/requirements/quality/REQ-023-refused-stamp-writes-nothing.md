@@ -2,10 +2,10 @@
 id: REQ-023
 title: A refused stamp puts back what it wrote, or names what it could not
 status: active
-statement: A refused `pkit living-docs new` leaves the project as it was, save a consented root edit, or names each file or folder it could not restore.
-measure: After a refusal, the project equals itself before the command ran, byte for byte, save what the refusal names and a consented root edit.
+statement: A refused `pkit living-docs new` leaves the project as it was, save a consented documentation root edit, or names each file or folder it could not restore.
+measure: After a refusal, the project equals itself before the command ran, byte for byte, save what the refusal names and a consented documentation root edit.
 applies-to: "`pkit living-docs new page` and `pkit living-docs new space`, whenever either refuses, a refusal after its write included."
-obligation: v1:sha256:64e65bc93c1bc4a9ae3741457391cc006a51c24927419309873682530a358e01
+obligation: v1:sha256:dbcc017e425c037a0fef961be12f86e747025281870ef342003e550a0f9fade6
 actors:
   - core:ACT-developer
   - core:ACT-adopter
