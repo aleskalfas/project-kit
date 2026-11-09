@@ -6,11 +6,21 @@ date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a brand gives an order two colours in each mode, one end for its source and one for its last place. It also gives one text colour for every step. Where the content chooses a pattern's word for an order, the engine spreads the two ends evenly over the list's places, whatever its length. That overturns an accepted record's refusal of a ramp from a first place's colour to the last's. The source's end stands out most from the page, so in a dark mode it is the lighter end. The text holds body text's contrast on both ends, and the check measures each step as drawn. A step shows only where an item stands, so no concept, component or state names one. An item that names a concept keeps its step as its fill. Its concept's colour becomes its line, held at 3 to 1 against what lies beside it. A brand whose lines are faint then fails such an item. Making the steps a released pattern's default breaks that pattern. A brand that gives no ends draws every step in its neutral colour.
+**In plain terms:** where a list's items stand in an order, such as a stack of levels from decisions down to code, the content may have them shaded by their place. A brand gives two colours for each mode, one for the order's first item and one for its last, and one text colour for all. The engine spreads the two colours evenly over the list, whatever its length, and the first item always stands out most from the page. On a shaded item, the concept the item names colours only its line, the outline around it. No concept, component or state picks a shade, and a brand that gives no colours draws every item alike. This overturns parts of two accepted records, which refused such a ramp and kept the engine's model of colour as it stood.
 
 ## Context
 
-Each colour family is a fill, a line and a text on the fill. The foundations declare six, a neutral one and five hues, and a notation maps its concepts to them ([visual-communication:DEC-004-brands-and-notations] point 10). Each family's text on its fill must reach WCAG's level for text, in every combination of the modes (DEC-004 point 8).
+Eight terms:
+- An *order* is a list whose items stand in a sequence the content means, such as a flow's steps or a stack's levels.
+- Its *source* is the end it runs from, such as the level every other carries out, or a flow's first step.
+- A *page whose point is an order* is there mainly to show the order its items stand in.
+- The *families of kinds* are the colour families a notation maps a concept to ([visual-communication:DEC-004-brands-and-notations] point 10).
+- The *neutral family* is the family of kinds that shows no hue, which the foundations mark (point 1).
+- A *concept of a hue* is one its notation maps to any other family of kinds.
+- An order's *ends* are the two colours a brand gives it in each combination of its modes. The *source's end* is the one the first place takes, and the *last end* the one the last place takes.
+- A *step* is the fill, line and text a place of an order takes where it would take a colour family. Its fill and line are spread from the ends, and its text is the order's text.
+
+Each colour family is a fill, a line and a text on the fill. The foundations declare the families, and a notation maps its concepts to them (DEC-004 point 10). Each family's text on its fill must reach WCAG's level for text, in every combination of the modes (DEC-004 point 8).
 
 How an item takes its colour ([visual-communication:DEC-001-visual-communication-discipline] point 6):
 - **From the concept it names,** read with its notation.
@@ -33,7 +43,7 @@ The redesign of the showcase deck of the repository the capability is authored i
 - **Its reason:** lightness is the ordered variable, and one hue says "one chain". The deck's one accent then keeps its one meaning.
 - **Order and a highlight never cross.** Order is only ever a block's fill. A highlight is only ever a line, a word or a tint region.
 
-The record of the principles of visual communication accepts them as two rule sets. It leaves colour roles that step in an order to a later record ([visual-communication:DEC-028-principles-of-visual-communication] point 11).
+The record of the principles of visual communication accepts them as two rule sets. It keeps the engine's model of colour as it stands, and rejects the order's colour in that model, since a change would rest on the engine judging a page's point. It leaves colour roles that step in an order to a later record ([visual-communication:DEC-028-principles-of-visual-communication] point 11, Rationale and Alternatives considered).
 
 The principles' rule that the form says what the content says, RS-GRAPHIC-007, asks that a picture's differences be those its content has. On a page whose point is an order, the parts that show the order share one colour, or step in one shade. Each concept an item names keeps its colour on a mark of its own.
 
@@ -41,18 +51,9 @@ Two rules bound how shared roles are added:
 - **The foundations are released,** so a shared role added now carries a default that aliases an older role (DEC-004 point 7, [visual-communication:DEC-008-library-role-defaults] point 2).
 - **A new top group of the shared roles** breaks the foundations, even where each of its roles has a default (DEC-004 point 5).
 
-Seven terms:
-- An *order* is a list whose items stand in a sequence the content means, such as a flow's steps or a stack's levels.
-- Its *source* is the end it runs from, such as the level every other carries out, or a flow's first step.
-- A *page whose point is an order* is there mainly to show the order its items stand in.
-- The *families of kinds* are the colour families a notation maps a concept to.
-- A *concept of a hue* is one its notation maps to a family of kinds that shows a hue, any but the neutral family.
-- An order's *ends* are the two colours a brand gives it in each combination of its modes. The *source's end* is the one the first place takes, and the *last end* the one the last place takes.
-- A *step* is the colour family a place of an order takes, spread from the ends.
-
 ## Decision
 
-**Under a pattern's word, the engine spreads two ends a brand gives evenly over a list's places, as colour steps that share one text colour. A step shows only where an item stands, so on a step an item's concept gives only its line. This overturns DEC-010's refusal of a ramp, and keeps its refusal of a role named by a place.**
+**Under a pattern's word, the engine spreads two ends a brand gives evenly over a list's places, as colour steps that share one text colour. A step shows only where an item stands, so on a step an item's concept gives only its line. This overturns DEC-010's refusal of a ramp and DEC-028's word that the model of colour stays, and keeps the reasons of both.**
 
 ### 1. Two ends and a text, each a shared colour role
 
@@ -64,11 +65,11 @@ Seven terms:
 
 ### 2. What a brand gives, and the contrast the text holds
 
-- **Defaults.** Both ends default to the neutral family's fill, `family.neutral.fill`, and the text to its text, `family.neutral.text`. So every brand released before the roles still draws, with every step alike, as its neutral family. A default rarely holds against values a brand gives, so a brand that gives the ends but not the text mostly fails the text's pairs.
+- **Defaults.** Both ends default to the neutral family's fill, and the text to its text. So every brand released before the roles still draws, with every step alike, as its neutral family. A default rarely holds against values a brand gives, so a brand that gives the ends but not the text mostly fails the text's pairs.
 - **The text on both ends.** The foundations declare the order's text on each end as a pair at the level `text`, 4.5 to 1 (WCAG 1.4.3). Each pair is checked in every combination of the axes that change a colour, as every pair is (DEC-004 point 8). At the defaults, both pairs are the neutral family's own, which every brand already holds.
 - **The text on one side of both ends.** In every combination, the order's text is lighter than both ends, or darker than both, by WCAG's relative luminance.
 - **Each step measured as drawn.** A brand's check holds the ends alone. A piece's check measures each text on a step as drawn, in each combination the piece is drawn in (DEC-004 point 8).
-- **Parts in a fixed role.** A step may be dark in a light mode, where every other family's fill is pale, and the order's text pale. So a part painted in a fixed role over its family's fill may fail on a step. So may a part painted in its family's text over a fixed fill, such as a card's text on the surface. The contrast as drawn finds both.
+- **Parts in a role from outside their family.** A step may be dark in a light mode, where every other family's fill is pale, and the order's text pale. So a part painted in a role from outside its family, over its family's fill, may fail on a step. So may a part painted in its family's text over a fill from outside its family, such as a card's text on the surface. The contrast as drawn finds both.
 - **No pair of an end against the background.** A brand may still hold its ends far from the background, as the neutral brand does (point 7).
 
 ### 3. The source stands out most, in every mode
@@ -86,7 +87,7 @@ Seven terms:
 - **In Oklab.** The spread runs along the straight line between the ends in Oklab, the colour space whose cylindrical form is OKLCH, so the lightness steps evenly. Between ends of one hue and chroma, only OKLCH's lightness changes.
 - **Within the ends' range.** The engine brings back a step that falls outside the range of colours its ends are given in, as CSS Color 4's gamut mapping does. It lowers the step's chroma in OKLCH, at its lightness and hue.
 - **Alpha and rounding.** Where an end has alpha, the spread premultiplies it, as CSS Color 4 interpolates. The engine rounds each step to a fixed precision, so the same files give the same steps on every machine (DEC-005 point 5).
-- **Each step is a family.** Its `fill` and `line` are its colour, and its `text` is the order's text. An item component paints a step with the members it paints any family with. So a card painted on the surface shows the step only in the parts it paints from its family, such as its bar. A mark a component paints from its line on its own fill does not show it.
+- **Each step paints as a family.** Its `fill` and `line` are its colour, and its `text` is the order's text. An item component paints a step with the members it paints any family with. So a card painted on the surface shows the step only in the parts it paints from its family, such as its bar. A mark a component paints from its line on its own fill does not show it.
 - **Every item counts.** Every item the list draws takes its place's step, an item that names its own component included. Content that ends an order with something outside it, such as a note that ends a row, places that outside the list. Places count from the first item the list draws (DEC-010 point 6), so the content lists the source first.
 - **Nothing else is given.** A pattern names no role of an order. Under the word that gives the steps, it names no family for any place of that list.
 - **Where no part shows the step.** Where no part an item draws takes a member of its step, the check asks the piece's author for attention. An item that names a concept of a hue takes point 6's findings instead.
@@ -110,9 +111,9 @@ Seven terms:
 - **A concept of the neutral family gives nothing on a step.** That family marks no kind by a hue, so the item takes the step whole.
 - **A text run keeps its concept.** A run that names a concept still takes its concept's family ([visual-communication:DEC-012-text-runs] point 3). It is measured as drawn on the step, as on any fill not its family's own. Such a run mostly fails on a step, and its author drops the run's concept or chooses no steps.
 - **The line at 3 to 1 against each colour beside it.** The check measures the concept's line as drawn against each fill it borders, in every combination the piece is drawn in (WCAG 1.4.11).
-- **Beside nothing the piece draws, not measured,** as a text over nothing is not. An HTML page with no ground lies on the browser's own ([visual-communication:DEC-023-html-page-modes] point 7). There point 7 holds the neutral brand's lines off its background.
+- **Beside nothing the piece draws, not measured,** as a text over nothing is not. On an HTML page with no ground, a line that fades against the browser's own ground is a person's to catch ([visual-communication:DEC-023-html-page-modes] point 7).
 - **A family's line carries a promise here.** Elsewhere a family's line only edges its fill, which a brand may draw faint. Here a brand whose hues' lines are faint against its page fails such an item, and the finding names the brand's owner too.
-- **Where the item cannot show both,** for a concept of a hue, the check asks the piece's author for attention. That is where no part the item draws takes its concept's line, or none takes the step's fill or text. An item component with no line or a fixed fill may cause it, and so may content that points a part at another role. The author may name another item component, or draw the list unshaded.
+- **Where the item cannot show both,** for a concept of a hue, the check asks the piece's author for attention. That is where no part the item draws takes its concept's line, or none takes the step's fill or text. An item component with no line, or a fill from outside its family, may cause it, and so may content that points a part at another role. The author may name another item component, or draw the list unshaded.
 - **Only a step splits an item's family so.** A place that gives one of the families of kinds still yields to the item's concept (DEC-001 point 6, DEC-010 point 6). A state its component gives a family still replaces both (DEC-001 point 6), and each run's family too (DEC-012 point 3).
 - **An outer item passes the step whole** to what sits in it, where nothing nearer gives a family (DEC-010 point 6). It keeps its concept's line as its own mark.
 
@@ -153,7 +154,7 @@ Each finding lies where the record of files and validation puts it, and fails or
 - **The document of values holds no step.** The document of a brand's resolved values is unchanged (DEC-005 point 7), so no code writer writes a step out.
 - **The seam's version rises,** since a renderer must read the new kind of value (DEC-005 point 8).
 - **Breaking, for a pattern already released:** a release that makes the steps the default for one of its lists, by a new option or by a changed default. Its items' concepts of a hue then give only their line, which changes what naming a concept means there (point 6). A pattern whose first release gives the steps by default breaks nothing. As every break, it needs a major release only where the pattern's status promises one (DEC-003 point 7).
-- **A draft holds a pattern back.** Versions under which a pattern gives a list the steps by default, without foundations declaring an order's roles, do not fit together for a piece. So a draft does not move into them ([visual-communication:DEC-003-change-over-time] point 8). As for a key claimed twice, only a misfit the piece does not show under its lock counts. Where the piece's content chose the word, or a person moved its lock there, the check fails it at the lock (point 8).
+- **No steps without their roles.** Versions under which a pattern gives a list the steps by default, without foundations declaring an order's roles, do not fit together for a piece. So a draft does not move into them ([visual-communication:DEC-003-change-over-time] point 8). As for a key claimed twice, only a misfit the piece does not show under its lock counts. Where the piece's content chose the word, or a person moved its lock there, the check fails it at the lock (point 8).
 
 ### 10. What this adds to the libraries and the format, what it overturns, and what still holds
 
@@ -161,7 +162,9 @@ Each finding lies where the record of files and validation puts it, and fails or
 - **The format grows by an addition** that every file written before still meets (DEC-003 point 3). The schema of a library's roles gains the declaration of the ends and the neutral family's mark. Only the foundations hold them, as only they declare families. The schema of a pattern gains a word that gives a list the steps.
 - **Every brand draws every piece as before,** except where a pattern gives a list the steps. There, under a brand that gives no ends, every place draws as the neutral family, and a concept of a hue gives its line.
 - **No file is renamed or removed,** and no project file changes shape, so no migration is owed (COR-010).
-- **It overturns one refusal of the record of a list's fields** ([visual-communication:DEC-010-list-item-fields]), of a ramp from a first level's role to the last's. Its reason still holds of roles, since a step is no role (point 9). That refusal stays as it stood, under a *Partially superseded by* top line, and the rest is refined in place (Implications).
+- **It overturns parts of two accepted records.** Each stays accepted, and the parts overturned stay as they stood, under a *Partially superseded by* top line (Implications). The rest of each is refined in place.
+  - **The record of a list's fields' refusal of a ramp,** from a first level's role to the last's (DEC-010, Alternatives considered). Its reason still holds of roles, since a step is no role (point 1).
+  - **The principles' word that the engine's model of colour stays,** and their rejection of the order's colour in that model (DEC-028 point 11, Rationale and Alternatives considered). Their reason still holds, since the content chooses the steps by a word, and the engine judges no page's point (point 4).
 
 ## Rationale
 
@@ -175,7 +178,7 @@ Each finding lies where the record of files and validation puts it, and fails or
 - **A sequential scheme fits its count.** ColorBrewer's sequential schemes pick their colours again for each number of classes (Cynthia Brewer). So a class's colour depends on the count, as a place's does here. Those schemes widen their range as the classes grow. Here the brand fixes the range, so neighbours come closer instead.
 - **The cost, accepted.** The second item of a short list looks different from the second item of a long one. A page whose point is an order compares its places within one order, and two orders still compare by position and numbers.
 
-**Why the steps overturn DEC-010's refusal of a ramp, and keep its reason.** That record refused roles named by a place. A role's name would then be computed from the place, where every role a component reads is written in a file. The steps keep that reason, since the two roles they spread between are written in the foundations (point 9). What they take is a colour computed from a place, which a ramp needs to span the whole order at any length.
+**Why the steps overturn parts of DEC-010 and DEC-028, and keep their reasons.** DEC-010 refused roles named by a place. A role's name would then be computed from the place, where every role a component reads is written in a file. The steps keep that reason, since the two roles they spread between are written in the foundations (point 1). DEC-028 kept the model of colour, since a change would rest on the engine judging a page's point. The steps keep that reason too, since the content chooses them by a word (point 4). What they change is a colour computed from a place, which a ramp needs to span the whole order at any length.
 
 **Why two ends for each mode.** Two colours are the least that fix a ramp: which step stands out most, and how near the page the last one comes. The brand chooses both, in each mode. An even spread in a space the eye sees evenly makes near-equal steps between them, so the middle needs no tuning.
 
@@ -212,11 +215,11 @@ Each finding lies where the record of files and validation puts it, and fails or
 
 **Why, on a step, the concept takes the line.**
 - **Each part carries one variable.** The fill carries the place by its lightness, Bertin's ordered variable. The line carries the kind by its hue, his selective one. The redesign's seventh round keeps that split on every page, and RS-GRAPHIC-007 has each concept keep its colour on a mark of its own.
-- **A state may still fill the item.** A state is a difference the content has, and its look is its component's (DEC-001 point 6). Today that look is a family, so a state on a step leaves the chain's shade. A state's look other than a family, such as a line, is left to a later change.
+- **A state may still fill the item.** A state is a difference the content has, and its look is its component's (DEC-001 point 6). Where that look is a family, a state on a step leaves the chain's shade. A state's look other than a family, such as a line, is left to a later change.
 
 **Why the line is measured against each colour beside it.** On a step the line is a concept's only colour mark, so WCAG 1.4.11 asks 3 to 1 of it against the colours beside it. The neutral brand's lines of the five hues stand 1.0 to 2.6 to 1 from the seventh round's ramp, in both modes. From its pages they stand 5.7 to 8.0 to 1. So the default item component draws the line apart from its fill, with the page on both its sides, as the round's picture does.
 
-**Why a neutral concept gives nothing, and an outer item passes the step whole.** A neutral concept's line, a quiet rule 1.4 to 1 from a light page in the neutral brand, marks no kind by a hue. At the defaults, where the step is the neutral family too, the item then looks as it would with its concept first. What sits in an item lies on the step, where no line of a hue holds 3 to 1. The outer item's line already marks the concept.
+**Why a neutral concept gives nothing, and an outer item passes the step whole.** A neutral concept's line, a quiet rule 1.4 to 1 from a light page in the neutral brand, marks no kind by a hue. At the defaults, where the step's colours are the neutral family's too, the item then looks as it would with its concept first. What sits in an item lies on the step, where no line of a hue holds 3 to 1. The outer item's line already marks the concept.
 
 **Why a missing line asks for attention, and does not fail.** WCAG 1.4.11 binds a mark that is drawn, so a weak line fails as a weak text does. Whether a concept is marked at all is a reviewer's judgement, under the rule that the same meaning looks the same (RS-GRAPHIC-004). Its author may mark the concept another way, or choose no steps.
 
@@ -232,7 +235,7 @@ Each finding lies where the record of files and validation puts it, and fails or
 - **Five fixed steps, the same for every brand, one to each place from the first.** Rejected. A short order takes only the ramp's strongest end, and a place past the fifth takes no step. Each step is three more colours a brand tunes. A place drawn alike in every order serves a comparison across orders that a page whose point is one order does not make.
 - **Steps spread in OKLCH, its hue taken along the shorter arc.** Not chosen. Between ends of one hue and chroma it gives Oklab's steps. Elsewhere it needs a rule for hue, which a grey lacks.
 - **Steps spread in sRGB's values.** Rejected. Equal steps of them do not look equal.
-- **A ramp for each of the families of kinds,** as Material keeps a tonal palette for each key colour. Not chosen. Each of six families would need its own ends, and a page whose point is an order needs its order shown, not its kinds.
+- **A ramp for each of the families of kinds,** as Material keeps a tonal palette for each key colour. Not chosen. Each family of kinds would need its own ends, and a page whose point is an order needs its order shown, not its kinds.
 - **Steps of a pattern's own library,** such as the starter's. Rejected. Each library that draws an order would declare its own, and a brand gives them values only where it names that library (DEC-008 point 4). A meaning every library needs is a shared role's (DEC-008 point 2).
 - **The roles under a top group of their own,** such as `order.first`. Rejected. A new top group is a breaking change of the foundations (DEC-004 point 5).
 - **No defaults, in a major release of the foundations.** Rejected. Every brand would give three values in every combination before it read the new major, and every lock would move on purpose.
@@ -245,7 +248,7 @@ Each finding lies where the record of files and validation puts it, and fails or
 - **The steps as a pattern's default, breaking nothing.** Rejected. The release changes what naming a concept means on the pattern's items (Rationale, "Why a default of the steps breaks a released pattern").
 - **A draft held back from a release that makes the steps a default,** as from versions that claim a key twice (DEC-010 point 2). Rejected. A hold waits for another library's version to mend a clash between two, and none mends the pattern's own change. The draft would stay behind each later release until a person moves it, as a break asks, with no major to say so.
 - **The concept's whole colour before the step,** as a place that gives a family of kinds yields to it. Rejected. One item of the chain would take its concept's hue, a difference on the very chain the page is about, which RS-GRAPHIC-007 refuses.
-- **The step alone, with the concept unmarked.** Rejected. A concept's colour is its only mark today, since format 1 draws no concept's icon (DEC-012, Context).
+- **The step alone, with the concept unmarked.** Rejected. A concept's colour is its only mark while format 1 draws no concept's icon (DEC-012, Context).
 - **The concept's colour on the item's text.** Rejected. A concept's text, tuned for its family's own fill, would fail its pair on a step.
 - **The line measured against what the item lies on alone.** Rejected. A line drawn on the step would pass, and be lost against it.
 - **A pair of each family's line against the background, at 3 to 1, or of each hue's.** Rejected. It judges a brand, but not what a line borders where it is drawn: the step, or the next item where items touch. It would also bind every family's line where it marks nothing.
@@ -262,13 +265,13 @@ Each finding lies where the record of files and validation puts it, and fails or
 Each is made once a person accepts this record, in the change that proposes it, and accepting this record accepts them ([COR-066](../../../decisions/core/COR-066-accepted-before-landing.md) point 5). Each edit ends with a pointer to this record and the point it names, in the form the accepted records use.
 
 - **The founding record (DEC-001), point 6:**
-  - It gains a bullet (point 5): "An order's steps are colour families the engine spreads over a list's places, from two ends a brand gives. No concept, component or state names one, and no part of a component names a role of an order."
+  - It gains a bullet (point 5): "An order's steps stand in for colour families. The engine spreads them over a list's places, from two ends a brand gives. No concept, component or state names one, and no part of a component names a role of an order."
   - Its bullet "Colour says what a thing is" gains, after its sentence on a default (point 6): "Where an item names a concept of a hue and its place takes a step of an order, its members `fill` and `text` take the step's. Its member `line` takes its concept's."
 - **The record of brands and notations (DEC-004):**
   - Point 7 gains, beside its bullet on a component token's default (point 5): "No component token's default aliases a role of an order."
   - Point 8 gains a bullet (points 2 and 3): "An order's text on each of its two ends is a declared pair. The text is lighter than both ends, or darker than both. In every combination, the source's end stands at least as far from the background as the last end, by WCAG's ratio."
   - Point 8's bullet "Checked as drawn" gains (point 6): "The engine also measures a concept's line on an item that takes a step of an order against each colour beside it, at WCAG's level for other marks."
-  - Point 10 gains a bullet (points 1, 4 and 5): "The foundations also declare an order's two ends and its text, apart from the families a notation maps to, and mark the family that shows no hue. A concept a notation maps to any other family is a concept of a hue. A pattern may give an order's places steps spread between the ends. Each step is a colour family too, whose fill and line the engine spreads from the ends' roles and whose text is the order's text. No concept maps to a role of an order." Its bullet "What a concept maps to" keeps its text, and so defines the families a notation maps to, beside the new bullet's families of an order.
+  - Point 10 gains a bullet (points 1, 4 and 5): "The foundations also declare an order's two ends and its text, apart from the families a notation maps to, and mark the family that shows no hue. A concept a notation maps to any other family is a concept of a hue. A pattern may give an order's places steps spread between the ends. A step stands in for a colour family: the engine spreads its fill and line from the ends' roles, and its text is the order's text. No concept maps to a role of an order."
   - The first sentence of point 10's bullet "Colour is never the only sign" reads (point 1): "The families a notation maps to bound how many concepts one piece tells apart by colour."
   - Point 11's list of what fails validation gains "an order's text lighter than one end and darker than the other, in some combination", "a brand's last end that contrasts with the background more than its source's end, in some combination" and "a concept a notation maps to a role of an order" (point 8). The order's text below its level already fails there, on an end as a declared pair and on a step as a drawn text. Its item on a declared pair or a drawn text below its contrast also names a concept's line drawn on a step (points 6 and 8).
   - Its Implications' first bullet names an order's ends and text, and the mark of the neutral family, among what the foundations declare.
@@ -288,11 +291,9 @@ Each is made once a person accepts this record, in the change that proposes it, 
   - Point 7, under "Breaking, for a pattern", gains (point 9): "a release that makes the steps of an order the default for one of its lists, by a new option or by a changed default". Its bullet "Not breaking" ends its sentence on changes of look with ", save a release that makes the steps of an order a list's default".
   - Point 9's list of what fails validation gains "in a pattern: a word that gives a list the steps and names a family for some place of it" (point 8). The findings that ask for attention stay this record's.
   - **Its top line** reads *Partially superseded by* [visual-communication:DEC-032-ordered-colour-steps], in the shape the record of change over time's takes (point 10). Overturned: its rejected alternative "Roles named by a place", so far as its example refuses a ramp from a first level's role to the last's. The rest stands, and that alternative stays as it stood.
-- **The record of the principles of visual communication (DEC-028) and its rule RS-GRAPHIC-007,** each edit citing this record by its id where it names a point of it:
-  - Point 11's paragraph "What it leaves as it is" reads whole (points 4 and 6): "How an item takes its colour stays as the founding record decides it (DEC-001 point 6). The engine judges no page's point. Content says it by pointing the parts that show the order at another role, as that point allows. Or it says it by a pattern's word that gives its places the steps of an order. The content chooses that word, or a pattern made for orders takes it by default. On a step, an item's concept of a hue colours only its line. Elsewhere an item's colour still comes from the concept it names, and an icon takes its concept's colour family ([visual-communication:DEC-004-brands-and-notations] point 10). So a piece meets the rule with what the model holds." That drops its words that the founding record's point stays true, since this record adds to that point, and its last sentence on colour roles that step in an order.
-  - Its Rationale "Why the form rule narrows a reason, and leaves the model" ends (points 4 and 6): "So the rule narrows the principle behind the model. The steps of an order change the model on no such judgement. The content, or a pattern made for orders by default, chooses them by a word, and the model resolves them." That replaces "So the rule narrows the principle behind the model, and the model stays."
-  - Its rejected alternative "The order's colour in the engine's model" becomes "The engine judging a page's point" (point 4): "Rejected: it cannot tell a page's point, and content tells it, by pointing parts at a role or by a pattern's word for the steps of an order."
-  - Its Implications' "Left to other records" drops the colour roles that step in an order. After the citation of project-kit#2584 it ends "; and the principles a shipped brand follows, refining the record of brands and notations", citing that record.
+- **The record of the principles of visual communication (DEC-028) and its rule RS-GRAPHIC-007:**
+  - **Its top line** reads *Partially superseded by* [visual-communication:DEC-032-ordered-colour-steps], in the shape the record of change over time's takes (point 10). Overturned: point 11's words that the founding record's point 6 stays true, and that an item's colour still comes from its concept. Also overturned: the Rationale's conclusion that the model stays, and the rejected alternative "The order's colour in the engine's model". The rest stands, and those passages stay as they stood.
+  - Its Implications' "Left to other records" takes a forward refinement pointer to this record after "the colour roles that step in an order".
   - RS-GRAPHIC-007's "From the text" ends, after "rather than each at its concept's": ", or whether the order's places take the steps of an order". The rule's anchors gain this record's points 4 and 6. The edit adds a way to meet the rule and tightens none, so the set takes no new major (COR-051 point 7).
 
 ### Tasks and what is left
@@ -302,9 +303,9 @@ Each is made once a person accepts this record, in the change that proposes it, 
   - **The foundations:** the three roles with their defaults, the declaration of the ends, the two text pairs and the neutral family's mark, in a minor version. The check refuses the declaration of the ends, and the neutral family's mark, in any library but the foundations.
   - **The engine and the check:** a family for each place, which the record of a list's fields decided and the engine does not draw yet. Also the spread of point 4, the scene's new kind of value, the seam's version it moves, and each renderer's reading of it. Also a concept's line on a step, measured as drawn against each colour beside it (point 6), and the findings of point 8. The release comparison counts as a break, for a stable pattern, an option whose default comes to give the steps (point 9).
   - **The starter:** each pattern that draws an order offers the steps by an option's word. Its owner chooses the default word, judged in review as the starter's other choices are ([visual-communication:DEC-007-starter-library] point 3). Its default item component paints its fill from its family, and its line apart from that fill, under every word (point 4). The Task weighs how that line looks, in a step's own colour and in pieces that draw no steps.
-  - **The starter's audit and pages:** the Task audits its components for parts in a fixed role over a step, or in the family's text over a fixed fill (point 2). It also audits them for marks painted from the line on the family's own fill (point 4). Its README says that on a step a concept's line is the item's only colour mark, at 3 to 1 (point 6). Its reference drops a colour for each place from what it lacks.
+  - **The starter's audit and pages:** the Task audits its components for parts in a role from outside their family over a step, or in the family's text over a fill from outside it (point 2). It also audits them for marks painted from the line on the family's own fill (point 4). Its README says that on a step a concept's line is the item's only colour mark, at 3 to 1 (point 6). Its reference drops a colour for each place from what it lacks.
   - **The starter's releases:** making the steps the default of a pattern already released breaks it (point 9). An experimental pattern may take that break in any release, as it may any other (DEC-003 point 7). A library names its bases by major alone (DEC-001 point 5). So a piece may lock the starter with foundations older than the roles of an order, which point 9 settles.
-  - **The neutral brand:** the ends and the text under point 7, in a minor version. Its ends start from the seventh round's OKLCH lightness, .28 and .54 in light and .90 and .64 in dark, in its text colour's hue. Whoever reviews its release judges its ends kept off its accent.
+  - **The neutral brand:** the ends and the text under point 7, in a minor version. Its ends start from the seventh round's OKLCH lightness, .28 and .54 in light and .90 and .64 in dark, in its text colour's hue. Whoever reviews its release judges those ends, and that they stay off its accent.
   - **The capability's reference:** the foundations' roles, the names a component's or a state's family may take, how the steps are given and spread, and the new findings. Also how an item's family resolves member by member on a step, and what passes to what sits in it.
   - **The design reviewer:** what records leave to its reading gains how close an order's neighbouring steps come (point 4).
   - **The analysis's glossary:** an order, its source, its ends and a step.
