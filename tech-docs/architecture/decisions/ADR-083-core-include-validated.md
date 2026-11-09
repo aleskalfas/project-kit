@@ -1,7 +1,7 @@
 ---
 id: ADR-083
 title: Validation fails a host file that does not include core's rules
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
