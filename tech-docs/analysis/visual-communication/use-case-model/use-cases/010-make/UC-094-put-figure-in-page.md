@@ -19,6 +19,8 @@ pkit:
         - visual-communication:DEC-005#6
         - visual-communication:DEC-006#7
         - visual-communication:DEC-006#8
+        - visual-communication:DEC-018#5
+        - visual-communication:DEC-018#6
         - COR-017
         - COR-013
         - COR-009
@@ -27,7 +29,7 @@ pkit:
 
 # UC-094 — Put a figure in a documentation page
 
-**Goal:** Put a figure in a documentation page that follows the page's light or dark mode, and stays current as the page changes.
+**Goal:** Put a figure in a documentation page that follows the light or dark mode a browser tells it, and stays current as the page changes.
 
 **Other actors:**
 
@@ -49,7 +51,7 @@ pkit:
 2. The developer writes the figure's content, and chooses the library component that does its job.
 3. The system draws the figure in each mode the piece names on the brand's colour scheme, such as light and dark.
 4. The developer marks the piece published, since it stays in use as long as the page that shows it. The developer shows the figure in the page, from a copy that always holds the figure's current drawing.
-5. The system shows the figure in the mode the reader's site uses, and follows the reader's switch to another mode.
+5. The figure takes the mode the reader's browser tells an image, and follows a switch of mode that reaches the image.
 6. The developer lands the page and the figure in one change.
 
 **Variants:**
@@ -58,7 +60,7 @@ pkit:
 - **6a.** The figure's content was edited, and its copy was not made again. The copy is stale, so the system's check fails on it until the copy is made again.
 - **6b.** The developer takes in a newer released version of a library the figure uses, one the system reads. The system states that the figure's lock is behind it and, for a version of the lock's major, names the command that proposes the move. For a version of a later major, the system says the developer takes it on purpose, by naming it to that command. That command proposes the move as a change of its own, with the figure before and after, or only an after with no copy standing. The figure moves only once that change lands.
 
-**Postconditions:** The page shows the figure, drawn from its current content, in the mode its reader uses.
+**Postconditions:** The page shows the figure, drawn from its current content, in the mode the reader's browser tells an image.
 
 **Minimal guarantees:**
 
@@ -67,10 +69,11 @@ pkit:
 
 ## Sources
 
-- **The goal:** proposed on 31 October, in planning the capability (#2423), to test its design beyond presentations. It rests on how a documentation page sees the figure: an image the capability produces from its source, the piece's content ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)).
+- **The goal:** proposed on 31 October, in planning the capability (#2423), to test its design beyond presentations. It rests on how a documentation page sees the figure: an image the capability produces from its source, the piece's content ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)). Which mode the figure takes is the browser's to say, as an image's is ([DEC-018 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-018-copy-follows-reader-mode.md#5-the-file-follows-what-the-browser-tells-it)).
 - **The steps and the guarantees:**
   - **Steps 1 and 2:** a new piece starts as a draft, and names its brand and its notations ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content) and [DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).
-  - **Steps 3 and 5:** a piece names the modes it is drawn in. The modes of an axis that moves nothing share one drawing, so a page switches them while open ([DEC-005 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#6-a-piece-names-the-modes-it-is-drawn-in) and [DEC-004 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
+  - **Step 3:** a piece names the modes it is drawn in. The modes of an axis that moves nothing share one drawing ([DEC-005 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#6-a-piece-names-the-modes-it-is-drawn-in) and [DEC-004 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
+  - **Step 5 and the postconditions:** a page shows a published figure as any image, from one file that follows what the browser tells it ([DEC-018 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-018-copy-follows-reader-mode.md#6-a-page-shows-a-current-copy-as-any-image)). A reader's switch reaches the figure as far as the browser carries it ([DEC-018 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-018-copy-follows-reader-mode.md#5-the-file-follows-what-the-browser-tells-it)).
   - **Step 4 and variant 6a:** a published piece keeps a copy where the documentation's rules put the page's produced images. A copy that is stale fails the check (DEC-006 points [7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#7-every-export-keeps-its-number) and [8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#8-what-the-check-reports-and-how-seriously)).
   - **Variant 2a:** a diagram is a page alone, and part of a page inside a slide ([DEC-005 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#5-the-scene-holds-every-elements-final-frame-values-and-source)).
   - **Variant 6b and the guarantees:** a published piece's lock moves only through a change a person reviews, with the piece before and after. With no copy standing, that change shows only an after. Marking the piece final is the one exception, which moves its lock back to the lock of the export handed out (DEC-003 point 8).
