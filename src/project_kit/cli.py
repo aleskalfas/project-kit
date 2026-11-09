@@ -5548,7 +5548,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         record=record,
         overridden=overridden,
     )
-    _echo_capability_bound(target_root, name, rules_before, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, rules_before, capability_source.path)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
@@ -7257,14 +7257,16 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 @click.argument("name")
 @click.option("--json", "as_json", is_flag=True, default=False, help="Print the machine form.")
 def show_capability_cmd(name: str, as_json: bool) -> None:
-    """Show a capability's connections, installed or not (COR-053 point 8).
+    """Show a capability's connections and its rules, installed or not (COR-053 point 8).
 
-    Read from its package metadata alone: the roles it provides, the points it
-    accepts and offers, its extensions (contributes, subscribes, depends-on),
-    and what would connect here — the live wiring for an installed capability,
-    the wiring this project would have with it installed otherwise. Found in the
-    local catalogue only: the installed tree, capabilities authored in this
-    repository, the capabilities that ship with this pkit. Writes nothing.
+    Its connections are read from its package metadata alone: the roles it
+    provides, the points it accepts and offers, its extensions (contributes,
+    subscribes, depends-on), and what would connect here — the live wiring for an
+    installed capability, the wiring this project would have with it installed
+    otherwise. Then the loaded rule set it ships, if any, with each accepted
+    rule's id and title: installing it is the consent to them (COR-070 point 3).
+    Found in the local catalogue only: the installed tree, capabilities authored
+    in this repository, the capabilities that ship with this pkit. Writes nothing.
     """
     from project_kit import capability_plans as plans
 
@@ -7564,7 +7566,7 @@ def install_capability_cmd(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
-    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7616,7 +7618,7 @@ def _install_capability_in_source(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
-    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
@@ -7915,7 +7917,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
             f"(in-repo) at {registered_path.relative_to(target_root)}/",
         )
     )
-    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
@@ -8036,15 +8038,14 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
 
 
 def _echo_capability_bound(
-    target_root: Path, name: str, before: SetReading | None, source: Path, *, dry_run: bool
+    target_root: Path, name: str, before: SetReading | None, source: Path
 ) -> None:
     """What a capability's install, register or upgrade newly binds of its loaded set,
     read where it is copied from, against its reading `before`, none for an install
-    (ADR-076 point 6). A dry run says nothing: its copy is only named."""
+    (ADR-076 point 6). A dry run says it too, as sync's does: running the step is the
+    consent to those rules, so they are read before it runs (COR-070 point 3)."""
     from project_kit import loaded_rules
 
-    if dry_run:
-        return
     loaded_rules.echo_bound(target_root, loaded_rules.bound_by({name: before}, [(name, source)]))
 
 
