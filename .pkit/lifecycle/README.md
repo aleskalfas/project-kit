@@ -7,6 +7,7 @@ pkit:
     anchors:
       path:
         - .pkit/lifecycle/ownership.py
+        - .pkit/agents/tool_access.py
         - .pkit/lifecycle/templates/README.md
         - src/project_kit/__init__.py
         - src/project_kit/lifecycle_ownership.py
@@ -111,6 +112,8 @@ The lifecycle keeps a project's state in these places under `.pkit/`:
 ```
 .pkit/
 ├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
+├── agents/
+│   └── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
 ├── lifecycle/
 │   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
 ├── migrations/

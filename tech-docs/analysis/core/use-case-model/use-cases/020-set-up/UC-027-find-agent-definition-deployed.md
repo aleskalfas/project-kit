@@ -36,11 +36,13 @@ pkit:
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/agents/README.md
+        - .pkit/agents/tool_access.py
         - .pkit/lifecycle/ownership.py
         - .pkit/permissions/decide.py
       record:
         - COR-013#1
         - COR-013#5
+        - COR-013#7
         - COR-026
         - COR-028#1
         - ADR-004#1
@@ -49,6 +51,8 @@ pkit:
         - ADR-052
         - ADR-034#1
         - ADR-066
+        - ADR-085
+        - ADR-086
       artefact:
         - ACT-ai-agent
         - ACT-operator
@@ -80,7 +84,7 @@ pkit:
 
 **Assumptions:**
 
-- The [harness](../../../glossary.md#term-harness--harness) loads a deployed [agent definition](../../../glossary.md#term-agent-definition--agent-definition) when a session dispatches the agent. It limits the agent to the tools its `tools:` list names ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)). Claude Code, for one, reads `.claude/agents/<name>.md`.
+- The [harness](../../../glossary.md#term-harness--harness) loads a deployed [agent definition](../../../glossary.md#term-agent-definition--agent-definition) when a session dispatches the agent. It gives the agent only the tools its `tools:` list names, or every tool but those its `withheld:` list names. With neither list, it gives the tools a session gives a helper ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked) and [COR-013 point 7](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#7-an-agents-tool-access)). Claude Code, for one, reads `.claude/agents/<name>.md`.
 - The harness names the dispatched agent in each tool call it hands the [permission hook](../../../glossary.md#term-permission-hook--permission-hook), as Claude Code's `agent_type` does ([ADR-066](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md) and `decide.py`).
 - The running agent finds the [project](../../../glossary.md#term-project--project)'s paths in its agent definition's front matter. The deploy fills no [placeholder](../../../glossary.md#term-placeholder--placeholder) in the body, which keeps each `<category>` as written, and nothing shows that the agent reads the front matter (#1731).
 - The agent changes only the paths its agent definition owns. Its `owns:` is metadata, not a permission, so nothing at run time holds the agent to it ([ADR-051 point 6](../../../../../architecture/decisions/ADR-051-process-author-edit-authority.md#6-the-mechanical-layer-is-a-validation-time-guarantee-an-honest-interlock-at-runtime)).
@@ -99,10 +103,10 @@ pkit:
 4. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s deploy scripts (`.pkit/adapters/README.md`). The fourth, `deploy-agents.sh`, deploys each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) where its [harness](../../../glossary.md#term-harness--harness) reads it ([COR-013 point 1](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#1-the-agents-area)).
 5. Where several sources ship an agent definition of one name, the adapter deploys the project's. Otherwise it deploys the one of the [capability](../../../glossary.md#term-capability--capability) whose name sorts first, and else the core's ([COR-026](../../../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md) and `.pkit/agents/README.md`).
 6. The adapter replaces each [placeholder](../../../glossary.md#term-placeholder--placeholder) `<category>` in the agent definition's front matter with the paths the [overlay](../../../glossary.md#term-overlay--overlay) gives that [overlay category](../../../glossary.md#term-overlay-category--overlay-category). A value under `overrides.<name>` replaces the top-level one for that agent definition, and is never merged with it ([COR-013 point 5](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)).
-7. The adapter carries the agent definition's model and its effort into what it deploys, each from the overlay's override, or else from the front matter. It writes none whose value is `inherit` or absent (`agent_policy.py`).
+7. The adapter carries the agent definition's model and its effort into what it deploys, each from the overlay's override, or else from the front matter. It writes none whose value is `inherit` or absent (`agent_policy.py`). It writes the agent definition's `tools:` or `withheld:` list in the harness's own key, as the agents [area](../../../glossary.md#term-area--area)'s reader reads the list ([ADR-086](../../../../../architecture/decisions/ADR-086-tool-access-reader.md) and `.pkit/agents/tool_access.py`).
 8. The adapter writes the deployed agent definition with its own [deploy mark](../../../glossary.md#term-deploy-mark--deploy-mark), so a later run tells its own files from the adopter's (`.pkit/adapters/README.md`).
 9. A session dispatches the agent for its remit.
-10. The harness loads the deployed agent definition. The agent finds the project's own paths in its front matter, and only the tools its `tools:` list names ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
+10. The harness loads the deployed agent definition. The agent finds the project's own paths in its front matter. It holds the tools its `tools:` or `withheld:` list gives it ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked) and [COR-013 point 7](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#7-an-agents-tool-access)).
 11. Where the adapter's [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, it hands each of the agent's tool calls to the [backbone](../../../glossary.md#term-backbone--backbone)'s [permission code](../../../glossary.md#term-permission-code--permission-code), for the [grant subject](../../../glossary.md#term-grant-subject--grant-subject) `agent:<name>`. That code needs only the operating system's `python3` ([REQ-016](../../../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)). It applies the grants to `all` and the agent's own, and a deny wins over an allow ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
 
 **Variants:**
@@ -115,9 +119,10 @@ pkit:
 - **6b.** The overlay leaves unset a category that the agent definition reads only through `reads.patterns`. The adapter drops that item, and deploys the agent definition without it ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
 - **6c.** A category that carries writes names a path that sync manages. The adapter skips the agent definition, saying that the category names sync-managed paths, so no agent owns a path that sync writes over (`.pkit/lifecycle/ownership.py`).
 - **7a.** The model or the effort is a value the [harness](../../../glossary.md#term-harness--harness) does not accept. The adapter carries no value for it, so the agent takes the harness's default, and the system reports a `warning` line naming the value (`agent_policy.py`).
+- **7b.** The agent definition names both a `tools:` and a `withheld:` list, or withholds a tool the harness cannot withhold. The adapter skips that agent definition and names the cause. It removes the copy it deployed earlier, since that copy may give tools the agent definition no longer gives ([COR-013 point 7](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#7-an-agents-tool-access) and [ADR-086](../../../../../architecture/decisions/ADR-086-tool-access-reader.md)). The use case ends for that agent definition.
 - **8a.** A file without the [deploy mark](../../../glossary.md#term-deploy-mark--deploy-mark) stands where the adapter would deploy, such as an agent definition the adopter wrote there. The adapter leaves the file untouched, and reports it `skipped`.
 - **8b.** A deployed agent definition carries the deploy mark, and no source ships its agent definition any more. The adapter removes it, and reports it `removed`.
-- **11a.** The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is not registered. Only the `tools:` list and the harness's own settings apply. Those settings are one set for the whole session, never one for each agent ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
+- **11a.** The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is not registered. Only the `tools:` or `withheld:` list and the harness's own settings apply. Those settings are one set for the whole session, never one for each agent ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
 - **11b.** The harness names no agent in the call, as for the main session. The [permission code](../../../glossary.md#term-permission-code--permission-code) takes the default agent from the `agent` key of Claude Code's `.claude/settings.json`, the one harness's settings it reads. With none, the [grant subject](../../../glossary.md#term-grant-subject--grant-subject) is `operator` (`decide.py`).
 - **11c.** An installed [capability](../../../glossary.md#term-capability--capability) contributes a deny [grant](../../../glossary.md#term-grant--grant) for the agent in a grants file of its own. The deny holds for that agent, whatever its other grants allow ([ADR-016](../../../../../architecture/decisions/ADR-016-capability-contributed-intent-grants.md) and [REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
 
@@ -128,4 +133,5 @@ pkit:
 - An [adapter](../../../glossary.md#term-adapter--adapter) never writes over a file without its [deploy mark](../../../glossary.md#term-deploy-mark--deploy-mark), as an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) the adopter wrote (`.pkit/adapters/README.md` and Claude Code's `deploy-agents.sh`).
 - A [placeholder](../../../glossary.md#term-placeholder--placeholder) resolves only from a value the [overlay](../../../glossary.md#term-overlay--overlay) holds. So an agent definition whose required [overlay category](../../../glossary.md#term-overlay-category--overlay-category) is unset is skipped, never deployed with the placeholder in it ([COR-013 point 5](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit) and [ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
 - One skipped agent definition never stops the others deploying (ADR-052).
+- An agent definition the adapter refuses for its `tools:` or `withheld:` list is never deployed. No copy deployed earlier stays to give tools the agent definition no longer gives ([COR-013 point 7](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#7-an-agents-tool-access)).
 - A deny granted to an agent wins over any allow it holds ([COR-028 point 1](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth) and `decide.py`).

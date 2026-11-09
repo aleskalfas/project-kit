@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076]
+      record: [COR-005, COR-006, "COR-013#1", "COR-013#7", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-085]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
@@ -110,7 +110,7 @@ Some commands start an agent with nobody watching: project-management's `review-
   - `rules`, the run's rules projected through the shared decision core: `allow`, the whole allow list, and `deny`, the denies to hold as native rules. Each rule takes one of three forms: `{"tool": T}`, the whole tool; `{"tool": T, "folder": F}`, the tool on `F` and everything below it; `{"command": [...]}`, a shell command whose words start with these. The backbone has already refused a run whose rules no native rule could hold.
   - `excluded`, the allowed commands the platform requires outside the sandbox (ADR-066 point 6), each as its words; empty off macOS
 
-  The runner reads the agent's definition from the working copy, as the deploy resolves it, and refuses where it fails its check (ADR-066 point 3). By the time the runner reads the brief, the backbone has put each folder's path in place of its marker: `{{pkit:working-copy}}`, `{{pkit:workspace}}`, `{{pkit:temp}}` and `{{pkit:commit}}`.
+  The runner reads the agent's definition from the working copy, as the deploy resolves it, and refuses where it fails its check (ADR-066 point 3). It passes the agent's tool access as the agents area's reader answers it, in its harness's keys, and refuses a definition whose tool access the reader or its adapter refuses ([the agents README, "Tool access"](../agents/README.md#tool-access)). By the time the runner reads the brief, the backbone has put each folder's path in place of its marker: `{{pkit:working-copy}}`, `{{pkit:workspace}}`, `{{pkit:temp}}` and `{{pkit:commit}}`.
 
 **The answer**, one JSON document on standard output, exit 0: `schema_version` (`1`), `ending`, `exit_code`, `output`, `diagnostics` and `reason`. The endings:
 
@@ -171,13 +171,23 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds four entries: `delegated-result-complete`; `unattended-confined-run`, which the drift command depends on (ADR-066 point 13); `unattended-working-run`, which the build command depends on (ADR-073); and `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to `session-loads-rules` names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost". The Claude Code adapter answers all four ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds six entries:
+
+- `delegated-result-complete`;
+- `unattended-confined-run`, which the drift command depends on (ADR-066 point 13);
+- `unattended-working-run`, which the build command depends on (ADR-073);
+- `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to it names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost";
+- `session-agent-withheld-tools`, that a whole session's agent withheld named tools has none of them and keeps every other tool its session holds, observed from outside a session ([ADR-085](../../tech-docs/architecture/decisions/ADR-085-agent-tool-access.md) point 3);
+- `helper-withheld-tools`, that a helper withheld named tools has none of them, observed only inside a session (ADR-085 point 3).
+
+The Claude Code adapter answers the first five, and leaves `helper-withheld-tools` unanswered until it is measured, so it reports `indeterminate` ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 
 1. Run `pkit new adapter <new-harness-name>`, through the `adapter-author` skill. It stamps `.pkit/adapters/<new-harness-name>/` with `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It stamps no script and no settings: those depend on the harness.
 2. Fill in the stamped `README.md`: what the harness expects and how this adapter satisfies that.
 3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), the `loaded_rules:` declaration of how the harness reaches each capability's rules file (see "How a capability's rules reach a session" above), and any runtime artifacts the harness needs.
+   - **An agent's tool access.** A deploy script writes each agent's tool access as the agents area's reader answers it, in the harness's keys, never the author's text. It refuses a withheld list the harness cannot withhold, or whose tool names it cannot translate, since a withheld list fails open: a tool it does not name is given. It leaves no earlier copy of an agent it refuses, and names the cause (COR-013 point 7; [the agents README, "Tool access"](../agents/README.md#tool-access)).
 4. Write the adapter's `harness-support.yaml`: an answer to each requirement in `.pkit/schemas/harness-requirements.yaml` you can answer with evidence (see "Harness requirements" above). Leave out one you cannot answer yet; it reports `indeterminate`. Run `pkit validate`, then `pkit harness report --adapter <new-harness-name>` to read what the harness leaves unmet.
 5. Update this README's "Currently shipped" list.
 
