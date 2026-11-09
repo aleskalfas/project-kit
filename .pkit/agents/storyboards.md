@@ -83,7 +83,7 @@ The agent and the storyboard each declare the other (COR-016). The agent's side:
 ---
 name: review-agent
 description: ...
-tools: [Read, Edit]           # its tool access gives it Read where storyboards are declared
+tools: [Read, Edit]           # the agent's tool access gives it Read where storyboards are declared
 storyboards:
   - storyboard.md
 ---
@@ -93,7 +93,7 @@ Load your storyboard from `storyboard.md` with the Read tool at session start an
 
 - **`storyboards:`** lists each storyboard by its bare file name beside the definition, `storyboard.md` or `<scenario-slug>.storyboard.md`. It resolves against the agent's own folder, so it stays right wherever the folder lives, and when the folder moves. A path from the project's root is accepted too.
 - **The body** cites each entry as the entry is written.
-- **Its tool access** gives it `Read`, so the agent can read the storyboard ([the agents README, "Tool access"](README.md#tool-access)). It does where its grant names `Read`, or where it names no grant and does not withhold `Read`.
+- **The agent's tool access** gives the agent `Read`, so the agent can read the storyboard ([the agents README, "Tool access"](README.md#tool-access)). The tool access gives `Read` where the agent's grant names `Read`, or where the agent names no grant and does not withhold `Read`.
 - **The deployed copy** lives elsewhere, such as `.claude/agents/<name>.md`, where a bare name resolves to nothing. So the deploy rewrites each such entry to the storyboard's path from the project's root, in `storyboards:` and in the body. An example is `.pkit/agents/project/review-agent/storyboard.md`, or `.pkit/capabilities/<capability>/agents/<agent>/storyboard.md` for a capability's agent. An entry already written from the root deploys as written.
 
 The storyboard's side:
