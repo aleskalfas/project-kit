@@ -22,11 +22,11 @@ Each concern admits multiple viable shapes. Settling them piecemeal would force 
 
 ## Decision
 
-The methodology's agent layer is structured by seven interlocking rules. The agents area is materialised as a first-class area per COR-011; agents declare references and operations in a unified frontmatter shape; an agent declares its tool access as tools granted, tools withheld, or neither; a reference graph spans agents and skills with bidirectional consistency; a hook pattern decouples agents from concrete implementations; an overlay mechanism lets adopter-specific paths populate core-shipped agent templates at deploy time; and a small set of universal agents ships in core under the universal-applicability test.
+The methodology's agent layer is structured by eight interlocking rules. The agents area is materialised as a first-class area per COR-011; agents declare references and operations in a unified frontmatter shape; an agent declares its tool access as tools granted, tools withheld, or neither; at most one of the definitions of a name is the agent of that name; a reference graph spans agents and skills with bidirectional consistency; a hook pattern decouples agents from concrete implementations; an overlay mechanism lets adopter-specific paths populate core-shipped agent templates at deploy time; and a small set of universal agents ships in core under the universal-applicability test.
 
 ### 1. The agents area
 
-Agents live in a first-class area at `.pkit/agents/`, in the universal variant of COR-003 (`core/` for core-shipped content, `project/` for adopter additions). The area's README is the spec. Each agent is a self-contained directory carrying a single canonical file describing the role; the file's frontmatter holds machine-readable metadata, and the body is the role description and instructions.
+Agents live in a first-class area at `.pkit/agents/`, in the universal variant of COR-003 (`core/` for core-shipped content, `project/` for adopter additions). The area's README is the spec. Each agent is a self-contained directory carrying a single canonical file describing the role, or that file alone where the agent has no other files (refinement per [COR-015](COR-015-artifact-file-layout.md)); the file's frontmatter holds machine-readable metadata, and the body is the role description and instructions.
 
 Agent file content is harness-neutral per COR-006, save the tool names of an agent's tool access (point 7). Translation to a specific harness's expected deployment paths is the responsibility of that harness's adapter (per COR-005).
 
@@ -61,6 +61,18 @@ A definition names a form by holding its key, whatever the key holds, so one tha
 Where the harness runs an agent as a whole session's agent, the session's own agent has only the tools its access gives it, so a grant there narrows what the session's agent can use.
 
 The tool names are the harness's own, and the adapter writes the tool access in its harness's form (point 1). A grant fails closed: a tool it does not name is not given. A withheld list fails open: a tool it does not name is given, a tool a later harness release adds among them. So an adapter refuses to deploy a definition that withholds tools where its harness cannot withhold them, or where it cannot translate the names, rather than deploy it with tools it should lack. Where an adapter refuses a definition for its tool access, it leaves in place no earlier copy of that agent it deployed, since that copy may give tools the definition no longer gives.
+
+### 8. Which definition of a name is the agent
+
+Several places may each ship a definition of one name: the project's, core's, and others that later records add. At most one of them is the agent of that name, and every part that deploys, runs, checks or names an agent takes that one, so none runs one definition while another checks a different one.
+
+- **The project's wins over every other place's, and core's yields to every other.** A project ships a name to have the last word on its agent, and core's is the default every other place may specialise. A record that adds a place states where it falls between them.
+- **One place, one definition.** A place ships a definition of a name in one of two layouts, point 1's folder or its canonical file alone, as [COR-015](COR-015-artifact-file-layout.md) sets them, and a folder without that file ships none. A definition is its place and its name, whichever layout holds it. A place that would win, and holds both layouts of one name, leaves the name with no agent until one is removed.
+- **A refused winner is still the agent, and no other definition stands in.** Where an adapter refuses the definition that wins, that definition stays the agent of the name. No definition below it stands in, since the place above shipped the name to replace it, and the one below may give what the winner withholds.
+- **What is deployed is the agent's.** An adapter leaves in place no copy it deployed from a definition that is not the agent, nor any copy of a name with no agent. Where it refuses the agent's current text, it removes the copy it deployed earlier from that definition if it refuses the text for its tool access (point 7), and may keep it for another cause. A kept copy runs, so each part that checks the definition says where the copy that runs is not of the definition's current text.
+- **Where a part cannot tell which definition is the agent,** because it cannot read what decides it, it changes nothing for the names it cannot tell, rather than take a definition that may not be the agent.
+
+Each part that finds a name with no agent, or an agent whose current text it refuses, says why.
 
 ### 3. Reference graph and bidirectional consistency
 
@@ -188,6 +200,8 @@ Agents tied to the adopter's domain — implementers, domain reviewers, customis
 **Why two- and three-segment hook names.** Two segments express *contract* hooks that multiple providers in a topic implement (the bundle-agnostic case); three segments make provider-specific extensions visible in the name itself, so an agent invoking a three-segment hook is *knowingly* bundle-locked. Forcing one form would either lose the abstraction (everything three-segment) or hide bundle dependencies (everything two-segment).
 
 **Why `project > bundle > adapter > core` precedence.** This is the same precedence skills already follow when the deploy step picks `.pkit/skills/project/<name>` over `.pkit/skills/core/<name>`. Generalising the rule to hooks keeps the mental model consistent. Same-tier collisions refuse rather than picking silently because silent picking is the worse failure mode — an agent calling the wrong provider produces wrong outcomes without warning.
+
+**Why one definition is the agent everywhere (point 8).** A check of an agent, of its tools or its storyboard, holds only for the definition it reads. Where the part that runs an agent takes another, the check passes while the agent that runs breaks it. A refused winner has no stand-in for the same reason: the definition below may give what the winner was written to withhold, and running it would pass for the agent the project chose. An earlier copy of the agent's own definition may keep running where its current text is refused for a cause other than its tool access, such as a gap in the project's configuration, so the agent stays available. The checks then say the copy that runs is not the current text, rather than pass on a text that does not run. A part that cannot read what decides the agent changes nothing, since a guess read as "no agent" would remove agents that work.
 
 **Why required-by-default needs, with optional deferred.** Most agents really do require their declared hooks; making required the default forces honest declarations. Optional semantics add a flag and a runtime fallback path that pays for itself only when concrete graceful-degradation cases pile up — defer per COR-007.
 
