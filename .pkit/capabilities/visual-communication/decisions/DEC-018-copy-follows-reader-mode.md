@@ -14,23 +14,25 @@ Accepting this record accepts two judgements. One is how far browsers carry the 
 
 ## Context
 
-A published figure reaches a page as its piece's current copy. In project-kit's use case of putting a figure in a page (UC-094 step 5), it follows "the reader's switch to another mode". [project-kit#2700](https://github.com/aleskalfas/project-kit/issues/2700) asks how, in a form that fits the documentation's rules as they stand. Where no such form follows the reader's switch, the issue stops the record. The question then goes to a person as living-docs' own, since it reopens those rules.
+A published figure reaches a page as its piece's current copy. [project-kit#2700](https://github.com/aleskalfas/project-kit/issues/2700) asks how the figure follows "the reader's switch to another mode", the words the issue quotes from project-kit's use case of putting a figure in a page (UC-094 step 5). It asks for a form that fits the documentation's rules as they stand. Where no such form follows the reader's switch, the issue stops the record. The question then goes to a person as living-docs' own, since it reopens those rules.
 
 The accepted records set these limits:
 - **How a page shows an image.** It writes `![alt](path)`, and its content holds no styling, HTML attributes that theme an image included. A theme reaches an image a renderer writes through the renderer's settings ([living-docs:DEC-002-visual-elements] points 1 and 5).
-- **What an export makes.** A format whose medium switches modes while open holds the modes of the value axes in one file ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 7). The SVG renderer draws a file for each combination. That drawing serves the previews, the exports and the viewing step ([visual-communication:DEC-015-viewing-step-and-reviewer]).
+- **What an export makes.** A format whose medium switches modes while open holds in one file the modes a reader's signal names. What becomes of any other mode is that format's own ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 7). The SVG renderer draws a file for each combination. That drawing serves the previews, the exports and the viewing step ([visual-communication:DEC-015-viewing-step-and-reviewer]).
+- **Which signal names a mode.** A renderer's declaration names each of its formats that holds modes, with the signal pairs it reads. The pairs are settled once, for the colour scheme and the contrast. Each format reads those its medium reaches, and a new pair is a new version of its renderer, after a test ([visual-communication:DEC-023-html-page-modes] point 5). So a signal names a mode to a format only through a pair that format reads (DEC-023 point 1).
 - **The current copy.** It is an unnumbered copy of each file an export makes (DEC-006 point 7). A page links it by name.
 - **The axes.** The engine knows them as data ([visual-communication:DEC-004-brands-and-notations] point 2). The foundations declare the colour scheme. A change to them puts off their release, and that of every library built on them ([visual-communication:DEC-013-shipped-library-releases] point 1).
 - **Freshness.** How an image is checked for freshness waits for the first page that needs it ([living-docs:DEC-002-visual-elements] point 2).
 
-Three terms serve the rest:
-- A *reader's signal* is what a medium tells a file of the mode its reader wants. For a file a web page shows as an image, it is a CSS media feature, such as `prefers-color-scheme`.
+Two terms come from the record of the HTML page's modes (DEC-023, Context). A *reader's signal* is a CSS media feature that names a mode a reader wants, such as `prefers-color-scheme`. A *signal pair* joins a mode to the value of a signal that names it. This record adds the case of an image: for a file a web page shows as an image, the signal is what the browser tells that file, which the element that embeds it may set (point 5).
+
+Two more serve the rest:
 - A *switching file* is one file that holds several combinations of modes, and draws the one the reader's signal names.
 - A *one-key file* is the file the SVG renderer draws of one combination, which a key names.
 
 ### What the test showed
 
-Three forms of the `sockets` figure stood on one temporary page on GitHub, since removed:
+On 6 November, three forms of the `sockets` figure stood on one temporary page on GitHub, since removed:
 - a switching file, by `![alt](path)`
 - a file for each mode, each with GitHub's fragment on its path, such as `#gh-dark-mode-only`, which its pages hide in the other mode
 - a file for each mode, in a `<picture>`
@@ -69,10 +71,14 @@ How it was set up:
 - **A system preference** was the browser's own setting or emulation, and in WebKit the view's appearance.
 - **A GitHub setting** was written in the attributes GitHub's stylesheets read. Chrome took them as the page arrived, Firefox in a saved copy or in the open page, and WebKit at the page's end.
 
-What it did not reach:
-- **A GitHub setting as a reader makes it.** No run signed in, or worked GitHub's own switch. Nothing showed that a signed-in page carries a setting in those attributes. The stylesheets hold rules for them and for nothing else, so the record takes that it does.
-- **Safari itself,** on a Mac or on a phone. Every WebKit run was a web view in a small program, which may be what made its result vary.
-- **A real change of the system's mode,** as against each browser's own setting.
+What a person saw on 9 November, signed in, on [the temporary page](https://github.com/aleskalfas/project-kit/blob/0db981c3f7644ec0c7bae528da45ae41f6277828/t2700-host-test/page.md) at commit `0db981c3`:
+- **GitHub's own setting.** With GitHub's theme set to light and the system dark, the switching file drew light, matching GitHub's theme.
+- **A real change of the system's mode.** With GitHub following the system, the switching file switched when the computer's mode was switched.
+- **The browser.** The person named none.
+
+What neither the test nor the person's look reached:
+- **GitHub's other settings as a reader makes them.** The look saw a light setting over a dark system. It did not see a dark one over a light system, dark dimmed, a high-contrast theme, or a change of setting on an open page.
+- **Safari itself,** on a Mac or on a phone. Every WebKit run was a web view in a small program, which may be what made its result vary. The person did not look in Safari either.
 - **GitHub's other surfaces:** its mobile app, a repository's front page and a wiki. Nor Windows or Linux.
 - **Any other host, and any documentation site.**
 
@@ -97,7 +103,7 @@ A piece that a page shows in the reader's mode names a format of its own, in pla
 
 A current copy's file takes its version's name with the number left out, in every format. `sockets.en.default.svg` is the copy of `sockets.v3.en.default.svg`. A page links that name.
 - **The language.** Each language is a scene of its own (DEC-005 point 6), so a page links the file in its own language.
-- **Which combinations share a file.** Combinations share a switching file where they differ only in paired modes (point 4). A mode two combinations hold alike does not part them, paired or not.
+- **Which combinations share a file.** Combinations share a switching file where they differ only in modes of the pairs this format reads (point 4). A mode two combinations hold alike does not part them, whether or not this format reads its pair.
 - **The key.** A switching file takes the first key it serves, as a variant does (DEC-004 point 3). So `default` holds the combination of defaults, as it does everywhere. A piece that names only the dark mode takes `colour-scheme.dark`.
 - **A piece names one of the two formats.** The SVG format and this one write the same name. So a piece that names both fails validation, in a file the project can correct, and an export refuses it.
 
@@ -110,24 +116,24 @@ A current copy's file takes its version's name with the number left out, in ever
 
 ### 4. A renderer's declaration pairs a shared mode with the reader's signal
 
-A *signal pair* is what a renderer declares: a mode of a shared value axis, and the value of the reader's signal that names it.
+The SVG renderer's declaration names this format with the signal pairs it reads ([visual-communication:DEC-023-html-page-modes] point 5). They are the colour scheme's: `light` and `dark`, with the same values of `prefers-color-scheme`.
 - **In the declaration.** What a browser tells an image belongs to a file read in a web page, so it sits with what the renderer declares. DEC-005 point 10 already has a renderer name a mode of a shared axis, as its font profile.
 - **A value axis only.** Each mode of a size axis takes a scene of its own (DEC-005 point 6), and a rule cannot redraw a scene.
 - **Every mode it follows.** A pair names each mode, the axis's default included. So a rule can name any of them, whichever a brand's default is.
 - **What reads it.** Computing a scene reads no pair, so axes stay data to the engine. The renderer reads the pairs to write its rules. The check and an export read them as plain data in the declaration, to refuse a piece (below).
 - **No library changes,** so no release waits on this record (DEC-013 point 1).
 - **What a pair relies on.** The names of a shared axis and its modes are public (DEC-004 point 5). A test holds each pair to what each shipped major of the foundations declares, the axis's kind included (DEC-013 point 2).
-- **A mode with no pair.** In this format, two combinations a piece names may not differ in a value axis's mode with no pair. The format holds a value axis's modes in one file, and a rule can reach only a paired mode. So such a piece fails validation, in a file the project can correct, and an export refuses it.
+- **A mode of no pair this format reads.** In this format, two combinations a piece names may not differ in a value axis's mode of no pair this format reads. The format holds a value axis's modes in one file, the choice DEC-006 point 7 leaves to it, and a rule can reach only a mode of a pair this format reads. So such a piece fails validation, in a file the project can correct, and an export refuses it.
 - **That is no loss.** It limits what the format takes from a piece, as point 2's rule on the two formats does.
 - **What that leaves.** A mode the combinations hold alike parts nothing, so a neutral piece that names no contrast passes. High contrast takes a piece of its own.
-- **A new pair** is a new version of the renderer, after a test of its own.
+- **Another pair it reads** is a new version of the renderer, after a test of its own.
 
 ### 5. The file follows what the browser tells it
 
 - **One signal.** The file reads the reader's signal and nothing else. An image runs no script, and the page around it holds nothing for it (point 6).
 - **So a reader's switch reaches the file as far as the browser carries it.** The reader's system preference sets the signal. A site's own switch sets it where the image's element takes a single CSS `color-scheme`, as it does from a page's root. The browser must also read that for an image.
 - **The floor.** A browser that applies the rules and one that ignores them each show a whole figure, in one of the piece's modes. The rules repaint together, and an export holds each combination to its one-key file, unless a person let a difference through (point 1).
-- **The reach.** Context says what one test found on one date. Accepting this record accepts that reach, and what a reader is promised narrows to it (Implications).
+- **The reach.** Context says what a test and a person's look found, each on its date. Accepting this record accepts that reach, and what a reader is promised narrows to it (Implications).
 - **A site that sets no single `color-scheme`** leaves the file on the system's preference. So a light site, read under a dark system, shows a dark figure on a light page.
 - **A figure that misses the mode** stays readable where it paints its own ground. Where a file of this format has no ground of its own in a mode it holds, dark text could meet a dark page. So that asks for attention, names the page and asks the piece's owner for a ground. It never fails, and it repeats until a ground is there, as an estimated overflow does.
 - **What a browser does is a fact.** One file may show another mode from one load to the next. That lies outside the same answer on every machine ([visual-communication:DEC-002-files-and-validation] point 6), which binds the capability's check. The project cannot correct it and nobody is expected to act, so no finding asks for attention ([visual-communication:DEC-002-files-and-validation] point 7). The capability's reference page states the reach, with its date.
@@ -163,9 +169,9 @@ A *signal pair* is what a renderer declares: a mode of a shared value axis, and 
 
 **Why the pair lies in the renderer's declaration.** A signal belongs to where a file is read, and the foundations serve every such place. A change there would also hold back their release. A piece or a brand would repeat the pair, and could get it wrong. A renderer may declare a choice its medium needs (DEC-001 point 2), and the font profile's rule has one name a shared mode so.
 
-**Why only some modes are paired.** A pair comes after a test. `prefers-contrast` did not reach an image in Chrome, so the contrast takes no pair yet. GitHub's high-contrast themes wrote only the colour scheme, so such a reader got the light or the dark drawing.
+**Why this format reads only the colour scheme's pairs.** Each format reads the pairs its medium reaches, and a new pair comes after a test (DEC-023 point 5). `prefers-contrast` did not reach an image in Chrome, so this format reads no contrast pair yet. GitHub's high-contrast themes wrote only the colour scheme, so such a reader got the light or the dark drawing.
 
-**Why a mode with no pair fails.** This format holds a value axis's modes in one file (DEC-006 point 7), and that file can hold only the modes a signal reaches. A piece that names another asks for what the format cannot do, so it fails at once. A renamed mode in a later major then stops no figure in silence. A loss would not fit: the renderer drew each mode whole, so nothing was lost. The cost is a second piece for high contrast, and no case asks for that yet. A size axis's modes are scenes of their own, so they take files as before.
+**Why a mode of no pair this format reads fails.** This format holds a value axis's modes in one file, and that file can hold only the modes its pairs reach. What becomes of any other mode is the format's own (DEC-006 point 7). A piece that names such a mode asks for what the format cannot do, so it fails at once. A renamed mode in a later major then stops no figure in silence. A loss would not fit: the renderer drew each mode whole, so nothing was lost. The cost is a second piece for high contrast, and no case asks for that yet. A size axis's modes are scenes of their own, so they take files as before.
 
 **Why a drawing with no ground is a finding.** It is what the scene sets, so nothing was lost, and a person may mean it. So it asks for attention and never fails. A released component with no ground leaves it repeating, and that is the cost.
 
@@ -189,7 +195,7 @@ This is the reading's hardest case. The rule names light and dark as presentatio
 ### Alternatives considered
 
 - **One image on its own ground, with the promise narrowed to a fixed mode.** Rejected. It costs no format, and every dark page shows a light figure. Following in Chrome and Firefox is worth one format. Against that, this form is worse in two places. Its mode varied by load in WebKit. And a light site that sets no single `color-scheme` can show a dark figure.
-- **One image now, and this format once Safari and a signed-in reader are known.** Left out as a decision, and open to any piece. A piece that names the SVG format today keeps its default file's name when it moves to this one (point 2).
+- **One image now, and this format once Safari is known.** Left out as a decision, and open to any piece. A piece that names the SVG format today keeps its default file's name when it moves to this one (point 2).
 - **A file for each mode, in a `<picture>`.** Rejected. It is no `![alt](path)`, and its `media` attribute themes an image ([living-docs:DEC-002-visual-elements] points 1 and 5). Each page would name a path for each mode.
 - **A file for each mode, with GitHub's fragment.** Rejected. It puts one host's word into content, as living-docs refuses for a callout. Any other renderer shows both images. It is the one form seen following both signals in WebKit, which is what this rejection gives up.
 - **An inline `<svg>` in the page.** Rejected. It is HTML, and GitHub removes it.
@@ -198,11 +204,11 @@ This is the reading's hardest case. The rule names light and dark as presentatio
 - **Only the copy taking the form.** Rejected, for the reasons above.
 - **CSS's `light-dark()` in place of a rule.** Left out. In WebKit it varied as the rule did, and runs that swing so widely cannot rank them. The file's plain drawing already serves a tool that reads neither.
 - **A name with no key.** Rejected. It adds a second shape of name, and moving from the SVG format breaks a page's link.
-- **A key that leaves the paired modes out.** Rejected. `default` would then name a dark drawing, and a key would gain a meaning of its own.
+- **A key that leaves out the modes of the pairs this format reads.** Rejected. `default` would then name a dark drawing, and a key would gain a meaning of its own.
 - **A mark in the name, so both formats can stand.** Left out. No case asks for it, and a later change may add one.
-- **A file for each mode with no pair, reported as a loss.** Rejected, for the reasons above.
+- **A file for each mode of no pair this format reads, reported as a loss.** Rejected, for the reasons above.
 - **A pair in the foundations, a brand or a piece.** Rejected, for the reasons above.
-- **A pair for the contrast.** Left out until a test shows it reaching an image.
+- **Reading the contrast's pair.** Left out until a test shows it reaching an image.
 - **A sentence in the rule on styling that says what point 6 reads.** Left out, for the reason above. Accepting this record settles that the reading is no change to the rule, so a later sentence saying it would only clarify.
 - **A check in living-docs that an image is fresh.** Rejected. Only what wrote a file knows what it was made from.
 
@@ -210,13 +216,12 @@ This is the reading's hardest case. The rule names light and dark as presentatio
 
 - **Edits to accepted records,** each made once this record is accepted. Each cites this record, but for those in living-docs. Accepting this record accepts them (COR-066 point 5).
   - **The founding record, point 10, "A figure in a documentation page".** The piece's libraries, its lock, its format and the modes it names are that renderer's settings.
-  - **The record of brands and notations, point 3, "A picture's variant takes the first key it serves".** A sentence ends the bullet: a switching file takes its key the same way, over the combinations it holds.
-  - **The record of the engine and its plugins, point 9, "Each declares what it supports".** A sentence ends the bullet: a renderer that writes a switching file also declares its signal pairs. They limit what that format takes from a piece.
-  - **The record of work outside the engine and outputs, point 7.** A bullet follows "No number or date that overflows". An export stops on a switching file that paints any combination it holds otherwise than the file the SVG renderer draws of that combination. It names the element, and the person who runs it may name that element to let it through.
+  - **The record of the engine and its plugins, point 9, "Each declares what it supports".** The bullet already has a renderer name each format that holds modes, with the signal pairs it reads (DEC-023). A sentence ends it: for the SVG renderer's format that holds several modes in one file, the pairs it reads also limit what that format takes from a piece.
+  - **The record of work outside the engine and outputs, point 7.** A bullet follows "No number or date that overflows". An export stops where a switching file the SVG renderer draws paints a combination it holds otherwise than that renderer's file of that combination. It names the element, and the person who runs it may name that element to let it through.
   - **Its point 7, "What it only records".** It also names each element of a switching file the version let through.
-  - **Its point 7, after "The export's gate".** A bullet of its own follows. Every export refuses a piece that fails validation on the two formats, or on a mode with no pair.
+  - **Its point 7, after "The export's gate".** A bullet of its own follows. Every export refuses a piece that fails validation on naming both formats, or on a mode of no pair its format reads.
   - **Its point 7, "A published piece's current copy".** A sentence follows the first. Its files hold the bytes of the version that wrote them, each under that file's name with the number left out.
-  - **Its point 8, "They fail validation".** It adds a piece that names both the SVG format and the format of a switching file. It adds a piece in that format whose combinations differ in a value axis's mode with no signal pair.
+  - **Its point 8, "They fail validation".** It adds a piece that names both the SVG format and the SVG renderer's format of a switching file. It adds a piece in that format whose combinations differ in a value axis's mode of no pair its format reads.
   - **Its point 8, "They ask for attention".** It adds a file of that format with no ground of its own in a mode it holds, until a ground is there. It adds a current copy made with an element of a switching file let through, and names the capability as the fault's owner.
   - **The record of final and published states, point 1, "A number or a date let through".** An element of a switching file let through is named the same way, and stops nothing.
   - **The record of final and published states, Implications, "The changes that write and hold a current copy".** Its last sentence reads: [visual-communication:DEC-018-copy-follows-reader-mode] point 3 says what the hash is taken of.
@@ -225,8 +230,9 @@ This is the reading's hardest case. The rule names light and dark as presentatio
 - **These need no edit:**
   - Living-docs' record of visual elements, point 1, as point 6 reads it, and its points 4 and 5.
   - The record of the viewing step, point 1, since the step goes on drawing one key at a time.
+  - The record of brands and notations, point 3, which has a file that holds several combinations take its key as a picture's variant does. That covers a switching file (DEC-023).
   - The record of brands and notations, point 2, and the record of the engine's point 6. Each already gives a scene every combination's values.
-  - The record of work outside the engine's point 7, "What a run makes". This format holds every value axis's mode a piece names in one file.
+  - The record of work outside the engine's point 7, "What a run makes". It leaves to each format a mode of no pair that format reads, and this format refuses a piece whose combinations differ in one (point 4).
   - The record of work outside the engine's point 3, whose variants travel with the file.
   - The record of what an export reads, point 1. A piece's formats stay an input, so moving to this format reads as a change, and one export mends it.
   - The record of final and published states, points 2 and 7, since a version's files and a copy's entries keep their shape.
@@ -239,7 +245,7 @@ This is the reading's hardest case. The rule names light and dark as presentatio
 - **The change that builds the format** carries out points 1, 2, 4 and 5's finding.
   - It names the format's word, which a piece may name as an addition the format allows (DEC-003 point 3). Its file's extension stays `svg`, so the word and the extension part.
   - It fixes how a rule reaches an element, an opacity and a paint left out among them. A test in a browser holds that each way repaints, which the export's comparison cannot show. It draws an arrowhead for each paint a rule can change, since one arrowhead now serves one colour.
-  - It hands the renderer each combination's values, which a render did not read before. So the seam's version rises with that change (DEC-005 point 8), as it did for text runs ([visual-communication:DEC-012-text-runs], Implications).
+  - It hands the renderer the keys that share a file in one call, with each key's values, as DEC-023 point 2 decides for any format that holds modes. Where the seam does not carry that yet, its version rises with that change (DEC-005 point 8).
   - It gives the check the viewing step's test of a page's ground (DEC-015).
   - It writes the reach, with its date, into the reference page on outputs.
 - **The changes that write and hold a current copy** carry out point 3.
