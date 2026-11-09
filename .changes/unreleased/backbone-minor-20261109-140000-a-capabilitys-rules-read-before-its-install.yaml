@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability's operational rules can be read before its install, which is the
+  consent to them (COR-070 point 3; #2446). `pkit capabilities show <name>` ends
+  with a `Loaded rules` section. It names the loaded rule set the capability
+  ships, with its version, and each accepted rule's id and title, or `none`.
+  With `--json`, the view gains `loaded_rules`, `null` where the capability
+  ships no set. A capability's install, register and upgrade now print under
+  `--dry-run` the rules their run would newly bind, change or retire, as they
+  print them once they write. Before, only `init`, `sync` and `upgrade` did.

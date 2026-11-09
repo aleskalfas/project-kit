@@ -1,7 +1,8 @@
 """Tests for discovery (#998, COR-053 point 8): `pkit capabilities show` for
 installed and uninstalled capabilities, the install and uninstall plans — each
 checked against what the operation then does — and the suggestions the status
-report makes from local catalogues only."""
+report makes from local catalogues only. Also a capability's loaded rules, read
+before its install by `show` and the install's dry run (#2446, COR-070 point 3)."""
 
 from __future__ import annotations
 
@@ -29,6 +30,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.test_loaded_rules import loaded_set
 
 DOCS = "pkit::documentation"
 READERS = f"{DOCS}:readers"
@@ -293,6 +295,72 @@ def test_show_renders_every_section_and_refuses_an_unknown_name(
     missing = runner.invoke(main, ["capabilities", "show", "nothing-here"])
     assert missing.exit_code != 0
     assert "no capability named 'nothing-here'" in missing.output
+
+
+# --- a capability's rules, read before its install (COR-070 point 3) ------------------
+
+
+def _with_loaded_set(cap_dir: Path) -> Path:
+    """The capability ships a loaded set, `ALPHA`, of one accepted rule."""
+    (cap_dir / "rule-sets").mkdir(exist_ok=True)
+    (cap_dir / "rule-sets" / "alpha.md").write_text(
+        loaded_set(cap_dir.name, "ALPHA"), encoding="utf-8"
+    )
+    return cap_dir
+
+
+def test_show_lists_the_loaded_set_a_capability_ships_and_none_without_one(
+    repo: AdopterRepo, kit_source: Path
+) -> None:
+    _with_loaded_set(_in_source(kit_source, _docs_provider()))
+    _in_source(kit_source, _consumer())
+
+    def shown(*args: str) -> str:
+        result = CliRunner().invoke(main, ["capabilities", "show", *args])
+        assert result.exit_code == 0, result.output
+        return result.output
+
+    shipped = shown("docs-a")
+    assert "Loaded rules (1)" in shipped
+    assert (
+        "    docs-a:ALPHA 1.0.0 — installing the capability is the consent to its rules "
+        "(COR-070 point 3):\n      RS-ALPHA-001  One rule\n"
+    ) in shipped
+    assert json.loads(shown("docs-a", "--json"))["loaded_rules"] == {
+        "citation": "docs-a:ALPHA",
+        "version": "1.0.0",
+        "rules": [{"id": "RS-ALPHA-001", "title": "One rule"}],
+    }
+
+    assert shown("evidence").endswith("Loaded rules (0)\n    none\n")
+    assert json.loads(shown("evidence", "--json"))["loaded_rules"] is None
+    assert not caps.is_installed(repo.root, "docs-a")
+
+
+def test_an_install_dry_run_names_each_rule_it_would_newly_bind(
+    repo: AdopterRepo, kit_source: Path
+) -> None:
+    _with_loaded_set(_in_source(kit_source, _docs_provider()))
+    _in_source(kit_source, _consumer())
+    runner = CliRunner()
+    bound = (
+        "  Loaded rules — what this step newly binds (COR-070 point 3):\n"
+        "    docs-a:ALPHA 1.0.0 (first delivered):\n"
+        "      binds    RS-ALPHA-001  One rule\n"
+    )
+
+    dry = runner.invoke(main, ["capabilities", "install", "docs-a", "--dry-run"])
+    assert dry.exit_code == 0, dry.output
+    assert bound in dry.output
+    assert not caps.is_installed(repo.root, "docs-a")
+    # The install names the same rules once it has written.
+    installed = runner.invoke(main, ["capabilities", "install", "docs-a"])
+    assert installed.exit_code == 0, installed.output
+    assert bound in installed.output
+
+    without = runner.invoke(main, ["capabilities", "install", "evidence", "--dry-run"])
+    assert without.exit_code == 0, without.output
+    assert "Loaded rules" not in without.output
 
 
 # --- the install plan -----------------------------------------------------------------

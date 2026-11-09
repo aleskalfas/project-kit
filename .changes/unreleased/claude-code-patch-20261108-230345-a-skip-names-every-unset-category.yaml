@@ -1,0 +1,12 @@
+component: claude-code
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A deploy that skips an agent names every required category the overlay leaves
+  unset, and the remedy that works for them (#2469). Where one of them has no
+  conventional folder, the skip prints that category's remedy from the
+  lifecycle's ownership module, never `Deploy it: pkit agents adopt`, which
+  refuses such an agent. Before, it named only the first unset category, and
+  `adopt` whenever that one had a folder. The closing note names `adopt` only
+  when some skipped agent's remedy is `adopt`.

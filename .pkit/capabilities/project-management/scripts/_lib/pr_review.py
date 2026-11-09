@@ -32,7 +32,9 @@ The rule reads the PR's head, base and commits from its view, which
 the gate after it has checked the per-reviewer overrides against the
 resolved set, too. So the rule is completed from the view the verb fetched
 (`PrReview.freshness_rule`), not fetched here: a refusal still comes before
-the round trip.
+the round trip. When the head arrived on the host is read through the verb's
+`gh` helper, by the rule itself, and only when it judges a verdict that
+names no head (`_lib.head_arrival`).
 """
 
 from __future__ import annotations
@@ -53,6 +55,7 @@ try:
         pr_closing_issue_numbers,
     )
     from _lib.friction_answers import answers_folder
+    from _lib.head_arrival import HeadArrival, read_head_arrival, unread_arrival
     from _lib.required_reviewers import (
         Resolution,
         _Unresolvable,
@@ -74,6 +77,11 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         pr_closing_issue_numbers,
     )
     from friction_answers import answers_folder  # type: ignore[no-redef]
+    from head_arrival import (  # type: ignore[no-redef]
+        HeadArrival,
+        read_head_arrival,
+        unread_arrival,
+    )
     from required_reviewers import (  # type: ignore[no-redef]
         Resolution,
         _Unresolvable,
@@ -104,12 +112,15 @@ class PrReview:
     be resolved (DEC-032 D5) — a verb checks `resolution.ok` before acting on
     the set. `author_delta` and `base_kept` are `_lib.author_delta`'s, as the
     verb passed them in, and `ruled_altered` is `_lib.ruled_artefacts`'.
+    `head_arrival` reads when the PR's head arrived, `(pr_view, head)`; by
+    default it reads nothing, so a verdict naming no head is stale.
     """
 
     resolution: Resolution
     author_delta: Callable[..., AuthorDelta]
     base_kept: Callable[..., BaseCheck]
     ruled_altered: Callable[..., RuledAlteration] = ruled_altered
+    head_arrival: Callable[[Mapping, str], HeadArrival] = unread_arrival
 
     def freshness_rule(self, pr_view: Mapping) -> FreshnessRule:
         """The freshness rule for the PR at the head `pr_view` reports.
@@ -124,6 +135,7 @@ class PrReview:
             author_delta=self.author_delta,
             base_kept=self.base_kept,
             ruled_altered=self.ruled_altered,
+            head_arrival=self.head_arrival,
         )
 
 
@@ -139,6 +151,7 @@ def resolve_pr_review(
     base_kept: Callable[..., BaseCheck],
     ruled_altered: Callable[..., RuledAlteration] = ruled_altered,
     folder_of: Callable[[Path], str | None] = answers_folder,
+    read_arrival: Callable[..., HeadArrival] = read_head_arrival,
 ) -> PrReview:
     """Resolve PR `pr_number`'s required reviewers, with their freshness rule.
 
@@ -159,7 +172,9 @@ def resolve_pr_review(
     about each stretch of the author's own change since a reviewed head
     (#1386). `folder_of` (`_lib.friction_answers.answers_folder`) reads where
     the backbone keeps the friction answers at `repo_root`, asked only where
-    the code floor turns on it.
+    the code floor turns on it. `read_arrival`
+    (`_lib.head_arrival.read_head_arrival`) reads, through `gh_run`, when the
+    PR's head arrived on the host, for a verdict that names no head.
     """
     resolution = resolve_required_local_reviewers(
         pr_number,
@@ -176,7 +191,11 @@ def resolve_pr_review(
         ),
     )
     return PrReview(
-        resolution, author_delta=author_delta, base_kept=base_kept, ruled_altered=ruled_altered
+        resolution,
+        author_delta=author_delta,
+        base_kept=base_kept,
+        ruled_altered=ruled_altered,
+        head_arrival=lambda pr_view, head: read_arrival(pr_view, head, config, gh_run=gh_run),
     )
 
 
