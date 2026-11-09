@@ -341,6 +341,66 @@ def test_retiring_a_note_whose_front_matter_does_not_read_is_refused(kit_target:
         scratchpads.transition_to_done(kit_target, slug="my-note")
 
 
+# --- a later send writes only into the stamp's own block (#2924) ------
+
+
+def test_a_later_send_leaves_a_body_line_starting_reported_hash_as_it_was(
+    kit_target: Path,
+) -> None:
+    body = "\nThe stamp writes a line like this one:\nreported_hash: sha256:quoted\n"
+    note = _stamp_note(kit_target)
+    note.write_text(note.read_text(encoding="utf-8") + body, encoding="utf-8")
+    scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#8",))
+    content = stamp.dst.read_text(encoding="utf-8")
+    assert content.endswith(body)  # the body, byte for byte
+    assert scratchpads.read_reported_refs(content) == ("owner/repo#7", "owner/repo#8")
+    assert scratchpads.note_is_drifted(content) is False
+
+
+def test_a_later_send_writes_only_the_stamp_s_own_reported_to_and_hash_lines() -> None:
+    # A note's own `reported_to:` and `reported_hash:` above the stamp's block,
+    # as a note stamped before #2923 could hold them, stay as they were.
+    own = "reported_to:\n  - elsewhere#1\nreported_hash: own\n"
+    stamped = (
+        "---\nauthors:\n  - A\n"
+        + own
+        + "reported: 2026-08-10\nreported_to:\n  - owner/repo#7\nreported_hash: sha256:old\n"
+        + "---\n\nbody\n"
+    )
+    later = scratchpads._append_reported_refs(stamped, ("owner/repo#8",), "sha256:new")
+    assert later == stamped.replace(
+        "  - owner/repo#7\nreported_hash: sha256:old",
+        "  - owner/repo#7\n  - owner/repo#8\nreported_hash: sha256:new",
+    )
+    assert own in later
+
+
+def test_a_later_send_refuses_a_note_whose_stamp_block_does_not_stand(kit_target: Path) -> None:
+    _stamp_note(kit_target)
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    hash_line = next(
+        line
+        for line in stamp.dst.read_text(encoding="utf-8").split("\n")
+        if line.startswith("reported_hash:")
+    )
+    # The hash moved above `reported:`, so no block stands as the stamp wrote it.
+    moved = (
+        stamp.dst.read_text(encoding="utf-8")
+        .replace(f"\n{hash_line}", "")
+        .replace("\nreported: ", f"\n{hash_line}\nreported: ", 1)
+    )
+    stamp.dst.write_text(moved, encoding="utf-8")
+    with pytest.raises(click.ClickException, match=r"holds no block of the fields its send wrote"):
+        scratchpads.refuse_unrecordable_send(kit_target, stamp.dst, moved)
+    with pytest.raises(click.ClickException, match=r"holds no block of the fields its send wrote"):
+        scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#8",))
+    assert stamp.dst.read_text(encoding="utf-8") == moved
+    # Every issue given recorded already, the send stays a no-op.
+    again = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    assert again.added == () and again.duplicate == ("owner/repo#7",)
+
+
 def test_cli_scratchpad_reported_refuses_a_field_the_note_holds(cli_target: Path) -> None:
     _hold_fields(_stamp_note(cli_target), "reported: not yet")
     res = CliRunner().invoke(main, ["scratchpad", "reported", "my-note", "owner/repo#7"])

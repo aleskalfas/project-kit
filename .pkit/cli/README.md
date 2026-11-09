@@ -1309,7 +1309,7 @@ Supports `--dry-run`. Refuses if no active or reported note matches the slug, or
 
 The **manual stamp gesture** (per COR-043): mark a note as sent through the report channel when the post happened outside the tooling — the URL path (the browser filed it; the compose flow ends by printing this exact command as the required follow-up, #664) or retroactive marking of a note hand-carried upstream before the mechanism existed. The automatic equivalent runs on a successful `pkit report` API post (direct or via `report submit`).
 
-Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time, without the reported fields — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
+Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time, without the reported fields — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op. It writes only the `reported_to` list and the `reported_hash` line of the block the first stamp wrote, and leaves every other line as it was. It refuses a note whose block no longer stands as the stamp wrote it (`reported`, `reported_to` with its refs, `reported_hash`).
 
 - **`<slug>`** finds the note as in `scratchpad done`.
 - **`<ref>`** is `owner/repo#N` or a full GitHub issue URL (normalised to `owner/repo#N`). Repeatable — one note may become several issues.
@@ -2325,8 +2325,9 @@ scratchpad-backed flow that ends at a URL instead of a post — `--url`,
 browser, run: pkit scratchpad reported <slug> <issue-ref>`): the browser
 cannot stamp the note, so the exact one-command gesture is handed over
 loudly, never left as a hidden step. A note its stamp could not record is
-**refused at compose, before any post, stage or link**, naming the key. That
-is a note whose front matter holds a key twice. It is also an active note that
+**refused at compose, before any post, stage or link**, saying why. That
+is a note whose front matter holds a key twice, or a reported note whose
+stamp's block no longer stands as written. It is also an active note that
 holds a field the stamp writes: `reported`, `reported_to`, `reported_hash`, and
 `project` or `workstream` where the post would write the report's context.
 `report submit` checks the note again before it posts, and keeps the draft. Every

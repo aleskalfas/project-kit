@@ -46,6 +46,15 @@ _ALL_STATES = ("active", "reported", "done", "dropped")
 #: and `workstream` join them where the report names them.
 _STAMP_FIELDS = ("reported", "reported_to", "reported_hash")
 
+#: Why a later send is refused where the stamp's own block no longer stands
+#: as the stamp wrote it (`_reported_block`, #2924).
+_NO_REPORTED_BLOCK = (
+    "the reported note's front matter holds no block of the fields its send wrote, as the "
+    "send wrote them: `reported`, then `reported_to` with its refs, then `reported_hash`. "
+    "A later send records its issue in that block. Put the fields back in that order, then "
+    "run the command again."
+)
+
 _ISSUE_REF_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*#\d+$")
 _ISSUE_URL_RE = re.compile(r"^https?://github\.com/([^/\s]+)/([^/\s]+)/issues/(\d+)/?(?:[?#].*)?$")
 
@@ -372,7 +381,9 @@ def stamp_reported(
     content = src.read_text(encoding="utf-8")
 
     if src.parent == scratchpad_dir / "reported":
-        _refuse_unrecordable(content, first=False)
+        # A key held twice reads no refs; a missing block refuses at the append,
+        # so a send whose issues are all recorded stays a no-op.
+        _refuse_keys_held_twice(_frontmatter_keys(content))
         existing = read_reported_refs(content)
         added = tuple(r for r in normalized if r not in existing)
         duplicate = tuple(r for r in normalized if r in existing)
@@ -599,20 +610,19 @@ def _insert_reported_frontmatter(
 
 
 def _append_reported_refs(content: str, refs: tuple[str, ...], hash_value: str) -> str:
-    """Append refs to an existing `reported_to` list and refresh the hash line."""
+    """Append refs to the `reported_to` list of the stamp's own block
+    (`_reported_block`) and rewrite that block's `reported_hash` line, every
+    other line of the note left as it is (#2924)."""
     lines = content.split("\n")
-    close = _frontmatter_close(lines)
-    try:
-        head = next(i for i in range(1, close) if lines[i].startswith("reported_to:"))
-    except StopIteration:
-        raise click.ClickException("reported note has no reported_to frontmatter list.") from None
-    end = head + 1
-    while end < close and (lines[end].startswith(" ") or lines[end].startswith("\t")):
-        end += 1
-    new_lines = lines[:end] + [f"  - {ref}" for ref in refs] + lines[end:]
+    block = _reported_block(lines, _frontmatter_close(lines))
+    if block is None:
+        raise click.ClickException(_NO_REPORTED_BLOCK)
+    _start, hash_line, _end = block
     return "\n".join(
-        f"reported_hash: {hash_value}" if line.startswith("reported_hash:") else line
-        for line in new_lines
+        lines[:hash_line]
+        + [f"  - {ref}" for ref in refs]
+        + [f"reported_hash: {hash_value}"]
+        + lines[hash_line + 1 :]
     )
 
 
@@ -628,10 +638,14 @@ def _refuse_unrecordable(
     already refuses any stamp. A first send also refuses each field it writes
     that the front matter holds: `reported`, `reported_to`, `reported_hash`,
     and `project` or `workstream` where it writes them. A later send writes
-    into the stamp's own block only, and adds no key."""
+    into the stamp's own block only, and adds no key, so it is refused where
+    that block no longer stands as the stamp wrote it (#2924)."""
     keys = _frontmatter_keys(content)
     _refuse_keys_held_twice(keys)
     if not first:
+        lines = content.split("\n")
+        if _reported_block(lines, _frontmatter_close(lines)) is None:
+            raise click.ClickException(_NO_REPORTED_BLOCK)
         return
     written: set[str] = set(_STAMP_FIELDS)
     if project:

@@ -155,7 +155,7 @@ reported_hash: sha256:<hex>
 - **`project` and `workstream`:** the report's context, where the report named it. Only a report's post writes them.
 - **Who writes these fields:** the successful post of a report composed with `--scratchpad <slug>`, or `pkit scratchpad reported <slug> <ref>...`. A report staged or filed in a browser writes nothing until one of the two runs.
 - **A field the note holds already:** recording a send never leaves a key twice in the front matter. A first send is refused where the note holds one of these fields, `project` and `workstream` only where the send writes them. Any send is refused where the front matter holds a key twice already. The refusal names the key, and comes before the report posts, stages or prints a link, or before `pkit scratchpad reported` writes ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
-- **A later send** of a reported note adds each new issue to `reported_to`, and records the hash again. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
+- **A later send** of a reported note adds each new issue to `reported_to`, and records the hash again. It changes only the `reported_to` and `reported_hash` its first send wrote, and leaves every other line as it was. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
 
 ### `done/`
 
@@ -230,5 +230,6 @@ Each command has its full entry in the CLI reference, which each name below link
     - a note with no front matter
     - a note whose front matter holds a key twice
     - a note in `active/` that holds a field the send writes ("Front matter" above)
+    - a note in `reported/` whose fields of the first send no longer lie in the order it wrote them
     - a file of the same name in `reported/` already
 - **Not built yet:** a command that reopens a note (COR-007). Move its file from `done/` or `dropped/` back to `active/` by hand, with `git mv`. Then remove each front-matter field `active/` does not hold, and a dropped note's closing paragraph on why it stopped.
