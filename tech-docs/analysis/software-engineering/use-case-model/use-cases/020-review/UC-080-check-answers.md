@@ -103,7 +103,7 @@ pkit:
 - **2b.** The list flags as "not asked for by this change" what no change owes, which the developer or the delegate decided, as [UC-081](../010-build/UC-081-decide-unasked-answers.md) describes. The reviewer checks each against what it answers, whoever decided it ([COR-064 point 4](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)):
   - an answer on an artefact the check asked nothing about, through `pkit friction explain` at the base
   - a revisit entry the check did not ask for, against its link target and the artefact that carries it, both at the head
-  - a reason for having no anchors, against what the artefact says
+  - an `unanchored-because` reason, against what the artefact says
 
   One that does not hold is a `[block]` finding. The reviewer also names each in an `[advisory]` finding, since it cannot tell who decided it.
 - **2c.** The list flags "not asked for by this change" a deferral the change rewords on an artefact the check asked about. The reviewer judges it as at step 4 ([software-engineering DEC-002 point 1](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel)).
@@ -119,7 +119,7 @@ pkit:
 - **7a.** The developer edits a sentence in the description after the verdict. An edit of the description makes no verdict stale, so nobody checks the edited sentence ([project-management DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
 - **7b.** The verdict withholds approval, and the developer bypasses the `docs-reviewer` on record, with a reason, as `project-management:UC-062` describes in its variant 13c. The answers then stand checked by their writer alone, a limit [COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) accepts ([project-management DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
 
-**Postconditions:** A reviewer other than their writer checked each answer and each revisit the change owed against the change. It checked each answer no change owes against what that answer answers, and each reason for having no anchors against what its artefact says. The verdict approves the change only where each holds.
+**Postconditions:** A reviewer other than their writer checked each answer and each revisit the change owed against the change. It checked each answer no change owes against what that answer answers, and each `unanchored-because` reason against what its artefact says. The verdict approves the change only where each holds.
 
 **Minimal guarantees:**
 
@@ -127,4 +127,4 @@ pkit:
 - A change check the reviewer cannot run is a `[block]` finding, never an approval (`docs-reviewer.md`).
 - The reviewer writes no answer, and changes nothing it reviews ([core:REQ-021](../../../../core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)).
 - An answer no change owes that does not hold is a `[block]` finding, whoever decided it (software-engineering DEC-002 point 1 and [COR-064 point 4](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)).
-- A reason for having no anchors that does not hold is a `[block]` finding too, whoever decided it (COR-064 point 4).
+- An `unanchored-because` reason that does not hold is a `[block]` finding too, whoever decided it (COR-064 point 4).

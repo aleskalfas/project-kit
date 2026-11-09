@@ -63,11 +63,11 @@ pkit:
 - The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The developer, or another agent the developer directs, writes each answer the developer accepted, as `core:UC-002` describes (COR-050 point 3 and [RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)).
 
-**Trigger:** While making a change, as [UC-001](UC-001-build-under-conventions.md) describes, the `software-engineer` agent finds an answer the change check did not ask of the change. A reason for having no anchors starts the use case too.
+**Trigger:** While making a change, as [UC-001](UC-001-build-under-conventions.md) describes, the `software-engineer` agent finds an answer the change check did not ask of the change. An `unanchored-because` reason starts the use case too.
 
 **Main path:**
 
-1. The agent finds an answer the change check did not ask for, or a reason for having no anchors (COR-050 points [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [16](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)). It may find:
+1. The agent finds an answer the change check did not ask for, or an `unanchored-because` reason (COR-050 points [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [16](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)). It may find:
    - an answer on an artefact the change check did not ask about, or for a debt the whole-repository check reports
    - a revisit entry for a link target the change asks no revisit of, or one whose outcome alone changed
    - a reason for having no anchors, which goes through the steps below as an answer does ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides))
@@ -87,9 +87,9 @@ pkit:
 - **6b.** The merge gate does not require the `docs-reviewer` for the pull request, such as an unclassified pull request that changes only documents. No reviewer names the answers, and the use case ends at step 5.
 - **6c.** The change is committed straight to the default branch, with no pull request. The developer, as the person the agent works for, decided each answer at step 4, and the use case ends at step 5.
 
-**Postconditions:** Each answer the change check did not ask for is written only with words the developer or the delegate accepted, or not at all. So is each reason for having no anchors. The pull request says who decided each.
+**Postconditions:** Each answer the change check did not ask for is written only with words the developer or the delegate accepted, or not at all. So is each `unanchored-because` reason. The pull request says who decided each.
 
 **Minimal guarantees:**
 
-- The `software-engineer` agent writes no answer the change check did not ask of its change, and no reason for having no anchors (`software-engineer.md`).
+- The `software-engineer` agent writes no answer the change check did not ask of its change, and no `unanchored-because` reason (`software-engineer.md`).
 - The `docs-reviewer` blocks on each such answer or reason that does not hold, whoever decided it ([software-engineering DEC-002 point 1](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel) and [COR-064 point 4](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)).
