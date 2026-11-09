@@ -120,6 +120,11 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
+        - visual-communication:DEC-031#1
+        - visual-communication:DEC-031#2
+        - visual-communication:DEC-031#3
+        - visual-communication:DEC-031#4
+        - visual-communication:DEC-031#5
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -168,7 +173,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 - the `svg` renderer, at version 1.1.0
 - the `pdf` renderer, at version 1.2.0
-- the `html` renderer, at version 1.2.0
+- the `html` renderer, at version 1.3.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -186,6 +191,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
 - **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
+- **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stays at 5, and no other plugin's version rises.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
@@ -281,7 +287,7 @@ The `html` renderer draws a scene as one *page file*: the scene's pages in one w
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
 - **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths.
 - **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
-- **Pages** follow each other down the document in the scene's order, each in the middle of the window. Each keeps its own size. The file sets no colour around them. It holds no rule on a window's width.
+- **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)).
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
 - **What the file holds.** A file asks for nothing. Its pictures lie inside it, each as the SVG renderer embeds it ([The SVG renderer](#the-svg-renderer)). Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour role, and every page reaches it.
 - **Names and words.** A family's name is written as the SVG renderer writes it. Whatever else a brand or a piece names is escaped. So none of it can end the file's `<style>` element or start another element.
@@ -302,8 +308,23 @@ A page file holds each mode a reader's signal names, such as `prefers-color-sche
 - **No control and no script.** Nothing in the page switches a mode, so a renderer adds no words and no focus stop.
 - **One mode alone.** A piece of one mode gives a file of one key, under no signal's rule. So dark alone draws dark for every reader. An axis with no mode named stays at its default.
 - **Its schemes.** CSS `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`, so the browser's own ground follows the mode. A file with no such mode names none.
-- **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade.
+- **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade. Around fixed pages, the backdrop and each page take `Canvas`, and the keyline `CanvasText` ([Fixed pages](#fixed-pages)).
 - **Pictures.** A produced picture draws the first key's variant, and a picture role the first key's file ([What the HTML renderer loses](#what-the-html-renderer-loses)). A picture file is the same in every key, so it draws as it is.
+
+### Fixed pages
+
+A deck's page file shows its slides as a viewer of slides does, each at its own size (DEC-031). The file does this where the scene says its pages are *fixed pages* ([What a scene holds](components.md#what-a-scene-holds)): the pages of a top whose layouts are its pages' forms, where the top asks for a height, as the deck does. A site's pages, a figure and what a slot of pages places are none. They lie as *Pages* in [The HTML renderer](#the-html-renderer) says, with nothing around them.
+
+- **A keyline,** a thin line, lies around each slide. So a slide's empty part reads as the slide's.
+- **A backdrop** fills the window around and between the slides. So the gap after a slide reads as a gap.
+- **Their colours** mix the browser's own. The backdrop is 7% of the browser's text colour mixed into its ground colour, and the keyline 48%. So they follow the page's mode: a dark page lies on a dark backdrop. Inside its keyline a slide lies on the browser's own ground. The file writes no colour value for them, and reads no role of the brand.
+- **The keyline reads.** It contrasts at least 3 to 1 against the backdrop and against the browser's ground, in light and in dark.
+- **More contrast.** Where the reader asks for more contrast, the keyline takes the browser's text colour, whatever modes the file holds.
+- **Forced colours.** The backdrop and each slide take the reader's background colour, and the keyline the reader's text colour.
+- **A browser that cannot mix colours** draws the keyline in its text colour and the backdrop in its ground colour.
+- **Size.** The keyline is 1 px wide and takes no room, so a slide keeps its size and its proportions. The backdrop shows 32 px wide on every side, or 4% of the window's width where that is less. In a narrower window a slide shrinks with the room that leaves it, and its keyline stays 1 px wide. In a window 500 px wide, a slide 1280 px wide is 460 px wide. Nothing scrolls sideways.
+- **The same elements.** The file holds the same elements as it would with no keyline. Only its rules differ.
+- **On screen alone.** A print holds neither the keyline nor the backdrop, until the record of how a page prints decides what of them it keeps ([project-kit#2824](https://github.com/aleskalfas/project-kit/issues/2824)).
 
 ### What the HTML renderer declares
 
@@ -311,6 +332,7 @@ The renderer draws in the default font profile, and it declares each primitive a
 
 - **`holds-modes`** names the format `html`, with each signal pair it reads ([Modes](#modes)). `colour-scheme`'s `light` and `dark` pair with the same values of `prefers-color-scheme`. `contrast`'s `standard` and `high` pair with `prefers-contrast`'s `no-preference` and `more`. No pair lies in the foundations or in a scene.
 - **`forced-colours`** names what each paint takes under a reader's forced colours: lines, opaque fills, their edge with its width, and translucent fills.
+- **`pages.fixed`** names how the file shows [fixed pages](#fixed-pages) (DEC-031 point 3). The keyline's `width`, 1 px, and its `share`, 48. The backdrop's `share`, 7. The gutter's `width`, 32 px, and its `window-share`, 4. Each share is the percent of the browser's text colour mixed into its ground colour. The gutter is the backdrop's width at each side of a page, or that share of the window's width where it is less. No project setting changes them.
 
 ### What the HTML renderer does not carry yet
 
@@ -711,9 +733,10 @@ A browser draws them. No other format needs one, and the capability installs non
 
 - **Which browser.** A browser of the Chromium family: the first found where Chrome and Chromium install themselves, or the one the project names ([The browser](files.md#the-browser)).
 - **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, as far as the widest page fits 1568 pixels. So a page's image may be larger than its own text needs. The browser draws the same bands of a page as resvg does at that scale.
+- **The window** is as wide as the widest page, with the gutter the renderer declares, 32 px, on each side. So a [fixed page](#fixed-pages) keeps its own size. The step widens the window so for every file. Each image is still one page, or one band of it, so the keyline and the backdrop lie outside every image (DEC-031 point 5).
 - **Each mode.** Each key the run draws out of a file is drawn in that start, with no reload. The step sets every signal the file reads by the browser's emulation, so the machine's own settings play no part. Each read the report names runs in each key drawn.
 - **What an image shows.** One browser's drawing, which stands for no other browser. The report names that browser and its version.
-- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window and printing. Open the page file in your own browsers to see those.
+- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window, printing, and the keyline and the backdrop around a fixed page. Open the page file in your own browsers to see those.
 - **The fonts.** The browser reads the faces the file embeds. A span it draws in a font of the machine is reported.
 - **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops. The page also holds a mode for each signal the file reads. Where setting one does not repaint it, the run stops too.
 - **Its profile** lies in a throwaway folder of the clone's local folder, which the run removes, even one that stops. The browser may write files of its own elsewhere, such as a crash report.
