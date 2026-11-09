@@ -39,11 +39,6 @@ _SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 #: it empties.
 _ALL_STATES = ("active", "reported", "done", "dropped")
 
-#: Frontmatter keys owned by the reported stamp (COR-043). Excluded from the
-#: drift-hash view so the stamp itself never reads as drift.
-_REPORTED_FM_KEYS = ("reported_to", "reported_hash", "reported", "project", "workstream")
-_REPORTED_KEY_RE = re.compile(rf"^(?:{'|'.join(_REPORTED_FM_KEYS)}):")
-
 _ISSUE_REF_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*#\d+$")
 _ISSUE_URL_RE = re.compile(r"^https?://github\.com/([^/\s]+)/([^/\s]+)/issues/(\d+)/?(?:[?#].*)?$")
 
@@ -343,7 +338,9 @@ def stamp_reported(
 
     The frontmatter edit is a textual insertion (no YAML round-trip) so the
     pre-stamp bytes stay recoverable — `content_hash` of the stamped file with
-    the reported block stripped equals the stamped hash.
+    the reported block stripped equals the stamped hash. The block is only the
+    fields this stamp wrote, so a field of the note's own named `project`,
+    `workstream` or `reported` stays in what the hash covers.
     """
     normalized: list[str] = []
     for ref in refs:
@@ -395,9 +392,21 @@ def stamp_reported(
 
 def note_is_drifted(content: str) -> bool:
     """True iff a reported note's current content diverges from its stamped
-    hash (post-send edit — surfaced as a warning, never a gate; COR-043)."""
-    data = _read_frontmatter_data(content)
-    stored = data.get("reported_hash")
+    hash (post-send edit — surfaced as a warning, never a gate; COR-043).
+
+    The hash is read from the reported block's own line (`_reported_block`),
+    so a frontmatter holding a key twice, the note's and the stamp's, is still
+    checked. A hash the frontmatter records outside such a block is compared
+    with the whole file, and reads as drift: the stamp's fields were edited."""
+    lines = content.split("\n")
+    try:
+        block = _reported_block(lines, _frontmatter_close(lines))
+    except click.ClickException:
+        return False
+    if block is None:
+        stored = _read_frontmatter_data(content).get("reported_hash")
+    else:
+        stored = lines[block[1]].removeprefix("reported_hash:").strip()
     if not isinstance(stored, str) or not stored:
         return False
     return content_hash(_strip_reported_frontmatter(content)) != stored
@@ -568,25 +577,48 @@ def _append_reported_refs(content: str, refs: tuple[str, ...], hash_value: str) 
     )
 
 
+def _reported_block(lines: list[str], close: int) -> tuple[int, int, int] | None:
+    """The reported block in a note's frontmatter, as `(start, hash_line, end)`
+    line indices: the fields the stamp wrote, laid out as
+    `_insert_reported_frontmatter` writes them and `_append_reported_refs`
+    keeps them. That is `reported`, `reported_to` and its items,
+    `reported_hash`, then `project` and `workstream` where the stamp wrote
+    them. The last such run before the closing delimiter, since the stamp
+    inserts its block last; None where the frontmatter holds none. A field
+    the note held before the stamp lies above the block, whatever its name."""
+    found = None
+    for start in range(1, close - 1):
+        if not (
+            lines[start].startswith("reported:") and lines[start + 1].startswith("reported_to:")
+        ):
+            continue
+        hash_line = start + 2
+        while hash_line < close and lines[hash_line].startswith((" ", "\t")):
+            hash_line += 1
+        if hash_line == close or not lines[hash_line].startswith("reported_hash:"):
+            continue
+        end = hash_line + 1
+        for key in ("project:", "workstream:"):
+            if end < close and lines[end].startswith(key):
+                end += 1
+        found = (start, hash_line, end)
+    return found
+
+
 def _strip_reported_frontmatter(content: str) -> str:
     """The note as it was at send time: current content minus the reported
-    block (the stamp's own keys + their nested lines). The drift-hash view."""
+    block (`_reported_block`), so only the fields the stamp wrote. The
+    drift-hash view, and the text the first stamp hashed (#2918). Content
+    with no such block is returned whole."""
     lines = content.split("\n")
     try:
-        close = _frontmatter_close(lines)
+        block = _reported_block(lines, _frontmatter_close(lines))
     except click.ClickException:
         return content
-    kept = [lines[0]]
-    skipping = False
-    for line in lines[1:close]:
-        if _REPORTED_KEY_RE.match(line):
-            skipping = True
-            continue
-        if skipping and (line.startswith(" ") or line.startswith("\t")):
-            continue
-        skipping = False
-        kept.append(line)
-    return "\n".join(kept + lines[close:])
+    if block is None:
+        return content
+    start, _hash_line, end = block
+    return "\n".join(lines[:start] + lines[end:])
 
 
 def _read_frontmatter_data(content: str) -> dict:

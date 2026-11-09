@@ -194,6 +194,85 @@ def test_drifted_reported_notes_lists_names(kit_target: Path) -> None:
     assert scratchpads.drifted_reported_notes(kit_target) == [stamp.dst.name]
 
 
+# --- what the hash covers: the note without only the stamp's fields (#2918)
+
+
+def _hold_fields(note: Path, fields: str) -> None:
+    """Give an active note's own frontmatter `fields`, before any stamp."""
+    content = note.read_text(encoding="utf-8")
+    note.write_text(content.replace("\n---\n", f"\n{fields}\n---\n", 1), encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("held", "project", "workstream"),
+    [
+        (None, None, None),
+        (None, "alpha", "cli"),
+        ("project: own-project", None, None),
+        ("workstream: own-workstream", None, None),
+        ("reported: not yet", None, None),
+        ("project: own-project\nworkstream: own-workstream", "alpha", None),
+    ],
+    ids=[
+        "held-none",
+        "held-none-stamp-writes-context",
+        "held-project",
+        "held-workstream",
+        "held-reported",
+        "held-both-stamp-writes-project",
+    ],
+)
+def test_first_stamp_and_drift_check_hash_the_same_text(
+    kit_target: Path, held: str | None, project: str | None, workstream: str | None
+) -> None:
+    src = _stamp_note(kit_target)
+    if held is not None:
+        _hold_fields(src, held)
+    pre_stamp = src.read_text(encoding="utf-8")
+    stamp = scratchpads.stamp_reported(
+        kit_target, "my-note", ("owner/repo#7",), project=project, workstream=workstream
+    )
+    stamped = stamp.dst.read_text(encoding="utf-8")
+    assert f"reported_hash: {scratchpads.content_hash(pre_stamp)}" in stamped
+    # The drift view removes only what the stamp wrote, the note's own fields kept.
+    assert scratchpads._strip_reported_frontmatter(stamped) == pre_stamp
+    assert scratchpads.note_is_drifted(stamped) is False
+    stamp.dst.write_text(stamped + "\npost-send edit\n", encoding="utf-8")
+    assert scratchpads.note_is_drifted(stamp.dst.read_text(encoding="utf-8")) is True
+
+
+def test_an_edit_to_a_field_the_note_held_reads_as_drift(kit_target: Path) -> None:
+    _hold_fields(_stamp_note(kit_target), "project: own-project")
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    stamped = stamp.dst.read_text(encoding="utf-8")
+    stamp.dst.write_text(
+        stamped.replace("project: own-project", "project: renamed"), encoding="utf-8"
+    )
+    assert scratchpads.note_is_drifted(stamp.dst.read_text(encoding="utf-8")) is True
+
+
+def test_a_later_send_of_a_note_holding_a_field_reads_unchanged(kit_target: Path) -> None:
+    _hold_fields(_stamp_note(kit_target), "project: own-project")
+    scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#8",))
+    content = stamp.dst.read_text(encoding="utf-8")
+    assert scratchpads.read_reported_refs(content) == ("owner/repo#7", "owner/repo#8")
+    assert scratchpads.note_is_drifted(content) is False
+
+
+def test_a_hash_outside_the_reported_block_reads_as_drift(kit_target: Path) -> None:
+    _stamp_note(kit_target)
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    stamped = stamp.dst.read_text(encoding="utf-8")
+    hash_line = next(line for line in stamped.split("\n") if line.startswith("reported_hash:"))
+    # Moved above the stamp's `reported:` line, the block no longer stands as written.
+    moved = stamped.replace(f"\n{hash_line}", "").replace(
+        "\nreported: ", f"\n{hash_line}\nreported: ", 1
+    )
+    stamp.dst.write_text(moved, encoding="utf-8")
+    assert scratchpads.note_is_drifted(moved) is True
+
+
 # --- retirement from reported/ + lazy dir removal ---------------------
 
 
