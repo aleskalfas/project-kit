@@ -1,0 +1,10 @@
+component: project-management
+kind: none
+body: >
+  DEC-068, proposed with this change (#2947), decides that project-manager
+  names no grant of tools and has the session's tools, less a list it is
+  withheld: the built-in tools its own denies cannot follow, and those that
+  start work or open a channel outside the methodology's rules. DEC-029's
+  dispatch paragraph says the messaging tool is one the definition
+  withholds. The agent's definition is unchanged until a later change, so
+  no surface moves.
