@@ -189,11 +189,13 @@ deploy_one() {
         #
         # The resolver's stderr is "reason on line 1, optional remediation
         # after". When it supplies remediation of its own, print that verbatim:
-        # the generic `adopt` advice below is wrong for a write-carrying
-        # category, which names paths only the adopter can enumerate so there is
-        # no conventional default for `adopt` to create (ADR-051). The resolver
-        # knows which categories those are because the shared ownership module
-        # declares them; this script stays dumb about it.
+        # the generic `adopt` advice below is wrong for a category with no
+        # conventional folder, since `adopt` has no folder to create for it and
+        # refuses (#2469). That covers a project's own categories and the
+        # write-carrying ones, which name paths only the adopter can enumerate
+        # (ADR-051). The resolver knows which categories have a conventional
+        # folder because the shared ownership module declares them; this script
+        # stays dumb about it.
         local skip_reason remediation
         skip_reason="$(head -n 1 "$tmperr")"
         remediation="$(tail -n +2 "$tmperr")"
@@ -206,6 +208,7 @@ deploy_one() {
             printf "  %s\n"    "         Deploy it:  pkit agents adopt $name"
             printf "  %s\n"    "         (custom doc layout? run \`pkit agents reconcile --write\`, set the"
             printf "  %s\n"    "          paths in overlay.yaml, then \`pkit sync\`)"
+            adoptable=$((adoptable + 1))
         fi
         rm -f "$tmpfile" "$tmperr"
         unresolved=$((unresolved + 1))
@@ -257,9 +260,12 @@ deploy_one() {
 
 # Pass: deploy every kit agent. An agent with an unresolved overlay category
 # is skipped (counted in `unresolved`) rather than aborting the run — see
-# deploy_one. `exit_code` is reserved for genuinely catastrophic failures.
+# deploy_one. Of those, the ones whose remedy is `pkit agents adopt` are counted
+# in `adoptable`, so the closing note names `adopt` only when it serves one.
+# `exit_code` is reserved for genuinely catastrophic failures.
 exit_code=0
 unresolved=0
+adoptable=0
 while IFS= read -r name; do
     [ -n "$name" ] || continue
     deploy_one "$name" || exit_code=$?
@@ -287,7 +293,11 @@ echo "Done."
 if [ "$unresolved" -gt 0 ]; then
     echo "  note: $unresolved agent(s) skipped — overlay category not set; the rest deployed."
     echo "        → Per-agent remediation is printed above; it differs by category."
-    echo "        → Conventional doc layout:      pkit agents adopt <agent>"
-    echo "        → Anything else:                pkit agents reconcile --write → set paths → pkit sync"
+    if [ "$adoptable" -gt 0 ]; then
+        echo "        → Conventional doc layout:      pkit agents adopt <agent>"
+        echo "        → Anything else:                pkit agents reconcile --write → set paths → pkit sync"
+    else
+        echo "        → Set the paths in overlay.yaml, or stub them: pkit agents reconcile --write; then pkit sync"
+    fi
 fi
 exit $exit_code

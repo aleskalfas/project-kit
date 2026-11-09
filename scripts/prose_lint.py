@@ -504,7 +504,7 @@ def _table_cells(text: str, start: int, end: int) -> list[tuple[int, int]]:
     i = 0
     while i < len(row):
         if row[i] == "`":
-            run = len(row) - len(row[i:].lstrip("`"))
+            run = _run_length(row, i, "`")
             code_run = run if code_run == 0 else (0 if code_run == run else code_run)
             i += run
             continue

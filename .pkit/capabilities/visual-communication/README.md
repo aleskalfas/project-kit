@@ -39,6 +39,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
+        - .pkit/capabilities/visual-communication/rule-sets/comm.md
+        - .pkit/capabilities/visual-communication/rule-sets/graphic.md
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
       record:
         - visual-communication:DEC-001#1
@@ -63,9 +65,12 @@ pkit:
         - visual-communication:DEC-020#8
         - visual-communication:DEC-024#4
         - visual-communication:DEC-024#6
+        - visual-communication:DEC-028#2
+        - visual-communication:DEC-028#5
         - COR-017
         - COR-070#1
         - COR-031
+        - COR-051#7
         - COR-054#3
         - COR-054#5
         - COR-055#3
@@ -155,6 +160,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
+- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@1]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
 No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)). A piece shows a picture of its own, such as a photo, from a picture file it holds ([Picture files](files.md#picture-files)).
@@ -418,22 +424,24 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The reviewer
 
-`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 To use it:
 
 1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names what it did not see. What it did not see is not looked at, never clean.
+2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 
 You may hand it a build pipeline's drawings instead, fetched into a folder of their own ([A pipeline's drawings](outputs.md#a-pipelines-drawings)). It names those images as drawn by the pipeline, at the commit it drew.
 
-Each finding names the page, and the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)). A finding is one of two kinds:
+Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
 - **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
-- **A note,** anything else worth a look.
+- **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
+- **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
+- **A note,** anything else worth a look. A note never fails.
 
 Its findings are advice. They join no validation and hold no merge.
 

@@ -181,7 +181,7 @@ started: <any>
 # Cache layer
 ```
 
-- **Its name:** the day it started, then the slug. The slug takes lower-case letters and digits, joined by hyphens. Where another note's name ends with the slug already, the command mostly refuses and writes nothing ([the CLI reference, `new scratchpad`](../../.pkit/cli/README.md#new-scratchpad-slug), says when).
+- **Its name:** the day it started, then the slug. The slug takes lower-case letters and digits, joined by hyphens. Where another note holds that whole slug already, the command refuses and writes nothing ([the CLI reference, `new scratchpad`](../../.pkit/cli/README.md#new-scratchpad-slug)).
 - **Its front matter:** you as its author, from your git configuration, and the day it started ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
 - **Its title:** drawn from the slug ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)). Change it to the question the note explores.
 - **With your agent:** ask it to start one, such as "Use the scratchpad-author skill to start a note on how we cache build results". The skill agrees the slug with you, keeps the note to one question and drafts its opening.

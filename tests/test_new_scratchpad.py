@@ -221,3 +221,76 @@ def test_outcome_without_a_scratchpad_area_checks_nothing(tmp_path: Path) -> Non
     outcome = scratchpads.outcome(tmp_path)
     assert outcome.findings == ()
     assert outcome.summary == ("0 scratchpad note(s) checked; 0 error(s).",)
+
+
+# --- a slug finds a note by its whole slug or whole file name (#2439) --
+
+
+def test_transitions_find_a_note_by_its_whole_slug_never_by_the_slug_s_end(
+    kit_target: Path,
+) -> None:
+    _note(kit_target, "active", "2026-06-03-cache-layer.md")
+    for transition in (scratchpads.transition_to_done, scratchpads.transition_to_dropped):
+        with pytest.raises(
+            click.ClickException, match=r"no active or reported scratchpad note matches 'layer'"
+        ):
+            transition(kit_target, slug="layer")
+    assert (kit_target / ".pkit/scratchpad/active/2026-06-03-cache-layer.md").is_file()
+    _src, dst = scratchpads.transition_to_done(kit_target, slug="cache-layer")
+    assert dst == kit_target / ".pkit/scratchpad/done/2026-06-03-cache-layer.md"
+
+
+def test_a_short_slug_stamps_and_retires_its_own_note_beside_longer_slugs(
+    kit_target: Path,
+) -> None:
+    _note(kit_target, "active", "2026-06-03-cache-layer.md")
+    _note(kit_target, "active", "2026-06-04-db-layer.md")
+    target = scratchpads.stamp_new_scratchpad(kit_target, slug="layer")
+    src, dst = scratchpads.transition_to_done(kit_target, slug="layer")
+    assert src == target
+    assert dst == kit_target / ".pkit/scratchpad/done/2026-05-12-layer.md"
+    active = kit_target / ".pkit" / "scratchpad" / "active"
+    assert sorted(p.name for p in active.glob("*.md")) == [
+        "2026-06-03-cache-layer.md",
+        "2026-06-04-db-layer.md",
+    ]
+
+
+def test_stamp_new_scratchpad_takes_a_slug_that_ends_another_note_s_slug(
+    kit_target: Path,
+) -> None:
+    _note(kit_target, "done", "2026-06-03-cache-layer.md")
+    target = scratchpads.stamp_new_scratchpad(kit_target, slug="layer")
+    assert target == kit_target / ".pkit/scratchpad/active/2026-05-12-layer.md"
+
+
+def test_stamp_new_scratchpad_refuses_a_slug_two_notes_of_one_folder_hold(
+    kit_target: Path,
+) -> None:
+    _note(kit_target, "done", "2026-04-01-cache-layer.md")
+    _note(kit_target, "done", "2026-04-20-cache-layer.md")
+    with pytest.raises(
+        click.ClickException,
+        match=r"'cache-layer' already used by \.pkit/scratchpad/done/2026-04-01-cache-layer\.md",
+    ):
+        scratchpads.stamp_new_scratchpad(kit_target, slug="cache-layer")
+    assert not (kit_target / ".pkit/scratchpad/active/2026-05-12-cache-layer.md").exists()
+
+
+def test_transitions_refuse_a_slug_two_notes_of_one_folder_hold(kit_target: Path) -> None:
+    _note(kit_target, "active", "2026-05-01-cache-layer.md")
+    _note(kit_target, "active", "2026-06-01-cache-layer.md")
+    with pytest.raises(
+        click.ClickException,
+        match=r"matches multiple notes: 2026-05-01-cache-layer\.md, 2026-06-01-cache-layer\.md",
+    ):
+        scratchpads.transition_to_done(kit_target, slug="cache-layer")
+    _src, dst = scratchpads.transition_to_done(kit_target, slug="2026-06-01-cache-layer.md")
+    assert dst == kit_target / ".pkit/scratchpad/done/2026-06-01-cache-layer.md"
+
+
+def test_transitions_take_a_file_name_never_a_path_out_of_the_folder(kit_target: Path) -> None:
+    _note(kit_target, "dropped", "2026-04-01-old-idea.md")
+    with pytest.raises(click.ClickException, match=r"no active or reported scratchpad note"):
+        scratchpads.transition_to_done(kit_target, slug="../dropped/2026-04-01-old-idea.md")
+    assert (kit_target / ".pkit/scratchpad/dropped/2026-04-01-old-idea.md").is_file()

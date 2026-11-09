@@ -265,9 +265,43 @@ def test_undefined_remediation_rules_out_adopt_for_write_carrying() -> None:
     assert "pkit agents reconcile --write" in joined
 
 
-def test_undefined_remediation_absent_for_ordinary_categories() -> None:
+@pytest.mark.parametrize("category", sorted(own.CONVENTIONAL_FOLDER_CATEGORIES))
+def test_undefined_remediation_absent_for_a_category_with_a_conventional_folder(
+    category: str,
+) -> None:
     """None means "the generic `adopt` advice applies" — adopt CAN serve these."""
-    assert own.undefined_category_remediation("architecture-docs") is None
+    assert own.undefined_category_remediation(category) is None
+
+
+def test_undefined_remediation_names_no_adopt_without_a_conventional_folder() -> None:
+    """A project's own category has no folder for `adopt` to create, so `adopt`
+    would refuse: the lines name only what works (#2469)."""
+    lines = own.undefined_category_remediation("release-notes")
+    assert lines is not None
+    joined = "\n".join(lines)
+    assert "<release-notes>" in joined and "no conventional folder" in joined
+    assert ".pkit/agents/project/overlay.yaml" in joined  # set the paths there …
+    assert "pkit agents reconcile --write" in joined  # … or stub them first
+    assert "pkit sync" in joined
+    assert "adopt" not in joined
+
+
+def test_conventional_folder_categories_match_the_backbones_sub_paths() -> None:
+    """The deploy resolver names `adopt` for the categories this module lists;
+    `adopt` fills the ones the backbone keeps a sub-path for. A category added to
+    one must be added to the other, or the deploy and `adopt` disagree."""
+    from project_kit import docs_roots
+
+    assert set(docs_roots.CONVENTIONAL_SUBPATHS) == own.CONVENTIONAL_FOLDER_CATEGORIES, (
+        "add the category to CONVENTIONAL_FOLDER_CATEGORIES in .pkit/lifecycle/ownership.py "
+        "as well as to docs_roots.CONVENTIONAL_SUBPATHS"
+    )
+
+
+def test_no_category_is_both_write_carrying_and_conventional() -> None:
+    """A write-carrying category names paths only the project can list, so it has
+    no conventional folder (ADR-051 Implications)."""
+    assert not own.WRITE_CARRYING_CATEGORIES & own.CONVENTIONAL_FOLDER_CATEGORIES
 
 
 # --- the single-implementation invariant (ADR-051 Decision point 3) ----------
