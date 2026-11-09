@@ -1,8 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  The migration that writes each requirement's `obligation` moves from
-  `migrations/0.3.0/` to `migrations/1.0.0/`, the version the release now
-  writes for the capability (#2840). No release ever shipped 0.3.0, so no
-  project holds the old folder. The migration does what it did, in the same
-  upgrade. Nothing a released version of software-analysis ships changes.

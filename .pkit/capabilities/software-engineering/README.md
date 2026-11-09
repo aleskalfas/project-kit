@@ -159,11 +159,11 @@ The panel is three reviewer agents that judge a pull request at merge time ([sof
 
 **A floor approval outlives a change that touches no code.** A reviewer whose every rule is a floor keeps its `APPROVED` while the commits after the head it reviewed change no code ([project-management:DEC-028], "Stale-verdict handling"). So a wording fix, a changeset or an answer after the review re-runs neither `code-reviewer` nor `security-reviewer`. `docs-reviewer` also carries the `type` rule, so any change re-runs it, on a typed and an unclassified pull request alike. A `CHANGES_REQUESTED` from any of the three goes stale on any change, since the fix it asks for may lie outside the floor.
 
-**Basic or complex review.** `code-reviewer` alone is basic review, and the two specialists beside it make complex review ([software-engineering:DEC-002-code-review-panel] D5). To drop one reviewer and keep the rest gating, opt out of it in project-management's `review.agents.contributed_opt_out:`, with a reason ([project-management's README](../project-management/README.md#opting-out-of-a-contributed-reviewer-per-project-managementdec-032-conditional-reviewer-requirements)).
+**Basic or complex review.** `code-reviewer` alone is basic review, and the two specialists beside it make complex review ([software-engineering:DEC-002-code-review-panel] point 5). To drop one reviewer and keep the rest gating, opt out of it in project-management's `review.agents.contributed_opt_out:`, with a reason ([project-management's README](../project-management/README.md#opting-out-of-a-contributed-reviewer-per-project-managementdec-032-conditional-reviewer-requirements)).
 
 ### How a finding is tagged
 
-Each reviewer withholds `APPROVED` only on an objective failure of the change, in its remit ([software-engineering:DEC-002-code-review-panel] D3). Each finding opens with one of three tags, which say what it does to the merge ([project-management:DEC-028-agent-as-approver-paths]):
+Each reviewer withholds `APPROVED` only on an objective failure of the change, in its remit ([software-engineering:DEC-002-code-review-panel] point 3). Each finding opens with one of three tags, which say what it does to the merge ([project-management:DEC-028-agent-as-approver-paths]):
 
 - **`[block]`** marks an objective failure of the change in the reviewer's remit. It withholds `APPROVED`.
 - **`[person]`** marks a finding on a passage the change owns. It cites by id an accepted rule of the `<project-conventions>` corpus that binds on an artefact the change alters or brings under a rule. Judging the passage against that rule needs a reading the rule does not settle, or a fact the rule does not name. It withholds no approval, and it is shown to the person who authorises the merge.
@@ -175,14 +175,14 @@ Each reviewer's definition tags its findings alike. A pre-existing defect blocks
 - **The remedy** is to fix the defect, or to retract the assertion.
 - **Any other pre-existing defect** is advisory, however severe.
 
-**Knowledge split.** Each reviewer's definition carries only review knowledge that holds in any project. The reviewer reads the project's own rules from the `<project-conventions>` corpus, the one the software-engineer writes against ([software-engineering:DEC-002-code-review-panel] D4). With no corpus, or an empty one, it reviews as a careful generalist, and says so.
+**Knowledge split.** Each reviewer's definition carries only review knowledge that holds in any project. The reviewer reads the project's own rules from the `<project-conventions>` corpus, the one the software-engineer writes against ([software-engineering:DEC-002-code-review-panel] point 4). With no corpus, or an empty one, it reviews as a careful generalist, and says so.
 
 ### The reviewer of a change's answers
 
 A reviewer other than their writer checks the answers a change wrote, and `docs-reviewer` does so wherever it reviews a pull request. The answers lie in answer files of the change's own, outside the documents (COR-062 point 1). A revalidation says a document was updated or still holds, and a deferral leaves it out of date until a follow-up. A change may also carry revisits ("Revisits" below).
 
 - **Who checks them.** The agent making the change writes them without asking first, and a reviewer other than that agent checks them (COR-050 point 3, [project-management:DEC-055] point 3). Which reviewer is the project's choice.
-- **`docs-reviewer`** checks them wherever it reviews a pull request, as its docs-match-behaviour lens applied to the change's claims about its documents ([software-engineering:DEC-002-code-review-panel] D1).
+- **`docs-reviewer`** checks them wherever it reviews a pull request, as its docs-match-behaviour lens applied to the change's claims about its documents ([software-engineering:DEC-002-code-review-panel] point 1).
 - **What it reads.** The change check's own list, the section "Answers written in this change" of `pkit friction check`, never an account the author wrote.
 
 **Revisits.** An installed component may declare a link on the place that holds a document (COR-050 point 16).

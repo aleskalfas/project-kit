@@ -1,0 +1,47 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+header:
+  use: starter/card
+  fill: tint
+  head: Project kit
+  text: The rules a project keeps, and the tools that apply them.
+
+footer:
+  use: starter/card
+  text: Written down, every rule can be read and reviewed, like any change.
+
+pages:
+  - id: home
+    layout: standard
+    main:
+      use: starter/list
+      head: Why a project writes its rules down
+      items:
+        - id: advice
+          head: Not advice
+          text: A rule an agent reads is advice. A rule the tool applies is not.
+
+  - id: guide
+    layout: standard
+    main:
+      use: starter/list
+      head: How a rule reaches every agent
+      items:
+        - id: written
+          head: Written
+          text: >-
+            A rule is written once, in the file its project keeps for it, where every
+            agent and every person who works on the project reads the same words.
+        - id: applied
+          head: Applied
+          text: >-
+            The tool reads the rule's settings and applies them, so no agent has to
+            remember the rule for it to hold, and none can slip past it by forgetting.
+
+  - id: notice
+    use: starter/card
+    fill: tint
+    bar: top
+    head: Moved
+    text: This page now lies in the guide.

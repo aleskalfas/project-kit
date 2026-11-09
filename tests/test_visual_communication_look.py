@@ -12,7 +12,9 @@ run, or asks whether an image is blank, and so runs on any machine and any tool.
 
 from __future__ import annotations
 
+import itertools
 import json
+import math
 import re
 import shutil
 import struct
@@ -45,7 +47,7 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.test_visual_communication_starter import PIECES, STARTER, TEST_NOTATION, UNRELEASED
+from tests.test_visual_communication_starter import PIECES, TEST_NOTATION, UNRELEASED
 from tests.test_visual_communication_svg import COLOURS, FONT, SEMIBOLD, element, line, run, scene
 from tests.test_visual_communication_viewing_browser import FUNCTIONS, planted
 from tests.test_visual_communication_viewing_browser import page as held_page
@@ -53,11 +55,14 @@ from tests.test_visual_communication_viewing_browser import span as held_span
 from tests.test_visual_communication_viewing_browser import text as held_text
 from tests.visual_communication_browser import called, logged, stand_in
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
+    RELEASES,
     TEST_BRAND,
+    bound,
     copy_library,
     importable,
     project,
+    write,
     write_list,
     yaml_text,
 )
@@ -190,9 +195,12 @@ def drawn_page(*children: dict[str, Any], **sizes: Any) -> str:
 
 
 def tool(tmp_path: Path, *children: dict[str, Any], long_edge: int = 800, **sizes: Any) -> Any:
+    """The page of `children` drawn whole, at the scale that sets its long edge `long_edge`
+    pixels long."""
     [page] = viewing.pages_of(scene(*children, **sizes))
     drawn = drawn_page(*children, **sizes)
-    return viewing_tool.draw(drawn, long_edge, tmp_path, viewing.line_widths(page))
+    edge = max(float(page["width"]), float(page["height"])) or 1.0
+    return viewing_tool.draw(drawn, long_edge / edge, tmp_path, viewing.line_widths(page))
 
 
 def dropped_of(
@@ -211,21 +219,22 @@ def test_a_page_is_drawn_at_the_long_edge_asked_for_with_each_face_handed_over(
 ) -> None:
     said = text_element("figure/said", run("Say it", fill="ink"))
     drawn = tool(tmp_path, said, long_edge=800)
-    assert (drawn.width, drawn.height) == (800, 400)
-    assert drawn.image != blank(drawn.image)
+    [image] = drawn.images
+    assert (image.width, image.height) == (800, 400)
+    assert image.image != blank(image.image)
     assert drawn.dropped == ()
     assert [path.suffix for path in tmp_path.iterdir()] == [".font"]
 
 
 def test_a_tall_page_takes_the_long_edge_on_its_height(tmp_path: Path) -> None:
     said = text_element("figure/said", run("Say it", fill="ink"))
-    drawn = tool(tmp_path, said, width=100, height=200, long_edge=800)
-    assert (drawn.width, drawn.height) == (400, 800)
+    [image] = tool(tmp_path, said, width=100, height=200, long_edge=800).images
+    assert (image.width, image.height) == (400, 800)
 
 
 def test_a_page_that_draws_no_ground_lies_on_white(tmp_path: Path) -> None:
-    drawn = tool(tmp_path, long_edge=800)
-    assert drawn.image == blank(drawn.image)
+    [image] = tool(tmp_path, long_edge=800).images
+    assert image.image == blank(image.image)
 
 
 def test_a_true_type_face_and_two_weights_of_one_family_each_draw(tmp_path: Path) -> None:
@@ -261,8 +270,8 @@ def test_a_size_past_what_the_tool_is_asked_fails_and_never_reaches_it(tmp_path:
 
 
 def test_the_most_pixels_asked_for_still_draw(tmp_path: Path) -> None:
-    drawn = tool(tmp_path, width=2, height=1, long_edge=16384)
-    assert (drawn.width, drawn.height) == (16384, 8192)
+    [image] = tool(tmp_path, width=2, height=1, long_edge=16384).images
+    assert (image.width, image.height) == (16384, 8192)
 
 
 @pytest.mark.parametrize(("width", "height"), [(960, 0), (0, 540), (0, 0)])
@@ -410,9 +419,11 @@ def test_a_run_of_the_step_hands_the_tool_the_page_s_measured_lines(
     given: list[Mapping[str, Any]] = []
     real = viewing_tool.draw
 
-    def drawing(svg_page: str, edge: int, folder: Path, widths: Mapping[str, Any]) -> Any:
+    def drawing(
+        svg_page: str, at: float, folder: Path, widths: Mapping[str, Any], **regions: Any
+    ) -> Any:
         given.append(widths)
-        return real(svg_page, edge, folder, widths)
+        return real(svg_page, at, folder, widths, **regions)
 
     monkeypatch.setattr(viewing.viewing_tool, "draw", drawing)
     assert run_look(flow, PIECE).returncode == 0
@@ -448,7 +459,7 @@ def test_a_colour_with_no_opacity_drew_nothing(tmp_path: Path) -> None:
         pictures={},
     )
     [page] = drawn.pages
-    found = viewing_tool.draw(page.svg, 800, tmp_path, {}).dropped
+    found = viewing_tool.draw(page.svg, 4.0, tmp_path, {}).dropped
     assert [(each.text, each.whole) for each in found] == [("clear", False)]
 
 
@@ -515,12 +526,12 @@ def test_a_text_over_a_picture_of_its_own_colour_was_drawn(tmp_path: Path) -> No
         key="default",
         colours=colours,
         font_file=lambda _family: FONT,
-        pictures={"red": picture},
+        pictures={"figure/picture": seam.Shown(picture, seam.PNG)},
     )
     [page] = drawn.pages
     faces = tmp_path / "faces"
     faces.mkdir()
-    assert viewing_tool.draw(page.svg, 800, faces, {}).dropped == ()
+    assert viewing_tool.draw(page.svg, 4.0, faces, {}).dropped == ()
 
 
 def test_a_white_text_on_white_was_drawn(tmp_path: Path) -> None:
@@ -552,11 +563,11 @@ def flow(tmp_path: Path) -> Path:
 
 
 def starter_project(tmp_path: Path) -> Path:
-    """The starter, the test brand and notation, and the starter's reference pieces, which
-    hold more than one page, two languages and four keys."""
+    """The starter's release 1.0.0, the test brand and notation, and the starter's reference
+    pieces, which hold more than one page, two languages and four keys."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASES / "starter" / "1.0.0", "starter", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(
@@ -682,18 +693,29 @@ def test_a_piece_of_no_default_takes_the_first_key_in_variant_order(tmp_path: Pa
     assert [image["key"] for image in report_of(root)["images"]] == ["colour-scheme.dark"]
 
 
-def test_the_long_edge_rises_where_a_page_s_smallest_text_would_land_under_what_reads() -> None:
-    def page(width: float, size: float) -> dict[str, Any]:
-        small = {"paragraphs": [[{"font-size": size}]]}
-        return {"width": width, "height": width / 2, "children": [small]}
+def long_edge(page: Mapping[str, Any]) -> int:
+    """How many pixels the long edge of `page`'s image takes through the SVG renderer."""
+    edge = max(float(page["width"]), float(page["height"]))
+    return viewing.pixels(edge, viewing.page_scale(page))
 
-    assert viewing.long_edge(page(1280, 16)) == 1568
-    assert viewing.long_edge({"width": 300, "height": 200}) == 1568
-    assert viewing.long_edge(page(5000, 16)) == 3125
+
+def text_page(width: float, height: float, size: float) -> dict[str, Any]:
+    """A page of `width` by `height` px whose smallest text is `size` px."""
+    small = {"paragraphs": [[{"font-size": size}]]}
+    return {"width": width, "height": height, "children": [small]}
+
+
+def test_the_scale_rises_where_a_page_s_smallest_text_would_land_under_what_reads() -> None:
+    """A page so drawn past the long edge is drawn in bands, or as wide as it allows."""
+    assert long_edge(text_page(1280, 640, 16)) == 1568
+    assert long_edge({"width": 300, "height": 200}) == 1568
+    assert viewing.scale(text_page(390, 5000, 16)) == viewing.SMALLEST_TEXT / 16
+    assert viewing.page_scale(text_page(390, 5000, 16)) == viewing.SMALLEST_TEXT / 16
 
 
 def test_a_large_page_with_no_text_takes_the_long_edge_of_every_page() -> None:
-    assert viewing.long_edge({"width": 1920, "height": 1080}) == 1568
+    assert long_edge({"width": 1920, "height": 1080}) == 1568
+    assert long_edge({"width": 700, "height": 300}) == 1568
 
 
 # --- what lies beside the images ----------------------------------------------------------------
@@ -1126,7 +1148,7 @@ def test_a_font_with_no_file_refuses_before_anything_is_written(flow: Path) -> N
 def test_a_page_the_tool_cannot_draw_refuses_with_nothing_written(
     flow: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def failing(_svg: str, _edge: int, _folder: Path, _widths: Any) -> Any:
+    def failing(_svg: str, _at: float, _folder: Path, _widths: Any, **_regions: Any) -> Any:
         raise viewing_tool.ToolFailed("Failed to create pixmap")
 
     monkeypatch.setattr(viewing.viewing_tool, "draw", failing)
@@ -1232,9 +1254,9 @@ def browser_for(
 
 class Browser:
     """`viewing_browser.draw` in a browser's place: what each call was handed, the file's bytes
-    as it read them among it. It draws each page in each mode at the scale it is given, as
-    `read` says, or as it says of that mode where it is a function of one, or raises `stops`
-    at the call of that number, from 1."""
+    as it read them among it. It draws each page in each mode at the scale it is given, an
+    image of each region a page is handed with, as `read` says, or as it says of that mode
+    where it is a function of one, or raises `stops` at the call of that number, from 1."""
 
     def __init__(
         self,
@@ -1275,11 +1297,15 @@ class Browser:
         images = tuple(
             viewing_browser.Image(
                 each.id,
-                b"\x89PNG " + each.id.encode(),
+                b"\x89PNG " + f"{each.id} {band}".encode(),
                 round(each.width * scale),
-                round(each.height * scale),
+                round(height * scale),
+                band,
             )
             for each in wanted
+            for band, (_, height) in (
+                enumerate(each.regions, 1) if each.regions else [(0, (0.0, each.height))]
+            )
         )
         return viewing_browser.Drawing(
             self.version,
@@ -1546,18 +1572,23 @@ def test_the_pages_of_one_file_share_the_largest_scale_any_of_them_asks(
     [call] = browser.calls
     every = viewing.pages_of(scene_of(root, "tag", "en"))
     assert call["scale"] == viewing.device_scale(every)
-    assert all(call["scale"] >= viewing.scale(page) for page in every)
+    places = 10**-viewing.SCALE_PLACES
+    assert all(call["scale"] > viewing.scale(page) - places for page in every)
     report = html_report(root, "tag")
     edges = [max(each["pixels"].values()) for each in report["images"]]
-    assert all(edge >= viewing.LONG_EDGE for edge in edges)
+    assert all(edge == viewing.LONG_EDGE for edge in edges)
 
 
-def test_a_device_scale_is_the_largest_a_page_asks_rounded_up() -> None:
+def test_a_device_scale_is_the_largest_a_page_asks_rounded_up_as_far_as_the_widest_fits() -> None:
     small = {"width": 960, "height": 540}
-    tiny_text = {"width": 960, "height": 540, "children": [{"paragraphs": [[{"font-size": 4}]]}]}
+    tiny_text = text_page(960, 540, 4)
     assert viewing.scale(small) == viewing.LONG_EDGE / 960
-    assert viewing.device_scale([small]) == 1.634
-    assert viewing.device_scale([small, tiny_text]) == 2.5
+    assert viewing.device_scale([text_page(390, 5000, 15)]) == 0.667
+    assert viewing.device_scale([small, text_page(390, 5000, 15)]) == 1.633
+    assert viewing.device_scale([small]) == 1.633
+    assert viewing.device_scale([small, tiny_text]) == 1.633
+    assert viewing.too_wide(tiny_text, 1.633)
+    assert not viewing.too_wide(small, 1.633)
     assert viewing.device_scale([{"width": 784, "height": 100}]) == 2.0
 
 
@@ -2153,6 +2184,389 @@ def test_an_image_of_a_page_with_a_ground_says_nothing_of_the_browsers(
     [image] = html_report(root)["images"]
     assert image[viewing.ON_BROWSER_GROUND] is False
     assert "on the browser's ground" not in shown.stdout
+
+
+# --- a page too tall for one image, in bands, and one too wide (DEC-022 point 7) -----------------
+
+
+#: How many steps a phone's page holds, one card each, so it is some 5,000 px tall.
+PHONE_STEPS = 91
+
+#: A phone's width, which the test brand's figure takes in a test of bands.
+PHONE_WIDTH = 390
+
+#: The piece's own column: its steps down one column, each a card of the `tests` library,
+#: a space apart, as a phone shows a page.
+COLUMN = bound(
+    "component",
+    status="experimental",
+    about="The steps of a flow down one column, as a phone shows them.",
+    fields={
+        "type": "object",
+        "required": ["steps"],
+        "properties": {"steps": {"type": "array", "items": {"type": "object"}}},
+    },
+    parts={
+        "down": {
+            "repeat": "steps",
+            "draw": "tests/card",
+            "width": "=:width",
+            "column": {"gap": "=@space.3"},
+        }
+    },
+    preferred={"height": "=down.bottom"},
+)
+
+
+def figure_width(root: Path, width: float) -> None:
+    """The test brand's figure made `width` px wide, in the project's copy of its tokens."""
+    tokens = root / BRAND_TOKENS
+    held = json.loads(tokens.read_text(encoding="utf-8"))
+    held["size"]["figure"]["$value"]["value"] = width
+    tokens.write_text(json.dumps(held), encoding="utf-8")
+
+
+def tall_page(tmp_path: Path, steps: int = PHONE_STEPS, **fields: Any) -> Path:
+    """`flow` without its picture, a page as wide as a phone and some 5,000 px tall: its body
+    the piece's own column of `steps` cards, each head a line of the body's 16 px text, under
+    the test brand 1.0.0 and the released foundations. `fields` are the piece's own."""
+    root = drawing_project(tmp_path, picture=False, **fields)
+    figure_width(root, PHONE_WIDTH)
+    write(root / PIECE_FOLDER / "components" / "column.yaml", yaml_text(COLUMN))
+    heads = [{"id": f"s{number}", "head": f"Step {number}."} for number in range(1, steps + 1)]
+    write_content(root, body={"use": "piece/column", "steps": heads})
+    return root
+
+
+@pytest.fixture
+def tall(tmp_path: Path) -> Path:
+    return tall_page(tmp_path)
+
+
+def page_of(root: Path) -> Mapping[str, Any]:
+    """The one page `flow` has in English, as its scene holds it."""
+    [page] = viewing.pages_of(scene_of(root, PIECE, "en"))
+    return page
+
+
+def bands_of(report: Mapping[str, Any], key: str = "default") -> list[dict[str, Any]]:
+    """Each band of the report's images in `key`, in the report's order."""
+    return [image["band"] for image in report["images"] if image["key"] == key]
+
+
+def frames_of(root: Path, image: Mapping[str, Any], renderer: str = "svg") -> dict[str, Any]:
+    folder = folder_of(root) if renderer == "svg" else html_folder(root)
+    return json.loads((folder / image["frames"]).read_text(encoding="utf-8"))
+
+
+def test_the_tall_page_is_a_phone_s_some_5000_px_tall_with_16_px_text(tall: Path) -> None:
+    page = page_of(tall)
+    assert page["width"] == PHONE_WIDTH
+    assert 4900 < page["height"] < 5100
+    assert viewing._smallest_text(page) == 16
+
+
+def test_a_page_too_tall_for_one_image_is_drawn_in_bands_none_past_the_long_edge(
+    tall: Path,
+) -> None:
+    shown = run_look(tall, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    report = report_of(tall)
+    images = report["images"]
+    assert len(images) > 1
+    assert [image["band"]["number"] for image in images] == list(range(1, len(images) + 1))
+    assert {image["band"]["of"] for image in images} == {len(images)}
+    assert [image["image"] for image in images] == [
+        f"flow.en.default.band-{number}.png" for number in range(1, len(images) + 1)
+    ]
+    for image in images:
+        assert max(image["pixels"].values()) <= viewing.LONG_EDGE
+        assert (folder_of(tall) / image["image"]).is_file()
+        assert frames_of(tall, image)["band"] == image["band"]
+
+
+def test_its_bands_share_one_scale_at_which_its_smallest_text_reads_each_as_wide_as_the_page(
+    tall: Path,
+) -> None:
+    assert run_look(tall, PIECE).returncode == 0
+    page, images = page_of(tall), report_of(tall)["images"]
+    scale = viewing.page_scale(page)
+    assert scale * 16 >= viewing.SMALLEST_TEXT
+    for image in images:
+        assert image["pixels"] == {
+            "width": viewing.pixels(PHONE_WIDTH, scale),
+            "height": viewing.pixels(image["band"]["height"], scale),
+        }
+        assert frames_of(tall, image)["elements"][0]["width"] == image["pixels"]["width"]
+
+
+def test_the_bands_cover_the_page_each_overlapping_the_next_by_its_tallest_line(
+    tall: Path,
+) -> None:
+    assert run_look(tall, PIECE).returncode == 0
+    page, bands = page_of(tall), bands_of(report_of(tall))
+    tallest = viewing._tallest_line(page)
+    assert tallest == 16 * 1.4
+    assert bands[0]["top"] == 0
+    assert bands[-1]["top"] + bands[-1]["height"] == pytest.approx(page["height"])
+    for above, below in itertools.pairwise(bands):
+        assert above["top"] < below["top"]
+        assert round(above["top"] + above["height"] - below["top"], 2) >= tallest
+
+
+def covering(page: Mapping[str, Any], y: float) -> list[str]:
+    """The drawn elements of `page` whose frame covers `y`, but a box over the whole page."""
+    width, height = float(page["width"]), float(page["height"])
+    return [
+        element["id"]
+        for element, left, top in viewing._placed(page)
+        if element.get("type") != "group"
+        and not (
+            element.get("type") == "box"
+            and left <= 0
+            and top <= 0
+            and left + float(element["width"]) >= width
+            and top + float(element["height"]) >= height
+        )
+        and top <= y <= top + float(element["height"])
+    ]
+
+
+def test_a_cut_falls_in_a_gap_between_elements_where_its_overlap_holds_one(tall: Path) -> None:
+    """The cards stand a space apart. One overlap of the page holds such a gap, and one lies
+    on a card alone, where the cut crosses it."""
+    assert run_look(tall, PIECE).returncode == 0
+    page, bands = page_of(tall), bands_of(report_of(tall))
+    held = []
+    for above, below in itertools.pairwise(bands):
+        cut = above["top"] + above["height"]
+        steps = range(math.ceil(below["top"] * 10), math.floor(cut * 10) + 1)
+        gap = any(covering(page, step / 10) == [] for step in steps)
+        assert (covering(page, cut) == []) == gap
+        held.append(gap)
+    assert sorted(held) == [False, True]
+
+
+def test_the_svg_and_the_html_renderer_s_pages_are_cut_alike(tmp_path: Path) -> None:
+    root = tall_page(tmp_path, exports=["svg", "html"])
+    assert run_look(root, PIECE, "--renderer", "svg").returncode == 0
+    program = browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"})
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    through_svg, through_html = report_of(root), html_report(root)
+    assert bands_of(through_html) == bands_of(through_svg)
+    scale = viewing.page_scale(page_of(root))
+    [start] = [each["flags"] for each in logged(program) if "flags" in each]
+    assert f"--force-device-scale-factor={scale:g}" in start
+    assert drawn_clips(program) == [
+        {"x": 0.0, "y": band["top"], "width": PHONE_WIDTH, "height": band["height"], "scale": 1}
+        for band in bands_of(through_svg)
+    ]
+    assert [image["image"] for image in through_html["images"]] == [
+        f"flow.en.default.band-{band['number']}.png" for band in bands_of(through_svg)
+    ]
+
+
+def drawn_clips(program: Path) -> list[dict[str, Any]]:
+    """The clips a stand-in browser drew the file's images by, in its first mode: those taken
+    after it opened the file, and before its first read for ink."""
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    after = messages[len(methods) - 1 - methods[::-1].index("Page.navigate") :]
+    first_ground = next(
+        index
+        for index, each in enumerate(after)
+        if each.get("method") == "Runtime.evaluate"
+        and each["params"]["expression"].startswith(f"({viewing_browser.GROUND})")
+    )
+    return [
+        each["params"]["clip"]
+        for each in after[:first_ground]
+        if each.get("method") == "Page.captureScreenshot"
+    ]
+
+
+def test_beside_each_band_lie_the_frames_of_what_it_shows_in_its_own_pixels(tall: Path) -> None:
+    """An element in an overlap, or across a cut, is framed in each band it shows in."""
+    assert run_look(tall, PIECE).returncode == 0
+    page, images = page_of(tall), report_of(tall)["images"]
+    placed = {element["id"]: (element, top) for element, _, top in viewing._placed(page)}
+    held = [frames_of(tall, image) for image in images]
+    for image, frames in zip(images, held, strict=True):
+        band, down = image["band"], image["pixels"]["height"] / image["band"]["height"]
+        [whole, *shown] = frames["elements"]
+        assert whole["id"] == page["id"]
+        assert whole["y"] == round(-band["top"] * down, 2)
+        for frame in shown:
+            element, top = placed[frame["id"]]
+            bottom = top + float(element["height"])
+            assert top < band["top"] + band["height"] and bottom > band["top"]
+            assert frame["y"] == round((top - band["top"]) * down, 2)
+        inside = [
+            name
+            for name, (element, top) in placed.items()
+            if band["top"] <= top and top + float(element["height"]) <= band["top"] + band["height"]
+        ]
+        assert set(inside) <= {frame["id"] for frame in shown}
+    [first, second, *_] = [{frame["id"] for frame in each["elements"]} for each in held]
+    across = {"figure/body", "figure/body/down"}
+    in_both = first & second
+    assert across < in_both
+    assert any(name.endswith("/head") for name in in_both)
+
+
+def test_a_text_drawn_to_nothing_on_a_page_in_bands_is_reported_once(tall: Path) -> None:
+    """Every head is clear, those in an overlap among them."""
+    tokens = tall / BRAND_TOKENS
+    held = json.loads(tokens.read_text(encoding="utf-8"))
+    held["text-primary"]["$value"] = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0}
+    tokens.write_text(json.dumps(held), encoding="utf-8")
+    shown = run_look(tall, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    report = report_of(tall)
+    heads = [each["element"] for each in report["dropped"] if each["element"].endswith("/head")]
+    assert sorted(heads) == sorted({*heads})
+    assert len(heads) == PHONE_STEPS
+    first, second = (frames_of(tall, image) for image in report["images"][:2])
+    in_both = {frame["id"] for frame in first["elements"]} & {
+        frame["id"] for frame in second["elements"]
+    }
+    assert any(name in in_both for name in heads)
+
+
+def test_the_report_lists_each_page_s_bands_in_order_and_the_run_prints_them(
+    tmp_path: Path,
+) -> None:
+    root = tall_page(tmp_path)
+    shown = run_look(root, PIECE, "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    images = report_of(root)["images"]
+    count = images[0]["band"]["of"]
+    assert [(image["key"], image["band"]["number"]) for image in images] == [
+        (key, number) for key in ("default", "colour-scheme.dark") for number in range(1, count + 1)
+    ]
+    lines = shown.stdout.splitlines()
+    for key in ("default", "colour-scheme.dark"):
+        names = ", ".join(f"flow.en.{key}.band-{number}.png" for number in range(1, count + 1))
+        assert f"bands: figure (en, {key}): {count}, top to bottom: {names}" in lines
+
+
+def test_a_page_too_wide_for_its_smallest_text_to_read_is_drawn_as_wide_as_the_long_edge(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    figure_width(root, 5000)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    [image] = report_of(root)["images"]
+    assert image["pixels"]["width"] == viewing.LONG_EDGE
+    assert image[viewing.TOO_WIDE] is True
+    assert "band" not in image
+    assert (
+        f"too wide: figure (en, default) is drawn {viewing.LONG_EDGE} pixels wide, so its "
+        f"smallest text may not read"
+    ) in shown.stdout.splitlines()
+
+
+def test_a_page_too_wide_through_a_browser_is_said_so_too(tmp_path: Path, browser: Browser) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=["html"])
+    figure_width(root, 5000)
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    assert run_look(root, PIECE).returncode == 0
+    [call] = browser.calls
+    assert call["scale"] == math.floor(viewing.LONG_EDGE / 5000 * 1000) / 1000
+    assert all(image[viewing.TOO_WIDE] for image in html_report(root)["images"])
+
+
+def test_a_page_that_fits_one_image_is_drawn_whole_as_before(
+    flow: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    asked: list[dict[str, Any]] = []
+    real = viewing_tool.resvg_py.svg_to_bytes
+
+    def asking(**given: Any) -> bytes:
+        asked.append(given)
+        return real(**given)
+
+    monkeypatch.setattr(viewing_tool.resvg_py, "svg_to_bytes", asking)
+    assert run_look(flow, PIECE).returncode == 0
+    [image] = report_of(flow)["images"]
+    assert image["image"] == "flow.en.default.png"
+    assert "band" not in image and viewing.TOO_WIDE not in image
+    assert "band" not in frames_of(flow, image)
+    assert asked[0]["width"] == viewing.LONG_EDGE
+    assert "preserveAspectRatio" not in asked[0]["svg_string"].split(">", 1)[0]
+
+
+# --- bands, as computed (DEC-022 point 7) ------------------------------------------------------
+
+
+def column_page(height: float, *boxes: tuple[float, float], line: float = 22.4) -> dict[str, Any]:
+    """A page of a phone's width and `height`, on a ground, holding a box from each top to
+    each bottom `boxes` give, and a text whose lines are `line` px tall."""
+    ground = element("box", "page/ground", x=0, y=0, width=PHONE_WIDTH, height=height)
+    held = [
+        element("box", f"page/box-{at}", x=16, y=top, width=358, height=bottom - top)
+        for at, (top, bottom) in enumerate(boxes)
+    ]
+    said = element("text", "page/said", x=16, y=0, width=358, height=line, **{"line-height": line})
+    page = element(
+        "group", "page", x=0, y=0, width=PHONE_WIDTH, height=height, page=True, children=[]
+    )
+    page["children"] = [ground, said, *held]
+    return page
+
+
+def test_a_page_whose_height_fits_is_one_region_of_the_whole_page() -> None:
+    page = column_page(2000.0)
+    assert viewing.bands(page, viewing.LONG_EDGE / 2000) == (viewing.Region(0.0, 2000.0),)
+
+
+def test_bands_are_of_about_one_height_none_past_the_long_edge() -> None:
+    page = column_page(5000.0, (0, 5000))
+    found = viewing.bands(page, 0.625)
+    heights = [band.height for band in found]
+    assert len(found) == 3
+    assert max(viewing.pixels(each, 0.625) for each in heights) <= viewing.LONG_EDGE
+    assert min(heights) > max(heights) * 0.95
+
+
+def test_with_no_gap_in_its_overlap_a_band_ends_at_the_overlap_s_bottom() -> None:
+    """The overlap is the page's tallest line, so its bottom is where a band of the height
+    asked for ends."""
+    page = column_page(5000.0, (0, 5000))
+    first, second, *_ = viewing.bands(page, 0.625)
+    asked = (5000 + 2 * 22.4) / 3
+    assert first.height == pytest.approx(asked, abs=0.01)
+    assert first.height - second.top == pytest.approx(22.4, abs=0.01)
+
+
+def test_a_band_ends_in_the_middle_of_the_lowest_gap_its_overlap_holds() -> None:
+    asked = (5000 + 2 * 22.4) / 3
+    page = column_page(5000.0, (0, asked - 20), (asked - 15, asked - 5), (asked - 2, 5000))
+    first, *_ = viewing.bands(page, 0.625)
+    assert first.height == pytest.approx(asked - 3.5, abs=0.01)
+    assert covering(page, first.height) == []
+
+
+def test_a_ground_over_the_whole_page_closes_no_gap() -> None:
+    asked = (5000 + 2 * 22.4) / 3
+    page = column_page(5000.0, (0, asked - 10), (asked, 5000))
+    first, *_ = viewing.bands(page, 0.625)
+    assert first.height == pytest.approx(asked - 5, abs=0.01)
+
+
+def test_an_overlap_takes_a_quarter_of_a_band_at_most() -> None:
+    """A line as tall as a band still moves each band on down the page."""
+    page = column_page(5000.0, (0, 5000), line=3000)
+    found = viewing.bands(page, 0.625)
+    most = math.floor(viewing.LONG_EDGE / 0.625 * 100) / 100
+    for above, below in itertools.pairwise(found):
+        assert above.top < below.top
+        assert above.top + above.height - below.top == pytest.approx(
+            most * viewing.MOST_OVERLAP, abs=0.01
+        )
+    assert found[-1].top + found[-1].height == pytest.approx(5000)
 
 
 # --- what fills an export's facts (DEC-016 point 5) ---------------------------------------------

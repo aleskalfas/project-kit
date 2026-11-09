@@ -54,7 +54,8 @@ def exports_with_copy(**fields: Any) -> dict[str, Any]:
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    assert names == wanted | {"defs.schema.json", "values.schema.json", ".gitkeep"}
+    alone = {"defs.schema.json", "values.schema.json", "values-2.schema.json", ".gitkeep"}
+    assert names == wanted | alone
 
 
 @pytest.mark.parametrize("path", COMPANIONS, ids=lambda path: path.name)

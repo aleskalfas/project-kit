@@ -70,7 +70,7 @@ def drawn(
         language="en",
         lock=dict(VERSIONS),
         size_key=key,
-        seam_version=4,
+        seam_version=5,
         env=FakeEnv(components=dict(components or {})),
         facts=layout.stand_ins("draft"),
         sizes=layout.Sizes(axes, modes),

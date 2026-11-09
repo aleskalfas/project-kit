@@ -267,6 +267,6 @@ Inside this capability's own content, cite decisions by their filename stem: `[d
 
 ## Dependencies
 
-- **Backbone:** `>=1.149.0,<2.0.0`.
+- **Backbone:** a version in the range the capability's [`package.yaml`](package.yaml) declares under `requires_backbone` (COR-017).
 - **living-docs,** optional: its page type is the default selection (COR-030). Without it, name your pages' types.
 - **uv,** which runs the CLI's two queries.

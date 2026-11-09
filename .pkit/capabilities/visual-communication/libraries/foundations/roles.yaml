@@ -3,9 +3,10 @@ schema_version: 1
 
 # The shared roles (DEC-004 point 7): a component paints and measures with these, and
 # every brand gives each a value, in every combination of the axes. A role carries no
-# value here, only its type. A picture role is the exception: no brand owes one a value,
-# so it carries no default, and the shared picture roles lie in the group `picture`
-# (DEC-025 point 4).
+# value here, only its type, and a role added after the first version a default that
+# aliases an older role, which it takes where a brand gives it none. A picture role is the
+# exception: no brand owes one a value, so it carries no default, and the shared picture
+# roles lie in the group `picture` (DEC-025 point 4).
 roles:
   background: {type: color}
   surface: {type: color}
@@ -39,6 +40,12 @@ roles:
   stroke.thick: {type: dimension}
   size.figure: {type: dimension}
   size.slide: {type: dimension}
+  # The width of a site's pages: a brand that gives it no value draws a site as wide as its
+  # slide (DEC-022 point 3).
+  size.site: {type: dimension, default: '{size.slide}'}
+  # The length of a line of text, at most, which a web part caps its text at: a brand that
+  # gives it no value caps a line at its figure's width (DEC-008 point 2).
+  size.line: {type: dimension, default: '{size.figure}'}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}
@@ -47,11 +54,14 @@ roles:
   type.code: {type: typography}
   picture.logo: {type: picture}
 
-# The shared axes (DEC-004 point 2). Both change colours alone, so every mode of either
-# is drawn from one scene.
+# The shared axes (DEC-004 point 2). The colour scheme and the contrast change colours
+# alone, so every mode of either is drawn from one scene. The device is a size: each of
+# its modes has a scene of its own, and a brand has it only where it gives it, with the
+# modes it gives (DEC-021 points 1 and 2).
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}
+  device: {kind: size, modes: [desktop, tablet, phone], default: desktop}
 
 # The colour families a notation maps its concepts to (DEC-004 point 10), and a component
 # paints with as `:colour.<member>`: each paints one thing, its line, its fill and the
