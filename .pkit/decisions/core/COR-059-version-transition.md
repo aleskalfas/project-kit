@@ -109,7 +109,7 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
 ### 7. A transition of the backbone moves every component the methodology ships together
 
 - **One release for each project.** A transition of the backbone moves the backbone, and every component the project installed from what the methodology ships, to the target release's versions. No such component is held back at its old version.
-- **A new collision is resolved inside the transition.** A shipped artefact whose name an artefact of the project already uses goes through the install-time flow of COR-017: override, skip or inspect, for each artefact. The skips are recorded in the component's manifest. An override of another capability's agent records the component being moved as the project's choice for that agent's name (COR-017, "Collision prevention").
+- **A new collision is resolved inside the transition.** A shipped artefact whose name an artefact already in the project uses, the project's own or another component's, goes through the install-time flow of COR-017: override, skip or inspect, for each artefact. The skips are recorded in the component's manifest. An override of another capability's agent records the component being moved as the project's choice for that agent's name (COR-017, "Collision prevention").
 - **With nobody to answer,** the transition refuses before it writes anything. It names two ways on: run it again where a person can answer, or rename the project's artefact.
 - **A collision with externally-sourced content** surfaces, as COR-041 sets.
 - **Components outside the release keep their own course:**
