@@ -83,13 +83,13 @@ A capability may ship operational rules of its own, as a loaded file at `.pkit/c
 
 - `entry:` the index's line for one capability's loaded file, with `{file}` for its path read from the index's folder. The part before `{file}` is the harness's import token.
 - `host:` the file that reaches the index, a path relative to the project's root and inside it.
-- `line:` the line the host keeps, with `{index}` for the index's path read from the host's folder.
+- `line:` the line the host keeps, with `{index}` for the index's path read from the host's folder. With core's loaded file's path in place of the index's, it is core's include, which the host keeps too.
 
 **The backbone renders the index**, `.pkit/rules/capabilities.md`, from that key and `pkit rule-sets loaded`, one entry per capability the manifest registers that ships a loaded set, wherever the lifecycle regenerates derivable state. The adapter's merge primitive keeps `line:` present in `host:`. So no adapter names a path under `.pkit/`, and the backbone names no harness's syntax.
 
 **What takes a capability out.** Its uninstall, and an unregistration that keeps its files, renders the index without it. The host's line stays, since the index carries every install and uninstall.
 
-**Validation checks it**, for each registered adapter: `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a host without the line, and warns of an adapter that declares no `loaded_rules:`, whose harness's sessions then load no capability's rules. While registered adapters declare different `entry:` forms, the index is not rendered and validation fails, until the record that adds the second adapter decides how one index serves both. An adapter whose harness reaches the files another way needs a key of its own or a validator it registers.
+**Validation checks it**, for each registered adapter: `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a host without the line or without core's include, and warns of an adapter that declares no `loaded_rules:`, whose harness's sessions then load no capability's rules, and for whose harness core's include goes unchecked. While registered adapters declare different `entry:` forms, the index is not rendered and validation fails, until the record that adds the second adapter decides how one index serves both. An adapter whose harness reaches the files another way needs a key of its own or a validator it registers.
 
 ## The agent runner
 
