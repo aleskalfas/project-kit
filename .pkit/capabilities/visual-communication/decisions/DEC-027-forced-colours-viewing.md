@@ -97,7 +97,7 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 
 **Why only where asked.** A forced start draws as many images as the file's first start, with their reads (Context). So a run that asks takes about twice as long. Most runs check what forced colours leave as it is: the layout, the words and the fonts.
 
-**Why the flag, and not the emulation alone.** The emulation alone draws a state no reader gets, shapes forced and text not (Context). Its image would read as forced colours, and mislead whoever judges it.
+**Why the flag, and not the emulation alone.** In some browsers, such as Chrome 157, the emulation alone draws a state no reader gets, shapes forced and text not, and in others it forces both (Context). Either way, only the flag gives the same state in every browser the step reached. The emulation's image would read as forced colours, and mislead whoever judges it.
 
 **Why the forced palette picks the key.** A browser sets a scheme and a contrast with its forced palette, as this one did. A key drawn in a forced palette that never shows it would show another key under its name.
 
@@ -105,7 +105,7 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 
 **Why the reads run again.** Every image the step draws has its reads (DEC-015 point 3), and the flag puts the browser in a state no other start meets. Kept out of forcing, the planted page shows that every read holds there.
 
-**Why the first read checks the text and the forced palette.** A browser's update could drop the flag, or leave the text unforced, as the emulation does. Or the emulation could stop pairing a forced palette with its scheme. Forced images would then show what their names deny. Only a planted page shows that before anyone trusts them.
+**Why the first read checks the text and the forced palette.** A browser's update could drop the flag, or leave the text unforced, as the emulation alone does in some browsers. Or the emulation could stop pairing a forced palette with its scheme. Forced images would then show what their names deny. Only a planted page shows that before anyone trusts them.
 
 **Why a folder for each forced palette.** Its name after a key's could spell another key, since a brand names its axes and modes freely. A folder no image's name can take keeps every name as it stands.
 
