@@ -225,9 +225,25 @@ $ pkit validate | grep -B1 "core rule 99"
 
 ## Have a capability's rules reach each session
 
-Install the capability, and its rules reach every session that loads `CLAUDE.md` from then on. Installing it is your consent to its rules, so nothing asks you to accept them again ([COR-070](../../.pkit/decisions/core/COR-070-capability-loaded-rules.md) point 3). From the install to the uninstall:
+Install the capability, and its rules reach every session that loads `CLAUDE.md` from then on. Installing it is your consent to its rules, so nothing asks you to accept them again ([COR-070](../../.pkit/decisions/core/COR-070-capability-loaded-rules.md) point 3).
 
-- **The install** copies the capability with its rules file, and renders the index again. It names each rule it newly binds, as the first fence on this page shows. Neither its dry run nor `pkit capabilities show` lists the rules.
+So read them before you install it. `pkit capabilities show` lists each rule a capability ships, and the install's dry run names each rule it would newly bind ([the CLI reference, "Surface"](../../.pkit/cli/README.md#surface)). Neither installs anything:
+
+```console
+$ pkit capabilities show project-management | grep -e "Loaded rules" -e project-management:PM -e RS-PM-001
+  Loaded rules (<any>)
+    project-management:PM <any> — installing the capability is the consent to its rules (COR-070 point 3):
+      RS-PM-001  A pull request names each issue it closes
+$ pkit capabilities install project-management --dry-run | grep -e "first delivered" -e RS-PM-001
+    project-management:PM <any> (first delivered):
+      binds    RS-PM-001  A pull request names each issue it closes
+$ test -d .pkit/capabilities/project-management || echo "not installed"
+not installed
+```
+
+From the install to the uninstall:
+
+- **The install** copies the capability with its rules file, and renders the index again. It names each rule it newly binds, as the first fence on this page shows.
 - **A later version.** An upgrade of the capability names each of its rules that it newly binds, changes or retires.
 - **No opt-out.** While the capability is installed, no setting of project-kit's keeps its rules away.
 - **A rule you kept yourself.** Where a capability you install ships a rule your `project.md` held, you may delete or shorten yours, keeping what holds only in your project.
