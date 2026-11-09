@@ -148,6 +148,16 @@ Per-agent overrides *replace* the default value for that category (no merge); co
 
 When a command fills a missing documentation category in the overlay, it computes the conventional location from the project's internal documentation root ([COR-049](COR-049-documentation-roots.md)) and records it explicitly. Deploy-time resolution is unchanged: placeholders resolve only from values the overlay explicitly contains.
 
+#### A capability's default for a category its agent writes (refinement per COR-073)
+
+A capability can name where the agents it ships write, so they deploy from its install on ([COR-073](COR-073-capability-grant-defaults.md)):
+
+- **Declared under its name.** A capability declares each category it introduces for its agents' writes, under its name and a dot. It may name a default for each, which a query of its own answers. A dotted category name is a capability's alone.
+- **Written into the overlay.** The capability's install and the commands that fill missing categories write the default. Deploy-time resolution is unchanged: placeholders resolve only from values the overlay explicitly contains.
+- **Moved only as written.** A written value moves with the default only while it stays exactly as written.
+- **Consent.** A person's run is the consent, except over a path that already holds content.
+- **Nothing sync overwrites.** The deploy's check against content the next sync overwrites binds every category a capability's agent owns, beside core's categories that carry writes.
+
 ### 6. Backbone — what ships in core vs project
 
 The core / project split for agents follows the universal-applicability principle (the same test that distinguishes COR records from PRJ records in `.pkit/decisions/README.md`; see the project's tracking work for lifting this test into a cross-artifact principle).
