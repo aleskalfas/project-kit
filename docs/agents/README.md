@@ -15,7 +15,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - src/project_kit/refs.py
         - src/project_kit/storyboards.py
-      record: [COR-006, COR-007, COR-013, COR-016, COR-024, COR-026, COR-047, COR-057, "project-management:DEC-029"]
+      record: [COR-006, COR-007, COR-013, COR-016, COR-024, COR-026, COR-047, COR-057, "project-management:DEC-029", ADR-085]
       artefact:
         - ACT-developer
         - ACT-ai-agent
@@ -150,7 +150,7 @@ A definition is written once, in `.pkit/`, and deployed into the place where the
 ```mermaid
 flowchart TD
   accTitle: How a definition reaches a session
-  accDescr: The core's definitions, each installed capability's and your own are the sources. pkit init and pkit sync run the adapter's deploy, which picks one source for each name, fills each placeholder of its front matter from your overlay, and writes the copy into .claude/agents. A definition whose required category the overlay leaves unset is skipped. A session dispatches an agent by its definition's name, and Claude Code loads the deployed copy, with the tools its tool access gives it.
+  accDescr: The core's definitions, each installed capability's and your own are the sources. pkit init and pkit sync run the adapter's deploy, which picks one source for each name, fills each placeholder of its front matter from your overlay, and writes the copy into .claude/agents. A definition whose required category the overlay leaves unset is skipped. A session dispatches an agent by its definition's name, and Claude Code loads the deployed copy, with the tools the definition's tool access gives the agent.
   core["core definitions, .pkit/agents/core/"] --> deploy
   cap["a capability's definitions, its agents/ folder"] --> deploy
   own["your definitions, .pkit/agents/project/"] --> deploy
@@ -167,11 +167,11 @@ flowchart TD
 - **The overlay,** `.pkit/agents/project/overlay.yaml`, names your paths for each category, such as `adr-records`. A definition's front matter names the category as `<adr-records>`, and the deploy writes the paths in its place. `pkit init` writes the overlay with a value for each category the core's definitions name ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).
 - **The deployed copy,** `.claude/agents/<name>.md`, is what Claude Code loads. Each sync writes it again from its source, so you edit the source, never the copy. A file of yours there stays: the deploy leaves a file it did not write, and reports it skipped ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
 - **Skipped.** A definition whose required category the overlay leaves unset is skipped, and the others deploy. A copy an earlier deploy wrote stays as it was. `pkit agents` lists each definition as deployable or skipped ([the reference, `pkit agents`](../../.pkit/agents/README.md#pkit-agents)).
-- **Refused for its tool access.** A definition that names both `tools` and `withheld`, or withholds a tool Claude Code cannot withhold, is skipped too, and the deploy says why. Its earlier copy is removed, since that copy may give tools the definition no longer gives. Mend the definition and run `pkit sync` again ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)).
-- **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". Claude Code gives the agent the tools its tool access gives it ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)):
-  - **With `tools:`,** only the tools that list names.
-  - **With `withheld:`,** every tool the session would give it, but those that list names.
-  - **With neither,** the tools the session gives a helper.
+- **Refused for its tool access.** A definition that names both `tools` and `withheld`, or withholds a tool Claude Code cannot withhold, is skipped too, and the deploy says why. The definition's earlier copy is removed, since that copy may give tools the definition no longer gives. Mend the definition and run `pkit sync` again ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)).
+- **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". The definition's tool access decides which tools Claude Code gives the agent ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)):
+  - **With `tools:`,** the agent holds only the tools that list names.
+  - **With `withheld:`,** the agent holds every tool the session would give it, but those that list names. That rests on `helper-withheld-tools`, a requirement on Claude Code that nobody has measured yet (ADR-085 point 3).
+  - **With neither,** the agent holds the tools the session gives a helper.
 - **What the agent may run.** Where the permission model is turned on, the model decides each of the agent's calls under the grants you give that agent ([the permissions guide](../permissions/README.md#deny-something-to-one-agent)).
 
 ## Get a delegated agent's result back whole
