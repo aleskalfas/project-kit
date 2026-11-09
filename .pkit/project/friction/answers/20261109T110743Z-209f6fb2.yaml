@@ -1,0 +1,2760 @@
+answers:
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T053408Z-3b52273c.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:07:43Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T095816Z-9e478090, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second judged a deny that reads what a runner runs, which left this page as it was. The third added the working-run requirement to the status line. The deploy primitives, their order and their contract hold with all three.
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:07:45Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T095816Z-9e478090, answered apart. The first adds the `visibility` member and `untrack --runtime-ignored`, which ADR-009 points 5 and 7 record. The second rewrote 'When the hook asks', and the third added the working-run probe's section. Neither touches the git-footprint section, whose footprint and modes the first leaves as they were. So the page holds with all three.
+  - artefact: .pkit/agents/hooks.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:07:47Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. No hook command, collision or need moves under any, so the page holds with all five.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:07:49Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second drops a DEC-001 sentence on a deny through `uv run`, and the third moves links into the lookup pages. How the check joins `pkit validate` and what fails it hold with all three.
+  - artefact: .pkit/capabilities/evidence/README.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T014227Z-338d7992.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:07:51Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the validate section's links, and judged main's `refs` row change with it. The evidence validator's row and how a component joins hold with both.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:07:53Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the page's anchors to manifest.md, and judged the ignore render and the `refs` row with it. Living-docs declares no `runtime_ignore` entry, and its row holds, so the page holds with both.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:07:55Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the CLI sections' links, and judged the validate section's `refs` row with it. Nothing the agent reads or proposes moves under either, so the page holds with both.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:07:56Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second drops a doc-examples DEC-001 sentence, and the third moves links into the lookup pages. A page's checks, their severities and who runs its fences hold with all three.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:07:58Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the friction block's and the validate section's links, and judged the `refs` row with it. The checks of a space hold with both, so the page holds.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:00Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the CLI sections' links, and judged the `refs` row with it. The renderer, the exit rule and the `living-docs:spaces` member hold with both, so the page holds.
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T210953Z-944553cc.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:03Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the rules README's and the CLI sections' links, and judged the `refs` row with it. How the check of figures joins and what fails validation hold with both.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:06Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the page's anchor to manifest.md, and judged the `refs` row with it. The new member only warns, so 'only an error fails pkit validate' holds with both.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T132436Z-bef131f7.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:08:09Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:11Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first edited three passages, which the second moved to manifest.md and migrations.md. This change carries them there, and the entry page keeps main's pointers unchanged. Its derivable state and its notes on package validation hold, so the page holds with both.
+  - artefact: .pkit/lifecycle/component-registry.md
+    revalidated:
+      at: 2026-11-09T11:08:14Z
+      outcome: unchanged
+      unchanged-because: Its register pre-flight runs the package validator, where only errors refuse. This change adds one in package_validate.py, for a `runtime_ignore` entry outside its component's folder, which manifest.md states. The pre-flight refuses it as any other error, so the page holds.
+  - artefact: .pkit/lifecycle/manifest.md
+    revalidated:
+      at: 2026-11-09T11:08:16Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/migrations.md
+    revalidated:
+      at: 2026-11-09T11:08:18Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/upgrade-flow.md
+    revalidated:
+      at: 2026-11-09T11:08:20Z
+      outcome: unchanged
+      unchanged-because: Its transitions render `.pkit/.gitignore` after the copy and again as derivable state. This change adds to visibility.py the tracked-file matcher, the `visibility` member and `untrack --runtime-ignored`, and leaves the render as it was. No step of a transition runs them, so the page holds.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:23Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, answered apart. The first warns at a tracked file the render ignores, so a committed diagnose log is now warned of. The second rewrote how a deny reads what a runner runs, and the third moves links into the lookup pages. The log and marker stay ignored, and the permission rows the page cites hold, so it holds with all three.
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:25Z
+      outcome: updated
+  - artefact: .pkit/process/connections.md
+    read:
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:27Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds a package error for a `runtime_ignore` entry outside its component's folder, a check the page does not describe. The second moved the page's link on the connection blocks to manifest.md. The connection checks and the generated depends-on list hold with both, so the page holds.
+  - artefact: .pkit/process/engine.md
+    read:
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:08:29Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. No process command, gate or journal pattern moves under any, so the engine page holds with all five.
+  - artefact: .pkit/process/shape.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+    revalidated:
+      at: 2026-11-09T11:08:31Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261108T224219Z-be2d9a25, answered apart. The first adds the `visibility` member, last, which only warns. The second keeps a sign-off gate shut when its predicate names no producer. The process member's shape checks and the gate kinds the page names hold with both.
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:08:34Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186 and 20261109T095816Z-9e478090, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second says an install writes no project rules file, and the third judged the lifecycle split's links. The rule-set and loaded-rules checks and their budgets hold with all three.
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:08:36Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186, 20261109T074625Z-5e6cbb22 and 20261109T095816Z-9e478090, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second rewords COR-069 point 3, and the third changes three privileges' descriptions in the catalog. The fourth adds a harness requirement of the shape its companion declares. The schemas row and each schema pair hold with all four.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:38Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186 and 20261109T075620Z-bee9e107, answered apart. The first adds a package error, which manifest.md's package-schema section states, and the `visibility` member, which applies no schema. ADR-058 lists that member, and points 1 and 5 keep their words. The second rewords COR-069 point 3, and the third moved the page's links to manifest.md. The package schema and the members that apply schemas hold with all three.
+  - artefact: .pkit/schemas/data-binding.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:45Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the validate section's links, and judged the `refs` row with it. How adopter data binds and the `data` member hold with both, so the page holds.
+  - artefact: .pkit/scratchpad/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:51Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186 and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second says the hash leaves out the stamp's fields, as `reported_hash` reads, and the third moved the seed-paths link. The scratchpad row and a slug's state folders hold with all three.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:54Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first counts fourteen members, adds the `visibility` row and gives the untrack row `--runtime-ignored`. The second moved the page's collision links to the lookup pages. The skill checks and the skill commands hold with both, so the page holds.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T014227Z-338d7992.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T203336Z-317aab12.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:08:57Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, answered apart. The first changes only a comment in check.sh, whose list of members gains `visibility`. The second drops a doc-examples DEC-001 sentence, and the third moved the sync's guard link to upgrade-flow.md. What check.sh runs, and who checks answers, hold with all three.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:00Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and the item that a later `runtime_ignore` entry ships no migration. The second rewrote the deny callout, and the third moved the page's lifecycle links to the lookup pages. An upgrade still runs each migration a breaking change ships, so the README holds with all three.
+  - artefact: docs/agents/README.md
+    read:
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:09:03Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T095816Z-9e478090, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second leaves the quoted `delegated-result-complete` answer, and judged the lifecycle split's links with it. The refs row and the guide's `pkit refs validate` run hold with both.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:06Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first counts fourteen members and gives the untrack row `--runtime-ignored`. The second moves the Surface section's links, and judged main's `capabilities` and `agents` rows with it. No `pkit decisions` command the guide runs moves under either, so it holds.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:10Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, answered apart. The first counts fourteen members and gives the untrack row `--runtime-ignored`. The second rewrote the deny callout, and the third moves the Surface section's links. The permission rows the guide points to hold with all three.
+  - artefact: docs/process/README.md
+    read:
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:16Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row, and says validate warns at a tracked journal the render ignores. The second moved the guide's link on the connection blocks to manifest.md. The tutorial's `pkit validate | tail -n 1` run holds with both.
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:09:21Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186 and 20261109T095816Z-9e478090, answered apart. The first counts fourteen members and adds the `visibility` row and the `packages` row's folder clause. The second says an install writes no project rules file, as 'Your rules' says, and the third judged the moved links. The rules checks, the word counts and 'What you keep' hold with all three.
+  - artefact: docs/schemas/README.md
+    read:
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:24Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the guide's links, and judged the ignore render and the `refs` row with it. `pkit validate` still fails a misspelt key and checks data files, so the guide holds with both.
+  - artefact: docs/scratchpad/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:28Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186 and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second says the hash leaves out the stamp's fields, and the third moved the seed-paths link. The scratchpad commands the guide runs hold with all three.
+  - artefact: docs/skills/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:31Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds the CLI reference's `visibility` row and the `packages` row's folder clause. The second moves the skills README's links, and judged the override warning with it. The guide's `pkit validate | grep` for citations holds with both.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+    revalidated:
+      at: 2026-11-09T11:09:34Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T004544Z-a16af972, answered apart. The first tests `untrack --runtime-ignored`'s dry run, which writes nothing. The second tests the render after a real install and uninstall. Each mode of `pkit visibility` still previews with `--dry-run`, so the requirement holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+    revalidated:
+      at: 2026-11-09T11:09:36Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160 and 20261109T004544Z-a16af972, answered apart. The first adds the `visibility` member and `untrack --runtime-ignored`, beside the render and both modes. The second has an install's dry run name the rules it would bind, and the third has the install render `.pkit/.gitignore`. Adopting still installs a capability and chooses a footprint as UC-023 and UC-049 say, so the journey holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:09:39Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T223622Z-2a5e1da3 and 20261109T014028Z-33dd8c89, answered apart. The first adds the `visibility` member, which only warns, and `untrack --runtime-ignored`. The second makes COR-008's issue number the tracker's, and the third warns of an ignored overlay override. A branch still names its issue, and no warning fails a check, so the journey holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-005-package-and-share-capability.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:09:42Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Packaging, registering and checking a capability keep the steps UC-015, UC-016 and UC-018 give, so the journey holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:09:45Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Variant 2d's install in place states none of these outputs, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:09:47Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second points the capability-author skill at manifest.md, and judged main's four cli.py changes with it. Stamping a capability with `pkit new capability` moves under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:09:49Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Registering and uninstalling a capability keep the steps the use case gives, so it holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:09:51Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Its roles, points, processes and connection checks move under none, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:09:53Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. The package check UC-018 runs names no `runtime_ignore` entry, and the other paths are not its steps, so it holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:09:55Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T095816Z-9e478090, answered apart. The first adds `untrack --runtime-ignored`, and a package error for a `runtime_ignore` entry outside its component's folder. The second adds a fourth harness requirement, and judged the lifecycle split's links with it. Steps 7 and 11 grade every requirement, and the use case describes no `runtime_ignore` entry, so it holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:09:57Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T095816Z-9e478090, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second changed the adapters README's status line, and judged the lifecycle split's links with it. `pkit new agent`, the deploy and step 10's refs check move under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-006-gate-merges.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T011742Z-95ba1392.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:06Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. The gate fails only on an error, and the new member and the override both only warn, so it holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:12Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. `pkit config set` still renders `.pkit/.gitignore` again on a change, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+    revalidated:
+      at: 2026-11-09T11:10:15Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T074625Z-5e6cbb22, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second makes a deny read what a listed runner runs, and judged main's four cli.py changes with it. A project's grant still never widens a deny, and the merge and sync steps hold with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:19Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The second has variant 1b's dry run name the rules it would bind. The third has steps 10, 15a and 19 render `.pkit/.gitignore`. The first adds the folder rule and a warning at a tracked file the render ignores, which no step denies. The fourth's report refusal and the fifth's override warning reach no step, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:22Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The second added variant 6a, where the plan lists the capability's loaded rules. The third renders `.pkit/.gitignore` only after a real install. The first adds `untrack --runtime-ignored`, and the fourth and fifth reach the report and the overlay. The plan still writes nothing and shows what it says, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:25Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Choosing which installed capability provides a role runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+    revalidated:
+      at: 2026-11-09T11:10:28Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T074625Z-5e6cbb22 and 20261109T095816Z-9e478090, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second makes a deny read what a runner runs, and the third changed the adapters README's status line. Step 11 still hands an agent's calls to the permission code, and the deploy holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:32Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Declaring a changeset runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:10:35Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T223622Z-2a5e1da3, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The second makes COR-008's issue link the tracker's form, and the conventional title of the landed commit stays. The others add `untrack --runtime-ignored`, list a capability's rules before install and render the ignore file in its verbs. They also refuse a report's doubled front-matter key and warn of an ignored override. The landing gate fails only on an error, which none of them gives, so the use case holds with all six.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:10:46Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second moved the decisions README's links to the lookup pages, and judged main's four cli.py changes with it. `pkit new decision` and `pkit decisions validate` move under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:10:50Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second moved the schemas pages' links into the lookup pages, and judged main's four cli.py changes with it. The rule-set commands and their validate member move under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:10:53Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186 and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second says the hash leaves out the stamp's fields, and the third moved the seed-paths link. Variants 5a and 5f keep their hashes, and no scratchpad command moves, so the use case holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:10:57Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second moved the decisions README's links to the lookup pages, and judged main's four cli.py changes with it. Making a proposal binding through review moves under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:04Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Keeping each core record true runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:09Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T223622Z-2a5e1da3, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The second makes COR-008's issue link the tracker's form, while the branch name the reviewer checks stays. The others add `untrack --runtime-ignored`, list a capability's rules before install and render the ignore file in its verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Challenging a draft and checking a diff run none of them, so the use case holds with all six.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:14Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Releasing the backbone runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:17Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Releasing a component on its own version runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:11:20Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and changes only a comment in check.sh, and triggers no migration. The second points the migration-author skill at migrations.md, and judged main's four cli.py changes with it. Writing and checking a backbone migration move under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-011-migrate-component-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T11:11:23Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T075620Z-bee9e107, answered apart. The first adds `untrack --runtime-ignored` and changes only a comment in check.sh, and triggers no migration. The second points the migration-author skill at migrations.md, and judged main's four cli.py changes with it. Writing and checking a component's migration move under neither, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:25Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Putting the CLI on a machine runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:33Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The first adds the `visibility` member and `untrack --runtime-ignored`, and ADR-009 records them beside the folder rule. The second lists a capability's rules before its install, and the third renders `.pkit/.gitignore` in a capability's verbs. The fourth refuses a report's doubled key, and the fifth warns of an ignored override. Init still renders the file at step 9, and variants 12a to 12f keep both modes, so it holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:36Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The first adds `untrack --runtime-ignored`, and ADR-009 point 7 says sync runs no migration. The second lists a capability's rules before its install, and the third has a committed install carry its ignore lines. The fourth refuses a report's doubled key, and the fifth warns of an ignored override. One sync still renders and deploys the shared footprint, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:39Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. `pkit upgrade` still runs the transition's migrations and renders `.pkit/.gitignore`, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:41Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. The version guard each project runs under moves under none, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:43Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. Re-pinning an inherited rule set runs none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:46Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The first has validate warn at a file a new version declares after the project committed it. The second has the upgrade's dry run name the rules it would bind, and variant 1a still writes nothing. The third renders `.pkit/.gitignore` once, in the tail the upgrade shares with install. The fourth and fifth reach the report and the overlay, so step 9 and the use case hold with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-012-report-problem.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:50Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261108T224213Z-b22c8186, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. The fifth makes `pkit report` refuse a note whose stamp would leave a front-matter key twice. A refused report posts and moves nothing, so variant 1c and the guarantee hold. The second changes only what a note's hash covers, which no step names. The first, third, fourth and sixth reach no report path, so the use case holds with all six.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-013-link-reports.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T11:11:53Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac, 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, answered apart. They add `untrack --runtime-ignored` and the `visibility` member, list a capability's rules before its install, and render `.pkit/.gitignore` in a capability's verbs. They also refuse a report's doubled front-matter key and warn of an ignored overlay override. The maintainer's inbox and links to fixes run none of these paths, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+    revalidated:
+      at: 2026-11-09T11:11:58Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261108T232517Z-0faf9d00, answered apart. The first warns at a tracked file the render ignores, and the render still ignores the provenance file. The second adds a hook-need warning after the deploy, which writes nothing. The per-machine choices and what stays out of a commit hold with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+    revalidated:
+      at: 2026-11-09T11:12:00Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261109T074625Z-5e6cbb22, answered apart. The first adds `untrack --runtime-ignored` and lists `visibility` in validate's help. The second reads a deny through a runner, and judged main's four cli.py changes with it. The context guard compares neither, so every step holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T233716Z-8c0bcbac.yaml
+    revalidated:
+      at: 2026-11-09T11:12:04Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261108T233716Z-8c0bcbac and 20261107T153702Z-907fa2fc, answered apart. The first adds the `visibility` member and `untrack --runtime-ignored`, and the diagnose files stay ignored. The second rewrote variant 4e on a call that may hide a guardrail. The diagnostics and the log the use case reads hold with both.
