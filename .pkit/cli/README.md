@@ -1295,7 +1295,7 @@ Moves a note from `active/` — or from `reported/`, retirement proceeds from th
 - **`<slug>`** is a slug or the full filename. A slug matches each note whose filename after the date is that whole slug, so `layer` never matches `2026-06-03-cache-layer.md`. Use the full filename where two notes of one folder hold the slug.
 - **`--produced <ref>`** is repeatable. Each value is a record ID (`COR-013`), file path (`.pkit/agents/README.md`), or URL. May be omitted; the `produced:` field is then not added (the author can edit it later by hand).
 
-Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `done/`. When the move empties `reported/`, the directory is removed (it is lazy — COR-043).
+Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `done/`. It also refuses a note whose front matter holds a key twice, naming the key, or does not read as YAML. When the move empties `reported/`, the directory is removed (it is lazy — COR-043).
 
 ### `scratchpad drop <slug>`
 
@@ -1303,7 +1303,7 @@ Moves a note from `active/` (or `reported/`) to `dropped/` and appends `retired`
 
 Before dropping, the convention asks the author to append a closing paragraph to the body explaining *why* the line was abandoned, so future readers do not re-tread the path silently.
 
-Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `dropped/`.
+Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `dropped/`. Like `scratchpad done`, it refuses a note whose front matter holds a key twice, or does not read as YAML.
 
 ### `scratchpad reported <slug> <ref>...`
 
@@ -1313,6 +1313,7 @@ Moves the note from `active/` to the lazily-created `reported/` and appends to i
 
 - **`<slug>`** finds the note as in `scratchpad done`.
 - **`<ref>`** is `owner/repo#N` or a full GitHub issue URL (normalised to `owner/repo#N`). Repeatable — one note may become several issues.
+- **A key never lands twice in the front matter.** An active note that holds `reported`, `reported_to` or `reported_hash` is refused, and so is any note whose front matter holds a key twice. The refusal names the key and its line, and writes nothing. Rename the note's own field, then run it again.
 
 Supports `--dry-run`.
 
@@ -2323,7 +2324,12 @@ scratchpad-backed flow that ends at a URL instead of a post — `--url`,
 **ends with the required follow-up as its last line** (`after filing in the
 browser, run: pkit scratchpad reported <slug> <issue-ref>`): the browser
 cannot stamp the note, so the exact one-command gesture is handed over
-loudly, never left as a hidden step. Every
+loudly, never left as a hidden step. A note its stamp could not record is
+**refused at compose, before any post, stage or link**, naming the key. That
+is a note whose front matter holds a key twice. It is also an active note that
+holds a field the stamp writes: `reported`, `reported_to`, `reported_hash`, and
+`project` or `workstream` where the post would write the report's context.
+`report submit` checks the note again before it posts, and keeps the draft. Every
 report verb also prints a one-line warning (never a gate) when a `reported/`
 note has been modified since its stamp.
 

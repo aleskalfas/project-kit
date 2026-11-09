@@ -210,16 +210,16 @@ def _hold_fields(note: Path, fields: str) -> None:
         (None, "alpha", "cli"),
         ("project: own-project", None, None),
         ("workstream: own-workstream", None, None),
-        ("reported: not yet", None, None),
-        ("project: own-project\nworkstream: own-workstream", "alpha", None),
+        ("project: own-project\nworkstream: own-workstream", None, None),
+        ("workstream: own-workstream", "alpha", None),
     ],
     ids=[
         "held-none",
         "held-none-stamp-writes-context",
         "held-project",
         "held-workstream",
-        "held-reported",
-        "held-both-stamp-writes-project",
+        "held-both",
+        "held-workstream-stamp-writes-project",
     ],
 )
 def test_first_stamp_and_drift_check_hash_the_same_text(
@@ -271,6 +271,82 @@ def test_a_hash_outside_the_reported_block_reads_as_drift(kit_target: Path) -> N
     )
     stamp.dst.write_text(moved, encoding="utf-8")
     assert scratchpads.note_is_drifted(moved) is True
+
+
+# --- a stamp never leaves a front-matter key twice (#2923) ------------
+
+
+def _held_twice(note: Path) -> str:
+    """A reported note whose own `reported:` lies above the stamp's: the shape a
+    stamp left before #2923. Returns the content written."""
+    content = note.read_text(encoding="utf-8").replace(
+        "\nreported: 2026-08-10", "\nreported: not yet\nreported: 2026-08-10", 1
+    )
+    note.write_text(content, encoding="utf-8")
+    return content
+
+
+@pytest.mark.parametrize(
+    ("held", "project", "workstream", "named"),
+    [
+        ("reported: not yet", None, None, "'reported' on line 5"),
+        ("project: own-project", "alpha", None, "'project' on line 5"),
+        ("workstream: own-workstream", None, "cli", "'workstream' on line 5"),
+        ("reported_to:\n  - elsewhere#1", None, None, "'reported_to' on line 5"),
+    ],
+    ids=["held-reported", "held-project-stamp-writes-it", "held-workstream", "held-reported-to"],
+)
+def test_a_first_stamp_refuses_a_field_the_note_holds_and_writes_nothing(
+    kit_target: Path, held: str, project: str | None, workstream: str | None, named: str
+) -> None:
+    src = _stamp_note(kit_target)
+    _hold_fields(src, held)
+    before = src.read_text(encoding="utf-8")
+    with pytest.raises(click.ClickException, match=r"would hold the key twice") as raised:
+        scratchpads.stamp_reported(
+            kit_target, "my-note", ("owner/repo#7",), project=project, workstream=workstream
+        )
+    assert named in raised.value.message
+    assert src.read_text(encoding="utf-8") == before
+    assert not (kit_target / ".pkit" / "scratchpad" / "reported").exists()
+
+
+def test_a_later_send_refuses_a_note_holding_a_key_twice(kit_target: Path) -> None:
+    _stamp_note(kit_target)
+    stamp = scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
+    before = _held_twice(stamp.dst)
+    with pytest.raises(click.ClickException, match=r"'reported' on lines 5 and 6"):
+        scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#8",))
+    assert stamp.dst.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize("command", ["done", "drop"])
+def test_cli_retiring_a_note_holding_a_key_twice_names_the_key(
+    cli_target: Path, command: str
+) -> None:
+    _stamp_note(cli_target)
+    stamp = scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
+    _held_twice(stamp.dst)
+    res = CliRunner().invoke(main, ["scratchpad", command, "my-note"])
+    assert res.exit_code == 1, res.output
+    assert isinstance(res.exception, SystemExit)  # a refusal, never a traceback
+    assert "holds a key twice" in res.output
+    assert "'reported' on lines 5 and 6" in res.output
+    assert stamp.dst.is_file()
+
+
+def test_retiring_a_note_whose_front_matter_does_not_read_is_refused(kit_target: Path) -> None:
+    _hold_fields(_stamp_note(kit_target), "meta:\n  kind: a\n  kind: b")
+    with pytest.raises(click.ClickException, match=r'not read as YAML: .*duplicate key "kind"'):
+        scratchpads.transition_to_done(kit_target, slug="my-note")
+
+
+def test_cli_scratchpad_reported_refuses_a_field_the_note_holds(cli_target: Path) -> None:
+    _hold_fields(_stamp_note(cli_target), "reported: not yet")
+    res = CliRunner().invoke(main, ["scratchpad", "reported", "my-note", "owner/repo#7"])
+    assert res.exit_code == 1, res.output
+    assert "'reported' on line 5" in res.output
+    assert not (cli_target / ".pkit" / "scratchpad" / "reported").exists()
 
 
 # --- retirement from reported/ + lazy dir removal ---------------------
@@ -753,6 +829,71 @@ def test_cli_report_attach_refuses_a_slug_that_only_ends_the_note_s_slug(
     assert res.exit_code != 0
     assert "no scratchpad note matches 'layer'" in res.output
     assert note.is_file()
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+@pytest.mark.parametrize(
+    ("held", "context", "named"),
+    [
+        ("reported: not yet", (None, None), "'reported' on line 5"),
+        ("project: own-project", ("alpha", None), "'project' on line 5"),
+    ],
+    ids=["held-reported", "held-project-report-names-a-project"],
+)
+def test_cli_report_refuses_before_it_sends_a_note_holding_a_field_the_stamp_writes(
+    cli_target: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    held: str,
+    context: tuple[str | None, str | None],
+    named: str,
+) -> None:
+    # #2923: the post would leave the note holding the key twice.
+    note = _stamp_note(cli_target)
+    _hold_fields(note, held)
+    before = note.read_text(encoding="utf-8")
+    posted = {"v": False}
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: context)
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep, "file_report_via_gh", lambda *a, **k: posted.__setitem__("v", True) or "x"
+    )
+    for extra in ([], ["--yes"]):
+        res = CliRunner().invoke(
+            main,
+            ["report", "bug", "--title", "t", "--body", "b", "--scratchpad", "my-note", *extra],
+            input="y\n",
+        )
+        assert res.exit_code == 1, res.output
+        assert named in res.output and "would hold the key twice" in res.output
+        assert "staged:" not in res.output
+    assert posted["v"] is False
+    assert note.read_text(encoding="utf-8") == before
+
+
+def test_cli_report_by_url_refuses_a_note_holding_reported_before_the_link(
+    cli_target: Path,
+) -> None:
+    # `scratchpad reported`, which records a browser filing, would write `reported` again.
+    _hold_fields(_stamp_note(cli_target), "reported: not yet")
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--scratchpad", "my-note"]
+    )
+    assert res.exit_code == 1, res.output
+    assert "'reported' on line 5" in res.output
+    assert "issues/new?" not in res.output
+
+
+def test_cli_report_by_url_of_a_note_holding_project_is_not_refused(
+    cli_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A browser filing is recorded by `scratchpad reported`, which writes no project.
+    _hold_fields(_stamp_note(cli_target), "project: own-project")
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: ("alpha", None))
+    res = CliRunner().invoke(
+        main, ["report", "bug", "--title", "t", "--body", "b", "--scratchpad", "my-note"]
+    )
+    assert res.exit_code == 0, res.output
+    assert "issues/new?" in res.output
 
 
 # --- pre-send drift lint ---------------------------------------------

@@ -4305,6 +4305,17 @@ def _run_report(
     if scratchpad_note:
         note_path = scratchpads.resolve_note(target_root, scratchpad_note)
         note_text = note_path.read_text(encoding="utf-8")
+        # Refused before anything is sent where the note could not record the
+        # send (#2923). A browser filing is recorded by `scratchpad reported`,
+        # which writes no report context.
+        stamps_context = assume_yes or (gh_ok and not want_url)
+        scratchpads.refuse_unrecordable_send(
+            target_root,
+            note_path,
+            note_text,
+            project=project if stamps_context else None,
+            workstream=ws if stamps_context else None,
+        )
         findings = lint_redaction(note_text)
         payload = attach_note(body, note_path.name, note_text)
         url = build_new_issue_url(
@@ -4935,6 +4946,16 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         )
     if not gh_authenticated():
         raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
+    note_path = (target_root / draft.note) if draft.note else None
+    if note_path is not None and note_path.is_file():
+        # The note may have changed since it was staged (#2923); the draft is kept.
+        scratchpads.refuse_unrecordable_send(
+            target_root,
+            note_path,
+            note_path.read_text(encoding="utf-8"),
+            project=draft.project,
+            workstream=draft.workstream,
+        )
     refusal = (
         "refusing to post: stdin is not a terminal, so nobody can confirm the post (#2003). "
         f"Nothing was posted, and the draft is kept. Run `pkit report submit "
@@ -4948,7 +4969,6 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     if not _confirm_send_payload(draft.kind, draft.payload, current_login(), refusal=refusal):
         click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
         return
-    note_path = (target_root / draft.note) if draft.note else None
     outcome = _post_confirmed_payload(
         target_root,
         kind=draft.kind,
