@@ -769,10 +769,13 @@ def _target_kit() -> Path:
 
 @main.group("config")
 def config() -> None:
-    """The backbone configuration file, `.pkit/project/config.yaml` (COR-048).
+    """Configuration: the backbone's own file, `.pkit/project/config.yaml`
+    (COR-048), and a key a capability records in its own.
 
-    Every key is owned by a core record and checked by `pkit validate`; the
-    keys are documented in `.pkit/cli/README.md`, "Configuration file".
+    `set` sets a key of the backbone's file. Every key there is owned by a core
+    record and checked by `pkit validate`; the keys are documented in
+    `.pkit/cli/README.md`, "Configuration file". `record` records a key, once, in
+    an installed capability's own configuration (COR-049 point 5).
     """
 
 
@@ -848,6 +851,107 @@ def config_set(key: str, value: str, yes: bool) -> None:
     refreshed = vis.refresh_runtime_ignore(target_root)
     if refreshed is not None:
         click.echo(refreshed.report())
+
+
+@config.command("record")
+@click.argument("capability", metavar="CAPABILITY")
+@click.argument("key", metavar="KEY")
+@click.argument("value", metavar="VALUE")
+@click.option(
+    "--yes", is_flag=True, default=False, help="Consent to the write without a prompt (CI)."
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Say what would be recorded, refuse what would be refused, and write nothing.",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Print the outcome as one document; never prompts, so a write takes --yes.",
+)
+def config_record(
+    capability: str, key: str, value: str, yes: bool, dry_run: bool, as_json: bool
+) -> None:
+    """Record KEY (dotted, e.g. `location`) as VALUE in CAPABILITY's own configuration.
+
+    The configuration is `.pkit/capabilities/<capability>/project/config.yaml`,
+    bound to the capability's `config` schema. The key is added once and never
+    moved: a key held with the same value writes nothing, and one held with
+    another value, an empty one included, is refused (COR-049 point 3). Its
+    line goes in as text, every other byte of the file kept — comments, order,
+    line endings and a byte-order mark. An absent file is created, bound to the
+    schema. Nothing is written where the result would not read back as the file
+    plus that key, or would bring an error of the schema the file did not have.
+    VALUE is written as text. Writing needs consent, in the forms of the
+    backbone configuration (COR-048 point 5): an interactive confirmation, or
+    `--yes`; a run off a terminal without `--yes` refuses and names the command
+    to run. A capability's command passes `--yes` only where its own records
+    make running that command the consent. Exit 1 when refused.
+    """
+    import json
+
+    from project_kit import capability_config, project_config
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    command = shlex.join(["pkit", "config", "record", capability, key, value])
+    try:
+        recording = capability_config.plan(target_root, capability, key, value)
+        if not dry_run and recording.after is not None:
+            project_config.Consent(
+                yes=yes,
+                interactive=False if as_json else None,
+                rerun=f"{command} --yes",
+                target=recording.relpath,
+                preview=f"{command} --dry-run",
+            ).confirm(f"Record {recording.key} = {value}")
+            capability_config.write(recording)
+    except click.ClickException as exc:
+        if as_json:
+            refusal = _record_document(capability, key, value, "refused", reason=exc.message)
+            click.echo(json.dumps(refusal, indent=2, sort_keys=True, ensure_ascii=False))
+            sys.exit(1)
+        raise
+    outcome = "would-record" if dry_run and recording.outcome == "recorded" else recording.outcome
+    if as_json:
+        document = _record_document(
+            capability, recording.key, value, outcome, file=recording.relpath
+        )
+        click.echo(json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False))
+        return
+    if outcome == "recorded-already":
+        click.echo(f"{capability} {recording.key} = {value}  (recorded already)")
+    elif outcome == "would-record":
+        click.echo(f"would record {recording.line()}")
+        click.echo(cli_render.style("strong", "Dry run: nothing written."))
+    else:
+        click.echo(f"recorded {recording.line()}")
+
+
+def _record_document(
+    capability: str,
+    key: str,
+    value: str,
+    outcome: str,
+    *,
+    file: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """The document `config record --json` prints (schema version 1)."""
+    return {
+        "schema_version": 1,
+        "capability": capability,
+        "key": key,
+        "value": value,
+        "file": file,
+        "outcome": outcome,
+        "reason": reason,
+    }
 
 
 @main.group("docs")

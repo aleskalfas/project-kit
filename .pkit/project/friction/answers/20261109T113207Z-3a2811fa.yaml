@@ -1,0 +1,70 @@
+answers:
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T120925Z-871d5089.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T234711Z-90f3839c.yaml
+      - 20261109T003240Z-da61486e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T072027Z-c9c2117b.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T110541Z-7228d8f6.yaml
+    revalidated:
+      at: 2026-11-09T11:32:07Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261109T072027Z-c9c2117b.yaml and main's 20261109T075620Z-bee9e107.yaml, made apart. The first found `config record` changes no backbone key, and `docs record-location`'s no-query sentence leaves the page true. The second found the friction block, the schemas README and the CLI's validate section change only links and pointers. The Configuration file now states ADR-084's contract for `config record`, which records no documentation location, and the CLI reference anchors ADR-084. The page names `pkit living-docs new space` and a run by hand as what records the definitions location, so it holds with both.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T120925Z-871d5089.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261108T234711Z-90f3839c.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T072027Z-c9c2117b.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T110541Z-7228d8f6.yaml
+    revalidated:
+      at: 2026-11-09T11:32:17Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261109T072027Z-c9c2117b.yaml and main's 20261109T075620Z-bee9e107.yaml, made apart. The first found the Surface table gains the `config record` row, and the Configuration file that command's section. That section now states ADR-084's contract without citing it, and the CLI reference anchors ADR-084. The second found the decisions README and the CLI's init and Surface sections change only their links and pointers. No `pkit decisions` command the guide's fences run moves under either, so the guide holds with both.

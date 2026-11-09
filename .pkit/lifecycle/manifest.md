@@ -585,6 +585,8 @@ The backbone runs the commands a component registers through one runner: one loo
   - **What a filler may call:** the artefacts, rule-set and settled-state readings resolve no data point. So a filler may call them while a point it contributes to resolves. A filler never asks for a point.
   - **The bound:** a query that calls a reading command keeps the reading inside its own bound. A filler the reading starts inherits the query's deadline and the outermost run's process group ("A run inside a run" above). Inside `pkit validate`, a point the run has already resolved is read from its run cache ("Reading one point from a script" below).
 
+  The CLI README's sections on [`docs record-location`](../cli/README.md#docs-record-location-capability-name---dry-run) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> and [`config record`](../cli/README.md#config-record-capability-key-value---yes---dry-run---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> say what each records, and when a capability's command runs it.
+
 The dispatcher's proxy is not a run in this sense. `pkit <capability> <command>` is a person's focused surface, so it takes the lookup, inherits the terminal's streams, and is neither bounded nor captured. A data point's question runs through the same proxy run, since a person answers it ("A data point's question", below).
 
 ### How a registered anchor kind is resolved
