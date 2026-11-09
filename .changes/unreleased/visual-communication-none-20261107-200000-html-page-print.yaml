@@ -1,8 +1,10 @@
 component: visual-communication
 kind: none
 body: >
-  DEC-026 is proposed: a printed HTML page file puts each page whole on a
-  sheet of its own, every page at one scale, on the reader's sheet. The file
-  asks to print its pages in their own colours and picks no mode for print
-  (#2824). The record designs ahead: no command, file, flag or format
-  changes, so no surface moves.
+  DEC-026 is proposed: a printed HTML page file sets its pages one after
+  another down the reader's sheets, and moves a page that does not fit whole
+  to the next sheet. A deck's slide fits one sheet, inside its keyline, and is
+  never cut. A web page taller than a sheet runs on, and the backdrop stays on
+  screen. The file asks to print its pages in their own colours and picks no
+  mode for print (#2824). The record designs ahead: no command, file, flag or
+  format changes, so no surface moves.
