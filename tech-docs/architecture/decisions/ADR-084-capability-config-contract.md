@@ -1,7 +1,7 @@
 ---
 id: ADR-084
 title: The backbone may record a key in any capability's own configuration, guarded by its schema
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
