@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", "COR-013#7", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-085]
+      record: [COR-005, COR-006, "COR-013#1", "COR-013#7", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships

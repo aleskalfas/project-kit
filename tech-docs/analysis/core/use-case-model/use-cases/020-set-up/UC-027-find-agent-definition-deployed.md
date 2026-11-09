@@ -35,6 +35,7 @@ pkit:
         - .pkit/adapters/README.md
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/adapters/claude-code/_resolve_agent.py
+        - .pkit/adapters/claude-code/_harness_tools.py
         - .pkit/agents/README.md
         - .pkit/agents/tool_access.py
         - .pkit/lifecycle/ownership.py
