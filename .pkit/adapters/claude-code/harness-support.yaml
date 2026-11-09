@@ -63,11 +63,11 @@ requirements:
     evidence: >-
       The probe of ADR-073 point 11, on 29 October, on Linux with bubblewrap
       0.12.0: runs of `claude -p` with no settings sources, inline settings,
-      `dontAsk` and the sandbox on. A producer agent built a probe Task, asked
-      a question, and built it on resume. Writes went to the run's folder
-      only, and a command with no agent ran under the same sandbox through
-      Claude Code's sandbox runtime. The adapter's README, "The probe of a
-      working run", lists each fact and how it was checked.
+      `dontAsk` and the sandbox on. Without the scrub, writes went to the
+      run's folder only. Its results, on #2289, do not yet cover the producer
+      agent's build or the checks' sandbox with no harness. The adapter's
+      README, "The probe of a working run", lists each fact they confirm and
+      how it was checked.
   session-loads-rules:
     grade: at-cost
     cost: >-

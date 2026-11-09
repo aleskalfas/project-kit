@@ -330,7 +330,7 @@ The confined form holds what the harness can hold. This is what it cannot, state
 
 #### The probe of a working run (ADR-073 point 11)
 
-The runner's working form, for the build command, is not built yet (#2290). Before it is, a probe checked the facts [ADR-073](../../../tech-docs/architecture/decisions/ADR-073-builder-runs.md) rests on, on 29 October. It ran Claude Code 2.1.303 by hand on Linux, with bubblewrap 0.12.0. Each run was `claude -p` with `--setting-sources ""`, the run's settings inline, `dontAsk`, `--permission-prompts none` and the sandbox on, failing closed. The runs and their results are on #2289.
+The runner's working form, for the build command, is not built yet (#2290). Before it is, a probe checked the facts [ADR-073](../../../tech-docs/architecture/decisions/ADR-073-builder-runs.md) rests on, on 29 October. It ran Claude Code 2.1.303 by hand on Linux, with bubblewrap 0.12.0. Each run was `claude -p` with `--setting-sources ""`, the run's settings inline, `dontAsk`, `--permission-prompts none` and the sandbox on, failing closed. Its results are on #2289, and this section states only what they record.
 
 **Platforms.** A working run is supported on Linux with bubblewrap. macOS is not probed yet, so a working run there is unsupported: the working form is to refuse it (exit 7) until a probe on macOS widens that.
 
@@ -338,22 +338,20 @@ The runner's working form, for the build command, is not built yet (#2290). Befo
 
 | Fact | How |
 |---|---|
-| With no settings file, the runner's settings and the passed definition, the builder starts, signs in and builds | the software-engineering producer built a probe Task: one unsigned commit on its branch, the tests passing. The branch descended from the start commit, and no other reference moved |
-| On a Task it cannot build as written, the builder asks, and builds it on resume | it stopped with a question and committed nothing. Resumed in its session with the answer, it built the Task |
-| A compound command outside the rules is refused, and the builder goes on | its heredoc command was refused, and it made the same change with the file tools |
 | The hook's code and model read from outside the clone are the ones that judge | the hook, registered by a path outside the clone, refused `rm -v -r` as `destructive-fs`. A hook and a `decide.py` planted in the clone never ran |
 | The `Read` deny on the caller's clone reaches a program the builder runs | a program read the seat's clone and `~/.ssh` as absent |
 | No signing agent's socket is reachable, and a program the builder runs cannot sign | `SSH_AUTH_SOCK` was absent. A connect to a live agent's socket failed (`EPERM`), with or without a deny on its path. `ssh-keygen -Y sign` failed |
-| A host off the list is unreachable | listed hosts were reached through the sandbox's proxy; the rest, and a direct connection, were not. In the checks' sandbox, `*.github.com` reached `api.github.com` and not `github.com`: a wildcard covers only the hosts below its domain, as the sandbox runtime's matcher reads it |
+| A host off the list is unreachable | listed hosts were reached through the sandbox's proxy; the rest, and a direct connection, were not |
 | The harness's memory is off | a planted `MEMORY.md` loaded with `autoMemoryEnabled: true`, and not with `false` |
 | Each event reaches the runner with its time, and the idle limit ends a run that sends none | events arrive line by line as they happen. Only `assistant` and `user` events carry a timestamp of their own, so the runner times each on arrival. A quiet 20-second tool call sent none, and the idle limit ended its run |
 | A detached run outlives the shell call that started it, and the limits still end it | it outlived the call and the session that started it, and the idle limit ended it |
-| Every process of a run's sandbox and of a check's ends, and none is left | each sandboxed command runs in a process namespace of its own, and a daemon it started died with it. Once the limit ended the run, no process of it was left |
+| Every process of a run's sandbox ends, and none is left | each sandboxed command runs in a process namespace of its own, and a daemon it started died with it. Once the limit ended the run, no process of it was left |
 | A resumed session takes the settings built again, and keeps the run's denies | a new allow and a new deny applied, and the first run's deny still held |
 | A sandbox that cannot start stops the harness at start | without `bwrap`, the harness refused to start, before any model call |
-| The checks' sandbox, with no harness, holds the run's rules, and one that cannot start reads as failed | Claude Code's sandbox runtime, 0.0.81, held the same writes, reads, socket and hosts. Without `bwrap`, or with one that fails, it exited 1 and wrote no result file |
 
 Two facts are the runner's own logic, with nothing of the harness beneath them, so no probe can confirm them before the runner exists: the refusal of a host list where the adapter declares no host set, and `--hand-back`'s second check of the clone.
+
+**Not probed yet,** as #2289's results name them: the producer agent's build, wildcards in a host list, the ending of a check's processes, and the checks' sandbox with no harness. Nothing here confirms them.
 
 **Disproved, or narrower than recorded:**
 
@@ -363,9 +361,8 @@ Two facts are the runner's own logic, with nothing of the harness beneath them, 
 
 **For the working form (#2290):**
 
-- The hook takes both its model's root and its anchor from `CLAUDE_PROJECT_DIR`. A working run needs the two apart: the model from outside the clone, the anchor the clone. With them split, the builder's edits in the clone passed.
+- The hook takes both its model's root and its anchor from `CLAUDE_PROJECT_DIR`. A working run needs the two apart: the model from outside the clone, the anchor the clone.
 - The hook judges `agent:<name>`, by the name the run passes to `--agent`.
-- The sandbox writes npm's log folder in the home. It leaves empty mount points in the clone, such as `.git/config.worktree`, which the clone's check must tell from the builder's writes.
 
 ### Live permission enforcement (`permission-hook.py`)
 
