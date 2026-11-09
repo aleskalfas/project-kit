@@ -1,6 +1,7 @@
 """The viewing step's browser (`_lib/viewing_browser.py`, visual-communication DEC-020 points 6
-to 9): how it finds a browser, what one start asks of it, the four reads, the first read of a
-page with planted faults, its bounds, and what a stop says.
+to 9, DEC-031 point 5): how it finds a browser, what one start asks of it, the window that holds
+each page at its own size with its gutters, the four reads, the first read of a page with
+planted faults, its bounds, and what a stop says.
 
 A stand-in program speaks the pipe in the browser's place (`visual_communication_browser`), so
 these tests need no browser. The one that starts a real browser skips where none is found, or
@@ -326,9 +327,11 @@ def test_the_places_are_where_chrome_and_chromium_install_themselves() -> None:
 # One start.
 
 
-def test_one_start_serves_one_file_at_the_callers_scale_and_the_widest_page(
+def test_one_start_serves_one_file_at_the_callers_scale_and_the_widest_page_with_its_gutters(
     tmp_path: Path,
 ) -> None:
+    """The window holds each page at its own size, with the gutter on each side, whichever
+    pages the file holds (DEC-031 point 5)."""
     pages = [
         page("narrow", 400.5, 300.0, text("a", [span("a", 0)])),
         page("wide", 1280.0, 720.0, text("b", [span("b", 1)])),
@@ -338,7 +341,16 @@ def test_one_start_serves_one_file_at_the_callers_scale_and_the_widest_page(
     assert len(starts) == 1
     assert "--force-device-scale-factor=1.225" in starts[0]
     (window,) = [flag for flag in starts[0] if flag.startswith("--window-size=")]
-    assert window.split("=")[1].split(",")[0] == "1280"
+    assert window.split("=")[1].split(",")[0] == "1344"
+
+
+def test_the_gutter_is_the_one_the_renderer_declares() -> None:
+    """The step takes it from the renderer's declaration, as it takes the file's marks, and
+    widens the window by it on each side (DEC-031 point 5)."""
+    declared = viewing_browser.html_declaration.DECLARATION["pages"]["fixed"]["gutter"]
+    assert viewing_browser.GUTTER == declared["width"] == 32
+    held = [viewing_browser.Page("one", 400.5, 300.0, ()), viewing_browser.Page("two", 90, 9, ())]
+    assert viewing_browser.window_width(held) == 400.5 + 2 * 32
 
 
 def test_a_program_whose_path_holds_spaces_starts(tmp_path: Path) -> None:
@@ -1323,3 +1335,81 @@ def REFERENCE_SCENE() -> Mapping[str, Any]:
     from tests.test_visual_communication_html import REFERENCE
 
     return REFERENCE
+
+
+def drawn_by_a_real_browser(file: Path, pages: Sequence[Any], scale: float, tmp_path: Path) -> Any:
+    """`file` drawn by the browser found, at `scale`; the test skips where a sandbox stopped
+    it."""
+    browser = found_browser()
+    assert browser is not None
+    try:
+        return viewing_browser.draw(file, pages, scale, browser, tmp_path / "local")
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+
+
+@real_browser
+def test_a_real_browser_draws_each_fixed_page_alone_at_its_own_size_and_clean(
+    tmp_path: Path,
+) -> None:
+    """The reference file, its pages fixed pages (DEC-031 point 5): the window holds each at its
+    own size with its gutters, so none stops the drawing, each image is its page alone, and
+    the reads read clean. What lies around a page is the file's tests' to read: no test holds
+    a pixel (DEC-015 point 6)."""
+    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture, seam
+
+    shown = seam.Shown(reference_picture(tmp_path), seam.PNG)
+    file = tmp_path / "fixed.html"
+    file.write_bytes(
+        draw({**REFERENCE, "fixed-pages": True}, pictures={"first/picture": shown}).document
+    )
+    pages = scene_pages(REFERENCE)
+
+    drawn = drawn_by_a_real_browser(file, pages, 2.0, tmp_path).shown[0]
+
+    assert drawn.read == viewing_browser.Read((), (), (), (), ())
+    assert [(each.page, each.band) for each in drawn.images] == [(page.id, 0) for page in pages]
+    assert [(each.width, each.height) for each in drawn.images] == [
+        (page.width * 2, page.height * 2) for page in pages
+    ]
+
+
+#: What the browser holds of the document's first page and of the window.
+MEASURED = """() => {
+  const {width, left, top} = document.querySelector('[data-page]').getBoundingClientRect();
+  return {width, left, top, window: innerWidth, scrolls: document.documentElement.scrollWidth};
+}"""
+
+
+@real_browser
+def test_in_a_real_browsers_narrow_window_a_fixed_page_shrinks_and_nothing_scrolls_sideways(
+    tmp_path: Path,
+) -> None:
+    """A deck's slide 1280 px wide in a window 500 px wide, as DEC-031's test drew it (point 4):
+    the gutter narrows to its share of the window, 20 px, the slide shrinks to the 460 px it
+    leaves, and the document is no wider than the window."""
+    from tests.test_visual_communication_html import SLIDES, draw
+
+    file = tmp_path / "slides.html"
+    file.write_bytes(draw(SLIDES).document)
+    browser = found_browser()
+    assert browser is not None
+    place = tmp_path / "browser"
+    place.mkdir()
+    started = viewing_browser._Started(browser, place, 500, 1.0)
+    try:
+        started.call("Browser.getVersion", within=viewing_browser.START_SECONDS)
+        started.open_tab()
+        started.open(file.resolve().as_uri())
+        measured = started.ask(MEASURED)
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    finally:
+        started.close()
+
+    assert (measured["window"], measured["scrolls"]) == (500, 500)
+    assert (measured["width"], measured["left"], measured["top"]) == (460, 20, 20)

@@ -1,5 +1,5 @@
 """What the HTML renderer draws: its declaration, plain data (visual-communication DEC-005
-points 9 and 10, DEC-020 points 1 to 4, DEC-023 points 2, 5 and 7).
+points 9 and 10, DEC-020 points 1 to 4, DEC-023 points 2, 5 and 7, DEC-031 points 3 and 5).
 
 The HTML renderer writes one page file for each language and each key over the size axes,
 its pages in order, holding the modes a reader's signal names. So it draws, and only draws:
@@ -21,6 +21,16 @@ calls no outside program and reaches no service. Writing a page file takes no br
   reader's, so the file adds none of its own.
 - `pages`: each choice a scene leaves open that the medium needs (DEC-001 point 2): how
   pages lie, the gap between two of them, in px of the window, and how a page scales.
+  Under `fixed`, how a file whose scene's root says its pages are fixed pages shows them
+  (DEC-031 points 1 to 4): each inside a keyline, on a backdrop that fills the window around
+  and between them. The keyline's `width` is in px of the window. Each `share` is the
+  percent of the browser's text colour, CSS's `CanvasText`, mixed into its ground colour,
+  `Canvas`, so the keyline and the backdrop follow the page's mode and the file writes no
+  colour value for them. The keyline's share gives it a contrast of at least 3 to 1 against
+  the backdrop and against the browser's ground (DEC-031 point 3). The gutter is the width
+  of backdrop at each side of a page: `width` px, or `window-share` percent of the window's
+  width where that is less. The viewing step widens its window by the gutter's `width` on
+  each side, for every file (DEC-031 point 5). No project setting changes these values.
 - `not-carried`: what the file does not carry yet. What a reader who does not see the page
   gets (DEC-005 point 5) comes with a later version.
 - `marks`: the attribute that marks each thing the file holds (`MARKS`), so the viewing
@@ -71,7 +81,7 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "seam": 5,
     "module": "html",
     "about": (
@@ -92,6 +102,11 @@ DECLARATION = {
         "lie": "one under another, each in the middle of the window",
         "gap": 24,
         "scale": "shrinks with a narrower window and never grows",
+        "fixed": {
+            "keyline": {"width": 1, "share": 48},
+            "backdrop": {"share": 7},
+            "gutter": {"width": 32, "window-share": 4},
+        },
     },
     "not-carried": ["alternative text", "reading order", "structure"],
     "marks": MARKS,
