@@ -3867,10 +3867,12 @@ def _dormant_context(
 
 
 def _outdated_message(base: BaseState, head: HeadState) -> str:
+    """The fact of an outdated base, and no remedy: whether and how a branch takes in
+    its base is the project's workflow to decide (COR-050 point 12)."""
     return (
         f"the base {base.ref} is at {base.tip[:SHORT]}, which is not an ancestor of "
         f"{head.name}: it moved on after this branch left it at {base.commit[:SHORT]}; results "
-        f"hold only against an up-to-date base — merge or rebase onto {base.ref}, then run again"
+        "hold only against an up-to-date base"
     )
 
 

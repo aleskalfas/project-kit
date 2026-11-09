@@ -53,7 +53,7 @@ shipped `<name>_declaration.py`):
 
 Its implementation has `produce(handover: dict, out_dir: Path) -> dict`.
 
-- **It receives** the values document, version 1 (`values.document`), holding the roles
+- **It receives** the values document, version 2 (`values.document`), holding the roles
   its inputs name alone, under the lock of the brand and what it builds on, with three keys
   added: `inputs` (input -> token path); `variants` (variant key -> `{serves: [combination
   keys], pixels: {width, height}}`); and `frames: {}`, the measured frames it declared
@@ -288,17 +288,23 @@ def _refuse_final(root: Path, location: str, piece: str) -> None:
 
 
 def plan(
-    root: Path, location: str, piece: str, output: str, held: libraries.Held | None = None
+    root: Path,
+    location: str,
+    piece: str,
+    output: str,
+    held: libraries.Held | None = None,
+    lock: Mapping[str, str] | None = None,
 ) -> Plan:
     """Read, from the files as they are now, what a run of the producer that the piece
     `piece` declares for `output` reads. The library versions come from `held` where it
-    is given, as for a location git ignores, and otherwise as git lists them. Raises
-    Refused."""
+    is given, as for a location git ignores, and otherwise as git lists them. They are those
+    of `lock` where it is given, as for a lock not yet written, and otherwise of the lock the
+    piece's file holds. Raises Refused."""
     folder = _piece_folder(root, location, piece)
     data = _piece(root, folder, piece)
     declaration = _declaration(data, piece, output)
     plugin = producer(declaration.producer)
-    lock = data.get("lock")
+    lock = data.get("lock") if lock is None else lock
     if not isinstance(lock, Mapping) or not lock:
         final = copies.final(data, folder)
         if copies.lock_stays(data, final):
@@ -316,7 +322,7 @@ def plan(
     if not isinstance(modes, Mapping):
         raise Refused(f"the `modes` of `{piece}` is not a mapping of axes to their modes")
     try:
-        combinations = keys.combinations(modes, brand.axes)
+        combinations = brand.combinations_of(modes)
     except keys.BadKey as exc:
         raise Refused(f"the `modes` of `{piece}`: {exc}") from exc
     document = values.document(

@@ -21,7 +21,7 @@
       "const": 1
     },
     "roles": {
-      "description": "The roles the library declares, by token path, each with its type and, optionally, a default: an alias to another role, which the role takes wherever no brand gives it a value. In the foundations these are the shared roles, and a default aliases an older role (DEC-004 point 7). In another library of components they are its own roles, each under the group of the library's name and none under `component`; a default aliases another of its own roles or a role of a library it builds on, the shared roles included, of the same type, never a value or a component token (DEC-008 points 1 and 3).",
+      "description": "The roles the library declares, by token path, each with its type and, optionally, a default: an alias to another role, which the role takes wherever no brand gives it a value. In the foundations these are the shared roles, and a default aliases an older role (DEC-004 point 7). In another library of components they are its own roles, each under the group of the library's name and none under `component`; a default aliases another of its own roles or a role of a library it builds on, the shared roles included, of the same type, never a value or a component token (DEC-008 points 1 and 3). A role of the type `picture` takes a picture file of the brand as its value: only the foundations declare one, with no default, and no brand owes it a value (DEC-025 point 4).",
       "type": "object",
       "propertyNames": {
         "$ref": "defs.schema.json#/$defs/token-path"
@@ -40,7 +40,8 @@
               "fontFamily",
               "fontWeight",
               "number",
-              "typography"
+              "typography",
+              "picture"
             ]
           },
           "default": {

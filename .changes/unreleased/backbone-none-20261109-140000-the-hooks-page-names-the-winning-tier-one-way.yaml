@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  Only the wording of the hooks page and of the CLI reference's `hooks resolve`
+  row moves (#2928). Both name the tier a hook binds by as the hook's winning
+  tier, which the hooks page defines once under "Provider precedence", where
+  they named it three ways before. The page also says that a dry run warns of
+  no hook need. Which provider binds a hook, and what every command does, stay
+  as they were, so no surface moves.

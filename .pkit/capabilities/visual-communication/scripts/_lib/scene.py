@@ -15,8 +15,17 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   Each line holds its text, its width, its baseline below its top, its paragraph, and
   its spans: each the part of one run of its paragraph that lies on it, with its width
   (DEC-012 points 4 and 7).
-- **An image of a produced output** holds the output's variants by key and its exposed
-  points, mapped into the image's frame.
+- **An image** is drawn whole, centred, as large as its frame allows (`FIT`). One of a
+  produced output holds the output, its variants by key and its exposed points, mapped into
+  the image's frame. One of a picture file holds the file's bare name, `file`, and where it
+  lies, `library`: `piece` for the piece's own `pictures/`, else `<library>@<version>`. Its
+  name's source is the content's field that names it, or the component's default, and it
+  holds no variants and no points (DEC-025 point 7). One of a picture role holds the role,
+  `role`, as a paint holds its colour's, so one scene serves every value mode; its source is
+  the brand's value, `role:<token path>`. A renderer is handed the file each image shows in each
+  combination, whatever its source, never the scene's names. One of a picture role the brand
+  gives no file at the scene's key is not drawn, and the result names it by its trace id
+  (`SceneResult.unvalued`), so a move onto that brand can name it (DEC-025 point 8).
 - **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
   and `marker-end`, where it draws one. A tie's connector also holds, where its route
   turns, every point of it, `points`, its ends first and last, and `attached`: for each
@@ -30,9 +39,10 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   item of the field that holds the pages, `<field>[<id>]`, and lies at the top's origin,
   as large as the top. Each drawn property names its source: `content:<field path>`, a
   run of a list of runs by its place, `<field path>#<place>`, as an item with no id,
-  `fact:<word>`, `option:<name>`, `default:<library>/<component>`, `role:<token path>` or
-  `engine`. A value the component leaves to the engine, such as a text's `text-anchor`
-  where it gives none, is the engine's.
+  `fact:<word>`, `option:<name>`, `size:<axis>`, a size axis a switch chose by,
+  `default:<library>/<component>`, `role:<token path>` or `engine`. A value the
+  component leaves to the engine, such as a text's `text-anchor` where it gives none, is
+  the engine's.
 - **The root** holds the piece, its lock, the language, the key over its size axes, the
   seam's version, and the trace ids of its pages in order.
 
@@ -49,6 +59,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from _lib import formula as fm
+from _lib import names
 from _lib.env import Env
 from _lib.findings import ATTENTION, Finding
 from _lib.layout import (
@@ -59,8 +70,10 @@ from _lib.layout import (
     Facts,
     Instance,
     Node,
+    Sizes,
     TextRun,
     place_top,
+    source_of_choice,
 )
 from _lib.text import MEASURED, Broken, paragraphs
 
@@ -141,11 +154,18 @@ class Scene:
 @dataclass
 class SceneResult:
     """A scene, what computing it found, and which facts of its export it shows: each fact's
-    word with the trace of every element that shows it."""
+    word with the trace of every element that shows it. `unvalued` names each image of a
+    picture role the brand gives no file at the scene's key, by its trace id, with the role:
+    the scene does not draw it, and a move onto that brand names it (DEC-025 point 8).
+    `shared` holds, for each page of a top whose layouts are its pages' forms, the trace of
+    each of its parts that draws a field of the top, which every such page draws alike
+    (`Instance.from_the_top`)."""
 
     scene: Scene
     findings: list[Finding]
     facts: dict[str, list[str]]
+    unvalued: dict[str, str] = field(default_factory=dict)
+    shared: dict[str, list[str]] = field(default_factory=dict)
 
 
 def compute_scene(
@@ -159,11 +179,14 @@ def compute_scene(
     seam_version: int,
     env: Env,
     facts: Facts,
+    sizes: Sizes | None = None,
 ) -> SceneResult:
     """The scene of a piece in one language and size combination, with what computing it
     found. `facts` fills the facts of its export, and no caller takes one by default (DEC-016
-    point 5). Raises `MissingFont`, or `MissingGlyph`, before anything is laid out."""
-    ctx = Context(env, language, facts)
+    point 5). `sizes` gives the size axes a piece can name, each at its mode at `size_key`
+    (DEC-021 point 3); none where it is not given. Raises `MissingFont`, or `MissingGlyph`,
+    before anything is laid out."""
+    ctx = Context(env, language, facts, sizes)
     root = place_top(ctx, top, content)
     pages: list[str] = []
     children = []
@@ -174,20 +197,32 @@ def compute_scene(
                 run.style.check(run.text, trace)
         children.append(emitter.root(root))
     scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children)
-    return SceneResult(scene, list(ctx.findings), emitter.facts)
+    shared = {page.trace: page.from_the_top() for page in (root.pages if root else [])}
+    return SceneResult(
+        scene, list(ctx.findings), emitter.facts, unvalued=emitter.unvalued, shared=shared
+    )
 
 
 class _Emitter:
-    """Turns placed instances into the scene's elements, computing each value as it goes."""
+    """Turns placed instances into the scene's elements, computing each value as it goes, and
+    names each image of a picture role it leaves out, since the brand gives it no file."""
 
     def __init__(self, ctx: Context, pages: list[str]) -> None:
         self.ctx = ctx
         self.pages = pages
         self.facts: dict[str, list[str]] = {}
+        self.unvalued: dict[str, str] = {}
 
     def root(self, top: Instance) -> Element:
+        """The top's group. A top whose layouts are its pages' forms and asks for no height
+        is as tall as its tallest page, which the engine sets (DEC-022 point 3)."""
         preferred = top.component.preferred
-        sizes = tuple(top.source(f"preferred.{s}", preferred.get(s)) for s in ("width", "height"))
+        sizes = tuple(
+            top.source(f"preferred.{s}", preferred.get(s))
+            if s in preferred or not top.component.forms
+            else ENGINE
+            for s in ("width", "height")
+        )
         return self.group(top, (0.0, 0.0), (ENGINE, ENGINE), sizes)
 
     def group(
@@ -220,11 +255,18 @@ class _Emitter:
             drawn = self.part(instance, name, node) if node.present else None
             if drawn is not None:
                 element.children.append(drawn)
-        # The pages of a top whose layouts are its pages' forms, each at the top's origin.
+            elif node.unvalued:
+                self.unvalued[f"{instance.trace}/{name}"] = node.unvalued
+        # The pages of a top whose layouts are its pages' forms, each at the top's origin. A
+        # page that takes its own height names where that height comes from (DEC-022 point 3).
         for page in instance.pages:
-            element.children.append(
-                self.group(page, (0.0, 0.0), (ENGINE, ENGINE), (ENGINE, ENGINE))
+            sizes = tuple(
+                page.source(f"preferred.{s}", page.component.preferred.get(s))
+                if page.takes_own(s)
+                else ENGINE
+                for s in ("width", "height")
             )
+            element.children.append(self.group(page, (0.0, 0.0), (ENGINE, ENGINE), sizes))
         for size, gets, asks in attempt(instance.shortfalls, []):
             self._short(instance.trace, size, gets, asks)
         return element
@@ -241,7 +283,9 @@ class _Emitter:
         if key in spec and not (node.part.kind == "text" and key == "height"):
             return instance.source(f"parts.{node.part.name}.{key}", spec[key])
         if node.child is not None and key in ("width", "height"):
-            return f"default:{node.child.component.use}"
+            # A stretch its instance passes on sets the size, beside what the child asks.
+            passed = self.ctx.attempt(lambda: instance.passed_on(node.part.name, key), 0.0)
+            return ENGINE if passed > TOLERANCE else f"default:{node.child.component.use}"
         return ENGINE
 
     def _frame(self, element: Element, instance: Instance, node: Node) -> None:
@@ -353,7 +397,7 @@ class _Emitter:
         _, _, chosen = instance.pick(f"{where}.text-anchor", anchor_raw)
         anchor = instance.word(f"{where}.text-anchor", anchor_raw, "start")
         given = f"default:{instance.component.use}" if anchor_raw is not None else ENGINE
-        element.set("text-anchor", anchor, f"option:{chosen}" if chosen else given)
+        element.set("text-anchor", anchor, source_of_choice(chosen) if chosen else given)
         tallest = max(node.runs, key=lambda run: run.style.line_height).style
         element.set("line-height", length(node.line_height), f"role:{tallest.role}")
         element.set("text", node.text, instance.source_of_text(node.part))
@@ -415,7 +459,9 @@ class _Emitter:
         if chosen and chosen in instance.component.runs:
             style_source = run.word_source
         else:
-            style_source = f"option:{chosen}" if chosen else f"default:{instance.component.use}"
+            style_source = (
+                source_of_choice(chosen) if chosen else f"default:{instance.component.use}"
+            )
         role = f"role:{style.role}"
         held: dict[str, Any] = {"text": text}
         sources = {"text": run.source, "style": style_source}
@@ -468,6 +514,12 @@ class _Emitter:
         self.ctx.add(found)
 
     def _image(self, element: Element, instance: Instance, node: Node) -> None:
+        if node.role:
+            self._picture_role(element, instance, node)
+            return
+        if node.read is not None:
+            self._picture_file(element, instance, node)
+            return
         picture = node.picture
         assert picture is not None
         element.set("output", node.output, instance.source_of_field(node.part.props["produced"]))
@@ -489,6 +541,29 @@ class _Emitter:
             {p: {"x": length(x), "y": length(y)} for p, (x, y) in sorted(points.items())},
             ENGINE,
         )
+
+    def _picture_file(self, element: Element, instance: Instance, node: Node) -> None:
+        """An image of a picture file (DEC-025 point 7): its bare name, from the content's
+        field or the component's default, and where it lies, the piece or the library
+        version of the component that names it. It holds no variants and no points."""
+        props = node.part.props
+        if "content" in props:
+            source = instance.source_of_field(props["content"])
+            lies = names.PIECE
+        else:
+            source = f"default:{instance.component.use}"
+            lies = instance.library or names.PIECE
+        element.set("file", node.file, source)
+        element.set("library", lies, ENGINE)
+        element.set("preserveAspectRatio", FIT, ENGINE)
+
+    def _picture_role(self, element: Element, instance: Instance, node: Node) -> None:
+        """An image of a picture role (DEC-025 point 7): the role, which stays a role, as a
+        paint's colour does, since its file may follow a value axis, its source the brand's
+        value. It holds no file, no variants and no points: the engine hands each renderer
+        the file the brand gives the role in each combination."""
+        element.set("role", node.role, f"role:{node.role}")
+        element.set("preserveAspectRatio", FIT, ENGINE)
 
     def _items(self, element: Element, instance: Instance, node: Node) -> None:
         name, part = node.part.name, node.part

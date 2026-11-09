@@ -317,6 +317,41 @@ def test_outside_a_repository_the_folder_is_walked_without_links(tmp_path: Path)
     assert location.files(root, "missing") == []
 
 
+def test_links_are_listed_beside_the_files_only_where_asked_for(tmp_path: Path) -> None:
+    """A link to a file, to a folder, and one that leads nowhere, each listed by `listed`,
+    and no folder entered through one."""
+    root = project(tmp_path)
+    write(root / "visual" / "b.yaml", "")
+    write(root / "visual" / "a" / "c.yaml", "")
+    (root / "visual" / "link.yaml").symlink_to(root / "visual" / "b.yaml")
+    (root / "visual" / "dir-link").symlink_to(root / "visual" / "a", target_is_directory=True)
+    (root / "visual" / "nowhere.yaml").symlink_to(root / "visual" / "none.yaml")
+    expected = [
+        "visual/a/c.yaml",
+        "visual/b.yaml",
+        "visual/dir-link",
+        "visual/link.yaml",
+        "visual/nowhere.yaml",
+    ]
+    assert location.listed(root, "visual") == expected
+    git(root, "init", "-q")
+    write(root / ".gitignore", "ignored.yaml\n")
+    write(root / "visual" / "ignored.yaml", "")
+    assert location.listed(root, "visual") == expected
+    assert location.files(root, "visual") == ["visual/a/c.yaml", "visual/b.yaml"]
+
+
+def test_git_says_which_paths_it_hands_to_a_large_file_store(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    assert location.in_store(root, ["visual/a.png"]) == []
+    git(root, "init", "-q")
+    write(root / ".gitattributes", "*.png filter=lfs diff=lfs merge=lfs -text\nb.png -filter\n")
+    assert location.in_store(root, ["visual/a.png", "visual/b.png", "visual/c.jpg"]) == [
+        "visual/a.png"
+    ]
+    assert location.in_store(root, []) == []
+
+
 def test_a_commit_is_read_as_it_stood_whatever_the_working_tree_holds(tmp_path: Path) -> None:
     root = project(tmp_path)
     git(root, "init", "-q")

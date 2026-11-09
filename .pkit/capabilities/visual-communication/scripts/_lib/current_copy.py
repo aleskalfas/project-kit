@@ -36,7 +36,8 @@ DEC-017 points 5, 7 and 8).
 - **The lock it was made under** (`written_lock`) is read from the fingerprint of the
   version that wrote it, as any version's is (`version_lock`), each library and version
   held to its shape, since a record may be written by hand. The release that version
-  recorded lies beside it (`written_release`).
+  recorded lies beside it (`written_release`), and so does each number or date it let
+  through (`written_let_through`, DEC-016 point 6).
 """
 
 from __future__ import annotations
@@ -77,7 +78,7 @@ _A_FOLDER = r"[^/.\\][^/\\]*(/[^/.\\][^/\\]*)*"
 #: A file's path in that entry, the pattern the schema of the record of exports holds.
 PATH = (
     rf"^{_A_FOLDER}/{_A_NAME}\.{_A_LANGUAGE}\.(default|{_A_MODE}(\+{_A_MODE})*)"
-    r"((\.[1-9][0-9]*)?\.svg|\.pdf)$"
+    r"((\.[1-9][0-9]*)?\.svg|\.pdf|\.html)$"
 )
 
 _PATH = re.compile(PATH)
@@ -369,6 +370,42 @@ def written_over_stale(
     kept = _writer(entry, versions).get("recorded")
     stale = kept.get("used-stale") if isinstance(kept, Mapping) else None
     return [str(output) for output in stale] if isinstance(stale, list) else []
+
+
+def written_let_through(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> list[Mapping[str, Any]]:
+    """Each number or date the version that wrote the current copy `entry` names let through,
+    among the record's `versions` (`let_through`)."""
+    return let_through(_writer(entry, versions))
+
+
+#: The fields of a text a version let through that each entry holds: the fact, its text, the
+#: element and its component. A component in a library adds its `version`.
+_LET_THROUGH = ("fact", "text", "element", "component")
+
+
+def let_through(kept: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Each number or date a version the record of exports `kept` let through, though it
+    overflows (DEC-016 point 6), each entry that holds its fields as text; none where it
+    keeps no such list, as a version that let none through."""
+    recorded = kept.get("recorded")
+    through = recorded.get("let-through") if isinstance(recorded, Mapping) else None
+    if not isinstance(through, list):
+        return []
+    return [
+        each
+        for each in through
+        if isinstance(each, Mapping)
+        and all(isinstance(each.get(name), str) for name in _LET_THROUGH)
+        and isinstance(each.get("version", ""), str)
+    ]
+
+
+def let_through_said(each: Mapping[str, Any]) -> str:
+    """A text a version let through, in words: the fact, its text, the element and its
+    component (`let_through`)."""
+    return f"`{each['fact']}` as `{each['text']}` at `{each['element']}` in `{each['component']}`"
 
 
 def _writer(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:

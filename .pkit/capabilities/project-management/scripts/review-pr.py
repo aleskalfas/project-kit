@@ -59,7 +59,7 @@ Side-effects:
     changes since, exactly as for any later push; the native reviews are
     skipped, since GitHub would attach them to a head the reviewers never
     saw. When the head cannot be read the verdicts name none and are judged
-    by the latest commit's time. Each reviewer's lines print together, in
+    by when the PR's head arrived. Each reviewer's lines print together, in
     the order of the required set; one reviewer that fails or times out does
     not stop the others.
   - Skips a required reviewer whose verdict is still fresh (#1178): its
@@ -82,10 +82,13 @@ Agent invocation:
   Each reviewer runs through the backbone's run command, `pkit agents run`,
   reached through `_lib.agent_runs` (ADR-066 point 10). The backbone starts
   the runner the project's adapter registers, and the runner starts the
-  harness; this script calls no harness. A project whose registered adapters
-  have no runner gets no reviews, and each reviewer's line says why. A project
-  with another harness answers through its own adapter's runner, not by
-  editing this script. Per DEC-028, this capability ships a default `pm-reviewer` agent
+  harness; this script calls no harness. Each reviewer starts in the project's
+  root, whichever folder of the project the command is run in (#2255): a
+  harness started in a folder below it takes none of the project's settings.
+  A project whose registered adapters have no runner gets no reviews, and
+  each reviewer's line says why. A project with another harness answers
+  through its own adapter's runner, not by editing this script. Per DEC-028,
+  this capability ships a default `pm-reviewer` agent
   at `.pkit/capabilities/project-management/agents/pm-reviewer.md` that emits
   the local-path verdict format and applies pm conventions; adopters may
   configure `local_registered: name: pm-reviewer` to use it, register their
@@ -514,7 +517,8 @@ def review(
     print(f"review-pr: #{args.issue_number}")
     print(f"  PR:     #{pr_number}")
 
-    # Resolve repo-root for the agent invocation (walk up from capability_root).
+    # The project's root, three folders above the capability's: the reviewers
+    # start there, wherever in the project the command runs (#2255).
     repo_root = capability_root.parent.parent.parent
 
     # DEC-032 D4: resolve the PR's required-local set — baseline ∪ contributed
@@ -680,6 +684,7 @@ def review(
                 config,
                 agent_timeout,
                 effort=agent_effort,
+                folder=repo_root,
                 base=pr.get("baseRefName"),
                 head=branch,
                 sha=reviewed,
@@ -854,6 +859,7 @@ def _invoke_agent(
     timeout: int = DEFAULT_AGENT_TIMEOUT,
     effort: str | None = None,
     *,
+    folder: Path,
     base: str | None = None,
     head: str = "HEAD",
     sha: str = "",
@@ -866,9 +872,10 @@ def _invoke_agent(
     or None on failure. Body is the agent's freeform commentary.
 
     The reviewer runs through the backbone's run command (`_lib.agent_runs`,
-    ADR-066 point 10), in the working folder, as it ran before: the backbone
-    starts the runner the project's adapter registers, and the runner starts
-    the harness. No harness is called here.
+    ADR-066 point 10), in `folder`: the backbone starts the runner the
+    project's adapter registers, and the runner starts the harness. No
+    harness is called here. `review-pr` passes the project's root, never the
+    folder it was run in, so the harness takes the project's settings (#2255).
 
     `timeout` is the per-agent wall-clock cap in seconds (issue #766); a
     reviewer that runs longer is ended, with the processes still descended
@@ -899,9 +906,7 @@ def _invoke_agent(
     """
     prompt = _review_brief(name, pr_number, base=base, head=head, sha=sha, confined=confined)
 
-    run = agent_runs.run_agent(
-        name, prompt, folder=Path.cwd(), limit_seconds=timeout, effort=effort
-    )
+    run = agent_runs.run_agent(name, prompt, folder=folder, limit_seconds=timeout, effort=effort)
     if run.ending == agent_runs.REFUSED:
         say(f"  [{name}] invocation refused: {run.reason}", file=sys.stderr)
         return None, ""
@@ -1098,13 +1103,13 @@ def _report_head_check(name: str, reviewed: str, now: str) -> bool:
 
     A verdict is posted against the head it reviewed either way (#1179) — the
     freshness rule judges what changed since. When the head was never read the
-    verdict names none, is judged by the latest commit's time, and nothing is
-    claimed about a head, so the check passes.
+    verdict names none, is judged by when the PR's head arrived, and nothing
+    is claimed about a head, so the check passes.
     """
     if not reviewed:
         print(
             f"  [{name}] the PR's head could not be read — the verdict names no "
-            "reviewed head and is judged by the latest commit's time."
+            "reviewed head and is judged by when the PR's head arrived."
         )
         return True
     if now == reviewed:

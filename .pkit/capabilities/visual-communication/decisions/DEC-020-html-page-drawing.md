@@ -6,7 +6,7 @@ date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** the HTML renderer writes one file for each language. A page in it is real HTML text, each line where the engine put it, over SVG shapes, lines and pictures, in the scene's draw order. A page shrinks with a narrow window and never grows. Writing that file takes no browser, but seeing it does, and no other format needs one. The viewing step draws the file through a browser of the Chromium family it finds on the machine, and reports each text it lost or drew in a font of the machine. Where no browser runs, it leaves the file and a report, and names what is missing. So a build in a sandbox cannot see such a page yet: each Chromium build tried stopped there on its own defaults. The SVG renderer stays as it is, for pictures: a figure on a GitHub page, a picture inside another document, and a build with no browser.
+**In plain terms:** the HTML renderer writes one file for each language. A page in it is real HTML text, each line where the engine put it, over SVG shapes, lines and pictures, in the scene's draw order. A page shrinks with a narrow window and never grows. Writing that file takes no browser, but seeing it does, and no other format needs one. The viewing step draws the file through a browser of the Chromium family it finds on the machine, and reports each text it lost or drew in a font of the machine. Where no browser runs, it leaves the file and a report, and names what is missing. A session's sandbox stops the browser, and the step leaves it only as [visual-communication:DEC-024-outside-programs-sandbox] allows. So a session in a sandbox reads a build pipeline's drawings of such a page, where it can reach them. Or it asks a person to draw it, and otherwise has the SVG renderer's pages (refinement per DEC-024). The SVG renderer stays as it is, for pictures: a figure on a GitHub page, a picture inside another document, and a build with no browser.
 
 ## Context
 
@@ -102,9 +102,9 @@ In each region the first figure lies below the second, at worst 3.53 against 4.8
 
 ### 4. What holds of a file
 
-- **One file for each language,** holding its pages in the scene's order, at one key until how a file holds its modes is settled (point 10). Each size has a file of its own.
+- **One file for each language,** holding its pages in the scene's order. Each size has a file of its own. It holds the modes a reader's signal names, each at its size's values (refinement per [visual-communication:DEC-023-html-page-modes] points 1 and 3).
 - **Its head declares** its encoding, its language and its viewport, so no browser guesses.
-- **The pages follow each other down the document,** each in the middle of the window, with a gap the renderer declares ([visual-communication:DEC-001-visual-communication-discipline] point 2). The file sets no colour around them.
+- **The pages follow each other down the document,** each in the middle of the window, with a gap the renderer declares ([visual-communication:DEC-001-visual-communication-discipline] point 2). The file sets no colour around them. It names its schemes in CSS's `color-scheme`, and under forced colours gives its shapes the reader's colours (refinement per [visual-communication:DEC-023-html-page-modes] point 7).
 - **A page shrinks and never grows.** In a narrower window it shrinks with the window and keeps its proportions. In a wider one it keeps its own size. At the sizes the file sets, the document never scrolls sideways.
 - **A page clips no text.** A reader's minimum size may push a line past its panel or the window, and the document then scrolls. A later shape still lies over that line.
 - **A file holds all it needs,** so it asks for nothing. Its pictures lie inside it, and each face once, subset to every character the file draws in it.
@@ -136,15 +136,15 @@ It asks nothing of what lies over a text: a text under a later box, or in the co
 - **A browser of the Chromium family.** The step looks where Chrome and Chromium install themselves, and takes the first it finds. The methodology installs and pins none.
 - **A project may name another in its configuration,** such as a pinned build of Playwright's, as it turns on a plugin that reaches a service ([visual-communication:DEC-002-files-and-validation] point 8). A caller may not: a command starts what it is told with no prompt, so the choice lies in a file the project reviews, never in a flag.
 - **What may differ between machines.** Pixels may, and nothing compares two machines' images (DEC-015 point 6).
-- **What may not.** Point 6 holds on every machine. So each browser start first reads a small page of its own, in the renderer's form, planted with one fault of each kind point 6 reads. If the check does not name each, with the font that drew the planted span, the run stops and says so.
+- **What may not.** Point 6 holds on every machine. So each browser start first reads a small page of its own, in the renderer's form, planted with one fault of each kind point 6 reads. If the check does not name each, with the font that drew the planted span, the run stops and says so. That page also holds a mode for each signal the file reads (refinement per [visual-communication:DEC-023-html-page-modes] point 6). The run stops if setting one does not repaint the page.
 
 ### 8. Where no browser runs
 
 - **The step still writes the page file and a report,** in this renderer's folder, and no image. It ends as a stop. The report says what stopped it and under which lock, so no one reads the folder as clean. A browser that stops part way, or a first read that fails (point 7), ends the same way, with no partial images.
-- **It names what is missing** (DEC-002 point 8): where it looked, or the program it started and what that said. It also names the SVG renderer as a way to go on.
+- **It names what is missing** (DEC-002 point 8): where it looked, or the program it started and what that said. It also names the ways on of [visual-communication:DEC-024-outside-programs-sandbox] point 4: a build pipeline's drawings, a person's run outside the sandbox, and the SVG renderer (refinement per DEC-024).
 - **Each call to the browser is bounded, and so is its close,** so a long piece still finishes. A browser that hangs counts as one that stopped, and the step ends it.
-- **A sandbox may stop the browser,** and the step says so. It does not turn off the browser's own sandbox, until what the permission model adds for an outside program is settled ([project-kit#2775](https://github.com/aleskalfas/project-kit/issues/2775)). That Task lies in version 1 of the capability.
-- **That leaves a build in a sandbox** the file, and the same scene through the SVG renderer and resvg. Those images show the layout, never this page. The browser's look falls to a session outside the sandbox.
+- **A sandbox may stop the browser** (refinement per [visual-communication:DEC-024-outside-programs-sandbox]). The step never turns off the browser's own sandbox. It says a sandbox stopped the browser where the browser's words show one, and otherwise names what the browser said.
+- **That leaves a build in a sandbox** the file and the same scene through the SVG renderer and resvg (refinement per [visual-communication:DEC-024-outside-programs-sandbox]). Where it can reach them, it also gets a build pipeline's drawings of a pushed commit. The SVG renderer's images show the layout, never this page. The browser's look falls to a pipeline's run, a person's run, a session with no sandbox, or, after DEC-024 point 7's third step, the drawing tool.
 
 ### 9. The shipped step is its own code
 
@@ -152,7 +152,7 @@ The step's browser half lies behind one module of the capability, on the standar
 
 ### 10. What this leaves to other records
 
-- **How a page holds its modes is [project-kit#2738](https://github.com/aleskalfas/project-kit/issues/2738)'s.** resvg no longer reads this page, so its limits on a paint fall away. #2738 keeps a mode settable from outside the file, so the step can read the real file.
+- **How a page holds its modes is [visual-communication:DEC-023-html-page-modes]'s.** resvg no longer reads this page, so its limits on a paint fall away. That record keeps a mode settable from outside the file, so the step can read the real file.
 - **What a reader who does not see the page gets is [project-kit#2740](https://github.com/aleskalfas/project-kit/issues/2740)'s,** and it shrinks, since each text now lies once. It keeps how these elements carry the words of a run's structure ([project-kit#2739](https://github.com/aleskalfas/project-kit/issues/2739)), emphasis or a link across a line break among them. It keeps a reading order that differs from the draw order, selection and find-in-page over lines placed apart, a keyboard reader, what a shape or a picture says, and a person's reading with a screen reader.
 
 ## Rationale
@@ -190,4 +190,4 @@ The step's browser half lies behind one module of the capability, on the standar
 - **The change that teaches the reviewer** lands with that Task. The reviewer comes to find this renderer's folder, to take other images as point 5 says, and to read a folder with a report and no image as a stop.
 - **#2738 and #2740 are edited before they start,** to what point 10 leaves them. #2738 also takes up a shape on a page with no ground, under forced colours. #2740's test comes to read the page the step draws, so it waits on that Task, not on #2736's script.
 - **The SVG renderer keeps WebKit's gap,** for a change of its own.
-- **Revisit this record** if a fault reaches a reader in an engine the step does not use, if a browser's update stops point 7's first read, if #2775 settles what the permission model adds, if #2740's test finds a need these elements cannot meet, or if what Context lists as not reached shows a fault.
+- **Revisit this record** if a fault reaches a reader in an engine the step does not use, if a browser's update stops point 7's first read, if #2740's test finds a need these elements cannot meet, or if what Context lists as not reached shows a fault.

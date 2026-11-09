@@ -19,12 +19,15 @@ point 5).
   read at the base, each as a file on disk is (`files.load_bound`), since both drawings
   take the same content.
 - **What each drawing takes** (`sides`). Today's engine, the piece's files as they lie and
-  the pictures they hold, and one filling of an export's facts, so what differs is the
-  locks'. No program runs. A lock checked and found not to hold, a before no lock can be
-  read for, or a drawing that fails gives a side that says why, and stops nothing: the
-  other side is still drawn.
+  the pictures they hold, and one filling of an export's facts, which the caller works out,
+  so what differs is the locks'. No program runs. A lock checked and found not to hold, a
+  before no lock can be read for, or a drawing that fails gives a side that says why, and
+  stops nothing: the other side is still drawn.
 - **What it says** (`report`). Each lock, what the search states, a release that differs
   from the one the copy's version recorded, each stale picture, and each page that differs.
+  Where the two locks name different brands, it names what the after's scenes show that does
+  not follow the after's brand (`rebranding`, DEC-025 point 8), looking ahead or back. A run
+  that keeps no drawing says only what it found.
 """
 
 from __future__ import annotations
@@ -36,7 +39,17 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from _lib import backbone, before_after, copies, current_copy, exports, fingerprint, libraries
+from _lib import (
+    backbone,
+    before_after,
+    copies,
+    current_copy,
+    exports,
+    fingerprint,
+    layout,
+    libraries,
+    rebranding,
+)
 from _lib import location as loc
 from _lib import pipeline as pl
 from _lib.before_after import Side
@@ -253,17 +266,18 @@ def _stated(moved: libraries.Moved) -> tuple[str, ...]:
     )
 
 
-def sides(look: Look) -> tuple[Side, Side]:
-    """The look's two drawings. Where its locks are one, it draws once. Where it has no
-    lock of its before, that side says why."""
-    after = _side(look, look.after)
+def sides(look: Look, facts: layout.Facts) -> tuple[Side, Side]:
+    """The look's two drawings, each with `facts` filling its export's facts, the one filling
+    the caller works out for both (DEC-016 point 5). Where its locks are one, it draws once.
+    Where it has no lock of its before, that side says why."""
+    after = _side(look, look.after, facts)
     lock = look.before.lock
     if lock is None:
         return Side(why=look.before.said), after
-    return (after if lock == look.after else _side(look, lock)), after
+    return (after if lock == look.after else _side(look, lock, facts)), after
 
 
-def _side(look: Look, lock: Mapping[str, str]) -> Side:
+def _side(look: Look, lock: Mapping[str, str], facts: layout.Facts) -> Side:
     """The piece's pages under `lock`, or why not. It checks the lock first, since a library
     version gone would otherwise leave only a hole in the drawing."""
     piece = look.piece
@@ -271,31 +285,54 @@ def _side(look: Look, lock: Mapping[str, str]) -> Side:
         libraries.move_lock(look.held, pl.needed(piece), lock, pinned=True)
     except libraries.LockRefused as exc:
         return Side(why=str(exc))
-    return before_after.drawing(piece.root, piece.location, piece.name, lock)
+    return before_after.drawing(piece.root, piece.location, piece.name, lock, facts=facts)
 
 
-def report(look: Look, before: Side, after: Side) -> Iterator[str]:
-    """What the command prints of a look and its two drawings, a line each."""
+def report(
+    look: Look,
+    before: Side,
+    after: Side,
+    *,
+    kept: bool = True,
+    moved: Mapping[str, str] | None = None,
+) -> Iterator[str]:
+    """What the command prints of a look and its two drawings, a line each. With `kept` false
+    the drawings were not kept, so it names no folder. `moved` is the lock a run moves to the
+    after, where it is not the before (`_rebranded`)."""
     name, lock = look.piece.name, look.before.lock
     if lock is not None:
-        yield f"before: {look.before.said}: {_versions(lock)}"
-    yield f"after: {look.after_said}: {_versions(look.after)}"
+        yield f"before: {look.before.said}: {versions_said(lock)}"
+    yield f"after: {look.after_said}: {versions_said(look.after)}"
     if lock == look.after:
         yield "the two locks are one"
     yield from _release(look)
     yield from look.stated
+    yield from _rebranded(look, after, moved)
     yield from _stale(before, after)
     if before.why == after.why != "":
         yield f"no drawing: {after.why}"
     elif before.why or after.why:
         yield from (f"no {side}: {why}" for side, why in _whys(before, after))
         drawn, folder = (after, before_after.AFTER) if before.why else (before, before_after.BEFORE)
-        if drawn.files:
+        if drawn.files and kept:
             where = f"{before_after.FOLDER}/{name}/{folder}/"
             yield f"drawn in {where}: {len(drawn.files)} files, and nothing to compare them with"
     else:
-        yield before_after.both_ways(name, before, after)
+        if kept:
+            yield before_after.both_ways(name, before, after)
         yield from (f"differs: {file}" for file in before_after.differing(before, after))
+
+
+def _rebranded(look: Look, after: Side, moved: Mapping[str, str] | None) -> Iterator[str]:
+    """What does not follow the after's brand, where the before names another brand, or
+    `moved` does, the lock a run moves to the after (DEC-025 point 8). It is read from the
+    after's drawing, and where none was drawn, says why. Said once, of the first that names
+    another brand."""
+    for lock in (look.before.lock, moved):
+        brands = rebranding.moved(look.held, lock, look.after)
+        if brands is not None:
+            yield from rebranding.said(*brands, after.unfollowed, why=after.why)
+            return
 
 
 def _whys(before: Side, after: Side) -> Iterator[tuple[str, str]]:
@@ -327,6 +364,6 @@ def _stale(before: Side, after: Side) -> Iterator[str]:
         yield f"stale, {' and '.join(named)}: `{output}`: {'; '.join(changes)}"
 
 
-def _versions(lock: Mapping[str, str]) -> str:
+def versions_said(lock: Mapping[str, str]) -> str:
     """A lock in words."""
     return ", ".join(f"{library} {lock[library]}" for library in sorted(lock))

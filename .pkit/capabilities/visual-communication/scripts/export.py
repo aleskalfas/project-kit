@@ -13,15 +13,27 @@
 
 Makes each format the piece declares under `exports`, in each of its languages and each
 combination of modes it names, from the scene, under the lock its `piece.yaml` holds:
-`svg`, one file for each page, and `pdf`, one file that holds every page in order. The run
-takes the piece's next number, past every version its `exports.yaml` records and every
-file of its exports folder, and every file it makes carries it:
-`<piece>.v<N>.<language>.<key>.<format>`, and for an SVG file of a piece of more than one
-page `<piece>.v<N>.<language>.<key>.<n>.svg`, its page's number from 1, in
+`svg`, one file for each page, `pdf`, one file that holds every page in order, and `html`,
+one page file that holds every page in order and each combination that shares it: those at
+one key over the size axes that differ only in modes a reader's signal names (DEC-023
+point 1). The run takes the piece's next number, past every version its `exports.yaml`
+records and every file of its exports folder, and every file it makes carries it:
+`<piece>.v<N>.<language>.<key>.<format>`, a page file under the first key it serves, and
+for an SVG file of a piece of more than one page `<piece>.v<N>.<language>.<key>.<n>.svg`,
+its page's number from 1, in
 `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the
 clone and never committed. It then records the version in `exports.yaml`: the fingerprint
 of every file its scenes were computed from, each file's hash, and when, in which state,
 by which release and renderers it was made.
+
+Where a component shows a version's number or its date, every file of the version shows
+the number and the date of the time its record keeps (DEC-016 point 5). The run measures
+that text where it fills it, from a font file, and stops on a text that overflows its width,
+or a component around it that gets less than it asks for, naming the fact, its text and the
+element, in any library, unless `--use-overflowing version` or `--use-overflowing date`
+names the fact (DEC-016 point 6). The record keeps each text let through. An overflow
+measured from a table or by an estimate stops nothing, and the run says it. Naming the
+language or the state is refused: the check measures them as they stand.
 
 It stops on a produced picture that is stale, naming what changed, unless `--use-stale`
 names it; the record keeps each picture used while stale, and the version of each picture
@@ -29,7 +41,8 @@ the export used. `--use-stale` naming an output the piece does not declare is re
 that is not stale is used as it is, and the command says so. It stops on a picture that is
 missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
 final piece takes no export, whatever else holds of it, final by its state or by a version
-handed out, or where its record of exports cannot be read (DEC-017 point 3).
+handed out, or where its record of exports cannot be read, and the refusal names
+`pkit visual take-up`, which copies it for new work (DEC-017 point 3).
 
 A published piece's run also writes its current copy, an unnumbered copy of each file of
 the version, in the piece's `current-copy/`, replacing that folder whole, and `exports.yaml`
@@ -40,7 +53,7 @@ removes nothing there: it names each file of the last copy it did not write agai
 stays where it lies (DEC-017 point 7). A piece in any other state writes none. It refuses a
 published piece whose lock differs from the lock of the version that wrote its current copy,
 and names both ways past (DEC-017 point 5): the gate reads the record, not the files, and
-holds only this command, so it lies here, outside what `exports.plan` and `exports.write`
+holds only this command, so it lies here, outside what `exports.plan` and `exports.add`
 share with the run that proposes a move of the lock.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
@@ -51,7 +64,8 @@ write that fails removes the files the run wrote, and leaves the current copy, t
 and the configuration as they were.
 
 Usage:
-  pkit visual export <piece> [--use-stale <output>]... [--location <path>]
+  pkit visual export <piece> [--use-stale <output>]... [--use-overflowing <fact>]...
+                     [--location <path>]
 
 Exit codes:
   0  exported and recorded
@@ -68,16 +82,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import (
-    checks,
-    current_copy,
-    exports,
-    files,
-    fingerprint,
-    libraries,
-    location,
-    tokens,
-)
+from _lib import copies, current_copy, exports, files, fingerprint, libraries, location, rendering
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -95,11 +100,19 @@ def main() -> int:
         metavar="OUTPUT",
         help="export with this produced picture as it is, though it is stale; may repeat",
     )
+    parser.add_argument(
+        "--use-overflowing",
+        action="append",
+        default=[],
+        metavar="FACT",
+        help="export with this fact's text as it is, `version` or `date`, though it overflows; "
+        "may repeat",
+    )
     parser.add_argument("--location", help="the location to take and record, where none is")
     args = parser.parse_args()
     root = project_root()
     try:
-        return _export(root, args.piece, args.use_stale, args.location)
+        return _export(root, args.piece, args.use_stale, args.use_overflowing, args.location)
     except (
         pl.Refused,
         location.LocationRefused,
@@ -110,42 +123,26 @@ def main() -> int:
         return 1
 
 
-def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> int:
+def _export(
+    root: Path, name: str, use_stale: list[str], use_overflowing: list[str], given: str | None
+) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
     if piece.final:
         raise pl.Refused(
-            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export"
+            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export: "
+            f"run {copies.take_up_command(name)} to take it up again as a new draft"
         )
     _refuse_a_lock_that_differs(piece)
-    held = libraries.Held(root, where.path)
-    faults = checks.lock_findings(held, piece)
-    if faults:
-        said = "; ".join(checks.said(finding) for finding in faults)
-        raise pl.Refused(f"the lock of {piece.file(pl.PIECE_FILE)} cannot be exported: {said}")
-    try:
-        project = pl.Project(piece, piece.lock, held)
-    except tokens.TokenError as exc:
-        said = "; ".join(finding.message for finding in exc.findings)
-        raise pl.Refused(f"the brand of `{name}` cannot be read: {said}") from exc
-    planned = exports.plan(project, use_stale=use_stale)
+    project = rendering.exportable(piece, libraries.Held(root, where.path))
+    planned = exports.plan(project, use_stale=use_stale, use_overflowing=use_overflowing)
     change = files.Change(root)
     said = location.record(change, where)
     exports.write(planned, change)
     if said is not None:
         print(said)
-    for file in planned.files:
-        print(f"export: {exports.FOLDER}/{name}/{file}")
-    if planned.copy is not None:
-        for path in planned.copy.entry["files"]:
-            print(f"current copy: {current_copy.rooted(piece, path)}")
-    for path in planned.left_behind:
-        print(f"left behind: {path}: the run did not write it again, and only a person removes it")
-    for output in planned.used_stale:
-        print(f"used while stale: {output}")
-    for output in planned.not_stale:
-        print(f"not stale, so used as it is: {output}")
-    print(f"export: version {planned.number} recorded in {piece.file(pl.EXPORTS_FILE)}")
+    for line in exports.report(planned):
+        print(line)
     return 0
 
 

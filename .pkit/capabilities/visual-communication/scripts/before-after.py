@@ -26,11 +26,14 @@ A person asks for one of two looks (`_lib/looks.py`):
   holds now. A piece the base does not hold has no before, and the command says so.
 
 Both drawings take today's engine, the piece's files and pictures as they lie, and one
-filling of an export's facts, so what differs is the locks'. It runs no program, moves no
-lock, keeps no finding, takes no number and records no location. It says where the two locks
-are one, where the engine's release differs from the one the copy's version recorded, and
-which pictures are stale. A drawing it cannot make stops nothing: it says why, and the other
-is still drawn. It writes each page in
+filling of an export's facts, what a preview fills (`exports.preview_filling`), so what
+differs is the locks'. Where that is a stand-in, it says so, and why. It runs no program,
+moves no lock, keeps no finding, takes no number and records no location. It says where the
+two locks are one, where the engine's release differs from the one the copy's version
+recorded, and which pictures are stale. Where the two locks name different brands, it names
+what the after shows that does not follow the after's brand (DEC-025 point 8), looking ahead
+or back. A drawing it cannot make stops nothing: it says why,
+and the other is still drawn. It writes each page in
 `.pkit/capabilities/visual-communication/project/local/before-after/<piece>/`, under
 `before/` and `after/`, replacing what an earlier run left there. No validator runs it.
 
@@ -55,7 +58,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import before_after, files, libraries, location, looks
+from _lib import before_after, exports, files, libraries, location, looks
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -110,12 +113,16 @@ def _before_after(root: Path, args: argparse.Namespace) -> int:
         look = looks.back(piece, held, args.base)
     else:
         look = looks.ahead(piece, held, args.versions)
-    before, after = looks.sides(look)
+    filling = exports.preview_filling(piece)
+    before, after = looks.sides(look, filling.facts)
     change = files.Change(root)
     before_after.keep(change, piece.name, before, after)
     change.commit()
     for line in looks.report(look, before, after):
         print(line)
+    said = before_after.stand_ins_said(filling, before, after)
+    if said:
+        print(said)
     return 0
 
 

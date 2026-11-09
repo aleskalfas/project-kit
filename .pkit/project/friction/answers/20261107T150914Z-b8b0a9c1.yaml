@@ -1,0 +1,937 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md
+    read:
+      - 20261105T214520Z-1bee3213.yaml
+      - moved-e579ada00294.yaml
+    revalidated:
+      at: 2026-11-07T15:09:14Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T214520Z-1bee3213.yaml, which answered the install need reworded and the records behind the needs anchored, COR-050 point 12 among them. Point 12 now has the outdated-base report state the fact and name no remedy, leaving how a branch takes in its base to the project. It keeps the friction mode and what enforcing mode fails. So the needs to declare the friction mode and to make merges wait on the checks hold. No need names an outdated base or its remedy.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:09Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the refusal document `--own-head` gives carries `schema_version`, and that every document stays at version 1. The second found that ACT-ci-pipeline's reworded body moves no word this requirement rests on. Here only the text of the outdated-base message changes, dropping its remedy. No key or version moves, so a reader relies on each document as the requirement asks, with all three.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:11Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the refusal document sorts its keys and holds nothing from a clock. The second found that ACT-ci-pipeline's reworded body moves no word this requirement rests on. Here the outdated-base message stays fixed text built from the base and head commits, now with no remedy. One state still gives one document, with all three.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-11-07T15:09:26Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T214520Z-1bee3213.yaml, which found that the reworded ACT-adopter and ACT-ci-pipeline move no word this requirement rests on. This change's earlier answer read 20261105T221812Z-ca40c14b.yaml and 20261105T224638Z-004832b8.yaml, which each left it as it was. COR-050 point 12 now only drops the outdated-base report's remedy. A missing answer is still never read as clean, so the requirement holds with all of them.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:09:28Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T214520Z-1bee3213.yaml, which updated the view. It scoped the squash merge and excepted a release pull request from the rule on version numbers. It gave the three kinds of finding to the rule-set reviewer. None of that touches the base section, which still says a check's result holds only against an up-to-date base. The refined point 12 report states that fact, and the view names no remedy, so it holds with both.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115109Z-58e99185.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:13Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the own head's flag and the refusal document leave anchors resolved as before. The second updated the applies-to to name the change check and the whole-repository check, the same two checks. Here the outdated-base message only drops its remedy, and COR-050 point 12 still fails a dead anchor in enforcing mode. So a dead anchor is still an error wherever either check or validation reads it.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:15Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the critic and the two reviewers run nothing the own head's flag or the refusal document reach. The second found that ACT-ai-agent, ACT-developer and REQ-021 changed only their words. Here `rule-sets altered` only stops naming a merge or a rebase on an outdated base. The reviewer's reading of what a change altered stands as UC-042 tells it, with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:17Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that no step reads the change check's own-head flag or its refusal document. The second found that ACT-developer's need and REQ-007 changed only their words. Here `rule-sets altered` only stops naming a merge or a rebase on an outdated base. Authoring and reading rule sets stands as UC-038 tells it, with all three.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+    revalidated:
+      at: 2026-11-07T15:09:37Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's 20261107T125436Z-9442a4b6.yaml and 20261107T134817Z-fbfbe8a0.yaml. The first updated the use case: the reviewers run through ADR-066, variants 5b and 13d are reworded, and the postconditions name the merge gate. The second found that reviewers starting in the project root, one fetch of a missing commit and the empty-rollup gate leave its steps standing. Here COR-050 point 12 only stops the outdated-base report naming a remedy. No step or variant names one, so the use case holds with all three."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:09:39Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-07T15:09:41Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+    revalidated:
+      at: 2026-11-07T15:09:43Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T125436Z-9442a4b6.yaml, 20261107T130246Z-a00da651.yaml and 20261107T132338Z-3c4c3246.yaml. The first updated the use case, naming lifecycle hooks and the two kinds of close by their terms. The others found that the empty-rollup gate and start-work's help leave each move as told. Here the skill's landing step only says the outdated-base report names no merge, where it called it advice. Landing comes after the Task is in Review, so each move holds with all four.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:09:45Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's 20261105T221030Z-aedda51f.yaml, which updated the journey: a batch plan named by its term, pools added, and a seat moved between pools. It read 20261105T111306Z-d2872d86.yaml, 20261105T115925Z-6c703c63.yaml and 20261105T131440Z-90d45a35.yaml. Here UC-089 step 4 only says the change check names no merge on an outdated base. The journey still needs each Task's pull request merged with each round's verdict naming its head, which holds with both."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-07T15:09:47Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T123620Z-3d057b1b.yaml, 20261107T125436Z-9442a4b6.yaml and 20261107T130246Z-a00da651.yaml. They found that one fetch of a head, the anchors added here and the empty-rollup gate change no step. Here DEC-064 and UC-089 step 4 only say the outdated-base report names no remedy. The worker still takes in the default branch only on a conflict, a named merge or a judged check. So the journey holds with all four.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:19Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T001934Z-0af931c1.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the landing check adds no artefact type, place or kind of anchor. The second updated the view to name each concept by its term, such as rule set, collection file and version transition. The view still says an outdated base is reported and never fails the change check, which COR-050 point 12 keeps. Only the report's remedy goes, which no edit of the view names, so it holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:21Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the own head's flag and the refusal document reach neither step 3's dead anchor nor variants 5a and 5b. The second found that the reworded actors and requirements move nothing the use case states. Here COR-050 point 12 and friction_check.py only drop the outdated-base report's remedy. No step or variant names one, so what validation and the checks fail on an anchor stands with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:22Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that no step or variant runs `pkit friction check`, so the own head's flag reaches none. The second found that the needs of ACT-ai-agent and ACT-developer changed only their words. Here `rule-sets altered` only stops naming a merge or a rebase on an outdated base. Accepting a rule through review stands as UC-040 tells it, with all three.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:09:56Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261105T213244Z-562b4fb1.yaml, which updated the README into a reference for agents, after 20261102T140915Z-ee6e244c.yaml and 20261103T221653Z-e4168d96.yaml. Its Friction writers section still cites COR-050 for anchors, answers and the writers. Here point 12 and friction_check.py only stop the outdated-base report naming a remedy, which the reference never describes, so it holds with both.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+    revalidated:
+      at: 2026-11-07T15:09:58Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T132338Z-3c4c3246.yaml and 20261107T134817Z-fbfbe8a0.yaml. fbfbe8a0 updated it for each reviewer starting in the project's root. Before it, 20261107T130246Z-a00da651.yaml updated it for an empty rollup passing only where the base requires none. 3c4c3246 found start-work's help as the README says. Here DEC-064 and the pm skill's landing step only say the outdated-base report names no remedy. 'When the branch takes in its base' already says that report names no merge, so the README holds with all of them.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:10:00Z
+      outcome: updated
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:25Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T001934Z-0af931c1.yaml and main's 20261105T235651Z-829c1f38.yaml, made apart. The first found that the validate section only gains a bullet saying the landing check is no validator. The second found that it changed only in its refs row. Here COR-050 point 12 only stops the outdated-base report naming a remedy, of which the README says nothing. The three reach different passages, so the README holds with all of them.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:27Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261106T013502Z-01dc9885.yaml, made apart. The first found that the own head's flag and the refusal document change no file's schema and no measure. The second found that the refs row and the whole-and-parts finding leave the page's rows true. Here the outdated-base report states the fact and names no remedy. The page says only that the change check covers an outdated base, so it holds with all three.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:31Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T235651Z-829c1f38.yaml, made apart. The first found that the change check's new flag and refusal document ask nothing of a page or its source's resolver. The second found that the validate section changed only in its refs row. Here COR-050 point 12 and the friction check's section only drop the outdated-base report's remedy. This page names none of the three, so it holds with all of them.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:36Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T011619Z-e405542a.yaml and main's 20261105T235651Z-829c1f38.yaml, made apart. The first found that the `decisions` key and the landing check's bullet leave what the page says of the configuration standing. The second found that the refs row moves none of the rows this page cites. Here COR-050 point 12 only stops the outdated-base report naming a remedy, which the page never mentions. So places and anchors are as it says, with all three.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:40Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T235651Z-829c1f38.yaml, made apart. The first found that the discovery of documents through `pkit friction artefacts --json` did not move. The second found that pkit validate still runs the check as its member living-docs:spaces. Here only the outdated-base report's remedy goes, in COR-050 point 12 and the friction check's section. The page says nothing of an outdated base, so it holds with all three.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:43Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261106T013502Z-01dc9885.yaml, made apart. The first found that the measures and findings the agent reads are the same beside the own head's flag. The second found that the agent reads the friction documents by the same keys and that the deploy pointer holds. Here the friction sections and COR-050 point 12 only drop the outdated-base report's remedy. The page says nothing of an outdated base, so what the agent reads and proposes stands with all three.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:46Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261106T013502Z-01dc9885.yaml, made apart. The first found that fill-doc-check reads the whole-repository check, which the own head's flag does not reach. The second found that the documents the README reads stay at version 1 and that the refs row moves nothing it says. Here the friction sections and COR-050 point 12 only drop the outdated-base report's remedy. The README says nothing of an outdated base, so it holds with all three.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:50Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T222708Z-59c67901.yaml, made apart. The first found that the guide's `explain` output and its run of the check meet neither the new flag nor the refusal document. The second read 20261105T214520Z-1bee3213.yaml, and found that ACT-developer's reworded need and explain's new keys leave fixing a stale page as told. Here only the outdated-base row of the friction check's section changes. Fixing a stale page touches none of the three, so the page holds.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:13:57Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T004440Z-668c5e91.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that onboarding reaches neither the new flag nor the refusal document. The second found that ACT-adopter's reworded install need moves no word the page rests on. Here only the outdated-base row of the friction check's section changes. The page says nothing of an outdated base, so the answers a document owes are as it says, with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-006-gate-merges.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T011742Z-95ba1392.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:10:21Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:10:23Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:14:04Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that step 1's `--all` takes neither `--head` nor `--own-head`. The second found that the reworded actors and requirements, and the over-broad warning's answers, move no debt the use case reports. Here COR-050 point 12 keeps the whole-repository check never failing, and drops only the change check's outdated-base remedy. No step or variant names it, so resolving debt stands with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:14:11Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that step 5's CI job names no own-head flag. The second found that ACT-adopter's reworded install need moves no word the journey states. Here UC-006 variant 6a and the change check's message only stop naming a remedy for an outdated base. Step 5 still makes merges wait on the checks, so the journey holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:14:16Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the own head's flag alters neither the list of answers nor the landing. The second found that the over-broad warning, UC-049's step 13 and ACT-developer's reworded need move nothing the journey needs. Here the outdated-base variants of UC-002 and UC-006, and the check's message, only stop naming a remedy. The change check's list of answers and merges that wait on the checks still hold, with all three.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+    revalidated:
+      at: 2026-11-07T15:10:30Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T131245Z-5afe6d5a.yaml, which found that the agents reference, the empty-rollup clause and the print at a stop each reach their own section. Here COR-050 point 12 only stops the outdated-base report naming a remedy. The README never describes that report, so the answers its agents write and check stand with all of them.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:14:18Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml, and main's 20261105T213244Z-562b4fb1.yaml and 20261105T214520Z-1bee3213.yaml, all made apart. The first found that the own head's flag reaches none of the page's fences. The second updated the README to link the agents guide. The third found that the reworded actors and REQ-021 move no word it rests on. Here the check's outdated-base message only drops its merge or rebase advice, which the README never shows. Each reaches its own passage, so the README holds with all four.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+    revalidated:
+      at: 2026-11-07T15:14:22Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T025518Z-7a1d1b0a.yaml and main's 20261105T214520Z-1bee3213.yaml, made apart. The first found that the guide's fences read the check's first lines and exit code, which the new flag leaves alone. The second found that the reworded needs of ACT-adopter and ACT-developer move no word the page rests on. Here only the outdated-base report's remedy goes, in COR-050 and the friction check's section. The page says nothing of an outdated base, so it holds with all three.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+    revalidated:
+      at: 2026-11-07T15:10:36Z
+      outcome: unchanged
+      unchanged-because: Judged with main's 20261107T131245Z-5afe6d5a.yaml, which found that the build task, the overlay and the landing path stand with the changes it read. Here COR-050 point 12 only stops the outdated-base report naming a remedy. The guide never describes that report, so what it says of the answers the agents write and check holds with all of them.

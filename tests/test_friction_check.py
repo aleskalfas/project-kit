@@ -1367,6 +1367,26 @@ def test_an_outdated_base_is_reported_and_never_fails(repo: AdopterRepo) -> None
     assert result.exit_code == 0
 
 
+def test_the_outdated_base_report_states_the_fact_and_names_no_remedy(
+    repo: AdopterRepo,
+) -> None:
+    """Whether and how a branch takes in its base is the project's workflow to decide,
+    so the report says where the base is and where the branch left it, and advises
+    neither a merge nor a rebase (COR-050 point 12)."""
+    _start(repo, {"docs/guide.md": guide()})
+    left = repo.head()
+    repo.commit("feature work", {"src/core/engine.py": "ENGINE = 4\n"})
+    repo.checkout("main")
+    tip = repo.commit("main moves on", {"README.md": "main moved\n"})
+    repo.checkout("feature")
+    (finding,) = _run(repo).findings
+    assert finding.message == (
+        f"the base main is at {tip[:12]}, which is not an ancestor of HEAD: it moved on "
+        f"after this branch left it at {left[:12]}; results hold only against an "
+        "up-to-date base"
+    )
+
+
 def test_every_run_names_the_base_commit_it_compared_against(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     base = repo.head()

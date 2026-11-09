@@ -7,8 +7,12 @@ needs a browser, and a test can have it answer, hang, die or plant a fault.
 **The plan.** `stand_in` writes a program and its plan, a JSON file that says what the program
 does. It holds a document for each file the module opens, by file name, as `READ` gives it, and
 each span adds what only a browser could learn: `fonts`, as `CSS.getPlatformFontsForNode`
-answers, and `ink`, the grounds on which the span changes the picture. `requests` are what the
-document asks for. A `fault` names a method, and the document it strikes in, if any.
+answers, and `ink`, the grounds on which the span changes the picture, with `ink-when` giving
+other grounds under a reader's signal set to a value, keyed `signal:value`. `requests` are what
+the document asks for. A `fault` names a method, and the document it strikes in, if any.
+
+**The signals.** What `Emulation.setEmulatedMedia` set shows in every picture it takes, so a
+page repaints as its signals change; under `repaints: false`, no picture shows them.
 
 **What it leaves.** Each line of the log it writes is a JSON message, its flags and its process
 first.
@@ -88,6 +92,7 @@ class _Browser:
         self.alone: int | None = None
         self.held: set[str] = set()
         self.loader = 0
+        self.media: dict[str, str] = {}
 
     def log(self, message: Mapping[str, Any]) -> None:
         with open(self.plan["log"], "a", encoding="utf-8") as log:
@@ -122,6 +127,9 @@ class _Browser:
         method, params = message["method"], message.get("params", {})
         if method == "Page.navigate":
             self.document = params["url"].rsplit("/", 1)[-1]
+            self.ground, self.alone = "", None
+        if method == "Emulation.setEmulatedMedia":
+            self.media = {each["name"]: each["value"] for each in params.get("features", [])}
         if self.strikes(method):
             self.strike(message)
             return
@@ -215,7 +223,17 @@ class _Browser:
             self.ground = arguments[1]
         elif name == "alone":
             self.alone = arguments[1] if arguments[3] else None
+        elif name == "unground":
+            self.ground, self.alone = "", None
         return None
+
+    def ink(self, span: Mapping[str, Any]) -> Sequence[str]:
+        """The grounds on which `span` changes the picture, under the signals set."""
+        for held, grounds in span.get("ink-when", {}).items():
+            signal, _, value = held.partition(":")
+            if self.media.get(signal) == value:
+                return grounds
+        return span.get("ink", ())
 
     def picture(self, clip: Mapping[str, float]) -> bytes:
         """A PNG's header, the size of `clip`, then what shows in it: a span alone adds to its
@@ -223,10 +241,11 @@ class _Browser:
         shown = None
         if self.alone is not None:
             span = next(each for each in self.spans() if each["index"] == self.alone)
-            shown = self.alone if self.ground in span.get("ink", ()) else None
+            shown = self.alone if self.ground in self.ink(span) else None
         width, height = round(clip["width"] * 2), round(clip["height"] * 2)
         header = b"\x89PNG\r\n\x1a\n" + b"\0\0\0\rIHDR" + struct.pack(">II", width, height)
-        return header + json.dumps([self.document, self.ground, clip, shown]).encode()
+        media = self.media if self.plan.get("repaints", True) else {}
+        return header + json.dumps([self.document, self.ground, clip, shown, media]).encode()
 
 
 def main() -> None:
