@@ -44,6 +44,7 @@ pkit:
         - .pkit/lifecycle/upgrade-flow.md#seed-paths
         - .pkit/decisions/README.md#citing
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
+        - .pkit/adapters/README.md#what-an-adapter-declares-as-data
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
 ---
 
@@ -176,9 +177,11 @@ How it is written:
 - **A function keeps its name and its answer.** One whose answer changes takes a new name, so an older command never reads a newer reader's answer as its own.
 - **A command that cannot reach it** refuses that step, where the tree holds no reader or not the function the command calls. Inside the validator, that is an error finding. The message says which side is behind. A project at the command's backbone version or older needs `pkit sync`, and a newer one needs the command upgraded.
 
-**The adapter** writes the reader's answer in its harness's keys, never the author's text. It keeps its harness's tool names. It refuses a withheld list its harness cannot withhold, or whose names it cannot translate, since a withheld list fails open. Its README says what it refuses, and "Deploy mechanics" below says what a refusal does at deploy.
+**The adapter** writes the reader's answer in its harness's keys, never the author's text. It declares its harness's terms as data, in `tool-access.json` in its folder. They are the harness's keys, the forms a tool's name takes, its built-in tools, and the withheld entries it was measured to withhold.
 
-**The validator** reports as an error each definition whose tool access the reader refuses. The refusals that are the adapter's, such as a withheld name its harness does not know, are made by the deploy and the agent runner.
+**What the adapter refuses.** Against its declaration the reader makes the adapter's refusals, since a withheld list fails open. It refuses a withheld list the harness cannot withhold, or whose names it cannot translate. [The adapters README, "What an adapter declares as data"](../adapters/README.md#what-an-adapter-declares-as-data), says what the declaration holds. The adapter's README says what it refuses, and "Deploy mechanics" below what a refusal does at deploy.
+
+**The validator** reports as an error each definition whose tool access the reader refuses. It makes the adapter's refusals too, reading the declaration of every registered adapter that deploys agents, and names the adapter that refuses. It also reports an error for such an adapter with no declaration the reader reads. It does so too for one whose declaration admits a withheld entry its support declaration does not answer as achievable.
 
 ## Body conventions
 
@@ -281,7 +284,8 @@ Commands an agent returns are run by one of these:
   - a path with two owners
   - a hook with no provider
   - a storyboard one side leaves out
-  - a tool access the reader refuses, or a reader the command cannot reach ("Tool access" above)
+  - a tool access the reader refuses, itself or by an adapter's declaration ("Tool access" above)
+  - an adapter that deploys agents with no declaration the reader reads, or a reader the command cannot reach
 - **The exceptions** warn in both commands:
   - a cited point its record does not hold
   - a cited operational rule that is missing or retired
