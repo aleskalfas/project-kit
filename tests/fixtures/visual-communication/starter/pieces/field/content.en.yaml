@@ -1,0 +1,22 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: fields
+    layout: standard
+    main:
+      use: starter/form
+      fields:
+        - id: name
+          label: Your name
+          value: Ada Lovelace
+        - id: mail
+          state: error
+          label: Your e-mail address
+          value: ada.example.org
+          note: An address holds an @, such as ada@example.org.
+        - id: about
+          label: What to review
+          note: A record, a page or a picture.
+      buttons:
+        - {id: send, label: Send}

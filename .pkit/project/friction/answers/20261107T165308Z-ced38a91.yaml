@@ -1,0 +1,276 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+    revalidated:
+      at: 2026-11-07T16:54:52Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers made apart. 20261107T142335Z-64833036 found the page true against DEC-023's edits, the browser's module taking the reader's signals. 20261107T144519Z-a31f624c updated the search to place a piece at each key over the size axes, and 20261107T150300Z-2a8421b1 added a version that lies behind and pkit visual prune. This change adds to DEC-015 point 2 only that the browser keeps its own sandbox on and leaves a session's sandbox only as DEC-024 allows. The page names no sandbox, and what it takes from point 2 holds: the fonts a look hands its tool lie in a temporary folder of the clone's local folder."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+    revalidated:
+      at: 2026-11-07T16:54:56Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers made apart. 20261107T142335Z-64833036 found the page true against DEC-023's modes in the HTML renderer's page, 20261107T144519Z-a31f624c against DEC-021's sizes, and 20261107T150300Z-2a8421b1 against pkit visual prune, each unchanged. This change has DEC-020's plain terms and point 8, DEC-015 point 2, DEC-002 point 8 and DEC-006 point 1 say an outside program keeps its own sandbox on and leaves a session's sandbox only as DEC-024 allows. The page describes the step as built: on main its stop names the SVG renderer and a session outside the sandbox, which the code still does. DEC-024's Task for the pipeline's drawings and the stop changes the code and this page together (follow-up: that Task, which the project manager files from #2775)."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+    revalidated:
+      at: 2026-11-07T16:54:59Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers made apart. 20261107T142335Z-64833036 found the look and reviewer entries true against DEC-023's edits, 20261107T144519Z-a31f624c found the page true against DEC-021's sizes, and 20261107T150300Z-2a8421b1 updated it with pkit visual prune and where a command finds the project root. This change has DEC-015 point 2 say the browser keeps its own sandbox on and leaves a session's sandbox only as DEC-024 allows, and point 7 have the reviewer pass on a stop's ways on. The page names no sandbox, and its reviewer section describes the agent as its definition stands: on main it reads a stop and looks at nothing. DEC-024's Task for the pipeline's drawings and the stop teaches the reviewer and changes this section with it (follow-up: that Task, which the project manager files from #2775)."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-07T16:53:27Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 point 1 gained a sentence on a producer's outside programs: they keep their own sandbox on and leave a session's sandbox only as DEC-024 point 8 allows. The term defines a helper script, the project's own program run while a piece is prepared, which that sentence does not touch and DEC-024 point 8 leaves to the project."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-07T16:53:34Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 1 gained a sentence on a producer's outside programs and the session's sandbox. The term defines a model, a file of a subject's elements and relations that several pieces draw from, and tells it apart from the permission model by name alone. Neither depends on how an outside program meets the sandbox.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T16:53:44Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 point 1 gained a sentence on a producer's outside programs: they keep their own sandbox on and leave a session's sandbox only as DEC-024 point 8 allows. UC-095 takes from point 1 only that a helper script may lay out a graph while the piece is prepared, which stands, and names no producer's program or sandbox."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T16:53:46Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 1 gained a sentence on a producer's outside programs and the session's sandbox. UC-096 takes from point 1 only that a helper script runs while the piece is prepared and writes a local component as data, which stands. A helper stays the project's script, which DEC-024 point 8 leaves unbound.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+    revalidated:
+      at: 2026-11-07T16:53:49Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 1 gained a sentence on a producer's outside programs and the session's sandbox. UC-110 takes from point 1 only that a helper script stays the project's code and its local component stays in its piece, which stands and touches no sandbox.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-011-move-component-into-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T16:53:51Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 1 gained a sentence on a producer's outside programs and the session's sandbox. JRN-011 takes from point 1 only that a helper script stays the project's code, so the local component it writes stays in its piece, which stands and touches no sandbox.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-097-put-produced-picture.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T16:54:07Z
+      outcome: unchanged
+      unchanged-because: "DEC-002 point 8 and DEC-006 point 1 each gained a sentence: an outside program keeps its own sandbox on, where it has one, and leaves a session's sandbox only as DEC-024 allows. UC-097 has a person or an agent run the producer through a command of the capability, and its variant 2a has a command name a missing program. Both stand: a program a sandbox stops is a program that cannot run there, whose picture waits (DEC-024 point 8)."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T16:54:10Z
+      outcome: unchanged
+      unchanged-because: "DEC-002 point 8 gained a sentence: an outside program keeps its own sandbox on, where it has one, and leaves a session's sandbox only as DEC-024 allows. UC-099 takes from point 8 that a renderer reaching a service runs only where the configuration turns it on and signs in through the shared sign-in, which stands. It names no outside program's sandbox."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T16:54:11Z
+      outcome: unchanged
+      unchanged-because: "DEC-002 point 8 gained a sentence: an outside program keeps its own sandbox on, where it has one, and leaves a session's sandbox only as DEC-024 allows. UC-102's variant 2b has a command that needs an outside program check for it and name what is missing, which stands: where a sandbox stops the program, its command still names what is missing (DEC-024 point 8)."

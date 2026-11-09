@@ -29,7 +29,7 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load
 from tests.visual_communication_project import (
     FIXTURES,
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_NOTATION,
     TEST_PARTS,
@@ -153,7 +153,7 @@ def lay_out_drawing(
     no producer is needed to check it. The libraries are listed unreleased, but under a
     final or a published piece's lock, which names released versions alone; `released` says
     otherwise."""
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TESTS, "tests", "1.0.0")
     stays = fields.get("state") in ("final", "published")
@@ -182,17 +182,23 @@ def lay_out_drawing(
     return root
 
 
-def write_picture(root: Path, framing: ModuleType, colour: tuple[int, ...] = RED) -> Path:
+def write_picture(
+    root: Path,
+    framing: ModuleType,
+    colour: tuple[int, ...] = RED,
+    by_variant: Mapping[str, tuple[int, ...]] | None = None,
+) -> Path:
     """The callout's picture as `pkit visual produce` keeps it, written directly: a PNG of
-    `colour` for each variant, exposing `tip` at (75, 25), and its record, with the
-    fingerprint of the files as they are now (the test producer registered with the
-    `seam` beside `framing`)."""
+    `colour` for each variant, or of the colour `by_variant` gives it, exposing `tip` at
+    (75, 25), and its record, with the fingerprint of the files as they are now (the test
+    producer registered with the `seam` beside `framing`)."""
     plan = framing.plan(root, "visual", PIECE, OUTPUT)
     folder = root / PIECE_FOLDER / "produced" / OUTPUT
     folder.mkdir(parents=True, exist_ok=True)
-    data = producer.png(100, 100, (colour[0], colour[1], colour[2], colour[3]))
     digests = {}
     for key in plan.variants:
+        red, green, blue, alpha = (by_variant or {}).get(key, colour)
+        data = producer.png(100, 100, (red, green, blue, alpha))
         (folder / f"{key}.png").write_bytes(data)
         digests[key] = reading.sha256(data)
     tip = {key: {"x": 75, "y": 25} for key in plan.variants}
@@ -468,8 +474,12 @@ def test_the_env_reads_the_produced_picture_from_its_record(tmp_path: Path) -> N
     assert picture.points == {
         "tip": {"colour-scheme.dark": {"x": 75, "y": 25}, "default": {"x": 75, "y": 25}}
     }
-    assert project.env.pictures_at("colour-scheme.dark") == {
-        OUTPUT: root / PIECE_FOLDER / "produced" / OUTPUT / "colour-scheme.dark.png"
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
+    image = "figure/body/steps[note]/pictures[square]/image"
+    assert project.env.handed(result.scene.to_dict(), "colour-scheme.dark") == {
+        image: seam.Shown(
+            root / PIECE_FOLDER / "produced" / OUTPUT / "colour-scheme.dark.png", seam.PNG
+        )
     }
 
 
@@ -519,8 +529,8 @@ def test_a_lock_naming_a_version_not_held_is_refused(tmp_path: Path) -> None:
 
 # --- a piece on a size axis (DEC-004 points 2 and 3, DEC-005 point 6) ---------------------------
 
-#: The size axis the size tests add to the foundations they hold. No shipped brand declares
-#: one, so each test adds it to its own copy.
+#: The size axis the size tests add, in two modes, to the foundations they hold: their
+#: release 1.0.0, which declares none, so each test adds it to its own copy.
 DEVICE = "device: {kind: size, modes: [desktop, phone], default: desktop}"
 
 #: The key of the phone, the mode of `device` that is not its default.
@@ -637,7 +647,7 @@ def test_a_piece_on_a_size_and_a_value_axis_draws_four_combinations_from_two_sce
     assert project.keys == ["default", dark, PHONE, f"{dark}+{PHONE}"]
     results = project.scenes(facts=project.piece.stand_ins)
     assert [made.scene.size_key for _, made in results] == ["default", PHONE]
-    drawn = {key: made.pages[0].svg for _, key, made in pl.drawn(project, results, "svg")}
+    drawn = {key: made.pages[0].svg for _, (key,), made in pl.drawn(project, results, "svg")}
     assert list(drawn) == project.keys
     widths = {key: re.findall(r'<svg [^>]*width="([0-9.]+)"', text) for key, text in drawn.items()}
     assert widths == {"default": ["960"], dark: ["960"], PHONE: ["480"], f"{dark}+{PHONE}": ["480"]}
@@ -852,7 +862,7 @@ def system_project(tmp_path: Path) -> Path:
     """The foundations, the test brand and the test notation, listed unreleased, and the
     draft `system`: a figure of the pattern over `NODES`, in both colour schemes."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     unreleased = {"1.0.0": {"released": False}}
@@ -967,7 +977,7 @@ def parts_project(tmp_path: Path, warning: bool = False) -> Path:
     three; with `warning`, the tag paints its label with the library's warning, which has
     no default and which the test brand, naming no library, leaves with no value."""
     root = project(tmp_path)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     parts = copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
     if warning:
@@ -1443,7 +1453,7 @@ def previews_of(root: Path) -> dict[str, str]:
     """The previews of the piece as its own location draws them."""
     drawn_project = project_of(root)
     found: dict[str, str] = {}
-    for language, key, drawn in pl.drawn(drawn_project, stand_in_scenes(drawn_project), "svg"):
+    for language, (key,), drawn in pl.drawn(drawn_project, stand_in_scenes(drawn_project), "svg"):
         found.update(pl.preview_files(PIECE, language, key, drawn.pages))
     return found
 
@@ -1748,16 +1758,22 @@ def test_what_a_run_says_of_a_stand_in_names_each_element_and_why(tmp_path: Path
     assert took.said([]) == ""
 
 
-def test_an_export_takes_the_stand_ins_whatever_the_clone_holds(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("shows", ["files", "number"])
+def test_an_exports_findings_take_the_stand_ins_and_only_a_shown_number_is_filled_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shows: str
 ) -> None:
+    """The scenes the findings rest on take the stand-ins, whatever the clone holds. Only a
+    piece that shows a version's number or its date is computed again, with the number and
+    the date the export fills (DEC-016 point 5)."""
     importable(monkeypatch, svg)
-    root = stamped(tmp_path, "files")
+    root = stamped(tmp_path, shows)
     exported_up_to(root, 41)
     taken = filled(monkeypatch, pl)
     project = project_of(root)
-    exports.plan(project)
-    assert taken == [project.piece.stand_ins]
+    planned = exports.plan(project)
+    assert planned.facts == layout.Facts("v42", planned.facts.date, "draft")
+    again = [] if shows == "files" else [planned.facts]
+    assert taken == [project.piece.stand_ins, *again]
 
 
 def test_the_search_for_a_lock_places_a_piece_that_shows_a_fact(tmp_path: Path) -> None:
@@ -1768,3 +1784,278 @@ def test_the_search_for_a_lock_places_a_piece_that_shows_a_fact(tmp_path: Path) 
         name: held.library(name, pl.Version.parse(version)) for name, version in piece.lock.items()
     }
     assert pl.fit(piece, held)(versions) == []
+
+
+# --- a format that holds modes (DEC-023 points 1 to 3) -----------------------------------------
+
+(html, html_declaration) = load("visual-communication", "plugins.html", "plugins.html_declaration")
+
+#: The pairs the HTML renderer declares for its format, read as data.
+PAIRS = html_declaration.DECLARATION["holds-modes"]["html"]
+
+#: The foundations' two value axes, and the size axis the size tests add.
+AXES = {
+    "colour-scheme": pl.tokens.Axis("colour-scheme", "value", ("light", "dark"), "light"),
+    "contrast": pl.tokens.Axis("contrast", "value", ("standard", "high"), "standard"),
+    "device": pl.tokens.Axis("device", "size", ("desktop", "phone"), "desktop"),
+}
+
+DARK_KEY = "colour-scheme.dark"
+HIGH_KEY = "contrast.high"
+
+
+def every_combination(**named: list[str]) -> list[dict[str, str]]:
+    return pl.keys.combinations(named, AXES)
+
+
+def test_every_mode_the_foundations_ship_shares_one_file_at_one_size() -> None:
+    combinations = every_combination(
+        **{"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]}
+    )
+    assert pl.files_of(combinations, AXES, PAIRS) == [
+        ("default", DARK_KEY, HIGH_KEY, f"{DARK_KEY}+{HIGH_KEY}")
+    ]
+
+
+def test_each_key_over_the_size_axes_takes_a_file_of_its_own() -> None:
+    combinations = every_combination(
+        **{"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    assert pl.files_of(combinations, AXES, PAIRS) == [
+        ("default", DARK_KEY),
+        (PHONE, f"{DARK_KEY}+{PHONE}"),
+    ]
+
+
+def test_a_mode_with_no_pair_takes_a_file_of_its_own_drawn_from_the_scene_of_its_size() -> None:
+    """Every mode the foundations ship has a pair, so a pair left out stands for one."""
+    pairs = {**PAIRS, "colour-scheme": {**PAIRS["colour-scheme"], "pairs": {"light": "light"}}}
+    combinations = every_combination(
+        **{
+            "colour-scheme": ["light", "dark"],
+            "contrast": ["standard", "high"],
+            "device": ["desktop", "phone"],
+        }
+    )
+    assert pl.files_of(combinations, AXES, pairs) == [
+        ("default", HIGH_KEY),
+        (DARK_KEY, f"{DARK_KEY}+{HIGH_KEY}"),
+        (PHONE, f"{HIGH_KEY}+{PHONE}"),
+        (f"{DARK_KEY}+{PHONE}", f"{DARK_KEY}+{HIGH_KEY}+{PHONE}"),
+    ]
+
+
+def test_a_pair_on_a_size_axis_shares_no_file() -> None:
+    pairs = {
+        **PAIRS,
+        "device": {"signal": "pointer", "pairs": {"desktop": "fine", "phone": "coarse"}},
+    }
+    combinations = every_combination(device=["desktop", "phone"])
+    assert pl.files_of(combinations, AXES, pairs) == [("default",), (PHONE,)]
+
+
+def test_with_no_pair_every_combination_takes_a_file_of_its_own() -> None:
+    combinations = every_combination(**{"colour-scheme": ["light", "dark"]})
+    assert pl.files_of(combinations, AXES, {}) == [("default",), (DARK_KEY,)]
+
+
+class Spy:
+    """A renderer of the format `spy`, which holds the modes the pairs it is given name, or of
+    one key at a time where it is given none: each call it is handed, and an empty file."""
+
+    def __init__(self, pairs: Mapping[str, Any] | None) -> None:
+        self.calls: list[dict[str, Any]] = []
+        self.declaration: dict[str, Any] = {
+            "name": "spy",
+            "kind": "renderer",
+            "version": "1.0.0",
+            "seam": seam.SEAM_VERSION,
+            "module": "spy",
+            "draws": {},
+        }
+        if pairs is not None:
+            self.declaration["holds-modes"] = {"spy": pairs}
+
+    def render(self, scene: Mapping[str, Any], **handed: Any) -> Any:
+        self.calls.append({"size-key": scene["size-key"], **handed})
+        return html.Drawn(b"", [], [])
+
+
+@pytest.fixture
+def spied() -> Any:
+    made: list[Spy] = []
+
+    def spy(pairs: Mapping[str, Any] | None) -> Spy:
+        held = Spy(pairs)
+        seam.register(held.declaration, held)
+        made.append(held)
+        return held
+
+    yield spy
+    seam.unregister("spy")
+
+
+def test_a_file_of_several_keys_is_handed_over_in_one_call_with_each_keys_colours_and_pictures(
+    tmp_path: Path, spied: Any
+) -> None:
+    root = drawing_project(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]}
+    )
+    write_picture(root, framing)
+    project = project_of(root)
+    spy = spied(PAIRS)
+
+    drawn = list(pl.drawn(project, stand_in_scenes(project), "spy"))
+
+    held = ("default", DARK_KEY, HIGH_KEY, f"{DARK_KEY}+{HIGH_KEY}")
+    assert [(language, keys) for language, keys, _ in drawn] == [("en", held)]
+    [call] = spy.calls
+    assert call["form"] == "spy"
+    assert call["keys"] == dict(zip(project.keys, project.combinations, strict=True))
+    assert list(call["keys"]) == list(held)
+    document = project.values()
+    assert call["colours"] == {key: pl.colours_at(document, key) for key in held}
+    [(_, result)] = stand_in_scenes(project)
+    scene = result.scene.to_dict()
+    assert call["pictures"] == {key: project.env.handed(scene, key) for key in held}
+    assert call["pictures"]["default"]
+    assert call["font_file"] == project.brand.font_file
+
+
+def test_a_renderer_of_one_key_at_a_time_is_handed_each_key_alone(
+    tmp_path: Path, spied: Any
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    project = project_of(root)
+    spy = spied(None)
+
+    drawn = list(pl.drawn(project, stand_in_scenes(project), "spy"))
+
+    assert [keys for _, keys, _ in drawn] == [("default",), (DARK_KEY,)]
+    assert [sorted(call) for call in spy.calls] == [
+        ["colours", "font_file", "key", "pictures", "size-key"]
+    ] * 2
+    assert [call["key"] for call in spy.calls] == ["default", DARK_KEY]
+
+
+def test_what_hands_the_keys_groups_them_by_the_pairs_the_declaration_names_alone(
+    tmp_path: Path, spied: Any
+) -> None:
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]},
+    )
+    project = project_of(root)
+    spy = spied({"contrast": PAIRS["contrast"]})
+
+    drawn = list(pl.drawn(project, stand_in_scenes(project), "spy"))
+
+    assert [keys for _, keys, _ in drawn] == [
+        ("default", HIGH_KEY),
+        (DARK_KEY, f"{DARK_KEY}+{HIGH_KEY}"),
+    ]
+    assert [tuple(call["keys"]) for call in spy.calls] == [keys for _, keys, _ in drawn]
+
+
+def test_a_file_holds_every_key_its_group_gives_it_whichever_keys_are_asked(
+    tmp_path: Path, spied: Any
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    project = project_of(root)
+    spy = spied(PAIRS)
+
+    drawn = list(pl.drawn(project, stand_in_scenes(project), "spy", [DARK_KEY]))
+
+    assert [keys for _, keys, _ in drawn] == [("default", DARK_KEY)]
+    assert list(spy.calls[0]["keys"]) == ["default", DARK_KEY]
+
+
+def test_the_html_renderer_takes_the_modes_of_one_size_in_one_file_and_each_size_its_own(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, html)
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    project = project_of(root)
+
+    drawn = list(pl.drawn(project, stand_in_scenes(project), "html"))
+
+    assert [keys for _, keys, _ in drawn] == [("default", DARK_KEY), (PHONE, f"{DARK_KEY}+{PHONE}")]
+    widths = [
+        re.findall(r"width:min\(100%,([0-9.]+)px\)", made.document.decode()) for *_, made in drawn
+    ]
+    assert widths == [["960"], ["480"]]
+    assert [re.findall(r'data-key="([^"]+)"', made.document.decode()) for *_, made in drawn] == [
+        ["default"],
+        [PHONE],
+    ]
+
+
+#: What the test brand gives a phone beside a narrower figure: a ground of its own colour, in
+#: every scheme, since the device's tokens resolve last.
+PHONE_GROUND = {
+    **NARROW,
+    "background": {"$type": "color", "$value": "{palette.black}"},
+}
+
+
+def page_values(file: bytes) -> list[tuple[str, dict[str, str]]]:
+    """Each rule of a page file's root: the signals it lies under, and what it declares."""
+    text = file.decode()
+    return [
+        (media, dict(part.split(":", 1) for part in held.split(";") if part))
+        for media, held in re.findall(r"(?:@media ([^{]*)\{)?:root\{([^}]*)\}", text)
+    ]
+
+
+def test_each_mode_of_a_file_takes_its_values_at_the_files_size(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A colour a size changes takes that size's value in every mode of the file (DEC-023
+    point 3, DEC-021 point 8)."""
+    importable(monkeypatch, html)
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]},
+    )
+    add_device(root, PHONE_GROUND)
+    project = project_of(root)
+    document = project.values()
+
+    files = {
+        keys[0]: made.document
+        for _, keys, made in pl.drawn(project, stand_in_scenes(project), "html")
+    }
+
+    black = "#000000"
+    assert hex_of(pl.colours_at(document, PHONE)["background"]) == black
+    assert hex_of(pl.colours_at(document, f"{DARK_KEY}+{PHONE}")["background"]) == black
+    desktop = {hex_of(pl.colours_at(document, key)["background"]) for key in ("default", DARK_KEY)}
+    assert black not in desktop
+    phone_rules = page_values(files[PHONE])
+    assert [media for media, _ in phone_rules] == ["", "(prefers-color-scheme:dark)"]
+    assert [held["--background"] for _, held in phone_rules] == [black, black]
+    desktop_rules = page_values(files["default"])
+    assert {held["--background"] for _, held in desktop_rules} == desktop
+
+
+def test_a_piece_of_one_mode_takes_a_file_of_that_key_under_no_signals_rule(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An axis the piece names no mode of stays at its default."""
+    importable(monkeypatch, html)
+    root = drawing_project(tmp_path, picture=False, modes={"colour-scheme": ["dark"]})
+    project = project_of(root)
+
+    [(_, keys, made)] = list(pl.drawn(project, stand_in_scenes(project), "html"))
+
+    assert keys == (DARK_KEY,)
+    [(media, held)] = page_values(made.document)
+    assert media == ""
+    assert held["color-scheme"] == "dark"
+    dark = pl.colours_at(project.values(), DARK_KEY)
+    assert held["--background"] == hex_of(dark["background"])
+    assert "prefers-contrast" not in made.document.decode()

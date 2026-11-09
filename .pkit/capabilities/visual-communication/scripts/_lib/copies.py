@@ -738,10 +738,10 @@ def _compared(
 # --- the locks ----------------------------------------------------------------------------------
 
 
-def locks(root: Path, location: str, library: str) -> list[Lock]:
-    """Each lock of the location, as it bears on `library`: each piece's, a folder of
-    `pieces/` that holds a file, in name order; then each declaration's of written code, a
-    YAML file directly in `code/`, in name order."""
+def locks(root: Path, location: str, library: str | None = None) -> list[Lock]:
+    """Each lock of the location, as it bears on `library`, or on each library it names where
+    none is given: each piece's, a folder of `pieces/` that holds a file, in name order; then
+    each declaration's of written code, a YAML file directly in `code/`, in name order."""
     found = []
     prefix = f"{location}/{PIECES}/"
     pieces = {rel[len(prefix) :].split("/")[0] for rel in listed_files(root, prefix[:-1])}
@@ -811,7 +811,7 @@ def take_up_command(piece: str) -> str:
     return f"`pkit visual take-up {piece} <name>`"
 
 
-def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
+def _piece_lock(root: Path, file: str, name: str, library: str | None) -> Lock:
     """A piece's lock, from its `piece.yaml`: its `lock`, `state` and, of a draft, `pinned`.
     Its record of exports says whether it is final, and one that cannot be read makes it so
     (`why_final`), so that lock follows."""
@@ -832,7 +832,7 @@ def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
     return Lock(PIECE, name, file, False, None, why)
 
 
-def _declaration_lock(root: Path, file: str, name: str, library: str) -> Lock:
+def _declaration_lock(root: Path, file: str, name: str, library: str | None) -> Lock:
     """A declaration's lock of written code, which moves only on purpose."""
     data, why = _bound(root / file, "code")
     if data is not None:
@@ -857,19 +857,20 @@ def _bound(path: Path, kind: str) -> tuple[Mapping[str, Any] | None, str]:
     return data, ""
 
 
-def _versions(data: Mapping[str, Any], library: str) -> tuple[Mapping[str, str] | None, str]:
+def _versions(data: Mapping[str, Any], library: str | None) -> tuple[Mapping[str, str] | None, str]:
     """The lock `data` holds, or None and why: a mapping of libraries to versions, its entry
-    for `library`, where it has one, a version."""
+    for `library`, where it has one, a version, and where no library is given, each entry."""
     lock = data.get("lock", {})
     if not isinstance(lock, Mapping) or not all(
         isinstance(key, str) and isinstance(value, str) for key, value in lock.items()
     ):
         return None, "its `lock` is not a mapping of libraries to versions"
-    if library in lock:
+    named = sorted(lock) if library is None else [name for name in (library,) if name in lock]
+    for name in named:
         try:
-            Version.parse(lock[library])
+            Version.parse(lock[name])
         except ValueError:
-            return None, f"its lock names `{library}: {lock[library]}`, which is no version"
+            return None, f"its lock names `{name}: {lock[name]}`, which is no version"
     return lock, ""
 
 

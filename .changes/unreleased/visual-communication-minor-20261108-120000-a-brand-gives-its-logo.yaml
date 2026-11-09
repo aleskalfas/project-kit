@@ -1,0 +1,26 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A brand gives its logo, and a part shows it (#2858). An `image` part comes to
+  name `role`, a picture role such as `picture.logo`, beside `produced`,
+  `content` and `file`, exactly one of the four. It draws the file the brand
+  gives the role in each mode and at each size, from one scene, in an SVG, an
+  HTML and a PDF export alike, and an image with no height takes that file's
+  proportions. Where the brand gives none,
+  the part is not drawn and takes zero size, and no piece takes a finding. A
+  `role` that names no picture role fails, as `unknown-role` or `role-type`. A
+  brand that gives a picture role a file in some value combinations of a key
+  and none in others fails (`picture-role-modes`), and so does one that gives
+  it files of two proportions there (`picture-role-proportion`); a dark logo
+  at twice the pixels passes. `pkit visual export` refuses a logo a part shows
+  that is missing or cannot be read. The document of values rises to version
+  2, which holds each picture role's file, and the JSON code writer writes it
+  as a new form 2, stated by `schemas/values-2.schema.json`; form 1 is written
+  as before. The CSS writer and the JSON writer's form 1 report a picture role
+  as a loss known before they run. So a CSS declaration under a brand with a
+  logo takes `code-loss` until it accepts the loss, and so does a JSON one of
+  form 1. Written code of a brand with no picture role is as before, so the
+  CSS and JSON writers stay at 1.0.0, and the seam stays at 5. Every file
+  format 1 accepted reads as before.

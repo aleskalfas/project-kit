@@ -1,0 +1,10 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `code-reviewer`, `security-reviewer` and `docs-reviewer` cite DEC-002's
+  block-threshold discipline as point 3 and its knowledge split as point 4, the
+  ids its headings carry (#2368). They cited them as `D3` and `D4`, which the
+  record does not hold, so `pkit validate` gave a project with the capability
+  installed nine warnings about them. What the agents do is unchanged.

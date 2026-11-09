@@ -18,6 +18,9 @@ the working tree (visual-communication DEC-019 points 1 to 4, 6, 7 and 11).
   runs no program, since a program reads under the lock the piece holds, so the way past is
   its own (`_way_past_stale`): a person names each output to use it as it is. No run writes
   the lock and stops.
+- **A number or a date that overflows** stops the run as it stops an export, measured where
+  the export fills it (DEC-016 point 6). A person names each fact to use its text as it is,
+  and the refusal prints the line that names them all (`_way_past_overflow`).
 - **What it carries** (`plan`, `write`). The lock, the findings record of a render under it,
   and an export run under it, which follows every rule of an export but the gate: the gate
   lies in `export.py`, so nothing here passes through it. The drawing a look ahead gives is
@@ -89,20 +92,31 @@ class Move:
 @dataclass(frozen=True)
 class Named:
     """What a person named to a run: each library version to move to, each input that changed
-    since the copy, and each stale output to use as it is."""
+    since the copy, each stale output to use as it is, and each fact whose text to use as it
+    is, though it overflows."""
 
     versions: Sequence[str] = ()
     edited: Sequence[str] = ()
     use_stale: Sequence[str] = ()
+    use_overflowing: Sequence[str] = ()
 
-    def line(self, piece: str, edited: Sequence[str], use_stale: Sequence[str]) -> str:
-        """The command that runs again with these versions, `edited` and `use_stale`."""
+    def line(
+        self,
+        piece: str,
+        edited: Sequence[str],
+        use_stale: Sequence[str],
+        use_overflowing: Sequence[str] | None = None,
+    ) -> str:
+        """The command that runs again with these versions, `edited`, `use_stale` and
+        `use_overflowing`, by default the facts named to this run."""
+        facts = self.use_overflowing if use_overflowing is None else use_overflowing
         words = [
             "pkit visual upgrade",
             piece,
             *self.versions,
             *(f"--edited {name}" for name in edited),
             *(f"--use-stale {output}" for output in use_stale),
+            *(f"--use-overflowing {fact}" for fact in facts),
         ]
         return " ".join(words)
 
@@ -204,11 +218,14 @@ def plan(move: Move, named: Named) -> Planned:
     moved = pl.Piece(piece.root, piece.location, piece.name, data, piece.contents)
     project = rendering.exportable(moved, held)
     written = {} if locked is None else {piece.folder / pl.PIECE_FILE: locked}
+    edited = sorted({edit.name for edit in edits})
     export = exports.plan(
         project,
         use_stale=named.use_stale,
+        use_overflowing=named.use_overflowing,
         written=written,
-        way_past_stale=_way_past_stale(piece.name, sorted({edit.name for edit in edits}), named),
+        way_past_stale=_way_past_stale(piece.name, edited, named),
+        way_past_overflow=_way_past_overflow(piece.name, edited, named),
     )
     pl.writable(piece.root, piece.folder / pl.FINDINGS_FILE)
     found = checks.scene_findings(project, export.results)
@@ -282,6 +299,21 @@ def _way_past_stale(
         return (
             f"This run runs no program, and a program reads under the lock the piece holds. Name "
             f"each to use it as it is, and make it again once the lock has moved: `{line}`"
+        )
+
+    return way
+
+
+def _way_past_overflow(
+    piece: str, edited: Sequence[str], named: Named
+) -> Callable[[Collection[str]], str]:
+    """What says the way past a number or a date that overflows under the moved lock, from
+    every fact that does: the line that names them all (DEC-016 point 6)."""
+
+    def way(facts: Collection[str]) -> str:
+        line = named.line(piece, edited, named.use_stale, sorted({*facts, *named.use_overflowing}))
+        return (
+            f"Give each room in its component, or name its fact to use its text as it is: `{line}`"
         )
 
     return way

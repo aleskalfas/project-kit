@@ -17,8 +17,8 @@ reads:
     - .pkit/agents/README.md
     - .pkit/agents/project/overlay.yaml
   patterns:
-    - architecture-docs
-    - adr-records
+    - <architecture-docs>
+    - <adr-records>
 owns:
   - <architecture-docs>
   - <adr-records>

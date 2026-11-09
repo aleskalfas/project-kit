@@ -1,7 +1,7 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
-points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
+points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-019 point 8).
 
 **File-level findings, every run:**
 
@@ -18,6 +18,9 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   final or a published piece's lock; and, read with the content, a key that both an item's
   component and its list declare, which fails where an item carries it and is stated as a
   fact where none does (DEC-010 points 2 and 9);
+- a published piece's lock behind a newer released version the installed capability reads,
+  a fact read from the lock and the list alone, outside the lock's findings, so it stops
+  nothing and refuses no export (`behind_findings`, DEC-003 point 9, DEC-019 point 8);
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
   major it names. A brand is read over its base, a component library's own roles are
@@ -82,7 +85,9 @@ reads and before a lock finding stops the piece, so each of these stands beside 
 - a published piece fails where it declares no format, where it has no current copy of its
   own, where a file of that copy is missing or holds another hash, or where something the
   version that wrote the copy read has changed (`published_findings`). So it is held to that
-  version, and not to the last. A copy made over a stale output asks for attention;
+  version, and not to the last. A copy made over a stale output asks for attention. A copy
+  made with a number or a date let through fails, at the component the text did not fit,
+  so it asks for attention in a released library, naming its owner (DEC-016 point 6);
 - a draft with a file of its own current copy standing asks for attention, whatever the file
   holds (`standing_findings`);
 - a final piece raises none of these, since no export can mend its copy (`_final`).
@@ -123,6 +128,7 @@ from _lib import (
     exports,
     fingerprint,
     framing,
+    keys,
     layout,
     location,
     names,
@@ -164,6 +170,7 @@ from _lib.libraries import (
     MajorsConflict,
     Version,
     kind_within,
+    newer_than,
     newest_of_majors,
     readable,
 )
@@ -195,6 +202,14 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
 
+#: The fact that a published piece's lock is behind a newer released version the installed
+#: capability reads (DEC-003 point 9, DEC-019 point 8). It lies outside `lock_findings`, so it
+#: stops no other finding of the piece and refuses no export.
+LOCK_BEHIND = "lock-behind"
+
+#: What the fact that a lock is behind says of fit, which it does not judge.
+OUTDATED = "`pkit visual outdated` says whether a move takes it, and why not"
+
 #: The findings on what a piece's state owes of its current copy (DEC-017 point 6).
 PUBLISHED_NO_FORMAT = "published-no-format"
 COPY_NONE = "current-copy-none"
@@ -203,6 +218,7 @@ COPY_FILE_CHANGED = "current-copy-file-changed"
 COPY_STALE = "current-copy-stale"
 COPY_UNREADABLE = "current-copy-unreadable"
 COPY_OVER_STALE = "current-copy-over-stale"
+COPY_LET_THROUGH = "current-copy-let-through"
 COPY_STANDING = "current-copy-standing"
 
 #: The findings on what a final piece owes of the version handed out (DEC-017 point 6), and on
@@ -458,6 +474,7 @@ class _Run:
         lock = lock_findings(self.held, piece)
         self.found.extend(lock)
         self._copy(piece)
+        self.found.extend(behind_findings(self.held, piece))
         if lock:
             self.counts["unchecked"] += 1
             return
@@ -629,13 +646,15 @@ class _Run:
                 env = pl.LibraryEnv(chosen, scope)
                 found = [*scope.findings_of(name), *default_clashes(self.held, library, env)]
             elif library.kind == "brand" and FOUNDATIONS in folders:
-                found = tokens.read_brand(
+                brand = tokens.read_brand(
                     library.folder,
                     tokens.read_scope(folders, root=self.root),
                     fonts=self.root / self.location / pl.FONTS,
                     root=self.root,
                     locked=folders,
-                ).findings
+                )
+                # What the version alone states, which no piece's lock reads (DEC-025 point 9).
+                found = [*brand.findings, *brand.facts]
             else:
                 found = []
         except tokens.TokenError as exc:
@@ -1113,19 +1132,48 @@ def _shipped_under(name: str, version: Version) -> copies.Source | None:
         return None
 
 
+def behind_findings(held: Held, piece: pl.Piece) -> list[Finding]:
+    """The facts that a published piece's lock is behind a newer released version the
+    installed capability reads, of any major (`libraries.newer_than`, DEC-003 point 9,
+    DEC-019 point 8). Each library behind takes one for the newest such version of the lock's
+    major, which names the command that proposes the move, and one for the newest of a later
+    major, which a person takes on purpose, by naming it. Each names `pkit visual outdated`
+    for whether a move takes it. It is read from the lock and the list of libraries alone and
+    judges no fit, so it stays while a version stands that no default move takes. It fails
+    nothing, and no other state raises it: a final piece never comes here."""
+    if not current_copy.keeps(piece) or piece.final:
+        return []
+    file = piece.file(pl.PIECE_FILE)
+    upgrade = f"pkit visual upgrade {piece.name}"
+    found = []
+    for newer in newer_than(held, piece.lock):
+        lead = f"the published piece `{piece.name}` locks {newer.name}@{newer.locked}, behind"
+        if newer.within is not None:
+            said = f"{lead} {newer.name}@{newer.within}, a released version of its major"
+            fix = f"run `{upgrade}`, which proposes the move; {OUTDATED}"
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+        if newer.later is not None:
+            said = f"{lead} {newer.name}@{newer.later}, a released version of a later major"
+            fix = (
+                f"a later major is taken on purpose, by naming it: "
+                f"`{upgrade} {newer.name}@{newer.later}`; {OUTDATED}"
+            )
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+    return found
+
+
 # --- what a state owes of a current copy --------------------------------------------------------
 
 
 def _no_format(piece: pl.Piece) -> Finding:
     """The finding on a published piece that declares no format (DEC-017 point 6)."""
-    formats = " or ".join(f"`{form}`" for form in exports.RENDERERS)
     return Finding(
         PUBLISHED_NO_FORMAT,
         FAILS,
         f"the published piece `{piece.name}` declares no format under `exports`",
         file=piece.file(pl.PIECE_FILE),
         where="exports",
-        fix=f"declare one there: {formats}",
+        fix=f"declare one there: {exports.formats_said()}",
     )
 
 
@@ -1139,7 +1187,10 @@ def published_findings(
     or None where it names none (`current_copy.own`), among the record's `versions` (DEC-006
     point 8, DEC-017 points 5 and 6): a copy that is whole, and that nothing it read has
     changed since. It reads the version that wrote the copy, not the last, so a piece set
-    back to published is held to it. A copy made over a stale output asks for attention."""
+    back to published is held to it. A copy made over a stale output asks for attention. A
+    copy made with a number or a date let through fails in the library version of the
+    component the text did not fit, so it asks for attention in a released one, naming its
+    owner, until a version that fits writes the copy (DEC-016 point 6)."""
     record = piece.file(pl.EXPORTS_FILE)
     if entry is None:
         said = f"the published piece `{piece.name}` has no current copy of its own"
@@ -1187,6 +1238,24 @@ def published_findings(
                 where=current_copy.FIELD,
                 fix=f"run {pl.produce_command(piece.name, output)}, then {fix}",
                 who=AUTHOR,
+            )
+        )
+    for each in current_copy.written_let_through(entry, versions):
+        said = (
+            f"the current copy of `{piece.name}`, which version {number} wrote, was made with "
+            f"{current_copy.let_through_said(each)} let through, which does not fit"
+        )
+        component = each["component"]
+        version = each.get("version", "")
+        found.append(
+            Finding(
+                COPY_LET_THROUGH,
+                FAILS,
+                said,
+                file=record,
+                where=current_copy.FIELD,
+                fix=f"give the text room in `{component}`, then {fix}",
+                library=f"{component.partition('/')[0]}@{version}" if version else "",
             )
         )
     return found
@@ -2292,7 +2361,10 @@ def scene_findings(
     each combination it serves. A finding the scenes of every key find alike is reported
     once, as it reads. Any other is reported for each key whose scenes find it, its message
     opening with that key, so a finding takes no field for its size. Content a scene draws
-    at one key and not at another is stated at the key that hides it (`_hidden`)."""
+    at one key and not at another is stated at the key that hides it (`_hidden`). A finding
+    in what a field of the top draws, read alike on several pages, is reported once, naming
+    its pages (`_once_on_pages`). A size at which the top is as wide as at the default asks
+    for attention (`_widths`)."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2322,7 +2394,7 @@ def scene_findings(
                 if not accepted(loss, piece.accepted_losses):
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
-        for finding in found:
+        for finding in _once_on_pages(found, result.shared):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
     for size, found_at in by_size.items():
@@ -2332,7 +2404,113 @@ def scene_findings(
             else:
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
+    for finding in _widths(project, results):
+        unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
+
+
+#: The finding on a piece drawn at a size at which its top is as wide as at the default
+#: (DEC-022 points 3 and 8).
+SIZE_WIDTH = "size-width"
+
+
+def _widths(project: pl.Project, results: Sequence[tuple[str, SceneResult]]) -> list[Finding]:
+    """A call for attention for each key over the size axes, other than the default, at
+    which the piece's top is as wide as at the default: its shape follows the size, and its
+    width does not (DEC-022 point 3). It lies at the piece and names the brand, which gives
+    the widths, and no component (DEC-022 point 8). The top's width at a key is its scene's,
+    and at the default, where no scene was computed there, the width its top gets."""
+    widths: dict[str, float] = {}
+    for _, result in results:
+        top = result.scene.children[:1]
+        if top and "width" in top[0].properties:
+            widths.setdefault(result.scene.size_key, float(top[0].properties["width"]))
+    sized = [key for key in widths if key != keys.DEFAULT_KEY]
+    if not sized:
+        return []
+    default = widths.get(keys.DEFAULT_KEY)
+    if default is None:
+        default = _top_width(project, keys.DEFAULT_KEY)
+    if default is None or default <= 0:
+        return []
+    brand = project.label(project.piece.brand)
+    return [
+        Finding(
+            SIZE_WIDTH,
+            ATTENTION,
+            f"`{key}`: the top is {default:g} px wide, as at the default size: the brand "
+            f"{brand} gives its width no other value at this size, so its shape follows the "
+            "size and its width does not",
+            file=pl.PIECE_FILE,
+            where="brand",
+            fix="draw the piece in a brand that gives the top's width at each size it names, "
+            "or ask the brand's owner to; where the piece means one width at every size, "
+            "leave it",
+            who="the piece's author",
+        )
+        for key in sized
+        if abs(widths[key] - default) <= layout.TOLERANCE
+    ]
+
+
+def _top_width(project: pl.Project, size_key: str) -> float | None:
+    """The width the piece's top gets at the key over the size axes `size_key`, in its
+    source language; None where it cannot be computed, whose finding a scene reports."""
+    language = project.piece.languages[0]
+    sizes = pl.sizes_at(project.scope.axes, size_key)
+    ctx = layout.Context(project.env.at(size_key), language, project.piece.stand_ins, sizes)
+    top = layout.place_top(ctx, project.piece.top, project.piece.contents[language])
+    if top is None:
+        return None
+    width: float | None = ctx.attempt(lambda: top.get("size", "width"), None)
+    return width
+
+
+#: What stands for a page's trace where two findings on two pages are read alike.
+PAGE = "<page>"
+
+
+def _once_on_pages(found: Sequence[Finding], shared: Mapping[str, Sequence[str]]) -> list[Finding]:
+    """`found`, where each finding in what a field of the top draws on a page (`shared`, by
+    page) that is read the same on several pages is reported once, naming its pages (DEC-022
+    point 8). Two such findings read alike where they differ only in the page's trace, where
+    they lie and in their message. The one kept is the first page's."""
+    kept: list[Finding] = []
+    alike: dict[tuple[str, str, str, str, str], list[tuple[str, Finding]]] = {}
+    for finding in found:
+        page = next(
+            (
+                page
+                for page, traces in shared.items()
+                for trace in traces
+                if finding.where == trace or _below_trace(finding.where, trace)
+            ),
+            None,
+        )
+        if page is None:
+            kept.append(finding)
+            continue
+        read = dataclasses.replace(
+            finding,
+            where=PAGE + finding.where[len(page) :],
+            message=finding.message.replace(f"{page}/", f"{PAGE}/"),
+        )
+        alike.setdefault(_mark(read), []).append((page, finding))
+    for held in alike.values():
+        pages = list(dict.fromkeys(page for page, _ in held))
+        first = held[0][1]
+        if len(pages) > 1:
+            named = ", ".join(f"`{page}`" for page in pages)
+            first = dataclasses.replace(
+                first, message=f"{first.message}; read the same on the pages {named}"
+            )
+        kept.append(first)
+    return kept
+
+
+def _below_trace(trace: str, other: str) -> bool:
+    """Whether the trace id `trace` lies below `other`: a part, an item or a run of it."""
+    return trace.startswith(other) and trace[len(other) : len(other) + 1] in ("/", "[", "#")
 
 
 #: The fact of content a piece draws at one key over the size axes and not at another
@@ -2394,10 +2572,14 @@ def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:
     """An engine finding placed in the file a person edits to mend it: the piece's own file
     where it lies in what the piece names (`piece`), its top or its lock (DEC-008 point 9);
     the file of the component it names (`component`), the piece's own in its `components/`
-    and a library's in the locked version's; with neither, the content file. A missing
-    picture gets why, and the command that makes it."""
+    and a library's in the locked version's; with neither, the content file. One the engine
+    already placed in a file keeps it, as a finding on a picture file lies at the file, in
+    the piece or in the version (DEC-025 point 9). A missing picture gets why, and the
+    command that makes it."""
     library, _, name = str(finding.extra.get("component") or "").partition("/")
     versioned, _, version = finding.library.partition("@")
+    if finding.file:
+        return finding
     if finding.extra.get("piece"):
         finding = dataclasses.replace(finding, library="", file=pl.PIECE_FILE)
     elif library == names.PIECE and name:

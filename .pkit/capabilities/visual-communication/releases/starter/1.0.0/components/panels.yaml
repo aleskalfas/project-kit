@@ -1,0 +1,55 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  What shows the point, side by side: panels in one row, each any component, such as a
+  network, a code block or a pattern of panels, and across the whole width under them,
+  one more component where the content gives one. The panels share the row by their
+  spans, a wide panel taking half as much again as a normal one, and each is as tall as
+  the tallest. A panel that names no component is drawn by the card.
+
+fields:
+  type: object
+  required: [panels]
+  properties:
+    panels:
+      type: array
+      minItems: 1
+      description: >-
+        The panels, left first, each with the fields of the component that draws it,
+        and perhaps its span.
+      items: {type: object}
+    panel:
+      type: object
+      description: >-
+        The component that draws each panel that names none, with words for its options:
+        the card unless the content names another.
+    under:
+      type: object
+      description: >-
+        What stands under the panels, across the whole width, as the component the
+        content places in it.
+
+lists:
+  panels:
+    component: panel
+    # How much of the row a panel takes: a normal panel two shares, a wide one three.
+    arrangement:
+      span:
+        words: [normal, wide]
+        shares: {normal: 2, wide: 3}
+
+parts:
+  panels:
+    repeat: panels
+    draw: starter/card
+    width: "=:width"
+    row: {gap: "=@starter.gap", sizes: shares, align-items: stretch}
+  under:
+    slot: under
+    y: "=panels.bottom + min(under.height, @starter.gap)"
+    width: "=:width"
+
+preferred:
+  height: "=under.bottom"

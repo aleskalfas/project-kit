@@ -64,25 +64,29 @@ slides:
             text: pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and your agent still uses all of it.
         - use: starter/code
           # A real tree of a new project, cut to what a slide holds. Until a legend comes
-          # (project-kit#2576), its last line names what each colour tells apart.
+          # (project-kit#2576), its last line names what each colour tells apart, and the
+          # mark beside it. Each of pkit's files starts with ●, each of yours with ○, so the
+          # two differ without their colours too, under forced colours or without colour
+          # vision. The mark lies here, in the content, since a notation gives a concept its
+          # colour alone, and the starter's code draws no sign for one (project-kit#2843).
           text: [
             {text: "$ ", style: prompt}, {text: "tree", style: command}, " -a -L 2 your-project\n",
             "your-project/\n",
-            "├── .pkit/", {text: "                    # the methodology\n", style: comment},
-            "│   ├── agents/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
-            "│   ├── decisions/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
-            "│   ├── permissions/ ", {text: "project/", concept: pkit/yours}, {text: " # what agents may do\n", style: comment},
-            "│   ├── rules/ ", {text: "core.md", concept: pkit/core}, " ", {text: "project.md", concept: pkit/yours}, {text: " # yours to add\n", style: comment},
-            "│   ├── ", {text: "schemas/", concept: pkit/core}, {text: "              # what the tools read\n", style: comment},
-            "│   ├── ", {text: "scratchpad/", concept: pkit/yours}, {text: "           # your unfinished ideas\n", style: comment},
-            "│   ├── skills/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
-            "│   ├── ", {text: "…", concept: pkit/core}, {text: "                     # and more of pkit's\n", style: comment},
-            "│   └── ", {text: "manifest.yaml", concept: pkit/core}, {text: "         # what is installed\n", style: comment},
-            "├── .claude/", {text: "                  # your Claude Code setup\n", style: comment},
-            "│   └── settings.json", {text: "         # ", style: comment}, {text: "yours", concept: pkit/yours}, {text: ", ", style: comment}, {text: "pkit's", concept: pkit/core}, {text: " merged in\n", style: comment},
-            "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "                 # loads the rules\n", style: comment},
-            "└── ", {text: "src/", concept: pkit/yours}, {text: "                      # your code, untouched\n", style: comment},
-            {text: "# ", style: comment}, {text: "pkit's files", concept: pkit/core}, {text: ", replaced by each upgrade · ", style: comment}, {text: "your files", concept: pkit/yours}]
+            "├── .pkit/", {text: "                      # the methodology\n", style: comment},
+            "│   ├── agents/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
+            "│   ├── decisions/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
+            "│   ├── permissions/ ", {text: "○ project/", concept: pkit/yours}, {text: " # what agents may do\n", style: comment},
+            "│   ├── rules/ ", {text: "● core.md", concept: pkit/core}, " ", {text: "○ project.md\n", concept: pkit/yours},
+            "│   ├── ", {text: "● schemas/", concept: pkit/core}, {text: "              # what the tools read\n", style: comment},
+            "│   ├── ", {text: "○ scratchpad/", concept: pkit/yours}, {text: "           # your unfinished ideas\n", style: comment},
+            "│   ├── skills/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
+            "│   ├── ", {text: "● …", concept: pkit/core}, {text: "                     # and more of pkit's\n", style: comment},
+            "│   └── ", {text: "● manifest.yaml", concept: pkit/core}, {text: "         # what is installed\n", style: comment},
+            "├── .claude/", {text: "                    # your Claude Code setup\n", style: comment},
+            "│   └── settings.json", {text: "           # ", style: comment}, {text: "○ yours", concept: pkit/yours}, {text: ", ", style: comment}, {text: "● pkit's", concept: pkit/core}, {text: " merged in\n", style: comment},
+            "├── ", {text: "○ CLAUDE.md", concept: pkit/yours}, {text: "                 # loads the rules\n", style: comment},
+            "└── ", {text: "○ src/", concept: pkit/yours}, {text: "                      # your code, untouched\n", style: comment},
+            {text: "# ", style: comment}, {text: "● pkit's files", concept: pkit/core}, {text: ", replaced by each upgrade · ", style: comment}, {text: "○ your files", concept: pkit/yours}]
     footer: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.
 
   - id: permissions

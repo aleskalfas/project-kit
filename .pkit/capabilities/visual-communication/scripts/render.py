@@ -22,6 +22,10 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
   end, each library it moved below the version the lock named, and a search that stopped
   at its bound and kept the lock, each a fact at the lock (DEC-010 point 9, DEC-011 point
   8). The findings record keeps none: its key covers only the versions the lock names.
+- **Names what does not follow a new brand,** where the lock it writes names another brand
+  than the lock the piece held: each picture file of the piece a scene shows, and each picture
+  role a part shows that the new brand gives no file, in each language, with its trace id
+  (`rebranding`, DEC-025 point 8). No record keeps it.
 - **Computes every scene:** one for each language the piece lists and each key over the
   size axes it names, each with the stand-in for a version's number and its date, so a
   render on any clone finds the same (DEC-016 point 5). A font with no file, or a character
@@ -72,7 +76,17 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, copies, exports, files, libraries, location, rendering, tokens
+from _lib import (
+    checks,
+    copies,
+    exports,
+    files,
+    libraries,
+    location,
+    rebranding,
+    rendering,
+    tokens,
+)
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.findings import FACT, Finding
@@ -161,6 +175,10 @@ def _render(root: Path, name: str, given: str | None) -> int:
     if locked is not None:
         print(f"lock: {', '.join(f'{lib} {lock[lib]}' for lib in sorted(lock))}")
     _print(_stated(piece, moved))
+    brands = rebranding.moved(held, piece.lock, lock)
+    if brands is not None:
+        for line in rebranding.said(*brands, rebranding.unfollowed(results)):
+            print(line)
     print(f"previews: {len(previews)} file(s) in {PREVIEWS}/{name}/")
     said = filling.said(exports.shown_stand_ins(previewed))
     if said:
@@ -255,7 +273,7 @@ def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[
     `lost`."""
     name = project.piece.name
     previews: dict[str, str] = {}
-    for language, key, drawn in pl.drawn(project, results, "svg"):
+    for language, (key,), drawn in pl.drawn(project, results, "svg"):
         previews.update(pl.preview_files(name, language, key, drawn.pages))
         lost.extend(loss for loss in drawn.losses if loss not in lost)
     return previews

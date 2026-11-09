@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit agents` and the deploy's skip line name `pkit agents adopt` only where
+  it serves (#2469). For an agent skipped over a category with no conventional
+  folder, such as a project agent's own `<release-notes>`, `pkit agents` named
+  `adopt` first, and `adopt` then refused. It now names `adopt` only for the
+  skipped agents whose every unset category has a conventional folder, and for
+  the other categories it says to set the paths in the overlay, or to stub them
+  with `pkit agents reconcile --write`. The lifecycle's ownership module says
+  which categories have a conventional folder, and gives the deploy the same
+  remedy for each of the others. The agents reference says where a new
+  category's name goes.

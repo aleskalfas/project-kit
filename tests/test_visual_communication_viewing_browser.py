@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import ast
 import copy
+import dataclasses
+import json
 import os
 import sys
 import time
@@ -46,6 +48,8 @@ FUNCTIONS = {
     "read": viewing_browser.READ,
     "ground": viewing_browser.GROUND,
     "alone": viewing_browser.ALONE,
+    "unground": viewing_browser.UNGROUND,
+    "settle": viewing_browser.SETTLE,
 }
 
 #: What a sandbox's stop has made browsers say: Chrome and Chromium in a sandbox around them,
@@ -362,10 +366,20 @@ def test_it_draws_each_page_by_a_clip_as_the_file_stands(tmp_path: Path) -> None
         {**page("two", 800.0, 1100.0, text("b", [span("b", 1)])), "x": 240.0, "y": 744.0},
     ]
     drawing, program = drawn(tmp_path, documents={FILE: {"pages": pages}})
-    assert [(each.page, each.width, each.height) for each in drawing.images] == [
+    assert [(each.page, each.width, each.height) for each in drawing.shown[0].images] == [
         ("one", 2560, 1440),
         ("two", 1600, 2200),
     ]
+    assert {each.band for each in drawing.shown[0].images} == {0}
+    assert file_clips(program) == [
+        {"x": 0.0, "y": 0.0, "width": 1280.0, "height": 720.0, "scale": 1},
+        {"x": 240.0, "y": 744.0, "width": 800.0, "height": 1100.0, "scale": 1},
+    ]
+
+
+def file_clips(program: Path) -> list[dict[str, Any]]:
+    """The clips the file's images were drawn by, in its first mode: those taken after the
+    file opened, and before the first read for ink."""
     messages = logged(program)
     methods = [each.get("method") for each in messages]
     file_opened = len(methods) - 1 - methods[::-1].index("Page.navigate")
@@ -376,15 +390,45 @@ def test_it_draws_each_page_by_a_clip_as_the_file_stands(tmp_path: Path) -> None
         if each.get("method") == "Runtime.evaluate"
         and each["params"]["expression"].startswith(f"({viewing_browser.GROUND})")
     )
-    clips = [
+    return [
         each["params"]["clip"]
         for each in after[:first_ground]
         if each.get("method") == "Page.captureScreenshot"
     ]
-    assert clips == [
-        {"x": 0.0, "y": 0.0, "width": 1280.0, "height": 720.0, "scale": 1},
-        {"x": 240.0, "y": 744.0, "width": 800.0, "height": 1100.0, "scale": 1},
+
+
+#: The bands of a phone's page 5,000 px tall, each a top and a height, as the caller hands them.
+BANDS = ((0.0, 1700.0), (1677.6, 1700.0), (3355.2, 1644.8))
+
+
+def test_a_page_handed_its_regions_is_drawn_by_a_clip_of_each_as_wide_as_the_page(
+    tmp_path: Path,
+) -> None:
+    pages = [{**page("tall", 390.0, 5000.0, text("a", [span("a", 0)])), "x": 8.0, "y": 744.0}]
+    [wanted] = as_scene(pages)
+    held = dataclasses.replace(wanted, regions=BANDS)
+    drawing, program = drawn(tmp_path, [held], documents={FILE: {"pages": pages}})
+    images = drawing.shown[0].images
+    assert [(each.page, each.band, each.width, each.height) for each in images] == [
+        ("tall", 1, 780, 3400),
+        ("tall", 2, 780, 3400),
+        ("tall", 3, 780, 3290),
     ]
+    assert file_clips(program) == [
+        {"x": 8.0, "y": 744.0 + top, "width": 390.0, "height": height, "scale": 1}
+        for top, height in BANDS
+    ]
+
+
+def test_a_page_in_bands_is_read_once_whole_a_span_in_an_overlap_among_it(tmp_path: Path) -> None:
+    """The span with no ink lies where the first two bands overlap."""
+    lost = span("lost", 0, ink=(), y=1690.0)
+    pages = [page("tall", 390.0, 5000.0, text("a", [lost, span("kept", 1, y=4000.0)]))]
+    [wanted] = as_scene(pages)
+    held = dataclasses.replace(wanted, regions=BANDS)
+    drawing, _ = drawn(tmp_path, [held], documents={FILE: {"pages": pages}})
+    assert [each.band for each in drawing.shown[0].images] == [1, 2, 3]
+    assert [(each.element, each.text) for each in drawing.shown[0].read.dropped] == [("a", "lost")]
 
 
 def test_a_page_asked_for_alone_is_read_alone(tmp_path: Path) -> None:
@@ -394,8 +438,8 @@ def test_a_page_asked_for_alone_is_read_alone(tmp_path: Path) -> None:
     ]
     wanted = as_scene(pages[1:])
     drawing, _ = drawn(tmp_path, wanted, documents={FILE: {"pages": pages}})
-    assert [each.page for each in drawing.images] == ["two"]
-    assert drawing.read.dropped == ()
+    assert [each.page for each in drawing.shown[0].images] == ["two"]
+    assert drawing.shown[0].read.dropped == ()
 
 
 def test_a_page_the_file_does_not_hold_stops_the_drawing(tmp_path: Path) -> None:
@@ -414,7 +458,7 @@ def test_a_page_of_another_size_than_the_scenes_stops_the_drawing(tmp_path: Path
 
 
 def words(tmp_path: Path, document: Mapping[str, Any], scene: Sequence[Any]) -> Any:
-    return drawn(tmp_path, scene, documents={FILE: document})[0].read.words
+    return drawn(tmp_path, scene, documents={FILE: document})[0].shown[0].read.words
 
 
 def scene_page(*texts: Any) -> Any:
@@ -423,7 +467,7 @@ def scene_page(*texts: Any) -> Any:
 
 def test_a_document_that_matches_the_scene_reports_no_difference(tmp_path: Path) -> None:
     drawing, _ = drawn(tmp_path)
-    assert drawing.read == viewing_browser.Read((), (), (), (), ())
+    assert drawing.shown[0].read == viewing_browser.Read((), (), (), (), ())
 
 
 @pytest.mark.parametrize(
@@ -478,7 +522,7 @@ def test_two_elements_of_one_trace_id_are_reported(tmp_path: Path) -> None:
 
 
 def dropped(tmp_path: Path, *spans: Mapping[str, Any]) -> Any:
-    return drawn(tmp_path, documents={FILE: one_page(*spans)})[0].read.dropped
+    return drawn(tmp_path, documents={FILE: one_page(*spans)})[0].shown[0].read.dropped
 
 
 def test_a_span_that_changes_nothing_left_no_ink(tmp_path: Path) -> None:
@@ -550,14 +594,14 @@ def test_a_band_stays_on_its_page(tmp_path: Path) -> None:
 def test_a_span_with_no_loaded_face_is_reported_by_family_and_weight(tmp_path: Path) -> None:
     held = span("words", 0, family="Brand & Co", weight="700", face=False)
     document = one_page(held)
-    assert drawn(tmp_path, documents={FILE: document})[0].read.no_face == (
+    assert drawn(tmp_path, documents={FILE: document})[0].shown[0].read.no_face == (
         viewing_browser.NoFace("page", "text-0", "words", "Brand & Co", "700"),
     )
 
 
 def test_a_span_with_no_characters_asks_for_no_face(tmp_path: Path) -> None:
     document = one_page(span("", 0, face=False, ink=()))
-    assert drawn(tmp_path, documents={FILE: document})[0].read.no_face == ()
+    assert drawn(tmp_path, documents={FILE: document})[0].shown[0].read.no_face == ()
 
 
 @pytest.mark.parametrize(
@@ -567,7 +611,7 @@ def test_a_span_drawn_in_a_font_of_the_machine_is_reported_with_that_font(
     tmp_path: Path, fonts: list[Mapping[str, Any]]
 ) -> None:
     document = one_page(span("words", 0, fonts=fonts))
-    assert drawn(tmp_path, documents={FILE: document})[0].read.machine_fonts == (
+    assert drawn(tmp_path, documents={FILE: document})[0].shown[0].read.machine_fonts == (
         viewing_browser.MachineFont("page", "text-0", "words", ("Times",)),
     )
 
@@ -581,13 +625,13 @@ def test_each_request_but_the_files_own_and_a_data_address_is_refused_and_named(
     asked = ["https://example.org/a.png", "data:image/png;base64,AAAA", "file:///beside.png"]
     document = {**clean(), "requests": asked}
     drawing, program = drawn(tmp_path, documents={FILE: document})
-    assert drawing.read.refused == (asked[0], asked[2])
+    assert drawing.shown[0].read.refused == (asked[0], asked[2])
     assert len(called(program, "Fetch.failRequest")) == 4  # two on the planted page
     assert len(called(program, "Fetch.continueRequest")) == 3
 
 
 def test_the_first_reads_requests_are_not_the_files(tmp_path: Path) -> None:
-    assert drawn(tmp_path)[0].read.refused == ()
+    assert drawn(tmp_path)[0].shown[0].read.refused == ()
 
 
 def test_each_request_is_held_from_before_a_page_opens(tmp_path: Path) -> None:
@@ -834,6 +878,23 @@ def test_a_browser_its_sandbox_stopped_is_told_apart(tmp_path: Path, words: str)
 def test_a_browser_that_stopped_otherwise_is_not_said_to_be_sandboxed(tmp_path: Path) -> None:
     stop, _ = stopped(tmp_path, says="Trace/BPT trap: 5", exit=133)
     assert not stop.sandbox
+    assert not stop.as_root
+
+
+#: What Chrome says where it runs as root, as a container may run it: it refuses to start with
+#: its own sandbox on, and its words name that sandbox.
+AS_ROOT_WORDS = (
+    "[1107/101010.000000:ERROR:zygote_host_impl_linux.cc(128)] Running as root without "
+    "--no-sandbox is not supported. See https://crbug.com/638180."
+)
+
+
+def test_a_browser_run_as_root_is_told_apart_from_a_sandbox_that_stopped_it(
+    tmp_path: Path,
+) -> None:
+    stop, _ = stopped(tmp_path, says=AS_ROOT_WORDS, exit=1)
+    assert stop.as_root
+    assert not stop.sandbox
 
 
 def test_only_the_end_of_what_a_browser_said_is_kept(tmp_path: Path) -> None:
@@ -860,6 +921,40 @@ def test_no_flag_touches_the_browsers_own_sandbox(tmp_path: Path) -> None:
     assert not [
         flag for flag in flags if "sandbox" in flag.split("=")[0] or "zygote" in flag.split("=")[0]
     ]
+
+
+#: Flags that turn off or weaken the sandbox of a browser's processes, merge them into one, or
+#: let a page read past its own file: the module passes none (DEC-024 point 1).
+UNSAFE_FLAGS = (
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-gpu-sandbox",
+    "--disable-seccomp-filter-sandbox",
+    "--disable-namespace-sandbox",
+    "--no-zygote",
+    "--single-process",
+    "--in-process-gpu",
+    "--disable-site-isolation-trials",
+    "--disable-web-security",
+    "--allow-file-access-from-files",
+    "--allow-file-access",
+    "--allow-running-insecure-content",
+    "--disable-features",
+    "--unsafely-treat-insecure-origin-as-secure",
+)
+
+#: Words in a flag's name that touch the browser's own sandbox or its processes' isolation.
+UNSAFE_WORDS = ("sandbox", "zygote", "single-process", "in-process", "unsafe", "security", "file")
+
+
+def test_no_flag_the_module_passes_weakens_the_browser_or_lets_a_page_read_past_its_file(
+    tmp_path: Path,
+) -> None:
+    _, program = drawn(tmp_path)
+    names = {flag.split("=")[0] for flag in logged(program)[0]["flags"]}
+    assert not names & set(UNSAFE_FLAGS)
+    assert not [name for name in names for word in UNSAFE_WORDS if word in name]
+    assert not set(viewing_browser.FLAGS) & set(UNSAFE_FLAGS)
 
 
 # Its profile.
@@ -919,6 +1014,171 @@ def test_the_folder_named_is_made_where_it_is_missing(tmp_path: Path) -> None:
     assert folder.is_dir()
 
 
+# Each mode.
+
+#: The signals a file of both value axes reads, each with its values, the first a reader's with
+#: no preference.
+SIGNALS = {
+    "prefers-color-scheme": ("light", "dark"),
+    "prefers-contrast": ("no-preference", "more"),
+}
+
+#: Each mode of such a file, as its keys' signals give it.
+MODES = [
+    {"prefers-color-scheme": scheme, "prefers-contrast": contrast}
+    for scheme in SIGNALS["prefers-color-scheme"]
+    for contrast in SIGNALS["prefers-contrast"]
+]
+
+
+def in_modes(
+    tmp_path: Path,
+    modes: Sequence[Mapping[str, str]] = MODES,
+    signals: Mapping[str, Sequence[str]] = SIGNALS,
+    **changes: Any,
+) -> tuple[Any, Path]:
+    """What `draw` gives in `modes` under `plan(**changes)`, and the stand-in that gave it."""
+    program, pages = _started(tmp_path, None, changes)
+    drawing = viewing_browser.draw(
+        _file(tmp_path), pages, 2.0, program, tmp_path / "local", signals=signals, modes=modes
+    )
+    return drawing, program
+
+
+def after_the_file_opened(program: Path) -> list[dict[str, Any]]:
+    """What the program received once the file was opened."""
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    return messages[len(methods) - 1 - methods[::-1].index("Page.navigate") :]
+
+
+def emulated(messages: Sequence[Mapping[str, Any]]) -> list[dict[str, str]]:
+    """The signals each emulation among `messages` set."""
+    return [
+        {each["name"]: each["value"] for each in message["params"]["features"]}
+        for message in messages
+        if message.get("method") == "Emulation.setEmulatedMedia"
+    ]
+
+
+def test_each_mode_sets_every_signal_the_file_reads_in_the_order_asked(tmp_path: Path) -> None:
+    drawing, program = in_modes(tmp_path)
+    assert [dict(each.signals) for each in drawing.shown] == MODES
+    assert emulated(after_the_file_opened(program)) == MODES
+    for call in called(program, "Emulation.setEmulatedMedia"):
+        assert [each["name"] for each in call["features"]] == sorted(SIGNALS)
+
+
+def test_every_mode_draws_from_one_start_and_the_file_opened_once(tmp_path: Path) -> None:
+    drawing, program = in_modes(tmp_path)
+    assert len([each for each in logged(program) if "flags" in each]) == 1
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [viewing_browser.PLANTED_FILE, FILE]
+    assert len(drawing.shown) == len(MODES)
+
+
+def test_each_modes_images_show_the_file_as_it_stands_in_that_mode(tmp_path: Path) -> None:
+    """The ink read leaves a ground behind it, which the next mode's images do not show."""
+    drawing, _ = in_modes(tmp_path)
+    for shown in drawing.shown:
+        (image,) = shown.images
+        document, ground, _, alone, media = json.loads(image.image[24:])
+        assert (document, ground, alone, media) == (FILE, "", None, dict(shown.signals))
+
+
+def test_each_mode_reads_the_file_in_that_mode_alone(tmp_path: Path) -> None:
+    """A text with no ink in one mode alone is named in that mode, and in no other."""
+    dim = span("dim", 1, **{"ink-when": {"prefers-color-scheme:dark": []}})
+    drawing, _ = in_modes(tmp_path, documents={FILE: one_page(span("hello", 0), dim)})
+    dropped = {
+        (each.signals["prefers-color-scheme"], each.signals["prefers-contrast"]): [
+            (found.text, found.why) for found in each.read.dropped
+        ]
+        for each in drawing.shown
+    }
+    assert dropped == {
+        ("light", "no-preference"): [],
+        ("light", "more"): [],
+        ("dark", "no-preference"): [("dim", viewing_browser.NO_INK)],
+        ("dark", "more"): [("dim", viewing_browser.NO_INK)],
+    }
+
+
+def test_a_request_refused_as_the_file_loaded_counts_in_each_mode(tmp_path: Path) -> None:
+    asked = ["https://example.com/a.png"]
+    document = {**clean(), "requests": asked}
+    drawing, _ = in_modes(tmp_path, documents={FILE: document})
+    assert [each.read.refused for each in drawing.shown] == [tuple(asked)] * len(MODES)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [{"prefers-color-scheme": "dark"}, {**MODES[0], "prefers-reduced-motion": "reduce"}],
+    ids=["a signal unset", "a signal the file does not read"],
+)
+def test_a_mode_that_does_not_set_every_signal_the_file_reads_is_refused(
+    tmp_path: Path, mode: Mapping[str, str]
+) -> None:
+    program, pages = _started(tmp_path, None, {})
+    with pytest.raises(ValueError):
+        viewing_browser.draw(
+            _file(tmp_path), pages, 2.0, program, tmp_path / "local", signals=SIGNALS, modes=[mode]
+        )
+    assert logged(program) == []
+
+
+def test_a_file_that_reads_no_signal_is_drawn_once_and_emulates_nothing(tmp_path: Path) -> None:
+    drawing, program = drawn(tmp_path)
+    assert [dict(each.signals) for each in drawing.shown] == [{}]
+    assert called(program, "Emulation.setEmulatedMedia") == [{"features": []}]
+
+
+def test_the_first_read_sets_each_later_value_of_each_signal_the_others_at_their_first(
+    tmp_path: Path,
+) -> None:
+    _, program = in_modes(tmp_path)
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    file_opened = len(methods) - 1 - methods[::-1].index("Page.navigate")
+    first = MODES[0]
+    assert emulated(messages[:file_opened]) == [
+        first,
+        {**first, "prefers-color-scheme": "dark"},
+        {**first, "prefers-contrast": "more"},
+        first,
+    ]
+
+
+def test_a_first_read_whose_page_does_not_repaint_as_a_signal_is_set_stops(
+    tmp_path: Path,
+) -> None:
+    program, pages = _started(tmp_path, None, {"repaints": False})
+    with pytest.raises(viewing_browser.Stopped) as stop:
+        viewing_browser.draw(
+            _file(tmp_path), pages, 2.0, program, tmp_path / "local", signals=SIGNALS, modes=MODES
+        )
+    assert "`prefers-color-scheme: dark`" in stop.value.what
+    assert "did not repaint" in stop.value.what
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [viewing_browser.PLANTED_FILE]
+
+
+def test_a_page_that_does_not_repaint_stops_no_file_that_reads_no_signal(tmp_path: Path) -> None:
+    drawing, _ = drawn(tmp_path, repaints=False)
+    assert drawing.shown[0].read == viewing_browser.Read((), (), (), (), ())
+
+
+def test_the_planted_page_holds_a_mode_for_each_signal_the_file_reads() -> None:
+    page = viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes(), SIGNALS)
+    white, black = viewing_browser.MODE_COLOURS
+    assert f":root{{--pkit-mode-0:{white};--pkit-mode-1:{white}}}" in page
+    assert f"@media (prefers-color-scheme:dark){{:root{{--pkit-mode-0:{black}}}}}" in page
+    assert f"@media (prefers-contrast:more){{:root{{--pkit-mode-1:{black}}}}}" in page
+    assert page.count("background:var(--pkit-mode-") == len(SIGNALS)
+    plain = viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes())
+    assert "--pkit-mode-" not in plain
+
+
 # A real browser.
 
 
@@ -950,12 +1210,40 @@ def test_a_real_browser_names_each_planted_fault_of_a_file(tmp_path: Path) -> No
         if stop.sandbox:
             pytest.skip(f"a sandbox stopped the browser: {stop}")
         raise
-    assert viewing_browser._named(drawing.read) == viewing_browser.PLANTED_FINDINGS
+    assert viewing_browser._named(drawing.shown[0].read) == viewing_browser.PLANTED_FINDINGS
     assert drawing.browser
-    (image,) = drawing.images
+    (image,) = drawing.shown[0].images
     assert (image.width, image.height) == (page.width * 2, page.height * 2)
-    assert all(each.fonts for each in drawing.read.machine_fonts)
+    assert all(each.fonts for each in drawing.shown[0].read.machine_fonts)
     assert list((tmp_path / "local").iterdir()) == []
+
+
+@real_browser
+def test_a_real_browser_draws_each_region_of_a_page_as_wide_as_the_page(tmp_path: Path) -> None:
+    """Two bands of the planted page, which overlap, at a scale of 2: the reads still read it
+    whole, once."""
+    file = tmp_path / "planted.html"
+    file.write_text(
+        viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes()),
+        encoding="utf-8",
+    )
+    page = viewing_browser.PLANTED_PAGE
+    half = page.height / 2
+    regions = ((0.0, half + 10), (half - 10, page.height - half + 10))
+    browser = found_browser()
+    assert browser is not None
+    try:
+        drawing = viewing_browser.draw(
+            file, [dataclasses.replace(page, regions=regions)], 2.0, browser, tmp_path / "local"
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    assert viewing_browser._named(drawing.shown[0].read) == viewing_browser.PLANTED_FINDINGS
+    assert [(each.band, each.width, each.height) for each in drawing.shown[0].images] == [
+        (number, page.width * 2, height * 2) for number, (_, height) in enumerate(regions, 1)
+    ]
 
 
 def scene_pages(scene: Mapping[str, Any]) -> list[Any]:
@@ -985,10 +1273,11 @@ def scene_pages(scene: Mapping[str, Any]) -> list[Any]:
 def test_a_real_browser_reads_the_renderers_reference_file_clean(tmp_path: Path) -> None:
     """A picture, an ellipse, a run in two families, a text under a later box and pages of two
     sizes, as the renderer writes them: the reads name nothing."""
-    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture
+    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture, seam
 
     file = tmp_path / "reference.html"
-    file.write_bytes(draw(REFERENCE, pictures={"square": reference_picture(tmp_path)}).document)
+    shown = seam.Shown(reference_picture(tmp_path), seam.PNG)
+    file.write_bytes(draw(REFERENCE, pictures={"first/picture": shown}).document)
     browser = found_browser()
     assert browser is not None
     pages = scene_pages(REFERENCE)
@@ -998,5 +1287,39 @@ def test_a_real_browser_reads_the_renderers_reference_file_clean(tmp_path: Path)
         if stop.sandbox:
             pytest.skip(f"a sandbox stopped the browser: {stop}")
         raise
-    assert drawing.read == viewing_browser.Read((), (), (), (), ())
-    assert [each.page for each in drawing.images] == [page.id for page in pages]
+    assert drawing.shown[0].read == viewing_browser.Read((), (), (), (), ())
+    assert [each.page for each in drawing.shown[0].images] == [page.id for page in pages]
+
+
+@real_browser
+def test_a_real_browser_draws_the_reference_file_in_each_of_its_modes_clean(
+    tmp_path: Path,
+) -> None:
+    """Its two keys, light and dark, from one start: each mode reads clean, each repaints the
+    file, and the first read finds that setting the signal repaints its own page."""
+    from tests.test_visual_communication_html import reference, reference_picture
+
+    file = tmp_path / "reference.html"
+    file.write_bytes(reference({"square": reference_picture(tmp_path)}).document)
+    browser = found_browser()
+    assert browser is not None
+    pages = scene_pages(REFERENCE_SCENE())
+    signals = {"prefers-color-scheme": ("light", "dark")}
+    modes = [{"prefers-color-scheme": "light"}, {"prefers-color-scheme": "dark"}]
+    try:
+        drawing = viewing_browser.draw(
+            file, pages, 1.0, browser, tmp_path / "local", signals=signals, modes=modes
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    light, dark = drawing.shown
+    assert light.read == dark.read == viewing_browser.Read((), (), (), (), ())
+    assert [each.image for each in light.images] != [each.image for each in dark.images]
+
+
+def REFERENCE_SCENE() -> Mapping[str, Any]:
+    from tests.test_visual_communication_html import REFERENCE
+
+    return REFERENCE

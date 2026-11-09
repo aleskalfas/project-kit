@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "exports.schema.json",
   "title": "The record of a piece's exports — visual-communication capability",
-  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale; who wrote a published piece's current copy (DEC-017 point 7); and which version was handed out (DEC-017 point 2). `pkit visual export` rewrites it, and `pkit visual mark-final` adds its last line. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used, those used while stale and each number or date let through; who wrote a published piece's current copy (DEC-017 point 7); and which version was handed out (DEC-017 point 2). `pkit visual export` rewrites it, and `pkit visual mark-final` adds its last line. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -43,7 +43,7 @@
           "description": "Each file of the copy, by its path with its SHA-256: under `current-copy/`, read from the piece's folder, and at the place the piece names, read from the repository's root (DEC-017 point 7). A file's name is its version's with the number left out.",
           "type": "object",
           "propertyNames": {
-            "pattern": "^[^/.\\\\][^/\\\\]*(/[^/.\\\\][^/\\\\]*)*/[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
+            "pattern": "^[^/.\\\\][^/\\\\]*(/[^/.\\\\][^/\\\\]*)*/[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf|\\.html)$"
           },
           "additionalProperties": {
             "$ref": "defs.schema.json#/$defs/sha256"
@@ -77,10 +77,10 @@
             "$ref": "defs.schema.json#/$defs/fingerprint"
           },
           "files": {
-            "description": "Each file the version made, by name, with its SHA-256. A name is `<piece>.v<N>.<language>.<key>.svg`, or `.pdf` for a PDF; an SVG file of a piece of more than one page adds the page's number, from 1, before `.svg`, and a PDF, which holds every page, adds none.",
+            "description": "Each file the version made, by name, with its SHA-256. A name is `<piece>.v<N>.<language>.<key>.svg`, `.pdf` for a PDF, or `.html` for a page file; an SVG file of a piece of more than one page adds the page's number, from 1, before `.svg`, and a PDF or a page file, which holds every page, adds none. A page file that holds several combinations takes the first key it serves.",
             "type": "object",
             "propertyNames": {
-              "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*\\.v[1-9][0-9]*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
+              "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*\\.v[1-9][0-9]*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf|\\.html)$"
             },
             "additionalProperties": {
               "$ref": "defs.schema.json#/$defs/sha256"
@@ -132,6 +132,47 @@
                 "items": {
                   "$ref": "defs.schema.json#/$defs/name"
                 },
+                "uniqueItems": true
+              },
+              "let-through": {
+                "description": "Each number or date the version let through, though it does not fit, as `--use-overflowing` named its fact (DEC-016 point 6): the fact, its text, the element where it overflows its width or a component around it gets less than it asks for, that element's component, and the version of the library that component lies in, absent for the piece's own. Absent where the version let none through.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "fact",
+                    "text",
+                    "element",
+                    "component"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "fact": {
+                      "description": "The fact, one of those an export fills.",
+                      "enum": [
+                        "version",
+                        "date"
+                      ]
+                    },
+                    "text": {
+                      "description": "The fact's text, as the version's files show it.",
+                      "$ref": "defs.schema.json#/$defs/text"
+                    },
+                    "element": {
+                      "description": "The trace id of the element the text does not fit at: the text, or a component around it.",
+                      "$ref": "defs.schema.json#/$defs/trace"
+                    },
+                    "component": {
+                      "description": "The component that element lies in.",
+                      "$ref": "defs.schema.json#/$defs/use"
+                    },
+                    "version": {
+                      "description": "The version of the library the component lies in, as the lock named it.",
+                      "$ref": "defs.schema.json#/$defs/version"
+                    }
+                  }
+                },
+                "minItems": 1,
                 "uniqueItems": true
               }
             }
