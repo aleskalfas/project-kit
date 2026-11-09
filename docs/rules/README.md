@@ -28,8 +28,8 @@ pkit:
         - .pkit/rules/README.md#each-rules-files-budget
         - .pkit/rules/README.md#which-file-a-rule-goes-in
         - .pkit/rules/README.md#converting-projectmd-into-a-loaded-set
-        - .pkit/lifecycle/README.md#what-a-step-newly-binds
-        - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/lifecycle/upgrade-flow.md#what-a-step-newly-binds
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/adapters/claude-code/README.md#merge-claude-mdsh
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/cli/README.md#surface
@@ -113,7 +113,7 @@ $ tail -n 1 .pkit/rules/project.md
 What the output proves, claim by claim:
 
 - **Included.** `CLAUDE.md`'s three lines include the methodology's rules, the index of the installed capabilities' rules, and yours. Claude Code loads the files a `CLAUDE.md` includes when a session starts, and the files those include ([its memory docs](https://code.claude.com/docs/en/memory)).
-- **Upgraded, yours kept.** The upgrade copies the newer `core.md`, and names each rule core's set holds. 1.134.0 kept core's rules in a plain file with no ids. So the upgrade says it cannot tell which of them bound before ([the lifecycle reference, "What a step newly binds"](../../.pkit/lifecycle/README.md#what-a-step-newly-binds)). `project.md` holds your rule as you wrote it, since no sync or upgrade writes `project.md` ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
+- **Upgraded, yours kept.** The upgrade copies the newer `core.md`, and names each rule core's set holds. 1.134.0 kept core's rules in a plain file with no ids. So the upgrade says it cannot tell which of them bound before ([the lifecycle reference's upgrade flow, "What a step newly binds"](../../.pkit/lifecycle/upgrade-flow.md#what-a-step-newly-binds)). `project.md` holds your rule as you wrote it, since no sync or upgrade writes `project.md` ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
 - **With the install.** The install names the rule it newly binds, and adds the capability's file to the index. `CLAUDE.md` already includes the index, so it needs no edit. Uninstalling takes the file out of the index again ([the third task](#have-a-capabilitys-rules-reach-each-session)).
 
 > [!WARNING]
@@ -176,7 +176,7 @@ Run `pkit sync` in each clone after you pull a change. It puts in place what the
 
 - **What it adds to `CLAUDE.md`.** It puts back a missing line of the methodology's rules or of the index, adds no line the file already holds, and removes nothing. Your own rules' line comes back only with the methodology's. Without a `CLAUDE.md`, the sync creates one with a heading and the three lines ([the adapter's README, `merge-claude-md.sh`](../../.pkit/adapters/claude-code/README.md#merge-claude-mdsh)).
 - **When it adds nothing.** Where the methodology's line stands only in a code fence or a code span, the sync inserts nothing and reports it. Move the line out of the code.
-- **What it says.** It names each rule it newly binds, changes or retires. That is information, and stops nothing ([the lifecycle reference, "What a step newly binds"](../../.pkit/lifecycle/README.md#what-a-step-newly-binds)).
+- **What it says.** It names each rule it newly binds, changes or retires. That is information, and stops nothing ([the lifecycle reference's upgrade flow, "What a step newly binds"](../../.pkit/lifecycle/upgrade-flow.md#what-a-step-newly-binds)).
 - **When it stops.** Where your `pkit` is at another version than your project records, sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
 - **What you keep.** Keep `CLAUDE.md` and the index out of Claude Code's `claudeMdExcludes`. Where a session starts below the project's root, approve Claude Code's prompt for the files `CLAUDE.md` includes. Otherwise those sessions load no rules ([the adapter's README, "Harness support"](../../.pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml)).
 
@@ -248,7 +248,7 @@ From the install to the uninstall:
 - **A later version.** An upgrade of the capability names each of its rules that it newly binds, changes or retires.
 - **No opt-out.** While the capability is installed, no setting of project-kit's keeps its rules away.
 - **A rule you kept yourself.** Where a capability you install ships a rule your `project.md` held, you may delete or shorten yours, keeping what holds only in your project.
-- **The uninstall** renders the index again without the capability's file ([the lifecycle reference, "Uninstall"](../../.pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)).
+- **The uninstall** renders the index again without the capability's file ([the lifecycle reference's component registry, "Uninstall"](../../.pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4)).
 
 Below, `pkit rule-sets loaded` lists the files a session loads, in their order, before and after the uninstall. It lists your `project.md` too, as missing until you write it:
 
