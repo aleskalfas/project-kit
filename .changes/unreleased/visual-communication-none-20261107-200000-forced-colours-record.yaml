@@ -1,8 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  Design-ahead: a proposed record decides whether and how the viewing step
-  draws the HTML renderer's pages under forced colours (#2847). Where asked,
-  a second browser start would draw each page file on the browser's light and
-  dark palettes, and keep those images apart. Nothing is built yet, so no
-  command, file or check moves.

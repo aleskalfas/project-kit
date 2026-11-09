@@ -1,6 +1,6 @@
 """The viewing step's browser: a page file as images, and what the browser dropped
 (visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-015 point 2, DEC-024 points 1
-and 4).
+and 4, DEC-027 points 2 to 4).
 
 This module alone calls the browser. It reads the HTML renderer's page files. It stands on the
 standard library and on the marks the renderer's declaration holds, so every other format
@@ -35,9 +35,19 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
 - **The first read.** Each start first reads a page of its own in the renderer's form,
   planted with one fault of each kind the four reads name, and with what they must leave
   unnamed. A read that names anything else stops the start, so a fault there shows as a stop,
-  never as a clean report. The page also holds a mode for each signal the file reads, and
-  the start stops where setting one does not repaint it, since the keys that signal parts
-  would read as one.
+  never as a clean report. The page also holds a mode for each signal the file reads, a box
+  of its own, and the start stops where setting the signal does not repaint that box, since
+  the keys that signal parts would read as one.
+- **Under forced colours.** `draw_forced` draws a file in each of the browser's forced
+  palettes (`PALETTES`), in a start of its own: the browser's flag forces its colours
+  (`FORCING`), and every emulation sets `forced-colors: active` with the palette's signals.
+  Under the flag, a page drawn without forced colours is no page a reader gets, so no start
+  mixes the two. The emulation alone leaves text in the file's colours, so it never stands in
+  for the flag. That start's first read keeps the planted page's mode boxes and its spans
+  with no paint out of forcing, so its reads name each planted fault in each forced palette.
+  It stops where one more span with no paint, left to forcing, shows no ink, since the forced
+  palette did not reach the text, and where a forced palette's ground is not lighter than its
+  text in the light one, and darker in the dark.
 - **Bounds.** The browser's start has `START_SECONDS`, each call `CALL_SECONDS`, and its close
   `CLOSE_SECONDS`. A browser that hangs counts as one that stopped, at its close too, and is
   ended: its own process group, which only its start made, and no other process.
@@ -109,6 +119,34 @@ FLAGS = (
     "--disable-background-networking",
     "--disable-component-update",
     "--disable-sync",
+)
+
+#: The browser's own flag that forces its colours, as a reader's forced palette does, which a
+#: start that draws under forced colours adds to `FLAGS` (DEC-027 point 3). It touches no
+#: sandbox either.
+FORCING = "--force-high-contrast"
+
+#: What every emulation of such a start sets, beside the signals of its forced palette.
+FORCED = {"forced-colors": "active"}
+
+
+@dataclass(frozen=True)
+class Palette:
+    """A forced palette the browser gives: its name, the reader's signals the browser sets with
+    it, and whether its ground is lighter than its text."""
+
+    name: str
+    signals: Mapping[str, str]
+    light: bool
+
+
+#: The browser's two forced palettes, in the order a forced start draws them: dark text on a
+#: light ground, and the reverse. Each sets the scheme of its darkness, as the emulation pairs
+#: them, and more contrast, as the flag reported (DEC-027 point 2). These are facts of the
+#: browser, so this module names them, and the step reads from them which key a file shows.
+PALETTES = (
+    Palette("light", {"prefers-color-scheme": "light", "prefers-contrast": "more"}, True),
+    Palette("dark", {"prefers-color-scheme": "dark", "prefers-contrast": "more"}, False),
 )
 
 #: How high a window starts. Only its width bears on a page, and an image reaches past it.
@@ -344,17 +382,19 @@ class Read:
 
 @dataclass(frozen=True)
 class Shown:
-    """One mode of a file drawn: the signals set, each page's image, and what the four reads
-    named."""
+    """One mode of a file drawn: the signals set, each page's image, what the four reads named,
+    and the name of the forced palette it was drawn in, empty for none."""
 
     signals: Mapping[str, str]
     images: tuple[Image, ...]
     read: Read
+    palette: str = ""
 
 
 @dataclass(frozen=True)
 class Drawing:
-    """A file drawn: the browser with its version, and each mode asked for, in order."""
+    """A file drawn: the browser with its version, and each mode or forced palette drawn, in
+    order."""
 
     browser: str
     shown: tuple[Shown, ...]
@@ -405,12 +445,60 @@ def draw(
     for mode in modes:
         if set(mode) != set(read):
             raise ValueError(f"a mode sets {sorted(mode)}, and the file reads {sorted(read)}")
+    return _start(file, pages, scale, browser, folder, read, [("", mode) for mode in modes])
+
+
+def draw_forced(
+    file: Path,
+    pages: Sequence[Page],
+    scale: float,
+    browser: Path,
+    folder: Path,
+    *,
+    signals: Mapping[str, Sequence[str]] | None = None,
+) -> Drawing:
+    """The page file `file` through `browser` in each forced palette of `PALETTES`, in their
+    order, in a start of its own: the browser's flag forces its colours (`FORCING`), and each
+    palette is set by emulating `FORCED` with the palette's signals. In all else as `draw`:
+    the file opened once, at `scale`, an image of each of `pages` or of each of its regions,
+    and the four reads, in each palette. Its first read checks that the palette reached the
+    text, and that each palette is what its name says (DEC-027 points 3 and 4).
+    `signals` names each signal the file reads, as `draw`'s does. Raises Stopped, and gives no
+    image, where a browser did not draw it all; ValueError where a palette does not set a
+    signal the file reads."""
+    read = dict(signals or {})
+    for palette in PALETTES:
+        if not set(read) <= set(palette.signals):
+            raise ValueError(
+                f"the forced palette `{palette.name}` sets {sorted(palette.signals)}, and the "
+                f"file reads {sorted(read)}"
+            )
+    modes = [(palette.name, {**palette.signals, **FORCED}) for palette in PALETTES]
+    return _start(file, pages, scale, browser, folder, read, modes, forced=True)
+
+
+def _start(
+    file: Path,
+    pages: Sequence[Page],
+    scale: float,
+    browser: Path,
+    folder: Path,
+    signals: Mapping[str, Sequence[str]],
+    modes: Sequence[tuple[str, Mapping[str, str]]],
+    *,
+    forced: bool = False,
+) -> Drawing:
+    """One start of `browser` that draws `file` in each of `modes`, each the name of the forced
+    palette it is, empty for none, with the signals it sets. `forced` is whether the start
+    forces the browser's colours. The browser's profile lies under `folder`, which is made where
+    it is missing, and which keeps nothing of this run."""
     folder.mkdir(parents=True, exist_ok=True)
     place = Path(tempfile.mkdtemp(prefix="browser-", dir=folder))
     try:
-        started = _Started(browser, place, max(page.width for page in pages), scale)
+        width = max(page.width for page in pages)
+        started = _Started(browser, place, width, scale, forced=forced)
         try:
-            drawing = _drawn(started, place, file, pages, read, modes)
+            drawing = _drawn(started, place, file, pages, signals, modes, forced)
         except BaseException:
             started.close()
             raise
@@ -427,7 +515,8 @@ def _drawn(
     file: Path,
     pages: Sequence[Page],
     signals: Mapping[str, Sequence[str]],
-    modes: Sequence[Mapping[str, str]],
+    modes: Sequence[tuple[str, Mapping[str, str]]],
+    forced: bool,
 ) -> Drawing:
     """The first read, then the file, opened once: in each mode its images first, as it stands,
     then its reads, and the document made as the file stands again. A request refused as the
@@ -436,11 +525,11 @@ def _drawn(
     try:
         version = started.call("Browser.getVersion", within=START_SECONDS)["product"]
         started.open_tab()
-        _first_read(started, place, signals)
+        _first_read(started, place, signals, forced=forced)
         started.open(file.resolve().as_uri())
         loaded = list(started.refused)
         shown = []
-        for mode in modes:
+        for palette, mode in modes:
             started.emulate(mode)
             started.refused = list(loaded)
             found = _found(started, pages)
@@ -451,7 +540,7 @@ def _drawn(
                 for page, held in zip(pages, found, strict=True)
                 for image in _images(started, page, held)
             )
-            shown.append(Shown(dict(mode), images, _read(started, pages, found)))
+            shown.append(Shown(dict(mode), images, _read(started, pages, found), palette))
             started.ask(UNGROUND, ALONE_MARK)
         return Drawing(version, tuple(shown))
     except UNREADABLE as exc:
@@ -611,7 +700,9 @@ def _band(span: Mapping[str, Any], page: Mapping[str, Any]) -> dict[str, float]:
 class _Started:
     """A browser this module started, and the one tab it reads in."""
 
-    def __init__(self, program: Path, place: Path, width: float, scale: float) -> None:
+    def __init__(
+        self, program: Path, place: Path, width: float, scale: float, *, forced: bool = False
+    ) -> None:
         self.program = str(program)
         self.refused: list[str] = []
         self._said = place / SAID
@@ -623,6 +714,7 @@ class _Started:
         self._ended = False
         flags = [
             *FLAGS,
+            *((FORCING,) if forced else ()),
             f"--user-data-dir={place / PROFILE}",
             f"--force-device-scale-factor={scale:g}",
             f"--window-size={math.ceil(width)},{WINDOW_HEIGHT}",
@@ -879,13 +971,15 @@ BESIDE = "beside.png"
 
 @dataclass(frozen=True)
 class _Planted:
-    """A span of the planted page, with what it looks like."""
+    """A span of the planted page, with what it looks like. Under forced colours, a span with no
+    paint is kept out of forcing unless it is `forced`."""
 
     text: str
     family: str = HELD
     weight: int = 400
     colour: str = "#000000"
     left: int = 8
+    forced: bool = False
 
 
 #: A span's paint where it has none, the text a later box lies over, and the text whose
@@ -919,6 +1013,18 @@ PLANTED_TEXTS: Mapping[str, tuple[tuple[_Planted, ...], ...]] = {
 #: A span the scene holds and the planted document does not.
 TAKEN_OUT = "taken"
 
+#: The text a start that forces its colours adds to the planted page, below the others: a span
+#: with no paint, left to forcing, which shows ink only where the forced palette reached the
+#: text (DEC-027 point 4).
+FORCED_TEXT = "no-paint-forced"
+FORCED_SPAN = "forced"
+FORCED_TEXTS: Mapping[str, tuple[tuple[_Planted, ...], ...]] = {
+    FORCED_TEXT: ((_Planted(FORCED_SPAN, colour=UNPAINTED, forced=True),),),
+}
+
+#: The file such a start writes the planted page to.
+PLANTED_FORCED_FILE = "planted.forced.html"
+
 
 def _scene_text(element: str, lines: Sequence[Sequence[_Planted]]) -> Text:
     """A text of the planted page as the scene holds it."""
@@ -926,12 +1032,21 @@ def _scene_text(element: str, lines: Sequence[Sequence[_Planted]]) -> Text:
     return Text(element, ((*held[0], TAKEN_OUT),) if element == SPAN_TAKEN_OUT else held)
 
 
-#: The planted page as the scene holds it.
+#: The planted page as the scene holds it, and as it is under forced colours.
 PLANTED_PAGE = Page(
     PLANTED_ID,
     PLANTED_WIDTH,
     PLANTED_HEIGHT,
     tuple(_scene_text(element, lines) for element, lines in PLANTED_TEXTS.items()),
+)
+PLANTED_FORCED_PAGE = Page(
+    PLANTED_ID,
+    PLANTED_WIDTH,
+    PLANTED_HEIGHT,
+    (
+        *PLANTED_PAGE.texts,
+        *(_scene_text(element, lines) for element, lines in FORCED_TEXTS.items()),
+    ),
 )
 
 #: The kinds of finding of the four reads, beside `NO_INK` and `OFF_THE_PAGE`.
@@ -939,6 +1054,10 @@ WORDS = "words"
 NO_FACE = "no face"
 MACHINE_FONT = "font of the machine"
 REFUSED = "refused"
+
+#: What the ink read names of the span left to forcing where the forced palette did not reach
+#: the text.
+FORCED_FINDING = (NO_INK, FORCED_TEXT, FORCED_SPAN)
 
 #: What the font read names of the span with the character the face lacks, and what a stop
 #: adds where it does not.
@@ -969,44 +1088,120 @@ PLANTED_FINDINGS = frozenset(
 )
 
 
-def _first_read(started: _Started, place: Path, signals: Mapping[str, Sequence[str]]) -> None:
+def _first_read(
+    started: _Started, place: Path, signals: Mapping[str, Sequence[str]], *, forced: bool = False
+) -> None:
     """Read the planted page. Raises Stopped where setting a signal of `signals` does not
-    repaint it, and where the reads do not name each fault, with the font that drew each span
-    of the machine's, or name what is clean. Where the character the face lacks is not named,
-    the stop says what a machine with no font for it does."""
-    file = place / PLANTED_FILE
+    repaint its mode box, and where the reads do not name each fault, with the font that drew
+    each span of the machine's, or name what is clean. Where the character the face lacks is
+    not named, the stop says what a machine with no font for it does.
+    In a start that `forced` its colours, every emulation sets `FORCED`, and the reads run in
+    each forced palette (`_forced_read`)."""
+    file = place / (PLANTED_FORCED_FILE if forced else PLANTED_FILE)
     try:
-        file.write_text(_planted_html(PLANTED_FACE.read_bytes(), signals), encoding="utf-8")
+        written = _planted_html(PLANTED_FACE.read_bytes(), signals, forced=forced)
+        file.write_text(written, encoding="utf-8")
     except OSError as exc:
         raise started.stop(f"the first read has no page to read: {exc}") from exc
-    pages = (PLANTED_PAGE,)
+    pages = (PLANTED_FORCED_PAGE if forced else PLANTED_PAGE,)
     found = _opened(started, file, pages)
-    _repaints(started, found[0], signals)
+    _repaints(started, found[0], signals, FORCED if forced else {})
+    if not forced:
+        _names_the_plants(started, _named(_read(started, pages, found)))
+        return
+    for palette in PALETTES:
+        _forced_read(started, pages, found, palette)
+
+
+def _forced_read(
+    started: _Started, pages: Sequence[Page], found: Sequence[Mapping[str, Any]], palette: Palette
+) -> None:
+    """The planted page read in the forced palette `palette`. Raises Stopped where its ground is
+    not lighter than its text in a light palette, or not darker in a dark one, where the span
+    left to forcing shows no ink, and where the reads do not name each fault, or name what is
+    clean (DEC-027 point 4)."""
+    where = f"the forced palette `{palette.name}`"
+    started.emulate({**palette.signals, **FORCED})
+    colours = started.ask(COLOURS, GROUND_MARK, FORCED_SELECTOR)
+    ground, text = _luminance(colours["ground"]), _luminance(colours["text"])
+    if not (ground > text if palette.light else ground < text):
+        than = "lighter" if palette.light else "darker"
+        raise started.stop(
+            f"the first read set {where}, and the browser gave it a ground of "
+            f"{colours['ground']}, not {than} than its text of {colours['text']}, so its "
+            f"images would show what their name denies"
+        )
     named = _named(_read(started, pages, found))
+    if FORCED_FINDING in named:
+        raise started.stop(
+            f"the first read set {where}, and a span with no paint, left to forcing, left no "
+            f"ink, so the forced palette did not reach the text"
+        )
+    _names_the_plants(started, named, f" in {where}")
+    started.ask(UNGROUND, ALONE_MARK)
+
+
+def _names_the_plants(started: _Started, named: set[tuple[str, ...]], where: str = "") -> None:
+    """Raise Stopped where `named`, what the reads named of the planted page `where`, is not
+    each planted fault and nothing else."""
     unnamed, wrong = PLANTED_FINDINGS - named, named - PLANTED_FINDINGS
     if unnamed or wrong:
         said = [f"did not name {_listed(unnamed)}" if unnamed else ""]
         said += [f"named {_listed(wrong)}, which the page does not plant" if wrong else ""]
         why = f". {NO_FONT_HOLDS}" if LACKED_FINDING in unnamed else ""
-        raise started.stop(f"the first read {' and '.join(each for each in said if each)}{why}")
+        raise started.stop(
+            f"the first read{where} {' and '.join(each for each in said if each)}{why}"
+        )
+
+
+#: The colours a forced palette gives the planted page: the ground of the box it forces, and
+#: the colour of the span with no paint left to forcing, as the browser computes them.
+COLOURS = """(ground, text) => ({
+  ground: getComputedStyle(document.querySelector(`[${ground}]`)).backgroundColor,
+  text: getComputedStyle(document.querySelector(text)).color,
+})"""
+
+#: The span left to forcing, as a selector of the document.
+FORCED_SELECTOR = f'[{MARKS["text"]}="{FORCED_TEXT}"] [{MARKS["span"]}]'
+
+#: A colour as the browser computes it: its first three numbers are its channels.
+RGB = re.compile(r"rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)")
+
+
+def _luminance(colour: str) -> float:
+    """The relative luminance of `colour`, as the browser computes it, from 0 for black to 1 for
+    white. Raises ValueError for a colour of another form."""
+    found = RGB.match(colour)
+    if found is None:
+        raise ValueError(f"a colour of another form: {colour!r}")
+    linear = [
+        share / 12.92 if share <= 0.04045 else ((share + 0.055) / 1.055) ** 2.4
+        for share in (float(channel) / 255 for channel in found.groups())
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
 
 
 def _repaints(
-    started: _Started, page: Mapping[str, Any], signals: Mapping[str, Sequence[str]]
+    started: _Started,
+    page: Mapping[str, Any],
+    signals: Mapping[str, Sequence[str]],
+    also: Mapping[str, str],
 ) -> None:
-    """Raise Stopped where setting a signal to a value after its first does not repaint the
-    planted page, every other signal at its first value. The page's own reads then run with
-    every signal at its first value."""
+    """Raise Stopped where setting a signal to a value after its first does not repaint its own
+    mode box of the planted page, every other signal at its first value. Each emulation sets
+    `also` too. A change of scheme repaints the whole page under forced colours, so each signal
+    is judged by its own box. The page's own reads then run with every signal at its first
+    value."""
     if not signals:
         return
-    first = {signal: values[0] for signal, values in signals.items()}
-    clip = {side: page[side] for side in ("x", "y", "width", "height")}
+    first = {**{signal: values[0] for signal, values in signals.items()}, **also}
+    boxes = [_mode_box(page, index) for index in range(len(signals))]
     started.emulate(first)
-    before = started.picture(clip)
-    for feature, values in sorted(signals.items()):
+    before = [started.picture(box) for box in boxes]
+    for (feature, values), box, held in zip(sorted(signals.items()), boxes, before, strict=True):
         for value in values[1:]:
             started.emulate({**first, feature: value})
-            if started.picture(clip) == before:
+            if started.picture(box) == held:
                 raise started.stop(
                     f"the first read set `{feature}: {value}`, and the page did not repaint, so "
                     f"the keys that signal parts would read as one"
@@ -1034,17 +1229,44 @@ def _listed(findings: Collection[tuple[str, ...]]) -> str:
     return "; ".join(" ".join(each) for each in sorted(findings))
 
 
-#: Where the planted page's modes lie: a box for each signal, in a row below its texts.
+#: Where the planted page's modes lie: a box for each signal, in a row below its texts. The
+#: box a forced palette paints in its ground ends that row, marked `GROUND_MARK`.
 MODE_TOP = 440
 MODE_SIZE = 24
+GROUND_MARK = "data-pkit-ground"
+GROUND_LEFT = PLANTED_WIDTH - 8 - MODE_SIZE
 
 #: The colour of a mode's box under the first value of its signal, and under each other.
 MODE_COLOURS = ("#ffffff", "#000000")
 
+#: The colour the box `GROUND_MARK` marks is painted, which a forced palette gives its ground.
+GROUND_COLOUR = "#808080"
 
-def _planted_modes(signals: Mapping[str, Sequence[str]]) -> tuple[str, str]:
+#: What keeps an element of the planted page out of forcing.
+KEPT_OUT = "forced-color-adjust:none"
+
+
+def _mode_left(index: int) -> int:
+    """Where the box of the signal of `index` lies from the planted page's left, in its px."""
+    return 8 + index * MODE_SIZE * 2
+
+
+def _mode_box(page: Mapping[str, Any], index: int) -> dict[str, float]:
+    """The clip of the box of the signal of `index`, on the planted page `page` as the document
+    holds it, whose lengths are shares of its width."""
+    unit = page["width"] / PLANTED_WIDTH
+    return {
+        "x": page["x"] + _mode_left(index) * unit,
+        "y": page["y"] + MODE_TOP * unit,
+        "width": MODE_SIZE * unit,
+        "height": MODE_SIZE * unit,
+    }
+
+
+def _planted_modes(signals: Mapping[str, Sequence[str]], forced: bool = False) -> tuple[str, str]:
     """The planted page's modes: their rules, and a box for each signal the file reads, painted
-    by a custom property each of its values after the first sets otherwise."""
+    by a custom property each of its values after the first sets otherwise. Where `forced`,
+    each box is kept out of forcing, so it repaints by its own signal alone."""
     rules, boxes = [], []
     plain = []
     for index, (feature, values) in enumerate(sorted(signals.items())):
@@ -1055,17 +1277,37 @@ def _planted_modes(signals: Mapping[str, Sequence[str]]) -> tuple[str, str]:
             for value in values[1:]
         )
         place = (
-            f"position:absolute;left:{_share(8 + index * MODE_SIZE * 2)};top:{_share(MODE_TOP)};"
+            f"position:absolute;left:{_share(_mode_left(index))};top:{_share(MODE_TOP)};"
             f"width:{_share(MODE_SIZE)};height:{_share(MODE_SIZE)};background:var({name})"
         )
-        boxes.append(f'<div style="{place}"></div>')
+        boxes.append(f'<div style="{place}{";" + KEPT_OUT if forced else ""}"></div>')
     sheet = f":root{{{';'.join(plain)}}}{''.join(rules)}" if plain else ""
     return sheet, "".join(boxes)
 
 
-def _planted_html(face: bytes, signals: Mapping[str, Sequence[str]] | None = None) -> str:
+def _planted_forced() -> tuple[str, str]:
+    """What a start that forces its colours adds to the planted page: the renderer's rule for a
+    layer's opaque fill under forced colours, as the declaration names it, since the browser
+    forces no colour a shape's attribute holds, and the box it paints in its ground."""
+    forced = html_declaration.DECLARATION["forced-colours"]
+    edge = forced["edge"]
+    sheet = (
+        f"@media (forced-colors:active){{[{MARKS['layer']}] rect{{fill:{forced['opaque-fills']};"
+        f"stroke:{edge['colour']};stroke-width:{edge['width']}px}}}}"
+    )
+    place = (
+        f"position:absolute;left:{_share(GROUND_LEFT)};top:{_share(MODE_TOP)};"
+        f"width:{_share(MODE_SIZE)};height:{_share(MODE_SIZE)};background:{GROUND_COLOUR}"
+    )
+    return sheet, f'<div {GROUND_MARK} style="{place}"></div>'
+
+
+def _planted_html(
+    face: bytes, signals: Mapping[str, Sequence[str]] | None = None, *, forced: bool = False
+) -> str:
     """The planted page, written as the renderer writes a page, each text in the tree's order,
-    with a mode for each of `signals`."""
+    with a mode for each of `signals`. Where `forced`, it holds what a start that forces its
+    colours reads too: `FORCED_TEXTS`, and `_planted_forced`'s."""
     data = base64.b64encode(face).decode("ascii")
     faces = (
         f"@font-face{{font-family:{HELD};font-weight:400;"
@@ -1076,21 +1318,25 @@ def _planted_html(face: bytes, signals: Mapping[str, Sequence[str]] | None = Non
     size = f"width:min(100%,{PLANTED_WIDTH}px);aspect-ratio:{PLANTED_WIDTH}/{PLANTED_HEIGHT}"
     written = []
     row = 0
-    for element, lines in PLANTED_TEXTS.items():
+    texts = {**PLANTED_TEXTS, **(FORCED_TEXTS if forced else {})}
+    for element, lines in texts.items():
         row += 1
         left, top = _share(lines[0][0].left), _share(row * ROW)
         place = f"left:{left};top:{top};width:{_share(TEXT_WIDTH)}"
-        drawn = "".join(_planted_line(line, index * ROW) for index, line in enumerate(lines))
+        drawn = "".join(
+            _planted_line(line, index * ROW, forced) for index, line in enumerate(lines)
+        )
         written.append(f'<div {MARKS["text"]}="{element}" style="{place}">{drawn}</div>')
         if element == UNDER_A_BOX:
             written.append(_planted_layer(row * ROW))
         row += len(lines) - 1
-    modes, boxes = _planted_modes(signals or {})
+    modes, boxes = _planted_modes(signals or {}, forced)
+    more, ground = _planted_forced() if forced else ("", "")
     return (
         '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8"/>\n'
-        f"<title>planted</title>\n<style>{faces}{modes}{PLANTED_SHEET}</style>\n</head>\n<body>"
-        f'<div {MARKS["page"]}="{PLANTED_ID}" style="{size}">{"".join(written)}{boxes}'
-        f'<img src="{NETWORK}" alt=""/><img src="{BESIDE}" alt=""/></div>'
+        f"<title>planted</title>\n<style>{faces}{modes}{PLANTED_SHEET}{more}</style>\n</head>\n"
+        f'<body><div {MARKS["page"]}="{PLANTED_ID}" style="{size}">{"".join(written)}{boxes}'
+        f'{ground}<img src="{NETWORK}" alt=""/><img src="{BESIDE}" alt=""/></div>'
         "</body>\n</html>\n"
     )
 
@@ -1100,12 +1346,19 @@ def _share(length: float) -> str:
     return f"{length / PLANTED_WIDTH * 100:.5f}cqw"
 
 
-def _planted_line(spans: Sequence[_Planted], top: int) -> str:
-    """A line `top` below its text's top, opened by its strut."""
+def _planted_line(spans: Sequence[_Planted], top: int, forced: bool = False) -> str:
+    """A line `top` below its text's top, opened by its strut. Where `forced`, a span with no
+    paint is kept out of forcing, but for the one left to it."""
+
+    def style(span: _Planted) -> str:
+        kept = forced and span.colour == UNPAINTED and not span.forced
+        return (
+            f"font-family:{span.family};font-size:{_share(14)};font-weight:{span.weight};"
+            f"color:{span.colour}{';' + KEPT_OUT if kept else ''}"
+        )
+
     drawn = "".join(
-        f'<span {MARKS["span"]} style="font-family:{span.family};font-size:{_share(14)};'
-        f'font-weight:{span.weight};color:{span.colour}">{span.text}</span>'
-        for span in spans
+        f'<span {MARKS["span"]} style="{style(span)}">{span.text}</span>' for span in spans
     )
     place = f"top:{_share(top + ROW - STRUT)}"
     strut = f'<span {MARKS["strut"]} style="height:{_share(STRUT)}"></span>'
