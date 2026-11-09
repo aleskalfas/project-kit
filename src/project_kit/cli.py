@@ -5587,13 +5587,10 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     if not dry_run:
         # Its derivable state (ADR-065 point 4, step 8, for this capability):
         # re-run installed adapter primitives so the harness side picks up any
-        # newly-added skills/agents from the upgraded capability, then provision
-        # its query commands, as sync would (#1090), and render `.pkit/.gitignore`,
-        # which reads the capability's runtime-ignore declarations.
+        # newly-added skills/agents from the upgraded capability, render
+        # `.pkit/.gitignore` again, which reads the capability's runtime-ignore
+        # declarations, then provision its query commands, as sync would (#1090).
         _deploy_capability(target_root, source_kit, name)
-        from project_kit import visibility
-
-        click.echo(visibility.render_runtime_ignore(target_root))
     # Last, the questions its points declare (COR-061).
     _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
@@ -8060,11 +8057,14 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     written: render the capabilities' rules index, so a session loads the
     capability's rules from here on (ADR-076 point 2); re-run the installed
     adapter primitives so the harness picks up the capability's skills and
-    agents; then provision its query commands, so an offline `pkit validate`
+    agents; render `.pkit/.gitignore`, as sync does, so the capability's
+    runtime-ignore lines are there before the next sync (ADR-009 rule 7,
+    #2367); then provision its query commands, so an offline `pkit validate`
     answers without a `pkit sync` first (#1090). Deploy is identical whatever
     the capability's origin (COR-031 D1).
     """
     from project_kit import install as install_mod
+    from project_kit import visibility
 
     ctx = install_mod.InstallContext(
         target_root=target_root,
@@ -8073,6 +8073,7 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     )
     install_mod.render_rules_index(ctx)
     install_mod.run_installed_adapter_primitives(ctx)
+    click.echo(visibility.render_runtime_ignore(target_root))
     install_mod.provision_query_commands(ctx, component=name)
 
 
@@ -8620,6 +8621,11 @@ def uninstall_capability_cmd(
         # on, its files kept or not (ADR-076 point 2).
         install_mod.render_rules_index(ctx)
         install_mod.run_installed_adapter_primitives(ctx)
+        # And `.pkit/.gitignore` leaves its runtime-ignore lines out, as the next
+        # sync's render would (ADR-009 rule 7, #2367).
+        from project_kit import visibility
+
+        click.echo(visibility.render_runtime_ignore(target_root))
 
 
 @capabilities.command("list")
