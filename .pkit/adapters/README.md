@@ -19,7 +19,7 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, COR-070, ADR-066, ADR-076]
+      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
@@ -171,7 +171,7 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds three entries: `delegated-result-complete`; `unattended-confined-run`, which the drift command depends on (ADR-066 point 13); and `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to it names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost". The Claude Code adapter answers all three ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds four entries: `delegated-result-complete`; `unattended-confined-run`, which the drift command depends on (ADR-066 point 13); `unattended-working-run`, which the build command depends on (ADR-073); and `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to `session-loads-rules` names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost". The Claude Code adapter answers all four ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 
