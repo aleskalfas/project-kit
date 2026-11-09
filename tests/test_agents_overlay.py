@@ -470,11 +470,51 @@ def test_cli_agents_skip_report_leads_with_adopt_and_names_reconcile(tmp_path, m
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "needs-arch", owns=["<architecture-docs>"])
     monkeypatch.chdir(proj)
-    result = CliRunner().invoke(main, ["agents"])
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
     assert result.exit_code == 0, result.output
-    assert "pkit agents adopt" in result.output
-    assert "pkit agents reconcile --write" in result.output
+    footer = _skip_footer(result.output)
+    assert "Deploy the skipped agent(s):  pkit agents adopt <agent>" in footer
+    assert "pkit agents reconcile --write" in footer
     assert "overlay.yaml" in result.output
+    assert "No conventional folder" not in footer
+
+
+def _skip_footer(output: str) -> str:
+    """The `pkit agents` status footer: from the `Skipped:` line to the command list,
+    which names `pkit agents adopt` whatever is skipped."""
+    return output.split("Skipped:", 1)[1].split("Commands", 1)[0]
+
+
+def test_cli_agents_names_no_adopt_for_a_category_with_no_conventional_folder(
+    tmp_path, monkeypatch
+):
+    """`adopt` refuses a category with no conventional folder, so the skip report
+    names only what works: the overlay, or `reconcile --write` (#2469)."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "project", "release-checker", owns=["<release-notes>"])
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+    assert result.exit_code == 0, result.output
+    footer = _skip_footer(result.output)
+    assert "No conventional folder (release-notes)" in footer
+    assert "overlay.yaml" in footer and "pkit agents reconcile --write" in footer
+    assert "adopt" not in footer
+
+
+def test_cli_agents_names_adopt_only_for_the_agents_it_serves(tmp_path, monkeypatch):
+    """An agent lacking a category with no conventional folder is no agent `adopt`
+    serves, even where another category it lacks has one."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    core = proj / ".pkit" / "agents" / "core"
+    _agent(core, "needs-arch", owns=["<architecture-docs>"])
+    _agent(core, "mixed", owns=["<architecture-docs>", "<release-notes>"])
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+    assert result.exit_code == 0, result.output
+    footer = _skip_footer(result.output)
+    assert "Deploy needs-arch:  pkit agents adopt <agent>" in footer
+    assert "Deploy the skipped agent(s)" not in footer
+    assert "No conventional folder (release-notes)" in footer
 
 
 def test_cli_agents_never_load_bearing(tmp_path, monkeypatch):
