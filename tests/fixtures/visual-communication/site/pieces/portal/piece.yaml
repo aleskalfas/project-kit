@@ -10,7 +10,7 @@ languages: [en]
 audience: The capability's tests, which draw a portal at two sizes.
 shown: In the capability's tests, as a site of three pages.
 explains: false
-exports: [svg, pdf]
+exports: [html, pdf]
 state: draft
 modes:
   device: [desktop, phone]

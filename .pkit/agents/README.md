@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/storyboards.md#location-and-lifecycle
         - .pkit/agents/storyboards.md#frontmatter-declaration
         - .pkit/agents/storyboards.md#authoring
-        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
         - .pkit/decisions/README.md#citing
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
@@ -246,7 +246,10 @@ Commands an agent returns are run by one of these:
   - a path with two owners
   - a hook with no provider
   - a storyboard one side leaves out
-- **The exceptions** warn in both commands: a cited point its record does not hold, and a cited operational rule that is missing or retired.
+- **The exceptions** warn in both commands:
+  - a cited point its record does not hold
+  - a cited operational rule that is missing or retired
+  - an unknown override in the overlay ("Adopter overlay" below)
 
 **What the backward check leaves out.** It is meant for reads whose place an overlay can move, so three kinds of path in a body need no declaration:
 
@@ -310,7 +313,12 @@ overrides:
 2. For the agent named under `overrides.<agent>:`, each category there replaces the top-level value whole, not merged with it. To extend a value, copy the top-level entries into the override. Merge semantics are deferred per COR-007 until concrete needs surface. Two keys there are reserved and are not categories: `model` and `effort` set the agent's execution policy ("Model and effort" below).
 3. Write the resolved paths in place of each placeholder in the front matter, and the deployed copy into the harness's place. The body keeps its placeholders as written. The deployed copy is what every downstream tool reads.
 
-**An unknown override** is ignored: a category under `overrides:` for an agent no source ships, or one no definition of that agent names. Nothing reports it. A `model` or `effort` there that the harness does not accept is still reported ("Model and effort" below).
+**An unknown override** is an entry under `overrides:` that the deploy ignores. It is one of these:
+
+- a block for an agent no source ships, whatever keys it holds
+- a category in an agent's block that the agent's definition does not name, the definition being the one that deploys ("Name-collision precedence" below)
+
+`pkit agents` and the `refs` member of `pkit validate` warn of each, naming its key, such as `overrides.critc` or `overrides.critic.code-pths`. A warning fails no command, `pkit refs validate` included. A `model` or `effort` there that the harness does not accept is still reported, as an error ("Model and effort" below).
 
 **The first install** writes the overlay with a value for each category core's definitions name, so they deploy before the project names a path. A missing overlay comes back as "Diagnosing + repairing the overlay" below says.
 
@@ -352,12 +360,12 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 **Where a conventional folder lies.** It is a sub-path of the project's internal documentation root ([COR-049](../decisions/core/COR-049-documentation-roots.md) point 4):
 
 - `architecture-docs` is `<root>/architecture`, and `adr-records` is `<root>/architecture/decisions`. With the default root, `docs/`, they are `docs/architecture/` and `docs/architecture/decisions/`. A project that set `docs.internal: tech-docs` gets `tech-docs/architecture/…` instead.
-- **A new category.** Adding a sub-path for it, in `src/project_kit/docs_roots.py`, is the authoring step that enables `reconcile`'s fill and `adopt` for that category.
+- **A new category.** Adding a sub-path for it, in `src/project_kit/docs_roots.py`, is the authoring step that enables `reconcile`'s fill and `adopt` for that category. Its name goes in `.pkit/lifecycle/ownership.py` too, where the deploy reads which categories `adopt` serves.
 - **A recorded path stays.** `reconcile --write` and `adopt` write the path uncommented, with a `recorded by` note, and a later change of the root never moves it (COR-049 point 5).
 
 #### `pkit agents`
 
-`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
+`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It warns of each unknown override too ("Adopter overlay" above). It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
 
 #### `pkit agents adopt <agent> [--yes]`
 
@@ -401,7 +409,7 @@ An optional category with no conventional folder is no prerequisite: `adopt` lea
 More of `reconcile`:
 
 - **A missing overlay.** With `--write`, `reconcile` creates the overlay from the seed the first install writes, and writes nothing else in that run. The dry run says it would. The next dry run shows each category the seed leaves undefined, so `--write` never records one the person was not shown.
-- **Outside the lifecycle, only it writes a seed path.** Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). `pkit agents adopt` names this repair where the overlay is missing.
+- **Outside the lifecycle, only it writes a seed path.** Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([the lifecycle reference, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)). `pkit agents adopt` names this repair where the overlay is missing.
 - **When to run it:** for an overlay older than a newly shipped agent's categories. The repair is an explicit, idempotent command, never an automatic write by sync.
 - **`--write` is the confirmation.** The dry run lists each fill as `category = path`, with the agents that reach it once recorded, as `adopt`'s question does. A command that shows what it would record until told to write takes `--write` as its confirmation (COR-049 point 5). So `--write` records over a folder that holds documents without a prompt. Each recording prints the root its path was derived from and where to change it.
 

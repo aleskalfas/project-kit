@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A sign-off gate opens only on an artefact that names its producer (#2542).
+  An `authorisation-artifact` gate whose predicate answers `exists: true` with
+  a missing, null, empty or blank `produced_by`, or one that is not a string,
+  stays shut, and its reason says the artefact names no producer. Before, an
+  empty `produced_by` opened the gate, and a missing one gave the reason
+  "authorised by None (cross-authority)". The process reference says so.

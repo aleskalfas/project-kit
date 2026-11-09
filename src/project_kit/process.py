@@ -270,8 +270,9 @@ class PredicateOutcome:
 
     `result` is the boolean the engine acts on. For a deterministic check that
     is the predicate's own `result`; for an authorisation-artifact gate the
-    engine computes it as `exists and produced_by != actor` and ignores any
-    `result` the predicate supplied (cross-authority is non-overridable).
+    engine computes it as `exists`, a named producer and `produced_by != actor`,
+    and ignores any `result` the predicate supplied (cross-authority is
+    non-overridable).
 
     `indeterminate` is the fail-closed flag: the predicate errored, timed out,
     returned unparseable JSON, or could not be resolved. When set, `result` is
@@ -358,9 +359,11 @@ class PredicateRunner:
 
         deterministic       -> uses the predicate's `result`.
         authorisation-artifact -> reads {exists, produced_by} and computes
-                                 result = exists and produced_by != actor; any
-                                 predicate-supplied `result` is ignored
-                                 (cross-authority is non-overridable, COR-033 P4).
+                                 result = exists and produced_by names a
+                                 producer (a string, not empty or blank) and
+                                 produced_by != actor; any predicate-supplied
+                                 `result` is ignored (cross-authority is
+                                 non-overridable, COR-033 P4).
 
         An unrecognised gate kind fails closed (ADR-020 gate-honesty): never a
         silent pass.
@@ -388,9 +391,18 @@ class PredicateRunner:
         if kind == "authorisation-artifact":
             exists = bool(payload.get("exists", False))
             produced_by = payload.get("produced_by")
-            result = exists and produced_by is not None and produced_by != actor
+            # A producer is named only by a string with something in it: a
+            # missing, null, empty, blank or non-string `produced_by` names no
+            # authority, so no different authority can be confirmed (COR-033 P4).
+            named = isinstance(produced_by, str) and produced_by.strip() != ""
+            result = exists and named and produced_by != actor
             if not exists:
                 reason = "no authorisation artifact recorded"
+            elif not named:
+                reason = (
+                    "authorisation artifact names no producer, so no authority other "
+                    "than the actor being gated can be confirmed"
+                )
             elif produced_by == actor:
                 reason = (
                     f"authorisation artifact was produced by the actor being gated "

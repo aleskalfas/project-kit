@@ -197,7 +197,16 @@ there instead, and changes nothing else.
           naming each document it fails on, a line each; in warning mode its
           findings are printed and stop nothing. A merge that conflicts stops
           the run with the merge to make, and a check that cannot be read
-          stops it too. Its line begins `merge check:` (`MERGE_CHECK`).
+          stops it too. Where the check fails nothing, the base moved on and,
+          in agent review mode, a reviewer that a contribution in force names
+          on the ruled-artefact floor is not among those the review resolved
+          at the head, the backbone answers once which artefacts the change
+          alters or brings under a rule from the base's tip to the merge
+          (`_lib.ruled_artefacts`). Where it lists one an accepted rule binds
+          on, the run stops with the merge of the base to make, naming each
+          reviewer the head lacks; an answer that cannot be read stops it too
+          ([project-management:DEC-064-base-merge-named] point 8). Its line
+          begins `merge check:` (`MERGE_CHECK`).
   merge   `done-work` with the pinned head. Without `--yes`, off a terminal,
           land-work merges nothing: it runs `done-work`'s gates as a dry run
           and stops with a `ready:` line naming the head and the command that
@@ -266,6 +275,8 @@ from _lib import (
     pr_head,
     pr_merge,
     provenance,
+    required_reviewers,
+    ruled_artefacts,
     session_guard,
 )
 from _lib.agent_verdicts import (
@@ -305,7 +316,9 @@ from _lib.membership import (
     resolve_invoker_identity,
 )
 from _lib.pr_review import REVIEW_VIEW_FIELDS, remote_baseline
+from _lib.review_contributions import FLOOR_TOUCHES_RULED_ARTEFACT
 from _lib.review_mode import resolve_mode
+from _lib.review_opt_outs import read_opt_outs
 from _lib.verdict_freshness import Freshness, head_sha
 
 
@@ -492,6 +505,10 @@ class _ReviewEnd:
     clear: bool
     #: What the approval is, as the `ready:` line says it.
     approval: str
+    #: The PR's required local reviewers, as the review resolved them at the head;
+    #: None in human review mode, where the merge gate requires no reviewer agent
+    #: ([project-management:DEC-064-base-merge-named] point 8).
+    required: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -791,7 +808,7 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         return EXIT_MERGED
     # Last before the ready stop, the prompt or the merge: the merge as it would land,
     # with the base as it stands now (DEC-055 point 6).
-    _merge_check(args, head, answers, config, capability_root)
+    _merge_check(args, head, answers, review, config, capability_root)
     if args.dry_run:
         return _merge(args, head, config, reading, answers)
     holds = (
@@ -1476,7 +1493,6 @@ def _review(
             "the approval is done-work's gate"
         )
         return _ReviewEnd(clear=True, approval="the PR is approved")
-    agents = _ReviewEnd(clear=True, approval="all required verdicts approved")
     # review-pr works out the required set itself, a contributed reviewer
     # included where the project registers no local reviewer of its own (#1934).
     argv = [str(issue), *_passed_through(args, review=True)]
@@ -1490,6 +1506,11 @@ def _review(
             f"review: stopped — review-pr failed ({_described(exc)}), so the review is not "
             f"complete. Run `land-work {issue}` again once it can run",
         ) from exc
+    # The set as resolved at the head, which the check of the merge compares with what
+    # the merge requires (DEC-064 point 8).
+    agents = _ReviewEnd(
+        clear=True, approval="all required verdicts approved", required=run.required
+    )
     verdicts = {name: (token, run.kept_bodies.get(name, "")) for name, token in run.kept.items()}
     verdicts.update(run.posted)
     requested = [name for name, (token, _) in verdicts.items() if token == CHANGES_REQUESTED]
@@ -1537,7 +1558,7 @@ def _review(
     if args.dry_run:
         would = f"run {', '.join(run.would_run)}" if run.would_run else "run none"
         _say(f"review: (dry-run) would keep {kept} fresh and {would}")
-        return _ReviewEnd(clear=not run.would_run, approval=agents.approval)
+        return replace(agents, clear=not run.would_run)
     noted = (
         f"; {advisories} advisor{'y' if advisories == 1 else 'ies'} above (every verdict in "
         f"full: `show-pr {head.pr_number} --field review`)"
@@ -1942,6 +1963,7 @@ def _merge_check(
     args: argparse.Namespace,
     head: _Head,
     answers: _AnswersEnd,
+    review: _ReviewEnd,
     config: dict[str, Any],
     capability_root: Path,
 ) -> None:
@@ -1952,7 +1974,8 @@ def _merge_check(
     read. A base the head already holds, at the tip the head's own check read, is that
     check's: nothing is run again. A merge can need a resolver its head did not, so for
     a head from elsewhere nobody named, that asks or stops as the head's own check does
-    (DEC-067 point 3)."""
+    (DEC-067 point 3). Where the check fails nothing, it stops the run, too, where the
+    merge requires a reviewer the head does not (`_reviewers_at_merge`)."""
     issue, sha, base = head.issue, short_sha(head.oid), head.base
     found = friction_answers.merged(
         head.oid,
@@ -1990,18 +2013,23 @@ def _merge_check(
         if found.merge != head.oid
         else f"{sha}, which holds {base} at {tip}"
     )
-    documents = _print_findings_at_merge(found.failing)
     if not found.failed:
+        # Before what the check reports is shown, so a stop here follows nothing that
+        # reads as its reason.
+        asked = _reviewers_at_merge(head, found, review, config, capability_root)
         # In warning mode the check fails nothing: what it finds is shown, and stops
         # nothing (COR-050 point 12).
+        documents = _print_findings_at_merge(found.failing)
         reported = (
             f", and reports {_count(len(documents), 'document')} above, which the project's "
             "friction mode fails nothing on: for information"
             if documents
             else ""
         )
-        _say(f"{MERGE_CHECK}: the change check passes on {where}{reported}")
+        requires = f", and the merge requires no reviewer {sha} does not" if asked else ""
+        _say(f"{MERGE_CHECK}: the change check passes on {where}{requires}{reported}")
         return
+    documents = _print_findings_at_merge(found.failing)
     named = (
         f", on {_count(len(documents), 'document')} ({', '.join(documents)}), above"
         if documents
@@ -2017,6 +2045,80 @@ def _merge_check(
         f"{MERGE_CHECK}: refused — the change check fails on {where}{named}. {settle}, push, "
         f"and run `land-work {issue}` again. Nothing was merged",
     )
+
+
+def _reviewers_at_merge(
+    head: _Head,
+    found: friction_answers.Merged,
+    review: _ReviewEnd,
+    config: dict[str, Any],
+    capability_root: Path,
+) -> bool:
+    """Whether the merge was asked which reviewers it requires, the run stopped with
+    nothing merged where it requires one the head does not: the merge of the base is
+    named ([project-management:DEC-064-base-merge-named] points 1 and 8).
+
+    Only the ruled-artefact floor can require at the merge a reviewer it did not at
+    the head, since a rule the base accepted after the head left it binds there and
+    the PR's closing issues and its diff are the head's (DEC-032 D1). So the merge is
+    asked only in agent review mode, where the base moved on, and where a reviewer of
+    that floor, as the contributions in force name it (`floor_reviewers`), is not
+    among those the review resolved at the head. Elsewhere nothing could be added, and
+    nothing runs. Asked, the backbone answers once which artefacts the change alters or
+    brings under a rule from the base's tip to the merge (`ruled_artefacts`), and the
+    floor counts what it lists as it counts the head's. What cannot be read stops the
+    run and names no merge: no command proceeds without a reviewer it cannot tell is
+    not required (DEC-032 D1). The contributions are read where the command runs, as
+    for the head's set (DEC-032 D5), whether or not the base merges through a queue."""
+    if review.required is None or found.merge == head.oid:
+        return False
+    issue, sha, base = head.issue, short_sha(head.oid), head.base
+    where = f"{sha} merged with {base} at {short_sha(found.tip)}"
+    floor = required_reviewers.floor_reviewers(
+        FLOOR_TOUCHES_RULED_ARTEFACT,
+        capability_root.parent.parent.parent,
+        opt_outs=read_opt_outs(config),
+        # done-work's, looked up now: the gate's and the review's collection.
+        collect_contributions=done_work.collect_contributions,
+    )
+    if isinstance(floor, required_reviewers.RequiredReviewersError):
+        why = "; ".join([floor.message, *floor.details])
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"{MERGE_CHECK}: the reviewers {where} requires could not be resolved — "
+            f"{friction_answers.shown(why)}. Nothing was merged; run `land-work {issue}` again",
+        )
+    lacking = [name for name in floor if name not in review.required]
+    if not lacking:
+        return False
+    ruled = ruled_artefacts.ruled_altered(found.tip, found.merge)
+    if not ruled.ok:
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"{MERGE_CHECK}: which artefacts {where} alters or brings under a rule could not "
+            f"be read — {friction_answers.shown(ruled.error)}, so whether it requires a "
+            f"reviewer {sha} does not cannot be told. Nothing was merged; run "
+            f"`land-work {issue}` again",
+        )
+    if not ruled.locations:
+        return True
+    names = ", ".join(friction_answers.shown(name) for name in lacking)
+    them = "it" if len(lacking) == 1 else "them"
+    raise _Stop(
+        EXIT_NEEDS_CHANGE,
+        f"{MERGE_CHECK}: refused — {where} alters or brings under an accepted rule "
+        f"{_artefacts(ruled.locations)}, so it requires {names}, which {sha} does not. "
+        f"Merge {base} into {head.branch} (`git merge {head.base_remote}/{base}`), push, and "
+        f"run `land-work {issue}` again: the review runs {them} there. Nothing was merged",
+    )
+
+
+def _artefacts(locations: tuple[str, ...]) -> str:
+    """`2 artefacts (docs/a.md, docs/b.md)`, the first three named, every character a
+    terminal would act on escaped."""
+    named = [friction_answers.shown(location) for location in dict.fromkeys(locations)]
+    shown = ", ".join(named[:3]) + (f" and {len(named) - 3} more" if len(named) > 3 else "")
+    return f"{_count(len(named), 'artefact')} ({shown})"
 
 
 def _print_findings_at_merge(findings: tuple[Mapping[str, Any], ...]) -> list[str]:

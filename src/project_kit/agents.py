@@ -258,6 +258,27 @@ def find_agent_file(agents_dir: Path, name: str) -> Path | None:
     return None
 
 
+# The deploy mark: the part of the comment line an adapter's agents deploy writes
+# into the front matter of each copy (the agents README, "Deploy mechanics"). It
+# tells the deploy's copy from a file of the project's of the same name.
+DEPLOY_MARK = "managed-by: project-kit"
+
+
+def carries_deploy_mark(path: Path) -> bool:
+    """True if the file's first five lines carry the deploy mark.
+
+    The deploy writes the mark as the second line of each copy, and looks for it
+    in the first five lines before it writes over a file, as this does. A long
+    body is not read.
+    """
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            head = "".join(line for _, line in zip(range(5), f, strict=False))
+    except (OSError, UnicodeDecodeError):
+        return False
+    return DEPLOY_MARK in head
+
+
 def _validate_name(name: str) -> None:
     if not _NAME_RE.match(name):
         raise click.ClickException(
