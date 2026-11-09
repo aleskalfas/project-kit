@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 **In plain terms:** `project-manager` often runs as a whole session's agent, through the default-agent switch this capability ships. A grant of tools then gives the session's agent only the tools it names. So a grant strips every such session of the web tools, tool search, and every tool of each MCP server connected to it.
 
-So the agent is granted no list. It has every tool the session gives it, less a short list it is withheld, and the harness removes a withheld tool from its view. A built-in tool is withheld where the agent's own denies cannot follow it, or where it starts work or opens a channel outside the methodology's rules. Finer limits, such as a command the agent may not run, stay in pkit's permission model. The agent gains a wider reach, and a tool a later harness release adds reaches it until the list names it. This record accepts both costs.
+So the agent is granted no list. It has every tool the session gives it, less a short list it is withheld, and the harness removes a withheld tool from its view. A built-in tool is withheld where the agent's own denies cannot follow it, or where it starts work or opens a channel outside the methodology's rules. Finer limits, such as a command the agent may not run, stay in pkit's permission model. The agent gains a wider reach, a tool a later harness release adds reaches it until the list names it, and some tools stay in its view though a call to them is refused. This record accepts these costs.
 
 ## Context
 
