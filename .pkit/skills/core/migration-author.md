@@ -13,7 +13,7 @@ reads:
     - COR-027
   paths:
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/migrations.md
     - .pkit/decisions/README.md
 ---
 
@@ -46,7 +46,7 @@ Pick the most specific tier that covers the change. A capability's internal chan
 
 ### 2. Pick the scope
 
-Each tier has three scopes that determine the script's role and execution order within a version's directory (per COR-010 / `.pkit/lifecycle/README.md`'s "Three scopes per tier"):
+Each tier has three scopes that determine the script's role and execution order within a version's directory (per COR-010 / `.pkit/lifecycle/migrations.md`'s "Three scopes (per tier)"):
 
 - **`manifest-schema`** — bridges a manifest format change. Runs **first** in any upgrade flow that needs it, before any structural or resource-scoped migration of the same target version.
 - **`structural`** — affects the tier's directory shape (a backbone-wide rename; a capability's internal restructure within the capability). Runs **before** resource-scoped migrations of the same target version.
