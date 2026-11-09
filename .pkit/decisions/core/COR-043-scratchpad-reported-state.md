@@ -28,7 +28,7 @@ It is created when the first note enters it and removed when it empties. A proje
 
 ### 3. Entering the state is produced by an actual send, never by intent
 
-The report surface stamps the note **only on a successful post** (the draft/URL path sends nothing and stamps nothing). Because the surface's primary posture is URL-first — the post may happen in a browser, outside the tooling — a **manual stamp gesture** exists (supply the note and the resulting issue ref); it also serves retroactive stamping of notes hand-carried before this record. Frontmatter records: the issue ref(s) (one note may become several issues), the reported date, and a **content hash of the full local file at send time**.
+The report surface stamps the note **only on a successful post** (the draft/URL path sends nothing and stamps nothing). Because the surface's primary posture is URL-first — the post may happen in a browser, outside the tooling — a **manual stamp gesture** exists (supply the note and the resulting issue ref); it also serves retroactive stamping of notes hand-carried before this record. Frontmatter records: the issue ref(s) (one note may become several issues), the reported date, and a **content hash of the note as it stood at send time, without the fields the stamp itself writes**. Those fields were never part of what was sent, so the stamp itself never reads as drift.
 
 ### 4. Reported notes are frozen by convention and guarded by detection
 

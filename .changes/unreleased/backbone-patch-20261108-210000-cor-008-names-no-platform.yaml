@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  COR-008's operational reference names no particular issue tracker or host
+  (#2374). A commit's footer carries its issue links in the form the project's
+  issue tracker reads, where it named GitHub's `Closes #N`. A branch's
+  `<issue-number>` is the number of its related issue in that tracker, where
+  it named a GitHub issue. The record no longer mentions the PR template, `gh
+  pr list` or PRs in its branch-naming guidance, and its Context and
+  Implications count the form an issue link takes among the platform-specific
+  conventions a capability ships. The conventions it decides stay as they
+  were: Conventional Commits, one logical unit per commit, the type list,
+  `main` as the default branch, and `<type>/<issue-number>-<slug>` with a
+  related issue for every branch.

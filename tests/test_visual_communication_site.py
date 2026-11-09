@@ -1,15 +1,15 @@
 """The site, a top of the foundations whose pages are web pages (visual-communication
 DEC-022): its pages, its shared header and footer, a page's width from the size it is drawn
 at and its height from its content, the role `size.site` and the sizes the neutral brand
-and the test brand give, the findings DEC-022 point 8 lists, and what the renderers draw of
-a site at two sizes.
+and the test brand give, the findings DEC-022 point 8 lists, what the renderers draw of a site
+at two sizes, and what `pkit visual export` writes of it.
 
 The engine's cases are drawn in this process through `tests/visual_engine.py`, each in a
 component of the tests' own, the site's file changed in memory. The pieces are the sites
 under `tests/fixtures/visual-communication/site/`: `page`, a site of one page at each size
 the neutral brand gives, and `portal`, a site of three pages on a desktop and on a phone.
 A location holds them with the foundations, the starter and the neutral brand being built.
-It starts no `pkit`."""
+It starts no `pkit`: the export command's script runs in this process."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ import copy
 import json
 import re
 import shutil
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +25,7 @@ import pytest
 from ruamel.yaml import YAML
 
 from tests import test_visual_communication_starter as starter
-from tests.in_process import load
+from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
     FIXTURES,
@@ -44,8 +44,9 @@ from tests.visual_communication_project import (
 )
 from tests.visual_engine import COMPONENTS, _px, block, codes, draw, frame
 
-checks, keys, pl, tokens, svg, pdf, html = load(
+export_script, checks, keys, pl, tokens, svg, pdf, html = load(
     "visual-communication",
+    "export.py",
     "checks",
     "keys",
     "pipeline",
@@ -525,6 +526,60 @@ def test_a_site_at_two_sizes_renders_a_file_for_each_size_in_svg_and_pdf(
         ]
         assert found == expected, key
     assert sizes["default"] != sizes["device.phone"]
+
+
+#: The folder the export command writes the portal's files to, in the clone's local folder
+#: (DEC-006 point 7), and the width of the site at each size the portal names.
+EXPORTED = ".pkit/capabilities/visual-communication/project/local/exports/portal"
+WIDTHS = {"default": 1280, "device.phone": 390}
+
+
+def page_sizes(drawn: str) -> dict[str, tuple[float, float]]:
+    """Each page of a page file, by its trace id, in its order, as the width and the height
+    its style gives it: as wide as its frame, in the frame's proportions (DEC-020 point 4)."""
+    found = re.findall(
+        r'<div data-page="([^"]+)" style="width:min\(100%,([0-9.]+)px\);'
+        r'aspect-ratio:([0-9.]+)/([0-9.]+)"',
+        drawn,
+    )
+    assert found and all(width == wide for _, width, wide, _ in found), found
+    return {id_: (float(width), float(tall)) for id_, width, _, tall in found}
+
+
+def scaled(sizes: Iterable[tuple[float, float]], scale: float = 1.0) -> list[tuple[float, float]]:
+    """Each width and height of `sizes` times `scale`, to the 1/100 a file writes."""
+    return [(round(width * scale, 2), round(height * scale, 2)) for width, height in sizes]
+
+
+def test_a_site_at_two_sizes_exports_a_page_file_and_a_pdf_file_for_each_size(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit visual export` writes the portal, which declares `html` and `pdf`, as one page
+    file and one PDF file at each size, under one number (DEC-023 point 1). Each holds the
+    three pages in order, each as wide as the site at that size and as tall as its scene
+    gives it from its own content, a PDF page at 0.75 pt to the px (DEC-022 point 3)."""
+    importable(monkeypatch, pdf, html)
+    root = site_location(project(tmp_path))
+    drawn = project_of(root, "portal")
+    results = drawn.scenes(facts=drawn.piece.stand_ins)
+    sizes = {result.scene.size_key: page_frames(result.scene) for _, result in results}
+    assert {key: {width for width, _ in pages.values()} for key, pages in sizes.items()} == {
+        key: {width} for key, width in WIDTHS.items()
+    }
+    assert [len({height for _, height in pages.values()}) for pages in sizes.values()] == [3, 3]
+    shown = run_main(export_script, "portal", cwd=root)
+    assert shown.returncode == 0, shown.stderr
+    folder = root / EXPORTED
+    names = {key: (f"portal.v1.en.{key}.html", f"portal.v1.en.{key}.pdf") for key in WIDTHS}
+    assert sorted(path.name for path in folder.iterdir()) == sorted(
+        name for pair in names.values() for name in pair
+    )
+    for key, (page_file, document) in names.items():
+        pages = page_sizes((folder / page_file).read_text(encoding="utf-8"))
+        assert list(pages) == list(sizes[key]), key
+        assert scaled(pages.values()) == scaled(sizes[key].values()), key
+        boxes = media_boxes((folder / document).read_bytes())
+        assert scaled(boxes) == scaled(sizes[key].values(), POINT), key
 
 
 # --- what draws as before ---------------------------------------------------------------------

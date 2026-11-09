@@ -353,8 +353,8 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     # page in the internal root (#2641), each reader resolved against the readers
     # point. software-analysis contributes one reader per actor of pkit's own
     # analysis (#1001), under the `act-` prefix: the eight core actors (#1344), the
-    # planner (#1710) and the three agents of parallel work (#2096), beside
-    # living-docs' own two.
+    # planner (#1710), the three agents of parallel work (#2096) and the component
+    # that starts software-analysis's agent (#2689), beside living-docs' own two.
     assert "docs/permissions/README.md" in _user_root_pages()
     assert "tech-docs/coding-conventions.md" in _internal_root_pages()
     pages = len(_project_places()) + len(_user_root_pages()) + len(_internal_root_pages())
@@ -362,8 +362,8 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
         "act-lead-agent, act-merge-authoriser, act-methodology-maintainer, "
-        "act-operator, act-planner, act-planning-agent, act-worker-agent, "
-        "maintainer, user; "
+        "act-operator, act-planner, act-planning-agent, act-project-management, "
+        "act-worker-agent, maintainer, user; "
         f"{pages} page reader(s) checked."
     )
 

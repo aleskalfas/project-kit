@@ -26,7 +26,7 @@ A proposal drafts one edit with its evidence, and nothing applies it until a per
 ```mermaid
 classDiagram
   accTitle: Proposals and reviews
-  accDescr: A proposal edits one page or more, with its diff and its evidence. A reader-review judges one page as one reader, with its findings. An approved onboarding plan leads to the proposals it names.
+  accDescr: A proposal edits any number of pages, with its diff and its evidence. A reader-review judges one page as one reader, with its findings. An approved onboarding plan leads to the proposals it names.
   class Proposal
   Proposal : diff
   Proposal : evidence
@@ -36,10 +36,10 @@ classDiagram
   OnboardingPlan : documentation spaces
   OnboardingPlan : splits and rewrites
   OnboardingPlan : anchors
-  OnboardingPlan : mapping
+  OnboardingPlan : code-to-doc mapping entries
   class Page
   class Reader
-  Proposal "*" --> "1..*" Page : edits
+  Proposal "*" --> "*" Page : edits
   ReaderReview "*" --> "1" Page : judges
   ReaderReview "*" --> "1" Reader : reads as
   OnboardingPlan "1" --> "*" Proposal : leads to, once approved
@@ -60,17 +60,17 @@ Defined in [TERM-proposal](../glossary.md#term-proposal--proposal).
 
 **Why:** An agent that rewrites pages directly will eventually rewrite them wrongly, such as by fixing a [page](../glossary.md#term-page--page) to match a regression. Proposals that cite their evidence, reviewed by a person, keep the agent's speed without giving up a person's judgement ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-A proposal is an edit the living-docs agent drafts, and leaves for a person to apply or refuse. It changes a page's text or its anchors, or in [onboarding](../glossary.md#term-onboarding--onboarding) the [documentation spaces](../glossary.md#term-documentation-space--documentation-space)' declarations too. It cites what it rests on: the [change](../../core/glossary.md#term-change--change) that caused it and the anchors behind each statement it changes.
+A proposal is an edit the living-docs agent drafts, and leaves for a person to apply or refuse. It changes a page's text or its anchors, or in [onboarding](../glossary.md#term-onboarding--onboarding) the [documentation spaces](../glossary.md#term-documentation-space--documentation-space)' declarations too. It cites what it rests on. That is the [change](../../core/glossary.md#term-change--change) that caused it and the anchors behind each statement it changes, or in onboarding its [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan)'s evidence.
 
 **Attributes:**
 
 - its diff ([DEC-001 point 5](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#5-fixes-are-proposed-never-applied-blind))
-- its evidence: the change that caused it, and the anchors it rests on (DEC-001 point 5)
+- its evidence: the change that caused it and the anchors it rests on, or in onboarding its onboarding plan's evidence (DEC-001 points 5 and [8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation))
 - in a run nobody watches, the page's [answer](../../core/glossary.md#term-answer--answer) as fields, never in its diff (DEC-001 point 5)
 
 **Relations:**
 
-- It edits one page, or the pages and declarations of one step of an [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan) (DEC-001 points 5 and [8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+- It edits one page, or the pages and declarations of one step of an onboarding plan (DEC-001 points 5 and 8).
 - An approved onboarding plan leads to the proposals it names (DEC-001 point 8).
 
 **States:** A proposal is drafted, then a person accepts it, or refuses it. Nothing applies it before a person accepts it (DEC-001 point 5).
@@ -118,7 +118,7 @@ An onboarding plan says how a project's existing documents come into its [docume
 - which documentation space each existing document belongs to ([DEC-001 point 8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation))
 - how pages are split, merged or rewritten for their [readers](../glossary.md#term-reader--reader) (DEC-001 point 8)
 - which anchors each statement should carry (DEC-001 point 8)
-- which of the project's mappings from code to documents become [page](../glossary.md#term-page--page) anchors, where it keeps any (DEC-001 point 8)
+- which entries of the project's [code-to-doc mapping](../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping) become [page](../glossary.md#term-page--page) anchors, where it keeps one (DEC-001 point 8)
 
 **Relations:**
 
@@ -130,7 +130,7 @@ An onboarding plan says how a project's existing documents come into its [docume
 **Always true:**
 
 - It cites its evidence for each thing it proposes (DEC-001 point 8).
-- Retiring a mapping from code to documents is a separate [change](../../core/glossary.md#term-change--change), for whoever owns the mapping (DEC-001 point 8).
+- Retiring a code-to-doc mapping is a separate [change](../../core/glossary.md#term-change--change), for whoever owns the mapping (DEC-001 point 8).
 - Onboarding is complete when the [declared surface](../../core/glossary.md#term-declared-surface--declared-surface) is covered, and no page is left unanchored without an accepted reason (DEC-001 point 8).
 
 ## What is built on these concepts
