@@ -3,8 +3,10 @@ kind: none
 body: >
   DEC-026 is proposed: a printed HTML page file sets its pages one after
   another down the reader's sheets, and moves a page that does not fit whole
-  to the next sheet. A page taller than a sheet runs on. A deck's slide prints
-  inside its keyline, and the backdrop stays on screen. Each page prints on
-  the browser's ground in its own colours, and the file picks no mode for
-  print (#2824). The record designs ahead: no command, file, flag or format
+  to the next sheet. A page taller than a sheet runs on. It is to break
+  between a text's lines, never through one, and a record of its own decides
+  how; until then the browser picks where. Only a fixed page, such as a deck's
+  slide, prints inside its keyline, and the backdrop stays on screen. Each
+  page prints on the browser's ground in its own colours, and the file picks
+  no mode for print (#2824). The record designs ahead: no command, file, flag or format
   changes, so no surface moves.
