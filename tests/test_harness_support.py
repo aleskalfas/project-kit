@@ -252,6 +252,41 @@ def _project(tmp_path: Path, declarations: dict[str, str | None]) -> Path:
     return root
 
 
+@pytest.mark.parametrize(
+    ("answer", "achievable"),
+    [
+        ("grade: at-cost\n    cost: c\n    harness_versions: ['2.1.1', '2.1.2']", True),
+        ("grade: supported\n    harness_versions: unbounded", True),
+        ("grade: supported\n    harness_versions: []", False),
+        ("grade: not-achievable\n    harness_versions: unbounded", False),
+        (None, False),
+    ],
+)
+def test_an_answer_is_achievable_where_it_covers_a_version_and_is_not_not_achievable(
+    tmp_path: Path, answer: str | None, achievable: bool
+) -> None:
+    """What an adapter's declaration of tool access needs before it admits a withheld
+    entry (ADR-086 point 6)."""
+    answers = f"\n  outside:\n    {answer}\n    evidence: e\n" if answer else " {}\n"
+    root = _project(tmp_path, {"one": f"schema_version: 1\nrequirements:{answers}"})
+    assert harness_support.answers_achievable(root, "one", "outside") is achievable
+
+
+def test_an_adapter_with_no_support_declaration_answers_nothing_as_achievable(
+    tmp_path: Path,
+) -> None:
+    root = _project(tmp_path, {"one": None})
+    assert harness_support.answers_achievable(root, "one", "outside") is False
+
+
+def test_a_support_declaration_its_schema_refuses_cannot_answer_as_achievable(
+    tmp_path: Path,
+) -> None:
+    root = _project(tmp_path, {"one": "schema_version: 1\nrequirements:\n  outside: yes\n"})
+    with pytest.raises(harness_support.SupportError):
+        harness_support.answers_achievable(root, "one", "outside")
+
+
 def _run(root: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> Any:
     monkeypatch.chdir(root)
     return CliRunner().invoke(main, ["harness", "report", *args])

@@ -1,4 +1,4 @@
-"""The reader of an agent's tool access, the Claude Code adapter's terms for it, and the
+"""The reader of an agent's tool access, an adapter's declaration of it, and the
 command's loader of the reader (COR-013 point 7, ADR-085, ADR-086).
 
 - the reader reads the two keys from the front matter's text: a list on one line or one
@@ -7,31 +7,39 @@ command's loader of the reader (COR-013 point 7, ADR-085, ADR-086).
   cannot read as a key and a key written twice;
 - its two readings: a check that an agent holds a tool, and one that it lacks a tool,
   which only a grant answers;
-- the adapter refuses a withheld name it does not know, a withheld entry Claude Code was
-  not measured to withhold, a name in a form Claude Code does not take, and Claude Code's
-  own key beside `withheld`;
+- it reads an adapter's declaration of tool access, and refuses one whose version, keys or
+  values it does not read; the Claude Code adapter's agrees with its schema;
+- by the Claude Code adapter's declaration it refuses a withheld name the adapter does not
+  know, a withheld entry Claude Code was not measured to withhold, a name in a form Claude
+  Code does not take, and Claude Code's own key beside `withheld`;
 - the command loads the reader from the tree, names which side is behind where it cannot,
-  and writes no bytecode;
-- the reader and the adapter's module run under the system's Python 3.9, standard library
-  only.
+  and writes no bytecode, and it names each registered adapter that deploys agents;
+- the reader runs under the system's Python 3.9, standard library only.
 """
 
 from __future__ import annotations
 
 import ast
+import copy
 import importlib.util
+import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
+import jsonschema
 import pytest
 
 from project_kit import agent_tool_access
 
 REPO = Path(__file__).resolve().parents[1]
 READER = REPO / ".pkit" / "agents" / "tool_access.py"
-HARNESS_TOOLS = REPO / ".pkit" / "adapters" / "claude-code" / "_harness_tools.py"
+CLAUDE_CODE = REPO / ".pkit" / "adapters" / "claude-code"
+SCHEMA = REPO / ".pkit" / "schemas" / "tool-access.schema.json"
+EMPTIEST = REPO / ".pkit" / "schemas" / "tool-access.yaml"
 
 
 def _load(path: Path, name: str) -> ModuleType:
@@ -48,8 +56,11 @@ def reader() -> ModuleType:
 
 
 @pytest.fixture(scope="module")
-def harness() -> ModuleType:
-    return _load(HARNESS_TOOLS, "harness_tools_under_test")
+def harness(reader: ModuleType) -> Any:
+    """The Claude Code adapter's declaration of tool access, as the reader reads it."""
+    declaration = reader.read_declaration(CLAUDE_CODE)
+    assert declaration is not None
+    return declaration
 
 
 def _definition(front_matter: str) -> str:
@@ -200,12 +211,12 @@ def test_holding_and_lacking_a_tool(
     assert reader.lacks(access, tool) is lacks
 
 
-# --- the adapter's terms (ADR-086 point 4) ------------------------------------------------------
+# --- the Claude Code adapter's declaration (ADR-086 point 4) ------------------------------------
 
 
-def _refusal(reader: ModuleType, harness: ModuleType, front_matter: str) -> str | None:
+def _refusal(reader: ModuleType, harness: Any, front_matter: str) -> str | None:
     access = reader.tool_access(_definition(front_matter))
-    return harness.refusal(access, ["name", "description", *_keys(front_matter)])
+    return reader.harness_refusal(access, ["name", "description", *_keys(front_matter)], harness)
 
 
 def _keys(front_matter: str) -> list[str]:
@@ -224,7 +235,7 @@ def _keys(front_matter: str) -> list[str]:
     ],
 )
 def test_what_claude_code_can_enforce_and_translate_is_admitted(
-    reader: ModuleType, harness: ModuleType, front_matter: str
+    reader: ModuleType, harness: Any, front_matter: str
 ) -> None:
     assert _refusal(reader, harness, front_matter) is None
 
@@ -235,9 +246,13 @@ def test_what_claude_code_can_enforce_and_translate_is_admitted(
         ("withheld: [Wrokflow]\n", "`withheld` names `Wrokflow`, which this adapter does not know"),
         ("withheld: [read]\n", "`withheld` names `read`, which this adapter does not know"),
         ("withheld: [mcp__github]\n", "does not know as one of Claude Code's built-in tools"),
-        ("withheld: ['Bash(rm:*)']\n", "measured to withhold only a whole built-in tool"),
+        (
+            "withheld: ['Bash(rm:*)']\n",
+            "measured to withhold only a whole built-in tool, named without an argument: "
+            "withhold `Bash` whole",
+        ),
         ("tools: [read-file]\n", "a name in a form Claude Code does not take"),
-        ("tools: ['mcp__github(x)']\n", "takes no argument after an MCP tool's name"),
+        ("tools: ['mcp__github(x)']\n", "takes no argument after an MCP server's or tool's name"),
         (
             "withheld: [Workflow]\ndisallowedTools: [Monitor]\n",
             "holds Claude Code's own key `disallowedTools` beside `withheld`",
@@ -245,21 +260,19 @@ def test_what_claude_code_can_enforce_and_translate_is_admitted(
     ],
 )
 def test_what_claude_code_cannot_enforce_or_translate_is_refused(
-    reader: ModuleType, harness: ModuleType, front_matter: str, cause: str
+    reader: ModuleType, harness: Any, front_matter: str, cause: str
 ) -> None:
     refusal = _refusal(reader, harness, front_matter)
     assert refusal is not None
     assert cause in refusal
 
 
-def test_each_form_is_written_under_claude_codes_key(
-    reader: ModuleType, harness: ModuleType
-) -> None:
-    assert harness.HARNESS_KEYS == {reader.GRANT: "tools", reader.WITHHOLD: "disallowedTools"}
-    assert set(harness.HARNESS_KEYS) == set(reader.KEYS)
+def test_each_form_is_written_under_claude_codes_key(reader: ModuleType, harness: Any) -> None:
+    assert harness.keys == {reader.GRANT: "tools", reader.WITHHOLD: "disallowedTools"}
+    assert set(harness.keys) == set(reader.KEYS)
 
 
-def test_every_tool_withheld_by_a_shipped_definition_is_known(harness: ModuleType) -> None:
+def test_every_tool_withheld_by_a_shipped_definition_is_known(harness: Any) -> None:
     """No definition the methodology ships is refused by the deploy for a withheld name."""
     reader = _load(READER, "tool_access_for_shipped")
     for path in sorted((REPO / ".pkit").rglob("agents/**/*.md")):
@@ -270,7 +283,164 @@ def test_every_tool_withheld_by_a_shipped_definition_is_known(harness: ModuleTyp
             access = reader.tool_access(text)
         except reader.Refused:
             continue
-        assert harness.refusal(access, []) is None, path
+        assert reader.harness_refusal(access, [], harness) is None, path
+
+
+# --- reading a declaration (ADR-086 point 4) ---------------------------------------------------
+
+
+def _claude_codes() -> dict[str, Any]:
+    return json.loads((CLAUDE_CODE / "tool-access.json").read_text(encoding="utf-8"))
+
+
+def _declared(root: Path, document: object) -> Path:
+    """An adapter folder under *root* whose declaration is *document*, written as JSON."""
+    folder = root / "adapter"
+    folder.mkdir(exist_ok=True)
+    (folder / "tool-access.json").write_text(json.dumps(document), encoding="utf-8")
+    return folder
+
+
+def _with(change: dict[str, Any]) -> dict[str, Any]:
+    document = copy.deepcopy(_claude_codes())
+    document.update(change)
+    return document
+
+
+def test_an_adapter_with_no_declaration_declares_none(reader: ModuleType, tmp_path: Path) -> None:
+    assert reader.read_declaration(tmp_path) is None
+    assert reader.declaration_path(tmp_path) == tmp_path / "tool-access.json"
+
+
+@pytest.mark.parametrize(
+    ("document", "cause"),
+    [
+        (_with({"schema_version": 2}), "its schema version is 2, and this reader reads version 1"),
+        (_with({"schema_version": True}), "its schema version is true"),
+        (_with({"aliases": {}, "groups": []}), "keys this reader does not know: aliases, groups"),
+        ({"schema_version": 1, "harness": "H"}, "it lacks keys, name_forms, known_tools"),
+        (_with({"harness": " "}), "its `harness` is not a harness's name"),
+        (_with({"keys": {"tools": "tools"}}), "its `keys` gives no key for withheld"),
+        (_with({"keys": {"tools": "a", "withheld": "a", "x": "b"}}), "names forms the reader"),
+        (_with({"keys": {"tools": "a b", "withheld": "c"}}), "which is not a key a front matter"),
+        (_with({"keys": {"tools": "a", "withheld": "a"}}), "gives one key for both forms"),
+        (_with({"known_tools": ["Read", "Read"]}), "names Read twice"),
+        (_with({"known_tools": ["Read file"]}), "which is not a tool's name the reader reads"),
+        (_with({"name_forms": {}}), "its `name_forms` is not a list"),
+        (_with({"name_forms": ["[A-Z]+"]}), "which is not an object"),
+        (
+            _with({"name_forms": [{"pattern": "(", "argument": True, "description": "d"}]}),
+            "which is not a regular expression",
+        ),
+        (
+            _with({"name_forms": [{"pattern": "a", "argument": "yes", "description": "d"}]}),
+            "an `argument` that is not true or false",
+        ),
+        (_with({"withheld_admits": [{"pattern": "a"}]}), "a shape that lacks argument, descr"),
+        (
+            _with({"withheld_admits": [{"pattern": "a", "argument": False, "description": ""}]}),
+            "a shape with no description",
+        ),
+        ([], "it is not a JSON object"),
+    ],
+)
+def test_a_declaration_the_reader_does_not_read_is_refused(
+    reader: ModuleType, tmp_path: Path, document: object, cause: str
+) -> None:
+    with pytest.raises(reader.BadDeclaration) as refused:
+        reader.read_declaration(_declared(tmp_path, document))
+    assert cause in str(refused.value)
+
+
+@pytest.mark.parametrize(
+    ("text", "cause"),
+    [
+        ('{"schema_version": 1, "schema_version": 1}', "writes the key 'schema_version' twice"),
+        ("{not json", "it is not JSON"),
+    ],
+)
+def test_a_declaration_that_is_not_one_json_object_is_refused(
+    reader: ModuleType, tmp_path: Path, text: str, cause: str
+) -> None:
+    (tmp_path / "tool-access.json").write_text(text, encoding="utf-8")
+    with pytest.raises(reader.BadDeclaration, match=cause):
+        reader.read_declaration(tmp_path)
+
+
+def test_a_declaration_admitting_no_withheld_entry_refuses_every_withheld_tool(
+    reader: ModuleType, tmp_path: Path
+) -> None:
+    declaration = reader.read_declaration(_declared(tmp_path, _with({"withheld_admits": []})))
+    access = reader.tool_access(_definition("withheld: [Workflow]\n"))
+    refusal = reader.harness_refusal(access, [], declaration)
+    assert refusal is not None
+    assert "was not measured to withhold any tool, so its adapter admits no withheld entry" in (
+        refusal
+    )
+    empty = reader.tool_access(_definition("withheld: []\n"))
+    assert reader.harness_refusal(empty, [], declaration) is None
+
+
+def test_a_declaration_with_no_name_forms_refuses_every_granted_tool(
+    reader: ModuleType, tmp_path: Path
+) -> None:
+    declaration = reader.read_declaration(_declared(tmp_path, _with({"name_forms": []})))
+    access = reader.tool_access(_definition("tools: [Read]\n"))
+    refusal = reader.harness_refusal(access, [], declaration)
+    assert refusal is not None
+    assert "its adapter declares no form a name takes" in refusal
+
+
+def test_a_declarations_patterns_never_widen_the_readers_grammar(
+    reader: ModuleType, tmp_path: Path
+) -> None:
+    """A name outside the reader's grammar is refused before any declaration is read."""
+    reader.read_declaration(
+        _declared(
+            tmp_path,
+            _with({"name_forms": [{"pattern": ".*", "argument": True, "description": "any"}]}),
+        )
+    )
+    with pytest.raises(reader.Refused, match="which is not a tool's name"):
+        reader.tool_access(_definition("tools: [read file]\n"))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [CLAUDE_CODE / "tool-access.json", EMPTIEST],
+    ids=["claude-code", "the emptiest"],
+)
+def test_a_declaration_the_methodology_ships_agrees_with_its_schema_and_its_reader(
+    reader: ModuleType, tmp_path: Path, path: Path
+) -> None:
+    from ruamel.yaml import YAML
+
+    text = path.read_text(encoding="utf-8")
+    document = json.loads(text) if path.suffix == ".json" else YAML(typ="safe").load(text)
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator.check_schema(schema)
+    assert list(jsonschema.Draft202012Validator(schema).iter_errors(document)) == []
+    assert reader.read_declaration(_declared(tmp_path, document)) is not None
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"schema_version": 2},
+        {"aliases": {}},
+        {"keys": {"tools": "tools"}},
+        {"known_tools": ["Read", "Read"]},
+        {"name_forms": [{"pattern": "a", "argument": True}]},
+        {"withheld_admits": [{"pattern": "a", "argument": False, "description": ""}]},
+    ],
+)
+def test_the_schema_refuses_what_the_reader_refuses(
+    reader: ModuleType, tmp_path: Path, change: dict[str, Any]
+) -> None:
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    assert list(jsonschema.Draft202012Validator(schema).iter_errors(_with(change)))
+    with pytest.raises(reader.BadDeclaration):
+        reader.read_declaration(_declared(tmp_path, _with(change)))
 
 
 # --- the command's loader (ADR-086 points 1 and 5) ----------------------------------------------
@@ -329,13 +499,48 @@ def test_a_reader_that_cannot_load_is_unreachable(tmp_path: Path) -> None:
         agent_tool_access.load_reader(root, ("tool_access",))
 
 
+def _adapter(root: Path, name: str, *, deploy: bool = False, runner: bool = False) -> None:
+    folder = root / ".pkit" / "adapters" / name
+    folder.mkdir(parents=True)
+    if deploy:
+        (folder / "deploy-agents.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+    commands = "commands:\n  run-agent:\n    script: run-agent.py\n    help: Run.\n"
+    (folder / "package.yaml").write_text(
+        f"schema_version: 1\ncomponent:\n  kind: adapter\n  name: {name}\n  version: 0.1.0\n"
+        + (commands if runner else ""),
+        encoding="utf-8",
+    )
+    if runner:
+        (folder / "run-agent.py").write_text("", encoding="utf-8")
+
+
+def test_the_adapters_that_deploy_agents_are_the_registered_ones_with_a_deploy_or_a_runner(
+    tmp_path: Path,
+) -> None:
+    root = _tree(tmp_path)
+    _adapter(root, "deploys", deploy=True)
+    _adapter(root, "runs", runner=True)
+    _adapter(root, "neither")
+    _adapter(root, "unregistered", deploy=True)
+    names = ["runs", "neither", "deploys", "../outside"]
+    (root / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 2.1.0\ncomponents:\n"
+        + "".join(f"  - kind: adapter\n    name: {name}\n    manifest: m.yaml\n" for name in names),
+        encoding="utf-8",
+    )
+    assert agent_tool_access.agent_adapters(root) == ["runs", "deploys"]
+
+
+def test_the_shipped_adapter_deploys_agents() -> None:
+    assert agent_tool_access.agent_adapters(REPO) == ["claude-code"]
+
+
 # --- where they run ------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("path", [READER, HARNESS_TOOLS], ids=lambda path: path.name)
-def test_it_parses_as_python_3_9_and_imports_only_the_standard_library(path: Path) -> None:
-    """The agent runner loads both under the system's Python, with nothing installed."""
-    tree = ast.parse(path.read_text(encoding="utf-8"), feature_version=(3, 9))
+def test_it_parses_as_python_3_9_and_imports_only_the_standard_library() -> None:
+    """The agent runner loads the reader under the system's Python, with nothing installed."""
+    tree = ast.parse(READER.read_text(encoding="utf-8"), feature_version=(3, 9))
     imported = {
         alias.name.split(".")[0]
         for node in ast.walk(tree)
@@ -350,23 +555,34 @@ def test_it_parses_as_python_3_9_and_imports_only_the_standard_library(path: Pat
 
 
 def test_the_reader_loads_from_its_file_under_the_system_python(tmp_path: Path) -> None:
-    """Loaded by path and not registered among the modules, as the runner loads it."""
+    """Loaded by path and not registered among the modules, as the runner loads it, and
+    reading the adapter's declaration there too."""
     python = Path("/usr/bin/python3")
     if not python.exists():
         pytest.skip("no system Python")
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    shutil.copy2(CLAUDE_CODE / "tool-access.json", adapter / "tool-access.json")
     script = (
         "import importlib.util, sys\n"
         "spec = importlib.util.spec_from_file_location('r', sys.argv[1])\n"
         "module = importlib.util.module_from_spec(spec)\n"
         "spec.loader.exec_module(module)\n"
-        "access = module.tool_access('---\\nwithheld: [Workflow]\\n---\\n')\n"
+        "access = module.tool_access('---\\nwithheld: [Workflow, Wrokflow]\\n---\\n')\n"
+        "declaration = module.read_declaration(sys.argv[2])\n"
         "print(access.form, [str(entry) for entry in access.entries])\n"
+        "print(declaration.keys[access.form])\n"
+        "print(module.harness_refusal(access, [], declaration).split(',')[0])\n"
     )
     done = subprocess.run(
-        [str(python), "-B", "-I", "-c", script, str(READER)],
+        [str(python), "-B", "-I", "-c", script, str(READER), str(adapter)],
         capture_output=True,
         text=True,
         check=True,
         cwd=tmp_path,
     )
-    assert done.stdout.strip() == "withheld ['Workflow']"
+    assert done.stdout.splitlines() == [
+        "withheld ['Workflow', 'Wrokflow']",
+        "disallowedTools",
+        "`withheld` names `Wrokflow`",
+    ]

@@ -13,8 +13,12 @@ queries:
 - Agent policy: every `model:` / `effort:` an agent's front matter declares,
   or the overlay sets for one, is a value the harness accepts (#1047).
 - Tool access: every agent's tool access is one the tree's reader,
-  `.pkit/agents/tool_access.py`, reads, and a reader the command cannot reach is
-  reported; a key outside an agent definition's fields is warned of (ADR-086).
+  `.pkit/agents/tool_access.py`, reads, and one every registered adapter that
+  deploys agents takes, by that adapter's declaration of tool access; such an
+  adapter with no readable declaration, or admitting a withheld entry its support
+  declaration does not answer as achievable, is reported, and so is a reader the
+  command cannot reach; a key outside an agent definition's fields is warned of
+  (ADR-086).
 - Pattern form: every `reads.patterns` entry of an agent is a `<category>`
   placeholder the deploy resolves, or a path; a bare category name is reported
   (#2481).
@@ -72,6 +76,7 @@ from project_kit import (
     agent_tool_access,
     agents_overlay,
     connections,
+    harness_support,
     lifecycle_ownership,
     record_points,
     rule_sets,
@@ -82,6 +87,8 @@ from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from project_kit.document_parts import Body
 
 Kind = Literal["agent", "skill"]
@@ -217,9 +224,12 @@ OPERATIONAL_CITATION = "operational-rule-citation"
 # (#2468). The agent deploys as if it were absent, so a warning.
 UNKNOWN_OVERRIDE = "unknown-override"
 
-# An agent's tool access the tree's reader refuses, or a reader the command cannot
-# reach where it has a definition to read (ADR-086 points 2 and 5): the deploy and
-# the runner refuse the agent, so an error.
+# An agent's tool access the tree's reader refuses, or an adapter that deploys
+# agents refuses; such an adapter with no declaration of tool access the reader
+# reads, or one admitting a withheld entry its support declaration does not answer
+# as achievable; or a reader the command cannot reach where it has a definition to
+# read (ADR-086 points 2, 5 and 6): the deploy and the runner refuse the agent, or
+# would, so an error.
 TOOL_ACCESS = "tool-access"
 
 # A key of an agent's definition that is none of a definition's fields
@@ -379,7 +389,9 @@ def outcome(target_root: Path) -> Outcome:
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
     provider answers, two providers at a hook's winning tier, an agent's tool access
-    the reader refuses or a reader the command cannot reach, a missing storyboard, a
+    the reader or an adapter that deploys agents refuses, such an adapter with no
+    readable declaration of tool access or one admitting a withheld entry it was not
+    measured to withhold, a reader the command cannot reach, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
     model or effort the harness does not accept, an agent's `reads.patterns`
     entry that is neither a placeholder nor a path — is an **error**. A citation of
@@ -2468,20 +2480,29 @@ def _tool_accesses(
     """Whether each agent holds a tool, by its file, as the tree's reader answers it.
 
     The reader, `.pkit/agents/tool_access.py`, reads each definition's tool access
-    from its text (ADR-086 point 2). Its findings come back beside: a definition it
-    refuses, and, where there is an agent to read, a reader the command cannot
-    reach, as one finding at the reader's path (point 5). An agent whose access
-    could not be read is left out of the answer, so no check reads it.
+    from its text (ADR-086 point 2), and makes an adapter's refusals against the
+    adapter's declaration of tool access (point 4). Its findings come back beside:
+    a definition it refuses, or that an adapter which deploys agents refuses, and
+    such an adapter's own findings (`_adapter_declarations`, point 6). Where there
+    is an agent to read and the command cannot reach the reader, they are one
+    finding at the reader's path (point 5). The adapters are read only where there
+    is an agent to read, since it is the reader that reads their declarations. An
+    agent whose access could not be read is left out of the answer, so no check
+    reads it.
     """
     agents = [art for art in artifacts if art.kind == "agent"]
     if not agents:
         return {}, []
+    adapters = agent_tool_access.agent_adapters(target_root)
+    functions = ("tool_access", "holds", "Refused")
+    if adapters:
+        functions += ("read_declaration", "declaration_path", "harness_refusal", "BadDeclaration")
     try:
-        reader = agent_tool_access.load_reader(target_root, ("tool_access", "holds", "Refused"))
+        reader = agent_tool_access.load_reader(target_root, functions)
     except agent_tool_access.Unreachable as exc:
         return {}, [Issue(location=agent_tool_access.READER.as_posix(), diagnosis=f"{exc}.")]
+    declarations, issues = _adapter_declarations(reader, adapters, target_root)
     holds: dict[Path, Callable[[str], bool]] = {}
-    issues: list[Issue] = []
     for art in agents:
         try:
             access = reader.tool_access(art.path.read_text(encoding="utf-8"))
@@ -2495,7 +2516,86 @@ def _tool_accesses(
             )
             continue
         holds[art.path] = functools.partial(reader.holds, access)
+        for adapter, declaration in declarations:
+            problem = reader.harness_refusal(access, art.fields, declaration)
+            if problem is None:
+                continue
+            issues.append(
+                Issue(
+                    location=_location(art, target_root),
+                    diagnosis=f"the {adapter} adapter refuses its tool access, since "
+                    f"{declaration.harness} cannot enforce or translate it: {problem}. Its "
+                    "deploy and agent runner refuse the agent until it is mended (ADR-086 "
+                    "point 6).",
+                )
+            )
     return holds, issues
+
+
+def _adapter_declarations(
+    reader: ModuleType, adapters: list[str], target_root: Path
+) -> tuple[list[tuple[str, Any]], list[Issue]]:
+    """The declaration of tool access of each adapter in *adapters*, which deploy
+    agents, as the reader reads it, beside a finding for each such adapter that
+    declares none, whose declaration cannot be read, or that admits a withheld entry
+    while its support declaration does not answer a session's agent withheld tools
+    as achievable for some version (ADR-085 point 3, ADR-086 point 6)."""
+    declarations: list[tuple[str, Any]] = []
+    issues: list[Issue] = []
+    for adapter in adapters:
+        folder = target_root / ".pkit" / "adapters" / adapter
+        location = Path(reader.declaration_path(folder)).relative_to(target_root).as_posix()
+        try:
+            declaration = reader.read_declaration(folder)
+        except reader.BadDeclaration as exc:
+            issues.append(
+                Issue(
+                    location=location,
+                    diagnosis=f"the {adapter} adapter deploys agents, and its declaration of tool "
+                    f"access cannot be read: {exc}. So no agent is checked against what its "
+                    "deploy and agent runner refuse (ADR-086 point 6).",
+                )
+            )
+            continue
+        if declaration is None:
+            issues.append(
+                Issue(
+                    location=location,
+                    diagnosis=f"the {adapter} adapter deploys agents and declares no tool access, "
+                    "so no agent is checked against what its deploy and agent runner refuse "
+                    "(ADR-086 point 6). An adapter the methodology ships gets its declaration "
+                    "from `pkit sync`. An adapter of the project's own declares its harness's "
+                    'terms here (the adapters README, "What an adapter declares as data").',
+                )
+            )
+            continue
+        declarations.append((adapter, declaration))
+        if declaration.withheld_admits:
+            unmeasured = _unmeasured_admission(target_root, adapter)
+            if unmeasured is not None:
+                issues.append(Issue(location=f"{location}/withheld_admits", diagnosis=unmeasured))
+    return declarations, issues
+
+
+def _unmeasured_admission(target_root: Path, adapter: str) -> str | None:
+    """Why *adapter* may not admit a withheld entry: its support declaration does not
+    answer a session's agent withheld tools as achievable for some version, or
+    cannot be read. None where it answers it so."""
+    requirement = agent_tool_access.SESSION_AGENT_WITHHELD
+    try:
+        if harness_support.answers_achievable(target_root, adapter, requirement):
+            return None
+        why = (
+            f"its support declaration does not answer `{requirement}` as achievable for any version"
+        )
+    except harness_support.SupportError as exc:
+        why = f"its support declaration cannot be read ({exc})"
+    return (
+        f"the {adapter} adapter's declaration of tool access admits a withheld entry, while "
+        f"{why}. A withheld entry its harness was not measured to withhold fails open "
+        "(ADR-085 point 3, ADR-086 point 6): admit none, or answer the requirement from a "
+        "measurement."
+    )
 
 
 def _validate_definition_fields(artifacts: list[Artifact], target_root: Path) -> list[Issue]:

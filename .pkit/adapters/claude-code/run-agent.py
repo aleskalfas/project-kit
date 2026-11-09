@@ -241,12 +241,11 @@ TEMP_VARIABLES = ("TMPDIR", "CLAUDE_CODE_TMPDIR")
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 
 #: Where the backbone runs this runner from: the working copy's adapter folder
-#: (ADR-066 point 3). The deploy's resolver lies beside it, and so do the
-#: adapter's terms for an agent's tool access (ADR-086 point 4).
+#: (ADR-066 point 3). The deploy's resolver lies beside it, and so does the
+#: adapter's declaration of tool access, which the reader reads (ADR-086 point 4).
 ADAPTER_FOLDER = Path(__file__).resolve().parent
 ADAPTER_PATH = (".pkit", "adapters", "claude-code")
 RESOLVER = "_resolve_agent.py"
-HARNESS_TOOLS = "_harness_tools.py"
 
 #: The flag that has the resolver keep the methodology's keys of tool access,
 #: `tools` and `withheld`, which the runner reads and then writes in Claude
@@ -256,7 +255,13 @@ METHODOLOGY_KEYS_FLAG = "--methodology-keys"
 #: The agents area's reader of an agent's tool access, in the working copy
 #: (ADR-086 point 1), and the functions the runner calls in it.
 READER_PATH = (".pkit", "agents", "tool_access.py")
-READER_FUNCTIONS = ("tool_access",)
+READER_FUNCTIONS = (
+    "tool_access",
+    "read_declaration",
+    "declaration_path",
+    "harness_refusal",
+    "BadDeclaration",
+)
 
 #: The longest the runner waits for the harness's version, and for the
 #: deploy's resolution of the agent. Both count against the run's limit.
@@ -1127,16 +1132,16 @@ def load_module(path: Path, name: str) -> ModuleType:
     return module
 
 
-def harness_tools() -> ModuleType:
-    """The adapter's terms for an agent's tool access, beside this runner."""
-    return load_module(ADAPTER_FOLDER / HARNESS_TOOLS, "claude_code_harness_tools")
-
-
-def tool_access(working_copy: Path, text: str, fields: dict[str, list[str]]) -> Any:
+def tool_access(
+    working_copy: Path, text: str, fields: dict[str, list[str]]
+) -> tuple[str, list[str]] | None:
     """The tool access of the resolved definition *text*, as the working copy's
-    reader answers it (ADR-086). Refuses where the working copy has no reader
-    with the functions the runner calls, where the reader refuses the
-    definition, or where Claude Code cannot enforce or translate its access."""
+    reader answers it (ADR-086): Claude Code's key for its form, and its
+    entries, each whole; None where it names neither form. Refuses where the
+    working copy has no reader with the functions the runner calls, where the
+    adapter's declaration of tool access cannot be read, where the reader
+    refuses the definition, or where Claude Code cannot enforce or translate its
+    access, by that declaration."""
     reader = load_module(working_copy.joinpath(*READER_PATH), "pkit_agents_tool_access")
     missing = [name for name in READER_FUNCTIONS if not callable(getattr(reader, name, None))]
     if missing:
@@ -1145,16 +1150,31 @@ def tool_access(working_copy: Path, text: str, fields: dict[str, list[str]]) -> 
             "Run `pkit sync`, which copies it with this runner (ADR-086 point 5)"
         )
     try:
+        declaration = reader.read_declaration(ADAPTER_FOLDER)
+    except reader.BadDeclaration as exc:
+        raise Refused(
+            "the adapter's declaration of tool access cannot be read: "
+            f"{exc}. Run `pkit sync`, which copies it with this runner"
+        ) from None
+    if declaration is None:
+        raise Refused(
+            "the adapter declares no tool access: "
+            f"{reader.declaration_path(ADAPTER_FOLDER)} is not there. Run `pkit sync`, which "
+            "copies it with this runner"
+        )
+    try:
         access = reader.tool_access(text)
     except reader.Refused as exc:
         raise Refused(f"the agent's tool access is refused: {exc}") from None
-    problem = harness_tools().refusal(access, list(fields))
+    problem = reader.harness_refusal(access, list(fields), declaration)
     if problem is not None:
         raise Refused(
-            "the agent's tool access is refused, since Claude Code cannot enforce or translate "
-            f"it: {problem}"
+            f"the agent's tool access is refused, since {declaration.harness} cannot enforce or "
+            f"translate it: {problem}"
         )
-    return access
+    if access.form is None:
+        return None
+    return declaration.keys[access.form], [str(entry) for entry in access.entries]
 
 
 def resolve_definition(
@@ -1251,10 +1271,9 @@ def checked_definition(
         raise Refused("the agent's definition has no instructions")
     definition: dict[str, Any] = {"description": description, "prompt": prompt}
     access = tool_access(working_copy, text, fields)
-    if access.form is not None:
-        definition[harness_tools().HARNESS_KEYS[access.form]] = [
-            str(entry) for entry in access.entries
-        ]
+    if access is not None:
+        key, entries = access
+        definition[key] = entries
     model = scalar(fields["model"], "model").strip() if "model" in fields else ""
     if model:
         definition["model"] = model

@@ -49,10 +49,13 @@ key for a definition that names neither (ADR-085 point 1). Given
 `--methodology-keys`, as the agent runner gives it, it keeps the methodology's
 keys, `tools` and `withheld`, and the runner writes Claude Code's (ADR-086
 point 4). A definition the reader refuses, or whose access Claude Code cannot
-enforce or translate (`_harness_tools.py`), is refused before anything else,
-with exit status 3 (`TOOL_ACCESS_REFUSED`): the deploy then removes the copy it
-deployed before, since that copy may give tools the definition no longer gives
-(COR-013 point 7).
+enforce or translate, by the adapter's declaration of tool access
+(`tool-access.json`, which the reader applies), is refused before anything
+else, with exit status 3 (`TOOL_ACCESS_REFUSED`): the deploy then removes the
+copy it deployed before, since that copy may give tools the definition no
+longer gives (COR-013 point 7). Where the reader or the declaration cannot be
+read, the agent is not resolved, with exit status 1, and its earlier copy
+stays.
 
 The sync-managed check above is one this script *applies* but does not
 *define*. The sync-managed predicate and the write-carrying category registry live
@@ -84,9 +87,9 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 TARGET_ROOT = Path(__file__).resolve().parents[3]
 
 # The agents area's reader of an agent's tool access (ADR-086 point 1), and this
-# adapter's terms for it, beside this script (point 4).
+# adapter's folder, which holds its declaration of tool access (point 4).
 TOOL_ACCESS_READER = TARGET_ROOT / ".pkit" / "agents" / "tool_access.py"
-HARNESS_TOOLS = Path(__file__).resolve().parent / "_harness_tools.py"
+ADAPTER_FOLDER = Path(__file__).resolve().parent
 
 # The flag the agent runner passes: keep the methodology's keys of tool access.
 METHODOLOGY_KEYS_FLAG = "--methodology-keys"
@@ -358,13 +361,30 @@ def main(argv: list[str]) -> int:
     # else it gets wrong, and the deploy removes its earlier copy (ADR-086 point 3).
     try:
         reader = load_module(TOOL_ACCESS_READER, "pkit_agents_tool_access")
-        harness_tools = load_module(HARNESS_TOOLS, "claude_code_harness_tools")
         read_tool_access = reader.tool_access
+        read_declaration = reader.read_declaration
+        declaration_path = reader.declaration_path
+        bad_declaration = reader.BadDeclaration
+        harness_refusal = reader.harness_refusal
     except Exception as exc:
         print(
             f"{agent_name}: cannot read the agent's tool access: no reader at "
             f".pkit/agents/tool_access.py, or none this resolver can call ({exc}).\n"
             "Fix: run `pkit sync`, which copies the reader and this resolver together.",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        declaration = read_declaration(ADAPTER_FOLDER)
+    except bad_declaration as exc:
+        declaration, cause = None, f"cannot be read: {exc}"
+    else:
+        cause = "is not there"
+    if declaration is None:
+        print(
+            f"{agent_name}: cannot check the agent's tool access: the adapter's declaration of "
+            f"tool access, {declaration_path(ADAPTER_FOLDER).relative_to(TARGET_ROOT)}, "
+            f"{cause}.\nFix: run `pkit sync`, which copies it with this resolver.",
             file=sys.stderr,
         )
         return 1
@@ -376,11 +396,11 @@ def main(argv: list[str]) -> int:
 
     fm_data = yaml.load(io.StringIO(fm_yaml)) or {}
 
-    problem = harness_tools.refusal(access, list(fm_data))
+    problem = harness_refusal(access, list(fm_data), declaration)
     if problem is not None:
         print(
-            f"{agent_name}: its tool access is refused, since Claude Code cannot enforce or "
-            f"translate it: {problem}",
+            f"{agent_name}: its tool access is refused, since {declaration.harness} cannot "
+            f"enforce or translate it: {problem}",
             file=sys.stderr,
         )
         return TOOL_ACCESS_REFUSED
@@ -510,7 +530,7 @@ def main(argv: list[str]) -> int:
                 fm_data["reads"][k] = expand_list(fm_data["reads"][k], optional=True)
 
     carry_policy(fm_data, policy_overrides, f"overrides.{agent_name}", warn)
-    keys = {key: key for key in reader.KEYS} if methodology_keys else harness_tools.HARNESS_KEYS
+    keys = {key: key for key in reader.KEYS} if methodology_keys else declaration.keys
     write_tool_access(fm_data, access, keys, reader.KEYS)
     body = rebase_sibling_storyboards(fm_data, body, Path(source_file))
     body = end_with_workspace_note(body)

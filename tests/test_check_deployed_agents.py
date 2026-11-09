@@ -60,7 +60,7 @@ def repo(tmp_path: Path) -> Path:
     """A git repository whose index holds one agent's source and its deployed copy."""
     adapter = tmp_path / ".pkit" / "adapters" / "claude-code"
     adapter.mkdir(parents=True)
-    for script in ("deploy-agents.sh", "_resolve_agent.py", "_harness_tools.py"):
+    for script in ("deploy-agents.sh", "_resolve_agent.py", "tool-access.json"):
         shutil.copy2(ADAPTER / script, adapter / script)
     (tmp_path / ".pkit" / "lifecycle").mkdir()
     shutil.copy2(OWNERSHIP, tmp_path / ".pkit" / "lifecycle" / "ownership.py")

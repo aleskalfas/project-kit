@@ -240,10 +240,8 @@ src = ["src", "tests"]
 ".pkit/adapters/claude-code/permission-hook.py" = "py39"
 ".pkit/permissions/*.py" = "py39"
 # The agent runner runs under the same bare `python3` (ADR-066 point 1), and so
-# do the reader of an agent's tool access and the adapter's terms for it, which
-# the runner loads (ADR-086).
+# does the reader of an agent's tool access, which the runner loads (ADR-086).
 ".pkit/adapters/claude-code/run-agent.py" = "py39"
-".pkit/adapters/claude-code/_harness_tools.py" = "py39"
 ".pkit/agents/tool_access.py" = "py39"
 
 [tool.ruff.lint]

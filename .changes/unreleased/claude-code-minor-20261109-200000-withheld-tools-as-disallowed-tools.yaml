@@ -7,11 +7,14 @@ body: >
   The deploy and the agent runner write an agent's tool access as the agents
   area's reader answers it: a grant as `tools`, a withheld list as
   `disallowedTools`, and no key for an agent that names neither (ADR-085,
-  ADR-086, #2951). The adapter refuses a withheld name it does not know as one
-  of Claude Code's built-in tools, a withheld entry with an argument or an MCP
-  server's tool, a tool's name in a form Claude Code does not take, and
-  `disallowedTools` beside `withheld`. The known names are `KNOWN_TOOLS` in
-  `_harness_tools.py`. A refused agent is not deployed, and the copy an earlier
+  ADR-086, #2951). The adapter declares Claude Code's terms for tool access as
+  data, in `tool-access.json`: its keys, the forms a tool's name takes, the
+  built-in tools it knows, and the withheld entries it admits. By that
+  declaration the reader refuses a withheld name the adapter does not know as
+  one of Claude Code's built-in tools, a withheld entry with an argument or an
+  MCP server's tool, a tool's name in a form Claude Code does not take, and
+  `disallowedTools` beside `withheld`, for the deploy, the runner and `pkit refs
+  validate` alike. A refused agent is not deployed, and the copy an earlier
   deploy wrote is removed, since it may give tools the definition no longer
   gives. A run of a refused agent is refused. The adapter answers
   `session-agent-withheld-tools` at a cost, for Claude Code 2.1.319, and leaves

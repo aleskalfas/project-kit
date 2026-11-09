@@ -17,7 +17,7 @@ import pytest
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
 RESOLVE_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
-HARNESS_TOOLS = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_harness_tools.py"
+TOOL_ACCESS_DECLARATION = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "tool-access.json"
 OWNERSHIP_MODULE = SOURCE_REPO / ".pkit" / "lifecycle" / "ownership.py"
 TOOL_ACCESS_READER = SOURCE_REPO / ".pkit" / "agents" / "tool_access.py"
 
@@ -33,7 +33,7 @@ def mock_kit(tmp_path: Path) -> Path:
 
     Includes the propagated `.pkit/lifecycle/ownership.py` the resolver imports
     for its write-authority check (ADR-051), and the agents area's reader of tool
-    access with the adapter's terms for it (ADR-086) — a synced adopter tree always
+    access with the adapter's declaration of it (ADR-086) — a synced adopter tree always
     has them, so staging them is what makes this fixture a faithful stand-in.
 
     Returns the project root (the directory containing `.pkit/`).
@@ -42,7 +42,7 @@ def mock_kit(tmp_path: Path) -> Path:
     adapter_dir.mkdir(parents=True)
     shutil.copy2(DEPLOY_SCRIPT, adapter_dir / "deploy-agents.sh")
     shutil.copy2(RESOLVE_SCRIPT, adapter_dir / "_resolve_agent.py")
-    shutil.copy2(HARNESS_TOOLS, adapter_dir / "_harness_tools.py")
+    shutil.copy2(TOOL_ACCESS_DECLARATION, adapter_dir / "tool-access.json")
     (adapter_dir / "deploy-agents.sh").chmod(0o755)
     (adapter_dir / "_resolve_agent.py").chmod(0o755)
 
@@ -1072,3 +1072,31 @@ def test_deploy_without_the_reader_skips_and_keeps_the_earlier_copy(mock_kit: Pa
     assert "pkit sync" in result.stdout
     assert "removed" not in result.stdout
     assert "description: Test." in deployed.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("declaration", "cause"),
+    [
+        (None, "tool-access.json, is not there"),
+        ('{"schema_version": 2}', "cannot be read: its schema version is 2"),
+    ],
+)
+def test_deploy_without_a_declaration_it_reads_skips_and_keeps_the_earlier_copy(
+    mock_kit: Path, declaration: str | None, cause: str
+) -> None:
+    """With no declaration of tool access it reads, the deploy cannot tell what Claude Code
+    can enforce, so the agent is skipped as any other skip is, and its earlier copy stays."""
+    deployed = _tooled(mock_kit, "withheld: [Workflow]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    path = mock_kit / ".pkit" / "adapters" / "claude-code" / "tool-access.json"
+    if declaration is None:
+        path.unlink()
+    else:
+        path.write_text(declaration, encoding="utf-8")
+    _tooled(mock_kit, "withheld: [Wrokflow]\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "cannot check the agent's tool access" in result.stdout
+    assert cause in result.stdout
+    assert "removed" not in result.stdout
+    assert "disallowedTools: [Workflow]" in deployed.read_text(encoding="utf-8")

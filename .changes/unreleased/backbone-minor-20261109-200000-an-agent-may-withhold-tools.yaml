@@ -9,7 +9,15 @@ body: >
   `.pkit/agents/tool_access.py`, reads a definition's tool access for the
   deploy, the agent runner and `pkit refs validate`, and sync copies it with the
   area. The validator reports as an error a definition whose tool access the
-  reader refuses, such as one naming both keys, and reads the storyboard check's
+  reader refuses, such as one naming both keys. It reads the declaration of
+  tool access of every registered adapter that deploys agents,
+  `tool-access.json` in the adapter's folder, shaped by
+  `.pkit/schemas/tool-access.schema.json` (ADR-086 points 4 and 6), and reports
+  a definition any of them refuses, such as one withholding a misspelt tool,
+  naming the adapter. It reports as an error such an adapter with no
+  declaration the reader reads, which an adapter a project wrote now owes, and
+  one admitting a withheld entry its support declaration does not answer as
+  achievable. It reads the storyboard check's
   `Read` through it, so a definition with no grant passes and one withholding
   `Read` fails. Where the project's tree holds no reader, it records an error
   that says whether to run `pkit sync` or upgrade `pkit`. It warns of each key in

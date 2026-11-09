@@ -13,6 +13,10 @@ it as an error finding (ADR-086 point 5). The message names which side is
 behind, read from the project's backbone version and the one this command
 bundles: a project at an older or the same version needs a sync, and one at a
 newer version needs this command upgraded.
+
+The validator also refuses what each adapter that deploys agents refuses, by
+that adapter's declaration of tool access, which the reader reads and applies
+(ADR-086 point 6). `agent_adapters` names those adapters.
 """
 
 from __future__ import annotations
@@ -25,6 +29,11 @@ from types import ModuleType
 
 #: Where the agents area puts the reader, relative to the project root.
 READER = Path(".pkit") / "agents" / "tool_access.py"
+
+#: The harness requirement an adapter's support declaration answers as achievable
+#: before its declaration of tool access admits a withheld entry (ADR-085 point 3,
+#: ADR-086 point 6).
+SESSION_AGENT_WITHHELD = "session-agent-withheld-tools"
 
 
 class Unreachable(Exception):
@@ -64,6 +73,31 @@ def load_reader(target_root: Path, functions: Sequence[str]) -> ModuleType:
             f"which this command calls; {behind(target_root)}"
         )
     return module
+
+
+def agent_adapters(target_root: Path) -> list[str]:
+    """Each adapter the backbone manifest registers that deploys agents, in its order
+    (ADR-086 point 6).
+
+    An adapter deploys agents where it ships a deploy of them, found by its name in
+    the adapter's folder as the lifecycle finds it, or registers an agent runner, as
+    the run command finds it. A registered name that is no plain name is never read
+    as a path.
+    """
+    from project_kit import agent_runs, harness_support
+    from project_kit.install import AGENT_DEPLOY_PRIMITIVE
+
+    runners, _ = agent_runs.find_runners(target_root)
+    with_runner = {runner.adapter for runner in runners}
+    found: list[str] = []
+    for name in harness_support.registered_adapters(target_root):
+        deploys = (
+            harness_support.is_adapter(target_root, name)
+            and (target_root / ".pkit" / "adapters" / name / AGENT_DEPLOY_PRIMITIVE).is_file()
+        )
+        if (deploys or name in with_runner) and name not in found:
+            found.append(name)
+    return found
 
 
 def behind(target_root: Path) -> str:

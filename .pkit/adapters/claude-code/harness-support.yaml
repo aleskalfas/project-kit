@@ -106,7 +106,8 @@ requirements:
       Measured only for a whole built-in tool, named without an argument, so
       a definition withholds only such tools: the adapter refuses to deploy
       or run one that withholds a tool it does not know as built in, a tool
-      narrowed by an argument, or an MCP server's tool (`_harness_tools.py`).
+      narrowed by an argument, or an MCP server's tool (its declaration of
+      tool access, `tool-access.json`).
     harness_versions: ["2.1.319", "2.1.319"]
     evidence: >-
       Measured with Claude Code 2.1.319 on macOS, from the init message a

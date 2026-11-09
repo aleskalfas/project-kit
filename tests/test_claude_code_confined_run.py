@@ -47,7 +47,7 @@ from project_kit import refs
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ADAPTER = REPO_ROOT / ".pkit" / "adapters" / "claude-code"
 RUNNER = ADAPTER / "run-agent.py"
-HARNESS_TOOLS = ADAPTER / "_harness_tools.py"
+DECLARATION = ADAPTER / "tool-access.json"
 READER = REPO_ROOT / ".pkit" / "agents" / "tool_access.py"
 PROBE = ADAPTER / "probe-confined-run.py"
 REFS = REPO_ROOT / "src" / "project_kit" / "refs.py"
@@ -140,11 +140,11 @@ def _script(path: Path, body: str) -> Path:
 
 
 def _copy_tool_access(root: Path) -> None:
-    """The agents area's reader of tool access, and the adapter's terms for it, into
-    the tree at *root*, as sync copies them."""
+    """The agents area's reader of tool access, and the adapter's declaration of it,
+    into the tree at *root*, as sync copies them."""
     adapter = root.joinpath(".pkit", "adapters", "claude-code")
     adapter.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(HARNESS_TOOLS, adapter / HARNESS_TOOLS.name)
+    shutil.copy2(DECLARATION, adapter / DECLARATION.name)
     (root / ".pkit" / "agents").mkdir(parents=True, exist_ok=True)
     shutil.copy2(READER, root / ".pkit" / "agents" / READER.name)
 
@@ -970,6 +970,29 @@ def test_a_working_copy_with_no_reader_refuses_the_run(runner: ModuleType, scene
     reason = _refusal(runner, scene)
     assert "tool_access.py is not there" in reason
     assert "pkit sync" in reason
+    assert not scene.started()
+
+
+def test_an_adapter_with_no_declaration_of_tool_access_refuses_the_run(
+    runner: ModuleType, scene: Scene
+) -> None:
+    (scene.adapter / DECLARATION.name).unlink()
+    scene.harness([INIT, RESULT])
+    reason = _refusal(runner, scene)
+    assert "the adapter declares no tool access" in reason
+    assert "pkit sync" in reason
+    assert not scene.started()
+
+
+def test_a_declaration_the_reader_cannot_read_refuses_the_run(
+    runner: ModuleType, scene: Scene
+) -> None:
+    (scene.adapter / DECLARATION.name).write_text('{"schema_version": 2}', encoding="utf-8")
+    scene.harness([INIT, RESULT])
+    reason = _refusal(runner, scene)
+    assert "the adapter's declaration of tool access cannot be read: its schema version is 2" in (
+        reason
+    )
     assert not scene.started()
 
 
