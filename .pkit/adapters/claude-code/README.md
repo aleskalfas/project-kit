@@ -16,10 +16,10 @@ pkit:
         - src/project_kit/permissions.py
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
-      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
+      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
-      source: [claude-code-hooks]
+      source: [claude-code-hooks, working-run-probe]
 ---
 
 # Claude Code adapter
@@ -328,6 +328,42 @@ The confined form holds what the harness can hold. This is what it cannot, state
 - **What an allowed command's options do.** A rule allows a command with any arguments after its words. No allowed form has an option that runs another program, as `git grep --open-files-in-pager` does, which is why the rules leave it out. An option that writes a file, such as `--output`, is held by the sandbox, which writes only the workspace.
 - **The review command's runs** take the unconfined form, and nothing checks them.
 
+#### The probe of a working run (ADR-073 point 11)
+
+The runner's working form, for the build command, is not built yet (#2290). Before it is, a probe checked the facts [ADR-073](../../../tech-docs/architecture/decisions/ADR-073-builder-runs.md) rests on, on 29 October. It ran Claude Code 2.1.303 by hand on Linux, with bubblewrap 0.12.0. Each run was `claude -p` with `--setting-sources ""`, the run's settings inline, `dontAsk`, `--permission-prompts none` and the sandbox on, failing closed. Its results are on #2289, and this section states only what they record.
+
+**Platforms.** A working run is supported on Linux with bubblewrap. macOS is not probed yet, so a working run there is unsupported: the working form is to refuse it (exit 7) until a probe on macOS widens that.
+
+**Confirmed on Linux:**
+
+| Fact | How |
+|---|---|
+| The hook's code and model read from outside the clone are the ones that judge | the hook, registered by a path outside the clone, refused `rm -v -r` as `destructive-fs`. A hook and a `decide.py` planted in the clone never ran |
+| The `Read` deny on the caller's clone reaches a program the builder runs | a program read the seat's clone and `~/.ssh` as absent |
+| No signing agent's socket is reachable, and a program the builder runs cannot sign | `SSH_AUTH_SOCK` was absent. A connect to a live agent's socket failed (`EPERM`), with or without a deny on its path. `ssh-keygen -Y sign` failed |
+| A host off the list is unreachable | listed hosts were reached through the sandbox's proxy; the rest, and a direct connection, were not |
+| The harness's memory is off | a planted `MEMORY.md` loaded with `autoMemoryEnabled: true`, and not with `false` |
+| Each event reaches the runner with its time, and the idle limit ends a run that sends none | events arrive line by line as they happen. Only `assistant` and `user` events carry a timestamp of their own, so the runner times each on arrival. A quiet 20-second tool call sent none, and the idle limit ended its run |
+| A detached run outlives the shell call that started it, and the limits still end it | it outlived the call and the session that started it, and the idle limit ended it |
+| Every process of a run's sandbox ends, and none is left | each sandboxed command runs in a process namespace of its own, and a daemon it started died with it. Once the limit ended the run, no process of it was left |
+| A resumed session takes the settings built again, and keeps the run's denies | a new allow and a new deny applied, and the first run's deny still held |
+| A sandbox that cannot start stops the harness at start | without `bwrap`, the harness refused to start, before any model call |
+
+Two facts are the runner's own logic, with nothing of the harness beneath them, so no probe can confirm them before the runner exists: the refusal of a host list where the adapter declares no host set, and `--hand-back`'s second check of the clone.
+
+**Not probed yet,** as #2289's results name them: the producer agent's build, wildcards in a host list, the ending of a check's processes, and the checks' sandbox with no harness. Nothing here confirms them.
+
+**Disproved, or narrower than recorded:**
+
+- **The credential scrub.** With `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which the runner sets for a confined run, Claude Code forces the mode to `default`, on Linux and on macOS. On Linux it also replaces the sandbox's writes with an isolation of its own. That leaves most of the machine writable, and writes empty stub files into the folder and its `.git/info/exclude`. Without the scrub the facts above hold, and a sign-in variable reaches every command the run starts. #2311 settles which runs set it.
+- **A sandbox that starts and cannot run.** Where `bwrap` is present but cannot mount, the harness starts, and every shell command fails. The probe met it running as root in a home folder another account owns.
+- **A detached run from a sandboxed shell** dies with the shell call, in that sandbox's process namespace. It outlives the call only from a shell outside the sandbox.
+
+**For the working form (#2290):**
+
+- The hook takes both its model's root and its anchor from `CLAUDE_PROJECT_DIR`. A working run needs the two apart: the model from outside the clone, the anchor the clone.
+- The hook judges `agent:<name>`, by the name the run passes to `--agent`.
+
 ### Live permission enforcement (`permission-hook.py`)
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../tech-docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.
@@ -417,6 +453,7 @@ The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harnes
 - **A delegated helper's full result reaches the agent that delegated to it** (`delegated-result-complete`): `at-cost`, for every version. It holds while Claude Code's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper becomes a teammate, and its result arrives cut at 4064 characters. The methodology dispatches its helpers without a name (project-management DEC-029).
 - **Every session holds every layer's loaded rules from its start to its end** (`session-loads-rules`): `at-cost`, for no version yet. Core's loaded file and every capability's reach a session by one route, `CLAUDE.md` and its imports, so they load in a session a person starts at the project's root, in a subagent dispatched from one with a definition of the project's, and again after compaction. By the harness's own behaviour no layer's rules load, core's included, in the built-in Explore and Plan agents or a definition that sets `omitClaudeMd`, in a run with `--bare` or `--safe-mode`, for a file `claudeMdExcludes` or `managed-only` drops, or in a session started below the project's root whose person declined the external imports. Whether a session in a worktree under `.claude/worktrees/` also loads the main checkout's files is unobserved. So keep `CLAUDE.md` and the index out of `claudeMdExcludes`, dispatch the methodology's work to definitions that do not set `omitClaudeMd`, and approve the external imports where sessions start below the root. The range stays empty until a session is observed holding an imported capability file. Apart from that cost, the runner's own gap: a confined run passes `--setting-sources ""`, and a builder's working run loads no settings file either, so neither holds any layer's rules, core's included; #2352 takes it up <!-- unanchored: names the issue that takes the runner's gap up, a pointer and no statement of the system -->.
 - **A process can start an agent unattended, confined for that one run** (`unattended-confined-run`): `at-cost`, for no version yet. The runner's confined form needs the platform's sandbox, which Claude Code runs on macOS, and on Linux with bubblewrap. On macOS an allowed command that starts `uv` runs outside it ("What stays open" above). The bound is the runner's tested range, `TESTED_RANGE`, empty until the probe passes ("The probe" above). Whoever widens the range widens the bound with it.
+- **A process can start an agent unattended that edits and builds in a folder the process names** (`unattended-working-run`): `at-cost`, for 2.1.303, the version the probe ran on. It holds on Linux with bubblewrap, and only where the run leaves the scrub of sign-in variables off, so a sign-in variable reaches every command the run starts. macOS is not probed ("The probe of a working run" above).
 
 ### `permission-enforcement.yaml`
 
