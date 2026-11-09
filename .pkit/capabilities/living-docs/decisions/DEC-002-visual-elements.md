@@ -45,7 +45,7 @@ So a change of theme changes no content, and flags no page. One theme file that 
 A diagram is written as Mermaid text in a fenced block of the page, whose info string opens with `mermaid`. It carries no styling (point 1).
 - **Drawn with no setup.** A repository host such as GitHub draws the fence, and a site draws it in the project's theme. Where nothing draws it, it reads as text.
 - **Its syntax is not validated.** A check would need a Mermaid parser installed, and no parser the capability could pin draws as each host draws. A project may run such a check in its own continuous integration.
-- **Another diagram language** is used only where the project renders it to an image, which the page shows as an image (point 5). How the methodology configures a renderer, and checks that an image is fresh, is decided with the first page that needs such a language.
+- **Another diagram language** is used only where the project renders it to an image, which the page shows as an image (point 5). What renders such an image answers for whether it is fresh, and this capability reads no image. A shared way to configure renderers waits for a project that runs two (COR-007).
 - **Text laid out as a picture,** such as a folder tree in a code block, is a code block, not a diagram.
 
 ### 3. Each fact has one home, and a diagram is never it
@@ -156,6 +156,8 @@ Until a major accepts them, they bind nothing, and the rule on one home binds as
 **Why this refines DEC-001 rather than overturning it.** DEC-001 weighed other homes as an alternative, for a page that needs them. This record takes that alternative, and keeps every home DEC-001 gives.
 
 **Why a produced image or recording is never anchored.** The anchor on what produced it already carries every change that matters. A render or a capture may write new bytes with nothing changed in what it shows. An anchor on it would then flag the page for nothing, and people would learn to answer blindly, which COR-050 point 7 warns of.
+
+**Why what renders an image answers for its freshness.** Only what wrote a file knows what it was made from. A check here would have to read each producer's record, and a project's own build keeps none it could read. The page's anchor already carries a change of the source.
 
 **Why console output lives in a fence that a runner checks.** The page shows what the reader types and sees, and the same fence is the test. Running it is testing the product, which DEC-001 keeps out of this capability.
 
