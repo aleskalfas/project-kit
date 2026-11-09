@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit capabilities install` asks about each skill and agent the capability
+  ships in the folder form, `<name>/<name>.md`, whose name an installed one
+  already uses, as it asks about one in the flat form (#2470). It also reads
+  the folder-form skills and agents of the capabilities already installed. So
+  a project skill of the name of a folder-form skill a capability ships, such
+  as `pm`, no longer replaces the capability's in the harness with no
+  question. `pkit capabilities register`, which refuses a collision, finds one
+  in either form too.

@@ -40,13 +40,13 @@ The rationale for invisible-not-visible is captured in the source scratchpad's Q
 
 ### Procedure carrier: new sub-procedure in the existing pm composite skill
 
-The autonomous flow's steps live in **`batch-plan.md`**, a new sub-procedure of the pm composite skill, sibling to today's `create-issue.md` / `validate-body.md` / `transition-state.md`. The agent body stays thin and dispatches to it when batch-planning is inferred. Each role a seat may hold has its procedure in the same composite skill, beside batch planning, and an agent of another definition that a seat names follows those procedures too (refinement per [project-management:DEC-059-topology-of-seats]).
+The autonomous flow's steps live in **`batch-plan.md`**, a new sub-procedure of the pm composite skill, sibling to today's `create-issue.md` / `validate-body.md` / `transition-state.md`. The agent body stays thin and dispatches to it when batch-planning is inferred. Each role a seat may hold has its procedure in the same composite skill, beside batch planning, and an agent of another definition that a seat names follows those procedures too (refinement per [project-management:DEC-059-topology-of-seats]). A worker's procedure builds each Task through the capability's build command, which starts a fresh builder agent, and acts on how each build ends. The agent never builds a seat's Task in its own session unless the person directs it (refinement per [project-management:DEC-063-task-builder]).
 
 The sub-procedure carries:
 
 1. **Read intent and reference material** — fuzzy intent + any handoff doc, scratchpad, or related issue the user supplies.
 2. **Walk the use cases** — while the use-case data point is not off: read the use cases; where they have entries, walk them against the intent before any slicing, so each planned Feature and Task that serves a use case names it; over an empty set, judge after slicing which planned work touches what users do (refinement per [project-management:DEC-054-use-case-validation]).
-3. **Propose slicing** — Umbrella / EPIC / Feature / Task hierarchy per [project-management:DEC-004-six-level-hierarchy], with workstream / milestone / priority / parent-ref classifications per [project-management:DEC-012-classification-axes]. Where the planned Tasks would share a choice that nothing settles yet, the slicing plans only the work's foundation first, and the slices once it is done (refinement per [project-management:DEC-060-foundation-before-slices]).
+3. **Propose slicing** — Umbrella / EPIC / Feature / Task hierarchy per [project-management:DEC-004-six-level-hierarchy], with workstream / milestone / priority / parent-ref classifications per [project-management:DEC-012-classification-axes]. Where the planned Tasks would share a choice that nothing settles yet, the slicing plans only the work's foundation first, and the slices once it is done (refinement per [project-management:DEC-060-foundation-before-slices]). Tasks that share a file are built one at a time. Those of one parent, Milestone and priority may be planned as one Task, within what one review reads and one build finishes (refinement per [project-management:DEC-066-fold-tasks-that-share-a-file]).
 4. **Adversarial review** — invoke `critic` and (when work crosses ≥3 components or the slicing introduces a new abstraction) `architect` per the reviewer-invocation discipline below.
 5. **Single approval gate** — present the (possibly revised) plan to the user, with the use-case mapping, both kinds of gap and, over an empty set, the prerequisite Task or why the plan has none (refinement per [project-management:DEC-054-use-case-validation]); pause until approval, revision, or refusal.
 6. **File via primitives** — call `create-issue` / `edit-issue` / `move-issue` per the plan. Handle validation failures per the storyboard's mid-execution-validation-failure scenario.
@@ -57,7 +57,7 @@ The sub-procedure file is authored as part of F3's implementation; this DEC comm
 
 `project-manager` invokes the kit's reviewer agents (`critic`, `architect` per [COR-024](../../../decisions/core/COR-024-reviewer-agents.md)) during batch-planning when the work crosses an empirical threshold:
 
-- **Multi-issue arcs (≥3 issues to file)** invoke `critic` adversarially against the proposed slicing before the user sees it.
+- **Multi-issue arcs (≥3 issues to file)** invoke `critic` adversarially against the proposed slicing before the user sees it. The issues are counted before any Tasks are planned as one (refinement per [project-management:DEC-066-fold-tasks-that-share-a-file]).
 - **Cross-component work (≥3 components touched, or any work introducing a new abstraction)** additionally invokes `architect` for big-picture review.
 - **Narrow single-issue work** (one ticket, no slicing decision) skips reviewer invocation. The threshold language mirrors today's CLAUDE.md reviewer-invocation table ("trivia and Q&A are exempt").
 

@@ -33,6 +33,13 @@ Gates per DEC-026:
     reason. In a project with a topology, a claim whose clone no longer holds
     its seat is no claim, and one that cannot be judged refuses (DEC-059
     point 9).
+  - Code that cannot read the topology in full (DEC-061 point 9): a clone
+    that holds a seat starts no work, and the refusal, before anything is
+    written, says what this code did not understand.
+  - The take's own check of the Task's pool (DEC-061 point 5), where the
+    topology declares pools of workers and the clone's seat builds: a Task
+    outside the seat's pools, or one whose Milestone's pool cannot be read,
+    is warned of and started as directed. A warning, never a gate.
 
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
@@ -62,10 +69,13 @@ Side-effects:
 Exit codes:
   0  in-progress
   1  membership refusal
-  2  usage error / gate failure / illegal transition / gh failure / another
+  2  usage error / gate failure / illegal transition / gh failure / where the
+     board carries the state, a card whose Status does not place the issue, or
+     a board that cannot be read / another
      instance claimed the issue in the same instant and keeps it, or claimed
      it first, so this clone did not move the issue / the clash guard refused
      an issue another instance owns / this clone's seat could not be confirmed
+     / this code cannot read the topology in full (DEC-061 point 9)
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -209,13 +219,25 @@ def main() -> int:
 
     # Gate: the move to In Progress is legal from where the issue is (#942).
     # Asked before the branch create / assignee write, so a refusal changes
-    # nothing. The state is read as review-work's gate reads it (#1242).
+    # nothing. The state is read as review-work's gate reads it (#1242): where
+    # the board carries it, from the card's Status, and a Status that does not
+    # place the issue refuses (DEC-051 point 6).
+    status = issue_position.read_status(args.issue_number, issue, config, substrate_map, workflow)
+    current = issue_position.current_state(issue, labels, substrate_map, status)
+    if current == infer.UNDETERMINED:
+        print(
+            issue_position.unplaced_refusal(
+                "start-work", args.issue_number, status, untouched="no branch, no assignee"
+            ),
+            file=sys.stderr,
+        )
+        return 2
     refusal = composed_move.transition_refusal(
         "start-work",
         args.issue_number,
         issue,
         labels,
-        issue_position.current_state(issue, labels, substrate_map),
+        current,
         target=TARGET_STATE,
         untouched="no branch, no assignee",
         workflow=workflow,
@@ -426,7 +448,10 @@ def main() -> int:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,assignees,state,body,milestone")
+    """The issue, with the fields the early check reads its card by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,labels,assignees,state,body,milestone,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _claim_lost_message(

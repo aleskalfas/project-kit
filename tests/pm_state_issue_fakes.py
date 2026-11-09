@@ -66,6 +66,7 @@ class FakeIssue:
         """The issue as `gh` gives it, in every field a read or a listing asks for."""
         return {
             "number": number,
+            "id": f"I_{number}",
             "state": self.state,
             "title": self.title,
             "body": self.body,

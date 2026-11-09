@@ -33,6 +33,10 @@ answers a **ternary per axis**, never a binary:
   * **A map present, axis bound** ⇒ resolve through the declared binding (a
     ``label`` value→value remap, a ``title-prefix`` remap, or a ``derive``
     predicate). :func:`resolve_write` returns the adopter's OWN substrate value.
+    A ``kit-label: true`` binding names the kit's own labels, so that axis
+    resolves exactly as with no map
+    ([project-management:DEC-062-axes-chosen-in-the-map] point 3): a map
+    carries nothing beyond its bindings (point 4).
   * **A map present, axis ``unsupported`` OR absent-from-a-present-map** ⇒
     the seam returns :data:`DEGRADE`; it emits **no write-label**. Absence is
     treated as ``unsupported``, NOT greenfield — the load-bearing rule.
@@ -46,11 +50,12 @@ answers a **ternary per axis**, never a binary:
     DEC-036 D4 holds hard).
 
 **Fail-closed (ADR-026 part (ii)).** :func:`resolve_write` NEVER returns the
-kit's own ``<axis>:<value>`` label as a write target in a present-map world. It
-returns the adopter's substrate value on the determinate paths and
-:data:`DEGRADE` on the indeterminate ones. The kit's own label is reachable as a
-*write target* only via the no-map identity arm (greenfield), where it is the
-adopter's own substrate.
+kit's own ``<axis>:<value>`` label as a write target for an axis a present map
+leaves out or binds elsewhere. It returns the adopter's substrate value on the
+determinate paths and :data:`DEGRADE` on the indeterminate ones. The kit's own
+label is reachable as a *write target* only where the kit's labels carry the
+axis: with no map, or under a ``kit-label: true`` binding, where the adopter
+named them.
 
 Scope held to Task B
 --------------------
@@ -97,6 +102,11 @@ AXES: tuple[str, ...] = ("type", "priority", "workstream", "state")
 SUBSTRATE_MAP_RELATIVE_PATH = "project/substrate-map.yaml"
 
 CAPABILITY_NAME = "project-management"
+
+# The binding arm that names the kit's own labels for an axis
+# ([project-management:DEC-062-axes-chosen-in-the-map] point 3). Parameterless:
+# `kit-label: true` takes no remap, since the labels are the kit's own.
+KIT_LABEL = "kit-label"
 
 
 # ----- the degrade sentinel + disposition vocabulary ---------------------
@@ -214,8 +224,8 @@ class SubstrateMap:
     """A parsed ``substrate-map.yaml`` — the per-axis bindings.
 
     ``axes`` maps an axis name to its raw binding mapping (one of ``label`` /
-    ``title-prefix`` / ``derive`` / ``unsupported``, plus an optional
-    ``default``). An axis NOT in this mapping is absent-from-a-present-map and
+    ``title-prefix`` / ``derive`` / ``board`` / ``kit-label`` / ``unsupported``,
+    plus an optional ``default``). An axis NOT in this mapping is absent-from-a-present-map and
     resolves identically to ``unsupported`` (ADR-026 the load-bearing rule).
 
     A ``SubstrateMap`` instance existing at all means *a map is present* — the
@@ -325,7 +335,7 @@ def axis_disposition(axis: str, substrate_map: SubstrateMap | None) -> Dispositi
 
     * No map (``substrate_map is None``) ⇒ ``"served"`` (greenfield identity).
     * Map present, axis bound (``label`` / ``title-prefix`` / ``derive`` /
-      ``board``) ⇒ ``"served"``.
+      ``board`` / ``kit-label``) ⇒ ``"served"``.
     * Map present, axis ``unsupported`` OR absent from the map ⇒
       ``"unsupported"`` (absent ≡ unsupported, the load-bearing rule).
 
@@ -347,22 +357,23 @@ def axis_disposition(axis: str, substrate_map: SubstrateMap | None) -> Dispositi
         return "unsupported"
     if binding.get("unsupported") is True:
         return "unsupported"
-    if any(key in binding for key in ("label", "title-prefix", "derive", "board")):
+    if any(key in binding for key in ("label", "title-prefix", "derive", "board", KIT_LABEL)):
         return "served"
-    # A binding mapping with none of the five arms is malformed; fail closed.
+    # A binding mapping with none of the six arms is malformed; fail closed.
     return "unsupported"
 
 
 def axis_expects_kit_labels(axis: str, substrate_map: SubstrateMap | None) -> bool:
     """Whether the kit's own ``<axis>:*`` labels are the substrate for ``axis``.
 
-    True only in greenfield (no ``substrate-map.yaml``). With a map present, NO
-    axis uses the kit's own ``<axis>:*`` labels — a *bound* axis resolves to the
-    adopter's own substrate (a remapped label, a title-prefix, or a derive
-    predicate), and an *unsupported*/absent axis degrades. Either way the kit's
-    ``<axis>:*`` label is not the thing to look for. This is the read-path's
-    expression of "never demand a label the adopter cannot create" (DEC-036,
-    EPIC #217 constraint 1).
+    True with no ``substrate-map.yaml``, and where a present map binds ``axis``
+    with ``kit-label: true`` ([project-management:DEC-062-axes-chosen-in-the-map]
+    point 3). Elsewhere in a present map the kit's own ``<axis>:*`` labels do
+    not carry the axis — a *bound* axis resolves to the adopter's own substrate
+    (a remapped label, a title-prefix, a derive predicate or the board), and an
+    *unsupported*/absent axis degrades. Either way the kit's ``<axis>:*`` label
+    is not the thing to look for. This is the read-path's expression of "never
+    demand a label the adopter cannot create" (DEC-036, EPIC #217 constraint 1).
 
     This is the single predicate a presence gate consults to decide whether to
     demand / count the kit's ``<axis>:*`` labels — the same disposition
@@ -379,15 +390,14 @@ def axis_expects_kit_labels(axis: str, substrate_map: SubstrateMap | None) -> bo
     demand a kit label for a label-bound brownfield axis. Use this predicate,
     not the disposition, for "should the kit label exist?".
 
-    The answer is **axis-independent** — ``axis`` is never read. That is
-    correct-by-design, not an oversight: ADR-026's absent-map-≡-no-axis-reads-kit-
-    labels rule means the disposition is a pure function of the map's *presence*,
-    identical for every axis. The parameter is kept for call-site symmetry with
-    the other per-axis seam predicates (so a future caller need not special-case
-    it), and so a later contract that *does* vary by axis has a signature to grow
-    into without churning every call site.
+    The answer is **per axis**: a map's presence carries nothing beyond its
+    bindings (DEC-062 point 4), so each behaviour that once keyed on whether a
+    map exists keys on the binding of the axis it concerns, through here.
     """
-    return substrate_map is None
+    if substrate_map is None:
+        return True
+    binding = substrate_map.axes.get(axis)
+    return isinstance(binding, dict) and binding.get(KIT_LABEL) is True
 
 
 def axis_is_title_carried(axis: str, substrate_map: SubstrateMap | None) -> bool:
@@ -451,10 +461,11 @@ def axis_is_board_carried(axis: str, substrate_map: SubstrateMap | None) -> bool
     adopters were told to spell board carriage ``unsupported: true``, which said
     the opposite of what they meant.
 
-    Admissible on ``priority`` and ``workstream`` only — the schema refuses it on
-    ``type`` (PR-title alignment reads the type label) and, for now, on ``state``
-    (reading a board Status field needs a detector kind that does not exist yet).
-    This function does not re-check admissibility: the schema is the gate, and a
+    Admissible on ``priority``, ``workstream`` and ``state`` — the schema refuses
+    it on ``type`` (PR-title alignment reads the type label). On ``state`` the
+    board's Status is then the source of an open issue's position, read as
+    [project-management:DEC-051-axis-carriage-activation] point 6 says. This
+    function does not re-check admissibility: the schema is the gate, and a
     second copy of the rule here would be a source of truth that can disagree.
     """
     if substrate_map is None:
@@ -680,9 +691,10 @@ def resolve_write(axis: str, value: str, substrate_map: SubstrateMap | None) -> 
 
     The fail-closed write-path resolver (ADR-026 part (ii)). It returns:
 
-    * **No map** ⇒ the kit's own ``<axis>:<value>`` label — greenfield identity.
-      This is the ONLY arm that returns the kit's own label; in greenfield the
-      kit's label *is* the adopter's substrate, so this is not a fall-through.
+    * **No map, or a ``kit-label: true`` binding** ⇒ the kit's own
+      ``<axis>:<value>`` label — the identity. These are the ONLY arms that
+      return the kit's own label; there the kit's label *is* the adopter's
+      substrate, so this is not a fall-through.
     * **Map present, axis bound to ``label``** ⇒ the adopter's remapped label
       string (e.g. ``P0``), NOT ``priority:P0``. :data:`DEGRADE` if ``value`` has
       no entry in the remap (value-unresolvable — the fourth arm).
@@ -695,13 +707,14 @@ def resolve_write(axis: str, value: str, substrate_map: SubstrateMap | None) -> 
     * **Map present, axis ``unsupported`` / absent / malformed** ⇒
       :data:`DEGRADE`.
 
-    Crucially, in a present-map world there is NO arm that returns the kit's own
-    ``<axis>:<value>`` as a write target — the unsafe direction is unreachable.
-    Callers test the result with ``if result is DEGRADE`` (or its falsiness) and
-    take the degrade path; they never write :data:`DEGRADE` (it is not a string).
+    Crucially, for an axis a present map leaves out or binds elsewhere there is
+    NO arm that returns the kit's own ``<axis>:<value>`` as a write target — the
+    unsafe direction is unreachable. Callers test the result with
+    ``if result is DEGRADE`` (or its falsiness) and take the degrade path; they
+    never write :data:`DEGRADE` (it is not a string).
     """
-    if substrate_map is None:
-        # Greenfield identity — the kit's own label IS the adopter's substrate.
+    if substrate_map is None or axis_expects_kit_labels(axis, substrate_map):
+        # The identity — the kit's own label IS the adopter's substrate.
         return label(axis, value)
 
     binding = substrate_map.axes.get(axis)
@@ -867,8 +880,8 @@ def resolve_read(axis: str, labels: list[str], substrate_map: SubstrateMap | Non
     on ``axis`` (e.g. ``High`` for priority), resolving the adopter's substrate
     back to the kit vocabulary, or ``None`` when the axis carries no value here:
 
-    * **No map (greenfield)** ⇒ the kit's own ``<axis>:`` read (:func:`read`) —
-      byte-identical to today.
+    * **No map, or a ``kit-label: true`` binding** ⇒ the kit's own ``<axis>:``
+      read (:func:`read`) — byte-identical to greenfield.
     * **Map present, axis bound to ``label``** ⇒ the kit value whose remapped
       adopter label is present (reverse of the ``label`` ``remap``). ``None`` if
       none of the adopter's mapped labels is on the issue.
@@ -886,7 +899,7 @@ def resolve_read(axis: str, labels: list[str], substrate_map: SubstrateMap | Non
     signal this function does not take). Kept separate so a derive read can never
     accidentally fall back to a label read.
     """
-    if substrate_map is None:
+    if substrate_map is None or axis_expects_kit_labels(axis, substrate_map):
         return read(axis, labels)
     binding = substrate_map.axes.get(axis)
     if not isinstance(binding, dict):

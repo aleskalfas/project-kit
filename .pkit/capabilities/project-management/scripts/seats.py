@@ -83,12 +83,13 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_labels,
+    board_status,
     bootstrap_gate,
     instance_claims,
     instance_identity,
     issue_branch,
     issue_list,
-    issue_position,
+    lifecycle_inference,
     pools,
     session_guard,
     state_issues,
@@ -109,7 +110,9 @@ VERB = "seats"
 
 #: The fields of the one listing of open issues: the state issues no seat names,
 #: the Tasks in Review a released seat left, and the Tasks the pools hold back.
-LIST_FIELDS = "number,title,labels,assignees,milestone,state"
+#: `id`, the issue's node id, joins a row to its card where the board carries
+#: the state.
+LIST_FIELDS = "number,title,labels,assignees,milestone,state,id"
 
 #: How many open issues, and open pull requests, one listing reads.
 LIST_LIMIT = state_issues.OPEN_LIMIT
@@ -240,19 +243,54 @@ def list_seats(
         for number, key in strays:
             print(f"  #{number}  seat {key}")
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    if pool_map is not None:
-        readers = task_pool.Readers(
-            issue_types=read_schema(capability_root, "issue-types.yaml"),
-            classification=read_schema(capability_root, "classification.yaml"),
-            substrate_map=substrate_map,
+    # Where the map binds the state to the board, each Task's state is its card's
+    # Status: the cards of the open issues listed, and no others, are read at
+    # once and joined to the listing by the issue's node id. A board that cannot
+    # be read is never read in part: no Task is then counted or named by its
+    # state (DEC-051 point 6).
+    statuses = None
+    if lifecycle_inference.state_is_board_carried(substrate_map):
+        statuses, failure = board_status.read_listed(
+            load_adopter_config(capability_root),
+            read_schema(capability_root, "workflow.yaml"),
+            task_pool.node_ids(listing.rows or ()),
         )
+        if statuses is None:
+            print(
+                f"[error] the board's Status could not be read ({failure}), so no Task is "
+                "counted by its pool, and no Task in Review a released seat left is named.",
+                file=sys.stderr,
+            )
+            return 3
+    readers = task_pool.Readers(
+        issue_types=read_schema(capability_root, "issue-types.yaml"),
+        classification=read_schema(capability_root, "classification.yaml"),
+        substrate_map=substrate_map,
+        statuses=statuses,
+    )
+    if statuses is not None:
+        show_unplaced(listing.rows or (), readers)
+    if pool_map is not None:
         back = held_back(snap, listing.rows or (), pool_map, readers)
         show_held_back(back)
         if back.unread:
             code = 3
-    left = left_in_review(snap, listing.rows or (), substrate_map=substrate_map)
+    left = left_in_review(snap, listing.rows or (), substrate_map=substrate_map, readers=readers)
     show_left(left)
     return 3 if left.unread else code
+
+
+def show_unplaced(rows: Iterable[Any], readers: task_pool.Readers) -> None:
+    """Warn of each open issue of work whose card's Status does not place it,
+    where the board carries the state: it is counted in no state below."""
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("number"), int):
+            continue
+        state, why = readers.state(row, task_pool.label_names(row))
+        if state == lifecycle_inference.UNDETERMINED:
+            print(
+                f"warn: #{row['number']} is in no state this listing reads: {why}.", file=sys.stderr
+            )
 
 
 # ---- the Tasks the pools hold back (DEC-061 points 5 and 10) ---------------------------
@@ -414,6 +452,7 @@ def left_in_review(
     rows: Iterable[Any],
     *,
     substrate_map: axis_labels.SubstrateMap | None,
+    readers: task_pool.Readers | None = None,
 ) -> Left:
     """The Tasks in Review among ``rows``, the open issues of work, that a
     released seat left, each with the open pull requests from its branch.
@@ -422,14 +461,18 @@ def left_in_review(
     released, and no claim counts or stands unjudged (DEC-059 points 5 and 9).
     Each Task's whole log is folded by the ownership seam for each of its
     assignees, since a claim counts only from the account it is assigned to
-    (DEC-043 point 3)."""
+    (DEC-043 point 3). ``readers`` reads each row's state, its card's Status
+    where the board carries the state; with none, the state is read from the
+    row alone under ``substrate_map``."""
     if not ever_released(snap.states()):
         return Left()
+    if readers is None:
+        readers = task_pool.Readers(issue_types={}, classification={}, substrate_map=substrate_map)
     holders = instance_claims.SeatHolders(snap)
     tasks: list[LeftTask] = []
     unread: list[str] = []
     for row in rows:
-        if not _in_review(row, substrate_map):
+        if not _in_review(row, readers):
             continue
         number = row["number"]
         log = ownership.read_log(number, snap.run.gh)
@@ -544,16 +587,12 @@ def _said_prs(task: LeftTask) -> str:
     return f"{noun} " + ", ".join(f"#{n}" for n in task.pull_requests)
 
 
-def _in_review(row: Any, substrate_map: axis_labels.SubstrateMap | None) -> bool:
+def _in_review(row: Any, readers: task_pool.Readers) -> bool:
     """Whether ``row``, an open issue of work, is in Review. Review is a Task's
     state alone (DEC-006), so no type is read."""
     if not isinstance(row, dict) or not isinstance(row.get("number"), int):
         return False
-    labels = [
-        str(label.get("name", "")) if isinstance(label, dict) else str(label)
-        for label in row.get("labels") or []
-    ]
-    return issue_position.current_state(row, labels, substrate_map) == REVIEW
+    return readers.state(row, task_pool.label_names(row))[0] == REVIEW
 
 
 def _assignees(row: Mapping[str, Any]) -> list[str]:

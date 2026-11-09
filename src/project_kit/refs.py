@@ -12,6 +12,12 @@ queries:
   paths, not placeholders) and cross-agent path overlaps are flagged.
 - Agent policy: every `model:` / `effort:` an agent's front matter declares,
   or the overlay sets for one, is a value the harness accepts (#1047).
+- Pattern form: every `reads.patterns` entry of an agent is a `<category>`
+  placeholder the deploy resolves, or a path; a bare category name is reported
+  (#2481).
+- Unknown overrides: every entry under the overlay's `overrides:` names an agent
+  some source ships, and a category its definition references; one the deploy
+  ignores is warned of (#2468).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -57,7 +63,14 @@ from typing import TYPE_CHECKING, Any, Literal
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, agents_overlay, connections, record_points, rule_sets
+from project_kit import (
+    agent_policy,
+    agents_overlay,
+    connections,
+    lifecycle_ownership,
+    record_points,
+    rule_sets,
+)
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
@@ -106,6 +119,10 @@ class BodyRefs:
     # brackets: `pkit::documentation`, `pkit::documentation:readers` — and a
     # malformed one carrying `::`, which validation reports as such.
     addresses: frozenset[str] = field(default_factory=frozenset)
+    # The Markdown link targets among `paths`, which `find_rot` reads from the
+    # folder of the file that holds the link (#2465). An empty frozenset is
+    # immutable, so it serves as the default itself, typed by the annotation.
+    links: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -151,12 +168,24 @@ STORYBOARD = "storyboard"
 CITATION = "citation"
 COMPOSES = "composes"
 AGENT_POLICY = "agent-policy"
+# An agent's `reads.patterns` entry that is neither a `<category>` placeholder nor a
+# path: the deploy resolves only a placeholder, so a bare name never reaches its paths
+# (#2481).
+READS_PATTERN = "reads-pattern"
 # A citation of a point its record does not hold (COR-058 point 1): read from prose, so
 # reported and never failed, by the member and by `pkit refs validate` alike.
 POINT_CITATION = "point-citation"
+# A citation of an operational rule that is missing or retired (COR-068 point 6; ADR-075
+# point 8): read from prose too, so a warning.
+OPERATIONAL_CITATION = "operational-rule-citation"
+
+# An entry under the overlay's `overrides:` that the deploy ignores: a block for an
+# agent no source ships, or a category the agent's definition does not reference
+# (#2468). The agent deploys as if it were absent, so a warning.
+UNKNOWN_OVERRIDE = "unknown-override"
 
 #: The kinds of finding that warn and never fail `pkit refs validate`.
-WARNING_KINDS = frozenset({POINT_CITATION})
+WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE})
 
 
 @dataclass(frozen=True)
@@ -261,8 +290,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy
-    checks."""
+    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
+    `reads.patterns` form + unknown-override checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -282,8 +311,11 @@ def check_corpus(
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_point_citations(artifacts, target_root), POINT_CITATION))
+    issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
+    issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
+    issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
     return issues
 
 
@@ -299,12 +331,14 @@ def outcome(target_root: Path) -> Outcome:
     declare — is a **warning**: the artifact deploys and resolves regardless,
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
-    provider answers, two providers at one tier, a missing storyboard, a
+    provider answers, two providers at a hook's winning tier, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
-    model or effort the harness does not accept — is an **error**. A citation of
+    model or effort the harness does not accept, an agent's `reads.patterns`
+    entry that is neither a placeholder nor a path — is an **error**. A citation of
     a point its record does not hold is a **warning** too, read from prose as
-    drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
-    it fails on any finding but that last.
+    drift is, and so is an override the deploy ignores, since the agent deploys as
+    if it were absent. `pkit refs validate`, the focused surface, keeps its
+    stricter exit: it fails on any finding but those last two.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -552,15 +586,92 @@ def _adr_records_dir_or_none(target_root: Path) -> Path | None:
         return None
 
 
-def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
-    """Pick the winning provider for a hook by precedence (project > capability > adapter >
-    core)."""
-    candidates = [p for p in providers if p.hook == hook]
+#: Each provider tier's rank in the precedence a hook binds by, the highest first
+#: (COR-013 point 4, "Provider precedence").
+TIER_RANK = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
+
+
+def by_precedence(providers: list[Provider]) -> list[Provider]:
+    """The providers in precedence order, the highest tier first, then by source."""
+    return sorted(providers, key=lambda p: (TIER_RANK.get(p.tier, 99), p.source))
+
+
+def winning_providers(providers: list[Provider], hook: str) -> list[Provider]:
+    """The providers of `hook` at its winning tier, the highest by precedence that holds
+    one, sorted by source. Empty where no provider declares the hook.
+
+    One binds the hook. Two or more are a same-tier collision, which binds none of them:
+    COR-013 point 4 refuses it rather than pick. A provider at a higher tier binds the
+    hook, so it settles a collision at a tier below it.
+    """
+    candidates = by_precedence([p for p in providers if p.hook == hook])
     if not candidates:
-        return None
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    candidates.sort(key=lambda p: order.get(p.tier, 99))
-    return candidates[0]
+        return []
+    return [p for p in candidates if p.tier == candidates[0].tier]
+
+
+def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
+    """The provider a hook binds to: the one at its winning tier (`winning_providers`).
+    None where no provider declares the hook, or where two collide at that tier."""
+    winners = winning_providers(providers, hook)
+    return winners[0] if len(winners) == 1 else None
+
+
+def collision_diagnosis(winners: list[Provider]) -> str:
+    """Why a hook whose winning tier holds two or more providers binds none, and how the
+    project settles it (COR-013 point 4)."""
+    tier = winners[0].tier
+    sources = ", ".join(p.source for p in winners)
+    remedy = (
+        "Keep the hook in the `answers:` of one of the project's skills"
+        if tier == "project"
+        else "Uninstall all but one, or add a provider of the project's"
+    )
+    return (
+        f"same-tier collision at tier '{tier}': multiple providers ({sources}), "
+        f"so none binds. {remedy} (COR-013 point 4)."
+    )
+
+
+@dataclass(frozen=True)
+class UnsatisfiedNeed:
+    """A `needs:` entry whose hook binds no provider (COR-013 point 4, "Unsatisfied
+    needs"): no skill answers the hook and no package provides it, or the providers at
+    its winning tier collide."""
+
+    artifact: Artifact
+    hook: str
+    #: The providers at the hook's winning tier where two or more collide; empty where no
+    #: provider declares the hook.
+    colliding: tuple[Provider, ...] = ()
+
+    def describe(self, target_root: Path) -> str:
+        """The need as a deploy warns of it: the agent or skill, its file, the hook, and
+        why the hook binds no provider."""
+        path = self.artifact.path
+        where = path.relative_to(target_root) if target_root in path.parents else path
+        need = f"{self.artifact.kind} {self.artifact.name!r} ({where}) needs hook {self.hook!r}"
+        if self.colliding:
+            return f"{need}, which binds no provider: {collision_diagnosis(list(self.colliding))}"
+        return f"{need}, which no skill answers and no package provides (COR-013 point 4)."
+
+
+def unsatisfied_needs(
+    artifacts: list[Artifact], providers: list[Provider]
+) -> list[UnsatisfiedNeed]:
+    """Each `needs:` entry of the artefacts whose hook binds no provider (`resolve_hook`),
+    in the artefacts' order and each one's hooks sorted.
+
+    One check for two readers: `pkit validate` and `pkit refs validate` fail the needs no
+    provider declares (`_validate_hook_closure`), and every deploy warns of them all
+    (`install.report_unsatisfied_needs`).
+    """
+    needs: list[UnsatisfiedNeed] = []
+    for art in artifacts:
+        for hook in sorted(art.declared.needs):
+            if resolve_hook(providers, hook) is None:
+                needs.append(UnsatisfiedNeed(art, hook, tuple(winning_providers(providers, hook))))
+    return needs
 
 
 #: The version of the document `pkit refs lookup --json` prints.
@@ -1037,7 +1148,8 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
       retired to `dropped/` (per COR-012). The thinking was abandoned;
       the reference shouldn't persist.
     - **Missing local paths** — an artifact cites a relative or
-      project-rooted path that no longer resolves on disk.
+      project-rooted path that no longer resolves on disk, read where
+      `_rot_candidates` says, without its `#` fragment.
     - **Proposed grounds** — an accepted record's body cites a record that
       is still `proposed` (`find_proposed_grounds`), against the acceptance
       gate of `.pkit/decisions/README.md`.
@@ -1060,7 +1172,14 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
             | art.body_refs.records
             | {_capability_key(cap, stem) for cap, stem in art.body_refs.capability_citations}
         )
-        all_paths = art.declared.reads_paths | art.declared.owns | art.body_refs.paths
+        other_paths = (
+            art.declared.reads_paths
+            | art.declared.owns
+            | (art.body_refs.paths - art.body_refs.links)
+        )
+        cited = sorted(
+            {(path, True) for path in art.body_refs.links} | {(path, False) for path in other_paths}
+        )
 
         for rec in sorted(all_records):
             status = record_status_index.get(rec)
@@ -1072,34 +1191,62 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
                     )
                 )
 
-        for path in sorted(all_paths):
+        reported: set[str] = set()
+        for path, link in cited:
             # Skip pattern placeholders and anchors.
             if path.startswith(("<", "#", "http://", "https://")):
                 continue
+            candidates = _rot_candidates(path.split("#", 1)[0], art, target_root, link=link)
             # Scratchpad dropped check runs first: even if the file
             # exists at the cited path (it does, in dropped/), the
             # reference is still rotten — the thinking was abandoned.
-            slug = _slug_from_scratchpad_path(path)
-            if slug is not None and slug in dropped_slugs:
-                issues.append(
-                    Issue(
-                        location=loc,
-                        diagnosis=f"references dropped scratchpad note {path!r}.",
-                    )
-                )
+            slugs = (_slug_from_scratchpad_path(_relative_to(c, target_root)) for c in candidates)
+            if any(slug is not None and slug in dropped_slugs for slug in slugs):
+                diagnosis = f"references dropped scratchpad note {path!r}."
+            elif any(candidate.exists() for candidate in candidates):
                 continue
-            candidate = target_root / path if not Path(path).is_absolute() else Path(path)
-            if candidate.exists():
-                continue
-            issues.append(
-                Issue(
-                    location=loc,
-                    diagnosis=f"references missing path {path!r} (file does not exist).",
-                )
-            )
+            else:
+                diagnosis = f"references missing path {path!r} (file does not exist)."
+            # A path declared and linked alike is read both ways; it is listed once.
+            if diagnosis not in reported:
+                reported.add(diagnosis)
+                issues.append(Issue(location=loc, diagnosis=diagnosis))
 
     issues.extend(find_proposed_grounds(target_root, record_status_index))
     return issues
+
+
+def _rot_candidates(path: str, art: Artifact, target_root: Path, *, link: bool) -> list[Path]:
+    """The places `find_rot` reads a path an artifact cites; the path resolves where
+    any of them holds a file.
+
+    A Markdown link's target is read from the folder of the file that holds the link,
+    as a reader following the link reads it. A composite skill's sub-procedures share
+    the artifact's folder, so that is the artifact's own. Any other path is read as the
+    reference graph reads it (the agents README, "The reference graph"):
+
+    - one that opens with `./` or `../` from the artifact's folder
+    - one that opens with `.pkit/` from the project root only, as
+      `_is_intra_capability_path` reads it
+    - any other from the project root and, in a capability's artifact, from the
+      artifact's folder and the capability's root too, where the capability's own
+      files sit
+    """
+    if Path(path).is_absolute():
+        return [Path(path)]
+    here = (target_root / art.path).parent
+    if link or path.startswith(("./", "../")):
+        bases = [here]
+    elif art.capability is None or path == ".pkit" or path.startswith(".pkit/"):
+        bases = [target_root]
+    else:
+        bases = [target_root, here, target_root / ".pkit" / "capabilities" / art.capability]
+    return [Path(os.path.normpath(base / path)) for base in bases]
+
+
+# The ids of a project's own records, PRJ and ADR: each project numbers its own, so
+# such an id in a record another repository authors names one of that repository's.
+_PROJECT_RECORD_PREFIXES = ("PRJ-", "ADR-")
 
 
 def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = None) -> list[Issue]:
@@ -1113,12 +1260,19 @@ def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = N
     that capability unless another capability's name stands just before it.
     Fenced code blocks, HTML comments and strikethrough are not read. One
     finding for each record and each proposed record it cites, with the lines.
+
+    A record the project receives as a synced copy (`synced_record_test`), such
+    as a core record in an adopter's project, is authored in another repository.
+    A `PRJ-` or `ADR-` id it cites names a record of that repository, never one
+    of this project, so such a citation is not read. In the methodology's source
+    no record is a synced copy, and every citation is read.
     """
-    from project_kit.decisions_validate import discover_decision_records
+    from project_kit.decisions_validate import discover_decision_records, synced_record_test
 
     if statuses is None:
         statuses = _index_decision_statuses(target_root)
     capabilities = frozenset(key.split(":", 1)[0] for key in statuses if ":" in key)
+    received = synced_record_test(target_root)
     issues: list[Issue] = []
     for record in discover_decision_records(target_root):
         try:
@@ -1136,8 +1290,9 @@ def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = N
             if target_root in record.path.parents
             else str(record.path)
         )
+        foreign = _PROJECT_RECORD_PREFIXES if received(rel) else ()
         for key in sorted(cited):
-            if statuses.get(key) != "proposed":
+            if statuses.get(key) != "proposed" or key.startswith(foreign):
                 continue
             lines = [first_line + line - 1 for line in cited[key]]
             where = f"line {lines[0]}" if len(lines) == 1 else f"lines {', '.join(map(str, lines))}"
@@ -1652,6 +1807,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         if _is_hook_like(inner):
             hooks.add(inner)
 
+    links: set[str] = set()
     for match in LINK_RE.finditer(stripped):
         target = match.group(1)
         if _is_url(target):
@@ -1659,6 +1815,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         if _TEMPLATE_MARKER_RE.search(target):
             continue
         paths.add(target)
+        links.add(target)
 
     # Bare record IDs always count — the format `(COR|PRJ)-NNN` is too
     # specific to appear by accident.
@@ -1691,6 +1848,7 @@ def extract_body_refs(body: str) -> BodyRefs:
         capability_citations=frozenset(capability_citations),
         rule_citations=frozenset(rule_citations),
         addresses=frozenset(addresses),
+        links=frozenset(links),
     )
 
 
@@ -1764,37 +1922,24 @@ def _load_one(
     declared = extract_declared(fm)
     body_refs = extract_body_refs(body)
 
-    # For composite skills (folder-form per COR-015 with supporting
-    # sibling files per COR-020), the canonical file is the dispatcher
-    # and per-operation walkthroughs / reference docs live as siblings.
-    # Citations in those siblings belong to the same composite skill
+    # Citations in a composite skill's siblings belong to the same skill
     # — union them into body_refs so the bidirectional rule (COR-013)
     # reconciles them against the dispatcher's frontmatter declarations.
-    #
-    # Discriminator: path.parent.name == path.stem (folder-form).
-    if path.parent.name == path.stem:
-        for sibling in sorted(path.parent.glob("*.md")):
-            if sibling == path:
-                continue
-            try:
-                sibling_text = sibling.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            # Sub-procedure files carry no frontmatter per COR-020, but
-            # _split_frontmatter is safe either way (returns the full
-            # text as body when no `---` block is present).
-            _, sibling_body = _split_frontmatter(sibling_text)
-            sibling_refs = extract_body_refs(sibling_body)
-            body_refs = BodyRefs(
-                paths=body_refs.paths | sibling_refs.paths,
-                records=body_refs.records | sibling_refs.records,
-                hooks=body_refs.hooks | sibling_refs.hooks,
-                capability_citations=(
-                    body_refs.capability_citations | sibling_refs.capability_citations
-                ),
-                rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
-                addresses=body_refs.addresses | sibling_refs.addresses,
-            )
+    for sibling_body in _sibling_bodies(path):
+        sibling_refs = extract_body_refs(sibling_body)
+        body_refs = BodyRefs(
+            paths=body_refs.paths | sibling_refs.paths,
+            records=body_refs.records | sibling_refs.records,
+            hooks=body_refs.hooks | sibling_refs.hooks,
+            capability_citations=(
+                body_refs.capability_citations | sibling_refs.capability_citations
+            ),
+            rule_citations=body_refs.rule_citations | sibling_refs.rule_citations,
+            addresses=body_refs.addresses | sibling_refs.addresses,
+            # The siblings share the dispatcher's folder, so a link in one is
+            # read from the artifact's own folder.
+            links=body_refs.links | sibling_refs.links,
+        )
 
     # Name: the file stem (matches both flat and folder layouts).
     name = path.stem
@@ -1808,6 +1953,38 @@ def _load_one(
         capability=capability,
         policy={key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None},
     )
+
+
+def _sibling_bodies(path: Path) -> list[str]:
+    """The bodies of a composite skill's other Markdown files, which count as its body.
+
+    A composite skill takes the folder form (COR-015), its dispatcher named as its
+    folder, and its per-operation procedures and reference files sit beside the
+    dispatcher (COR-020). Any other artifact has none. A sibling that cannot be read
+    is left out.
+    """
+    if path.parent.name != path.stem:
+        return []
+    bodies: list[str] = []
+    for sibling in sorted(path.parent.glob("*.md")):
+        if sibling == path:
+            continue
+        try:
+            sibling_text = sibling.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        # Sub-procedure files carry no frontmatter per COR-020, but
+        # _split_frontmatter is safe either way (returns the full
+        # text as body when no `---` block is present).
+        bodies.append(_split_frontmatter(sibling_text)[1])
+    return bodies
+
+
+def _body_text(art: Artifact) -> str:
+    """An artifact's whole body as text, its front matter left out: the file's own,
+    and, for a composite skill, its siblings' (`_sibling_bodies`)."""
+    _, body = _split_frontmatter(art.path.read_text(encoding="utf-8"))
+    return "\n".join([body, *_sibling_bodies(art.path)])
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
@@ -1847,7 +2024,12 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
             else str(art.path)
         )
 
-        declared_paths_all = art.declared.reads_paths | art.declared.owns | art.declared.storyboards
+        # A path written under `reads.patterns` is a declared path like any other,
+        # never a category the pattern block below looks for.
+        pattern_paths = frozenset(p for p in art.declared.reads_patterns if _is_pattern_path(p))
+        declared_paths_all = (
+            art.declared.reads_paths | art.declared.owns | art.declared.storyboards | pattern_paths
+        )
         # Pattern tokens (`<category-name>`) often appear as `owns:` entries
         # and as backticked references in body. The body parser skips
         # template-marker tokens, so backward checks would otherwise demand
@@ -1864,19 +2046,46 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # literal text search for paths whose shape the parser doesn't
         # extract (bare filenames like `CONTRIBUTING.md` — too generic
         # for backward-direction tracking, but legitimate forward
-        # references when explicitly declared).
-        file_text_lazy: str | None = None
+        # references when explicitly declared). The search reads the body
+        # alone: the front matter holds the declaration itself, so the
+        # whole file would find every declared path (#2471).
+        body_text_lazy: str | None = None
+        cited_files_lazy: frozenset[Path] | None = None
 
-        def _in_file_text(art: Artifact = art) -> str:
-            nonlocal file_text_lazy
-            if file_text_lazy is None:
-                file_text_lazy = art.path.read_text(encoding="utf-8")
-            return file_text_lazy
+        def _in_body_text(art: Artifact = art) -> str:
+            nonlocal body_text_lazy
+            if body_text_lazy is None:
+                body_text_lazy = _body_text(art)
+            return body_text_lazy
 
+        def _cited_files(art: Artifact = art) -> frozenset[Path]:
+            nonlocal cited_files_lazy
+            if cited_files_lazy is None:
+                cited_files_lazy = frozenset(
+                    file
+                    for cited in art.body_refs.paths
+                    for file in _rot_candidates(
+                        cited.split("#", 1)[0], art, target_root, link=cited in art.body_refs.links
+                    )
+                )
+            return cited_files_lazy
+
+        cited_records = art.body_refs.records | {
+            _capability_key(cap, stem) for cap, stem in art.body_refs.capability_citations
+        }
         for path in declared_paths_all:
             if path in art.body_refs.paths:
                 continue
-            if path in _in_file_text():
+            # A body path written another way, such as a relative link, cites
+            # the declared path where both read to the same file.
+            declared_files = _rot_candidates(path.split("#", 1)[0], art, target_root, link=False)
+            if not _cited_files().isdisjoint(declared_files):
+                continue
+            # A decision record's file is cited by the record's id, as the
+            # backward check reads a link to one (`_is_decision_link`).
+            if any(_record_of_file(file) in cited_records for file in declared_files):
+                continue
+            if path in _in_body_text():
                 continue
             issues.append(
                 Issue(
@@ -1906,8 +2115,11 @@ def _validate_bidirectional(artifacts: list[Artifact], target_root: Path) -> lis
         # the placeholder the deploy reads (`<project-conventions>`,
         # `agents_overlay.placeholder_category`); the placeholder must appear
         # in the file — a bare name in the body, a bracketed declaration
-        # already does, like an `owns:` placeholder.
-        pattern_names: set[str] = {p.strip("<>") for p in art.declared.reads_patterns}
+        # already does, like an `owns:` placeholder. A bare name in an agent's
+        # `reads.patterns` is `_validate_reads_patterns`'s finding as well.
+        pattern_names: set[str] = {
+            p.strip("<>") for p in art.declared.reads_patterns if not _is_pattern_path(p)
+        }
         for p in art.declared.reads_paths | art.declared.owns:
             if p.startswith("<") and p.endswith(">"):
                 pattern_names.add(p.strip("<>"))
@@ -1991,6 +2203,27 @@ def _is_decision_link(path: str) -> bool:
     Existence of the linked file is still checked separately by `find_rot`.
     """
     return "/decisions/" in path or bool(_DECISION_LINK_RE.search(path))
+
+
+_CAPABILITY_DECISION_FILE_RE = re.compile(
+    r"(?:^|/)\.pkit/capabilities/([^/]+)/decisions/(DEC-\d+)(?:-[^/]*)?\.md$"
+)
+_RECORD_FILE_RE = re.compile(r"(?:^|/)((?:COR|PRJ|ADR)-\d+)(?:-[^/]*)?\.md$")
+
+
+def _record_of_file(file: Path) -> str | None:
+    """The record a decision record's file holds, keyed as a body's citation of it
+    is: `COR-NNN`, `PRJ-NNN` or `ADR-NNN` by the file's name, and
+    `<capability>:DEC-NNN` for a file under a capability's `decisions/` folder.
+    None for any other file. `file` is read from the project root, as
+    `_rot_candidates` gives it.
+    """
+    text = file.as_posix()
+    match = _CAPABILITY_DECISION_FILE_RE.search(text)
+    if match:
+        return f"{match.group(1)}:{match.group(2)}"
+    match = _RECORD_FILE_RE.search(text)
+    return match.group(1) if match else None
 
 
 def _is_intra_capability_path(path: str, art: Artifact, target_root: Path) -> bool:
@@ -2139,28 +2372,30 @@ def _via(category: str | None) -> str:
 
 
 def _validate_hook_closure(artifacts: list[Artifact], providers: list[Provider]) -> list[Issue]:
-    """Every `needs:` hook must be answerable by at least one provider."""
+    """Every `needs:` hook must be answerable by at least one provider (`unsatisfied_needs`).
+    A need whose hook has providers that collide is left to the collision's own finding
+    (`_validate_same_tier_collisions`)."""
     issues: list[Issue] = []
-    provided_hooks = {p.hook for p in providers}
-    for art in artifacts:
-        for hook in art.declared.needs:
-            if hook not in provided_hooks:
-                # Use path-based location so capability artifacts surface
-                # under `.pkit/capabilities/<cap>/...`, not under the
-                # synthetic area path.
-                target_root = _infer_target_root(art.path)
-                loc = (
-                    str(art.path.relative_to(target_root))
-                    if target_root is not None and target_root in art.path.parents
-                    else str(art.path)
-                )
-                issues.append(
-                    Issue(
-                        location=loc,
-                        diagnosis=f"declares need for hook {hook!r} but no provider exists "
-                        f"(skill `answers:` or package.yaml `provides:`).",
-                    )
-                )
+    for need in unsatisfied_needs(artifacts, providers):
+        if need.colliding:
+            continue
+        art = need.artifact
+        # Use path-based location so capability artifacts surface
+        # under `.pkit/capabilities/<cap>/...`, not under the
+        # synthetic area path.
+        target_root = _infer_target_root(art.path)
+        loc = (
+            str(art.path.relative_to(target_root))
+            if target_root is not None and target_root in art.path.parents
+            else str(art.path)
+        )
+        issues.append(
+            Issue(
+                location=loc,
+                diagnosis=f"declares need for hook {need.hook!r} but no provider exists "
+                f"(skill `answers:` or package.yaml `provides:`).",
+            )
+        )
     return issues
 
 
@@ -2455,7 +2690,7 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
     issues: list[Issue] = []
     for art, citation in cited:
         resolution = rule_sets.resolve_citation(discovery, citation)
-        if resolution.resolved:
+        if resolution.resolved or _cites_loaded_set(discovery, resolution):
             continue
         issues.append(
             Issue(
@@ -2464,6 +2699,17 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
             )
         )
     return issues
+
+
+def _cites_loaded_set(
+    discovery: rule_sets.RuleSetDiscovery, resolution: rule_sets.CitationResolution
+) -> bool:
+    """Whether a rule citation names a loaded set's rule: that citation is judged by the
+    check of operational-rule citations alone, so none is reported twice (ADR-075 point 8)."""
+    reference = resolution.reference
+    if reference is None:
+        return False
+    return any(s.loaded for s in discovery.sets_named(reference.set_name))
 
 
 def _validate_address_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
@@ -2521,22 +2767,359 @@ def _validate_point_citations(artifacts: list[Artifact], target_root: Path) -> l
     return issues
 
 
-def _validate_same_tier_collisions(providers: list[Provider]) -> list[Issue]:
-    """Two providers in the same tier providing the same hook refuse rather than silently pick."""
-    issues: list[Issue] = []
-    grouped: dict[tuple[str, str], list[Provider]] = {}
-    for p in providers:
-        grouped.setdefault((p.hook, p.tier), []).append(p)
-    for (hook, tier), entries in grouped.items():
-        if len(entries) > 1:
-            sources = ", ".join(sorted(e.source for e in entries))
-            issues.append(
-                Issue(
-                    location=f"hooks/{hook}",
-                    diagnosis=f"same-tier collision at tier '{tier}': "
-                    f"multiple providers ({sources}). Disambiguate.",
+# --- citations of operational rules (COR-068 point 6; ADR-075 point 8) ---------------
+#
+# An operational rule of a loaded set is cited by its layer and number, `core rule 19`,
+# or by its id, `backbone:RS-OPS-019` or `RS-OPS-019`. The forms, with any case of the
+# first letter: `core rule N`, `core.md rule N`, `rules/core.md #N` (or `#N` with no
+# space), `rules/core.md N` (and `rules/core.md rule N`), a list after the plural
+# (`core rules 3, 5 and 13`) and a range (`core rules 14-15`); the same with `project`
+# for a project's own loaded set. After the path, the numbers stay on its line. A number
+# that opens a line as a list item (`3. `) is read neither after the plural nor in a
+# list. A bare `rule N` is never read, since it may name an item of any numbered list, a
+# record's points among them.
+
+# White space within a line, and white space that runs onto the next line, past a
+# quote's, a comment's or a list's marker there.
+_OPS_INLINE = r"[ \t]+"
+_OPS_BREAK = r"[ \t]*\n[ \t]*(?:>|#|//|\*)?[ \t]*"
+_OPS_GAP = rf"(?:{_OPS_INLINE}(?:\n[ \t]*(?:>|#|//|\*)?[ \t]*)?|{_OPS_BREAK})"
+# Before a number of a list: white space within the line, or onto the next line where
+# the number does not open that line as a list item (`3. `), which numbers the list's
+# own items, not rules.
+_OPS_TO_NUMBER = rf"(?:{_OPS_INLINE}|{_OPS_BREAK}(?!\d+\.(?:\s|\Z)))"
+_OPS_NUMBER = r"\d+(?![\w])"
+_OPS_RANGE = r"[ \t]*(?:-|\u2013|to)[ \t]*"
+_OPS_JOIN = rf"(?:,{_OPS_TO_NUMBER}|,?{_OPS_GAP}(?:and|or){_OPS_TO_NUMBER}|{_OPS_RANGE})"
+_OPS_LIST = rf"{_OPS_NUMBER}(?:{_OPS_JOIN}{_OPS_NUMBER})*"
+# After the path, the number and the list stay on the path's line.
+_OPS_INLINE_JOIN = rf"(?:,{_OPS_INLINE}|,?{_OPS_INLINE}(?:and|or){_OPS_INLINE}|{_OPS_RANGE})"
+_OPS_INLINE_LIST = rf"{_OPS_NUMBER}(?:{_OPS_INLINE_JOIN}{_OPS_NUMBER})*"
+OPERATIONAL_CITATION_RE = re.compile(
+    rf"(?<![\w/.-])(?P<layer>[Cc]ore|[Pp]roject)(?:\.md`?)?{_OPS_GAP}"
+    rf"(?:rules{_OPS_TO_NUMBER}(?P<listed>{_OPS_LIST})|rule{_OPS_GAP}(?P<one>{_OPS_NUMBER}))"
+    rf"|(?<![\w-])rules/(?P<file>core|project)\.md`?"
+    rf"(?:{_OPS_INLINE}(?:rules?{_OPS_INLINE})?#?|#)(?P<filed>{_OPS_INLINE_LIST})"
+)
+_OPS_LISTED = re.compile(r"(?P<number>\d+)(?:[ \t]*(?:-|\u2013|to)[ \t]*(?P<through>\d+))?")
+_OPS_RULE_ID = re.compile(
+    rf"(?<![\w:-])(?:\[?(?P<component>{rule_sets.COMPONENT_PATTERN}):)?"
+    rf"(?P<rule>RS-(?P<set>{rule_sets.SET_NAME_PATTERN})-{rule_sets.RULE_NUMBER_PATTERN})"
+    rf"(?![\w-])"
+)
+_MARKDOWN_SUFFIXES = (".md", ".markdown")
+#: A path segment that holds a project's tests, which may cite a missing rule on purpose.
+_TESTS_SEGMENTS = frozenset({"tests", "test"})
+
+
+@dataclass(frozen=True)
+class OperationalCitation:
+    """A citation of one operational rule, as `operational_rule_citations` finds it.
+
+    - `line`: the line of the text it starts on, counted from 1.
+    - `text`: the citation as written, its white space folded.
+    - `layer`: `core` or `project`, for a citation by layer and number; `None` for one by
+      id.
+    - `number`: the rule's number, for a citation by layer and number; for a range, its
+      first number.
+    - `through`: for a range, its last number, so a range is one citation, however
+      many rules it spans; `None` otherwise.
+    - `rule`: the rule's id as written, for a citation by id, with `component` written in
+      front of it, if any.
+    """
+
+    line: int
+    text: str
+    layer: str | None = None
+    number: int | None = None
+    through: int | None = None
+    rule: str | None = None
+    component: str | None = None
+
+    @property
+    def numbers(self) -> range:
+        """The numbers the citation names: its number, or its range's."""
+        if self.number is None:
+            return range(0)
+        return range(self.number, (self.through or self.number) + 1)
+
+
+def operational_rule_citations(
+    text: str, *, loaded_sets: Collection[str], markdown: bool
+) -> list[OperationalCitation]:
+    """Every citation of an operational rule in `text`, in order.
+
+    By layer and number, in each form above, a list giving one citation for each number
+    or range it names, a range one citation for all its numbers (`through`); and by id,
+    for a rule of a set named in `loaded_sets`. In Markdown, fenced code is skipped,
+    every line kept where it was. Each number or range of one citation is given once.
+    """
+    if markdown:
+        text = _without_fenced_code(text)
+    found: list[tuple[int, OperationalCitation]] = []
+    for match in OPERATIONAL_CITATION_RE.finditer(text):
+        line = text.count("\n", 0, match.start()) + 1
+        written = " ".join(match.group(0).replace("\n", " ").split())
+        layer = (match["layer"] or match["file"]).lower()
+        listed = (
+            [(int(match["one"]), None)]
+            if match["one"] is not None
+            else _listed(match["listed"] or match["filed"])
+        )
+        found.extend(
+            (
+                match.start(),
+                OperationalCitation(line, written, layer=layer, number=number, through=through),
+            )
+            for number, through in dict.fromkeys(listed)
+        )
+    if loaded_sets:
+        for match in _OPS_RULE_ID.finditer(text):
+            if match["set"] not in loaded_sets:
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            found.append(
+                (
+                    match.start(),
+                    OperationalCitation(
+                        line,
+                        match.group(0).lstrip("["),
+                        rule=match["rule"],
+                        component=match["component"],
+                    ),
                 )
             )
+    return [citation for _start, citation in sorted(found, key=lambda pair: pair[0])]
+
+
+def _listed(listed: str) -> list[tuple[int, int | None]]:
+    """What a list names, each a number with no `through`, or a range's first and last
+    numbers: `3, 5 and 13`, `14-15`. A range written backwards names its two numbers."""
+    named: list[tuple[int, int | None]] = []
+    for match in _OPS_LISTED.finditer(listed):
+        first = int(match["number"])
+        last = int(match["through"]) if match["through"] else first
+        if last > first:
+            named.append((first, last))
+        elif last == first:
+            named.append((first, None))
+        else:
+            named.extend([(first, None), (last, None)])
+    return named
+
+
+def _without_fenced_code(text: str) -> str:
+    """`text` with each line of fenced code blanked, every line kept where it was."""
+    lines = text.split("\n")
+    fence: str | None = None
+    for index, line in enumerate(lines):
+        opened = _FENCE.match(line)
+        if opened is not None:
+            marker = opened.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            lines[index] = ""
+        elif fence is not None:
+            lines[index] = ""
+    return "\n".join(lines)
+
+
+@dataclass(frozen=True)
+class UnheldOperationalRule:
+    """A citation of an operational rule its loaded set lacks, or holds retired."""
+
+    path: str
+    citation: OperationalCitation
+    message: str
+
+
+def unheld_operational_rules(target_root: Path) -> list[UnheldOperationalRule]:
+    """Each citation of an operational rule that is missing, superseded or withdrawn.
+
+    The citations are read from the text files of the working tree's one listing, but the
+    project's tests (a file beneath a `tests` folder, or a `test_*.py`). Left out (COR-068
+    point 6; ADR-075 point 8):
+
+    - a synced copy, by the tree's own predicate (`is_synced_copy`), so where a set
+      arrives by sync only the project's own citations of its rules are read
+    - a superseded decision record, whose body stays as it was written
+    - an answer file (`answer_files.is_answer_file`)
+    - what the project leaves out of anchoring (`friction.exclude`, COR-050 point 7)
+    - in a loaded set's own file, the ids of its own rules: the file defines them, in
+      its front matter and its headings, and cites none of them
+
+    A citation by layer and number names the first loaded set of that layer: the
+    backbone's for `core`, the project's for `project`. A layer with none is not judged,
+    as a project's plain file of rules is not (COR-068 point 7).
+    """
+    from project_kit import answer_files, decisions_validate
+    from project_kit import friction_discovery as fd
+    from project_kit.working_tree import working_tree
+
+    discovery = rule_sets.discover_rule_sets(target_root)
+    loaded = {s.name: s for s in discovery.rule_sets if s.loaded and s.name is not None}
+    if not loaded:
+        return []
+    defines = {s.path: s.name for s in loaded.values()}
+    by_layer: dict[str, rule_sets.RuleSet] = {}
+    for rule_set in discovery.rule_sets:
+        if not rule_set.loaded:
+            continue
+        if rule_set.component == fd.BACKBONE_COMPONENT:
+            by_layer.setdefault("core", rule_set)
+        elif rule_set.component is None:
+            by_layer.setdefault("project", rule_set)
+    settings = fd.read_friction_settings(target_root)
+    superseded = _superseded_records(target_root, decisions_validate)
+    tree = working_tree(target_root)
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    found: list[UnheldOperationalRule] = []
+    for rel in tree.files():
+        path = PurePosixPath(rel)
+        if _TESTS_SEGMENTS & set(path.parts[:-1]) or (
+            path.name.startswith("test_") and path.suffix == ".py"
+        ):
+            continue
+        if rel in superseded or answer_files.is_answer_file(rel) or settings.excluded(rel):
+            continue
+        try:
+            raw = tree.read_file(rel)
+        except OSError:
+            continue
+        if raw is None or b"\0" in raw or (b"rule" not in raw and b"RS-" not in raw):
+            continue
+        try:
+            text = universal_newlines(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            continue
+        citations = operational_rule_citations(
+            text, loaded_sets=loaded.keys(), markdown=path.suffix in _MARKDOWN_SUFFIXES
+        )
+        if not citations:
+            continue
+        if ownership is not None and ownership.is_synced_copy(target_root, rel):
+            continue
+        own = defines.get(rel)
+        for citation in citations:
+            if own is not None and rule_sets.rule_set_name_of(citation.rule or "") == own:
+                continue
+            found.extend(
+                UnheldOperationalRule(rel, citation, message)
+                for message in _unheld_operational(citation, by_layer, discovery)
+            )
+    return found
+
+
+def _superseded_records(target_root: Path, decisions_validate: Any) -> frozenset[str]:
+    """The paths, relative to the root, of every superseded decision record, its status
+    read from its front matter as YAML, so a quoted `"superseded"` counts too."""
+    from project_kit import document_parts
+
+    found: set[str] = set()
+    for record in decisions_validate.discover_decision_records(target_root):
+        try:
+            text = record.path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        front_matter, _body, _problem = document_parts.parse_front_matter(text)
+        if front_matter is not None and front_matter.get("status") == "superseded":
+            found.add(_relative_to(record.path, target_root))
+    return frozenset(found)
+
+
+def _unheld_operational(
+    citation: OperationalCitation,
+    by_layer: Mapping[str, rule_sets.RuleSet],
+    discovery: rule_sets.RuleSetDiscovery,
+) -> list[str]:
+    """Why a citation names no rule in force, one message for each rule it names that is
+    missing or retired; none when every one is in force, or it names a layer with no
+    loaded set. A range that runs past the set's highest number gives one message for
+    the numbers past it, naming the range, rather than one for each."""
+    if citation.layer is None:
+        reference = rule_sets.RuleReference(rule=citation.rule or "", component=citation.component)
+        rule_set, rule, problem = rule_sets.locate_rule(discovery, reference)
+        if problem is not None or rule_set is None or rule is None:
+            return [
+                f"{citation.text!r} cites a rule that does not resolve: {problem} "
+                f"(COR-068 point 6)."
+            ]
+        retired = _retired_operational(citation, citation.text, rule_set, rule)
+        return [retired] if retired is not None else []
+    rule_set = by_layer.get(citation.layer)
+    if rule_set is None or rule_set.name is None or citation.number is None:
+        return []
+    highest = max((_rule_number(r.id) for r in rule_set.rules), default=0)
+    messages: list[str] = []
+    past = [number for number in citation.numbers if number > highest]
+    for number in citation.numbers:
+        if number > highest and citation.through is not None:
+            continue
+        rule_id = f"RS-{rule_set.name}-{number:03d}"
+        cited = f"{citation.layer} rule {number}"
+        rule = rule_set.rule(rule_id)
+        if rule is None:
+            messages.append(
+                f"{citation.text!r} cites {cited}, which {rule_set.citation} "
+                f"({rule_set.path}) does not hold: a citation by layer and number names the "
+                f"rule of that id, {rule_set.cite(rule_id)} (COR-068 point 6)."
+            )
+            continue
+        retired = _retired_operational(citation, cited, rule_set, rule)
+        if retired is not None:
+            messages.append(retired)
+    if past and citation.through is not None:
+        messages.append(
+            f"{citation.text!r} cites {citation.layer} rules {past[0]} to {past[-1]}, past "
+            f"the highest rule {rule_set.citation} ({rule_set.path}) holds, "
+            f"{citation.layer} rule {highest}: a citation by layer and number names the "
+            f"rule of that id (COR-068 point 6)."
+        )
+    return messages
+
+
+def _rule_number(rule_id: str) -> int:
+    """A rule's number, without its leading zeros: `RS-OPS-019` is 19."""
+    return int(rule_id.rsplit("-", 1)[1])
+
+
+def _retired_operational(
+    citation: OperationalCitation,
+    cited: str,
+    rule_set: rule_sets.RuleSet,
+    rule: rule_sets.Rule,
+) -> str | None:
+    """Why a cited rule binds nothing, or None when it is in force."""
+    if not rule.is_retired:
+        return None
+    successor = rule.successor
+    instead = f"; its successor is {rule_set.cite(successor.rule)}" if successor else ""
+    return (
+        f"{citation.text!r} cites {cited}, {rule_set.cite(rule.id)}, which is {rule.status}"
+        f"{instead}, so it binds nothing (COR-068 point 6)."
+    )
+
+
+def _validate_operational_citations(target_root: Path) -> list[Issue]:
+    """Each citation of a missing or retired operational rule, at `<file>:<line>`
+    (`unheld_operational_rules`). Read from prose, so a warning (ADR-075 point 8)."""
+    return [
+        Issue(location=f"{unheld.path}:{unheld.citation.line}", diagnosis=unheld.message)
+        for unheld in unheld_operational_rules(target_root)
+    ]
+
+
+def _validate_same_tier_collisions(providers: list[Provider]) -> list[Issue]:
+    """Each hook whose winning tier holds two providers, which bind neither rather than
+    one picked (COR-013 point 4). A provider at a higher tier binds the hook, so a
+    collision below it is settled and no finding (`winning_providers`)."""
+    issues: list[Issue] = []
+    for hook in sorted({p.hook for p in providers}):
+        winners = winning_providers(providers, hook)
+        if len(winners) > 1:
+            issues.append(Issue(location=f"hooks/{hook}", diagnosis=collision_diagnosis(winners)))
     return issues
 
 
@@ -2612,6 +3195,64 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                     Issue(
                         location=str(agents_overlay.OVERLAY_PATH),
                         diagnosis=f"`overrides.{agent}.{key}`: {problem}.",
+                    )
+                )
+    return issues
+
+
+def _validate_unknown_overrides(target_root: Path) -> list[Issue]:
+    """Each entry under the overlay's `overrides:` that the deploy ignores, at
+    `overlay.yaml` and naming its key (#2468).
+
+    A block for an agent no source ships, or a category its definition does not
+    reference, changes no deployed agent, so a typo in either would pass with no
+    sign (`agents_overlay.unknown_overrides`). The agent deploys as if the entry
+    were absent, so a warning.
+    """
+    return [
+        Issue(
+            location=str(agents_overlay.OVERLAY_PATH),
+            diagnosis=f"`{unknown.key}` is ignored: {unknown.reason}. "
+            f"Correct the name, or remove the entry.",
+        )
+        for unknown in agents_overlay.unknown_overrides(target_root)
+    ]
+
+
+def _is_pattern_path(entry: str) -> bool:
+    """Whether a `reads.patterns` entry is a path: no `<category>` placeholder, and
+    holding a `/` or a `.`, such as `docs/` or `CLAUDE.md`.
+
+    The deploy resolves a placeholder through the overlay and writes any other entry
+    as it stands, so a path still names something on disk in the deployed copy.
+    """
+    return agents_overlay.placeholder_category(entry) is None and any(
+        mark in entry for mark in "/."
+    )
+
+
+def _validate_reads_patterns(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every `reads.patterns` entry of an agent is a `<category>` placeholder or a
+    path (#2481).
+
+    The agents README writes each category there as its placeholder, the form the
+    deploy resolves. A bare category name, such as `architecture-docs`, deploys as
+    written: the deployed copy carries the name, never the category's paths. A skill
+    is left out, since the adapter deploys a skill's text unchanged and its
+    `reads.patterns` is not filled (the skills README).
+    """
+    issues: list[Issue] = []
+    for art in artifacts:
+        if art.kind != "agent":
+            continue
+        for entry in sorted(art.declared.reads_patterns):
+            if agents_overlay.placeholder_category(entry) is None and not _is_pattern_path(entry):
+                issues.append(
+                    Issue(
+                        location=_location(art, target_root),
+                        diagnosis=f"`reads.patterns` entry {entry!r} is neither a "
+                        f"`<category>` placeholder nor a path, so the deploy does not "
+                        f"resolve it. Write it `<{entry.strip('<>')}>`.",
                     )
                 )
     return issues

@@ -1,0 +1,51 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: session
+    layout: slide
+    title: Eine Sitzung im Terminal, mit Eingabeaufforderung, Befehlen und Kommentaren
+    visual:
+      use: starter/list
+      widths: own
+      item: {use: starter/code}
+      items:
+        - id: install
+          head: Einmal installieren
+          text:
+            - {text: "# einmalig, auf Ihrem Rechner\n", style: comment}
+            - {text: "$ ", style: prompt}
+            - {text: "uv tool install pkit\n", style: command}
+            - {text: "$ ", style: prompt}
+            - {text: "pkit --version\n", style: command}
+            - "pkit 2.0.0"
+        - id: status
+          head: Was der Status zeigt
+          text:
+            - {text: "$ ", style: prompt}
+            - {text: "pkit status\n", style: command}
+            - "  Verbindungen\n"
+            - "    Rollen     3 benannt: 3 aktiv\n"
+            - "    Anschlüsse 6 definiert: 2 unbefüllt"
+
+  - id: file
+    layout: slide
+    title: Der Text einer Datei, ohne Überschrift, jede Zeile wie geschrieben
+    visual:
+      use: starter/list
+      widths: own
+      item: {use: starter/code}
+      items:
+        - id: tree
+          text:
+            - "ihr-projekt/\n"
+            - "├── .pkit/"
+            - {text: "              # die Methodik\n", style: comment}
+            - "│   ├── decisions/"
+            - {text: "      # Entscheidungen und Begründungen\n", style: comment}
+            - "│   └── rules/"
+            - {text: "          # was zu tun ist\n", style: comment}
+            - "└── src/"
+            - {text: "                # Ihr Quellcode, unverändert", style: comment}
+        - id: plain
+          text: "name: starter\nversion: 1.0.0\nkind: components"

@@ -1,0 +1,67 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: stack
+    layout: slide
+    title: Ebenen übereinander gestapelt, die oberste zuerst
+    visual:
+      use: starter/layers
+      levels:
+        - id: decisions
+          head: Entscheidungen
+          text: Getroffene Entscheidungen und ihre Begründung.
+        - id: rules
+          head: Arbeitsregeln
+          text: Genau, was zu tun ist, für jede Sitzung und jedes Werkzeug.
+        - id: commands
+          head: Befehle und Prüfungen
+          text: Setzen um, was entschieden ist, und prüfen jede Änderung.
+        - id: work
+          head: Quellcode und Dokumente
+          text: Die Arbeit selbst, verknüpft mit ihren Abhängigkeiten.
+
+  - id: tinted
+    layout: slide
+    title: Jede Ebene getönt nach dem Begriff, den sie nennt
+    visual:
+      use: starter/layers
+      level: {use: starter/card, fill: tint}
+      levels:
+        - id: people
+          concept: test-notation/person
+          head: Menschen
+          text: Wer die Arbeit anfordert.
+        - id: services
+          concept: test-notation/service
+          head: Dienste
+          text: Was ihnen antwortet.
+        - id: stores
+          concept: test-notation/store
+          head: Datenspeicher
+          text: Wo liegt, was sie aufbewahren.
+
+  - id: notes
+    layout: slide
+    title: Notizen neben dem Stapel gelten über seine Ebenen hinweg
+    visual:
+      use: starter/layers
+      level: {use: starter/card, fill: tint, concept: test-notation/service}
+      note: {use: starter/card, bar: left}
+      levels:
+        - id: decisions
+          head: Entscheidungen
+          text: Getroffene Entscheidungen und ihre Begründung.
+        - id: rules
+          head: Arbeitsregeln
+          text: Genau, was zu tun ist.
+        - id: work
+          head: Quellcode
+          text: Die Arbeit selbst.
+      notes:
+        - id: carried-out
+          head: Umgesetzt
+          text: Jede Ebene setzt die darüberliegenden Ebenen um.
+        - id: checked
+          head: Überprüft
+          text: Eine abweichende Ebene wird zuerst überprüft.

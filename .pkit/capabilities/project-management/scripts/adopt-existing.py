@@ -865,12 +865,16 @@ def _unmatched_workstreamish_labels(inventory: Inventory) -> list[str]:
 
 # ----- board-carried axes (the `board:` arm, DEC-051 decision point 2) ----
 
-# The axes the substrate-map may declare board-carried. Mirrors the schema's
-# admissibility (`type` and `state` carry a `not: {required: [board]}`): `type` is
-# label-carried by functional dependency — PR-title alignment reads the label and
-# a board field is invisible from a PR — and a board-carried `state` awaits a
-# detector kind that can read a board Status field.
-BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
+# The axes this ceremony drafts board-carried from a board field it observes.
+# Within the schema's admissibility (`type` carries a `not: {required: [board]}`:
+# it is label-carried by functional dependency — PR-title alignment reads the
+# label and a board field is invisible from a PR). `state` is admissible on the
+# arm, but the ceremony drafts no `board: true` for it: a project binds its state
+# to its board only by its own choice, once it has checked its Status options and
+# given every open issue a card and a Status
+# ([project-management:DEC-062-axes-chosen-in-the-map] point 5), so the human
+# writes that binding.
+BOARD_DRAFTED_AXES: tuple[str, ...] = ("priority", "workstream")
 
 
 def _board_field_candidate(inventory: Inventory, axis: str) -> dict[str, Any] | None:
@@ -884,16 +888,17 @@ def _board_field_candidate(inventory: Inventory, axis: str) -> dict[str, Any] | 
     unnoticed. The evidence names the field, so a loose match is visible and
     correctable, and the write path's stricter rule is stated there too.
 
-    Scoped to :data:`BOARD_DECLARABLE_AXES`, and that is the guard rather than a
+    Scoped to :data:`BOARD_DRAFTED_AXES`, and that is the guard rather than a
     convention: a future board-field detector added to `_infer_type` or
-    `_infer_state` would otherwise draft an arm the schema refuses, and the
-    ceremony's contract is that the draft it emits VALIDATES. A non-declarable
-    axis finds nothing here and falls through to its existing path.
+    `_infer_state` would otherwise draft an arm the schema refuses for `type`, or
+    one DEC-062 point 5 leaves to the project for `state`, and the ceremony's
+    contract is that the draft it emits VALIDATES. Any other axis finds nothing
+    here and falls through to its existing path.
 
     Returns ``None`` when no board is configured (the inventory then holds no
     fields at all) or nothing matches.
     """
-    if axis not in BOARD_DECLARABLE_AXES:
+    if axis not in BOARD_DRAFTED_AXES:
         return None
     for field_obs in inventory.board_fields:
         name = str(field_obs.get("name", ""))

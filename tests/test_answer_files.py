@@ -22,7 +22,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor, discover_artefacts
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -30,7 +30,9 @@ from tests.friction_documents import (
     Timeline,
     document,
     friction_config,
+    without_over_broad,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 GUIDE = "docs/guide.md"
 CLI = Anchor("path", "src/cli/**")
@@ -90,8 +92,10 @@ def answers(*entries: dict[str, Any]) -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _check(timeline: Timeline) -> fr.RepositoryCheck:
@@ -115,7 +119,11 @@ def _answers(result: fr.RepositoryCheck, location: str = GUIDE) -> Mapping[str, 
 
 
 def _kinds(result: fr.RepositoryCheck) -> list[tuple[str, str | None]]:
-    return [(f.kind.value, None if f.anchor is None else f.anchor.value) for f in result.findings]
+    """(kind, anchor) per finding, the over-broad anchors left out (`without_over_broad`)."""
+    return [
+        (f.kind.value, None if f.anchor is None else f.anchor.value)
+        for f in without_over_broad(result.findings)
+    ]
 
 
 # --- the folder ---------------------------------------------------------------------
@@ -322,7 +330,8 @@ def test_an_artefact_whose_block_holds_no_answer_is_read_from_its_answer_file(
 
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", changed)
     ]
 
@@ -372,7 +381,8 @@ def test_a_value_written_back_keeps_its_first_point(timeline: Timeline) -> None:
     )
     result = _check(timeline)
     assert _points(result) == [first]
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", changed)
     ]
 
@@ -554,6 +564,28 @@ def test_a_revalidation_that_reads_both_clears_the_debt(timeline: Timeline) -> N
     assert result.prunable == ("one.yaml", "two.yaml")
 
 
+def test_the_check_parses_each_version_of_an_answer_file_once(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The names history agrees with are read from the versions the points are read from
+    (COR-062 points 5 and 6), so each version is parsed once for both (#2405)."""
+    _apart(timeline)
+    timeline.commit(
+        "judge the combined state",
+        {answer_path("three"): answers(entry(at=T3, read=("one", "two")))},
+    )
+    parsed: list[bytes | None] = []
+    read = af.read_answer_file
+
+    def reading(name: str, raw: bytes | None) -> af.AnswerFile:
+        parsed.append(raw)
+        return read(name, raw)
+
+    monkeypatch.setattr(af, "read_answer_file", reading)
+    assert _kinds(_check(timeline)) == []
+    assert len(parsed) == len(set(parsed)) == 3
+
+
 def test_an_anchor_changed_since_only_one_of_two_apart_is_no_friction(
     timeline: Timeline,
 ) -> None:
@@ -624,7 +656,8 @@ def test_a_deferral_in_an_answer_file_covers_its_anchor_until_it_changes_again(
 
     again = timeline.commit("change the CLI again", {"src/cli/main.py": "print('v3')\n"})
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", again),
         ("deferred", deferred),
     ]
@@ -654,7 +687,8 @@ def test_a_deferral_moved_out_of_the_block_keeps_its_point(timeline: Timeline) -
         },
     )
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("deferred", deferred)
     ]
 
@@ -712,6 +746,7 @@ def test_no_anchor_stands_on_an_answer_file(timeline: Timeline) -> None:
 
 
 def test_no_place_reads_a_file_in_the_answer_folder(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {f"{FOLDER}/notes.md": document("notes", anchors={"path": ["src/**"]})},
         friction_config(places=("docs", ".pkit/project")),

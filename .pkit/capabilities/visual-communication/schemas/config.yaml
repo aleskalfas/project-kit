@@ -1,0 +1,22 @@
+# The capability's project configuration (visual-communication DEC-002 point 2): the
+# project's choices as a whole, never a look, a lock or a choice of one piece.
+#
+# - `location` — the working folder that holds the project's libraries and pieces,
+#   relative to the repository's top. The command that first writes there records it
+#   (COR-049 point 5); until then the commands take `visual/`. Move the work by moving
+#   the folder and changing this line.
+# - `browser` — the program of the browser the viewing step draws the HTML renderer's
+#   pages through, such as a pinned build, in place of the first browser of the Chromium
+#   family it finds (visual-communication DEC-020 point 7). A path that starts `~/` lies
+#   in the home folder, and a relative one below the repository's top. Absent, the step
+#   looks where Chrome and Chromium install themselves.
+#
+# A file of the capability's format names its schema at its top (DEC-002 point 3); no
+# path binds it. The body below is the reference instance: valid, the schema's self-test.
+
+pkit_schema: visual-communication:config
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+location: visual

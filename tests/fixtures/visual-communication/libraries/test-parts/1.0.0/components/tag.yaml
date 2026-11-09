@@ -1,0 +1,28 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A short label on a box, painted and spaced with the library's own roles.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: What the tag says.
+      x-pkit-prose: true
+
+parts:
+  box:
+    box: {fill: test-parts.paper, stroke: line, stroke-width: "=@stroke.thin"}
+    width: "=:width"
+    height: "=:height"
+  label:
+    text: {content: label, style: type.body, fill: test-parts.note}
+    x: "=@test-parts.gap"
+    y: "=@test-parts.gap"
+    width: "=:width - 2 * @test-parts.gap"
+
+preferred:
+  height: "=label.bottom + @test-parts.gap"

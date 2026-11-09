@@ -13,7 +13,7 @@
       "$ref": "#/$defs/word"
     },
     "kind": {
-      "description": "The page's kind, named by the template it follows: pages of a kind follow one format, with a template per kind (RS-LDOC-004). The capability ships the `signpost` template (RS-LDOC-005); a kind is a word, and a kind other than the shipped ones arrives with its template.",
+      "description": "The page's kind, named by the template it follows: pages of a kind follow one format, with a template per kind (RS-LDOC-004). The capability ships the templates of `signpost` (RS-LDOC-005), `reference` and `guide` (living-docs DEC-003), each kind's structure declared in `schemas/page-kinds.yaml`; a kind is a word, and a kind other than the shipped ones arrives with its template.",
       "$ref": "#/$defs/word"
     }
   },

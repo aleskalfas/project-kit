@@ -57,3 +57,20 @@ requirements:
       proposing needs, and ADR-066 point 13 words what it requires of the
       harness. The drift command, `pkit pm fix-drift`, is the first command
       that depends on it.
+  session-loads-rules:
+    title: Every session holds every layer's loaded rules from its start to its end
+    behaviour: >-
+      Each session the harness starts in a project holds every layer's loaded
+      file of operational rules — the methodology core's, each installed
+      capability's and the project's — from the session's start and for its
+      whole length, after the harness shortens the session's context too. That
+      covers a session a person starts, a helper an agent delegates to, and a
+      run started with nobody attending.
+    observation_point: interposed-runtime
+    evidence: >-
+      A design dependency (COR-047 point 9): COR-070 point 6 states it, resting
+      on COR-068 point 2, under which a loaded rule binds only on the sessions
+      that load its file. A harness may load its start-up files in a session a
+      person starts and not in some helpers it starts for another agent, or in
+      a run started without the project's settings, and a session that loads
+      none is bound by none of the rules, with nothing to say so.

@@ -1,0 +1,76 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  Something to know beside the main point: a box with rounded corners on its colour
+  family's fill, a bar along its left side in the family's line, that holds a head, a
+  command and a text, one under another, each where the content gives it. The command
+  stands in a code block. It is as wide as it is given, and as tall as what it holds.
+
+fields:
+  type: object
+  properties:
+    head:
+      type: string
+      description: What to know, in a few words, such as a question it answers.
+      x-pkit-prose: true
+    command:
+      type: string
+      description: A command to run for it, shown as code.
+    text:
+      type: string
+      description: What to know, in a sentence or two.
+      x-pkit-prose: true
+
+colour: neutral
+
+values:
+  # Where what the aside holds starts, beside its bar and inside its edge, and how wide
+  # it is.
+  left: "=@starter.bar + @starter.inset"
+  inner: "=:width - left - @starter.inset"
+
+parts:
+  box:
+    box:
+      fill: ":colour.fill"
+      rx: "=@starter.corner"
+    width: "=:width"
+    height: "=:height"
+  bar:
+    box: {fill: ":colour.line", rx: "=@starter.corner"}
+    width: "=@starter.bar"
+    height: "=:height"
+  # The head and the text are the family's text on the family's fill, a pair the
+  # foundations declare. Each keeps a gap from what stands above it only where both are
+  # drawn: a part not drawn has no height.
+  head:
+    when: head
+    text:
+      content: head
+      style: starter.type.head
+      fill: ":colour.text"
+    x: "=left"
+    y: "=@starter.inset"
+    width: "=inner"
+  # The command is passed on as text, so the code block shows it as one plain run.
+  command:
+    when: command
+    use: starter/code
+    fields: {text: command}
+    x: "=left"
+    y: "=head.bottom + min(head.height, command.height, @space.2)"
+    width: "=inner"
+  text:
+    when: text
+    text:
+      content: text
+      style: type.body
+      fill: ":colour.text"
+    x: "=left"
+    y: "=command.bottom + min(max(head.height, command.height), text.height, @space.2)"
+    width: "=inner"
+
+preferred:
+  height: "=text.bottom + @starter.inset"

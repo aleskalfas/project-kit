@@ -27,6 +27,10 @@ Held to software-analysis DEC-004 point 7 and DEC-001 points 1 and 2:
 - **one name, one concept** — validation refuses two terms in force of one name, a
   plural among the names, and a name another term replaces, within an analysis and
   across the analyses it builds on, two of those included, whatever any rule's status.
+
+The validator, the links and the stamp run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2326). One test keeps a process: the link
+command's exit code and the lines it prints.
 """
 
 from __future__ import annotations
@@ -44,22 +48,25 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
     ANALYSIS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     CONSTRAINTS,
     DOMAIN_MODEL,
     FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
+    LINK,
     QUALITY,
     SA,
     SETTINGS_TEXT,
     USE_CASES,
     VALIDATE,
-    accepting_san,
     fill,
     installed,
     link,
     load_lib,
     prepare,
+    run_in_process,
     run_script,
     stamped,
 )
@@ -238,7 +245,8 @@ def bare(
 
 
 def _validate(repo: AdopterRepo) -> list[tuple[str, str]]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's errors, `--json` alone, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     return [
         (f["location"], f["message"])
@@ -284,13 +292,18 @@ def test_the_stamp_opens_each_section_with_its_link_to_its_term(
 # --- the command writes the links ------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the link command's end-to-end test: its exit code and the lines it prints, from a "
+    "process of its own, and the pkit it starts"
+)
 def test_the_command_links_each_first_mention_with_every_safeguard(project: AdopterRepo) -> None:
     """Each first mention in a section links to its term's entry; the safeguards keep a
     link off the rest (DEC-004 point 7). The view and the glossary's entries come out
     exactly as `VIEW_LINKED` and `ENTRIES_LINKED` show them, and a term's definition, in
     front matter, stays plain."""
     before = _read(project, GLOSSARY).split("\n---\n", 1)[0]
-    completed = link(project)
+    completed = run_script(project, LINK)
+    assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [
         f"linked {GLOSSARY} (5 link(s) written or mended)",
         f"linked {VIEW} (9 link(s) written or mended)",
@@ -380,7 +393,7 @@ def test_a_section_s_link_to_its_term_is_no_content_of_its_explanation(
     """Where the format rule binds, a section whose explanation holds only its link to its
     term lacks its explanation (DEC-004 point 7)."""
     link(project)
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(project) == []
     view = _read(project, VIEW).replace(
         "An order is what a [customer](../glossary.md#term-customer--customer) asks the shop "
@@ -1087,7 +1100,7 @@ def test_the_command_links_each_part_of_an_actor_a_use_case_a_journey_and_a_requ
         assert _body(kinds, rel) == body, rel
         assert _read(kinds, rel).split("\n---\n", 1)[0] == fronts[rel], rel
     assert _validate(kinds) == []
-    kinds.write(accepting_san(kinds))
+    kinds.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(kinds) == []
     assert link(kinds).stdout.strip() == "Every link is as it should be; nothing written."
 
@@ -1179,7 +1192,7 @@ def test_a_view_ends_with_where_its_concepts_are_used(kinds: AdopterRepo) -> Non
     assert _body(kinds, VIEW).endswith("**Always true:** None.\n\n" + KINDS_CLOSING)
     targets = re.findall(r"\]\(([^)]+)\)", KINDS_CLOSING)
     assert targets and all(re.fullmatch(links.CLOSING_TARGET, t) for t in targets), targets
-    kinds.write(accepting_san(kinds))
+    kinds.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(kinds) == []
 
 

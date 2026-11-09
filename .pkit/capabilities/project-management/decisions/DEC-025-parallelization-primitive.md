@@ -63,7 +63,7 @@ The etymological re-cut (renaming workstreams to lanes) was rejected at the scra
 
 A label series, parallel to but distinct from `workstream:<slug>`. Each label names an ephemeral lock domain (file area, deployment target, fixture set — adopter's call). **At most one in-flight issue per lane** is the lock rule. What counts as in flight is open question 1.
 
-Until lanes are built, readiness takes no account of the code a Task touches, and the merge settles an overlap. Whether and how a lane's lock holds a ready Task back is for the record that builds lanes, which then refines DEC-059 point 7.
+Until lanes are built, readiness reckons nothing from the code a Task touches. The planner orders Tasks that share a file through their dependencies, and the merge settles any other overlap (refinement per [project-management:DEC-066-fold-tasks-that-share-a-file]). Whether and how a lane's lock holds a ready Task back is for the record that builds lanes, which then refines DEC-059 point 7.
 
 ### `project/lanes.yaml` — lane catalog
 

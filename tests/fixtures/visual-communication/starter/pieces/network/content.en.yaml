@@ -1,0 +1,63 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: groups
+    layout: slide
+    title: Two cards tied to the items of a group in the other column
+    visual:
+      use: starter/network
+      item: {use: starter/card, fill: tint, concept: test-notation/service}
+      left:
+        - id: living-docs
+          head: living-docs
+          tag: documentation
+          text: Docs for each reader.
+        - id: software-analysis
+          head: software-analysis
+          tag: analysis
+          text: What the software must do.
+      right:
+        - id: groups
+          use: starter/groups
+          groups:
+            - id: project-management
+              head: project-management
+              tag: work tracking
+              items:
+                - {id: doc-check, text: The docs a change must update.}
+                - {id: fixers, text: Which agent fixes each document.}
+                - {id: use-cases, text: The use cases to plan from.}
+      ties:
+        - id: docs-check
+          from: {item: "left[living-docs]"}
+          to: {item: "right[groups].groups[project-management].items[doc-check]"}
+        - id: docs-fixers
+          from: {item: "left[living-docs]"}
+          to: {item: "right[groups].groups[project-management].items[fixers]"}
+        - id: analysis-fixers
+          from: {item: "left[software-analysis]"}
+          to: {item: "right[groups].groups[project-management].items[fixers]"}
+        - id: analysis-use-cases
+          from: {item: "left[software-analysis]"}
+          to: {item: "right[groups].groups[project-management].items[use-cases]"}
+
+  - id: three
+    layout: slide
+    title: Three columns, their ties with corners
+    visual:
+      use: starter/network
+      columns: three
+      tie: {use: starter/connector, route: corners}
+      left:
+        - {id: ideas, head: Ideas, text: In a conversation.}
+      middle:
+        - {id: decisions, head: Decisions, text: Choices you accepted.}
+        - {id: rules, head: Rules, text: Exactly what to do.}
+      right:
+        - {id: work, head: Your code, text: The work itself.}
+      ties:
+        - {id: ideas-decisions, from: {item: "left[ideas]"}, to: {item: "middle[decisions]"}}
+        - {id: ideas-rules, from: {item: "left[ideas]"}, to: {item: "middle[rules]"}}
+        - {id: decisions-work, from: {item: "middle[decisions]"}, to: {item: "right[work]"}}
+        - {id: rules-work, from: {item: "middle[rules]"}, to: {item: "right[work]"}}

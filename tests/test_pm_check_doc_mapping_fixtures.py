@@ -8,23 +8,24 @@ error and exit code are written out literally below, so the mapping check's
 behaviour for a project without a documentation capability cannot change
 without this file changing with it.
 
-The script runs as a subprocess under this interpreter, from the fixture
+The script's `main` runs in the test's own process, from the fixture
 repository, with `--capability-root` and `--pr-body-file` always given — so no
 `gh` is reached and no real project is read.
 
 Since the check reads its obligations from the resolved doc-check point
-(DEC-053) through `pkit connections resolve`, a `pkit` stand-in on PATH answers
-that read: it runs the real default filler, `fill-doc-check.py --json`, over the
-fixture's capability root and wraps its envelope as the backbone resolves an
-additive point with one filler — the mapping's obligations, in order, each
-from project-management. The expected outcomes were captured before the check
-read the point, and are unchanged.
+(DEC-053) through `pkit connections resolve`, a `pkit` stand-in answers that
+read in this process (`tests/in_process.py`): it runs the real default filler's
+`main`, `fill-doc-check.py --json`, over the fixture's capability root and wraps
+its envelope as the backbone resolves an additive point with one filler — the
+mapping's obligations, in order, each from project-management. The expected
+outcomes were captured before the check read the point, and are unchanged.
 
 The last fixture is the merge gate under the setting project-kit runs with
 (#1012): the friction source enforcing, in an adopter with living-docs and
 project-management installed, the point resolved by the real `pkit` — a
 pull request with a stale page and unanchored code is refused naming both, and
-passes once the page is revalidated and the path anchored.
+passes once the page is revalidated and the path anchored. It keeps a real
+process, marked with why: it is the gate's end-to-end test.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -42,6 +44,7 @@ from click.testing import CliRunner
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import document as friction_document
+from tests.in_process import InProcessPkit, Runner, load, route_pkit, run_main
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -51,40 +54,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 SCRIPT = CAPABILITY / "scripts" / "check-doc-mapping.py"
 FILLER = CAPABILITY / "scripts" / "fill-doc-check.py"
-
-# The `pkit` stand-in: `pkit connections resolve <point> --json` from the default
-# filler's real envelope, and `pkit repository base` — the base and where HEAD
-# left it (COR-054) — from the real CLI. Records its argv; anything else it is
-# asked fails.
-PKIT_STANDIN = """\
-import json, subprocess, sys
-log, filler, capability = sys.argv[1:4]
-argv = sys.argv[4:]
-with open(log, "a", encoding="utf-8") as handle:
-    handle.write(json.dumps(argv) + "\\n")
-if argv[:2] == ["repository", "base"]:
-    sys.exit(subprocess.run([sys.executable, "-m", "project_kit", *argv]).returncode)
-if argv != ["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]:
-    sys.exit(f"unexpected pkit call: {argv}")
-run = subprocess.run(
-    [sys.executable, filler, "--json", "--capability-root", capability],
-    capture_output=True, text=True, check=True,
-)
-obligations = json.loads(run.stdout)["value"]
-print(json.dumps({
-    "address": "pkit::work-tracking:doc-check", "defined": True,
-    "provider": "project-management", "policy": "additive", "inert_policy": "fail",
-    "participation": None, "resolved": True, "why": "", "value": obligations, "origin": "",
-    "entries": [
-        {"id": o["id"], "origin": "project-management", "replaces": [], "value": o}
-        for o in obligations
-    ],
-    "removals": [],
-    "fillers": [{"source": "contribution", "name": "project-management",
-                 "supplies": "command 'fill-doc-check'", "state": "taken", "reason": "",
-                 "query_contract": True}],
-}))
-"""
+POINT = "pkit::work-tracking:doc-check"
 
 BASE_FILES = {
     "src/app.py": "print('app')\n",
@@ -190,55 +160,82 @@ def _stage_capability(tmp_path: Path, mapping: str) -> Path:
     return cap
 
 
-def _stage_pkit(tmp_path: Path, cap: Path) -> Path:
-    """A directory holding the `pkit` stand-in, to put first on PATH."""
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    (bin_dir / "pkit-standin.py").write_text(PKIT_STANDIN, encoding="utf-8")
-    pkit = bin_dir / "pkit"
-    pkit.write_text(
-        "#!/bin/sh\n"
-        f'exec "{sys.executable}" "{bin_dir / "pkit-standin.py"}" '
-        f'"{tmp_path / "pkit-calls.log"}" "{FILLER}" "{cap}" "$@"\n',
-        encoding="utf-8",
-    )
-    pkit.chmod(0o755)
-    return bin_dir
+class PkitStandIn:
+    """The `pkit` stand-in, in this process: `pkit connections resolve <point> --json`
+    from the default filler's real envelope, its `main` run over the fixture's
+    capability root, and `pkit repository base` — the base and where HEAD left it
+    (COR-054) — from the real CLI. Records each argument list, without its first word,
+    as a JSON line in `calls`; anything else it is asked fails."""
+
+    def __init__(self, filler: Any, capability: Path) -> None:
+        self.filler = filler
+        self.capability = capability
+        self.calls: list[str] = []
+        self.pkit: Runner = InProcessPkit()
+
+    def __call__(self, args: Any, **options: Any) -> subprocess.CompletedProcess[Any]:
+        argv = [str(word) for word in args]
+        self.calls.append(json.dumps(argv[1:]))
+        if argv[1:3] == ["repository", "base"]:
+            return self.pkit(argv, **options)
+        if argv[1:] != ["connections", "resolve", POINT, "--json"]:
+            return subprocess.CompletedProcess(argv, 1, "", f"unexpected pkit call: {argv[1:]}\n")
+        run = run_main(self.filler, "--json", "--capability-root", str(self.capability))
+        assert run.returncode == 0, run.stderr
+        obligations = json.loads(run.stdout)["value"]
+        document = {
+            "address": POINT,
+            "defined": True,
+            "provider": "project-management",
+            "policy": "additive",
+            "inert_policy": "fail",
+            "participation": None,
+            "resolved": True,
+            "why": "",
+            "value": obligations,
+            "origin": "",
+            "entries": [
+                {"id": o["id"], "origin": "project-management", "replaces": [], "value": o}
+                for o in obligations
+            ],
+            "removals": [],
+            "fillers": [
+                {
+                    "source": "contribution",
+                    "name": "project-management",
+                    "supplies": "command 'fill-doc-check'",
+                    "state": "taken",
+                    "reason": "",
+                    "query_contract": True,
+                }
+            ],
+        }
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document) + "\n", "")
 
 
-def pkit_calls(tmp_path: Path) -> list[str]:
-    log = tmp_path / "pkit-calls.log"
-    return log.read_text(encoding="utf-8").splitlines() if log.exists() else []
-
-
-def run_fixture(tmp_path: Path, fixture: Fixture) -> Outcome:
+def run_fixture(tmp_path: Path, fixture: Fixture) -> tuple[Outcome, list[str]]:
+    """The check's `main` on the fixture, in this process from its repository, every
+    `pkit` call answered by the stand-in: its outcome, and the calls it made."""
     repo = _stage_repo(tmp_path, fixture)
     cap = _stage_capability(tmp_path, fixture.mapping)
-    bin_dir = _stage_pkit(tmp_path, cap)
     body = tmp_path / "body.md"
     body.write_text(fixture.body, encoding="utf-8")
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
+    check, filler, backbone = load("project-management", SCRIPT.name, FILLER.name, "backbone")
+    pkit = PkitStandIn(filler, cap)
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone, pkit)
+        proc = run_main(
+            check,
             "--base",
             "refs/heads/base",  # read as named: no resolution to say anything about
             "--pr-body-file",
             str(body),
             "--capability-root",
             str(cap),
-        ],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env={
-            **os.environ,
-            "NO_COLOR": "1",
-            "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
-        },
-        check=False,
-    )
-    return Outcome(proc.returncode, proc.stdout, proc.stderr)
+            cwd=repo,
+            env={"NO_COLOR": "1"},
+        )
+    return Outcome(proc.returncode, proc.stdout, proc.stderr), pkit.calls
 
 
 # --- the fixtures and what each prints -----------------------------------------
@@ -371,7 +368,7 @@ EXPECTED: dict[str, Outcome] = {
 
 @pytest.mark.parametrize("name", sorted(FIXTURES))
 def test_the_mapping_check_prints_exactly_what_it_did(tmp_path: Path, name: str) -> None:
-    assert run_fixture(tmp_path, FIXTURES[name]) == EXPECTED[name]
+    assert run_fixture(tmp_path, FIXTURES[name])[0] == EXPECTED[name]
 
 
 @pytest.mark.parametrize("name", sorted(set(FIXTURES) - {"mapping-not-a-mapping"}))
@@ -380,10 +377,9 @@ def test_the_rules_it_applies_are_the_ones_the_point_resolves_to(tmp_path: Path,
     when it compares, read the base through the backbone once, never resolving it
     itself (COR-054 point 5). (A malformed mapping is refused before the point is
     read, as before.)"""
-    run_fixture(tmp_path, FIXTURES[name])
+    _outcome, calls = run_fixture(tmp_path, FIXTURES[name])
     point = '["connections", "resolve", "pkit::work-tracking:doc-check", "--json"]'
     base = '["repository", "base", "--json", "--base=refs/heads/base"]'
-    calls = pkit_calls(tmp_path)
     assert calls in ([point], [point, base])
     assert (calls == [point]) == EXPECTED[name].out.endswith("no rules configured; skipped.\n")
 
@@ -491,6 +487,10 @@ def _merge_gate(repo: AdopterRepo, tmp_path: Path) -> Outcome:
     return Outcome(proc.returncode, proc.stdout, proc.stderr)
 
 
+@pytest.mark.process(
+    "the merge gate's end-to-end test, as check.sh runs it: the script, the real pkit, "
+    "living-docs' filler and a revalidation between two states"
+)
 def test_the_merge_gate_refuses_unmet_contributed_obligations_until_they_are_met(
     enforcing_project: AdopterRepo, tmp_path: Path
 ) -> None:

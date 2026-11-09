@@ -1,0 +1,35 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: right
+    layout: standard
+    main:
+      use: starter/section
+      head: Jede Regel an einem Ort
+      text: >-
+        Ein Projekt schreibt jede seiner Regeln einmal auf, wo jeder Agent und jede
+        Mitarbeiterin dieselben Worte liest.
+      picture: window.png
+
+  - id: left
+    layout: standard
+    main:
+      use: starter/section
+      fill: tint
+      side: left
+      head: Von den Werkzeugen durchgesetzt
+      text: >-
+        Die Werkzeuge lesen die Regeln und setzen sie durch, sodass sich niemand eine
+        Regel merken muss, damit sie gilt.
+      picture: window.png
+
+  - id: words
+    layout: standard
+    main:
+      use: starter/section
+      side: left
+      head: Kein Bild
+      text: >-
+        Ein Abschnitt ohne Bild hält seine Worte allein, am Anfang der Seite, welche Seite
+        er auch angibt.

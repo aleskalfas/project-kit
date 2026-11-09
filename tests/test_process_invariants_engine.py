@@ -13,6 +13,10 @@ check against. Covers:
   `validate` says all hold,
 - the CLI `validate` subcommand (narrative + `--json`, non-zero exit on a
   violation).
+
+Each predicate the engine starts runs in the test's own process, its command
+still found through the runner's one lookup (`tests/in_process.py`,
+`start_in_process`); a test marked `process` starts it as a process.
 """
 
 from __future__ import annotations
@@ -20,6 +24,8 @@ from __future__ import annotations
 import json
 import shutil
 import stat
+import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -34,6 +40,21 @@ from project_kit.process import (
     render_validate_json,
     render_validate_narrative,
 )
+from tests.in_process import MARK, start_in_process
+
+
+@pytest.fixture(autouse=True)
+def predicates_started(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process
+    (`start_in_process`), but in a test that keeps its process. No bytecode is written,
+    so a script a test rewrites is read afresh."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    if request.node.get_closest_marker(MARK) is not None:
+        return []
+    return start_in_process(monkeypatch)
+
 
 # --- fixture scaffolding --------------------------------------------------
 
@@ -81,8 +102,12 @@ process:
 
 
 def _write_script(path: Path, body: str) -> None:
+    """An executable predicate script whose `main` runs `body`, as a process and in this
+    process alike."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    code = "import sys\n\n\ndef main():\n" + textwrap.indent(body, "    ")
+    code += "\n\nif __name__ == '__main__':\n    sys.exit(main())\n"
+    path.write_text("#!/usr/bin/env python3\n" + code, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
@@ -426,6 +451,7 @@ def test_process_without_invariants_reports_empty(fixture_repo: Path) -> None:
 # --- CLI wiring -----------------------------------------------------------
 
 
+@pytest.mark.process("pkit process validate end to end, each check predicate a process")
 def test_cli_validate_json_and_exit_code(
     fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

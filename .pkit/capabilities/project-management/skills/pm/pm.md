@@ -19,6 +19,7 @@ reads:
     - COR-016
     - COR-021
     - COR-064
+    - COR-066
   paths:
     - .pkit/capabilities/project-management/README.md
     - .pkit/capabilities/project-management/schemas/issue-types.yaml

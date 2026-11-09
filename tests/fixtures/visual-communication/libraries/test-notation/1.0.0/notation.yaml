@@ -1,0 +1,9 @@
+pkit_schema: visual-communication:notation
+schema_version: 1
+
+# Each concept maps to a colour family the foundations declare, never to a value, so each
+# brand colours it its own way.
+concepts:
+  person: {colour: purple}
+  service: {colour: blue}
+  store: {colour: green}

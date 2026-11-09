@@ -15,16 +15,17 @@ import shutil
 import stat
 import subprocess
 import sysconfig
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from enum import StrEnum
 from importlib.resources import as_file, files
 from pathlib import Path, PurePath
+from typing import Any
 
 import click
 
-from project_kit import treecopy, workspace
+from project_kit import project_config, treecopy, workspace
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
@@ -136,15 +137,21 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     # here: capability source is bundled (a distribution medium) but installed
     # on demand, not auto-propagated to every adopter (ADR-033 §3).
     "migrations",
+    # The backbone's method rule sets, its loaded set `OPS` among them (ADR-075 point 1):
+    # the location rule reads every Markdown file of `.pkit/rule-sets/` as a set the
+    # backbone ships. The one area added past the hold below, as its exception names
+    # (ADR-065 point 13).
+    "rule-sets",
 )
 
 # The one core area a project's own area can share a name with today, and the
 # file that tells the core one apart (ADR-065 point 13). `lifecycle` first
 # shipped in v1.149.0, with `ownership.py` in the same commit, and the core area
-# has held that file since. Every other area above has shipped since v1.134.0.
-# No release adds a core area or a core adapter until #1600 builds the full
-# check: `tests/test_area_name_clash.py` holds the set of areas above, and of the
-# adapters the bundle ships, to today's.
+# has held that file since. Every other area above but `rule-sets` has shipped
+# since v1.134.0. No release adds another core area or a core adapter until #1600
+# builds the full check: `tests/test_area_name_clash.py` holds the set of areas
+# above, and of the adapters the bundle ships, to today's. `rule-sets` is the one
+# exception the hold names (ADR-065 point 13).
 LIFECYCLE_AREA = OWNERSHIP_MODULE.parent.name
 LIFECYCLE_MARK = OWNERSHIP_MODULE.name
 
@@ -651,11 +658,12 @@ def _source_gap_causes(target_root: Path) -> list[str]:
     return causes
 
 
-def install_kit(target_root: Path, dry_run: bool = False) -> None:
+def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool = False) -> None:
     """Run `pkit init` against `target_root`. Refuses to run if `.pkit/`
     already exists, if the source kit doesn't look like a real source
     tree, or if the target is the source itself (project-kit
-    self-hosts).
+    self-hosts). With `refuse_proposals`, the explicit flag, it writes the
+    key that turns the landing check's refusal on (ADR-081 point 5).
     """
     source_kit = find_source_kit()
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
@@ -685,6 +693,8 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     # The seed paths, before deploy reads the overlay and merge the adapter's
     # project settings (ADR-065 point 11).
     seed_missing_paths(ctx)
+    if refuse_proposals:
+        _write_refuse_proposals(ctx)
 
     # Every adapter the copy placed is registered, and recorded at the version
     # it ships, before deploy, the render and provisioning read the registry.
@@ -692,10 +702,14 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
         click.echo("  would register each adapter at the version it ships (.pkit/manifest.yaml)")
     else:
         register_adapters(target_root)
+    # A first install lists every rule core's set binds (ADR-076 point 6).
+    _echo_newly_bound(ctx, {}, [("backbone", source_kit)])
     settings_backed_up = _backup_existing_claude_settings(ctx)
+    render_rules_index(ctx)
     run_installed_adapter_primitives(ctx)
 
     _render_runtime_ignore(ctx)
+    refresh_private_region(ctx)
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
     _record_install_completion(ctx)
@@ -748,6 +762,41 @@ def _render_runtime_ignore(ctx: InstallContext) -> None:
     from project_kit import visibility
 
     click.echo(visibility.render_runtime_ignore(ctx.target_root, dry_run=ctx.dry_run))
+
+
+def render_rules_index(ctx: InstallContext) -> None:
+    """Render the capabilities' rules index, `.pkit/rules/capabilities.md`, whole, at the
+    core tier (ADR-076 point 2).
+
+    Derivable state: rendered from `pkit rule-sets loaded` and the registered adapters'
+    `loaded_rules:` wherever the lifecycle regenerates derivable state, after the
+    manifest is written, so the render reads what is registered. A file at the path that
+    is no index is never written over. Local import, as the other renders'.
+    """
+    from project_kit import loaded_rules
+
+    click.echo(loaded_rules.write_index(ctx.target_root, dry_run=ctx.dry_run))
+
+
+def refresh_private_region(ctx: InstallContext) -> None:
+    """Re-render pkit's region of the local exclude file from the footprint, where the
+    project is private (ADR-009 point 3): a component the step installed may declare
+    footprint the region did not hold. A project that is not private, or not a git
+    repository, is left as it is."""
+    from project_kit import visibility
+
+    line = visibility.refresh_private_region(ctx.target_root, dry_run=ctx.dry_run)
+    if line is not None:
+        click.echo(line)
+
+
+def _echo_newly_bound(
+    ctx: InstallContext, before: Mapping[str, Any], delivered: Sequence[tuple[str, Path]]
+) -> None:
+    """Print what a step newly binds of each loaded set it delivers (ADR-076 point 6)."""
+    from project_kit import loaded_rules
+
+    loaded_rules.echo_bound(ctx.target_root, loaded_rules.bound_by(before, delivered))
 
 
 def _record_install_target(ctx: InstallContext) -> None:
@@ -1045,7 +1094,10 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
         # overwrite it. Exclude it from the flat-content pass so sync only
         # propagates core.md. On init (overwrite=False), project.md is
         # absent in fresh adopters so the file-presence guard below handles it.
-        _handled.add("project.md")
+        # capabilities.md, the capabilities' rules index, is rendered for each
+        # project from what it installs (`render_rules_index`, ADR-076 point 2),
+        # never copied from the source's own.
+        _handled |= {"project.md", "capabilities.md"}
     elif area_name == LIFECYCLE_AREA:
         _handled.add(LIFECYCLE_MARK)  # written first, above
     for entry in sorted(src.iterdir()):
@@ -1062,6 +1114,21 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
 
 # The scratchpad's state folders (COR-012): seed paths, never propagated.
 _SCRATCHPAD_STATE_DIRS = ("active", "done", "dropped")
+
+
+def _write_refuse_proposals(ctx: InstallContext) -> None:
+    """Write the key that turns the landing check's refusal on. The flag that asked for it
+    is the consent (COR-048 point 5), and the install makes no offer (ADR-081 point 5)."""
+    if ctx.dry_run:
+        click.echo(f"  would write {project_config.REFUSE_PROPOSALS_KEY}: true")
+        return
+    segments = tuple(project_config.REFUSE_PROPOSALS_KEY.split("."))
+    project_config.write_config(
+        ctx.target_root,
+        lambda data: project_config.set_path(data, segments, True),
+        consent=project_config.Consent(yes=True),
+    )
+    click.echo(f"  wrote {project_config.REFUSE_PROPOSALS_KEY}: true")
 
 
 def seed_missing_paths(ctx: InstallContext, *, capabilities: Iterable[str] = ()) -> None:
@@ -1250,11 +1317,46 @@ def run_installed_adapter_primitives(ctx: InstallContext) -> None:
     `pkit sync` after the refresh pass — both need the harness side
     (re-)materialised. Adapters are discovered by walking
     `.pkit/adapters/<name>/`; the scripts must be idempotent so re-runs
-    on a stable state report "exists" rather than "created".
+    on a stable state report "exists" rather than "created". Every deploy
+    then warns of the hook needs no provider binds
+    (`report_unsatisfied_needs`).
     """
     for adapter_dir in _installed_adapter_dirs(ctx.target_root):
         for name in _ADAPTER_PRIMITIVES:
             _run_adapter_primitive(adapter_dir / name, ctx)
+    report_unsatisfied_needs(ctx)
+
+
+def report_unsatisfied_needs(ctx: InstallContext) -> None:
+    """Warn of each `needs:` entry whose hook binds no provider (COR-013 point 4).
+
+    The check is the one `pkit refs validate` makes (`refs.unsatisfied_needs`), over
+    the agents and skills on disk once they are deployed. Each need is one `warning`
+    line naming the agent or skill and the hook: a hook no skill answers and no
+    package provides, or one whose providers collide at its winning tier. The report
+    writes nothing and fails nothing, as the deploy's other reports. A front matter or
+    a `package.yaml` that cannot be read is one `warning` line in its place. A dry run
+    deploys nothing, so it reports nothing. Local import: the reference graph imports
+    this module.
+    """
+    if ctx.dry_run:
+        return
+    from ruamel.yaml.error import YAMLError
+
+    from project_kit import refs
+
+    try:
+        artifacts = refs.load_artifacts(ctx.target_root)
+        needs = refs.unsatisfied_needs(artifacts, refs.load_hook_providers(ctx.target_root))
+    except (OSError, UnicodeDecodeError, YAMLError) as exc:
+        reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        click.echo(
+            f"  {'warning':<12} hook needs not checked: a front matter or package.yaml "
+            f"could not be read ({reason})."
+        )
+        return
+    for need in needs:
+        click.echo(f"  {'warning':<12} {need.describe(ctx.target_root)}")
 
 
 def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> tuple[str, ...]:

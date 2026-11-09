@@ -24,6 +24,9 @@ What this proves: an agent that follows its body returns commands in every
 session, and those commands write nothing without a person. What it does not
 prove: that a dispatched agent never adds `--yes` on its own. No test can run an
 agent; that stays discipline.
+
+The record stamp runs in the test's own process, its `pkit` calls answered there
+too (`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
@@ -38,7 +41,15 @@ from click.testing import CliRunner, Result
 
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.analysis_repo import JOURNEYS, REPO, SA, USE_CASES, installed, prepare_seeded, run_script
+from tests.analysis_repo import (
+    JOURNEYS,
+    REPO,
+    SA,
+    USE_CASES,
+    installed,
+    prepare_seeded,
+    run_in_process,
+)
 from tests.handed_over import CONSENT, commands
 
 LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs" / "agents" / "living-docs"
@@ -193,7 +204,7 @@ def test_no_refusal_offers_a_command_that_writes(analysed: AdopterRepo) -> None:
 def test_a_record_stamp_as_handed_over_writes_nothing(analysed: AdopterRepo, command: str) -> None:
     argv = shlex.split(command)
     assert argv[:3] == ["pkit", "analysis", "new"] and CONSENT.search(command) is None
-    completed = run_script(analysed, NEW, *argv[3:])
+    completed = run_in_process(analysed, NEW, *argv[3:])
     assert completed.returncode != 0, completed.stdout
     assert completed.stderr.startswith(("refused: ", "usage: ")), completed.stderr
     assert analysed.git("status", "--porcelain").stdout == ""
@@ -206,7 +217,7 @@ def test_a_record_stamp_waits_for_the_person_s_words(analysed: AdopterRepo, comm
     for one of them."""
     named = re.compile("|".join(rf"\b{re.escape(i)}\b" for i in IDS))
     argv = [named.sub(lambda m: IDS[m[0]], token) for token in shlex.split(command)]
-    completed = run_script(analysed, NEW, *argv[3:])
+    completed = run_in_process(analysed, NEW, *argv[3:])
     assert completed.returncode == 1, completed.stderr
     assert "still holds the placeholder" in completed.stderr
     assert any(repr(person) in completed.stderr for person in PERSONS), completed.stderr

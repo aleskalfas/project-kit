@@ -426,10 +426,10 @@ def _detect_current_state(
     `lifecycle_inference` with the full open/closed + milestone signal this
     label-only read does not fetch:
 
-      * `board` — the value is on a Projects-v2 field. This function does NOT
-        read it: the board value read (and the rule that an unreadable board
-        raises) belongs to the board read-path contract, and is specified there
-        but not yet built. Returning nothing is the honest answer until it is.
+      * `board` — the value is the card's Status on the board. This label-only
+        read does not fetch it: move-issue, which runs next, reads the Status as
+        the classifier does, and refuses a move it does not place
+        ([project-management:DEC-051-axis-carriage-activation] point 6).
       * `derived` — open/closed carries it, which needs a signal this label-only
         read does not fetch; `lifecycle_inference.infer_current_state` is the
         home of that read and move-issue performs it.

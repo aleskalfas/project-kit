@@ -107,7 +107,8 @@ its tree stays owned from creation.
 ### 4. Ownership releases when the work ends or stops, and transfers on reclaim
 
 The
-label is stripped when the issue closes (PR-merge or won't-do). For a
+label is stripped when the issue closes (PR-merge, a Task's close as completed
+without a pull request, or won't-do). For a
 container that closes via the cascade fold
 ([project-management:DEC-034-cascade-slot-binding]), the **pm closure wrapper
 that observes the fold strips the label** — the engine fold itself stays

@@ -1,0 +1,28 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+body:
+  use: starter/network
+  item: {use: starter/card, fill: tint}
+  tie: {use: starter/connector, concept: pkit/core}
+  left:
+    - {id: living-docs, concept: pkit/capability, head: living-docs, tag: "pkit::documentation", text: dokumenty na míru čtenáři}
+    - {id: software-analysis, concept: pkit/capability, head: software-analysis, tag: "pkit::analysis", text: co musí software umět}
+  right:
+    - id: slots
+      use: starter/groups
+      groups:
+        - id: project-management
+          concept: pkit/capability
+          head: project-management
+          tag: plays pkit::work-tracking
+          items:
+            - {id: doc-check, tag: doc-check, text: "dokumenty, které změna musí upravit"}
+            - {id: fixers, tag: fixers, text: který agent opraví který dokument}
+            - {id: use-cases, tag: use-cases, text: případy užití k plánování}
+  ties:
+    - {id: docs-doc-check, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[doc-check]"}}
+    - {id: docs-fixers, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
+    - {id: analysis-fixers, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
+    - {id: analysis-use-cases, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[use-cases]"}}
+caption: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.

@@ -24,7 +24,7 @@ import json
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -56,6 +56,26 @@ from project_kit.line_breaks import line_break, universal_newlines
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo
 
 CONFIG = ".pkit/project/config.yaml"
+
+#: The finding kind of an over-broad anchor (`friction_repository.RepositoryFindingKind`).
+OVER_BROAD = "over-broad"
+
+_Found = TypeVar("_Found")
+
+
+def without_over_broad(findings: Iterable[_Found]) -> tuple[_Found, ...]:
+    """`findings` of the whole-repository check, or of `explain`, but the over-broad
+    anchors. In a history of a few commits, most anchors flagged their artefacts in more
+    than half of them (ADR-080 point 3); a test that reads this judges the other kinds,
+    and `test_friction_over_broad` holds the warning."""
+    return tuple(f for f in findings if _kind_of(f) != OVER_BROAD)
+
+
+def _kind_of(found: Any) -> str:
+    """The kind of a finding, or of the finding an explained one wraps."""
+    return str(getattr(found, "finding", found).kind.value)
+
+
 T1 = "2026-10-01T09:00:00Z"
 T2 = "2026-10-02T09:40:12Z"
 SOURCE = {"src/cli/main.py": "print('cli')\n", "src/core/engine.py": "ENGINE = 1\n"}
@@ -247,6 +267,23 @@ def listed_record() -> str:
     """
     items = "\n".join(f"{pid}. **{name}.** {text}" for pid, name, text in POINTS)
     return pointed_record((), title="A listed record", lead=items).replace("PRJ-900", "PRJ-910")
+
+
+#: When `commit_install` dates the install's commit: a day before the scripted history's
+#: epoch, so every commit a test makes comes after it, a `Timeline`'s among them.
+INSTALLED_AT = HISTORY_EPOCH - timedelta(days=1)
+
+
+def commit_install(adopter: AdopterRepo) -> None:
+    """A `prepare` that commits the installed `.pkit/` on `main`, dated `INSTALLED_AT` (#2320).
+
+    A template built with it is built once per session and copied for each test
+    (`tests/README.md`, "Built once, copied for each test"). So a test's base commit
+    holds only its own files, on top of the install's commit, and its tree is the one a
+    commit of everything would hold. The install is committed as git commits it, with
+    no answer settled, whatever fixtures the first test that asks for the template
+    uses."""
+    GitRepo.commit(adopter, "install", None, date=INSTALLED_AT)
 
 
 class Timeline:

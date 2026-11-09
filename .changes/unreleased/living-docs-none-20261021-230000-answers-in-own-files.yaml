@@ -1,5 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  Internal. The README's account of answers in a page's block is deferred to
-  #1779, which builds COR-062's answer files. Nothing you run changes.

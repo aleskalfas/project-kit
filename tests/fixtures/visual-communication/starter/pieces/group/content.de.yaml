@@ -1,0 +1,49 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: parts
+    layout: slide
+    title: Eine Gruppe enthält Überschrift, Etikett und ihre Elemente, wo angegeben
+    visual:
+      use: starter/list
+      item: {use: starter/group}
+      items:
+        - id: all
+          head: project-management
+          tag: Arbeitsverfolgung
+          items:
+            - {id: doc-check, text: "Die Dokumente, die eine Änderung aktualisieren muss."}
+            - {id: fixers, text: Welcher Agent jedes Dokument korrigiert.}
+        - id: head
+          head: living-docs
+          items:
+            - {id: pages, text: Seiten für jede Leserschaft.}
+            - {id: anchors, text: Worauf jede Seite beruht.}
+        - id: items
+          items:
+            - {id: rules, head: Regeln, text: "Genau, was zu tun ist."}
+            - {id: checks, head: Prüfungen, text: Bei jeder Änderung ausgeführt.}
+
+  - id: families
+    layout: slide
+    title: Getönt nach ihrem Begriff, ihre Elemente so gezeichnet, wie der Inhalt es nennt
+    visual:
+      use: starter/list
+      item: {use: starter/group}
+      items:
+        - id: people
+          concept: test-notation/person
+          head: Menschen
+          item: {use: starter/tag}
+          items:
+            - {id: maintainer, label: die Betreuerin}
+            - {id: adopter, label: ein Anwender}
+        - id: services
+          concept: test-notation/service
+          head: Dienste
+          tag: in Bereitschaft
+          item: {use: starter/card, fill: tint, concept: test-notation/service}
+          items:
+            - {id: check, head: Die Prüfung, text: Beurteilt jede Datei.}
+            - {id: render, head: Der Zeichner, text: Zeichnet jedes Stück.}

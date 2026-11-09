@@ -22,7 +22,8 @@ reads:
     - .pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md
     - .pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md
     - .pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md
-  patterns: []
+  patterns:
+    - tech-docs/coding-conventions.md
 ---
 
 # Code reviewer

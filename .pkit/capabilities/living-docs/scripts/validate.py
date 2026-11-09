@@ -17,7 +17,9 @@ definition with its scope, whether the two spaces are separate, and the
 captured sources' layout and what names them (DEC-001 point 4). It reports,
 never failing, each mention of a file, a record, a rule or a command that a
 page's anchors do not cover where RS-LDOC-001 binds (DEC-001 point 6;
-`_lib/mentions.py`).
+`_lib/mentions.py`). On those pages it warns, never failing, of each link to
+another page's section that the page does not anchor at that section, and each
+citation of a record that its anchors do not stand on (DEC-001 points 3 and 6).
 `_lib/spaces.py` and `_lib/sources.py` state every check and the record point
 it applies.
 
@@ -79,7 +81,7 @@ def main() -> int:
     for line in outcome.summary:
         print(line)
     for finding in outcome.findings:
-        print(f"  {finding.severity:<7}{finding.location}")
+        print(f"  {finding.severity:<8}{finding.location}")
         print(f"    → {finding.message}")
     if outcome.unclassified:
         print(

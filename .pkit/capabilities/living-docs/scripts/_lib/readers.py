@@ -22,6 +22,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from _lib import backbone
+
 #: The point, and where a project's own filler file for it lives, under the
 #: internal documentation root (the lifecycle README, "Where a project filler
 #: file lives").
@@ -40,7 +42,7 @@ class Readers:
     why: str = ""  # when unresolved
 
 
-def read_readers(run: Runner = subprocess.run) -> Readers:
+def read_readers(run: Runner = backbone.run) -> Readers:
     """The readers point, through `pkit connections resolve --json`. No document at
     all — `pkit` absent, a backbone without the command, a crash — is unresolved,
     with what went wrong."""

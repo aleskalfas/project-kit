@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A PDF draws every image (#2857): a produced picture from the variant that
+  serves its combination, and a picture file, in each language. Each lies in
+  its frame as the SVG renderer draws it. A JPEG is embedded as its own data. A
+  PNG keeps its image data as the file holds it, and its transparency: an alpha
+  channel's or a palette's as a soft mask, a transparent colour as a colour
+  key. A colour profile goes into the PDF with its picture. A PNG the renderer
+  cannot decode, damaged or taking more than 128 MiB decoded, is left out and
+  reported as a `left-out` loss. What the renderer
+  decodes it writes uncompressed, so a PDF stays the same bytes on every
+  machine. The PDF renderer rises to 1.1.0, and no image is a `refused` loss in
+  a PDF any more; a piece's `accept-losses` entry for one now matches nothing.
+  It breaks nothing an adopter holds: a PDF of a piece that shows no picture is
+  as before, but for the renderer's version.

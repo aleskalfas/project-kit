@@ -366,7 +366,7 @@ def _parse_prs(raw: list) -> dict[int, PR]:
         number = r.get("number")
         if not isinstance(number, int):
             continue
-        # The friction answers' section closes nothing (DEC-055).
+        # A list of the answers an earlier run left closes nothing (DEC-065 point 1).
         body = friction_answers.strip(str(r.get("body") or ""))
         closes = sorted({int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)})
         out[number] = PR(

@@ -148,10 +148,11 @@ Cite other capability decisions in the same capability using the form `[<this-ca
 
 ### 6. Author the skills, agents, scripts, and schemas
 
-Skills, agents, scripts, and schemas in a capability follow the same shapes as their area-shipped counterparts (per COR-006). Two notes specific to capabilities:
+Skills, agents, scripts, and schemas in a capability follow the same shapes as their area-shipped counterparts (per COR-006). Three notes specific to capabilities:
 
 - Skills and agents may cite *this capability's* decisions in body prose via the `[<name>:DEC-NNN-slug]` form. The validator (`pkit refs validate`) walks capability subtrees and resolves these citations.
 - Scripts can be Python with PEP 723 inline metadata (so adopters can run them via `uv run` without a host project) or shell. If a script needs Python dependencies, declare them inline so the script is self-installing.
+- If the capability keeps lasting state in the agent workspace — files that must outlast the session that wrote them, such as a queue that waits for a person — keep it under a direct child named after the capability, `.agent-workspace/<name>/`. Every agent working in the checkout shares that folder, and `pkit workspace remove` refuses any path at or under a child named after a registered capability, so an agent clearing its own files never removes the capability's (core rule 16, and `.pkit/cli/README.md`, "Workspace commands").
 
 ### 6b. (Optional) Ship a permission fragment
 

@@ -10,7 +10,9 @@ realises, over the real repository:
   the status report shows them (acceptance criterion 1);
 - the `.pkit/` READMEs declared are exactly the adopter-facing ones — every
   README under `.pkit/` is either a place or named here with the reason it is
-  not, so a new one cannot land unclassified (criterion 2);
+  not, so a new one cannot land unclassified (criterion 2) — and a page under
+  `.pkit/` that is no README is a place exactly when its folder's README is a
+  place and lists it (ADR-069, Implications);
 - no declared place is a synced copy, which is what living-docs' place rule
   asks (criterion 3), and the friction pass, which enforces it, walks them all;
 - the analysis location derives under the internal root (criterion 4);
@@ -32,6 +34,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -79,7 +82,19 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/capabilities/project-management/migrations/README.md": (
         "maintainer-facing: the capability's migration scripts"
     ),
+    ".pkit/rule-sets/README.md": (
+        "the folder's signpost; the rules README is the page that describes the set"
+    ),
+    ".pkit/capabilities/visual-communication/libraries/README.md": (
+        "maintainer-facing: the rule a change to a shipped library's version declares"
+    ),
 }
+
+# The released versions of the libraries visual-communication ships, each a copy of the
+# version being built fixed by its hash (visual-communication DEC-013 point 2). A README in
+# one is that version's README as it was released, which never changes: the version being
+# built's README is the place.
+RELEASED_COPIES = ".pkit/capabilities/visual-communication/releases/"
 
 # The trees of the code-to-doc mapping's retired rules (#1010), which the
 # declared surface covers.
@@ -105,6 +120,10 @@ NOT_SURFACE: dict[str, str] = {
     ".pkit/capabilities/evidence/agents/.gitkeep": (
         "evidence ships no agent yet; the placeholder holds the folder open in git"
     ),
+    ".pkit/capabilities/*/rule-sets/**": (
+        "a capability's rule sets, anchor targets that anchor the records they rest on"
+    ),
+    ".pkit/capabilities/*/rules.md": "generated from the capability's loaded set",
 }
 
 
@@ -125,6 +144,20 @@ def _user_root_pages() -> list[str]:
     """The pages inside the user root, `docs/`: the guides (ADR-069 point 1). The
     root is living-docs' default place, so they are pages without being declared."""
     return sorted(path.relative_to(REPO).as_posix() for path in (REPO / "docs").rglob("*.md"))
+
+
+def _internal_root_pages() -> list[str]:
+    """The pages inside the internal root, `tech-docs/`: each document there that
+    declares a page kind, which with the root makes it a page (living-docs' pages
+    reference, "A page's fields"), with no place declared for it. The records, the
+    rule sets and the analysis beside them declare no kind."""
+    pages = []
+    for path in (REPO / "tech-docs").rglob("*.md"):
+        front, _body = split_front_matter(path.read_text(encoding="utf-8"))
+        fields = YAML(typ="safe").load(front) if front is not None else None
+        if isinstance(fields, dict) and "kind" in fields:
+            pages.append(path.relative_to(REPO).as_posix())
+    return sorted(pages)
 
 
 def _living_docs_config() -> dict:
@@ -205,6 +238,7 @@ def test_every_pkit_readme_is_a_place_or_named_as_not_one() -> None:
         for path in (REPO / ".pkit").rglob("README.md")
         # A `project/` tier is the project's own content, not a shipped README.
         if "project" not in PurePosixPath(path.relative_to(REPO / ".pkit").as_posix()).parts
+        and not path.relative_to(REPO).as_posix().startswith(RELEASED_COPIES)
     }
     unclassified = sorted(on_disk - declared - NOT_PLACES.keys())
     assert unclassified == [], (
@@ -214,8 +248,32 @@ def test_every_pkit_readme_is_a_place_or_named_as_not_one() -> None:
         ".pkit/capabilities/living-docs/project/config.yaml, or maintainer-facing and "
         "named in NOT_PLACES here with the reason."
     )
-    assert declared & NOT_PLACES.keys() == set()
-    assert (declared | NOT_PLACES.keys()) <= on_disk
+    declared_readmes = {p for p in declared if PurePosixPath(p).name == "README.md"}
+    assert declared_readmes & NOT_PLACES.keys() == set()
+    assert (declared_readmes | NOT_PLACES.keys()) <= on_disk
+
+
+def _lists(readme: str, page: str) -> bool:
+    """Whether `readme` links `page`, a file beside it, by its name."""
+    name = re.escape(PurePosixPath(page).name)
+    text = (REPO / readme).read_text(encoding="utf-8")
+    return re.search(rf"\]\(\s*(?:\./)?{name}(?:#[^)\s]*)?\s*\)", text) is not None
+
+
+def test_a_pkit_page_that_is_no_readme_is_listed_by_its_folders_readme() -> None:
+    """A page under `.pkit/` that is not a README is a place exactly when its folder's
+    README is a place and lists it (ADR-069, Implications). Such a page is a lookup page
+    of the reference its README is, and the README is its folder's stable address."""
+    places = set(_project_places())
+    for page in sorted(p for p in places if p.startswith(".pkit/")):
+        if PurePosixPath(page).name == "README.md":
+            continue
+        readme = str(PurePosixPath(page).parent / "README.md")
+        assert readme in places, (
+            f"{page}: a page under .pkit/ that is no README is a place only where its "
+            f"folder's README, {readme}, is one"
+        )
+        assert _lists(readme, page), f"{page}: {readme} lists it by a link to its name"
 
 
 # --- criterion 3: the synced-copy rule ---------------------------------------
@@ -291,19 +349,22 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    # Every place is a page (#1010), and so is every guide in the user root, each
-    # reader resolved against the readers point. software-analysis contributes one
-    # reader per actor of pkit's own analysis (#1001), under the `act-` prefix: the
-    # eight core actors (#1344), the planner (#1710) and the three agents of
-    # parallel work (#2096), beside living-docs' own two.
+    # Every place is a page (#1010), and so is every guide in the user root and every
+    # page in the internal root (#2641), each reader resolved against the readers
+    # point. software-analysis contributes one reader per actor of pkit's own
+    # analysis (#1001), under the `act-` prefix: the eight core actors (#1344), the
+    # planner (#1710) and the three agents of parallel work (#2096), beside
+    # living-docs' own two.
     assert "docs/permissions/README.md" in _user_root_pages()
+    assert "tech-docs/coding-conventions.md" in _internal_root_pages()
+    pages = len(_project_places()) + len(_user_root_pages()) + len(_internal_root_pages())
     assert summary[4] == (
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
         "act-lead-agent, act-merge-authoriser, act-methodology-maintainer, "
         "act-operator, act-planner, act-planning-agent, act-worker-agent, "
         "maintainer, user; "
-        f"{len(_project_places()) + len(_user_root_pages())} page reader(s) checked."
+        f"{pages} page reader(s) checked."
     )
 
 

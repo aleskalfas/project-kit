@@ -14,13 +14,14 @@ enclosing the analysis — one committed record is:
   page's field written into it fails nothing (living-docs DEC-001 point 1);
 - **found by software-analysis' check** from the declaration of its held
   folder in the artefacts document, never by listing the folder.
+
+The stamp and both capabilities' validators run in the test's own process, their
+`pkit` calls answered there too (`tests/in_process.py`, #2324).
 """
 
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +32,7 @@ from project_kit.cli import main
 from project_kit.friction_check import BASE_ENV
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.analysis_repo import ANALYSIS, NEW, RECORDS, prepare, run_script, seed
+from tests.analysis_repo import ANALYSIS, NEW, RECORDS, prepare, run_in_process, seed
 from tests.test_software_analysis_check import check, errors
 
 LD_VALIDATE = Path(".pkit") / "capabilities" / "living-docs" / "scripts" / "validate.py"
@@ -40,14 +41,14 @@ LD_VALIDATE = Path(".pkit") / "capabilities" / "living-docs" / "scripts" / "vali
 UNANCHORED_PAGE = "tech-docs/guide.md"
 
 
-# Slow: the seed and a record stamped, once per session; the first test to ask pays it.
+# The seed and a record stamped, once per session; the first test to ask pays them.
 def _record_a_revalidation(repo: AdopterRepo) -> None:
     """The analysis prepared and seeded, one revalidation recorded — an artefact a person
     decided was stale — and one page with no anchors beside them, all committed on
     `main`."""
     prepare(repo)
     seed(repo)
-    stamped = run_script(
+    stamped = run_in_process(
         repo,
         NEW,
         "revalidation",
@@ -137,13 +138,8 @@ def test_the_whole_repository_check_and_the_debt_never_name_a_record(
 
 
 def test_living_docs_counts_a_record_as_another_component_s(project: AdopterRepo) -> None:
-    completed = subprocess.run(
-        [sys.executable, str(project.root / LD_VALIDATE), "--json"],
-        cwd=project.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    """living-docs' validator, the adopter's copy, run in the test's own process."""
+    completed = run_in_process(project, LD_VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     (not_pages,) = [
         line for line in json.loads(completed.stdout)["summary"] if line.startswith("not pages:")
@@ -161,13 +157,7 @@ def test_living_docs_counts_a_record_as_another_component_s(project: AdopterRepo
         ),
         encoding="utf-8",
     )
-    completed = subprocess.run(
-        [sys.executable, str(project.root / LD_VALIDATE), "--json"],
-        cwd=project.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    completed = run_in_process(project, LD_VALIDATE, "--json")
     document = json.loads(completed.stdout)
     assert [f for f in document["findings"] if f["severity"] == "error"] == []
     (not_pages,) = [line for line in document["summary"] if line.startswith("not pages:")]

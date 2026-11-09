@@ -1,0 +1,1546 @@
+answers:
+  - artefact: .pkit/README.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - moved-5ce170187337.yaml
+    revalidated:
+      at: 2026-10-30T00:42:38Z
+      outcome: updated
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:42:40Z
+      outcome: updated
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:42:43Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+    revalidated:
+      at: 2026-10-30T00:42:46Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-30T00:42:49Z
+      outcome: updated
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:42:51Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+    revalidated:
+      at: 2026-10-30T00:42:54Z
+      outcome: updated
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:42:57Z
+      outcome: updated
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:43:00Z
+      outcome: updated
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:43:02Z
+      outcome: updated
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:05Z
+      outcome: unchanged
+      unchanged-because: ownership.py answers the capabilities' rules index as no synced copy, as it answers .gitignore; ADR-065 point 11 gains the index's row among derivable state; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set. The agents README's overlay, owns and deploy rules name no rules file, so they still hold.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T155443Z-e9552da8.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:08Z
+      outcome: unchanged
+      unchanged-because: the CLI README's sync and validate sections gain the index's render and the delivery findings. What doc-examples says of sync provisioning its queries and validate running its member still holds.
+  - artefact: .pkit/capabilities/evidence/README.md
+    read:
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:11Z
+      outcome: unchanged
+      unchanged-because: the CLI README's validate section gains the rule-sets member's delivery findings. evidence's own validator and its place in pkit validate are unchanged.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T214030Z-7cd17739.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:43:13Z
+      outcome: unchanged
+      unchanged-because: "the CLI README gains the index in status, sync and validate; the schemas README's rule-set files section gains a capability's loaded set. living-docs' places of rule sets, its pages and its validation still read as written: its LDOC set is an ordinary one."
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:16Z
+      outcome: unchanged
+      unchanged-because: document_parts.py adds two public readers, of lines outside fences and of running text, and changes no reading; rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 points 3 to 6 gain pointers to COR-070 on a capability's loaded set and what a step newly binds; the lifecycle README gains the index among transition steps and sync's writes. The record schema, statuses, id spaces and the acceptance gate are untouched.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:48:41Z
+      outcome: unchanged
+      unchanged-because: Since it was last checked, the CLI reference's Surface table gave pkit rule-sets reach its paths and now adds rule-sets loaded, and its sync section the index's render; core.md gained rule 23 on decision records, then how the layers' rules stand, rule 9's pointer to COR-008 and its closing; visibility.py renders a private project's region again; ADR-066 point 12 gains a probe fact. The rows of grant, revoke, profile activate and enable, the workspace rule's text and the permission model are as they were, so the README holds.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+    revalidated:
+      at: 2026-10-30T00:48:44Z
+      outcome: unchanged
+      unchanged-because: Since it was last checked, COR-006 gained only a top line on COR-065, the page's anchors were added with its prose unchanged, and the CLI README's status section now gains the rules index's line after the deployed skills and agents. Skills stay procedure written for no harness in particular, and status still shows which core skills are deployed, so what the README says holds.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+    revalidated:
+      at: 2026-10-30T00:43:24Z
+      outcome: unchanged
+      unchanged-because: COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set. CONTRIBUTING's COR vs PRJ test and its build guidance cite COR-014's principle, which is unchanged.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:43:27Z
+      outcome: unchanged
+      unchanged-because: the CLI README's surface and sync sections gain the index's render and rule-sets loaded. The guide's permission settings and sync's settings merge are as it says.
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:30Z
+      outcome: unchanged
+      unchanged-because: COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 points 3 to 6 gain pointers to COR-070 on a capability's loaded set and what a step newly binds. The view's methodology, its parts and its operational rules as core's and the project's still hold; a capability's rules add a layer the view does not deny.
+  - artefact: tech-docs/analysis/core/domain-model/020-parts-of-the-system.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+    revalidated:
+      at: 2026-10-30T00:43:32Z
+      outcome: unchanged
+      unchanged-because: COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set. The parts of the system and the universal-applicability test as the view gives them are unchanged.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:35Z
+      outcome: unchanged
+      unchanged-because: COR-068 points 3 to 6 gain pointers to COR-070 on a capability's loaded set and what a step newly binds. A loaded rule is still an artefact that binds on sessions, not on artefacts, as the view says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-definition
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+    revalidated:
+      at: 2026-10-30T00:43:38Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement. An agent definition is deployed for a harness as before.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:43:41Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 16 on the agent workspace is untouched, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-finding
+    read:
+      - moved-1dfda6d2e7f5.yaml
+    revalidated:
+      at: 2026-10-30T00:43:43Z
+      outcome: unchanged
+      unchanged-because: validators.py only rewords the rule-sets member's help line. A finding's severity still says whether it fails the check.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-install
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:43:46Z
+      outcome: unchanged
+      unchanged-because: install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy. Install still adds the backbone or a component after checking name collisions.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:43:49Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 point 6 gains how a capability's rules are cited; the adapters README gains how a capability's rules reach a session and a third harness requirement. Each operational rule is still loaded through the harness's include and numbered in a file of the system or the project, and core and project rules keep their meaning.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-package-metadata
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+    revalidated:
+      at: 2026-10-30T00:43:52Z
+      outcome: unchanged
+      unchanged-because: package_validate.py checks that `loaded_rules.host` is a repository-relative path. Package metadata still declares a component's version, ranges and additions; loaded_rules is one more of them.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-project-owned-content
+    read:
+      - moved-7bd1918b1f45.yaml
+    revalidated:
+      at: 2026-10-30T00:43:55Z
+      outcome: unchanged
+      unchanged-because: ownership.py answers the capabilities' rules index as no synced copy, as it answers .gitignore. The index is written only by the lifecycle's render that ADR-065 point 11 names, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-propagation
+    read:
+      - 20261027T133722Z-42862485.yaml
+    revalidated:
+      at: 2026-10-30T00:43:57Z
+      outcome: unchanged
+      unchanged-because: sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds. Propagation still writes the methodology's files verbatim; the index is rendered, not propagated.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-rule
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - moved-9a5e6d64c9f6.yaml
+    revalidated:
+      at: 2026-10-30T00:44:00Z
+      outcome: unchanged
+      unchanged-because: rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings. A rule keeps its id, origin and status, and binds once accepted.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-rule-set
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:44:03Z
+      outcome: unchanged
+      unchanged-because: rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings. A rule set is still one collection file with its version, inheritance and scope.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-seeding
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:44:06Z
+      outcome: unchanged
+      unchanged-because: "install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds. Seeding is unchanged: the index is derivable state, not a seed path."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-skill
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+    revalidated:
+      at: 2026-10-30T00:44:09Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement. A skill is still deployed where the harness looks.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-source-repository
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-10-30T00:44:11Z
+      outcome: unchanged
+      unchanged-because: ownership.py answers the capabilities' rules index as no synced copy, as it answers .gitignore. The source repository's test and its originals are unchanged.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-sync
+    read:
+      - 20261027T133722Z-42862485.yaml
+    revalidated:
+      at: 2026-10-30T00:44:14Z
+      outcome: unchanged
+      unchanged-because: sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds. Sync still propagates at the recorded versions and regenerates derivable state, the index among it, moving no version.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-synced-copy
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-10-30T00:44:17Z
+      outcome: unchanged
+      unchanged-because: ownership.py answers the capabilities' rules index as no synced copy, as it answers .gitignore. The index is no synced copy, and what is one is unchanged.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version-transition
+    read:
+      - 20261027T133722Z-42862485.yaml
+    revalidated:
+      at: 2026-10-30T00:44:20Z
+      outcome: unchanged
+      unchanged-because: upgrade.py adds the index's marker test to step 1 and says what the copy newly binds. A transition still records its completion only after every migration.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:44:23Z
+      outcome: unchanged
+      unchanged-because: ADR-065 point 4 gains the index's marker test in step 1 and its render in step 8. The index's marker test joins step 1's refusals and writes nothing, so compatibility is still checked before any write.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-002-project-owned-writers.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+    revalidated:
+      at: 2026-10-30T00:44:26Z
+      outcome: unchanged
+      unchanged-because: the merge primitive's tests gain the index's line and the shared cases; ADR-065 point 11 gains the index's row among derivable state. CLAUDE.md is still written only by merge delivery, which adds the index's line and removes nothing.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-017-backbone-migration-safe.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:44:29Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 5 on safe migrations is untouched.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:44:31Z
+      outcome: unchanged
+      unchanged-because: the status tests read the adapter section up to the new rules index line; ADR-065 point 4 gains the index's marker test in step 1 and its render in step 8. The two recorded states and the finish of an interrupted transition are unchanged.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+    revalidated:
+      at: 2026-10-30T00:44:34Z
+      outcome: unchanged
+      unchanged-because: the visibility tests gain the private region's render. The region's render runs only under install and sync, says what it would render under a dry run, and writes nothing then.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:44:37Z
+      outcome: unchanged
+      unchanged-because: install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; visibility.py adds a render of pkit's private region from the footprint where the region is present; ADR-065 point 11 gains the index's row among derivable state. The journey's install, commit and sync steps still happen as it tells them.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T00:44:40Z
+      outcome: unchanged
+      unchanged-because: upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; status.py adds the rules index's line to the adapter's section. The journey's upgrade and status steps still read as told.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:44:43Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; visibility.py adds a render of pkit's private region from the footprint where the region is present. The journey's change, check and merge steps rest on core rules that are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:44:46Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; status.py adds the rules index's line to the adapter's section; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; ADR-065 point 11 gains the index's row among derivable state. In the source, sync's self-host branch still re-runs only derivable state, the index's render among it.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:44:48Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Packaging a capability with pkit new capability and its checks is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:44:51Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds. An incubated capability is still never reconciled with the source; its register and uninstall now render the index too.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:44:54Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; package_validate.py checks that `loaded_rules.host` is a repository-relative path; validators.py only rewords the rule-sets member's help line. Connection points and their validation are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:44:57Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Checking an externally sourced capability is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:00Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement; ownership.py answers the capabilities' rules index as no synced copy, as it answers .gitignore; harness-requirements.yaml adds the requirement session-loads-rules; cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; package_validate.py checks that `loaded_rules.host` is a repository-relative path. An adapter is still stamped by pkit new adapter, answers the harness requirements it can, and runs its primitives by name; declaring loaded_rules is optional.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:03Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement; cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy. Deploying one's own skill or agent definition and name precedence are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:06Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. The configuration file and pkit config set are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:09Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy. The project's own project.md, skills and settings additions are kept as before.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:12Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Installing and uninstalling a capability run as told; each now also renders the index and names what it binds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:16Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; status.py adds the rules index's line to the adapter's section. The connections status shows and graph draws are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:19Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; status.py adds the rules index's line to the adapter's section. Choosing a provider and the status lines for roles are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:45:22Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement; ops.md and core.md gain the layers' sentence, rule 9's pointer and the closing; the rules README gains the index; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 point 3 gains that a capability's loaded file travels with it. Sync still refreshes core.md and leaves project.md, and the merge still prints its exists line where CLAUDE.md holds core's include and the index's line.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:24Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement; ownership.py answers the capabilities' rules index as no synced copy, as it answers .gitignore; cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds. Where a deployed agent definition comes from, and its deploy, are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:45:27Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; status.py adds the rules index's line to the adapter's section; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; ADR-065 point 11 gains the index's row among derivable state. The agent workspace, its exclude line and core rule 16 are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-029-get-result-whole.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+    revalidated:
+      at: 2026-10-30T00:45:30Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement; harness-requirements.yaml adds the requirement session-loads-rules. delegated-result-complete and its answer are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+    revalidated:
+      at: 2026-10-30T00:45:33Z
+      outcome: unchanged
+      unchanged-because: the adapters README gains how a capability's rules reach a session and a third harness requirement. Unattended confined runs and their requirement are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+    revalidated:
+      at: 2026-10-30T00:45:36Z
+      outcome: unchanged
+      unchanged-because: install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; visibility.py adds a render of pkit's private region from the footprint where the region is present. The per-machine sidecars and .pkit/.gitignore are unchanged; the region's render touches only a private project's region.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:48:47Z
+      outcome: unchanged
+      unchanged-because: Since it was last checked, cli.py gave pkit rule-sets reach optional paths and now adds rule-sets loaded, with the capability verbs rendering the capabilities' rules index and printing what they newly bind; core.md gained rule 23 on decision records, then how the layers' rules stand, rule 9's pointer to COR-008 and its closing. The commands that would change another repository keep their names, options and output, and core rule 19 keeps its number and its text, so being asked before such a change holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261028T213538Z-054672e7.yaml
+    revalidated:
+      at: 2026-10-30T00:45:42Z
+      outcome: unchanged
+      unchanged-because: visibility.py adds a render of pkit's private region from the footprint where the region is present. Diagnosing a prompt and the permission diagnostics are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:45:45Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 20 on answers is untouched.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:48Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Declaring a changeset and the release check are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T124541Z-754e4b23.yaml
+    revalidated:
+      at: 2026-10-30T00:45:51Z
+      outcome: unchanged
+      unchanged-because: project rule 2 keeps project-kit's own gates and points to software-engineering's rule for what a builder runs; validators.py only rewords the rule-sets member's help line. Project rule 2 still says scripts/check.sh runs the suite, the pre-push hook runs it, and CI skips the suite on an answers-only change.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:45:54Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; validators.py only rewords the rule-sets member's help line. The merge gate and the members it runs are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:45:57Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 20 and the whole-repository check are untouched.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:02Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Authoring a backbone migration and its coverage check are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:05Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Authoring a component migration is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:48:50Z
+      outcome: unchanged
+      unchanged-because: Since it was last checked, cli.py gave pkit rule-sets reach optional paths and now adds rule-sets loaded and the capability verbs' index render and binding lines; core.md gained rule 23 on decision records, then how the layers' rules stand, rule 9's pointer to COR-008 for branch naming and its closing. pkit pull-request read, land and delete-branch keep their names, options and output, and core rule 20 keeps its number and its text, so landing a change on the default branch holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:48:53Z
+      outcome: unchanged
+      unchanged-because: Since it was last checked, cli.py gave pkit rule-sets reach optional paths and now adds rule-sets loaded and the capability verbs' index render; core.md gained rule 23, which brings COR-065 point 3 into every session, then how the layers' rules stand, rule 9's pointer and its closing; ownership.py answers the capabilities' rules index as no synced copy. pkit new decision, decisions validate and check-diff keep their names, options and output, the record is still drafted through the skill and left proposed for a person to accept, and core rule 2's gate holds as written.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:15Z
+      outcome: unchanged
+      unchanged-because: the schemas README's rule-set files section gains a capability's loaded set and its new findings; cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings. Authoring an ordinary or a project's loaded rule set reads as told; a capability may now ship a loaded set too.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:18Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Scratchpad notes and their commands are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:46:21Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings. Accepting a rule through review is unchanged; the reach walk still routes through no loaded set.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:24Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set. Keeping core records true, and the universal-applicability test, are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:27Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. The reviewer stack and rule-set reviewer's reading commands are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:31Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Releasing the backbone and its changesets are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:34Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Releasing a component, and its floor raises, are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:38Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Filing a report is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:41Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind. Linking reports is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:44Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds. Installing the CLI and its self-update are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:47Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; status.py adds the rules index's line to the adapter's section; visibility.py adds a render of pkit's private region from the footprint where the region is present; ADR-065 point 11 gains the index's row among derivable state; ADR-065 point 4 gains the index's marker test in step 1 and its render in step 8. Each step the use case names still runs in its order; the index's render and the rules a first install binds are added beside them.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:51Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; ADR-065 point 11 gains the index's row among derivable state. The index is committed with .pkit/, so a fresh clone holds it, and sync on checkout still readies the clone.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:54Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; ADR-065 point 4 gains the index's marker test in step 1 and its render in step 8. The transition's steps run in COR-010's order as told, with one more refusal in step 1 and the index among step 8's state.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:46:57Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; ADR-065 point 11 gains the index's row among derivable state. Running at a pin and the router are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:47:00Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings; status.py adds the rules index's line to the adapter's section. Re-pinning an inherited set and status's pins are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+    revalidated:
+      at: 2026-10-30T00:47:03Z
+      outcome: unchanged
+      unchanged-because: cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; ADR-065 point 4 gains the index's marker test in step 1 and its render in step 8. A capability's upgrade runs as told, and now also renders the index and names what it binds.
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-003-python-floor.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - moved-835fea364b80.yaml
+    revalidated:
+      at: 2026-10-30T00:47:06Z
+      outcome: unchanged
+      unchanged-because: pyproject.toml only adds the capabilities' rules index to the globs the sdist withholds. Its `requires-python = ">=3.11"` is unchanged, so the floor holds.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183129Z-d1c2e7b6.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:47:09Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; project rule 2 keeps project-kit's own gates and points to software-engineering's rule for what a builder runs. In project-kit the agent still runs the tests of what it changed and leaves the full suite to the pre-push hook and CI, as project rule 2 still says.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-30T00:47:13Z
+      outcome: unchanged
+      unchanged-because: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 20 on who decides an answer is untouched.

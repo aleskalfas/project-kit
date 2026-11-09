@@ -6,6 +6,10 @@ pkit:
     anchors:
       path:
         - .pkit/skills/core/capability-author.md
+        - .pkit/permissions/decide.py
+        - .pkit/schemas/privilege-catalog.yaml
+        - .pkit/permissions/project/grants.yaml
+        - .pkit/adapters/claude-code/settings/project/settings.json
       record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032]
       artefact:
         - ACT-operator
@@ -18,6 +22,10 @@ pkit:
         - .pkit/permissions/README.md#capability-contributed-privilege-definitions
         - .pkit/permissions/README.md#default-agent-subject-resolution
         - .pkit/permissions/README.md#the-read-only-text-filters-and-uv-run
+        - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
+        - .pkit/permissions/README.md#what-keeps-a-grant-from-allowing
+        - .pkit/permissions/README.md#a-redirection-that-writes-no-file
+        - .pkit/permissions/README.md#denies-and-what-an-abstain-says
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
         - .pkit/permissions/README.md#scope-enforcement
         - .pkit/permissions/README.md#authoring-a-fragment-pkit-permissions-scaffold-cap
@@ -25,6 +33,7 @@ pkit:
         - .pkit/cli/README.md#surface
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#schemas-validate-path
+        - .pkit/cli/README.md#standard-flags
         - .pkit/adapters/README.md#currently-shipped
         - .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy
         - .pkit/adapters/claude-code/README.md#settings
@@ -165,12 +174,27 @@ flowchart TD
 - **The hook.** The harness passes each tool call to the hook before the call runs, once you turn enforcement on ("Turning it on" below). The hook gives the harness the verdict, and nothing for an abstain. Claude Code's hook prints the verdict as JSON ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 - **The decision core** reads the permission model at each call, and gives one verdict. The model holds the guardrails, and the grants of the active profile, of your project and of each installed capability ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)). The guardrails deny recursive deletion, `sudo` and rewriting published history to every agent and to you ([the reference, "Privileges and how they are recognized"](../../.pkit/permissions/README.md#privileges-and-how-they-are-recognized)).
 - **Allow** runs the call with no prompt. **Deny** refuses it, and the harness asks nobody. A deny wins over every allow, whatever the order of the grants.
-- **Abstain** leaves the call to the harness's native rules, its native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask you.
+- **Abstain** leaves the call to the harness's native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask you.
 - **What else decides.** Where no grant covers a call, the posture decides: the default, `lenient`, abstains, and `strict` denies. A fault in the hook gives an abstain. The harness's native denies still refuse the forms of the guardrails' commands they name ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **The CLI reads the same model** as the hook, so `explain` shows what the hook decides on ([the same section](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **When the hook asks.** Claude Code's hook asks you rather than abstain in two cases:
-  - a call that may hide a guardrail's form, outside auto and bypass mode ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command))
+  - a call that may hide a guardrail's form, outside auto and bypass mode ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)). In those two modes you chose not to be asked ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
   - an `Edit` or `Write` to an absolute path outside the session's repository, in every mode ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
+
+### Why some commands still prompt
+
+A command can prompt although each program in it would run unasked on its own. The decision core allows a command only where a grant covers each of its parts ([the reference, "Compound commands"](../../.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)). The core must also be able to tell what each part runs ([the reference, "What keeps a grant from allowing"](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)). These are the reasons behind some of these rules, and what still guards a person's decision:
+
+- **Some programs are no text filters.** Every shipped profile grants `text-filter`, which covers programs whose only effect is their output, such as `grep` ([the reference, "The read-only text filters and `uv run`"](../../.pkit/permissions/README.md#the-read-only-text-filters-and-uv-run)). `text-filter` leaves out these three, each for its reason:
+  - **`echo`:** the usual way to answer a confirmation from a pipe, as in `echo y | pkit …`
+  - **`printf`:** its `-v` sets a shell variable
+  - **`jq`:** its expressions hold a `|`, where the core cuts a command into parts, and some of its options read files no check sees
+- **A `$` keeps every grant from allowing.** The core never sees an expansion's value. Some forms, such as `${X@P}` and `$[…]`, evaluate it as code ([the reference, "What keeps a grant from allowing"](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)).
+- **So does an assignment written with a quote or a backslash.** The core never matches an assignment's value, so removing its quotes would make no match more accurate. A program's setting written unquoted, as in `GH_HOST=x gh pr list`, is allowed by a grant on `gh` ([the same section](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)).
+- **A leading `cd` is stripped only from a command the core can read.** `cd src && gh pr list` is decided as `gh pr list`. But `cd {a,b} && git status` is decided whole, so nothing in the `cd` part is hidden ([the reference, "Compound commands"](../../.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)).
+- **An assignment that changes a program's configuration keeps the core from telling whether a deny applies.** The configuration may set a forced refspec or an alias. So the core abstains on `HOME=/tmp/x git status` ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+- **`&>/dev/null` and `&>>/dev/null` are ignored only at the end of their part of the command.** Elsewhere they keep every grant from allowing. The dash shell reads their `&` as running the command in the background ([the reference, "A redirection that writes no file"](../../.pkit/permissions/README.md#a-redirection-that-writes-no-file)).
+- **A `pkit` confirmation that guards a person's decision reads no answer from a pipe** ([the CLI reference, "Standard flags"](../../.pkit/cli/README.md#standard-flags)). Leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`.
 
 ## Turning it on
 
@@ -281,12 +305,13 @@ diagnostic session disarmed — the hook stops capturing.
 The report's headline counts the real prompts: the logged calls for which the report finds no allow rule in Claude Code's settings.
 
 - **`uv run pytest`** matches no allow rule, so the report counts it as genuinely missing, and recommends granting a privilege. The next task grants it.
-- **`gh pr list | jq .`** matches allow rules part by part, but not as a whole. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project.
+- **`gh pr list | jq .`** matches allow rules part by part, but not as a whole. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project. Why `jq` is no text filter is in "Why some commands still prompt" above.
 - **Nothing is applied.** You act on each recommendation yourself ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)).
+- **The core's reasons keep the log's redaction, a fault's excepted.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). The core's reasons never name an argument: at most a program, a privilege, or the kinds of a construct or form. A fault's reason is the exception: it quotes the error the hook met ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
 
 ### Allow a command
 
-Grant the privilege that recognizes the command. `pkit permissions catalog` lists the privileges, and `pkit permissions grant` writes the grant into `.pkit/permissions/project/grants.yaml`. Below, the grant is of `uv-run`, which no shipped profile grants:
+Grant the privilege that recognizes the command. `pkit permissions catalog` lists the privileges, and `pkit permissions grant` writes the grant into `.pkit/permissions/project/grants.yaml` ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)). Below, the grant is of `uv-run`, which no shipped profile grants:
 
 ```console
 $ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/adapters/claude-code/permission-hook.py
@@ -301,7 +326,7 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/a
 - **Scope:** a privilege with a scope type, such as `docker` or `web-fetch`, takes `--scope` to narrow the grant ([the reference, "Scope enforcement"](../../.pkit/permissions/README.md#scope-enforcement)).
 - **No privilege for the command:** where the catalog lists none, two routes allow the command.
   - **A privilege, the durable route.** A capability can define one, and a grant of it then works as above ("Ship a capability's own privilege" below).
-  - **The harness's own allow rule, the quick route.** With Claude Code, add a rule such as `Bash(make test:*)` under `permissions.allow` in `.pkit/adapters/claude-code/settings/project/settings.json` ([the adapter's README, `settings/`](../../.pkit/adapters/claude-code/README.md#settings)). The next `pkit sync` merges it into `.claude/settings.json`, where it binds every agent alike. The model does not see the rule, so `explain` does not show it, and `diff` lists it as one no privilege recognizes. Under a strict posture, the hook denies the command all the same.
+  - **The harness's own allow rule, the quick route.** With Claude Code, add a rule such as `Bash(make test:*)` under `permissions.allow` in `.pkit/adapters/claude-code/settings/project/settings.json` ([the adapter's README, `settings/`](../../.pkit/adapters/claude-code/README.md#settings)). The next `pkit sync` merges it into `.claude/settings.json` <!-- unanchored: named as where sync merges the rule, which the adapter's README, linked and anchored here, states -->, where it binds every agent alike. The model does not see the rule, so `explain` does not show it, and `diff` lists it as one no privilege recognizes. Under a strict posture, the hook denies the command all the same.
 - **Note:** `uv run` runs any program it is given, so this grant allows whatever that program does ([the reference, "The read-only text filters and `uv run`"](../../.pkit/permissions/README.md#the-read-only-text-filters-and-uv-run)).
 
 ### Deny something to one agent

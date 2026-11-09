@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "content.schema.json",
+  "title": "A piece's content in one language — visual-communication capability",
+  "description": "Formal shape of a piece's `content.<language>.yaml` (DEC-001 point 3, DEC-002 point 4): its top component's fields. The one schema of the capability that is not strict at schema level, since the components the content fills declare its fields: the capability's check judges the content against them, naming the nearest known key. Here, each key at the top is a name or a reserved key, and the methodology's container `pkit` is a mapping the capability never reads. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version"
+  ],
+  "propertyNames": {
+    "anyOf": [
+      {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      {
+        "enum": [
+          "pkit_schema",
+          "schema_version",
+          "id",
+          "use",
+          "concept",
+          "state",
+          "override",
+          "pkit"
+        ]
+      }
+    ]
+  },
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:content`.",
+      "const": "visual-communication:content"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "pkit": {
+      "description": "The methodology's container (COR-053 point 10).",
+      "type": "object"
+    }
+  }
+}

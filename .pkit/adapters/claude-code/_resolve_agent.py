@@ -283,12 +283,12 @@ def main(argv: list[str]) -> int:
 
     fm_data = yaml.load(io.StringIO(fm_yaml)) or {}
 
-    def _placeholder_cats(items: object) -> set[str]:
-        cats: set[str] = set()
+    def _placeholder_cats(items: object) -> list[str]:
+        cats: list[str] = []
         if isinstance(items, list):
             for item in items:
                 if isinstance(item, str) and item.startswith("<") and item.endswith(">"):
-                    cats.add(item[1:-1])
+                    cats.append(item[1:-1])
         return cats
 
     # The categories this agent references through a *hard* channel — any list
@@ -296,13 +296,16 @@ def main(argv: list[str]) -> int:
     # so the optional-read branch can tell a genuinely-optional category from one
     # that is also hard-referenced elsewhere (in which case the hard reference
     # wins and an undefined value still fails the deploy). Per ADR-052 Decision 2.
-    hard_cats: set[str] = set()
+    # Kept in front-matter order, so a skip names the undefined ones as written.
+    hard_order: list[str] = []
     for key in RESOLVABLE_LIST_KEYS:
-        hard_cats |= _placeholder_cats(fm_data.get(key))
+        hard_order += _placeholder_cats(fm_data.get(key))
     reads_fm = fm_data.get("reads")
     if isinstance(reads_fm, dict):
         for k in HARD_READS_KEYS:
-            hard_cats |= _placeholder_cats(reads_fm.get(k))
+            hard_order += _placeholder_cats(reads_fm.get(k))
+    hard_order = list(dict.fromkeys(hard_order))
+    hard_cats: set[str] = set(hard_order)
 
     ownership_cache: list = []
 
@@ -360,16 +363,28 @@ def main(argv: list[str]) -> int:
                             )
                         continue
                     # Undefined (absent key) or bare (`cat:` with no value) —
-                    # both unresolvable, both skip the agent. The remediation
-                    # depends on whether the category has a conventional default,
-                    # which the shared module answers (ADR-051 Implications).
-                    fail(
-                        [
-                            f"category <{cat}> referenced but not defined in overlay "
-                            f"({overlay_file})",
-                            *(own.undefined_category_remediation(cat) or []),
-                        ]
+                    # both unresolvable, both skip the agent. The skip names
+                    # every hard category left undefined, since `adopt` serves
+                    # the agent only when each has a conventional folder. The
+                    # shared module answers that per category (ADR-051
+                    # Implications, #2469): the first one with remediation of
+                    # its own gives it, else the deploy's generic `adopt` advice
+                    # applies.
+                    undefined = [c for c in hard_order if resolve(c) is None]
+                    if len(undefined) > 1:
+                        named = ", ".join(f"<{c}>" for c in undefined)
+                        reason = f"categories {named} referenced but not defined"
+                    else:
+                        reason = f"category <{cat}> referenced but not defined"
+                    remediation = next(
+                        (
+                            lines
+                            for c in undefined
+                            if (lines := own.undefined_category_remediation(c))
+                        ),
+                        [],
                     )
+                    fail([f"{reason} in overlay ({overlay_file})", *remediation])
                 values = resolved if isinstance(resolved, list) else [resolved]
                 offences = own.sync_managed_offences(
                     TARGET_ROOT, cat, [str(v) for v in values if v is not None]

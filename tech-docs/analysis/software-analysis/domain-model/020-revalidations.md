@@ -13,6 +13,7 @@ pkit:
   friction:
     anchors:
       record:
+        - software-analysis:DEC-001
         - software-analysis:DEC-001#1
         - software-analysis:DEC-001#4
         - software-analysis:DEC-001#5
@@ -57,7 +58,7 @@ classDiagram
   RevalidationProposal : commands or question
   class Shortfall
   Shortfall : record
-  Shortfall : issue
+  Shortfall : work item
   class UseCase["Use case"]
   Revalidation "1" --> "*" RevalidationOutcome : gives, one for each artefact
   RevalidationProposal "*" --> "1" Revalidation : drafts the outcomes of
@@ -82,21 +83,21 @@ flowchart LR
 
 Defined in [TERM-revalidation](../glossary.md#term-revalidation--revalidation).
 
-**Why:** Checking the [analysis](../glossary.md#term-analysis--analysis) before code and checking it after an unplanned [change](../../core/glossary.md#term-change--change) are the same act with different triggers. One set of outcomes, and one shape of record, serve both ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** Checking the [analysis](../glossary.md#term-analysis--analysis) before code and checking it after an unplanned [change](../../core/glossary.md#term-change--change) are the same act with different triggers. One set of [revalidation outcomes](../glossary.md#term-revalidation-outcome--revalidation-outcome), and one shape of [revalidation record](../glossary.md#term-revalidation-record--revalidation-record), serve both ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
 A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-artefact--artefact) against one state of the [system](../../core/glossary.md#term-system--system): a proposed design before its code, or the code after a change. It asks whether each description is still true of the software, and usually mends the description. Whoever performs it, a person or an agent, records its result on each artefact it covered.
 
 **Attributes:**
 
-- its trigger: planned, drift, scheduled, close or onboarding ([DEC-001 point 5](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation))
+- its trigger: `planned`, `drift`, `scheduled`, `close` or `onboarding` ([DEC-001 point 5](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation))
 - what it reviews against: a proposed design, or the code (DEC-001 point 5)
-- the artefacts it covers, each with its [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) (DEC-001 point 5)
+- the artefacts it covers, each with its revalidation outcome (DEC-001 point 5)
 
 **Relations:**
 
 - It gives each artefact it covers one revalidation outcome (DEC-001 point 5).
 - Its result on each artefact is recorded as the core's [answer](../../core/glossary.md#term-answer--answer), which clears the artefact's [friction](../../core/glossary.md#term-friction--friction) ([DEC-001 point 4](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#4-every-artefact-says-what-makes-it-true)).
-- A revalidation with something to say is logged by a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) ([DEC-001 point 6](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
+- A revalidation with something to say is logged by a revalidation record ([DEC-001 point 6](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 
 **States:** None.
 
@@ -177,9 +178,9 @@ A revalidation record is named by its day and its subject, never numbered.
 
 Defined in [TERM-design-source](../glossary.md#term-design-source--design-source).
 
-**Why:** A pointer returns the exact text reviewed, which no version number does. So a planned record points at the text itself, and the [analysis](../glossary.md#term-analysis--analysis)'s [artefacts](../../core/glossary.md#term-artefact--artefact) and records carry no declared versions ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** A pointer returns the exact text reviewed, which no version number does. So a planned [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) points at the text itself. No [artefact](../../core/glossary.md#term-artefact--artefact) of the [analysis](../glossary.md#term-analysis--analysis), and no revalidation record, carries a declared version ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as an issue's body or a design note. Its [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) names it with a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
+A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as a work item's body or a design note. Its revalidation record names it with a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
 
 **Attributes:**
 
@@ -230,13 +231,13 @@ Defined in [TERM-shortfall](../glossary.md#term-shortfall--shortfall).
 
 **Why:** An accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) binds the [system](../../core/glossary.md#term-system--system) from its acceptance, and the code may follow later. A [use case](../glossary.md#term-use-case--use-case) written to the code alone would hide what the record asks. One written to the record alone would describe behaviour that is not there. With a box below the step, both stay true ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A shortfall is a step or a variant of a use case that the system does not carry out yet. An accepted decision record decides it, so the step keeps the words the record decides. A box below the step says what the system lacks, and names the record and the issue that tracks building it.
+A shortfall is a step or a variant of a use case that the system does not carry out yet. An accepted decision record decides it, so the step keeps the words the record decides. A box below the step says what the system lacks, and names the record and the work item that tracks building it.
 
 **Attributes:**
 
 - its box, which says what the system lacks ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
 - the accepted decision record that decides it, one of the use case's record anchors (DEC-001 point 1)
-- the issue that tracks building it (DEC-001 point 1)
+- the work item that tracks building it (DEC-001 point 1)
 
 **Relations:**
 
@@ -246,7 +247,7 @@ A shortfall is a step or a variant of a use case that the system does not carry 
   - where the code regressed a step a decision record decides
   - where it finds such a description with no behaviour
 
-**States:** A shortfall stays open until the [change](../../core/glossary.md#term-change--change) that builds its step removes the box and the entry. The [pull request](../../core/glossary.md#term-pull-request--pull-request) of that change closes the shortfall's issue (DEC-001 point 1).
+**States:** A shortfall stays open until the [change](../../core/glossary.md#term-change--change) that builds its step removes the box and the entry. The [pull request](../../core/glossary.md#term-pull-request--pull-request) of that change closes the shortfall's work item (DEC-001 point 1).
 
 **Always true:**
 
@@ -259,28 +260,30 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Revalidation:**
 
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
 - [REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-052-record-only-with-something-to-say.md)
 
 **Revalidation outcome:**
 
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
 
 **Revalidation record:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md)
-- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/UC-074-free-uncited-ids.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
+- [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)
+- [REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-052-record-only-with-something-to-say.md)
+- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
 
 **Design source:**
 
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
 
 **Revalidation proposal:**
 
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
 
 **Shortfall:** None.

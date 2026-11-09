@@ -1,5 +1,6 @@
 schema_version: 1
-backbone_version: 1.149.0
+backbone_version: 2.1.0
+completed_version: 2.1.0
 components:
   - kind: adapter
     name: claude-code
@@ -22,3 +23,7 @@ components:
   - kind: capability
     name: doc-examples
     manifest: .pkit/capabilities/doc-examples/project/manifest.yaml
+  - kind: capability
+    name: visual-communication
+    manifest: .pkit/capabilities/visual-communication/project/manifest.yaml
+    origin: incubated-in-repo

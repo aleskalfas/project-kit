@@ -510,33 +510,15 @@ def test_reduction_returns_the_input_objects(av) -> None:
     assert latest is history[-1]
 
 
-# ---- the commit-time anchor (DEC-028 "Stale-verdict handling") ---------
+# ---- no commit-time anchor (DEC-028 "Stale-verdict handling", #2930) -------
 #
-# One definition, read by the freshness rule (`_lib.verdict_freshness`) for a
-# verdict naming no reviewed head, and by done-work's refusal when the PR's
-# head cannot be read.
+# A verdict naming no reviewed head is judged by when the PR's head arrived on
+# the host (`_lib.head_arrival`), never by the head commit's own dates, which
+# its committer's clock sets.
 
 
-def test_latest_commit_timestamp_prefers_committed_then_authored(av) -> None:
-    assert av.latest_commit_timestamp([]) == ""
-    assert (
-        av.latest_commit_timestamp([{"authoredDate": "2026-06-01T00:00:00Z"}])
-        == "2026-06-01T00:00:00Z"
-    )
-    assert (
-        av.latest_commit_timestamp(
-            [
-                {"committedDate": "2026-06-01T00:00:00Z"},
-                {"committedDate": "2026-06-05T00:00:00Z", "authoredDate": "2026-06-04T00:00:00Z"},
-            ]
-        )
-        == "2026-06-05T00:00:00Z"
-    )
-
-
-def test_latest_commit_timestamp_is_empty_without_a_readable_head(av) -> None:
-    assert av.latest_commit_timestamp([{"oid": "abc123"}]) == ""
-    assert av.latest_commit_timestamp(["not-a-commit"]) == ""
+def test_no_commit_date_is_offered_as_a_freshness_anchor(av) -> None:
+    assert not hasattr(av, "latest_commit_timestamp")
 
 
 # ---- finding tags (DEC-028 "Finding tags", #1405) ------------------------------

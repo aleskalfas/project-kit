@@ -1,6 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Internal. The README's section on adopting the capability is named
-  "Adopter setup", as every other capability's README names it, in place of
-  "Adopting it". What it says is unchanged, and nothing you run changes.
