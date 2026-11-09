@@ -7,6 +7,5 @@ body: >
   whatever its own front matter held (#2918). The drift check of `pkit
   scratchpad list`, and of composing a report, now leaves out only the fields
   the stamp wrote, so it hashes the text the stamp hashed. A field the note
-  held before it was reported, such as its own `project`, `workstream` or
-  `reported`, is part of what the hash covers, and an edit to it reads as
-  drift.
+  held before it was reported is part of what the hash covers, and an edit
+  to it reads as drift.
