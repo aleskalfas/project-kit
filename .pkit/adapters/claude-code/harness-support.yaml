@@ -54,7 +54,9 @@ requirements:
       Code's scrub of sign-in variables off. So a sign-in variable reaches
       every command the run starts. With the scrub on, the harness forces its
       own permission mode and widens the sandbox's writes. macOS is not
-      probed, so it has no grade here.
+      probed, so it has no grade here. The producer agent's build in such a
+      run, and a check's sandbox with no harness, are not confirmed yet, so
+      the grade covers only what the probe ran.
     # The versions the probe of ADR-073 point 11 ran on. The runner's working
     # form is not built yet; once it is, this bound is its tested range, as
     # the confined run's is.
