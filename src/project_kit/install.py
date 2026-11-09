@@ -1317,11 +1317,46 @@ def run_installed_adapter_primitives(ctx: InstallContext) -> None:
     `pkit sync` after the refresh pass — both need the harness side
     (re-)materialised. Adapters are discovered by walking
     `.pkit/adapters/<name>/`; the scripts must be idempotent so re-runs
-    on a stable state report "exists" rather than "created".
+    on a stable state report "exists" rather than "created". Every deploy
+    then warns of the hook needs no provider binds
+    (`report_unsatisfied_needs`).
     """
     for adapter_dir in _installed_adapter_dirs(ctx.target_root):
         for name in _ADAPTER_PRIMITIVES:
             _run_adapter_primitive(adapter_dir / name, ctx)
+    report_unsatisfied_needs(ctx)
+
+
+def report_unsatisfied_needs(ctx: InstallContext) -> None:
+    """Warn of each `needs:` entry whose hook binds no provider (COR-013 point 4).
+
+    The check is the one `pkit refs validate` makes (`refs.unsatisfied_needs`), over
+    the agents and skills on disk once they are deployed. Each need is one `warning`
+    line naming the agent or skill and the hook: a hook no skill answers and no
+    package provides, or one whose providers collide at its winning tier. The report
+    writes nothing and fails nothing, as the deploy's other reports. A front matter or
+    a `package.yaml` that cannot be read is one `warning` line in its place. A dry run
+    deploys nothing, so it reports nothing. Local import: the reference graph imports
+    this module.
+    """
+    if ctx.dry_run:
+        return
+    from ruamel.yaml.error import YAMLError
+
+    from project_kit import refs
+
+    try:
+        artifacts = refs.load_artifacts(ctx.target_root)
+        needs = refs.unsatisfied_needs(artifacts, refs.load_hook_providers(ctx.target_root))
+    except (OSError, UnicodeDecodeError, YAMLError) as exc:
+        reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        click.echo(
+            f"  {'warning':<12} hook needs not checked: a front matter or package.yaml "
+            f"could not be read ({reason})."
+        )
+        return
+    for need in needs:
+        click.echo(f"  {'warning':<12} {need.describe(ctx.target_root)}")
 
 
 def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> tuple[str, ...]:

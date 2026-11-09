@@ -13,9 +13,8 @@ reads:
     - COR-027
   paths:
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/migrations.md
     - .pkit/decisions/README.md
-    - .pkit/VERSION
 ---
 
 # Authoring a migration
@@ -47,7 +46,7 @@ Pick the most specific tier that covers the change. A capability's internal chan
 
 ### 2. Pick the scope
 
-Each tier has three scopes that determine the script's role and execution order within a version's directory (per COR-010 / `.pkit/lifecycle/README.md`'s "Three scopes per tier"):
+Each tier has three scopes that determine the script's role and execution order within a version's directory (per COR-010 / `.pkit/lifecycle/migrations.md`'s "Three scopes (per tier)"):
 
 - **`manifest-schema`** — bridges a manifest format change. Runs **first** in any upgrade flow that needs it, before any structural or resource-scoped migration of the same target version.
 - **`structural`** — affects the tier's directory shape (a backbone-wide rename; a capability's internal restructure within the capability). Runs **before** resource-scoped migrations of the same target version.
@@ -61,7 +60,7 @@ It is never a version already released. A project already at that version never 
 
 How that version is known depends on the project's version-bump policy, which COR-010 defers to. Read the project's own record of it first. Two common shapes:
 
-- **Where the change's own branch bumps the version,** the target is the bumped version. The stamp picks it without `--version`, from `.pkit/VERSION` or the component's `package.yaml` after the bump.
+- **Where the change's own branch bumps the version,** the target is the bumped version. The stamp picks it without `--version`, from the version the tier records after the bump (step 5).
 - **Where a release step bumps the version after the change merges,** the branch carries a version already shipped. The target is the backbone's or component's version in the next release. Without `--version`, the stamp picks the next minor past the version the default branch records, or the next major where its folder already waits. Where the release will be a major and no folder waits yet, pass it. Check the version again just before the change merges: `pkit migrations check-diff` fails a script whose version a release took meanwhile.
 
 ### 4. Pick the slug
@@ -78,7 +77,7 @@ pkit new migration --tier <tier> [--component <name>] [--version <X.Y.0>] --name
 
 - `--tier` is required.
 - `--component` is required when `--tier` is `adapter` or `capability`.
-- `--version` defaults to the next version past the one the default branch records for the tier: `.pkit/VERSION` for the backbone, a component's `package.yaml` `version` field for a component. The command prints the version it picked and why. Pass step 3's target explicitly when it differs. A version at or below the default branch's is refused, and the refusal names the version to give.
+- `--version` defaults to the next version past the one the default branch records for the tier: the backbone's in its `VERSION` file, which only the methodology's source holds, and a component's in its `package.yaml` `version` field. The command prints the version it picked and why. Pass step 3's target explicitly when it differs. A version at or below the default branch's is refused, and the refusal names the version to give.
 - `--name` is the slug, required.
 - `--scope` defaults to `resource`. Set to `manifest-schema` or `structural` per step 2.
 

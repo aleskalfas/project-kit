@@ -1,9 +1,0 @@
-component: visual-communication
-kind: patch
-custom:
-  category: Changed
-body: >
-  A refusal of a lock that stays now says "the lock" (#2752). It said "the
-  pinned lock" of a final and a published piece's too, which no pin holds. The
-  search that works out a lock's proposed move lies in `libraries.py`, as
-  `propose_lock`. No command calls it yet, so a person sees nothing of it.

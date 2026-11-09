@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import dataclasses
 import json
 import os
 import sys
@@ -369,6 +370,16 @@ def test_it_draws_each_page_by_a_clip_as_the_file_stands(tmp_path: Path) -> None
         ("one", 2560, 1440),
         ("two", 1600, 2200),
     ]
+    assert {each.band for each in drawing.shown[0].images} == {0}
+    assert file_clips(program) == [
+        {"x": 0.0, "y": 0.0, "width": 1280.0, "height": 720.0, "scale": 1},
+        {"x": 240.0, "y": 744.0, "width": 800.0, "height": 1100.0, "scale": 1},
+    ]
+
+
+def file_clips(program: Path) -> list[dict[str, Any]]:
+    """The clips the file's images were drawn by, in its first mode: those taken after the
+    file opened, and before the first read for ink."""
     messages = logged(program)
     methods = [each.get("method") for each in messages]
     file_opened = len(methods) - 1 - methods[::-1].index("Page.navigate")
@@ -379,15 +390,45 @@ def test_it_draws_each_page_by_a_clip_as_the_file_stands(tmp_path: Path) -> None
         if each.get("method") == "Runtime.evaluate"
         and each["params"]["expression"].startswith(f"({viewing_browser.GROUND})")
     )
-    clips = [
+    return [
         each["params"]["clip"]
         for each in after[:first_ground]
         if each.get("method") == "Page.captureScreenshot"
     ]
-    assert clips == [
-        {"x": 0.0, "y": 0.0, "width": 1280.0, "height": 720.0, "scale": 1},
-        {"x": 240.0, "y": 744.0, "width": 800.0, "height": 1100.0, "scale": 1},
+
+
+#: The bands of a phone's page 5,000 px tall, each a top and a height, as the caller hands them.
+BANDS = ((0.0, 1700.0), (1677.6, 1700.0), (3355.2, 1644.8))
+
+
+def test_a_page_handed_its_regions_is_drawn_by_a_clip_of_each_as_wide_as_the_page(
+    tmp_path: Path,
+) -> None:
+    pages = [{**page("tall", 390.0, 5000.0, text("a", [span("a", 0)])), "x": 8.0, "y": 744.0}]
+    [wanted] = as_scene(pages)
+    held = dataclasses.replace(wanted, regions=BANDS)
+    drawing, program = drawn(tmp_path, [held], documents={FILE: {"pages": pages}})
+    images = drawing.shown[0].images
+    assert [(each.page, each.band, each.width, each.height) for each in images] == [
+        ("tall", 1, 780, 3400),
+        ("tall", 2, 780, 3400),
+        ("tall", 3, 780, 3290),
     ]
+    assert file_clips(program) == [
+        {"x": 8.0, "y": 744.0 + top, "width": 390.0, "height": height, "scale": 1}
+        for top, height in BANDS
+    ]
+
+
+def test_a_page_in_bands_is_read_once_whole_a_span_in_an_overlap_among_it(tmp_path: Path) -> None:
+    """The span with no ink lies where the first two bands overlap."""
+    lost = span("lost", 0, ink=(), y=1690.0)
+    pages = [page("tall", 390.0, 5000.0, text("a", [lost, span("kept", 1, y=4000.0)]))]
+    [wanted] = as_scene(pages)
+    held = dataclasses.replace(wanted, regions=BANDS)
+    drawing, _ = drawn(tmp_path, [held], documents={FILE: {"pages": pages}})
+    assert [each.band for each in drawing.shown[0].images] == [1, 2, 3]
+    assert [(each.element, each.text) for each in drawing.shown[0].read.dropped] == [("a", "lost")]
 
 
 def test_a_page_asked_for_alone_is_read_alone(tmp_path: Path) -> None:
@@ -837,6 +878,23 @@ def test_a_browser_its_sandbox_stopped_is_told_apart(tmp_path: Path, words: str)
 def test_a_browser_that_stopped_otherwise_is_not_said_to_be_sandboxed(tmp_path: Path) -> None:
     stop, _ = stopped(tmp_path, says="Trace/BPT trap: 5", exit=133)
     assert not stop.sandbox
+    assert not stop.as_root
+
+
+#: What Chrome says where it runs as root, as a container may run it: it refuses to start with
+#: its own sandbox on, and its words name that sandbox.
+AS_ROOT_WORDS = (
+    "[1107/101010.000000:ERROR:zygote_host_impl_linux.cc(128)] Running as root without "
+    "--no-sandbox is not supported. See https://crbug.com/638180."
+)
+
+
+def test_a_browser_run_as_root_is_told_apart_from_a_sandbox_that_stopped_it(
+    tmp_path: Path,
+) -> None:
+    stop, _ = stopped(tmp_path, says=AS_ROOT_WORDS, exit=1)
+    assert stop.as_root
+    assert not stop.sandbox
 
 
 def test_only_the_end_of_what_a_browser_said_is_kept(tmp_path: Path) -> None:
@@ -863,6 +921,40 @@ def test_no_flag_touches_the_browsers_own_sandbox(tmp_path: Path) -> None:
     assert not [
         flag for flag in flags if "sandbox" in flag.split("=")[0] or "zygote" in flag.split("=")[0]
     ]
+
+
+#: Flags that turn off or weaken the sandbox of a browser's processes, merge them into one, or
+#: let a page read past its own file: the module passes none (DEC-024 point 1).
+UNSAFE_FLAGS = (
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-gpu-sandbox",
+    "--disable-seccomp-filter-sandbox",
+    "--disable-namespace-sandbox",
+    "--no-zygote",
+    "--single-process",
+    "--in-process-gpu",
+    "--disable-site-isolation-trials",
+    "--disable-web-security",
+    "--allow-file-access-from-files",
+    "--allow-file-access",
+    "--allow-running-insecure-content",
+    "--disable-features",
+    "--unsafely-treat-insecure-origin-as-secure",
+)
+
+#: Words in a flag's name that touch the browser's own sandbox or its processes' isolation.
+UNSAFE_WORDS = ("sandbox", "zygote", "single-process", "in-process", "unsafe", "security", "file")
+
+
+def test_no_flag_the_module_passes_weakens_the_browser_or_lets_a_page_read_past_its_file(
+    tmp_path: Path,
+) -> None:
+    _, program = drawn(tmp_path)
+    names = {flag.split("=")[0] for flag in logged(program)[0]["flags"]}
+    assert not names & set(UNSAFE_FLAGS)
+    assert not [name for name in names for word in UNSAFE_WORDS if word in name]
+    assert not set(viewing_browser.FLAGS) & set(UNSAFE_FLAGS)
 
 
 # Its profile.
@@ -1126,6 +1218,34 @@ def test_a_real_browser_names_each_planted_fault_of_a_file(tmp_path: Path) -> No
     assert list((tmp_path / "local").iterdir()) == []
 
 
+@real_browser
+def test_a_real_browser_draws_each_region_of_a_page_as_wide_as_the_page(tmp_path: Path) -> None:
+    """Two bands of the planted page, which overlap, at a scale of 2: the reads still read it
+    whole, once."""
+    file = tmp_path / "planted.html"
+    file.write_text(
+        viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes()),
+        encoding="utf-8",
+    )
+    page = viewing_browser.PLANTED_PAGE
+    half = page.height / 2
+    regions = ((0.0, half + 10), (half - 10, page.height - half + 10))
+    browser = found_browser()
+    assert browser is not None
+    try:
+        drawing = viewing_browser.draw(
+            file, [dataclasses.replace(page, regions=regions)], 2.0, browser, tmp_path / "local"
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    assert viewing_browser._named(drawing.shown[0].read) == viewing_browser.PLANTED_FINDINGS
+    assert [(each.band, each.width, each.height) for each in drawing.shown[0].images] == [
+        (number, page.width * 2, height * 2) for number, (_, height) in enumerate(regions, 1)
+    ]
+
+
 def scene_pages(scene: Mapping[str, Any]) -> list[Any]:
     """The pages of a scene, each text's spans as its `lines` hold them."""
 
@@ -1153,10 +1273,11 @@ def scene_pages(scene: Mapping[str, Any]) -> list[Any]:
 def test_a_real_browser_reads_the_renderers_reference_file_clean(tmp_path: Path) -> None:
     """A picture, an ellipse, a run in two families, a text under a later box and pages of two
     sizes, as the renderer writes them: the reads name nothing."""
-    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture
+    from tests.test_visual_communication_html import REFERENCE, draw, reference_picture, seam
 
     file = tmp_path / "reference.html"
-    file.write_bytes(draw(REFERENCE, pictures={"square": reference_picture(tmp_path)}).document)
+    shown = seam.Shown(reference_picture(tmp_path), seam.PNG)
+    file.write_bytes(draw(REFERENCE, pictures={"first/picture": shown}).document)
     browser = found_browser()
     assert browser is not None
     pages = scene_pages(REFERENCE)

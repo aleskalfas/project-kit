@@ -18,6 +18,7 @@ pkit:
         - visual-communication:DEC-004#2
         - visual-communication:DEC-005#4
         - visual-communication:DEC-005#6
+        - visual-communication:DEC-025#8
         - COR-017
         - COR-013
 ---
@@ -53,7 +54,7 @@ pkit:
 - **1a.** The developer names another mode of the same brand, on one of its axes, such as dark on the colour scheme. A warm palette beside a calm one of the same brand is a mode too. The system draws the piece with that mode's values, and the use case ends.
 - **1b.** The mode lies on an axis whose modes alter sizes, such as a device. The system lays the piece out again for that mode, and says which texts do not fit. The use case ends.
 - **1c.** The developer names several modes on one axis, such as light and dark. The system draws and checks the piece in each combination of the modes it names, and its exports hold each. An axis the piece names no mode for takes its default mode. The use case ends.
-- **3a.** The piece holds a picture made outside the system, such as a photo. It does not follow the brand, so the system names it.
+- **3a.** The piece shows a picture made outside the system, such as a photo, which its content or a local component names. It does not follow the brand. So the system names each such picture in each language, as it moves the piece's lock onto the new brand. It also names each logo the piece shows that the new brand lacks, which is not drawn. Comparing the piece in the two brands names the same.
 - **3b.** The new brand lacks what the piece uses. The developer chooses another layout or library component the new brand has, or keeps the earlier brand, and the use case ends.
 
 **Postconditions:** The piece is drawn in the new brand or mode, from the same content.
@@ -69,4 +70,4 @@ pkit:
   - **Steps 1 to 3 and the guarantee:** switching the brand changes how a piece looks, and leaves its content and its library components as they are. What the new brand lacks is reported ([DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
   - **Variants 1a and 1c:** a piece names the modes it is drawn in, on each axis of its brand ([DEC-005 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#6-a-piece-names-the-modes-it-is-drawn-in)). Looks of one owner that share every layout are modes of one axis, not brands ([DEC-004 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
   - **Variant 1b:** an axis whose modes alter sizes needs a drawing for each mode. Each text is measured in it (DEC-004 point 2 and [DEC-005 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#4-the-engine-measures-text-from-committed-fonts-and-breaks-its-lines)).
-  - **Variant 3a:** a picture made elsewhere is content that follows no brand, and switching the brand reports it ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+  - **Variant 3a:** a picture made elsewhere is content that follows no brand, and switching the brand reports it ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)). A command that moves the piece's lock onto another brand names each picture of the piece a scene shows, in each language. It also names each logo the new brand gives no value, and the before-and-after says the same ([visual-communication:DEC-025 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-025-picture-files.md#8-the-command-that-moves-a-piece-onto-another-brand-names-what-does-not-follow)).

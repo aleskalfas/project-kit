@@ -163,7 +163,8 @@ def test_an_agent_the_deploy_skips_fails_with_the_deploys_remediation(
     code, out = _run(repo, capsys)
     assert code == 1, out
     assert "- gapped: the deploy skips it: gapped — " in out
-    assert "    Deploy it:  pkit agents adopt gapped\n" in out
+    assert "    <code-paths> has no conventional folder to create.\n" in out
+    assert "    Fix: set its paths in .pkit/agents/project/overlay.yaml, or run\n" in out
     assert "To fix a skipped agent: follow the deploy's remediation under it" in out
     assert "To fix a copy" not in out
 

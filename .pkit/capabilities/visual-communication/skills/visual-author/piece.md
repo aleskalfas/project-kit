@@ -32,16 +32,18 @@ Then choose each field of `piece.yaml`:
 
 | Field | How to choose |
 |---|---|
-| `top` | `foundations/deck` for a presentation, one page for each slide. `foundations/figure` for a figure in a documentation page, one page alone. |
+| `top` | `foundations/deck` for a presentation, one page for each slide. `foundations/figure` for a figure in a documentation page, one page alone. `foundations/site` for a web page, or a portal of several pages. |
 | `brand` | `neutral`, or a brand the library folder already holds. A brand gives every value the piece draws in. |
 | `notations` | Leave it out unless the content names concepts. No notation ships, so name only one the library folder holds ([Notations](../../files.md#notations)). |
 | `languages` | The first is the source language, such as `[en]`. Each language needs its content file. |
 | `audience` | Who the piece is for, in one sentence. Name the reader and what they already know, since the build loop reads the pages as that reader does. |
 | `shown` | Where the piece is shown, in words: the place and the medium. |
 | `explains` | `true` where the piece explains, rather than only shows. A figure of how parts relate explains. A title page only shows. |
-| `exports` | The formats an export makes. `pdf` makes one file for each language and combination of modes, which suits a presentation. `svg` makes one file for each page, which suits a figure. `[]` makes none yet. |
+| `exports` | The formats an export makes. `pdf` makes one file for each language and combination of modes, which suits a presentation. `svg` makes one file for each page, which suits a figure. `html` makes a page file a browser opens, which suits a web page. `[]` makes none yet. |
 | `state` | `draft`. A draft's lock moves at each render. |
-| `modes` | Leave it out to draw each axis in its default. Name an axis to draw more, such as `colour-scheme: [light, dark]` ([Axes and modes](../../files.md#axes-and-modes)). Each combination adds a drawing to read, so name only what the piece is shown in. |
+| `modes` | Leave it out to draw each axis in its default. Name an axis to draw more, such as `colour-scheme: [light, dark]` ([Axes and modes](../../files.md#axes-and-modes)). A web page names the sizes it is shown at, such as `device: [desktop, tablet, phone]`, and the brand gives each size. Each combination adds a drawing to read, so name only what the piece is shown in. |
+
+**A web page** is a site of one page, and a portal is a site of several. Its content holds its pages under `pages`, each naming the layout `standard` and filling its slot `main`. The site's `header` and `footer` are optional. Each is written once, and every page takes it. Each page is as wide as its size, and as tall as its content. The site and the axis `device` come with the foundations' version 1.1.0 ([The foundations](../../files.md#the-foundations)).
 
 Write no `lock`: the first render writes it. Write no `pinned` either, since a pinned draft with no lock is refused.
 
@@ -68,10 +70,11 @@ modes:
 
 Write `pieces/<piece>/content.<language>.yaml` for each language. The content says what the piece shows, and names no position, size, colour or font ([Content files](../../files.md#content-files)).
 
-- **What it may hold.** Open the top's file in the location, under `libraries/foundations/<version>/components/`. A figure takes the fields `body` and `caption`. A deck takes `slides`. Each slide names a `layout`, whose `slots` are what it may fill, or the component that draws it, with `use`.
+- **What it may hold.** Open the top's file in the location, under `libraries/foundations/<version>/components/`. A figure takes the fields `body` and `caption`. A deck takes `slides`, and a site takes `pages`. Each slide or page names a `layout`, whose `slots` are what it may fill, or the component that draws it, with `use`.
 - **What draws a visual.** A mapping with `use` places a component. Choose a pattern by the question the visual answers, never by its look ([The patterns, by the question they answer](../../libraries/starter/README.md#the-patterns-by-the-question-they-answer)). Its page says which fields and options it takes.
 - **Ids.** Give each slide and each item an `id`, unique in its list. A second language is a second file of the same shape, with the same ids.
 - **Concepts.** Where the piece names a notation, `concept: <notation>/<concept>` gives a component its colour family.
+- **A picture of the piece's own,** such as a photo, is a PNG or a JPEG in `pieces/<piece>/pictures/`. In each language, the field of the image that shows it gives the file's bare name, with no folder before it ([Picture files](../../files.md#picture-files)).
 
 The content of a deck, one cover and one slide:
 

@@ -47,9 +47,12 @@ A finding in a library version that the project does not correct asks for attent
 
 - **While you mend a page:** `pkit visual look <piece> --page <page>`, by its number or its trace id. By default that is the source language, in the first key.
 - **A language or a mode you changed:** add `--language <language>` or `--key <key>`, each of which may repeat.
-- **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language or one mode alone, such as a longer word that breaks a line.
+- **Each size the piece names:** a look draws one size by default. Draw each other size with `--key`, a phone's among them, or all with `--every-key`.
+- **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language, one mode or one size alone, such as a longer word that breaks a line.
 
 **How to read them.** Open each image, one at a time, and read it as the piece's `audience` would. Go through what the content gives, part by part, then look over the page as a whole. A frame file beside each image gives each element's trace id and its box in the image's pixels, so you can name what you found.
+
+**A page in bands.** A page too tall for one image, such as a phone's web page, is drawn in bands, each an image as wide as the page. Read every band of the page, in order, before you judge it. Each overlaps the next by a line, so a part cut at a band's edge shows whole in the band beside it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **What `report.json` adds.** It says what the images cannot show ([What the report says](../../outputs.md#what-the-report-says)):
 
@@ -58,6 +61,7 @@ A finding in a library version that the project does not correct asks for attent
 | `dropped` | The tool drew nothing of a text or a run. | Read it as a part missing from the page, even where the image looks whole. Find the element by its frame, and mend what lost it. If you cannot, report it. |
 | `losses` | What the renderer left out, accepted or not. | Treat one the piece does not accept as `loss` in step 4. |
 | `drawn-otherwise` | A run measured in more than one family, which the tool may set in one of them. | Trust the image less on that line. |
+| `band`, on an image | The image is one band of a page too tall for one, with its number and how many the page has. | Read each band the page has before you judge the page. |
 | `on-white`, on an image | Through the SVG renderer, the page draws no ground of its own, so its white is not the piece's. | Judge a text over nothing knowing this. |
 | `on-browser-ground`, on an image | Through the HTML renderer, the page draws no ground of its own. It lies on the browser's own ground in the mode drawn, which differs between browsers. | Judge a text over nothing knowing this, in each mode. No check reads that ground. |
 
@@ -65,8 +69,29 @@ A finding in a library version that the project does not correct asks for attent
 
 - **A browser's drawing.** An image shows this tool's drawing, and no other tool's.
 - **A later drawing.** The pixels may change with the tool, its version or the machine. Keep no image as a reference, and compare none as a contract.
-- **A page you did not draw.** One language or one key stands for no other.
+- **A page you did not draw.** One language, one key or one size stands for no other.
 - **A pass.** A page that looks right has passed nothing. The check still measures it.
+
+### Where a look stops
+
+Through the HTML renderer a look needs a browser. Where none can run, the look exits 3, leaves the page files and `report.json` with no image, and names the ways on, in this order ([When the browser stops](../../outputs.md#when-the-browser-stops)):
+
+1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them. They show a pushed commit, not the working tree.
+2. the same look, run once by a person outside any sandbox, such as in their own terminal. That line is addressed to a person, not to you.
+3. the SVG renderer's pages, `pkit visual look <piece> --renderer svg`, which show the layout, never the HTML renderer's page.
+
+Where a sandbox stopped it, the stop says so. Go on as [visual-communication:DEC-024-outside-programs-sandbox] point 6 holds:
+
+- **Never take the command out of the sandbox yourself.** Never apply an exclusion from the session's sandbox, and never use the harness's escape on your own. Letting a command out is a person's act.
+- **Run the command as the project writes it.** Never change its form to slip out of the sandbox.
+- **Read the pipeline's drawings** of the commit you pushed, where you can reach them. Otherwise, or where you need the working tree drawn, ask a person, naming the ways on the stop names.
+- **In a run the permission model confines,** a builder's among them, no pipeline's drawings are in reach. Only the SVG renderer's pages remain there. Whoever started the run may read the pipeline's drawings once its commits are pushed.
+
+**How to find a pull request's drawings.** A pipeline that draws them keeps them as `visual-drawings-<commit>`, named by the full hash of the commit it drew ([A pipeline's drawings](../../outputs.md#a-pipelines-drawings)). Take the pull request's head commit, then fetch its drawings into a folder of their own, named by that commit.
+
+Never fetch them into `look/`: a look replaces its renderer's folder there. Read the fetched folder as a look's: `report.json` first, then each image with its frames. They show that commit as the pipeline's browser drew it. Where the download is refused, or its host is out of reach, say so and ask a person.
+
+**Where a person ran the look outside the sandbox,** read the folder that run left in `look/<piece>.html/`. Never run the look over it, since a run replaces that folder ([visual-communication:DEC-020-html-page-drawing] point 5).
 
 ## 4. Mend
 
@@ -190,6 +215,6 @@ The loop ends when all three hold.
 - before the piece goes to its audience
 - where you cannot read an image yourself
 
-Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. Mend a fault it reports as in step 4. Its findings are advice, and it changes nothing. Where its harness reads no image it stops and says so, and those pages stay not looked at.
+Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. Mend a fault it reports as in step 4. Its findings are advice, and it changes nothing. Where its harness reads no image it stops and says so, and those pages stay not looked at.
 
-**Then commit** the piece's folder: `piece.yaml`, the content, any local component, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.
+**Then commit** the piece's folder: `piece.yaml`, the content, any local component, its `pictures/`, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.

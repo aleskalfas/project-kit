@@ -31,3 +31,12 @@ roles:
   # The typography of the code block's text: the shared type of code, in a monospace
   # family, so the columns of a terminal's lines and of a file's text stay in line.
   starter.type.code: {type: typography, default: '{type.code}'}
+  # The space between a page's edge and what a web part that fills the page's width holds,
+  # and between a web part's own rows, on a wide page: a large spacing. On a phone a web
+  # part keeps the inset from the edge instead.
+  starter.margin: {type: dimension, default: '{space.4}'}
+  # How wide a header draws the brand's logo, at most: a large spacing, so a square mark
+  # stands about as tall as the title beside it.
+  starter.logo: {type: dimension, default: '{space.4}'}
+  # The radius of a button's corners: a card's, unless a brand rounds its buttons apart.
+  starter.button.corner: {type: dimension, default: '{starter.corner}'}

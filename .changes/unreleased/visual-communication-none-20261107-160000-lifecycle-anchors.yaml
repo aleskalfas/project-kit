@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  visual-communication's page on its checks anchors "How a registered
+  command is run" on the lifecycle reference's `manifest.md`, where the
+  lifecycle README held it before it split (#2473). Its link stays on the
+  lifecycle README, whose heading leads there. Nothing visual-communication
+  ships to an adopter changes.

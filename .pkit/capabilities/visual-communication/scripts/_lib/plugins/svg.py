@@ -4,7 +4,8 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
 - **What it draws** is its declaration (`svg_declaration.py`): every primitive of format
   1's scene but the path. It draws only what it declares, so the losses the capability
   reads from the declaration before it runs are the ones it makes.
-- **How it draws** is the canvas's (`_lib/canvas.py`), with nothing replaced.
+- **How it draws** is the canvas's (`_lib/canvas.py`), with nothing replaced: a picture is
+  embedded whole, as PNG or JPEG data, so it keeps the colour profile it carries.
 
 Output is fixed for a version: the same scene and values give the same bytes. A change that
 could give another output, here or in the canvas, raises the version, and the reference
@@ -49,11 +50,12 @@ def render(
     key: str,
     colours: Mapping[str, Mapping[str, Any]],
     font_file: Callable[[str], Path],
-    pictures: Mapping[str, Path],
+    pictures: Mapping[str, seam.Shown],
 ) -> Drawn:
     """`scene` (`Scene.to_dict()`) drawn in the combination `key`: `colours` gives each
     colour role's value there, in canonical form; `font_file` the committed file of a font
-    family; `pictures` the file of each produced output's variant that serves `key`."""
+    family; `pictures` the picture each image shows there, by the image's trace id
+    (`seam.Shown`), whatever its source."""
     canvas = Canvas(DECLARATION, scene, key, colours, font_file, pictures)
     pages = []
     for trace in scene.get("pages", []):

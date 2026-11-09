@@ -9,7 +9,8 @@ losses a declaration of written code meets, without importing the writer.
 - `forms`: the versions of its spelling it writes (DEC-005 point 8). A declaration of
   written code names one; the writer keeps writing every form it shipped.
 - `kinds`: the DTCG types its language has a form for. A token of another type is a loss,
-  left out, known before the writer runs.
+  left out, known before the writer runs: a typography, and a picture role's file
+  (DEC-025 point 4).
 - `axis-kinds`: the kinds of axis its selectors spell: value axes alone. The command hands
   it a brand's values at the default of each axis of another kind, a size, and reports
   each token that axis changes as a loss, approximated (DEC-021 point 8).
@@ -20,7 +21,7 @@ DECLARATION = {
     "name": "css",
     "kind": "code-writer",
     "version": "1.0.0",
-    "seam": 4,
+    "seam": 5,
     "module": "css",
     "forms": [1],
     "kinds": ["color", "dimension", "fontFamily", "fontWeight", "number"],

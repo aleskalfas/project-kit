@@ -1,5 +1,6 @@
 """The viewing step's browser: a page file as images, and what the browser dropped
-(visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-015 point 2).
+(visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-015 point 2, DEC-024 points 1
+and 4).
 
 This module alone calls the browser. It reads the HTML renderer's page files. It stands on the
 standard library and on the marks the renderer's declaration holds, so every other format
@@ -12,6 +13,9 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   the one device scale the caller gives, set by the browser's own flag, since an emulated
   scale leaves HTML text on whole pixels. The window stays at the width of the widest page,
   so no page shrinks.
+- **Regions.** A page the caller hands with regions of its height, its bands, is drawn as an
+  image of each, as wide as the page, in order (DEC-022 point 7). The reads read the whole
+  page, once.
 - **Each mode in that one start.** The caller names the reader's signals the file reads, each
   with the values it may take, and the signals of each mode to draw, each a set of CSS media
   features such as `prefers-color-scheme: dark`. The module knows no axis. It opens the file
@@ -38,9 +42,11 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   `CLOSE_SECONDS`. A browser that hangs counts as one that stopped, at its close too, and is
   ended: its own process group, which only its start made, and no other process.
 - **A stop.** `Stopped` says where `find` looked, or the program started and what that said.
-  It gives no image: a drawing is all its pages or none.
-- **Its own sandbox.** No flag here touches it, until what the permission model adds for an
-  outside program is settled (#2775).
+  It gives no image: a drawing is all its pages or none. From those words it tells a sandbox
+  that stopped the browser apart from a browser run as root, which refuses to start with its
+  own sandbox on.
+- **Its own sandbox.** No flag here turns off or weakens the sandbox of any of the browser's
+  processes, merges them into one, or lets a page read past its own file (`FLAGS`).
 - **Its profile** lies in a throwaway folder under the one the caller names, removed even on
   a stop, with the planted page and what the browser said.
 
@@ -91,7 +97,8 @@ PLACES: Mapping[str, tuple[str, ...]] = {
 }
 NAMES = ("google-chrome-stable", "google-chrome", "chromium", "chromium-browser")
 
-#: What each start asks of the browser, beside its profile, its window and its scale.
+#: What each start asks of the browser, beside its profile, its window and its scale. None
+#: touches its own sandbox (DEC-024 point 1).
 FLAGS = (
     "--headless",
     "--remote-debugging-pipe",
@@ -126,6 +133,10 @@ SAID_LENGTH = 2000
 #: What a browser says where a sandbox stopped it: its own that could not start, or one around
 #: it that refused the local socket every start binds.
 SANDBOX = re.compile(r"sandbox|SingletonSocket: Operation not permitted", re.IGNORECASE)
+
+#: What Chrome says where it runs as root, and so refuses to start with its own sandbox on, as
+#: a container may run it. Its words name its sandbox, so they are read before `SANDBOX`.
+AS_ROOT = re.compile(r"Running as root without --no-sandbox is not supported")
 
 #: What reading an answer of another form than the protocol's raises.
 UNREADABLE = (AttributeError, KeyError, IndexError, TypeError, ValueError, struct.error)
@@ -220,7 +231,8 @@ SETTLE = """() => new Promise((done) => {
 
 class Stopped(Exception):
     """What stopped a drawing: `what`, where `find` looked, or the program started and what
-    it said. `sandbox` is whether a sandbox stopped it, as far as those words tell."""
+    it said. As far as those words tell, `as_root` is whether the browser ran as root and so
+    refused its own sandbox, and `sandbox` whether a sandbox stopped it otherwise."""
 
     def __init__(
         self, what: str, *, looked: Sequence[str] = (), program: str = "", said: str = ""
@@ -230,7 +242,8 @@ class Stopped(Exception):
         self.looked = tuple(looked)
         self.program = program
         self.said = said
-        self.sandbox = bool(SANDBOX.search(said))
+        self.as_root = bool(AS_ROOT.search(said))
+        self.sandbox = not self.as_root and bool(SANDBOX.search(said))
 
     def __str__(self) -> str:
         parts = [self.what]
@@ -254,22 +267,26 @@ class Text:
 
 @dataclass(frozen=True)
 class Page:
-    """A page wanted of the file: its trace id, its size in px, and its texts."""
+    """A page wanted of the file: its trace id, its size in px, its texts, and the regions of
+    its height to draw, each a top and a height in its px, none where it is drawn whole."""
 
     id: str
     width: float
     height: float
     texts: tuple[Text, ...]
+    regions: tuple[tuple[float, float], ...] = ()
 
 
 @dataclass(frozen=True)
 class Image:
-    """A page drawn: its trace id, the PNG file's bytes, and its size in pixels."""
+    """A page drawn: its trace id, the PNG file's bytes, its size in pixels, and the number of
+    the region it shows, from 1, or 0 where it shows the page whole."""
 
     page: str
     image: bytes
     width: int
     height: int
+    band: int = 0
 
 
 @dataclass(frozen=True)
@@ -377,7 +394,8 @@ def draw(
     modes: Sequence[Mapping[str, str]] = ({},),
 ) -> Drawing:
     """The page file `file` through `browser`, in one start: for each of `modes`, in order, an
-    image of each of `pages`, at `scale` device pixels to a px, and what the four reads named.
+    image of each of `pages`, or of each region of one handed with its regions, at `scale`
+    device pixels to a px, and what the four reads named.
     `signals` names each signal the file reads, with the values it may take, the first a
     reader's with no preference; each mode sets every one of them. The browser's profile lies
     under `folder`, which is made where it is missing, and which keeps nothing of this run.
@@ -428,7 +446,11 @@ def _drawn(
             found = _found(started, pages)
             for page, held in zip(pages, found, strict=True):
                 _hold_to_its_size(started, page, held)
-            images = tuple(_image(started, held) for held in found)
+            images = tuple(
+                image
+                for page, held in zip(pages, found, strict=True)
+                for image in _images(started, page, held)
+            )
             shown.append(Shown(dict(mode), images, _read(started, pages, found)))
             started.ask(UNGROUND, ALONE_MARK)
         return Drawing(version, tuple(shown))
@@ -460,10 +482,23 @@ def _found(started: _Started, pages: Sequence[Page]) -> list[Mapping[str, Any]]:
     return [held[page.id] for page in pages]
 
 
-def _image(started: _Started, held: Mapping[str, Any]) -> Image:
-    picture = started.picture({side: held[side] for side in ("x", "y", "width", "height")})
+def _images(started: _Started, page: Page, held: Mapping[str, Any]) -> Iterator[Image]:
+    """The images of `page`, which the document holds as `held`: one of the whole page, or one
+    of each of its regions, each as wide as the page (DEC-022 point 7)."""
+    if not page.regions:
+        yield _image(started, held, {side: held[side] for side in ("x", "y", "width", "height")})
+        return
+    for number, (top, height) in enumerate(page.regions, 1):
+        clip = {"x": held["x"], "y": held["y"] + top, "width": held["width"], "height": height}
+        yield _image(started, held, clip, number)
+
+
+def _image(
+    started: _Started, held: Mapping[str, Any], clip: Mapping[str, float], band: int = 0
+) -> Image:
+    picture = started.picture(clip)
     width, height = struct.unpack(">II", picture[PNG_SIZE])
-    return Image(held["id"], picture, width, height)
+    return Image(held["id"], picture, width, height, band)
 
 
 def _read(started: _Started, pages: Sequence[Page], found: Sequence[Mapping[str, Any]]) -> Read:

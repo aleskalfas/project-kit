@@ -7,9 +7,11 @@ well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elemen
 (`html_elements`). What a browser makes of the file is the viewing step's to see. Which mode a
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them.
 
-The reference output below is pinned to the renderer's version, 1.1.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.2.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
+Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
+or a JPEG, by the image's trace id (DEC-025 point 7).
 """
 
 from __future__ import annotations
@@ -45,7 +47,7 @@ from tests.test_visual_communication_svg import (
     scene,
 )
 from tests.visual_communication_producer import png
-from tests.visual_communication_project import importable
+from tests.visual_communication_project import TEST_PICTURES, importable
 
 html, html_declaration, svg, svg_declaration, seam, pl, checks, css, shipped, reading = load(
     "visual-communication",
@@ -92,7 +94,7 @@ def draw(
     pictures: Any = None,
     keys: Mapping[str, Mapping[str, str]] | None = None,
     colours: Mapping[str, Mapping[str, Any]] | None = None,
-    variants: Mapping[str, Mapping[str, Path]] | None = None,
+    variants: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> Any:
     """`drawn` as one page file holding `keys`, the combination of defaults alone where none
     are given: each key in its `colours`, `COLOURS` where it has none, and its `variants`,
@@ -251,7 +253,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.1.0"
+    assert html.VERSION == "1.2.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -509,11 +511,12 @@ def test_a_picture_is_written_as_the_svg_renderer_writes_it(tmp_path: Path) -> N
         key="default",
         colours=COLOURS,
         font_file=FILES.__getitem__,
-        pictures={"square": picture},
+        pictures={"figure/picture": seam.Shown(picture, seam.PNG)},
     ).pages
     [written] = re.findall(r"<image [^>]*/>", page.svg)
 
-    assert written in draw(drawn, pictures={"square": picture}).document.decode()
+    handed = {"figure/picture": seam.Shown(picture, seam.PNG)}
+    assert written in draw(drawn, pictures=handed).document.decode()
     assert f"base64,{base64.b64encode(picture.read_bytes()).decode()}" in written
 
 
@@ -668,7 +671,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.1.0"
+    assert root.get("data-renderer") == "html 1.2.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -783,7 +786,8 @@ def test_the_file_finds_no_address_but_a_data_one(tmp_path: Path) -> None:
     )  # fmt: skip
 
     file = draw(
-        scene(image, SAID, *TIES["children"][0]["children"]), pictures={"square": picture}
+        scene(image, SAID, *TIES["children"][0]["children"]),
+        pictures={"figure/picture": seam.Shown(picture, seam.PNG)},
     ).document.decode()
 
     addresses = re.findall(r"""url\(([^)]*)\)|\b(?:href|src|action)=["']([^"']*)""", file)
@@ -1130,7 +1134,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.1.0">\n'
+    '1.2.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
@@ -1184,10 +1188,10 @@ PINNED = (
 )
 
 
-def test_the_reference_scene_is_drawn_as_pinned_for_version_1_1_0(
+def test_the_reference_scene_is_drawn_as_pinned_for_version_1_2_0(
     tmp_path: Path,
 ) -> None:
-    pictures = {"square": reference_picture(tmp_path)}
+    pictures = {"first/picture": seam.Shown(reference_picture(tmp_path), seam.PNG)}
 
     drawn = reference(pictures)
 
@@ -1200,10 +1204,10 @@ def test_the_reference_scene_is_drawn_as_pinned_for_version_1_1_0(
     }
     data = re.search(r'href="data:image/png;base64,([A-Za-z0-9+/=]+)"', drawn.document.decode())
     assert data is not None
-    assert base64.b64decode(data[1]) == pictures["square"].read_bytes()
+    assert base64.b64decode(data[1]) == pictures["first/picture"].file.read_bytes()
 
 
-def reference(pictures: Mapping[str, Path]) -> Any:
+def reference(pictures: Mapping[str, Any]) -> Any:
     """The reference scene drawn in its two keys."""
     return draw(
         REFERENCE,
@@ -1214,12 +1218,12 @@ def reference(pictures: Mapping[str, Path]) -> Any:
 
 
 def test_the_same_scene_and_values_give_the_same_bytes(tmp_path: Path) -> None:
-    pictures = {"square": reference_picture(tmp_path)}
+    pictures = {"first/picture": seam.Shown(reference_picture(tmp_path), seam.PNG)}
     assert reference(pictures).document == reference(pictures).document
 
 
-def test_the_svg_renderers_version_stays() -> None:
-    assert svg.VERSION == "1.0.1"
+def test_the_svg_renderers_version_is_its_own() -> None:
+    assert svg.VERSION == "1.1.0"
 
 
 # --- a piece through the engine -----------------------------------------------------------------
@@ -1515,7 +1519,8 @@ CONTROLS = {
 
 def test_the_file_holds_no_control_and_no_script(tmp_path: Path) -> None:
     picture = reference_picture(tmp_path)
-    file = draw(REFERENCE, pictures={"square": picture}, keys=EVERY, colours=TINTED).document
+    handed = {"first/picture": seam.Shown(picture, seam.PNG)}
+    file = draw(REFERENCE, pictures=handed, keys=EVERY, colours=TINTED).document
 
     root = ElementTree.fromstring(file)
     tags = {node.tag.lower() for node in root.iter()}
@@ -1630,9 +1635,9 @@ def test_a_picture_draws_the_first_keys_variant_and_each_other_that_differs_is_a
     other.write_bytes(png(2, 2, (30, 30, 200, 255)))
     image = element("image", "figure/picture", x=0, y=0, width=50, height=50, output="square")
     variants = {
-        "default": {"square": first},
-        "colour-scheme.dark": {"square": first},
-        "contrast.high": {"square": other},
+        "default": {"figure/picture": seam.Shown(first, seam.PNG)},
+        "colour-scheme.dark": {"figure/picture": seam.Shown(first, seam.PNG)},
+        "contrast.high": {"figure/picture": seam.Shown(other, seam.PNG)},
         "colour-scheme.dark+contrast.high": {},
     }
 
@@ -1671,7 +1676,10 @@ def test_a_variant_that_holds_the_first_keys_picture_is_no_loss(tmp_path: Path) 
     drawn = draw(
         scene(image),
         keys=REFERENCE_KEYS,
-        variants={"default": {"square": first}, "colour-scheme.dark": {"square": same}},
+        variants={
+            "default": {"figure/picture": seam.Shown(first, seam.PNG)},
+            "colour-scheme.dark": {"figure/picture": seam.Shown(same, seam.PNG)},
+        },
     )
 
     assert drawn.losses == []
@@ -1687,7 +1695,10 @@ def test_a_picture_the_first_key_has_no_variant_for_is_left_out_in_each_key(
     drawn = draw(
         scene(image),
         keys=REFERENCE_KEYS,
-        variants={"default": {}, "colour-scheme.dark": {"square": other}},
+        variants={
+            "default": {},
+            "colour-scheme.dark": {"figure/picture": seam.Shown(other, seam.PNG)},
+        },
     )
 
     assert [(loss.did, loss.key) for loss in drawn.losses] == [
@@ -1695,6 +1706,89 @@ def test_a_picture_the_first_key_has_no_variant_for_is_left_out_in_each_key(
         ("left-out", "colour-scheme.dark"),
     ]
     assert marked(ElementTree.fromstring(drawn.document), "layer") == []
+
+
+@pytest.mark.parametrize("name", ["colour.jpg", "progressive.jpg", "profile.jpg", "palette.png"])
+def test_a_picture_file_is_the_same_in_every_key_embedded_whole_as_its_kind(name: str) -> None:
+    """A picture file follows no mode (DEC-025 point 3), so the file names it in every key and
+    reports no loss. It is embedded as the canvas embeds it, JPEG data for a JPEG, with the
+    colour profile it carries."""
+    path = TEST_PICTURES / name
+    kind = seam.JPEG if name.endswith(".jpg") else seam.PNG
+    image = element(
+        "image", "figure/photo", x=0, y=0, width=50, height=50, file=name, library="piece",
+        preserveAspectRatio="xMidYMid meet",
+    )  # fmt: skip
+    handed = {"figure/photo": seam.Shown(path, kind)}
+
+    drawn = draw(scene(image), keys=EVERY, colours=TINTED, pictures=handed)
+
+    assert drawn.losses == []
+    media = "image/jpeg" if kind == seam.JPEG else "image/png"
+    [written] = re.findall(
+        rf'href="data:{media};base64,([A-Za-z0-9+/=]+)"', drawn.document.decode()
+    )
+    assert base64.b64decode(written) == path.read_bytes()
+
+
+def test_a_picture_role_draws_the_first_keys_file_and_each_other_key_that_differs_is_a_loss() -> (
+    None
+):
+    """A picture role's file may differ by a value mode (DEC-025 point 4). The page draws the
+    first key's, as it does a produced output's variant, until a page holds each mode's
+    picture (DEC-023 point 8). The scene is built by hand: the renderer draws what it is
+    handed, and reads no document of values for a picture."""
+    image = element(
+        "image", "figure/logo", x=0, y=0, width=50, height=50, role="picture.logo",
+        preserveAspectRatio="xMidYMid meet",
+    )  # fmt: skip
+    light = seam.Shown(TEST_PICTURES / "palette.png", seam.PNG)
+    dark = seam.Shown(TEST_PICTURES / "alpha.png", seam.PNG)
+
+    drawn = draw(
+        scene(image),
+        keys=REFERENCE_KEYS,
+        variants={"default": {"figure/logo": light}, "colour-scheme.dark": {"figure/logo": dark}},
+    )
+
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "html",
+            "what": "figure/logo",
+            "did": "approximated",
+            "why": "the page draws the picture of `default` of the picture role `picture.logo`, "
+            "and `colour-scheme.dark` takes another",
+            "key": "colour-scheme.dark",
+        }
+    ]
+    [written] = re.findall(
+        r'href="data:image/png;base64,([A-Za-z0-9+/=]+)"', drawn.document.decode()
+    )
+    assert base64.b64decode(written) == light.file.read_bytes()
+
+
+def test_a_picture_role_the_brand_gives_no_file_in_a_key_is_left_out_there() -> None:
+    image = element("image", "figure/logo", x=0, y=0, width=50, height=50, role="picture.logo")
+    light = seam.Shown(TEST_PICTURES / "palette.png", seam.PNG)
+
+    drawn = draw(scene(image), keys=REFERENCE_KEYS, variants={"default": {"figure/logo": light}})
+
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "html",
+            "what": "figure/logo",
+            "did": "left-out",
+            "why": "the brand gives the picture role `picture.logo` no file in "
+            "`colour-scheme.dark`",
+            "key": "colour-scheme.dark",
+        }
+    ]
+
+
+def test_it_declares_each_property_of_an_image_of_every_source() -> None:
+    image = html_declaration.DECLARATION["draws"]["image"]
+    every = {"output", "variants", "points", "file", "library", "role", "preserveAspectRatio"}
+    assert every <= set(image)
 
 
 def test_a_role_with_no_colour_in_one_key_draws_nothing_there_and_that_key_reports_it() -> None:

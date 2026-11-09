@@ -24,8 +24,10 @@
   (DEC-016 point 5).
 - **No stale output.** A run stops on a produced picture whose record no longer verifies,
   naming what changed, unless the person names it to be used as it is; it stops on a
-  picture that is missing whatever is named. Naming an output the piece does not declare
-  is refused; one that is not stale is used as it is, and the command says so.
+  picture that is missing whatever is named, and on a picture file a drawn image shows that
+  is missing or cannot be read, the piece's or a library's (DEC-025 point 9). Naming an
+  output the piece does not declare is refused; one that is not stale is used as it is, and
+  the command says so.
 - **What an export fills** (`FILLED`). One number and one date, those its record keeps, in
   every file of the version: its number, and the date of the time it records. The scenes
   it draws are computed again with them, where a scene shows either (DEC-016 point 5). The
@@ -318,6 +320,9 @@ def plan(
             for output, reason in sorted(project.env.missing.items())
         )
         raise pl.Refused(f"a produced picture the piece shows is missing: {why}")
+    if project.env.refused:
+        why = "; ".join(reason for _, reason in sorted(project.env.refused.items()))
+        raise pl.Refused(f"a picture file the piece shows is missing or cannot be read: {why}")
     stale = stale_outputs(project)
     stopping = {output: why for output, why in stale.items() if output not in use_stale}
     if stopping:

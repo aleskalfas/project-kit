@@ -58,9 +58,9 @@ pkit:
         - .pkit/cli/README.md#rule-sets-altered---base-ref---head-rev---json
         - .pkit/decisions/README.md#the-acceptance-gate
         - .pkit/decisions/README.md#looking-a-citation-up
-        - .pkit/lifecycle/README.md#install-pre-flight-checks
-        - .pkit/lifecycle/README.md#how-the-wiring-is-resolved
-        - .pkit/lifecycle/README.md#how-a-registered-anchor-kind-is-resolved
+        - .pkit/lifecycle/component-registry.md#install-pre-flight-checks
+        - .pkit/lifecycle/manifest.md#how-the-wiring-is-resolved
+        - .pkit/lifecycle/manifest.md#how-a-registered-anchor-kind-is-resolved
 ---
 
 # Schemas
@@ -387,7 +387,7 @@ A file is a rule-set file because of where it is, and nothing in the file binds 
 - **Who writes them:**
   - **Method rule sets** are refreshed by sync, with their component. A project never edits one: it inherits it.
   - **Project rule sets** are the project's. Sync never reads or writes one, and uninstall never writes one (COR-051 point 6).
-  - **A capability's install** creates the one project rule set the capability declares, in `rule-sets/` under the internal documentation root. That capability's migration may create it for an earlier install (COR-017, [the lifecycle reference, "Install pre-flight checks"](../lifecycle/README.md#install-pre-flight-checks), "The declared project rule set").
+  - **A capability's install** creates the one project rule set the capability declares, in `rule-sets/` under the internal documentation root. That capability's migration may create it for an earlier install (COR-017, [the lifecycle reference, "Install pre-flight checks"](../lifecycle/component-registry.md#install-pre-flight-checks), "The declared project rule set").
 
 #### When the internal root changes
 
@@ -521,7 +521,7 @@ Errors fail `pkit validate`, and reports print under its `rule-sets` heading.
 - **A kind nothing registers** is unresolved.
 - **A kind two capabilities register** is refused. So is a registered resolver whose command names no leaf, or does not declare the query contract.
 - **The backbone's own kinds,** `path`, `record` and `artefact`, are anchor kinds, never source kinds.
-- **How a source is resolved:** this pass runs no resolver of its own. The registry's resolver resolves a source of a kind that passes, run as the friction checks run it ([the lifecycle reference](../lifecycle/README.md#how-a-registered-anchor-kind-is-resolved)).
+- **How a source is resolved:** this pass runs no resolver of its own. The registry's resolver resolves a source of a kind that passes, run as the friction checks run it ([the lifecycle reference](../lifecycle/manifest.md#how-a-registered-anchor-kind-is-resolved)).
 
 A source is never silently passed:
 
@@ -549,7 +549,7 @@ A source is never silently passed:
 
 #### The pinned major
 
-The pinned major is a version relation. It is checked and reported with the others, under the `versions` heading of `pkit validate` ([the lifecycle reference, "How the wiring is resolved"](../lifecycle/README.md#how-the-wiring-is-resolved), "Version relations").
+The pinned major is a version relation. It is checked and reported with the others, under the `versions` heading of `pkit validate` ([the lifecycle reference, "How the wiring is resolved"](../lifecycle/manifest.md#how-the-wiring-is-resolved), "Version relations").
 
 - **A pin whose major is not the inherited set's** is an error on the inheriting set. It names the new major: the set is at `2.1.0`, so update the pin to `CMN@2`. It stands until the set's owner reviews what changed, and updates the pin.
 - **`pkit status` shows the same pins,** under its `Rule sets` heading, from the same check ([the CLI reference, "status"](../cli/README.md#status)). It shows each inheriting set whose pin is behind, the version the inherited set is at, and the fix. The fix is the edit to `inherits` that re-pins it, such as `DOC pins CMN@1; CMN is at 2.1.0`, then ``fix: review what changed in CMN, then update the pin to CMN@2 in `inherits` of docs/rule-sets/doc.md``.

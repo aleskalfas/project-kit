@@ -255,6 +255,20 @@
         "value": 1280,
         "unit": "px"
       }
+    },
+    "site": {
+      "$description": "The width of a site's page, on a desktop.",
+      "$value": {
+        "value": 1280,
+        "unit": "px"
+      }
+    },
+    "line": {
+      "$description": "The length of a line of text, at most.",
+      "$value": {
+        "value": 600,
+        "unit": "px"
+      }
     }
   },
   "stroke": {

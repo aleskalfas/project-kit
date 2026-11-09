@@ -1,7 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  The README's "The documentation check" says that `fill-doc-check`'s time
-  grows with the repository's history and answers, and that a run its bound
-  ends leaves the point unresolved (#2410). It states what the backbone and
-  project-management already decide; no command, value or schema moves.

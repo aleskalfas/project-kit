@@ -20,8 +20,10 @@ piece through the HTML renderer where the piece declares `html`, and through the
 renderer otherwise; `--renderer` names either. Each renderer has a folder of its own in
 `.pkit/capabilities/visual-communication/project/local/look/`: `<piece>/` for the SVG
 renderer's pages, `<piece>.html/` for the HTML renderer's. Each image lies there beside its
-frames and one report, and a run replaces only what an earlier run left in that folder. The
-report says what the images cannot show as the renderer set it. See `_lib/viewing.py`.
+frames and one report, and a run replaces only what an earlier run left in that folder. A
+page too tall for one image is drawn in bands, each an image as wide as the page, and the
+run names them in order. The report says what the images cannot show as the renderer set
+it, a page too wide for its smallest text to read among it. See `_lib/viewing.py`.
 
 - **The SVG renderer's pages** are drawn by resvg, through the wheel this script pins, with
   no network.
@@ -49,7 +51,8 @@ Exit codes:
   2  usage error
   3  stopped: no browser ran, or one stopped part way, or its first read failed. The HTML
      renderer's folder holds the page files and a report that says what stopped it, and no
-     image
+     image. It names the ways on: a build pipeline's drawings, the same look run by a person
+     outside any sandbox, and the SVG renderer's pages (DEC-024 point 4)
 """
 
 from __future__ import annotations
@@ -158,6 +161,16 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"page file: {folder}{each['file']}, to open in your own browser")
     through_svg = report["renderer"]["name"] == viewing.SVG
     for image in report["images"]:
+        band = image.get("band")
+        if band and band["number"] > 1:
+            continue
+        if band:
+            print(f"bands: {_at(image)}: {band['of']}, top to bottom: {_bands(report, image)}")
+        if image.get(viewing.TOO_WIDE):
+            print(
+                f"too wide: {_at(image)} is drawn {image['pixels']['width']} pixels wide, so its "
+                f"smallest text may not read"
+            )
         if through_svg and image["on-white"]:
             print(f"on white: {_at(image)} draws no ground of its own")
         if not through_svg and image["on-browser-ground"]:
@@ -177,6 +190,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"loss{accepted}: {_at(each)}: `{each['what']}` {each['did']}: {each['why']}")
     for each in report["drawn-otherwise"]:
         print(f"drawn otherwise: {_at(each)}: {_otherwise(each)}")
+    for each in report.get("profiles", []):
+        print(f"profile: {_at(each)}: `{each['element']}` shows `{each['picture']}`: {each['why']}")
     for each in report.get("refused", []):
         print(f"refused: {each['language']}, {each['key']}: a request for {each['url']}")
     if stand_ins:
@@ -185,8 +200,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
 
 
 def _print_stop(folder: str, report: Mapping[str, Any]) -> None:
-    """A stop, on standard error: what stopped the browser, what the folder holds, and how to
-    go on (DEC-020 point 8)."""
+    """A stop, on standard error: what stopped the browser, what the folder holds, the ways on
+    in their order, and what an agent does (DEC-020 point 8, DEC-024 points 4 and 6)."""
     stop = report["stopped"]
     said = [stop["what"]]
     if stop["looked"]:
@@ -196,17 +211,22 @@ def _print_stop(folder: str, report: Mapping[str, Any]) -> None:
     if stop["said"]:
         said.append(f"it said: {stop['said']}")
     print(f"stopped: {'; '.join(said)}", file=sys.stderr)
-    if stop["sandbox"]:
+    if stop["as-root"]:
         print(
-            "stopped: a sandbox stopped the browser; draw the pages in a session outside it",
+            "stopped: the browser runs as root, where it refuses to start with its own sandbox "
+            "on, and the step never turns that sandbox off",
             file=sys.stderr,
         )
+    elif stop["sandbox"]:
+        print("stopped: a sandbox stopped the browser", file=sys.stderr)
     print(
         f"stopped: no image; the page files and {viewing.REPORT} lie in {folder}",
         file=sys.stderr,
     )
     _print_lock_and_renderer(report, sys.stderr)
-    print(f"go on: {stop['go-on']}", file=sys.stderr)
+    for way in stop["go-on"]:
+        print(f"go on: {way}", file=sys.stderr)
+    print(f"for an agent: {stop['for-an-agent']}", file=sys.stderr)
 
 
 def _print_lock_and_renderer(report: Mapping[str, Any], to: Any = None) -> None:
@@ -239,6 +259,16 @@ def _otherwise(each: Mapping[str, Any]) -> str:
     return (
         f"a span of `{element}` has no face of {each['family']} at weight {each['weight']}: "
         f"{each['text']!r}"
+    )
+
+
+def _bands(report: Mapping[str, Any], first: Mapping[str, Any]) -> str:
+    """The images of the bands of the page whose first band `first` shows, in order."""
+    at = ("language", "key", "page")
+    return ", ".join(
+        image["image"]
+        for image in report["images"]
+        if "band" in image and all(image[each] == first[each] for each in at)
     )
 
 
