@@ -176,7 +176,7 @@ How it is written:
 - **A function keeps its name and its answer.** One whose answer changes takes a new name, so an older command never reads a newer reader's answer as its own.
 - **A command that cannot reach it** refuses that step, where the tree holds no reader or not the function the command calls. Inside the validator, that is an error finding. The message says which side is behind. A project at the command's backbone version or older needs `pkit sync`, and a newer one needs the command upgraded.
 
-**The adapter** writes the reader's answer in its harness's keys, never the author's text. It keeps its harness's tool names. It refuses a withheld list its harness cannot withhold, or whose names it cannot translate, since a withheld list fails open. Its README says what it refuses, and "Deploy mechanics" below what a refusal does at deploy.
+**The adapter** writes the reader's answer in its harness's keys, never the author's text. It keeps its harness's tool names. It refuses a withheld list its harness cannot withhold, or whose names it cannot translate, since a withheld list fails open. Its README says what it refuses, and "Deploy mechanics" below says what a refusal does at deploy.
 
 **The validator** reports as an error each definition whose tool access the reader refuses. The refusals that are the adapter's, such as a withheld name its harness does not know, are made by the deploy and the agent runner.
 
