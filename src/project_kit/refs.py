@@ -15,6 +15,9 @@ queries:
 - Pattern form: every `reads.patterns` entry of an agent is a `<category>`
   placeholder the deploy resolves, or a path; a bare category name is reported
   (#2481).
+- Unknown overrides: every entry under the overlay's `overrides:` names an agent
+  some source ships, and a category its definition references; one the deploy
+  ignores is warned of (#2468).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -176,8 +179,13 @@ POINT_CITATION = "point-citation"
 # point 8): read from prose too, so a warning.
 OPERATIONAL_CITATION = "operational-rule-citation"
 
+# An entry under the overlay's `overrides:` that the deploy ignores: a block for an
+# agent no source ships, or a category the agent's definition does not reference
+# (#2468). The agent deploys as if it were absent, so a warning.
+UNKNOWN_OVERRIDE = "unknown-override"
+
 #: The kinds of finding that warn and never fail `pkit refs validate`.
-WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION})
+WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE})
 
 
 @dataclass(frozen=True)
@@ -283,7 +291,7 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
     storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
-    `reads.patterns` form checks."""
+    `reads.patterns` form + unknown-override checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -307,6 +315,7 @@ def check_corpus(
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
+    issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
     return issues
 
 
@@ -327,8 +336,9 @@ def outcome(target_root: Path) -> Outcome:
     model or effort the harness does not accept, an agent's `reads.patterns`
     entry that is neither a placeholder nor a path — is an **error**. A citation of
     a point its record does not hold is a **warning** too, read from prose as
-    drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
-    it fails on any finding but that last.
+    drift is, and so is an override the deploy ignores, since the agent deploys as
+    if it were absent. `pkit refs validate`, the focused surface, keeps its
+    stricter exit: it fails on any finding but those last two.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -3188,6 +3198,25 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                     )
                 )
     return issues
+
+
+def _validate_unknown_overrides(target_root: Path) -> list[Issue]:
+    """Each entry under the overlay's `overrides:` that the deploy ignores, at
+    `overlay.yaml` and naming its key (#2468).
+
+    A block for an agent no source ships, or a category its definition does not
+    reference, changes no deployed agent, so a typo in either would pass with no
+    sign (`agents_overlay.unknown_overrides`). The agent deploys as if the entry
+    were absent, so a warning.
+    """
+    return [
+        Issue(
+            location=str(agents_overlay.OVERLAY_PATH),
+            diagnosis=f"`{unknown.key}` is ignored: {unknown.reason}. "
+            f"Correct the name, or remove the entry.",
+        )
+        for unknown in agents_overlay.unknown_overrides(target_root)
+    ]
 
 
 def _is_pattern_path(entry: str) -> bool:

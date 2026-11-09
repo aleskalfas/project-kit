@@ -246,7 +246,10 @@ Commands an agent returns are run by one of these:
   - a path with two owners
   - a hook with no provider
   - a storyboard one side leaves out
-- **The exceptions** warn in both commands: a cited point its record does not hold, and a cited operational rule that is missing or retired.
+- **The exceptions** warn in both commands:
+  - a cited point its record does not hold
+  - a cited operational rule that is missing or retired
+  - an unknown override in the overlay ("Adopter overlay" below)
 
 **What the backward check leaves out.** It is meant for reads whose place an overlay can move, so three kinds of path in a body need no declaration:
 
@@ -310,7 +313,12 @@ overrides:
 2. For the agent named under `overrides.<agent>:`, each category there replaces the top-level value whole, not merged with it. To extend a value, copy the top-level entries into the override. Merge semantics are deferred per COR-007 until concrete needs surface. Two keys there are reserved and are not categories: `model` and `effort` set the agent's execution policy ("Model and effort" below).
 3. Write the resolved paths in place of each placeholder in the front matter, and the deployed copy into the harness's place. The body keeps its placeholders as written. The deployed copy is what every downstream tool reads.
 
-**An unknown override** is ignored: a category under `overrides:` for an agent no source ships, or one no definition of that agent names. Nothing reports it. A `model` or `effort` there that the harness does not accept is still reported ("Model and effort" below).
+**An unknown override** is an entry under `overrides:` that the deploy ignores. It is one of these:
+
+- a block for an agent no source ships, whatever keys it holds
+- a category in an agent's block that the agent's definition does not name, the definition being the one that deploys ("Name-collision precedence" below)
+
+`pkit agents` and the `refs` member of `pkit validate` warn of each, naming its key, such as `overrides.critc` or `overrides.critic.code-pths`. A warning fails no command, `pkit refs validate` included. A `model` or `effort` there that the harness does not accept is still reported, as an error ("Model and effort" below).
 
 **The first install** writes the overlay with a value for each category core's definitions name, so they deploy before the project names a path. A missing overlay comes back as "Diagnosing + repairing the overlay" below says.
 
@@ -357,7 +365,7 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 
 #### `pkit agents`
 
-`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
+`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It warns of each unknown override too ("Adopter overlay" above). It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
 
 #### `pkit agents adopt <agent> [--yes]`
 

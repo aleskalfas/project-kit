@@ -295,8 +295,11 @@ def agents(ctx: click.Context) -> None:
     whose absence never skips — the agent deploys without it, and such undefined
     categories are surfaced in an `Optional` footer state. Each row also shows the
     agent's effective model and effort: the overlay's `overrides.<agent>` value,
-    else the front matter's, else `inherit`. Deployment itself happens via
-    `pkit sync`; configuration is `.pkit/agents/project/overlay.yaml`.
+    else the front matter's, else `inherit`. An `UNKNOWN OVERRIDES` section warns
+    of each `overrides:` entry the deploy ignores, naming its key: a block for an
+    agent no source ships, or a category the agent's definition does not reference.
+    Deployment itself happens via `pkit sync`; configuration is
+    `.pkit/agents/project/overlay.yaml`.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -5669,7 +5672,12 @@ def refs_validate() -> None:
         raise click.ClickException("not in a project tree.")
     found = refs_mod.validate_corpus(target_root)
     issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
-    warnings = [issue for issue in found if issue.kind in refs_mod.WARNING_KINDS]
+    overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
+    warnings = [
+        issue
+        for issue in found
+        if issue.kind in refs_mod.WARNING_KINDS and issue.kind != refs_mod.UNKNOWN_OVERRIDE
+    ]
     lines = [
         cli_render.style(
             "title",
@@ -5693,6 +5701,17 @@ def refs_validate() -> None:
             )
         )
         for issue in warnings:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if overrides:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(overrides)} warning(s) of an override the deploy ignores, which do not "
+                "fail the check:",
+            )
+        )
+        for issue in overrides:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     click.echo("\n".join(lines) + "\n", nl=False)
     if issues:
