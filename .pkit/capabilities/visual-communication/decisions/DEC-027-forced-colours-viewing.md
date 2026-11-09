@@ -80,7 +80,7 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 - **A folder for each forced palette,** inside the renderer's folder for the piece, under a name no image takes. Its images and frames take the names any image takes, by the key they show. So no forced image takes the name of a mode's image.
 - **The report names the forced palette in a field of its own,** in each image and in each entry that lies on one. An image under no forced palette leaves it empty. So no reader parses a path to tell the two apart.
 - **What drew them.** The report names the forced palettes drawn, and that the browser's flag forced them, beside the browser and its version (DEC-015 point 3). It says what the forced images do not show (point 6).
-- **The ground.** A page with no ground of its own lies on its forced palette's ground. The report says so, as it says where one lies on the browser's (DEC-015 point 5).
+- **The ground.** A page with no ground of its own lies on its forced palette's ground, as it lies on the browser's own ground in a mode (DEC-015 point 5). The report says so, as it says where one lies on the browser's.
 - **The command prints them apart,** naming the forced palette wherever it names a forced image.
 
 ### 6. What a forced image shows, and what it does not
@@ -122,20 +122,21 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 ## Implications
 
 - **Edits to accepted records,** made once this record is accepted, each citing it. Accepting this record accepts them (COR-066 point 5).
-  - **DEC-015, point 1, "What it is".** It comes to add that where its tool can force a palette, the step draws under one forced palette or none.
-  - **DEC-015, point 2, "Behind one module of its own".** It comes to add that the browser's module also takes whether to force its colours. It names each forced palette's signals and forces them by the browser's flag.
-  - **DEC-015, point 3, "What drew the page".** It comes to add that the report names the forced palettes drawn, and the flag that forced them.
+  - **DEC-015, point 1, "What it is".** It comes to add that where its tool can force a palette, the step draws each image under one forced palette or none. It defines a forced palette, and calls an image drawn under one a forced image.
+  - **DEC-015, point 2, "Behind one module of its own".** It comes to add that the browser's module also takes whether to force the browser's colours, and names each forced palette's signals. A browser start that forces colours runs under the browser's own flag for it, and sets forced colours there by emulation, with each forced palette's signals.
+  - **DEC-015, point 3, "What drew the page".** It comes to add that the report names the forced palettes drawn, and that the browser's flag forced them.
   - **DEC-015, point 5, "The caller picks".** It comes to add that the caller may also ask for each page file in the browser's two forced palettes. There each forced palette, not the caller, picks the key an image shows.
   - **DEC-015, point 5, "The ground".** It comes to add that an image under a forced palette lies on that palette's ground.
   - **DEC-015, point 6, "It shows one tool's drawing".** It comes to add that a forced image shows that browser's forced palette, not a reader's own.
   - **DEC-015, point 7, "Nothing unseen reads as clean".** It comes to add the forced palettes the reviewer looked at to what its report names. Where a run through the HTML renderer drew none, the report lists forced colours as not seen.
   - **DEC-015, point 7, "Its remit".** It comes to add that a forced image is evidence of what its palette's reader loses, and that no finding on it rests on a brand's colour.
-  - **DEC-020, point 5, "It reads the page file as the renderer wrote it".** It comes to say that a file takes one start for each state of the browser its images need. The device scale binds every start, and forcing its colours takes a start of its own.
-  - **DEC-020, point 5, "What an image does not show".** It comes to say that a reader's own settings stay a person's, but for forced colours in the browser's two forced palettes where the step drew them.
-  - **DEC-020, point 6, "Ink".** It comes to add that under a forced palette both grounds are that palette's.
+  - **DEC-015, point 7, "Its findings".** It comes to add that a finding on a forced image names its forced palette.
+  - **DEC-020, point 5, "It reads the page file as the renderer wrote it".** It comes to say that a file takes one start for each set of flags its images need. Its pages share one device scale in every start, and the browser's flag that forces its colours takes a start of its own.
+  - **DEC-020, point 5, "What an image does not show".** It comes to say that a reader's own settings beyond the modes the file holds stay a person's, but for forced colours in the browser's two forced palettes where the step drew them.
+  - **DEC-020, point 6, "Ink".** It comes to add that under a forced palette the browser paints both grounds in that palette's ground colour, and each span in the palette's text colour, so the read names what that palette's reader loses.
   - **DEC-020, point 7, "What may not".** It comes to add that a start that forces its colours reads the planted page as this record's point 4 says, each signal judged by its own box.
-  - **DEC-020, point 8, "It names what is missing".** It comes to add that a stop of a start that forces its colours also names a run without forced colours.
-  - **DEC-023, point 6, "Every key it draws, in the file's one start".** It comes to add that forced images take a start of their own, as this record's point 3 says.
+  - **DEC-020, point 8, "It names what is missing".** It comes to add that a stop of a start that forces its colours also names a run without forced colours, and that the run through the SVG renderer it names is one too.
+  - **DEC-023, point 6, "Every key it draws, in the file's one start".** It comes to say "in the file's first start", as this record's point 3 names it. It comes to add that an image drawn in a forced palette is a forced image, and that forced images take a start of their own, as point 3 says.
   - **DEC-023, point 6, "Each read of the check for dropped text runs in each key drawn".** It comes to add: and in each forced palette drawn.
 - **The Task that draws under forced colours** ([project-kit#2847](https://github.com/aleskalfas/project-kit/issues/2847)) builds these points. They are the flag, the second start and its first read, the folders, the report and what the command prints. Its tests need no browser, since the forced start's first read holds the real one. It checks on the showcase deck that each forced image gives text and shapes the forced palette (DEC-023 point 7).
   - **The pages it brings to them:** the reviewer's agent file, the viewing step's page and the command's entry. The viewing step's page names the folders, and says when a forced look is worth asking for, such as for a page with a translucent fill or a picture under a text.
