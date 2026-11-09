@@ -889,8 +889,8 @@ def config_record(
     VALUE is written as text. Writing needs consent, in the forms of the
     backbone configuration (COR-048 point 5): an interactive confirmation, or
     `--yes`; a run off a terminal without `--yes` refuses and names the command
-    to run. A capability's command, whose own run is the consent, runs it with
-    `--yes` when it first uses the value. Exit 1 when refused.
+    to run. A capability's command passes `--yes` only where its own records
+    make running that command the consent. Exit 1 when refused.
     """
     import json
 
