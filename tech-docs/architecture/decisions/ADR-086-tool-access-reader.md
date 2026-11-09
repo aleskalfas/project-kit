@@ -1,7 +1,7 @@
 ---
 id: ADR-086
 title: One reader in the agents area reads an agent's tool access
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
