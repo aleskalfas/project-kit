@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit capabilities uninstall` no longer counts a copy an adapter deployed of
+  an agent definition as a reference to the capability (#2366). Such a copy,
+  marked by the deploy and named after a definition the agents folders ship,
+  is not one of the project's files: the deploy writes it again from its
+  source. So uninstalling software-engineering from a fresh project no longer
+  needs `--force`. A file of the project's that cites the capability still
+  refuses the uninstall, a definition under `.pkit/agents/project/` and an
+  agent file without the deploy's mark among them. The CLI reference says so,
+  and the rules guide's example uninstalls project-management without
+  `--force`.

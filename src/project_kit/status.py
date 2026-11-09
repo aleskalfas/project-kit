@@ -325,7 +325,7 @@ def _deployed_agents(target_root: Path) -> _Deployed:
     itself uses. A marked copy belongs to the first folder shipping its name,
     in the deploy's order (`agents.agent_locations`).
     """
-    from project_kit.agents import agent_locations, find_agent_file
+    from project_kit.agents import agent_locations, carries_deploy_mark, find_agent_file
 
     found = _Deployed()
     agents_dir = target_root / ".claude" / "agents"
@@ -336,7 +336,7 @@ def _deployed_agents(target_root: Path) -> _Deployed:
         if not (entry.is_file() and entry.suffix == ".md"):
             continue
         name = entry.stem
-        if not _has_kit_marker(entry):
+        if not carries_deploy_mark(entry):
             found.own.append(name)
             continue
         owner = next(
@@ -936,22 +936,3 @@ def _skill_link(entry: Path) -> str | None:
     if entry.is_dir() and inner.is_symlink():
         return os.readlink(inner)
     return None
-
-
-_KIT_AGENT_MARKER = "managed-by: project-kit"
-
-
-def _has_kit_marker(agent_file: Path) -> bool:
-    """True if the deployed agent file carries the kit's marker in its frontmatter.
-
-    The marker is a YAML comment the adapter inserts as line 2 of every
-    resolved file (see `.pkit/adapters/claude-code/deploy-agents.sh`).
-    Read only enough of the file to find it — large agent bodies don't
-    matter.
-    """
-    try:
-        with agent_file.open("r", encoding="utf-8") as f:
-            head = "".join(line for _, line in zip(range(5), f, strict=False))
-    except OSError:
-        return False
-    return _KIT_AGENT_MARKER in head

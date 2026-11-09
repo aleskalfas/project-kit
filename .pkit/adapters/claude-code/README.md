@@ -18,7 +18,7 @@ pkit:
         - .pkit/schemas/harness-requirements.yaml
       record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
       artefact:
-        - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks]
 ---
 
@@ -68,7 +68,7 @@ Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/set
 Ensures the adopter's root `CLAUDE.md` loads every layer's rules via Claude Code's `@<path>` include mechanism, in the order of their layers: core's (`@.pkit/rules/core.md`), the capabilities' rules index (`@.pkit/rules/capabilities.md`), which imports each installed capability's `rules.md`, and the project's (`@.pkit/rules/project.md`). Per the COR-002 merge contract (insert-if-absent / create-if-none posture), core's include and the index's line are kept present, each inserted wherever it is absent, and the project's include is inserted only together with core's ([ADR-076](../../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 3):
 
 - **No CLAUDE.md:** creates a minimal one with an H1 and the three `@`-includes.
-- **CLAUDE.md without core's include:** inserts the three after the first H1 outside fenced code (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
+- **CLAUDE.md without core's include:** inserts only the lines the file does not hold, keeping the three in their order, so none stands twice. Where the file holds the index's line, core's include goes directly before it, and the project's include, if absent, directly after it. Where it holds the project's include alone, core's include and the index's line go directly before it. Where it holds none of the three, inserts them after the first H1 outside fenced code (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
 - **CLAUDE.md with core's include but not the index's line:** inserts `@.pkit/rules/capabilities.md` directly after core's include. A project that removed its `project.md` include does not find it back.
 - **Core's include only in fenced code or a code span,** where Claude Code imports nothing: inserts nothing and reports it (`refused`), naming the file. Move the include out of the code, and the next sync inserts the index's line after it.
 - **CLAUDE.md with both:** no-op (idempotent).

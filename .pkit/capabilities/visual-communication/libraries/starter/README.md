@@ -272,7 +272,13 @@ A web block draws one item of a web part's list.
 
 ## Colours
 
-Each starter block declares the colour family `neutral`, which the concept an item names replaces with the concept's own. A text in a family's text lies on that family's fill, a pair the foundations declare. On the surface, a card's texts take the shared roles `text-primary` and `text-secondary` instead. So a run of a card's text reads the family only where the card is tinted.
+Each component's file declares its own colour family, or none. An item that names a concept takes the concept's family instead, and a state may then change it (visual-communication DEC-010 point 6).
+
+- **`neutral`:** the blocks `card`, `tag`, `group`, `code`, `aside` and `connector`, the web parts `header` and `section`, and the web block [`field`](#field). A field in `error` takes `red`.
+- **`blue`:** the web block [`button`](#button). A `disabled` button takes `neutral`.
+- **None:** the patterns, the web parts `navigation`, `sections`, `form` and `table`, and the web blocks `link`, `row` and `cell`. None of them takes a colour from a family.
+
+A text in a family's text lies on that family's fill, whose contrast the capability's `files.md` describes under *The foundations*. On the surface, a card's texts take the shared roles `text-primary` and `text-secondary` instead. So a run of a card's text reads the family only where the card is tinted.
 
 A group, a code block and an aside always lie on their family's fill, so their heads read the family's text. So do an aside's text and a code block's plain runs. A code block's prompts and comments take `text-secondary`, and its commands `accent`, whatever its family.
 
