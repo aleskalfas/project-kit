@@ -1,7 +1,7 @@
 ---
 id: COR-073
 title: A capability names the default paths its agent writes, and installing it writes them into the overlay
-status: proposed
+status: accepted
 date: 2026-11-08
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
