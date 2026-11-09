@@ -38,6 +38,9 @@ pkit:
         - COR-044#2
         - COR-057#5
         - COR-068
+        - COR-050#2
+        - COR-050#13
+        - COR-055#3
 ---
 
 # UC-036 — Ground a claim in its source
@@ -63,7 +66,7 @@ pkit:
 
 1. The developer, or an AI agent they direct through the `evidence` [skill](../../../../core/glossary.md#term-skill--skill), finds the [evidence scope](../../../glossary.md#term-evidence-scope--evidence-scope) of the document. It is the nearest directory, from the document's own upwards, that holds an `evidence.yaml` ([evidence DEC-002](../../../../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md), the `evidence` skill's add operation).
 2. The developer fetches the source, and copies the words that ground the claim, verbatim. The excerpt holds no more than the claim needs (evidence DEC-002, the `evidence` skill's add operation).
-3. The developer appends an [evidence record](../../../glossary.md#term-evidence-record--evidence-record) to the scope's `evidence.yaml`. The record holds an `id`, a slug that names the fact. It also holds the `source_url`, the `fetched_at` and the `excerpt`. A `title`, a `note` or a `snapshot` is added where it helps ([evidence DEC-001](../../../../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md) and DEC-002).
+3. The developer appends an [evidence record](../../../glossary.md#term-evidence-record--evidence-record) to the scope's `evidence.yaml`. The record holds an `id`, a slug that names the [outside fact](../../../glossary.md#term-outside-fact--outside-fact). It also holds the `source_url`, the `fetched_at` and the `excerpt`. A `title`, a `note` or a `snapshot` is added where it helps ([evidence DEC-001](../../../../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md) and DEC-002).
 4. The developer writes the claim in the document, with the [citation](../../../glossary.md#term-citation--citation) `[ev:<id>]` right after it. In a YAML file, it stands in a comment at the end of the claim's line. The citation may also stand in a field of prose, such as `notes:` (evidence DEC-001).
 5. The developer runs `pkit evidence validate <scope>`.
 6. The [system](../../../../core/glossary.md#term-system--system) reads the scope's `evidence.yaml`. It checks that each evidence record holds an `id`, a `source_url`, a `fetched_at` and an `excerpt` (evidence DEC-002). It checks too that each `id` is of the slug's form, `^[a-z0-9][a-z0-9-]*$` (evidence DEC-001, `validate.py`).

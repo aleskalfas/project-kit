@@ -14,7 +14,7 @@ reads:
     - COR-002
   paths:
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/manifest.md
     - .pkit/adapters/README.md
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-005-bundle-pattern.md
@@ -53,7 +53,7 @@ Use the harness's canonical kebab-case name: `claude-code`, `codex`, `cursor`, e
 
 Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure", "Universal elements" and "Authoring surface"). Every adapter must ship:
 
-- `package.yaml` — component metadata per COR-010 (`schema_version`, `kind: adapter`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
+- `package.yaml` — component metadata per COR-010 (`schema_version`, `kind: adapter`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/manifest.md`, "Package metadata (`package.yaml`)").
 - `README.md` — what the adapter handles, what content it ships, how to deploy it.
 - `migrations/` — the adapter's version migrations per COR-010, empty until its first one.
 

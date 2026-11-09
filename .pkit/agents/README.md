@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/storyboards.md#location-and-lifecycle
         - .pkit/agents/storyboards.md#frontmatter-declaration
         - .pkit/agents/storyboards.md#authoring
-        - .pkit/lifecycle/README.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
         - .pkit/decisions/README.md#citing
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
@@ -409,7 +409,7 @@ An optional category with no conventional folder is no prerequisite: `adopt` lea
 More of `reconcile`:
 
 - **A missing overlay.** With `--write`, `reconcile` creates the overlay from the seed the first install writes, and writes nothing else in that run. The dry run says it would. The next dry run shows each category the seed leaves undefined, so `--write` never records one the person was not shown.
-- **Outside the lifecycle, only it writes a seed path.** Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). `pkit agents adopt` names this repair where the overlay is missing.
+- **Outside the lifecycle, only it writes a seed path.** Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([the lifecycle reference, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)). `pkit agents adopt` names this repair where the overlay is missing.
 - **When to run it:** for an overlay older than a newly shipped agent's categories. The repair is an explicit, idempotent command, never an automatic write by sync.
 - **`--write` is the confirmation.** The dry run lists each fill as `category = path`, with the agents that reach it once recorded, as `adopt`'s question does. A command that shows what it would record until told to write takes `--write` as its confirmation (COR-049 point 5). So `--write` records over a folder that holds documents without a prompt. Each recording prints the root its path was derived from and where to change it.
 

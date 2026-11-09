@@ -25,7 +25,7 @@ TERM-citation:
   name: citation
   noun-forms: [citations]
   status: active
-  definition: "token of the form `[ev:<slug>]` in the text of a document, whose slug names an evidence record by that record's `id`"
+  definition: "token of the form `[ev:<slug>]` in text its evidence scope's check reads, whose slug gives the `id` of the evidence record it points to"
   pkit:
     friction:
       anchors:
@@ -73,6 +73,8 @@ TERM-outside-fact:
           - .pkit/capabilities/evidence/skills/evidence/add.md
         record:
           - evidence:DEC-001
+          - COR-001
+          - COR-010
 ---
 
 # Glossary
