@@ -22,6 +22,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/switching.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
@@ -92,6 +93,7 @@ pkit:
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-018
         - visual-communication:DEC-019#2
         - visual-communication:DEC-020#1
         - visual-communication:DEC-020#2
