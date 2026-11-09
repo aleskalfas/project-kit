@@ -1,7 +1,7 @@
 ---
 id: ADR-087
 title: One picker in the agents area names which definition is an agent
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
