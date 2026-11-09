@@ -24,7 +24,7 @@ builds-on:
         name: Developer
         needs:
           - Build a presentation from library components that exist, filled with my own content, so nothing made once is made again.
-          - Put a figure in a documentation page that follows the page's light or dark mode, and stays current as the page changes.
+          - Put a figure in a documentation page that follows the light or dark mode a browser tells it, and stays current as the page changes.
           - Draw several views of one system from one model, so each fact is written once and every view shows it the same way.
           - Add a new kind of visual to a piece as data, without code, where no library component fits.
           - Put a picture that a program makes, such as a 3D render, in any piece, in the colours of its brand.
@@ -249,6 +249,7 @@ TERM-mode:
           - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         record:
           - visual-communication:DEC-004#2
+          - visual-communication:DEC-018#5
 TERM-model:
   name: model
   status: active
@@ -338,6 +339,7 @@ TERM-site:
         path:
           - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
         record:
+          - visual-communication:DEC-018#5
           - visual-communication:DEC-022#1
           - visual-communication:DEC-022#2
 TERM-stable:
@@ -400,7 +402,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [version pin](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version-pin--version-pin)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Build a presentation from library components that exist, filled with my own content, so nothing made once is made again.
-    - Put a figure in a documentation page that follows the page's light or dark mode, and stays current as the page changes.
+    - Put a figure in a documentation page that follows the light or dark mode a browser tells it, and stays current as the page changes.
     - Draw several views of one system from one model, so each fact is written once and every view shows it the same way.
     - Add a new kind of visual to a piece as data, without code, where no library component fits.
     - Put a picture that a program makes, such as a 3D render, in any piece, in the colours of its brand.
@@ -560,13 +562,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-mode — mode
 
-**Example:** A figure in a documentation page is drawn in the light mode and in the dark mode of its brand's colour scheme. The page shows the one its reader chose.
+**Example:** A figure in a documentation page is drawn in the light mode and in the dark mode of its brand's colour scheme. The page shows the one the reader's browser tells an image.
 
 **Distinctions:**
 
 - **Theme:** a whole set of values. A mode gives only the values that differ on its axis.
 - **Light or dark:** the two modes of one axis, the colour scheme. A brand may have more axes, each with modes of its own.
-- **A reader's mode:** the light or dark setting of a reader's site. A figure follows it by showing its brand's mode of the same name.
+- **A reader's mode:** the light or dark mode a reader's system or browser asks for. A figure in a documentation page takes the mode the browser tells an image, which a site's own setting may set. It shows its brand's mode of the same name.
 
 ## TERM-model — model
 
@@ -635,7 +637,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **A reader's site:** where a reader finds a piece, such as a documentation site whose light or dark setting a figure follows. The system draws no such site. It draws a figure into one.
+- **A reader's site:** where a reader finds a piece, such as a documentation site. A figure follows the site's light or dark setting where the site sets a single CSS `color-scheme` and the browser reads it for an image. The system draws no such site. It draws a figure into one.
 - **The HTML renderer's medium:** the file the HTML renderer writes, which a browser shows. A presentation drawn in it is no site. A site is drawn in it as any piece is, and as a PDF or in SVG too.
 
 ## TERM-stable — stable
