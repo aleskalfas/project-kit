@@ -22,7 +22,7 @@ from ruamel.yaml import YAML
 from tests import visual_communication_producer as producer
 from tests.in_process import load
 from tests.visual_communication_producer import LOCK, OUTPUT, PIECE, producing_project
-from tests.visual_communication_project import CONFIG, write_piece, yaml_text
+from tests.visual_communication_project import CONFIG, capability_version, write_piece, yaml_text
 
 framing, seam, location, files, findings_module = load(
     "visual-communication", "framing", "plugins.seam", "location", "files", "findings"
@@ -131,7 +131,7 @@ def test_the_hand_over_holds_the_roles_read_alone_with_the_inputs_and_variants(
     root = producing_project(tmp_path)
     handed = framing.handover(framing.plan(root, "visual", PIECE, OUTPUT))
     assert handed["document"] == "visual-communication/values"
-    assert handed["version"] == 1
+    assert handed["version"] == 2
     assert handed["lock"] == LOCK
     assert list(handed["tokens"]) == ["accent"]
     assert handed["inputs"] == {"fill": "accent"}
@@ -174,7 +174,7 @@ def test_a_run_keeps_each_variant_and_a_record_the_schema_holds(tmp_path: Path) 
     }
     assert record["recorded"]["plugins"] == {"square": "1.0.0"}
     assert record["recorded"]["programs"] == {}
-    assert record["recorded"]["capability"] == "0.1.0"
+    assert record["recorded"]["capability"] == capability_version()
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
     assert found(root) == []
 
@@ -385,7 +385,7 @@ def test_a_point_outside_the_pixels_is_refused(tmp_path: Path) -> None:
             {"points": {}, "programs": {"blender": "4.2"}},
             "it called `blender`, which its declaration does not name under `programs`",
         ),
-        ({"points": {}, "frames": {}}, "returned `frames`, which seam 4 does not read"),
+        ({"points": {}, "frames": {}}, "returned `frames`, which seam 5 does not read"),
         ({"points": {}, "losses": {}}, "its `losses` is not a list"),
         (
             {"points": {}, "losses": [{"plugin": "square", "what": "line", "did": "lost"}]},

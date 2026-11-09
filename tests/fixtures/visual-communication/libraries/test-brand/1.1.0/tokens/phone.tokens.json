@@ -1,0 +1,12 @@
+{
+  "$description": "The test-brand's values on a phone, where they differ from a desktop's.",
+  "size": {
+    "$type": "dimension",
+    "site": {
+      "$value": {
+        "value": 320,
+        "unit": "px"
+      }
+    }
+  }
+}

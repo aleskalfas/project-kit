@@ -36,7 +36,9 @@ This module is the one home of both answers:
   the harness would read as an import of its own (ADR-076 point 1).
 - **What a lifecycle step newly binds** (`compare`): two readings of one set's
   accepted rules, by id, status and statement, whatever its layer. Install, sync
-  and upgrade print it for each loaded set they deliver (ADR-076 point 6).
+  and upgrade print it for each loaded set they deliver (ADR-076 point 6). Where
+  the project held no set before and its sessions loaded a plain file, whose rules
+  carry no ids, the step says it cannot tell which rules bound before (#2369).
 """
 
 from __future__ import annotations
@@ -139,8 +141,10 @@ def loaded_files(
     registered capability's by name, then the project's.
 
     A layer's file is the one generated from its first loaded set (`first_loaded`). The
-    backbone and the project with no loaded set give their plain file where it is, as a
-    project's `project.md` is before it is converted (COR-068 point 7). Only capabilities
+    backbone and the project with no loaded set give their plain file, as a project's
+    `project.md` is before it is converted (COR-068 point 7), with whether the checkout
+    holds it: the instruction file includes it all the same, as a fresh project's includes
+    a `project.md` that `pkit init` does not create (#2370). Only capabilities
     the backbone manifest registers count, so one unregistered with its files kept is
     left out though its set is still where it was.
     """
@@ -161,8 +165,9 @@ def loaded_files(
                     (target_root / path).is_file(),
                 )
             )
-        elif plain is not None and (target_root / plain).is_file():
-            found.append(LoadedFile(layer, owner, str(plain), None, None, True))
+        elif plain is not None:
+            present = (target_root / plain).is_file()
+            found.append(LoadedFile(layer, owner, str(plain), None, None, present))
 
     add(BACKBONE, BACKBONE, fd.BACKBONE_COMPONENT, lrs.BACKBONE_LOADED_FILE)
     for name in fd.installed_capability_names(target_root):
@@ -642,6 +647,16 @@ def read_set(rule_set: rs.RuleSet | None) -> SetReading | None:
     return SetReading(rule_set.citation, rule_set.component, rule_set.version, rules)
 
 
+@dataclass(frozen=True)
+class PlainReading:
+    """A layer that held no loaded set, whose sessions loaded a plain file as it stood
+    (COR-068 point 7), as the backbone's earlier versions kept core's rules. The file's
+    rules carry no ids, and its numbers need not be a later set's, so `compare` cannot
+    tell which of a set's rules bound before."""
+
+    path: str
+
+
 def read_component(component: str, component_dir: Path) -> SetReading | None:
     """The loaded set a component's files hold where they are now, read as
     `rs.component_rule_sets` reads them, or None: the backbone's at `.pkit/`, a
@@ -662,17 +677,34 @@ class Bound:
     binds: tuple[tuple[str, str], ...] = ()
     changes: tuple[tuple[str, str], ...] = ()
     retires: tuple[tuple[str, str], ...] = ()
+    # Where the set takes the place of a plain file (`PlainReading`): that file, and
+    # every accepted rule the set holds, none said to newly bind.
+    replaces: str | None = None
+    holds: tuple[tuple[str, str], ...] = ()
 
     @property
     def any(self) -> bool:
-        return bool(self.binds or self.changes or self.retires)
+        return bool(self.binds or self.changes or self.retires or self.holds)
 
 
-def compare(before: SetReading | None, after: SetReading) -> Bound:
+def compare(before: SetReading | PlainReading | None, after: SetReading) -> Bound:
     """The rules `after` newly binds, changes or retires since `before`, by id, status and
     statement: accepted now and not then, accepted both times with another statement or
     title, and accepted then and not now. With no `before`, every accepted rule newly
-    binds. It knows no layer."""
+    binds. Where `before` is a plain file, no rule is said to newly bind, change or
+    retire: each is one the set holds, since which bound before cannot be told. It knows
+    no layer."""
+    if isinstance(before, PlainReading):
+        held = tuple((i, t) for i, (t, _s) in after.rules.items())
+        return Bound(
+            after.citation,
+            after.component,
+            None,
+            after.version,
+            True,
+            replaces=before.path,
+            holds=held,
+        )
     was: Mapping[str, tuple[str, str]] = before.rules if before is not None else {}
     binds = tuple((i, t) for i, (t, _s) in after.rules.items() if i not in was)
     changes = tuple((i, t) for i, (t, s) in after.rules.items() if i in was and was[i] != (t, s))
@@ -693,7 +725,9 @@ def render_bound(bound: Sequence[Bound], *, capabilities_delivered: bool) -> str
     """What install, sync and upgrade print: for each loaded set delivered, its name and
     version and each rule it newly binds, changes or retires. Where no adapter in use
     declares a delivery, a capability's set says that its rules bind no session here,
-    rather than list them as bound (COR-070 point 3). Information, not a gate."""
+    rather than list them as bound (COR-070 point 3). A set that takes the place of a
+    plain file says that which of its rules bound before cannot be told, and why, and
+    lists each rule it holds. Information, not a gate."""
     if not bound:
         return ""
     lines = ["", "  " + "Loaded rules — what this step newly binds (COR-070 point 3):"]
@@ -716,10 +750,18 @@ def render_bound(bound: Sequence[Bound], *, capabilities_delivered: bool) -> str
             lines.append(f"{head}: no rule newly binds, changes or retires.")
             continue
         lines.append(f"{head}:")
+        if item.replaces is not None:
+            lines.append(
+                f"      Which of its rules bound before cannot be told. Until this step, "
+                f"sessions loaded {item.replaces} as a plain file, whose rules carry no ids "
+                f"to compare by."
+            )
+            lines.append("      Compare that file's earlier text with the rules the set holds:")
         for verb, rules in (
             ("binds", item.binds),
             ("changes", item.changes),
             ("retires", item.retires),
+            ("holds", item.holds),
         ):
             lines.extend(f"      {verb:<8} {rule_id}  {title}" for rule_id, title in rules)
     return "\n".join(lines)
@@ -741,15 +783,25 @@ def component_folder(target_root: Path, component: str) -> Path:
     return target_root / fd.CAPABILITIES_DIR / component
 
 
-def read_delivered(target_root: Path) -> dict[str, SetReading | None]:
+def read_delivered(target_root: Path) -> dict[str, SetReading | PlainReading | None]:
     """Each component's loaded set as the project holds it now, the backbone's and each
-    registered capability's: what a step reads before it copies (ADR-076 point 6)."""
+    registered capability's: what a step reads before it copies (ADR-076 point 6).
+
+    Where the backbone holds no loaded set and its plain file is there, as a project at
+    a version before core's set holds `.pkit/rules/core.md`, the backbone's reading is
+    that file (`PlainReading`), as `loaded_files` gives it."""
     names = [fd.BACKBONE_COMPONENT, *fd.installed_capability_names(target_root)]
-    return {name: read_component(name, component_folder(target_root, name)) for name in names}
+    found: dict[str, SetReading | PlainReading | None] = {
+        name: read_component(name, component_folder(target_root, name)) for name in names
+    }
+    plain = lrs.BACKBONE_LOADED_FILE
+    if found[fd.BACKBONE_COMPONENT] is None and (target_root / plain).is_file():
+        found[fd.BACKBONE_COMPONENT] = PlainReading(str(plain))
+    return found
 
 
 def bound_by(
-    before: Mapping[str, SetReading | None], delivered: Sequence[tuple[str, Path]]
+    before: Mapping[str, SetReading | PlainReading | None], delivered: Sequence[tuple[str, Path]]
 ) -> tuple[Bound, ...]:
     """What a step newly binds: each component it delivers, read where the step copies it
     from (or, for a step that copies nothing, where it is), compared with its reading

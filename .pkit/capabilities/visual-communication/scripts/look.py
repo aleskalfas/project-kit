@@ -20,8 +20,10 @@ piece through the HTML renderer where the piece declares `html`, and through the
 renderer otherwise; `--renderer` names either. Each renderer has a folder of its own in
 `.pkit/capabilities/visual-communication/project/local/look/`: `<piece>/` for the SVG
 renderer's pages, `<piece>.html/` for the HTML renderer's. Each image lies there beside its
-frames and one report, and a run replaces only what an earlier run left in that folder. The
-report says what the images cannot show as the renderer set it. See `_lib/viewing.py`.
+frames and one report, and a run replaces only what an earlier run left in that folder. A
+page too tall for one image is drawn in bands, each an image as wide as the page, and the
+run names them in order. The report says what the images cannot show as the renderer set
+it, a page too wide for its smallest text to read among it. See `_lib/viewing.py`.
 
 - **The SVG renderer's pages** are drawn by resvg, through the wheel this script pins, with
   no network.
@@ -159,6 +161,16 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"page file: {folder}{each['file']}, to open in your own browser")
     through_svg = report["renderer"]["name"] == viewing.SVG
     for image in report["images"]:
+        band = image.get("band")
+        if band and band["number"] > 1:
+            continue
+        if band:
+            print(f"bands: {_at(image)}: {band['of']}, top to bottom: {_bands(report, image)}")
+        if image.get(viewing.TOO_WIDE):
+            print(
+                f"too wide: {_at(image)} is drawn {image['pixels']['width']} pixels wide, so its "
+                f"smallest text may not read"
+            )
         if through_svg and image["on-white"]:
             print(f"on white: {_at(image)} draws no ground of its own")
         if not through_svg and image["on-browser-ground"]:
@@ -178,6 +190,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"loss{accepted}: {_at(each)}: `{each['what']}` {each['did']}: {each['why']}")
     for each in report["drawn-otherwise"]:
         print(f"drawn otherwise: {_at(each)}: {_otherwise(each)}")
+    for each in report.get("profiles", []):
+        print(f"profile: {_at(each)}: `{each['element']}` shows `{each['picture']}`: {each['why']}")
     for each in report.get("refused", []):
         print(f"refused: {each['language']}, {each['key']}: a request for {each['url']}")
     if stand_ins:
@@ -245,6 +259,16 @@ def _otherwise(each: Mapping[str, Any]) -> str:
     return (
         f"a span of `{element}` has no face of {each['family']} at weight {each['weight']}: "
         f"{each['text']!r}"
+    )
+
+
+def _bands(report: Mapping[str, Any], first: Mapping[str, Any]) -> str:
+    """The images of the bands of the page whose first band `first` shows, in order."""
+    at = ("language", "key", "page")
+    return ", ".join(
+        image["image"]
+        for image in report["images"]
+        if "band" in image and all(image[each] == first[each] for each in at)
     )
 
 

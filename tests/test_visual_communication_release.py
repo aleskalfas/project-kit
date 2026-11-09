@@ -5,7 +5,7 @@ with the library's previous release, every refusal before any write. Run in this
 
 - **A project's own library,** in a project the tests build: the release it needs and the
   hash written, the version listed released, every other byte of the list kept; each
-  refusal, a component no piece places among them.
+  refusal, a component no piece places and a picture file nothing names among them.
 - **A library the capability ships,** with `--shipped`, on a repository and a history the
   tests build where the capability is authored, the methodology's source: each refusal of
   DEC-013 point 1, in the order of its Implications; a release that writes exactly the
@@ -45,9 +45,11 @@ from tests.test_visual_communication_shipped_libraries import (
     without_note,
 )
 from tests.visual_communication_project import (
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     REPO,
+    TEST_PICTURES,
     bound,
+    built_as_released,
     copy_library,
     project,
     write,
@@ -118,7 +120,7 @@ def own_project(tmp: Path, listed: str = OWN_LIST) -> Path:
     """A project that holds the foundations, and version 1.0.0 of its own library `parts`,
     built on them, with a stable component, listed not released."""
     root = project(tmp)
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     parts_version(root, "1.0.0", label=LABEL)
     write(root / LIST, listed)
     return root
@@ -295,6 +297,40 @@ def test_a_component_no_piece_places_that_cannot_be_read_is_refused(tmp_path: Pa
     assert files_under(root / "visual") == before
 
 
+def test_each_picture_file_the_version_holds_is_read_and_one_refused_refuses_the_release(
+    tmp_path: Path,
+) -> None:
+    """Each file of its `pictures/` under a bare name, whether or not anything names it, as
+    the engine reads it (DEC-014 point 1, DEC-025 point 9). A file of another name is none."""
+    root = own_project(tmp_path)
+    folder = root / "visual" / "libraries" / "parts" / "1.0.0" / "pictures"
+    folder.mkdir()
+    for name, source in (
+        ("mark.png", "palette.png"),
+        ("photo.jpg", "progressive.jpg"),
+        ("deep.png", "deep.png"),
+        ("Turned.jpg", "turned.jpg"),
+    ):
+        shutil.copyfile(TEST_PICTURES / source, folder / name)
+    write(folder / "notes.txt", "Not a picture.\n")
+    before = files_under(root / "visual")
+
+    done = own(root, "parts")
+
+    assert done.returncode == 1
+    assert done.stderr.splitlines() == [
+        "error: parts@1.0.0 is not released: 1 finding that fails where it is read in full, "
+        "each to mend in the version first:",
+        "  visual/libraries/parts/1.0.0/pictures/deep.png [picture-encoding] (fails): "
+        "`deep.png` is a PNG of 16 bits for each sample, which the capability does not read "
+        "— save it at 8 bits for each sample, not interlaced",
+    ]
+    assert files_under(root / "visual") == before
+
+    (folder / "deep.png").unlink()
+    assert own(root, "parts").returncode == 0
+
+
 @pytest.mark.parametrize(
     ("change", "said"),
     [
@@ -365,15 +401,16 @@ components:
 
 
 class Repository:
-    """A repository the tests build, whose capability's folder ships the foundations: where
-    the capability is authored, the methodology's source, unless `source` is false, where
-    the capability is installed as a copy. A commit at a time, never signed. The clone's
-    local folder is ignored, as the capability's `runtime_ignore` asks."""
+    """A repository the tests build, whose capability's folder ships the foundations, built
+    as they stood when 1.0.0 was released: where the capability is authored, the
+    methodology's source, unless `source` is false, where the capability is installed as a
+    copy. A commit at a time, never signed. The clone's local folder is ignored, as the
+    capability's `runtime_ignore` asks."""
 
     def __init__(self, tmp: Path, *, source: bool = True) -> None:
         self.root = tmp / "repository"
         self.folder = self.root / CAPABILITY_DIR
-        shutil.copytree(FOUNDATIONS, built(self.folder))
+        built_as_released(built(self.folder))
         set_fields(built(self.folder) / "library.yaml", **{"needs-release": BEFORE})
         write(self.folder / "package.yaml", PACKAGE.format(version="0.1.0"))
         write(self.root / OWNERSHIP, (REPO / OWNERSHIP).read_text(encoding="utf-8"))

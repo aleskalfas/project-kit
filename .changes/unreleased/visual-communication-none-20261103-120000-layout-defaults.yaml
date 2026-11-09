@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-009 decides that a top component draws each of its layouts, as a default
-  that a brand naming its library may replace (#2497). The record designs
-  ahead: the deck draws its own layouts, and the code that reads a brand's
-  drawing lands with a later slice, so no surface moves yet.

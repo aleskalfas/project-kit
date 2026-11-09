@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-001, DEC-002, DEC-004, DEC-005, DEC-007 and DEC-009 state in place
-  what DEC-012 decides of them (#2554). The records design ahead: the code
-  that reads and draws a field's runs lands with #2501 T6, so no surface
-  moves yet.

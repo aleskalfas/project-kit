@@ -41,7 +41,7 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.test_visual_communication_render import newer_tests
-from tests.visual_communication_project import importable, yaml_text
+from tests.visual_communication_project import hold_shipped, importable, yaml_text
 
 (
     check,
@@ -190,7 +190,10 @@ def test_a_finding_at_one_size_reads_the_same_from_the_record_as_computed(tmp_pa
 def test_past_the_validations_bound_a_piece_without_a_record_fails_as_not_checked(
     tmp_path: Path,
 ) -> None:
+    """With the foundations held as `pkit visual add foundations` takes them, so their copy
+    raises no finding of its own."""
     root = drawing_project(tmp_path)
+    hold_shipped(root, "foundations", being_built=False)
     write_picture(root, framing)
     found = document(root, PKIT_COMMAND_DEADLINE=str(time.time()))
     assert [(f["severity"], f["location"], f["label"]) for f in found["findings"]] == [

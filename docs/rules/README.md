@@ -99,11 +99,12 @@ Below, `uvx` fetches release 1.134.0 from GitHub and sets up a project with it. 
 $ git init -q older-project && cd older-project
 $ uvx -q --from git+https://github.com/aleskalfas/project-kit.git@v1.134.0 pkit init >/dev/null 2>&1
 $ printf '## Tests\n\n1. **Run `make test` before each commit.**\n' > .pkit/rules/project.md
-$ pkit upgrade | grep -e "^Upgrading" -e "refreshed    .pkit/rules/core.md" -e "backbone:OPS" -e RS-OPS-001 -e "^Pinned"
+$ pkit upgrade | grep -e "^Upgrading" -e "refreshed    .pkit/rules/core.md" -e "backbone:OPS" -e "cannot be told" -e RS-OPS-001 -e "^Pinned"
 Upgrading backbone: 1.134.0 -> <VERSION>
   refreshed    .pkit/rules/core.md
     backbone:OPS <any> (first delivered):
-      binds    RS-OPS-001  The no-shared-files invariant
+      Which of its rules bound before cannot be told. Until this step, sessions loaded .pkit/rules/core.md as a plain file, whose rules carry no ids to compare by.
+      holds    RS-OPS-001  The no-shared-files invariant
 Pinned project-kit to <VERSION> (.pkit/version-pin).
 $ tail -n 1 .pkit/rules/project.md
 1. **Run `make test` before each commit.**
@@ -112,7 +113,7 @@ $ tail -n 1 .pkit/rules/project.md
 What the output proves, claim by claim:
 
 - **Included.** `CLAUDE.md`'s three lines include the methodology's rules, the index of the installed capabilities' rules, and yours. Claude Code loads the files a `CLAUDE.md` includes when a session starts, and the files those include ([its memory docs](https://code.claude.com/docs/en/memory)).
-- **Upgraded, yours kept.** The upgrade copies the newer `core.md`, and names each rule it newly binds. `project.md` holds your rule as you wrote it, since no sync or upgrade writes `project.md` ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
+- **Upgraded, yours kept.** The upgrade copies the newer `core.md`, and names each rule core's set holds. 1.134.0 kept core's rules in a plain file with no ids. So the upgrade says it cannot tell which of them bound before ([the lifecycle reference, "What a step newly binds"](../../.pkit/lifecycle/README.md#what-a-step-newly-binds)). `project.md` holds your rule as you wrote it, since no sync or upgrade writes `project.md` ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
 - **With the install.** The install names the rule it newly binds, and adds the capability's file to the index. `CLAUDE.md` already includes the index, so it needs no edit. Uninstalling takes the file out of the index again ([the third task](#have-a-capabilitys-rules-reach-each-session)).
 
 > [!WARNING]
@@ -173,7 +174,7 @@ flowchart TD
 
 Run `pkit sync` in each clone after you pull a change. It puts in place what the clone's sessions load: `core.md`, the index and `CLAUDE.md`'s lines. What it does, and what you keep yourself:
 
-- **What it adds to `CLAUDE.md`.** It puts back a missing line of the methodology's rules or of the index, and removes nothing. Your own rules' line comes back only with the methodology's. Without a `CLAUDE.md`, the sync creates one with a heading and the three lines ([the adapter's README, `merge-claude-md.sh`](../../.pkit/adapters/claude-code/README.md#merge-claude-mdsh)).
+- **What it adds to `CLAUDE.md`.** It puts back a missing line of the methodology's rules or of the index, adds no line the file already holds, and removes nothing. Your own rules' line comes back only with the methodology's. Without a `CLAUDE.md`, the sync creates one with a heading and the three lines ([the adapter's README, `merge-claude-md.sh`](../../.pkit/adapters/claude-code/README.md#merge-claude-mdsh)).
 - **When it adds nothing.** Where the methodology's line stands only in a code fence or a code span, the sync inserts nothing and reports it. Move the line out of the code.
 - **What it says.** It names each rule it newly binds, changes or retires. That is information, and stops nothing ([the lifecycle reference, "What a step newly binds"](../../.pkit/lifecycle/README.md#what-a-step-newly-binds)).
 - **When it stops.** Where your `pkit` is at another version than your project records, sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
@@ -197,7 +198,7 @@ $ grep @.pkit CLAUDE.md
 ```
 
 > [!WARNING]
-> `pkit validate` checks only the index's line, so a `CLAUDE.md` without the methodology's line passes it. The next sync then adds all three lines again, and the index's line and yours stand twice. Delete the second copies by hand.
+> `pkit validate` checks only the index's line, so a `CLAUDE.md` without the methodology's line passes it.
 
 ## Add your own rules
 
@@ -225,32 +226,48 @@ $ pkit validate | grep -B1 "core rule 99"
 
 ## Have a capability's rules reach each session
 
-Install the capability, and its rules reach every session that loads `CLAUDE.md` from then on. Installing it is your consent to its rules, so nothing asks you to accept them again ([COR-070](../../.pkit/decisions/core/COR-070-capability-loaded-rules.md) point 3). From the install to the uninstall:
+Install the capability, and its rules reach every session that loads `CLAUDE.md` from then on. Installing it is your consent to its rules, so nothing asks you to accept them again ([COR-070](../../.pkit/decisions/core/COR-070-capability-loaded-rules.md) point 3).
 
-- **The install** copies the capability with its rules file, and renders the index again. It names each rule it newly binds, as the first fence on this page shows. Neither its dry run nor `pkit capabilities show` lists the rules.
+So read them before you install it. `pkit capabilities show` lists each rule a capability ships, and the install's dry run names each rule it would newly bind ([the CLI reference, "Surface"](../../.pkit/cli/README.md#surface)). Neither installs anything:
+
+```console
+$ pkit capabilities show project-management | grep -e "Loaded rules" -e project-management:PM -e RS-PM-001
+  Loaded rules (<any>)
+    project-management:PM <any> — installing the capability is the consent to its rules (COR-070 point 3):
+      RS-PM-001  A pull request names each issue it closes
+$ pkit capabilities install project-management --dry-run | grep -e "first delivered" -e RS-PM-001
+    project-management:PM <any> (first delivered):
+      binds    RS-PM-001  A pull request names each issue it closes
+$ test -d .pkit/capabilities/project-management || echo "not installed"
+not installed
+```
+
+From the install to the uninstall:
+
+- **The install** copies the capability with its rules file, and renders the index again. It names each rule it newly binds, as the first fence on this page shows.
 - **A later version.** An upgrade of the capability names each of its rules that it newly binds, changes or retires.
 - **No opt-out.** While the capability is installed, no setting of project-kit's keeps its rules away.
 - **A rule you kept yourself.** Where a capability you install ships a rule your `project.md` held, you may delete or shorten yours, keeping what holds only in your project.
-- **The uninstall** renders the index again without the capability's file. Today it refuses while the capability's own deployed agents cite its records, so the fence below shows the refusal, then passes `--force`. `--force` also skips the checks of what depends on the capability ([the lifecycle reference, "Uninstall"](../../.pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)).
+- **The uninstall** renders the index again without the capability's file ([the lifecycle reference, "Uninstall"](../../.pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)).
 
-Below, `pkit rule-sets loaded` lists the files a session loads, in their order, before and after the uninstall:
+Below, `pkit rule-sets loaded` lists the files a session loads, in their order, before and after the uninstall. It lists your `project.md` too, as missing until you write it:
 
 ```console
 $ pkit capabilities install project-management >/dev/null 2>&1
 $ pkit rule-sets loaded
-Loaded files — 2   (every layer's, in the order a session reads them)
+Loaded files — 3   (every layer's, in the order a session reads them)
 
   backbone    backbone            .pkit/rules/core.md                             backbone:OPS (.pkit/rule-sets/ops.md)
   capability  project-management  .pkit/capabilities/project-management/rules.md  project-management:PM (.pkit/capabilities/project-management/rule-sets/pm.md)
-$ pkit capabilities uninstall project-management 2>&1 | grep Refusing
-  Refusing to uninstall 'project-management': <any> reference(s) found:
-$ pkit capabilities uninstall project-management --force | grep -e Removed -e rules/capabilities
+  project     project             .pkit/rules/project.md                          a plain file, missing
+$ pkit capabilities uninstall project-management | grep -e Removed -e rules/capabilities
   Removed capability 'project-management' from .pkit/capabilities/project-management
   rendered     .pkit/rules/capabilities.md (0 capability file(s))
 $ pkit rule-sets loaded
-Loaded files — 1   (every layer's, in the order a session reads them)
+Loaded files — 2   (every layer's, in the order a session reads them)
 
-  backbone  backbone  .pkit/rules/core.md  backbone:OPS (.pkit/rule-sets/ops.md)
+  backbone  backbone  .pkit/rules/core.md     backbone:OPS (.pkit/rule-sets/ops.md)
+  project   project   .pkit/rules/project.md  a plain file, missing
 ```
 
 ## Keep each rules file within its budget

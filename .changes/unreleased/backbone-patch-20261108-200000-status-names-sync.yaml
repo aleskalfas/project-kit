@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit status` names a remedy the installed `pkit` runs (#2463). Where
+  `.claude/settings.json` is not present, or no skill or agent is deployed, its
+  adapter section now says to run `pkit sync`, which merges the settings and
+  deploys the skills and agents. It named `pkit merge-settings`,
+  `pkit deploy-skills` and `pkit deploy-agents`, which are no commands of the
+  installed `pkit`.

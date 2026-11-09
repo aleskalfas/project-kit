@@ -14,13 +14,15 @@ These tests hold:
   absent, an adapter with no key, and entry forms that differ;
 - **an import token** in a loaded set, refused outside code;
 - **the citation form** `<capability>:RS-<SET>-NNN`;
-- **what a step newly binds**, for core's set and a capability's;
+- **what a step newly binds**, for core's set and a capability's, and an upgrade from
+  a version with no core set, whose plain file tells nothing of what bound before;
 - **`pkit status`**, which reports the index.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import click
@@ -31,7 +33,7 @@ from project_kit import capabilities as caps
 from project_kit import install as install_mod
 from project_kit import loaded_rule_sets as lrs
 from project_kit import loaded_rules as lr
-from project_kit import refs, sync
+from project_kit import refs, sync, upgrade
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from project_kit.manifest import (
@@ -252,6 +254,25 @@ def test_loaded_gives_a_project_s_own_loaded_set(adopter: AdopterRepo) -> None:
     assert (project.path, project.rule_set) == (".pkit/rules/project.md", "OWN")
 
 
+def test_loaded_lists_the_project_s_plain_file_when_it_is_absent(adopter: AdopterRepo) -> None:
+    """A fresh project's instruction file includes `project.md` before it exists, so the
+    project layer is listed, and said to be missing (#2370)."""
+    (adopter.root / ".pkit/rules/project.md").unlink(missing_ok=True)
+    runner = CliRunner()
+    as_json = runner.invoke(main, ["rule-sets", "loaded", "--json"])
+    assert as_json.exit_code == 0, as_json.output
+    (project,) = [e for e in json.loads(as_json.output)["loaded"] if e["layer"] == "project"]
+    assert (project["path"], project["rule_set"], project["present"]) == (
+        ".pkit/rules/project.md",
+        None,
+        False,
+    )
+    human = runner.invoke(main, ["rule-sets", "loaded"])
+    (line,) = [row for row in human.output.splitlines() if ".pkit/rules/project.md" in row]
+    assert line.split()[:3] == ["project", "project", ".pkit/rules/project.md"]
+    assert line.endswith("a plain file, missing")
+
+
 def test_an_unregistered_capability_s_set_is_left_out(adopter: AdopterRepo) -> None:
     folder = incubated(adopter, "alpha", loaded_set("alpha", "ALPHA"))
     lrs.generate(adopter.root)
@@ -260,9 +281,7 @@ def test_an_unregistered_capability_s_set_is_left_out(adopter: AdopterRepo) -> N
     manifest.components = [c for c in manifest.components if c.name != "alpha"]
     write_backbone_manifest(adopter.root, manifest)
     assert (folder / "rules.md").is_file()
-    assert [f.owner for f in lr.loaded_files(adopter.root)] == ["backbone"] + (
-        ["project"] if (adopter.root / ".pkit/rules/project.md").is_file() else []
-    )
+    assert [f.owner for f in lr.loaded_files(adopter.root)] == ["backbone", "project"]
 
 
 def test_the_command_prints_the_list_the_json_and_the_index(adopter: AdopterRepo) -> None:
@@ -607,6 +626,69 @@ def test_a_capability_s_set_newly_bound_and_where_no_adapter_delivers(
     nowhere = lr.render_bound([bound], capabilities_delivered=False)
     assert "its rules bind no session in this project" in nowhere
     assert "RS-ALPHA-001" not in nowhere
+
+
+def test_a_set_in_place_of_a_plain_file_cannot_tell_what_bound_before(
+    adopter: AdopterRepo,
+) -> None:
+    """Where the project held no core set and loaded `core.md` as a plain file, as a
+    project before core's set does, the reading before is that file, and the step lists
+    each rule the set holds, none as newly binding (#2369)."""
+    (adopter.root / ".pkit/rule-sets/ops.md").unlink()
+    before = lr.read_delivered(adopter.root)
+    assert before["backbone"] == lr.PlainReading(".pkit/rules/core.md")
+    (bound,) = lr.bound_by(before, [("backbone", REPO / ".pkit")])
+    assert bound.first and bound.replaces == ".pkit/rules/core.md"
+    assert (bound.binds, bound.changes, bound.retires) == ((), (), ())
+    assert bound.holds[0] == ("RS-OPS-001", "The no-shared-files invariant")
+    rendered = lr.render_bound([bound], capabilities_delivered=True)
+    assert "Which of its rules bound before cannot be told." in rendered
+    assert "holds    RS-OPS-001  The no-shared-files invariant" in rendered
+    assert "binds    " not in rendered
+
+
+def test_an_upgrade_from_a_version_with_no_rule_set_cannot_tell_what_bound_before(
+    adopter: AdopterRepo, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project from before core's set, as at v1.149.0, holds no `.pkit/rule-sets/`
+    and loads `.pkit/rules/core.md` as a plain file. The upgrade delivers `OPS` for the
+    first time, says it cannot tell which of its rules bound before, and why, and lists
+    each rule it holds, none as newly binding (#2369)."""
+    # The tool step's lookup of the latest release finds none, so nothing reaches the
+    # network.
+    monkeypatch.setattr(upgrade, "_latest_released_version", lambda: None)
+    recorded = read_backbone_manifest(adopter.root)
+    assert recorded is not None
+    recorded.backbone_version = "0.1.0"
+    write_backbone_manifest(adopter.root, recorded)
+    shutil.rmtree(adopter.root / ".pkit" / "rule-sets")
+    (adopter.root / ".pkit" / "rules" / "core.md").write_text(
+        "## Hard rules\n\n1. **The no-shared-files invariant.** Every file has one owner.\n",
+        encoding="utf-8",
+    )
+
+    upgrade.run_upgrade(adopter.root, pin=False)
+
+    out = capsys.readouterr().out
+    assert "    backbone:OPS " in out and "(first delivered):" in out
+    assert "Which of its rules bound before cannot be told." in out
+    assert "sessions loaded .pkit/rules/core.md as a plain file, whose rules carry no ids" in out
+    assert "holds    RS-OPS-001  The no-shared-files invariant" in out
+    assert "binds    RS-OPS-" not in out
+    assert (adopter.root / ".pkit" / "rule-sets" / "ops.md").is_file()
+
+
+def test_with_neither_a_set_nor_a_plain_file_every_rule_newly_binds(
+    adopter: AdopterRepo,
+) -> None:
+    (adopter.root / ".pkit/rule-sets/ops.md").unlink()
+    (adopter.root / ".pkit/rules/core.md").unlink()
+    before = lr.read_delivered(adopter.root)
+    assert before["backbone"] is None
+    (bound,) = lr.bound_by(before, [("backbone", REPO / ".pkit")])
+    assert bound.first and bound.replaces is None
+    assert bound.binds[0] == ("RS-OPS-001", "The no-shared-files invariant")
+    assert not bound.holds
 
 
 def test_a_step_that_changes_no_rule_says_so() -> None:

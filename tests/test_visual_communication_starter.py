@@ -3,7 +3,9 @@ DEC-007): `pkit visual add starter` copies and lists it; every role of its own e
 its defaults, at a shared role (DEC-008 point 2); each pattern declares a component field
 for each list it repeats (DEC-010, Implications); it holds no raw value; and each
 component's reference renders, under the test brand, pass the check and draw each word of
-each option and of each field of runs (DEC-007 point 3). A run that reads a colour family
+each option and of each field of runs (DEC-007 point 3). The header's, on three axes, is
+previewed by `pkit visual render` and checked by `pkit visual check` in each of its twelve
+combinations, with nothing failing (DEC-005 point 6). A run that reads a colour family
 lies on that family's fill (`components.md`, *Values, states and colour*). A connector's
 line reaches 3:1 against what it lies on in every mode, and crosses no item but its ends;
 a strong run keeps the body's size and line height. The README names what the components
@@ -25,7 +27,7 @@ import json
 import math
 import re
 import shutil
-from collections.abc import Iterator, Mapping
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -40,17 +42,33 @@ from tests.visual_communication_project import (
     TEST_NOTATION,
     bound,
     copy_library,
+    hold_shipped,
+    importable,
+    locked_at,
     project,
+    taken,
     version_folder,
     write_list,
 )
 
-add, checks, pl, reading, tokens = load(
-    "visual-communication", "add.py", "checks", "pipeline", "reading", "tokens"
+add, render, check, checks, keys, pl, reading, tokens, svg = load(
+    "visual-communication",
+    "add.py",
+    "render.py",
+    "check.py",
+    "checks",
+    "keys",
+    "pipeline",
+    "reading",
+    "tokens",
+    "plugins.svg",
 )
 
 STARTER = CAPABILITY / "libraries" / "starter"
 PIECES = FIXTURES / "starter" / "pieces"
+#: The test brand's version that gives the sizes of the axis `device` (DEC-021 point 2), which
+#: the web parts' reference pieces lock.
+SIZED_BRAND = FIXTURES / "libraries" / "test-brand" / "1.1.0"
 README = STARTER / "README.md"
 LANGUAGES = ["en", "de"]
 UNRELEASED = {"1.0.0": {"released": False}}
@@ -136,14 +154,18 @@ def files_of(folder: Path) -> dict[str, bytes]:
 
 
 def test_add_copies_the_starter_whole_and_lists_it_shipped(tmp_path: Path) -> None:
+    """What the capability ships by default, as the tree holds it: the newest released
+    version, with its record's entry, or the version being built where none is released."""
+    ships = taken("starter")
     root = project(tmp_path)
     added = run_main(add, "starter", cwd=root)
     assert added.returncode == 0, added.stderr
-    assert files_of(root / "visual" / "libraries" / "starter" / "1.0.0") == files_of(STARTER)
+    copy = root / "visual" / "libraries" / "starter" / ships.version
+    assert files_of(copy) == files_of(ships.folder)
     listed = read(root / "visual" / "libraries" / "libraries.yaml")
+    versions = {ships.version: ships.entry}
     assert listed == bound(
-        "libraries",
-        libraries={"starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED}},
+        "libraries", libraries={"starter": {"source": {"kind": "shipped"}, "versions": versions}}
     )
 
 
@@ -210,23 +232,32 @@ def test_each_default_of_its_own_roles_is_an_alias_never_a_value() -> None:
 
 @pytest.fixture(scope="module")
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A location that holds the foundations and the starter as the capability ships them,
-    the test brand and the test notation, and the starter's reference pieces."""
-    root = project(tmp_path_factory.mktemp("starter"))
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
+    """A location that holds the foundations and the starter being built as the capability
+    ships them, the released version of their number where it is released, the test brand,
+    its version that gives sizes, and the test notation, and the starter's reference
+    pieces, each locked at the versions being built."""
+    return reference_location(project(tmp_path_factory.mktemp("starter")))
+
+
+def reference_location(root: Path) -> Path:
+    """The location of `location`, laid out in the project at `root`."""
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    copy_library(root, SIZED_BRAND, "test-brand", "1.1.0")
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
     write_list(
         root,
         {
-            "foundations": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "test-brand": {"source": {"kind": "project"}, "versions": UNRELEASED},
+            "test-brand": {
+                "source": {"kind": "project"},
+                "versions": {**UNRELEASED, "1.1.0": {"released": False}},
+            },
             "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
         },
     )
+    built = {name: hold_shipped(root, name).version for name in ("foundations", "starter")}
     shutil.copytree(PIECES, root / "visual" / "pieces")
+    for folder in (root / "visual" / "pieces").iterdir():
+        locked_at(folder, built)
     return root
 
 
@@ -242,39 +273,134 @@ def projects(location: Path) -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def scenes(projects: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
-    """The scene of each reference piece in each language, by piece and language."""
+    """The scene of each reference piece in each language, by piece and language, at the
+    default size: each is drawn at every size with no finding."""
     computed = {}
     for name, drawn in projects.items():
         for language, result in drawn.scenes(facts=drawn.piece.stand_ins):
             assert result.findings == [], (name, language, result.findings)
-            computed[(name, language)] = result.scene.to_dict()
+            if result.scene.size_key == keys.DEFAULT_KEY:
+                computed[(name, language)] = result.scene.to_dict()
     return computed
 
 
 @pytest.fixture(scope="module")
 def resolved(projects: Mapping[str, Any]) -> dict[str, tuple[dict[str, Any], list[str]]]:
     """For each reference piece, the test brand's value of each token in each combination
-    of modes, by token path, and the combinations the piece is drawn in."""
+    of modes, by token path, and the combinations the piece is drawn in at the default
+    size, those of its scenes in `scenes`."""
     found = {}
     for name, drawn in projects.items():
         values = {path: token["values"] for path, token in drawn.values()["tokens"].items()}
-        found[name] = (values, list(drawn.keys))
+        default = [key for key in drawn.keys if drawn.size_key(key) == keys.DEFAULT_KEY]
+        found[name] = (values, default)
     return found
 
 
 def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> None:
+    """Each piece locks a version of the starter the capability ships: the components of its
+    release 1.0.0 that, and the web parts the version being built, which adds them."""
+    shipped = {taken("starter").version, taken("starter", being_built=True).version}
     assert sorted(path.name for path in PIECES.iterdir()) == sorted(COMPONENTS)
     for folder in PIECES.iterdir():
         piece = read(folder / "piece.yaml")
         assert piece["brand"] == "test-brand"
         assert piece["pinned"] is True
         assert piece["languages"] == LANGUAGES
-        assert piece["lock"]["starter"] == "1.0.0"
+        assert piece["lock"]["starter"] in shipped
+
+
+def previews(drawn: Any) -> dict[str, str]:
+    """Each preview the SVG renderer draws of a piece, by its file's name, with its text."""
+    found: dict[str, str] = {}
+    results = drawn.scenes(facts=drawn.piece.stand_ins)
+    for language, (key,), made in pl.drawn(drawn, results, "svg"):
+        found.update(pl.preview_files(drawn.piece.name, language, key, made.pages))
+    return found
+
+
+def on_each_foundations(
+    root: Path, released: str = "1.0.0", brand: Mapping[str, str] | None = None
+) -> dict[str, dict[str, Any]]:
+    """Each piece of the location at `root` drawn on the foundations being built and on their
+    release `released`, both of which the location holds: by the foundations' version, each
+    piece's document of values and its previews, by the piece's name. Each piece's lock
+    names the version being built. On the release, the lock names `brand`'s version of each
+    library it names instead: a brand's release, which a brand being built on the
+    foundations being built follows. What names the version drawn on is left out: the lock
+    the document of values holds, and the version a preview's trace gives each component of
+    the foundations."""
+    built = taken("foundations", being_built=True).version
+    held = pl.Held(root, "visual")
+    drawn: dict[str, dict[str, Any]] = {released: {}, built: {}}
+    locks = {released: {**(brand or {}), "foundations": released}, built: {"foundations": built}}
+    for folder in sorted((root / "visual" / "pieces").iterdir()):
+        piece = pl.read_piece(root, "visual", folder.name)
+        assert piece.lock["foundations"] == built
+        if names_a_size(folder):
+            continue
+        for version, pieces in drawn.items():
+            on = pl.Project(piece, {**piece.lock, **locks[version]}, held)
+            values = {field: value for field, value in on.values().items() if field != "lock"}
+            named = re.escape(version)
+            traced = re.compile(rf'(data-component="foundations/[^"]*" data-version="){named}"')
+            files = {name: traced.sub(r'\1"', text) for name, text in previews(on).items()}
+            pieces[folder.name] = (values, files)
+    return drawn
+
+
+#: The shared roles the foundations being built add to their release 1.0.0, each by the role
+#: its default aliases (DEC-022 point 3, DEC-004 point 7).
+ADDED_ROLES = {"size.site": "size.slide", "size.line": "size.figure"}
+
+
+def names_a_size(folder: Path) -> bool:
+    """Whether the reference piece in `folder` is drawn at the sizes of the axis `device`, as
+    each web part's is: the foundations' release 1.0.0 declares no such axis (DEC-021
+    point 2)."""
+    return "device" in (read(folder / "piece.yaml").get("modes") or {})
+
+
+#: The reference pieces that name no size, by name.
+UNSIZED = [folder.name for folder in sorted(PIECES.iterdir()) if not names_a_size(folder)]
+
+
+def as_released(values: Mapping[str, Any], given: Collection[str] = ()) -> dict[str, Any]:
+    """A piece's document of values drawn on the foundations being built, as on their release
+    1.0.0: without the roles they add. Each takes the value of the role its default aliases
+    where the brand gives it none, as the test brand 1.0.0 gives none (DEC-004 point 7);
+    `given` names those the brand gives a value of its own."""
+    for added, aliased in ADDED_ROLES.items():
+        if added not in given:
+            assert values["tokens"][added] == values["tokens"][aliased], added
+    tokens = {path: token for path, token in values["tokens"].items() if path not in ADDED_ROLES}
+    return {**values, "tokens": tokens}
+
+
+def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The foundations being built add the size axis `device` and the roles `size.site` and
+    `size.line` to their release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021
+    points 2 and 9, DEC-022 point 3). So each reference piece that names no size draws on
+    them as on that release, byte for byte: each preview, but for the foundations' version
+    they name, and its values, but for the roles they add. A web part's piece names the
+    sizes, which that release does not declare."""
+    importable(monkeypatch, svg)
+    root = reference_location(project(tmp_path))
+    hold_shipped(root, "foundations", being_built=False)
+    drawn = on_each_foundations(root)
+    released, built = drawn.values()
+    assert sorted(built) == sorted(UNSIZED)
+    for name, (values, files) in built.items():
+        assert files, name
+        assert (as_released(values), files) == released[name], name
 
 
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
-    """The test brand's version states, once, that it gives `picture.logo` no value, and no
-    piece states it (DEC-025 point 9)."""
+    """The test brand's newest version, the one the check of a version alone reads (DEC-019),
+    states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
+    point 9): a header draws with no logo."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
@@ -282,12 +408,126 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
         if finding.code != "component-experimental"
     ]
     assert found == [
-        ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.0.0/", "picture.logo")
+        ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
         f"record, of {len(COMPONENTS)} computed now, of 0 not checked."
+    ]
+
+
+#: The reference piece drawn on three axes, one of them a size axis: the header's, on
+#: `colour-scheme`, `contrast` and `device`.
+THREE_AXES = "header"
+
+#: The width the test brand's version that gives sizes gives a site's page, its `size.site`,
+#: at each mode of `device`.
+SITE_WIDTHS = {"desktop": 1440.0, "tablet": 768.0, "phone": 320.0}
+
+#: An attribute of a preview's root element.
+ATTRIBUTE = re.compile(r'([a-z-]+)="([^"]*)"')
+
+
+def named_combinations(name: str) -> dict[str, dict[str, str]]:
+    """Each combination of the modes the reference piece `name` names, one mode on each
+    axis, by its key as DEC-004 point 3 spells it: each axis whose mode is not the
+    foundations' default for it, as `<axis>.<mode>`, in the order of the axes' names and
+    joined by `+`, or `default` where every mode is its axis's default."""
+    modes = read(PIECES / name / "piece.yaml")["modes"]
+    defaults = {
+        axis: each["default"] for axis, each in read(FOUNDATIONS / "roles.yaml")["axes"].items()
+    }
+    axes = sorted(modes)
+    found = {}
+    for chosen in itertools.product(*(modes[axis] for axis in axes)):
+        combination = dict(zip(axes, chosen, strict=True))
+        spelled = [f"{axis}.{mode}" for axis, mode in combination.items() if mode != defaults[axis]]
+        found["+".join(spelled) or "default"] = combination
+    return found
+
+
+def root_attributes(text: str) -> dict[str, str]:
+    """The attributes of the root element of a preview, by name."""
+    found = re.match(r"<svg ([^>]*)>", text)
+    assert found is not None
+    return dict(ATTRIBUTE.findall(found.group(1)))
+
+
+def test_a_piece_on_three_axes_has_a_preview_for_each_language_in_each_combination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit visual render` draws the header in each of the twelve combinations it names, in
+    each language: a preview of each page, which names its language and its key, at its
+    device's width (DEC-005 point 6, DEC-021 point 1). No two previews of one page in one
+    language are alike but for the key they name, so each draws its own combination."""
+    importable(monkeypatch, svg)
+    root = reference_location(project(tmp_path))
+    shown = run_main(render, THREE_AXES, cwd=root)
+    assert shown.returncode == 0, shown.stderr
+    combinations = named_combinations(THREE_AXES)
+    assert len(combinations) == 12
+    # Each preview's file name, with its language, its key, its page and its width.
+    expected: dict[str, tuple[str, str, int, float]] = {}
+    for language in LANGUAGES:
+        pages = read(PIECES / THREE_AXES / f"content.{language}.yaml")["pages"]
+        for key, combination in combinations.items():
+            for page in range(1, len(pages) + 1):
+                width = SITE_WIDTHS[combination["device"]]
+                expected[f"{THREE_AXES}.{language}.{key}.{page}.svg"] = (language, key, page, width)
+    folder = root / render.PREVIEWS / THREE_AXES
+    drawn = {path.name: path.read_text(encoding="utf-8") for path in folder.glob("*.svg")}
+    assert sorted(drawn) == sorted(expected)
+    said = f"previews: {len(expected)} file(s) in {render.PREVIEWS}/{THREE_AXES}/"
+    assert said in shown.stdout.splitlines()
+    unkeyed: dict[tuple[str, int], set[str]] = {}
+    for name, (language, key, page, width) in expected.items():
+        attributes = root_attributes(drawn[name])
+        named = (attributes["data-language"], attributes["data-key"], float(attributes["width"]))
+        assert named == (language, key, width), name
+        text = drawn[name].replace(f' data-key="{key}"', "", 1)
+        unkeyed.setdefault((language, page), set()).add(text)
+    assert {at: len(texts) for at, texts in unkeyed.items()} == {
+        at: len(combinations) for at in unkeyed
+    }
+
+
+def test_a_piece_on_three_axes_is_checked_in_each_combination_and_nothing_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit visual check` computes the header's scene at each size in each language, and
+    measures its texts' contrast in each combination that scene serves (DEC-005 point 13,
+    DEC-004 point 8): each of the twelve, once in each language. Nothing it finds fails, and
+    once the render keeps the findings record, the check reads the same findings from it."""
+    importable(monkeypatch, svg)
+    root = reference_location(project(tmp_path))
+    measured: list[tuple[str, str]] = []
+    measure = checks.drawn_contrast
+
+    def measuring(
+        scene: Mapping[str, Any], colours: Mapping[str, Any], served: Sequence[str]
+    ) -> Any:
+        measured.extend((scene["language"], key) for key in served)
+        return measure(scene, colours, served)
+
+    monkeypatch.setattr(checks, "drawn_contrast", measuring)
+    unbounded = {"PKIT_COMMAND_DEADLINE": None}
+    computed = run_main(check, THREE_AXES, cwd=root, env=unbounded)
+    assert computed.returncode == 0, computed.stdout
+    summary, *found = computed.stdout.splitlines()
+    assert summary == (
+        f"the piece `{THREE_AXES}` in `visual`: the scenes of 0 read from their findings "
+        f"record, of 1 computed now, of 0 not checked."
+    )
+    assert found and not [line for line in found if line.startswith("  error ")]
+    assert sorted(measured) == sorted(itertools.product(LANGUAGES, named_combinations(THREE_AXES)))
+    assert run_main(render, THREE_AXES, cwd=root).returncode == 0
+    recorded = run_main(check, THREE_AXES, cwd=root, env=unbounded)
+    assert recorded.returncode == 0, recorded.stdout
+    assert recorded.stdout.splitlines() == [
+        f"the piece `{THREE_AXES}` in `visual`: the scenes of 1 read from their findings "
+        f"record, of 0 computed now, of 0 not checked.",
+        *found,
     ]
 
 
@@ -428,10 +668,13 @@ def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
     assert checked > 0
 
 
-#: Every combination of the foundations' modes: a piece drawn in each mode of each axis is
-#: drawn in all of them.
+#: Every combination of the modes of the foundations' value axes, which every brand has
+#: whole: a piece drawn in each of their modes is drawn in all of them. The test brand gives
+#: no size (DEC-021 point 2).
 COMBINATIONS = math.prod(
-    len(axis["modes"]) for axis in read(FOUNDATIONS / "roles.yaml")["axes"].values()
+    len(axis["modes"])
+    for axis in read(FOUNDATIONS / "roles.yaml")["axes"].values()
+    if axis["kind"] == "value"
 )
 #: How many points of each stretch of a connector's route are measured.
 SAMPLES = 16

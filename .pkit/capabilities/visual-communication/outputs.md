@@ -40,6 +40,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/png.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/html.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/html_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css.py
@@ -53,6 +54,8 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
+        - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
+        - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
       record:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
@@ -99,6 +102,7 @@ pkit:
         - visual-communication:DEC-020#7
         - visual-communication:DEC-020#8
         - visual-communication:DEC-021#8
+        - visual-communication:DEC-022#7
         - visual-communication:DEC-023#1
         - visual-communication:DEC-023#2
         - visual-communication:DEC-023#3
@@ -112,6 +116,10 @@ pkit:
         - visual-communication:DEC-024#4
         - visual-communication:DEC-024#5
         - visual-communication:DEC-024#6
+        - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#5
+        - visual-communication:DEC-025#7
+        - visual-communication:DEC-025#9
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -158,9 +166,9 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
-- the `svg` renderer, at version 1.0.1
-- the `pdf` renderer, at version 1.0.0
-- the `html` renderer, at version 1.1.0
+- the `svg` renderer, at version 1.1.0
+- the `pdf` renderer, at version 1.2.0
+- the `html` renderer, at version 1.2.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -173,11 +181,14 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
-- **The seam's version** is 4. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call. Its loss in one of those keys names the key ([Modes](#modes)). What a producer and a code writer are handed and return is as version 1 had it.
+- **The seam's version** is 5. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). Version 5 hands a renderer, for each language and combination it draws, the picture each image shows there, by the image's trace id: the file and its kind, a PNG or a JPEG (DEC-025 point 7). It is handed one for every source of an image, and reads nothing else for a picture. What a producer and a code writer are handed and return is as version 1 had it, the document of values apart.
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
-- **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
-- **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes form 1, which is version 1 of the document of values ([The JSON code writer](#the-json-code-writer)).
+- **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
+- **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
+- **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
+- **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
+- **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
 - **None of these versions** is the format number of the files a project keeps.
 
 ### The loss report
@@ -215,7 +226,7 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as `#rrggbb`, with a `fill-opacity` or `stroke-opacity` where the colour is translucent.
 - **Shapes and text.** A box's stroke lies inside its frame. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
-- **Pictures.** A produced picture is embedded as PNG data: the variant that serves the combination drawn ([Variants](#variants)).
+- **Pictures.** Each picture is embedded whole, as the data of its kind: a PNG as PNG data, a JPEG as JPEG data. A colour profile it carries stays with it (DEC-025 point 5). A produced picture draws the variant that serves the combination drawn ([Variants](#variants)), and a picture role the file the brand gives it there ([Primitives](components.md#primitives)). A picture file draws itself.
 - **Fonts.** Each font the page draws in, for each family and weight a run is drawn in, is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
 - **The same bytes.** Lengths are written to 1/100 px, and attributes in one order, so the same scene and values give the same file.
 
@@ -228,7 +239,7 @@ A *preview* is a render for a person to look at, which `pkit visual render` draw
 Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
-- **an image** whose produced picture has no variant for the combination drawn.
+- **an image** with no picture for the combination drawn: a produced picture with no variant for it, or a picture file that is missing or cannot be read. The message says which.
 
 The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
 
@@ -237,12 +248,14 @@ The third is `refused`: a line that holds neither its ends nor its points, which
 The `pdf` renderer draws a scene as one PDF file for each language and each combination of modes the piece names. The file holds the scene's pages in order, one PDF page for each. It draws the exports a piece declares as `pdf` ([Exports](#exports)); previews stay SVG.
 
 - **Pages.** Each page is as large as its frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the inch. Format 1's top components declare no physical size, so the renderer's declaration states this mapping as its `unit` (DEC-001 point 2).
+- **The largest page.** A PDF reader holds a page of at most 14,400 pt on a side, which is 19,200 px. A larger page, such as a phone's page of a long site, is drawn smaller to fit. It keeps its proportions, and its long side is 14,400 pt. The renderer reports it ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
 - **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
 - **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each keeps a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
+- **Pictures.** Each picture lies in its frame as the SVG renderer draws it ([Primitives](components.md#primitives)). A produced picture draws the variant that serves the combination drawn ([Variants](#variants)), and a picture role the file the brand gives it there. A picture file draws itself. A JPEG is embedded as its own data. A PNG keeps its transparency: an alpha channel's or a palette's as a soft mask, and one transparent colour as a colour key. A colour profile a picture carries goes into the file with it, so a PDF viewer draws its colours as a browser does (DEC-025 point 5). Each picture lies once in the file, however often it is drawn.
 - **The file** names its language, `/Lang`, and the renderer with its version, `/Producer`.
-- **The same bytes.** The file holds no date, and its streams are not compressed. So the same scene and values give the same file on every machine.
+- **The same bytes.** The file holds no date. A picture keeps its file's own data, and what the renderer decodes, such as a soft mask, it writes uncompressed, as it writes its other streams. So the same scene and values give the same file on every machine.
 
 ### What the PDF renderer does not carry yet
 
@@ -250,17 +263,19 @@ The PDF is not tagged. It carries no alternative text, no reading order and no s
 
 ### What the PDF renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive of format 1's scene but the image. So an image is `refused`, and left out of the file. No producer ships yet, so no piece can show a picture yet ([Produced pictures](#produced-pictures)); a later version draws it. The capability reports the loss before the renderer runs, unless the piece accepts it (DEC-005 point 9; *Losses* in *What the check reports*).
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive and property a scene of format 1 holds, the image among them, so this finds no loss in format 1.
 
-While it draws, the renderer reports three losses of its own:
+While it draws, the renderer reports five losses of its own:
 
+- **a page** larger than a PDF reader holds, `approximated`, under the page's trace id. It is drawn smaller, to fit.
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
 - **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
 - **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
+- **an image** with no picture for the combination drawn, `left-out`, as for the SVG renderer. So is a picture the renderer cannot read or decode, such as a PNG whose image data is damaged, or one that would take more than 128 MiB decoded. The message says which.
 
 ## The HTML renderer
 
-The `html` renderer draws a scene as one *page file*: one language's pages, at one key over the size axes, in one web document. The file holds each mode a reader's system can pick ([Modes](#modes)). Writing it takes no browser. It draws the exports a piece declares as `html` ([Exports](#exports)); previews stay SVG. The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
+The `html` renderer draws a scene as one *page file*: the scene's pages in one web document. [Modes](#modes) says which keys a file serves, and how it holds their modes. Writing it takes no browser. It draws the exports a piece declares as `html` ([Exports](#exports)); previews stay SVG. The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
 
 - **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
@@ -268,16 +283,16 @@ The `html` renderer draws a scene as one *page file*: one language's pages, at o
 - **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
 - **Pages** follow each other down the document in the scene's order, each in the middle of the window. Each keeps its own size. The file sets no colour around them. It holds no rule on a window's width.
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
-- **What the file holds.** A file asks for nothing. Its pictures lie inside it as PNG data. Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour role, and every page reaches it.
+- **What the file holds.** A file asks for nothing. Its pictures lie inside it, each as the SVG renderer embeds it ([The SVG renderer](#the-svg-renderer)). Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour role, and every page reaches it.
 - **Names and words.** A family's name is written as the SVG renderer writes it. Whatever else a brand or a piece names is escaped. So none of it can end the file's `<style>` element or start another element.
 - **Marks.** A page takes `data-page` and a text `data-text`, each holding its trace id. A shape keeps `data-id`. A layer takes `data-layer`, a line `data-line`, and the part of a run on one line `data-span`. A line opens with an empty `data-strut`, which places its baseline. The `<html>` element names the piece, the file's key, and the renderer with its version: `data-piece`, `data-key`, `data-renderer`.
 - **The same bytes.** The same scene and values give the same file.
 
 ### Modes
 
-A page file holds, for one language and one size, each mode a reader's signal names, such as `prefers-color-scheme: dark`. The reader's system or browser picks one, and an open page repaints.
+A page file holds each mode a reader's signal names, such as `prefers-color-scheme: dark`. The reader's system or browser picks one, and an open page repaints.
 
-- **Which keys share a file.** Keys that differ only in modes paired with a signal share one file ([What the HTML renderer declares](#what-the-html-renderer-declares)). So a file serves one key over the size axes.
+- **Which keys share a file.** In one language, keys that differ only in modes paired with a signal share one file ([What the HTML renderer declares](#what-the-html-renderer-declares)). So a file serves one language, and one key over the size axes: the file's size.
 - **A mode with no pair** takes a file of its own, drawn from the scene of its size.
 - **The file's key** is the first it serves, in [key order](files.md#keys-of-combinations). So a piece of light and dark takes the default key, and a piece of dark alone takes dark's.
 - **A paint is a custom property.** Each colour role the file paints is one property, in the CSS writer's spelling, such as `--ink`. Text and shapes read the same property, and a colour's alpha lies in its value.
@@ -288,7 +303,7 @@ A page file holds, for one language and one size, each mode a reader's signal na
 - **One mode alone.** A piece of one mode gives a file of one key, under no signal's rule. So dark alone draws dark for every reader. An axis with no mode named stays at its default.
 - **Its schemes.** CSS `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`, so the browser's own ground follows the mode. A file with no such mode names none.
 - **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade.
-- **Pictures.** A picture draws the first key's variant ([What the HTML renderer loses](#what-the-html-renderer-loses)).
+- **Pictures.** A produced picture draws the first key's variant, and a picture role the first key's file ([What the HTML renderer loses](#what-the-html-renderer-loses)). A picture file is the same in every key, so it draws as it is.
 
 ### What the HTML renderer declares
 
@@ -305,21 +320,21 @@ The file carries no alternative text, no reading order and no structure such as 
 
 Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer. While it draws, the renderer reports that renderer's three losses, under its own name ([What the SVG renderer loses](#what-the-svg-renderer-loses)). A run whose role has no colour is written `transparent`. It never takes the browser's own colour.
 
-In a file of several keys, a loss that lies in one key alone names it, under `key` ([The loss report](#the-loss-report)):
+In a file of several keys, these losses lie in one key alone (`key` in [The loss report](#the-loss-report)):
 
 - **A role with no colour in one key** draws nothing in that key, and reports the loss there.
-- **A picture** whose variant in another key holds another picture is `approximated` in that key, since the page draws the first key's.
-- **A picture with no variant for a key** is left out in that key.
+- **A picture** that another key shows in another file is `approximated` in that key, such as a dark logo (*Pictures* in [Modes](#modes)).
+- **A picture with no file for a key,** such as a produced picture with no variant for it, is left out in that key.
 
 ## Exports
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
 - **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows three. The SVG renderer draws `svg`, the PDF renderer `pdf`, and the HTML renderer `html`.
-- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes one [page file](#the-html-renderer) for each language and each set of keys that share one, its pages in order ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
+- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes the [page files](#the-html-renderer) that serve every language and combination the piece names ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **What a file shows of its export.** A component may show the version's number and its date. Each file shows the run's own ([The facts of an export](components.md#the-facts-of-an-export)).
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A page file holds every page too, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A [page file](#the-html-renderer)'s name carries none either, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), but for a copy at a place it names, and the files of the version handed out ([The lock](files.md#the-lock)).
 
 ### The current copy
@@ -361,7 +376,7 @@ A version that let a version's number or its date through, though it does not fi
 
 ```yaml
 let-through:
-  - {fact: version, text: v1000, element: figure/body/number, component: tests/stamp, version: 1.0.0}
+  - {fact: version, text: v1, element: figure/body/narrow, component: tests/stamp, version: 1.0.0}
 ```
 
 | Field | What it holds |
@@ -407,6 +422,7 @@ An export run is refused, and writes nothing, when:
 - the brand cannot be read, or the piece names a mode its brand lacks;
 - a font has no file, or a character has no font family that can measure it;
 - a produced picture the piece shows is missing: it has no record, or its record names a variant file that is missing;
+- a picture file an image shows is missing or cannot be read, the piece's, a library's or a brand's (DEC-025 point 9). The refusal names it, and why;
 - a produced picture is stale (*What makes an output stale* in *What the check reports*), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
 - the piece has no page in one of its languages, so the version would hold no file in it;
@@ -474,12 +490,12 @@ A variant is named by the first key it serves, in key order ([Keys of combinatio
 
 The *hand-over* is what a producer receives. The command writes it as JSON before the producer runs, at `.pkit/capabilities/visual-communication/project/local/handover/<piece>/<output>.json`, local to the clone.
 
-It opens with the *document of values* of the roles the inputs name alone (DEC-005 point 7), which `document` and `version` name: `visual-communication/values`, 1. `lock` holds the versions of the brand and of the foundations library it builds on, and `keys` each combination the piece names, in key order. `tokens` holds each role by its token path, with its value type and its value in each combination. A value is in its DTCG form, made canonical: a colour with `alpha` and without `hex`, a font family a list of names. Three keys follow. `inputs` gives the token path each input reads. `variants` gives each variant's key, the combinations it serves, and its pixels. `frames` holds the measured frames of the scene a producer reads; format 1 hands over none. A variant's values are those of its own key:
+It opens with the *document of values* of the roles the inputs name alone (DEC-005 point 7), which `document` and `version` name: `visual-communication/values`, 2. `lock` holds the versions of the brand and of the foundations library it builds on, and `keys` each combination the piece names, in key order. `tokens` holds each role by its token path, with its value type and its value in each combination. A value is in its DTCG form, made canonical: a colour with `alpha` and without `hex`, a font family a list of names. A [picture role](files.md#picture-roles)'s value is its file's bare name and the brand whose version holds it, such as `{"file": "logo.png", "library": "test-logo"}`. In a combination where the brand gives it none, it is `null`. Three keys follow. `inputs` gives the token path each input reads. `variants` gives each variant's key, the combinations it serves, and its pixels. `frames` holds the measured frames of the scene a producer reads; format 1 hands over none. A variant's values are those of its own key:
 
 ```json
 {
   "document": "visual-communication/values",
-  "version": 1,
+  "version": 2,
   "lock": {"foundations": "1.0.0", "test-brand": "1.0.0"},
   "keys": ["default", "colour-scheme.dark", "contrast.high", "colour-scheme.dark+contrast.high"],
   "tokens": {
@@ -585,7 +601,7 @@ out: web/brand.css
 | Field | What it holds |
 |---|---|
 | `writer` | the code writer: `css` or `json` |
-| `form` | the form of the writer's spelling: `1` |
+| `form` | the form of the writer's spelling: `1`; the `json` writer also takes `2` |
 | `brand` | the brand, by its library's name |
 | `lock` | a version of the brand and of every library it builds on, and of any other library whose roles the code holds, each one the project holds and the capability reads, whose majors fit what each builds on |
 | `out` | where the code goes: a file of the project's tree |
@@ -593,7 +609,7 @@ out: web/brand.css
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it (DEC-005 point 7). So the code changes only when the declaration changes, or when the person names the declaration to `pkit visual add`. Naming it lets the command replace a copy not yet released that the lock names, under the same number ([The lock](files.md#the-lock), DEC-013 point 5). The run that leaves the copy prints the difference in the code first.
-- **What the code holds:** the document of values under the lock: every token the brand exports but a picture role ([Picture roles](files.md#picture-roles)), and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
+- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), at the versions the lock names. It holds them in every combination of the brand's axes ([Axes and modes](files.md#axes-and-modes)) whose kind the writer spells, each other axis at its default. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
@@ -627,21 +643,23 @@ A rule with no token is not written. A rule holds each token once, in the order 
 
 It holds no `[data-contrast="standard"]` rule: every token the contrast axis changes, the colour scheme changes too, and its name comes first. The writer writes each declaration on a line of its own.
 
-**Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 that type is `typography`, such as the test brand's `type.body`. Each other token a size changes is written at the size axis's default, and reported as approximated.
+**Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 those types are `typography`, such as the test brand's `type.body`, and `picture`, such as a brand's logo. Each other token a size changes is written at the size axis's default, and reported as approximated.
 
 ### The JSON code writer
 
-The JSON writer writes the [document of values](#the-hand-over) as one file, for a program that reads data, such as a game's runtime. It adds nothing to the document and leaves nothing out. A declaration names `writer: json`, `form: 1` and an `out` such as `game/brand.json`.
+The JSON writer writes the [document of values](#the-hand-over) as one file, for a program that reads data, such as a game's runtime. It adds nothing to the document, and leaves out only what its form's version does not hold. A declaration names `writer: json`, `form: 2` and an `out` such as `game/brand.json`.
 
-- **Its form.** Form 1 is version 1 of the document. The schema `.pkit/capabilities/visual-communication/schemas/values.schema.json` states that form, so a program can check the file against it. A later version of the document is a new form, and the writer keeps writing this one ([Versions](#versions)).
+- **Its forms.** Each form is that version of the document, and the writer keeps writing each ([Versions](#versions)). A schema states each, so a program can check the file against it:
+  - **Form 2,** version 2, holds a picture role's file. Its schema is `.pkit/capabilities/visual-communication/schemas/values-2.schema.json`.
+  - **Form 1,** version 1, holds no picture role. Its schema is `.pkit/capabilities/visual-communication/schemas/values.schema.json`.
 - **What it holds.** It holds what the code holds ([The declaration](#the-declaration)), in the fields the hand-over opens with, and no others.
 - **Names.** A token keeps its path as the brand exports it, such as `space.1`. So the writer takes no `prefix`, and refuses a declaration that names one, saying why.
 - **Modes.** A token's `values` holds its value under the key of each combination ([Keys of combinations](files.md#keys-of-combinations)). A program picks a set of values by its key. Value axes and size axes are written alike, so the keys of each size the brand gives are among them (DEC-021 point 8).
-- **Values.** Each value is in its DTCG form, as in the hand-over.
+- **Values.** Each value is in the form the hand-over gives it: its DTCG form, or a picture role's file and brand.
 - **The text.** Each key of an object lies on its own line, down to a token's values. Each value then keeps to one line, in the capability's canonical text. So a changed value changes one line, and the same document gives the same file on every machine.
-- **Losses.** The writer takes every value type and every kind of axis, so it reports no loss.
+- **Losses.** Form 2 takes every value type and every kind of axis, so it reports no loss. Form 1 has no form for a picture role, so it leaves each out, as a loss known before the writer runs.
 
-The check reads this code as it reads any written code (*Written code* in *What the check reports*). The test brand gives this file, cut short:
+The check reads this code as it reads any written code (*Written code* in *What the check reports*). The test brand, which gives no picture role, gives this file in form 1, cut short:
 
 ```json
 {
@@ -673,10 +691,13 @@ The *viewing step* draws a piece's pages as images, for a person or an agent to 
 - **No render, and no export.** It moves no lock and keeps no findings. It uses up no version number, writes no `exports.yaml` and records no location.
 - **An export's facts** show as in a [preview](#previews): a number shown is the next export's, which the run leaves for it. Where an image shows a stand-in, the command says so, and why, after what the report says ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
-- **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss.
+- **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss. So is a picture file that is missing or cannot be read.
 - **Which renderer.** It reads a piece that declares `html` through [the HTML renderer](#the-html-renderer), and any other piece through [the SVG renderer](#the-svg-renderer). `--renderer svg` or `--renderer html` names one.
 - **What it draws.** By default, every page in the piece's source language, in the first key in [key order](files.md#keys-of-combinations). That is the combination of defaults wherever the piece names it. `--page`, `--language` and `--key` pick others. `--every-language` and `--every-key` take them all.
-- **The size.** An image takes 1568 pixels on its long edge, or more where the page's smallest text would land under 10 pixels.
+- **Each size.** A piece on a size axis is drawn at one size by default. Name each other size's key with `--key`, a phone's among them, or take every key with `--every-key`.
+- **The size of an image.** A page is drawn 1568 pixels on its long edge, or larger where its smallest text would land under 10 pixels. No image passes 1568 pixels on either edge.
+- **Bands.** A page too tall for one such image is drawn in *bands* (DEC-022 point 7). Each band is a strip of its height as wide as the page, and all share one scale. Each band overlaps the next by the page's tallest line, so every line lies whole in one band. Where a gap between elements lies in that overlap, the band ends in it. Read every band of a page before you judge it, and a band's edge is no fault of the page.
+- **A page too wide** for one image whose smallest text reads is drawn 1568 pixels wide. Its smallest text may not read, and the report says so.
 - **The ground.** Where a page draws no ground of its own, the SVG renderer's image lies on white, which the piece never set. The HTML renderer's lies on the browser's own ground in the mode drawn, which differs between browsers. Judge a text over nothing knowing this.
 - **No promise about pixels.** An image may change with the tool, its version or the machine (DEC-015 point 6).
 
@@ -689,7 +710,7 @@ resvg draws them, with no network. It draws from the fonts the page embeds, neve
 A browser draws them. No other format needs one, and the capability installs none.
 
 - **Which browser.** A browser of the Chromium family: the first found where Chrome and Chromium install themselves, or the one the project names ([The browser](files.md#the-browser)).
-- **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, so a page's image may be larger than its own text needs.
+- **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, as far as the widest page fits 1568 pixels. So a page's image may be larger than its own text needs. The browser draws the same bands of a page as resvg does at that scale.
 - **Each mode.** Each key the run draws out of a file is drawn in that start, with no reload. The step sets every signal the file reads by the browser's emulation, so the machine's own settings play no part. Each read the report names runs in each key drawn.
 - **What an image shows.** One browser's drawing, which stands for no other browser. The report names that browser and its version.
 - **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window and printing. Open the page file in your own browsers to see those.
@@ -724,8 +745,9 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 | File | What it holds |
 |---|---|
 | `<piece>.<language>.<key>.png` | one page drawn. A piece of more than one page adds the page's number, from 1, to this name and the next: `<piece>.<language>.<key>.<n>.png` |
-| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids) |
-| `<piece>.<language>.<key>.html` | through the HTML renderer, the page file the images were drawn from, with every page of that language. It holds every key of its file, whichever keys the run draws, and its key is the first ([Modes](#modes)). Open it in your own browser. It is no export, and is never committed |
+| `<piece>.<language>.<key>.band-<k>.png` | one [band](#the-viewing-step) of a page, numbered from 1 at the page's top, in place of the page's one image. A piece of more than one page puts the page's number first: `<piece>.<language>.<key>.<n>.band-<k>.png` |
+| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids). Beside a band, it names the band. It frames each element the band shows, in part or whole, so a frame a band's edge crosses reaches past the image |
+| `<piece>.<language>.<key>.html` | through the HTML renderer, the [page file](#the-html-renderer) the images were drawn from, whichever pages and keys the run draws. Its `<key>` is the file's key ([Modes](#modes)). Open it in your own browser. It is no export, and is never committed |
 | `report.json` | [What the report says](#what-the-report-says) |
 
 ### What the report says
@@ -733,11 +755,14 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
 - **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white.
-- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`.
+  - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
+  - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
+- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`. Each page is read whole, once, so a text in two bands is listed once.
 - **`losses`:** each [loss](#the-loss-report) the renderer reports. A loss that names a key is listed under that key alone. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
 - **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. resvg may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks. Through the HTML renderer, an entry is a span with `why`:
   - `no face`: the file holds no face of its family at its weight, with that family and weight;
   - `font of the machine`: the browser drew it, even in part, in a font of the machine, with each such font.
+- **`profiles`:** through the SVG renderer, each picture a page shows that carries a colour profile, with its element and its file's name. resvg may draw it without its profile, where a browser draws it by it (DEC-025 point 5).
 
 Through the HTML renderer the report holds these too:
 
@@ -757,7 +782,7 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 - a renderer other than `svg` and `html`;
 - a brand that cannot be read;
 - a font with no file, or a character no font holds;
-- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;
+- a page with no size, or an image of one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;
 - through the HTML renderer, a `browser` in the configuration that names no path ([The browser](files.md#the-browser)).
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.

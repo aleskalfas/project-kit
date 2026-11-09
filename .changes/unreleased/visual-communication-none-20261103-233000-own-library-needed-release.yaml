@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-014 decides how the release a project's own library needs is computed
-  (#2612). The record designs ahead: the command that releases a project's
-  own library, and the edits to DEC-003 and DEC-013, come in later pull
-  requests, so no surface moves yet.

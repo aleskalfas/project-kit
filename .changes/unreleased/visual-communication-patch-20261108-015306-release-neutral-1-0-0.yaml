@@ -1,0 +1,6 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Added
+body: >
+  `neutral` 1.0.0, a library the capability ships, is released: its files are fixed from now on, and the capability records their hash.

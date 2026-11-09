@@ -9,8 +9,9 @@ Six checks hold every version it ships, each run on the capability's folder as t
 holds it and on the history as the clone holds it:
 
 1. **Each released version** matches the hash its record keeps, and the engine reads its
-   files: each file of the capability's format holds its schema, and its roles, its
-   components, its brand or its notation are read with the versions it is checked with.
+   files: each file of the capability's format holds its schema, its roles, its
+   components, its brand or its notation are read with the versions it is checked with,
+   and each picture file it holds is read as the engine reads it.
 2. **Every released version was untouched since the release it names:** no change touched
    the place of the version being built between the release step's change that wrote
    the version of the capability it names and the change on HEAD's first-parent line that
@@ -54,9 +55,10 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import (
     CAPABILITY,
-    FOUNDATIONS,
     REPO,
+    TEST_PICTURES,
     bound,
+    built_as_released,
     project,
     write,
     yaml_text,
@@ -155,6 +157,11 @@ FAILS_AT_ANY_LEVEL = frozenset(
         # A notation the engine cannot read.
         "notation-kind",
         "notation-unreadable",
+        # A picture file the engine cannot read, or does not read (DEC-025 point 9).
+        "picture-unreadable",
+        "picture-stored",
+        "picture-encoding",
+        "picture-extension",
         # A check that stopped on an error it does not expect.
         "unexpected-error",
         # The list of the location these checks build.
@@ -574,9 +581,10 @@ UNFINISHED = bound(
 
 
 def capability(tmp: Path) -> Path:
-    """A capability's folder that builds the foundations, as the tree holds them."""
+    """A capability's folder that builds the foundations as they stood when 1.0.0 was
+    released, and releases none."""
     folder = tmp / "capability"
-    shutil.copytree(FOUNDATIONS, folder / libraries.FOLDER / libraries.FOUNDATIONS)
+    built_as_released(folder / libraries.FOLDER / libraries.FOUNDATIONS)
     return folder
 
 
@@ -610,12 +618,16 @@ def add_library(folder: Path, name: str, builds_on: Mapping[str, int], version: 
     write(built(folder, name) / "library.yaml", yaml_text(library))
 
 
-def release(folder: Path, name: str = libraries.FOUNDATIONS) -> Any:
+def release(folder: Path, name: str = libraries.FOUNDATIONS, needs: str | None = None) -> Any:
     """Release the version being built of `name` as it stands: its files copied to its place,
-    and its entry added to its record."""
+    its `library.yaml` naming `needs` as the release it needs where given, as the release
+    writes it, and its entry added to its record."""
     version = libraries.read_library(built(folder, name)).version
     place = shipped.place_of(folder, name, version)
     shutil.copytree(built(folder, name), place)
+    if needs is not None:
+        written = shipped.needs_written(place / "library.yaml", needs)
+        (place / "library.yaml").write_bytes(written)
     rewrite_entry(folder, name, version)
     return version
 
@@ -646,8 +658,11 @@ def test_a_folder_that_releases_nothing_passes_every_check(tmp_path: Path) -> No
 
 
 def test_a_released_version_as_its_record_keeps_it_passes(tmp_path: Path) -> None:
+    """Released as the release writes it, naming the capability's current version. Where
+    the capability's own folder releases that number too, the two are one content, and a
+    version that differed from it would be reported as `copy-hash-differs`."""
     folder = capability(tmp_path)
-    release(folder)
+    release(folder, needs=shipped.current_version())
 
     [library] = shipped.read(folder)
     [released] = library.released
@@ -720,6 +735,27 @@ def test_a_released_component_the_engine_cannot_read_fails_and_another_finding_i
         "`formula-dimension` (attention) at foundations/squared#parts.box.height in "
         "foundations@1.0.0: foundations/squared: the formula `=@space.3 * @space.3` gives "
         "a length to the power 2 where a length belongs"
+    ]
+
+
+def test_a_picture_file_the_engine_does_not_read_fails_released_or_being_built(
+    tmp_path: Path,
+) -> None:
+    """The full read reads each picture file a version holds (DEC-014 point 1), and one it
+    refuses breaks a released version's promise as a component it cannot read does."""
+    folder = capability(tmp_path)
+    picture = built(folder) / "pictures" / "deep.png"
+    picture.parent.mkdir()
+    shutil.copyfile(TEST_PICTURES / "deep.png", picture)
+    said = (
+        "at visual/libraries/foundations/1.0.0/pictures/deep.png in foundations@1.0.0: "
+        "`deep.png` is a PNG of 16 bits for each sample, which the capability does not read"
+    )
+
+    assert built_outcome(tmp_path / "1", folder).failures == [f"`picture-encoding` (fails) {said}"]
+    release(folder)
+    assert released_outcome(tmp_path / "2", folder).failures == [
+        f"`picture-encoding` (attention) {said}"
     ]
 
 
