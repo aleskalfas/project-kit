@@ -5,8 +5,10 @@ read of a page with planted faults, its bounds, what a stop says, and the start 
 colours.
 
 A stand-in program speaks the pipe in the browser's place (`visual_communication_browser`), so
-these tests need no browser. The one that starts a real browser skips where none is found, or
-where a sandbox stops the one found. No test holds a pixel as a contract (DEC-015 point 6).
+these tests need no browser. The ones that start a real browser skip where none is found, or
+where a sandbox stops the one found. The one that holds that a start forced by the emulation
+alone stops skips too where that browser's emulation forces the text. No test holds a pixel as
+a contract (DEC-015 point 6).
 """
 
 from __future__ import annotations
@@ -1710,12 +1712,59 @@ def test_a_real_browser_draws_the_reference_file_in_each_forced_palette_clean(
     assert [each.image for each in light.images] != [each.image for each in dark.images]
 
 
-@real_browser
-def test_a_real_browser_whose_colours_only_the_emulation_forces_stops_the_forced_start(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Without the flag the emulation forces the shapes and leaves the text in the file's
-    colours: the span left to forcing then shows no ink, and the first read stops."""
+@dataclasses.dataclass(frozen=True)
+class EmulationAlone:
+    """What the browser found shows of the span left to forcing where only the emulation
+    forces its colours: the browser, with its version and its program, and the forced palettes,
+    in order, in which the span showed no ink."""
+
+    browser: str
+    unreached: tuple[str, ...]
+
+
+@pytest.fixture(scope="module")
+def emulation_alone(tmp_path_factory: pytest.TempPathFactory) -> EmulationAlone:
+    """The forced start's first read's probe, in a start without the flag that forces the
+    browser's colours: the planted page as that read writes it, read in each forced palette's
+    emulation, and whether the span left to forcing left ink (DEC-027 point 4). Some browsers
+    force the text under the emulation alone, and some leave it in the file's colours."""
+    place = tmp_path_factory.mktemp("emulation-alone")
+    file = place / viewing_browser.PLANTED_FORCED_FILE
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    file.write_text(viewing_browser._planted_html(face, SIGNALS, forced=True), encoding="utf-8")
+    program = found_browser()
+    assert program is not None
+    modes = [
+        (palette.name, {**palette.signals, **viewing_browser.FORCED})
+        for palette in viewing_browser.PALETTES
+    ]
+    try:
+        drawing = viewing_browser._start(
+            file,
+            [viewing_browser.PLANTED_FORCED_PAGE],
+            2.0,
+            program,
+            place / "local",
+            SIGNALS,
+            modes,
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    unreached = tuple(
+        shown.palette
+        for shown in drawing.shown
+        if viewing_browser.FORCED_FINDING in viewing_browser._named(shown.read)
+    )
+    return EmulationAlone(f"{drawing.browser} ({program})", unreached)
+
+
+def forced_without_the_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """The planted page drawn by the forced start of the browser found, its flag that forces
+    the browser's colours swapped for one that changes nothing, so the emulation alone forces
+    them: the drawing, or the stop its first read raised. The test skips where a sandbox stopped
+    the browser."""
     monkeypatch.setattr(viewing_browser, "FORCING", "--no-first-run")
     file = tmp_path / "planted.html"
     file.write_text(
@@ -1723,8 +1772,8 @@ def test_a_real_browser_whose_colours_only_the_emulation_forces_stops_the_forced
     )
     browser = found_browser()
     assert browser is not None
-    with pytest.raises(viewing_browser.Stopped) as stop:
-        viewing_browser.draw_forced(
+    try:
+        return viewing_browser.draw_forced(
             file,
             [viewing_browser.PLANTED_PAGE],
             2.0,
@@ -1732,9 +1781,49 @@ def test_a_real_browser_whose_colours_only_the_emulation_forces_stops_the_forced
             tmp_path / "local",
             signals=SIGNALS,
         )
-    if stop.value.sandbox:
-        pytest.skip(f"a sandbox stopped the browser: {stop.value}")
-    assert stop.value.what.endswith("so the forced palette did not reach the text")
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        return stop
+
+
+@real_browser
+def test_a_real_browser_whose_colours_only_the_emulation_forces_stops_the_forced_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, emulation_alone: EmulationAlone
+) -> None:
+    """Where the emulation alone forces the shapes and leaves the text in the file's colours,
+    as Chrome 157 does, the span left to forcing shows no ink without the flag, and the first
+    read stops. Where it forces the text too, the span shows ink, and the first read rightly
+    passes (DEC-027 point 4): the test skips there, naming the browser."""
+    if not emulation_alone.unreached:
+        pytest.skip(
+            f"{emulation_alone.browser} forces the text under its emulation alone, so the span "
+            "left to forcing shows ink in each forced palette without the flag"
+        )
+    stop = forced_without_the_flag(tmp_path, monkeypatch)
+    assert isinstance(stop, viewing_browser.Stopped)
+    assert stop.what.endswith("so the forced palette did not reach the text")
+
+
+@real_browser
+def test_a_real_browsers_forced_start_stops_exactly_where_the_span_left_to_forcing_shows_no_ink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, emulation_alone: EmulationAlone
+) -> None:
+    """In any browser, without the flag: the first read stops, naming the first forced palette
+    in which the span left to forcing showed no ink, and draws where it showed ink in each
+    (DEC-027 point 4)."""
+    drawn_or_stopped = forced_without_the_flag(tmp_path, monkeypatch)
+    stopped = (
+        drawn_or_stopped.what if isinstance(drawn_or_stopped, viewing_browser.Stopped) else None
+    )
+    expected = (
+        f"the first read set the forced palette `{emulation_alone.unreached[0]}`, and a span "
+        "with no paint, left to forcing, left no ink, so the forced palette did not reach the "
+        "text"
+        if emulation_alone.unreached
+        else None
+    )
+    assert stopped == expected, emulation_alone.browser
 
 
 def drawn_by_a_real_browser(file: Path, pages: Sequence[Any], scale: float, tmp_path: Path) -> Any:
