@@ -89,7 +89,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/capabilities/visual-communication/scripts/look.py
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8"]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8"]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#the-reference-graph
@@ -541,7 +541,7 @@ If a same-named capability later begins shipping from kit source (graduation, be
 
 **Query-command environments.** `capabilities install`, `capabilities register` and `capabilities upgrade` run the provisioning step of `init` and `sync` (see [`sync`](#sync)) after deploying the capability and before the questions, scoped to that capability: each query command it registers is resolved once, online, and reported with the line `sync` prints — `provisioned`, `unchanged … already provisioned`, `skipped`, or a `warning` that never fails the command. An offline `pkit validate` then answers for it without a `pkit sync` first. Other components' commands are left to `sync`, and `--dry-run` provisions nothing.
 
-**The runtime-ignore file.** `capabilities install`, `capabilities register` and `capabilities upgrade` render `.pkit/.gitignore` after deploying the capability, as `sync` does (ADR-009 rule 7). `capabilities uninstall` renders it once the capability is unregistered, and `--dry-run` renders nothing. The file then holds the lines each installed component declares under `runtime_ignore:`, and none of a removed one's. A `pkit sync` right after leaves it as it is.
+**The runtime-ignore file.** `capabilities install`, `capabilities register` and `capabilities upgrade` render `.pkit/.gitignore` after deploying the capability, [as `sync` does](../lifecycle/README.md#what-sync-writes) (ADR-009 point 7). `capabilities uninstall` renders it once the capability is unregistered, and `--dry-run` renders nothing. The file then holds the lines each installed component declares under `runtime_ignore:`, and none of a removed one's. A `pkit sync` right after leaves it as it is.
 
 ### The project rule set a capability declares
 
