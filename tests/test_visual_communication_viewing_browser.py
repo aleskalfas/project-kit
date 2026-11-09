@@ -1282,6 +1282,18 @@ def test_a_forced_start_passes_the_flag_that_forces_the_browsers_colours(tmp_pat
     assert viewing_browser.FORCING not in logged(plain)[0]["flags"]
 
 
+def test_a_forced_start_holds_each_page_at_its_own_size_with_its_gutters(tmp_path: Path) -> None:
+    """Its window is the first start's: the widest page, with the gutter on each side, so a
+    fixed page keeps its size under forced colours too (DEC-031 point 5)."""
+    pages = [
+        page("narrow", 400.5, 300.0, text("a", [span("a", 0)])),
+        page("wide", 1280.0, 720.0, text("b", [span("b", 1)])),
+    ]
+    _, program = forced_drawn(tmp_path, documents={FILE: {"pages": pages}})
+    (window,) = [flag for flag in logged(program)[0]["flags"] if flag.startswith("--window-size=")]
+    assert window.split("=")[1].split(",")[0] == "1344"
+
+
 def test_no_flag_of_a_forced_start_touches_or_weakens_the_browsers_sandbox(
     tmp_path: Path,
 ) -> None:
