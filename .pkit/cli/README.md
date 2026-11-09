@@ -541,6 +541,8 @@ If a same-named capability later begins shipping from kit source (graduation, be
 
 **Query-command environments.** `capabilities install`, `capabilities register` and `capabilities upgrade` run the provisioning step of `init` and `sync` (see [`sync`](#sync)) after deploying the capability and before the questions, scoped to that capability: each query command it registers is resolved once, online, and reported with the line `sync` prints — `provisioned`, `unchanged … already provisioned`, `skipped`, or a `warning` that never fails the command. An offline `pkit validate` then answers for it without a `pkit sync` first. Other components' commands are left to `sync`, and `--dry-run` provisions nothing.
 
+**The runtime-ignore file.** `capabilities install`, `capabilities register` and `capabilities upgrade` render `.pkit/.gitignore` after deploying the capability, as `sync` does (ADR-009 rule 7). `capabilities uninstall` renders it once the capability is unregistered, and `--dry-run` renders nothing. The file then holds the lines each installed component declares under `runtime_ignore:`, and none of a removed one's. A `pkit sync` right after leaves it as it is.
+
 ### The project rule set a capability declares
 
 A capability's method rule set takes no scope, so its rules bind only through a rule set of the project's own that inherits it ([COR-051](../decisions/core/COR-051-rule-sets.md) point 7). A capability may declare one such set in its package metadata, `project_rule_set` ([the lifecycle README, "Field layout and casing"](../lifecycle/README.md#field-layout-and-casing)). `capabilities install` creates it, as [COR-017](../decisions/core/COR-017-capability-pattern.md) sets. Running install is the consent.

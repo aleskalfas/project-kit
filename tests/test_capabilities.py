@@ -1729,6 +1729,68 @@ def test_cli_uninstall_not_installed_errors(kit_target: Path) -> None:
     assert "not installed" in result.output
 
 
+# --- the runtime-ignore render on install and uninstall (ADR-009 rule 7, #2367) ---
+
+#: The runtime-ignore line project-management declares, as `.pkit/.gitignore` renders it.
+_PM_IGNORE_LINE = "capabilities/project-management/project/instance/*.json"
+
+
+@pytest.fixture
+def committed_target(make_adopter_repo: MakeAdopterRepo, monkeypatch) -> GitRepo:
+    """A project with the backbone installed and committed, as after `pkit init`.
+    Provisioning is stubbed out, so neither an install nor a sync here asks uv
+    to resolve a query command."""
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    monkeypatch.setattr(install_mod, "provision_query_commands", lambda *_a, **_k: None)
+    repo = make_adopter_repo()
+    repo.commit("adopter: pkit init")
+    return repo
+
+
+def _ignore_lines(root: Path) -> list[str]:
+    return (root / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def _what_sync_changes(repo: GitRepo) -> str:
+    """Run `pkit sync` and return what it changed, as `git status --porcelain` lists it."""
+    result = CliRunner().invoke(main, ["sync"])
+    assert result.exit_code == 0, result.output
+    return repo.git("status", "--porcelain").stdout
+
+
+def test_cli_install_writes_the_ignore_lines_so_the_next_sync_changes_nothing(
+    committed_target: GitRepo,
+) -> None:
+    """The install renders `.pkit/.gitignore` with the capability's lines, as sync
+    does, so a sync after the committed install leaves git status clean."""
+    result = CliRunner().invoke(main, ["capabilities", "install", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert "rendered      .pkit/.gitignore" in result.output
+    assert _PM_IGNORE_LINE in _ignore_lines(committed_target.root)
+    committed_target.commit("adopter: install project-management")
+    assert _what_sync_changes(committed_target) == ""
+
+
+def test_cli_uninstall_drops_the_ignore_lines_so_the_next_sync_changes_nothing(
+    committed_target: GitRepo,
+) -> None:
+    """The uninstall renders `.pkit/.gitignore` without the capability's lines, so
+    a sync after the committed uninstall leaves git status clean."""
+    runner = CliRunner()
+    assert runner.invoke(main, ["capabilities", "install", "project-management"]).exit_code == 0
+    _what_sync_changes(committed_target)
+    committed_target.commit("adopter: install project-management")
+    assert _PM_IGNORE_LINE in _ignore_lines(committed_target.root)
+
+    result = runner.invoke(main, ["capabilities", "uninstall", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert _PM_IGNORE_LINE not in _ignore_lines(committed_target.root)
+    committed_target.commit("adopter: uninstall project-management")
+    assert _what_sync_changes(committed_target) == ""
+
+
 # --- pkit capabilities upgrade (per COR-017) ---------------------------
 
 
