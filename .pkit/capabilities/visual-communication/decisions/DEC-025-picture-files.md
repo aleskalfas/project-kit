@@ -106,7 +106,7 @@ Terms:
 - **Who says it.** Each command that moves a piece's lock off one brand and onto another says it in its output.
 - **What it says, in each language.** Each picture file of the piece that a scene shows, whoever names it, and each picture role a part shows that the new brand gives no value, each with its trace id.
 - **Said, never kept.** No record keeps it, and the check is silent on it.
-- **The before-and-after says it too,** wherever its two locks name different brands ([visual-communication:DEC-019-lock-moves-and-pruning] point 5).
+- **The before-and-after says it too,** wherever its two locks name different brands ([visual-communication:DEC-019-lock-moves-and-pruning] point 5). A reviewer of a published piece's move reads that command and the change, not the run's output.
 - **A lock a person writes by hand** moves with no command, under the brand its writer chose. The before-and-after's look back says it to a reviewer of the change.
 - **Not a library's own file,** which is part of the form its owner chose for every brand (point 3).
 
@@ -171,7 +171,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why the seam rises.** A renderer built for an earlier seam looks a picture up by its produced output and writes it as PNG data, so it would draw a picture file, a picture role or a JPEG wrong with no error. The version exists so the engine refuses such a renderer, and rose so for runs ([visual-communication:DEC-012-text-runs], Implications). The seam is never kept, so the rise costs nothing outside the capability.
 
-**Why the command that moves the lock says it.** The lock's move is the one moment a command sees the old brand and the new, and none of the piece's picture files follows the new brand (DEC-001 point 3). The check reads the files as they are, so it cannot tell a change of brand from a piece that always had its brand (DEC-002 point 7), and said at every render the report would ask nothing of anyone. A reviewer of a published piece's move reads the before-and-after and the change, not the run's output.
+**Why the command that moves the lock says it.** The lock's move is the one moment a command sees the old brand and the new, and none of the piece's picture files follows the new brand (DEC-001 point 3). The check reads the files as they are, so it cannot tell a change of brand from a piece that always had its brand (DEC-002 point 7), and said at every render the report would ask nothing of anyone. A comparison is a command's (DEC-002 point 7), and the before-and-after is the one a reviewer runs.
 
 **Why a fact in the brand, and none at the piece.** A brand's owner may forget its logo, and one fact in its version tells them. A piece meets a brand without a logo at the change of brand, where point 8 says it.
 
