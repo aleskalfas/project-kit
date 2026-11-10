@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  DEC-032 decides how a brand gives an order's colour steps (#2896): two
+  ends and a text for each mode, which the engine spreads evenly over a
+  list's places, with each step's values handed with the scene. It lands
+  accepted, with the edits its Implications name to accepted records.
+  `GRAPHIC` moves to 1.1.0: RS-GRAPHIC-007 also accepts, on a page whose
+  point is an order, a list given the steps with no item naming a concept.
+  The rule only loosens, so no pin moves. No role, schema, check or
+  renderer changes yet: the foundations, the engine, the starter and the
+  neutral brand change in the Tasks under #2882, each with its own
+  changeset.

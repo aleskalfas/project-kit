@@ -1,6 +1,6 @@
 ---
 rule-set: GRAPHIC
-version: 1.0.0
+version: 1.1.0
 rules:
   RS-GRAPHIC-001:
     status: accepted
@@ -43,7 +43,7 @@ rules:
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#6", "visual-communication:DEC-004#10", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-028#10", "visual-communication:DEC-028#11"]}
+        anchors: {record: ["visual-communication:DEC-001#6", "visual-communication:DEC-004#10", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-028#10", "visual-communication:DEC-028#11", "visual-communication:DEC-032#3"]}
 ---
 
 # GRAPHIC — how a piece looks
@@ -107,6 +107,6 @@ Every difference a reader takes for meaning is one the content has, and every di
 The strongest of these differences goes to what the page's point is about. Where that point is an order, the parts of the items that show the order do not take each concept's hue: they share one colour, or step in one shade. Each concept an item names keeps its colour on a mark of its own, such as its icon.
 
 - **What it does not judge.** The page's frame, such as its title bar and its footer, and what lies inside a picture made elsewhere, such as a screenshot.
-- **From the text:** on a page whose point is an order, whether the content points the parts that show the order at one role, rather than each at its concept's.
+- **From the text:** on a page whose point is an order, whether the content points the parts that show the order at one role, or gives their list the steps of an order with no item naming a concept, rather than each at its concept's.
 - **What the text gives the drawn page.** The differences the content has: the order of a list its pattern draws in order, its quantities, the concepts and states it names, and what it marks.
 - **On the drawn page:** whether each difference the content has shows as what it is, and whether the page shows one the content lacks.
