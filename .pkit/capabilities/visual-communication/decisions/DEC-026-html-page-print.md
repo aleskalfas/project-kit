@@ -6,7 +6,7 @@ date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** when a reader prints a page file, its pages follow one another down the sheets, as they follow one another on screen. A sheet holds as many pages as fit. A page that does not fit the rest of a sheet moves whole to the next one, and a page taller than a sheet runs on across sheets. Such a page is to break between lines of text, never through one, and a record of its own decides how. Until then the browser picks where it breaks. Only a fixed page, such as a deck's slide, prints inside its keyline, the thin line that shows where it ends on screen. A figure and a web page print with none, and the backdrop around the slides does not print. The sheet is the reader's: the file sets no size, margin or orientation. Each page prints in its own colours, and the file picks no mode for print. For example, a deck's slides printed on A4 sheets held upright lie two to a sheet, each whole inside its thin line.
+**In plain terms:** when a reader prints a page file, its pages follow one another down the sheets, as they follow one another on screen. A sheet holds as many pages as fit. A page that does not fit the rest of a sheet moves whole to the next one, and a page taller than a sheet runs on across sheets. Such a page is to break between lines of text, never through one, and a record of its own decides how. Until then the browser picks where it breaks. Only a fixed page, such as a deck's slide, prints inside its keyline, the thin line that shows where it ends on screen. A figure and a web page print with none. The backdrop, the tinted ground around the slides on screen, does not print. The sheet is the reader's: the file sets no size, margin or orientation. Each page prints in its own colours, and the file picks no mode for print. For example, a deck's slides printed on A4 sheets held upright lie two to a sheet, each whole inside its thin line.
 
 ## Context
 
@@ -15,7 +15,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **The record of modes** lists printing in a dark mode the same way ([visual-communication:DEC-023-html-page-modes], Context and Implications).
 - **The record of the backdrop** keeps its keyline and backdrop off a print until this record decides ([visual-communication:DEC-031-html-page-backdrop] point 4). The renderer writes them for a screen alone, so a print holds neither.
 
-The fault came from the change that drew the page through a browser ([project-kit#2804](https://github.com/aleskalfas/project-kit/pull/2804), "Other engines" and "A person's look"). Printed, the deck's page file ran its pages on with no break, so a sheet's edge cut a page, and in Firefox the text below the cut parted from its shapes. The runs behind this record are the evidence of its pull request ([project-kit#2850](https://github.com/aleskalfas/project-kit/pull/2850)).
+The fault came from the change that drew the page through a browser ([project-kit#2804](https://github.com/aleskalfas/project-kit/pull/2804), "Other engines" and "A person's look"). Printed, the page file of the showcase deck, the deck of the repository the capability is authored in, ran its pages on with no break, so a sheet's edge cut a page, and in Firefox the text below the cut parted from its shapes. The runs behind this record are the evidence of its pull request ([project-kit#2850](https://github.com/aleskalfas/project-kit/pull/2850)).
 
 On 9 November 2026 whoever maintains the capability chose a compact print, over a sheet for each page, from a mock-up of a deck's slides on A4 sheets. [The comment on #2824 that records it](https://github.com/aleskalfas/project-kit/issues/2824#issuecomment-6740449104) reads: "Pages print compact: they follow each other on a sheet, so several fit on one. Each page is framed by a thin line, and a page that would be cut at a sheet's foot starts the next sheet whole. A page taller than a sheet still runs on."
 
@@ -41,7 +41,7 @@ The terms used below:
 - **Each page kept whole where it fits.** The file asks the browser to keep each page on one sheet. So a page that does not fit the rest of a sheet moves whole to the next.
 - **A page taller than a sheet's area runs on** across sheets. That holds for a fixed page too, since point 2 sets no bound on a page's height.
 - **It is to break between a text's lines, never through one,** as whoever maintains the capability asked. A record of its own, the *record on breaks*, decides how (Implications).
-- **Until then the browser picks where it breaks.** The file holds no rule on it, since none reaches the renderer's absolutely placed lines and layers (Rationale). So a break may cut or move a line of text, or cut or lose a shape, and this record accepts that until the record on breaks lands.
+- **Until then the browser picks where it breaks.** The file holds no rule on it, since none reaches the renderer's absolutely placed lines and layers (Rationale). So a break may cut a line of text, or move it off the place DEC-020 point 2 gives it, and cut or lose a shape. This record accepts that until the record on breaks lands.
 
 ### 2. A page prints at most the sheet's width
 
@@ -57,7 +57,7 @@ The terms used below:
 - **Room for it.** The area, less the keyline on each side, is a fixed page's window. So the keyline lies inside the sheet's area, and the page's drawing shrinks only where it would not fit, keeping its proportions.
 - **Its colour as on screen.** It takes the mix of the browser's colours DEC-031 point 3 sets, under more contrast and forced colours too. Point 5 keeps that colour on paper.
 - **It reads on paper.** Its share keeps DEC-031's floor of 3 to 1 against a white sheet too, in light and in dark. Under more contrast, where the keyline takes the browser's text colour whole, a dark page's keyline is white on a white sheet, and the page's own ground marks its edge there.
-- **Only a fixed page.** A deck's slide and a handout's page print inside their keylines. A page that is no fixed page prints with no keyline, as on screen: a figure, and a site's page. Two of a site's pages on one sheet are told apart by the gap between them.
+- **Only a fixed page.** A deck's slide and a handout's page print inside their keylines. A page that is no fixed page prints with no keyline, as on screen: a figure, and a site's page.
 
 ### 4. The sheet is the reader's
 
@@ -80,7 +80,7 @@ The scene sets none of them, so the renderer declares each beside how its pages 
 
 ### 7. What checks a print
 
-- **A test on the file** holds what points 1 to 5 ask of it, all but where a page that runs on breaks, as a test holds how its pages lie on screen (DEC-020 point 5). Where the machine has the step's browser, the test may also print the file there and count its sheets. That print lies in the test, never in the step's shipped code. It asserts no mode, since the step's emulated dark signal printed dark where a real dark system printed light.
+- **A test on the file** holds what points 1 to 5 ask of it, all but where a page that runs on breaks, as a test holds how its pages lie on screen (DEC-020 point 5). Where the machine has the step's browser, the test may also print the file there and count its sheets. That print lies in the test, never in the step's shipped code, and it asserts no mode.
 - **The viewing step reads no print.** It draws the screen alone, and a person looks at a print in each browser (DEC-020 point 5). Safari gets the same rules, and that person's print is its only check.
 - **In print alone.** Every rule here holds in print alone. So the screen's rules, which the step's measures and images rest on, stay as DEC-020 and DEC-031 have them.
 
@@ -92,7 +92,7 @@ The scene sets none of them, so the renderer declares each beside how its pages 
 
 **Why a tall page runs on, a slide too.** It is the maintainer's choice: "A page taller than a sheet still runs on." Shrunk to one sheet, a site's tall page prints too small to read. Run on, a page keeps the scale its width gives it.
 - **A slide needs no bound.** A 16:9 slide fits the area of A4 and Letter either way up. A bound on a fixed page's height would reach only a slide of another shape, and would shrink a tall fixed page as far as it would a site's page.
-- **The cost:** a page taller than the area breaks where the sheet ends, a figure, a site's page and a slide of another shape alike. The reader can print it the other way up, or take the PDF export where the piece declares `pdf`.
+- **The cost:** a page taller than the area breaks where the sheet ends, a figure, a site's page and a slide of another shape alike. The reader can print it on a sheet taller than wide, or take the PDF export where the piece declares `pdf`.
 
 **Why the break waits for the record on breaks.** CSS's rules on breaks, which keep a block whole, a heading with what follows, or a paragraph's lines together, act on boxes in the document's flow. Every text, line and layer of the renderer's page is placed absolutely, where the engine put it (DEC-020 points 2 and 3). So no rule of the file chooses the break. What mends it changes how the renderer writes a page that runs on, or what the scene tells it. That is DEC-020's to decide, so the record on breaks takes it up, not a rule of print.
 
@@ -114,7 +114,7 @@ The scene sets none of them, so the renderer declares each beside how its pages 
 
 **Why Firefox's faults stay open.** Firefox parts a page's text from its shapes in cases no rule of the file reaches, such as a scale the reader sets in the print dialog. So a bug takes them up by what was seen (Implications).
 
-**Why the step reads no print.** A test on the file holds the rules on every machine. A print through the step would run in Chromium alone, where every rule of this record held. The faults lie where the step does not run, so a person looks.
+**Why the step reads no print.** A test on the file holds the rules on every machine. A print through the step would run in Chromium alone, where every rule of this record held but where a page that runs on breaks, which is the record on breaks' (point 1). Firefox's faults lie where the step does not run, so a person looks. The test asserts no mode, since the step's emulated dark signal printed dark where a real dark system printed light.
 
 ### Alternatives considered
 
@@ -122,7 +122,7 @@ The scene sets none of them, so the renderer declares each beside how its pages 
 - **The pages run on with no print rule,** as #2804 tested them. Rejected. A sheet's edge cuts a slide, and Firefox parts its text from its shapes.
 - **A fixed page shrunk to fit one sheet's height too.** Rejected. It goes past the maintainer's "A page taller than a sheet still runs on". No 16:9 slide needs it on A4 or Letter, and it would shrink a tall fixed page past reading.
 - **A tall page cut into bands,** each a sheet's height. Rejected. A shape a band's edge crosses would lie twice, where each id lies once (DEC-020 point 4). A band is no page a reader asked for either. Parts cut where no element crosses are another design, for the record on breaks to weigh.
-- **A sheet named in a page rule,** of the page's own size or turned. Rejected. Firefox broke every page under each.
+- **A sheet named in a page rule,** such as one of the page's own size. Rejected. Firefox broke every page under each page rule tried.
 - **Printing left to the browser,** with the PDF export named as the way to print. Rejected. Each browser cuts pages with no print rule. A piece that declares `html` alone has no PDF.
 - **No keyline in print.** Rejected. A white slide on a white sheet has no edge, and two slides on one sheet run together.
 - **A thin line around every page in print,** a figure's and a site's too. Rejected by the maintainer: "slides only".
@@ -139,7 +139,7 @@ The scene sets none of them, so the renderer declares each beside how its pages 
 
 ## Implications
 
-- **Edits to accepted records,** made once this record is accepted, each citing it. Accepting this record accepts them (COR-066 point 5).
+- **Edits to accepted records,** made in this change once this record is accepted, each citing it. Accepting this record accepts them (COR-066 point 5).
   - **DEC-020 point 4, "The pages follow each other down the document".** It comes to add that in print they follow each other down the sheets, with no backdrop, as this record's points 1 and 3 say. A page that fits a sheet is kept whole, and a page taller than a sheet runs on.
   - **DEC-020 point 4, "A page shrinks and never grows".** It comes to add that in print a page shrinks with the sheet's area as the window, and a fixed page with the room its keyline leaves, as this record's points 2 and 3 say.
   - **DEC-023 point 7, "The file names its schemes".** It comes to add that in print each page lies on the browser's ground, and the file asks the browser to keep the colours of its pages and their keylines exactly, and nothing around them, as this record's point 5 says.
@@ -149,10 +149,11 @@ The scene sets none of them, so the renderer declares each beside how its pages 
   - **DEC-031 point 4, "On screen alone".** It comes to say that the backdrop, the gutter and the room the gutter leaves are a screen's alone. In print a fixed page lies inside its keyline, as this record's point 3 says.
   - **DEC-031 point 5, "What reads them instead".** "A keyline that takes no room" comes to say on screen, and the test comes to hold the print's keyline too.
   - **DEC-031's Rationale, "Why an outline", and its alternative "A border, or a shadow alone, as the keyline".** Each comes to speak of the screen. "Why an outline" comes to add that in print, where the page's drawing shrinks to leave it room, the keyline is a border, as this record's point 3 says.
-- **Edits to the capability's pages,** made in this change once this record is accepted, each anchored to it:
-  - `outputs.md`, The HTML renderer, a new section Printing: how a page file prints by points 1 to 5, carried once the Task below lands; the sheets a 16:9 slide fits whole; the scale a page prints at.
-  - `outputs.md`, Printing: the keyline's contrast against a white sheet, in light and in dark, and how much narrower a fixed page prints.
-  - `outputs.md`, Printing: what each browser does where a page that runs on breaks, until the record on breaks lands.
+- **Edits to the capability's page on outputs** (`outputs.md`), made in this change once this record is accepted, each anchored to it:
+  - The HTML renderer, a new section Printing: it says the renderer does not yet print as this record decides, until the Task below lands. It gives the sheets a 16:9 slide fits whole, and the scale a page prints at.
+  - Printing: the keyline's contrast against a white sheet, in light and in dark, and how much narrower a fixed page prints.
+  - Printing: what each browser does where a page that runs on breaks, until the record on breaks lands.
+  - Fixed pages, "On screen alone": a print holds neither the keyline nor the backdrop until the Task below lands, and Printing says what it will hold.
 - **Read against this answer, and left as they stand:**
   - The step emulates the dark signal, since emulated and real dark gave the same pixels (DEC-023's Rationale, and its revisit if the emulation stops matching a reader's dark mode). In print the two differ, and the step reads no print.
   - Every length is a share of the page's width (DEC-020 point 2), so a page scales to the sheet with no script. It stands, and the bug below may come to question it.
@@ -166,12 +167,9 @@ The scene sets none of them, so the renderer declares each beside how its pages 
 - **The Task that prints the page,** filed under [project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570) once this record is accepted, builds points 1 to 6 in the renderer.
   - Its output changes, so the renderer's own version rises ([visual-communication:DEC-005-engine-and-plugins] point 9). The seam's version stays, since no plugin reads anything new (DEC-005 point 8).
   - It builds on the keyline as [project-kit#2944](https://github.com/aleskalfas/project-kit/issues/2944) left it, and on the file's modes as [project-kit#2815](https://github.com/aleskalfas/project-kit/issues/2815) left them. It adds the print's rules beside the screen's, and changes none of the screen's.
-  - The line of the capability's page on outputs that a print holds neither keyline nor backdrop gives way to its Printing section, and so do the renderer's docstrings that say the same.
+  - The page on outputs comes to say that the renderer prints as its Printing section says. Its line that a print holds neither keyline nor backdrop gives way to that, and so do the renderer's docstrings that say the same.
   - It closes with a person's print, which [project-kit#2851](https://github.com/aleskalfas/project-kit/issues/2851) takes.
-- **#2851's body** comes to say, in its criterion on printing, what the person checks, and its Dependencies come to name the Task that prints the page.
-  - They print the deck's page file, which holds light and dark, in Safari, Firefox and Chrome as shipped, on a sheet upright and turned, with the system set dark, then light, and once with backgrounds on. They say which mode printed, and whether each slide lay whole inside its keyline, with its text on its shapes.
-  - They print a figure's page file of a dark mode alone, and the deck once with the system's more contrast on, and say whether each page's edge and text read on the sheet.
-  - They print no page that runs on. How such a page breaks waits for the record on breaks.
+- **#2851's body,** edited once this record is accepted, comes to say in its criterion on printing that a person prints points 1 to 5 in each browser as shipped, in each mode and under more contrast (point 7), though no page that runs on, whose break waits for the record on breaks. Its Dependencies come to name the Task that prints the page.
 - **#2815's and [project-kit#2817](https://github.com/aleskalfas/project-kit/issues/2817)'s bodies** ask no edit. Both closed before this record, and the person's print they left open is #2851's.
 - **The record on breaks** decides how a page that runs on is to break between a text's lines, never through one, as point 1 asks. Its issue is filed under #2570 once this record is accepted.
   - **What it weighs:** whether a block is kept whole, and a heading with what follows it. The scene names neither today, so these may wait on how a text's structure is declared ([project-kit#2739](https://github.com/aleskalfas/project-kit/issues/2739)). It weighs too a picture that holds text, which a browser cuts like any image.
