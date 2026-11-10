@@ -38,7 +38,7 @@ Two kinds of library, released on the same steps where they share them:
 3. **The release it needs** is the capability's current version, written into the
    version's `library.yaml` before the hash is worked out, so the hash covers it.
 
-**A shipped library's release first** (DEC-013 point 1, in the order of its Implications):
+**A shipped library's release first** (DEC-013 point 1), in this order:
 
 1. refuses where the methodology holds the capability's folder as a synced copy, by the
    methodology's own answer (`shipped.synced_copy`);
