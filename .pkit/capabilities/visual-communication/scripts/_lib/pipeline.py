@@ -95,6 +95,21 @@ def content_file(language: str) -> str:
     return f"content.{language}.yaml"
 
 
+def new_piece_folder(root: Path, location: str, name: str) -> Path:
+    """The folder of a new piece `name` in `location`. Raises Refused where `name` is not a
+    piece's name, or anything lies there already, so a new piece never writes over a file."""
+    if not is_name(name):
+        raise Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
+    rel = f"{location}/{PIECES}/{name}"
+    target = root / rel
+    if target.exists() or target.is_symlink():
+        raise Refused(
+            f"{rel} lies in the location already, so the name `{name}` is taken: name the new "
+            f"piece another"
+        )
+    return target
+
+
 def produce_command(piece: str, output: str) -> str:
     return f"`pkit visual produce {piece} {output}`"
 
