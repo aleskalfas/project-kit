@@ -78,7 +78,7 @@ UNLISTED = "files-unlisted"
 
 _BARE_NAME = re.compile(r"^[a-z][a-z0-9-]*\.(png|jpg|jpeg)$")
 
-#: What each refused encoding is fixed by (DEC-025 point 5).
+#: What each refused encoding is fixed by (DEC-025 point 5; `files.md`, "The encodings read").
 _SAVE_AT_8_BITS = "save it at 8 bits for each sample, not interlaced"
 _SAVE_FIRST_FRAME = "save its first frame as a still PNG"
 _SAVE_IN_RGB = "save it in RGB"

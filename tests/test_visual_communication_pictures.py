@@ -52,7 +52,7 @@ READ = {
 }
 
 #: Each picture the capability refuses: its label, what the message says it is, and the fix
-#: DEC-025 point 5 names.
+#: `files.md` names under "The encodings read", as DEC-025 point 5 asks.
 REFUSED = {
     "deep.png": (
         "picture-encoding",
