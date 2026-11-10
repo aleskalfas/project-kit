@@ -240,7 +240,8 @@ tokens:
   gap: {type: dimension, default: '{space.1}'}
 parts:
   box:
-    box: {fill: component.ui.card.fill, stroke: line, x: "=@component.ui.card.gap"}
+    x: "=@component.ui.card.gap"
+    box: {fill: component.ui.card.fill, stroke: line}
 ```
 
 - **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
