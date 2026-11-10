@@ -30,7 +30,7 @@ Changes to a library here, and its releases, meet as visual-communication DEC-01
 `tests/test_visual_communication_shipped_libraries.py` holds them (DEC-013 point 6). The default branch's required checks run them on each change as it would merge, and a project's validation never runs them. Each reads a version in full, through the routine a release reads it through, so every component, a brand's tokens and its fonts are read, whether a piece places them or not. They check that:
 
 1. **Each released version** under `../releases/` matches the hash its record keeps, and the engine reads its files. Any other finding in a released version is printed, and fails nothing.
-2. **Every released version was untouched since the release it names:** no change touched the version here between the release step's change that wrote that version of the capability and the change that brings the release onto the default branch, that change included.
+2. **Every released version was untouched since the release it names:** no change touched the version here between the release step's change that wrote that version of the capability and the change that brings the release onto the default branch, that change included. Where that history is not at hand, as in a shallow clone, the check fails.
 3. **The newest released versions read together,** each on the newest released version of each major it builds on, so a new project can lock them together.
 4. **Each version here reads and checks clean** on the versions here of its bases. A finding in it fails.
 5. **A version here that carries a released number** differs from that released version only in the release it needs, and none carries a number below the newest released one.
