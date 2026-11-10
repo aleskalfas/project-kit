@@ -90,7 +90,7 @@ def brand_copy(tmp_path: Path, *, names: bool, given: Mapping[str, Any] | None =
     tokens. A brand that names it gives the library's warning, which has no default, a
     value."""
     folder = tmp_path / "test-brand" / "1.0.0"
-    shutil.copytree(TEST_BRAND, folder)
+    shutil.copytree(TEST_BRAND, folder, ignore=shutil.ignore_patterns("__pycache__"))
     if names:
         naming(folder)
         add_tokens(
@@ -376,7 +376,7 @@ def chain(tmp_path: Path, *, base_names: bool, opens: str = FILL) -> tuple[Path,
     base = brand_copy(tmp_path, names=base_names)
     replace_in(base / "library.yaml", "open: [accent, space]", f"open: [accent, space, {opens}]")
     edition = tmp_path / "test-edition" / "1.0.0"
-    shutil.copytree(TEST_EDITION, edition)
+    shutil.copytree(TEST_EDITION, edition, ignore=shutil.ignore_patterns("__pycache__"))
     naming(edition)
     add_tokens(edition / EDITION, tag_fill(WHITE))
     return base, edition
@@ -536,7 +536,11 @@ def tags_project(tmp_path: Path, brand: Path | None = None, gap: bool = False) -
     and the tag places its label by a token `gap` that defaults to it."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
-    shutil.copytree(brand or TEST_BRAND, root / "visual" / "libraries" / "test-brand" / "1.0.0")
+    shutil.copytree(
+        brand or TEST_BRAND,
+        root / "visual" / "libraries" / "test-brand" / "1.0.0",
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
     folder = copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
     if gap:
         far = "  test-parts.far: {type: dimension}\n"
