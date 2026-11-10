@@ -136,7 +136,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 ### `group`
 
 - **Form:** a box with rounded corners on its colour family's fill, edged in the family's line. It holds a head, a tag and its items, one under another, the head and the tag where the content gives them. Its items stand in a column, each as wide as the group.
-- **Source:** Yuri Engelhardt's containment, as for the `groups` pattern.
+- **Source:** Yuri Engelhardt's containment, which also checks the `groups` pattern.
 - **Fields:** `head` and `tag`, each optional, and the list `items`.
 - **Lists:** `items`, each drawn by the `card`, unless the component field `item` names another.
 - **Options:** none. A group's tag stays `neutral`, as a card's does.
