@@ -112,7 +112,7 @@ src/project_kit/refs.py reportAssignmentType 1
 src/project_kit/refs.py reportRedeclaration 1
 src/project_kit/refs.py reportUnknownArgumentType 6
 src/project_kit/refs.py reportUnknownMemberType 12
-src/project_kit/refs.py reportUnknownVariableType 32
+src/project_kit/refs.py reportUnknownVariableType 31
 src/project_kit/refs.py reportUnnecessaryIsInstance 1
 src/project_kit/release.py reportArgumentType 2
 src/project_kit/release.py reportMissingTypeArgument 7

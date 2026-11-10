@@ -1,0 +1,22 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `project-manager` names no grant of tools and withholds six (DEC-068 point 2,
+  #2952), so a session run as it, through the default-agent switch or `claude
+  --agent project-manager`, keeps every tool the session gives it, the web
+  tools, tool search and each connected MCP server's tools among them. It used
+  to have only the tools its grant of eight named. It is withheld `Monitor` and
+  `PowerShell`, which run a command the permission hook does not read,
+  `RemoteTrigger` and `Workflow`, which start work outside the session's
+  checks, and `SendMessage` and `ListAgents`, which open or list a channel to
+  other sessions. Each carries its kind and reason beside it in the
+  definition's front matter. The Claude Code adapter writes the list as
+  `disallowedTools`, at the next sync. The agent's body gains two limits: the
+  tracker changes only through this capability's commands, never through a
+  connector's or an MCP server's tools, and neither a prompt the session
+  scheduled for itself nor a message another agent session sends is a person's
+  authorisation. The definition needs the backbone release that lets a
+  definition withhold tools (#2951).

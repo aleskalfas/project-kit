@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design systems its form comes from (DEC-022 point 4): the rows of the GOV.UK Design
+# System's table and of the U.S. Web Design System's table, as for the table.
 about: >-
   One row of a table: its cells side by side, sharing the row's width, each drawn by the
   cell unless the content names another, and a rule along its foot. The cells share the
