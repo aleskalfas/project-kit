@@ -101,7 +101,7 @@ Each finding below fails validation where it lies in a file the project can corr
   - a brand that names a library and gives one of its roles without a default no value in some combination
   - a brand's token under the name of a library it names, or under `component.<library>` for such a library, that gives none of the library's roles a value, since it names none or is of another type (refinement per [visual-communication:DEC-035-component-tokens])
   - at a lock, a part that reads a library's role whose chain gives no value under the brand, where the brand does not name the library
-- **Asks for attention, never failing:** a brand's token under the name of a library a piece locks with it, or under `component.<library>` for such a library, where the brand does not name that library (refinement per [visual-communication:DEC-035-component-tokens]). The token stays private, and gives the library nothing.
+- **Asks for attention, never failing:** a brand's token under the name of a library a piece locks with it, or under `component.<library>` for such a library, but for one under `component.<its own name>`, where the brand does not name that library (refinement per [visual-communication:DEC-035-component-tokens]). The token stays private, and gives the library nothing.
 - **Stated as a fact:** a library's own role whose chain of defaults does not end at a shared role, so that only a brand that gives it a value draws it.
 
 ## Rationale
