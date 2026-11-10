@@ -51,7 +51,7 @@ A small page in DEC-020's form held four keys over the foundations' two value ax
 
 ### 3. A paint is a custom property
 
-- **One custom property for each colour role the file paints,** in the CSS writer's spelling. HTML text and the shapes of a layer read the same property.
+- **One custom property for each colour role the file paints,** in the CSS writer's spelling. HTML text and the shapes of a layer read the same property. Each step of an order the file paints takes one too, under a name no role's spelling by the CSS writer can take, and its value in each mode comes with the scene (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 5).
 - **A mode is a set of their values.** So text and shapes change together, an arrowhead defined once for a role serves every mode, and a colour's alpha lies in its value.
 - **At the file's size.** Each mode's values are its key's, and that key's combination takes the file's size. So a colour a size changes takes that size's value in every mode of the file.
 - **The renderer writes these rules itself,** for the keys the file holds and the roles it paints. It shares the writer's spelling, never its output (DEC-005 point 7).
