@@ -1,0 +1,64 @@
+# A piece's brief, `pieces/<piece>/brief.yaml` (visual-communication DEC-029): what the
+# piece must show and why it is designed so, for whoever makes or reviews it. A part for
+# the whole piece, `piece`, and a part for each page it speaks of under `pages`, keyed by
+# the id the page carries in the content. Each part holds the relations a picture must
+# make visible, the goals, a takeaway where the page has no lead, and the reasons for the
+# design, each naming the principle it rests on. A key path names a part of the content,
+# from the content's top in the piece's part and from the page in a page's part. A person
+# writes it, in the language the piece's makers work in; no command changes what it says,
+# and no renderer reads it.
+#
+# The body below is the reference instance: a deck whose slide `layers` shows how the
+# levels of a method rest on each other.
+
+pkit_schema: visual-communication:brief
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+piece:
+  goals:
+    - A newcomer can say where a decision lives, and which layer carries it out.
+  reasons:
+    - aspect: hierarchy
+      text: >-
+        Each slide's title is read before its visual, so every slide states its point
+        before it shows it.
+      principle:
+        name: Visual hierarchy
+        source: Ellen Lupton, Thinking with Type
+pages:
+  cover:
+    takeaway: The talk is about how the method's parts fit together.
+  layers:
+    relations:
+      - text: >-
+          Each level rests on the one below it, and the decisions are the source of all
+          the others.
+        relates:
+          - visual.levels
+    goals:
+      - The audience sees that decisions come first, and that each layer carries out the one above.
+    reasons:
+      - aspect: structure
+        about: visual.levels
+        text: The layers are levels in an order, not kinds side by side.
+        principle:
+          name: Ordered and categorical attributes
+          source: Tamara Munzner, Visualization Analysis and Design
+      - aspect: form
+        about: visual.levels
+        text: >-
+          A stepped pyramid, narrowest at the top, so that width carries the order and the
+          top reads as the source.
+        principle:
+          name: Ordered visual variables
+          source: Jacques Bertin, Semiology of Graphics
+      - aspect: colour
+        about: visual.levels
+        text: >-
+          One family of the brand, from its strongest role at the top to its lightest at
+          the base, since lightness is read in order and a change of hue is not.
+        principle:
+          name: Ordered visual variables
+          source: Jacques Bertin, Semiology of Graphics

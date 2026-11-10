@@ -38,6 +38,7 @@ KINDS = (
     "config",
     "piece",
     "content",
+    "brief",
     "library",
     "component",
     "roles",
