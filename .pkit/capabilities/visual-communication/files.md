@@ -245,7 +245,7 @@ The table names the schema each file binds to (see [The binding](#the-binding)),
 | a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/pictures/<file>`, a picture file | none: a PNG or a JPEG ([Picture files](#picture-files)) | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual new` stamps it; `pkit visual render` and `pkit visual upgrade` rewrite its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
-| `pieces/<piece>/content.<language>.yaml` | `content` | a person; `pkit visual new` stamps it with the top's fields, empty |
+| `pieces/<piece>/content.<language>.yaml` | `content` | a person; `pkit visual new` stamps it with each field of the top it can leave empty, empty |
 | `pieces/<piece>/brief.yaml` | `brief` | a person ([The brief](#the-brief)); `pkit visual new` stamps it holding its binding alone |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
 | `pieces/<piece>/pictures/<file>`, a picture file | none: a PNG or a JPEG ([Picture files](#picture-files)) | a person |
@@ -347,7 +347,7 @@ No path binds a file, and the capability writes no line that points an editor at
 
 A *piece* is one finished item of visual work, such as a figure (DEC-001 point 3). Its sources are one folder, `pieces/<piece>/`, named with the name shape. The folder holds `piece.yaml`, a content file for each language, the piece's local components, and its picture files in `pictures/` ([Picture files](#picture-files)). It may hold the piece's brief too ([The brief](#the-brief)).
 
-`pkit visual new <piece>` stamps a new piece's first files from a person's choices: its `piece.yaml`, a draft with no lock, a content file for each language, holding each field of its top, empty, and a brief holding its binding alone. Its first render writes the lock, as for a piece written by hand ([The lock](#the-lock)).
+`pkit visual new <piece>` stamps a new piece's first files from a person's choices: its `piece.yaml`, a draft with no lock; a content file for each language, holding each field of its top it can leave empty, empty, a deck's or a site's pages being one page; and a brief holding its binding alone. Its first render writes the lock, as for a piece written by hand ([The lock](#the-lock)).
 
 ### `piece.yaml`
 
