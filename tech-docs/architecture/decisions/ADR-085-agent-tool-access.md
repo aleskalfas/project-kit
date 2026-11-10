@@ -40,7 +40,7 @@ A check of an agent's tools reads the tool access in the agent's own definition,
 - **A check that an agent holds a tool,** such as `Read` for an agent that declares a storyboard, holds where the tool is granted, or where the agent names no grant and does not withhold it.
 - **A check that an agent lacks a tool,** such as a fixer's, holds only where the agent's grant leaves the tool out. A withheld list never satisfies one, since it gives every tool it does not name.
 
-No check of a definition reads the harness's own set of tools.
+No check of a definition reads the tools a harness gives a session. One reader answers both readings for every check ([ADR-086](ADR-086-tool-access-reader.md)).
 
 ### 3. The Claude Code behaviour this rests on is declared
 
@@ -49,7 +49,7 @@ Core's harness requirements gain two, in behavioural words ([COR-047](../../../.
 - **A session's agent withheld named tools** has none of them, and keeps every other tool its session holds, a connected server's included. It is observed from outside a session, in the report a session gives at its start.
 - **A helper withheld named tools** has none of them. It is observed only inside a session.
 
-The Claude Code adapter answers each in its support declaration, from what was measured.
+Each rests on a design that needs it: an agent that withholds tools runs as a whole session's agent through a project's default-agent switch, and as a helper where another session dispatches it ([project-management:DEC-068-session-agent-tools]; [project-management:DEC-029-project-manager-agent-shape], "Invocation pattern"). The Claude Code adapter answers each in its support declaration from what was measured, and leaves one nobody has measured unanswered, which reads as indeterminate (COR-047 point 3).
 
 ## Rationale
 
@@ -75,6 +75,7 @@ The Claude Code adapter answers each in its support declaration, from what was m
   
   Point 1 makes a definition's tool names an exception to its harness neutrality. Each is a decision of its own, which the person who authorises the change accepts.
 - **ADR-066 point 3** says the runner passes the tool access, granted or withheld, where it said the tool list. A confined run still passes its own fixed tools, so a withheld list only narrows it, and the start report's check holds.
+- **COR-016,** refined in place in the change that builds this record, says an agent that declares storyboards has `Read` through its tool access, where it said its `tools` must include `Read`. Point 2's storyboard check rests on that edit.
 - **ADR-004 point 1,** which names Claude Code's keys as the front matter, gains a pointer to this record once it is accepted.
 - **The agents README** documents `withheld` beside `tools`, and the adapter README lists it among the fields the runner passes. The adapter README also says that a tool's name alone, as a deny rule in a project's own settings, removes it from the session for every agent.
 - **The order of landing:** the deploy translates `withheld`, and the validator and the runner admit it and read a missing grant as in point 2, before any definition names a withheld list. An earlier deploy would copy `withheld` through unread, so the agent would have every tool.

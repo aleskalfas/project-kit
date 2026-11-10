@@ -7,8 +7,11 @@ and 12; #1744).
   shipped), the platform's sandbox, the runner not being the working copy's own, the
   agent's definition, and the run's settings;
 - the definition is the deploy's resolution of the file the deploy picks, in the
-  methodology's shape, and only the description, the instructions, the tools, the model
-  and the effort are passed, under a name unique to the run; both fixers pass the check;
+  methodology's shape, and only the description, the instructions, the tool access, the
+  model and the effort are passed, under a name unique to the run; both fixers pass the
+  check;
+- the tool access is the reader's answer, a withheld list passed as `disallowedTools`, and
+  a definition the reader or the adapter refuses refuses the run (ADR-085, ADR-086);
 - the run's settings are its own, carry the denies of every settings file it leaves out,
   and hold the confined form's fixed values; the command line is the closed set; the
   environment holds only what the run needs, with the marker;
@@ -39,9 +42,13 @@ from typing import Any
 
 import pytest
 
+from project_kit import refs
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ADAPTER = REPO_ROOT / ".pkit" / "adapters" / "claude-code"
 RUNNER = ADAPTER / "run-agent.py"
+DECLARATION = ADAPTER / "tool-access.json"
+READER = REPO_ROOT / ".pkit" / "agents" / "tool_access.py"
 PROBE = ADAPTER / "probe-confined-run.py"
 REFS = REPO_ROOT / "src" / "project_kit" / "refs.py"
 
@@ -130,6 +137,16 @@ def _script(path: Path, body: str) -> Path:
     path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return path
+
+
+def _copy_tool_access(root: Path) -> None:
+    """The agents area's reader of tool access, and the adapter's declaration of it,
+    into the tree at *root*, as sync copies them."""
+    adapter = root.joinpath(".pkit", "adapters", "claude-code")
+    adapter.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(DECLARATION, adapter / DECLARATION.name)
+    (root / ".pkit" / "agents").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(READER, root / ".pkit" / "agents" / READER.name)
 
 
 @pytest.fixture
@@ -221,6 +238,7 @@ def scene(tmp_path: Path, runner: ModuleType, monkeypatch: pytest.MonkeyPatch) -
     clone = tmp_path / "clone"
     adapter = clone.joinpath(".pkit", "adapters", "claude-code")
     _script(adapter / "_resolve_agent.py", IDENTITY_RESOLVER)
+    _copy_tool_access(clone)
     agent = clone.joinpath(".pkit", "agents", "project", "probe", "probe.md")
     agent.parent.mkdir(parents=True)
     agent.write_text(AGENT_FILE, encoding="utf-8")
@@ -840,6 +858,7 @@ def test_the_deploys_drop_of_a_model_refuses_the_run(runner: ModuleType, tmp_pat
     adapter = tmp_path.joinpath(".pkit", "adapters", "claude-code")
     adapter.mkdir(parents=True)
     shutil.copy2(ADAPTER / "_resolve_agent.py", adapter / "_resolve_agent.py")
+    _copy_tool_access(tmp_path)
     agent = tmp_path.joinpath(".pkit", "agents", "project", "probe.md")
     agent.parent.mkdir(parents=True)
     agent.write_text(
@@ -853,12 +872,173 @@ def test_the_deploys_drop_of_a_model_refuses_the_run(runner: ModuleType, tmp_pat
         )
 
 
+# --- the agent's tool access (ADR-085, ADR-086) ---------------------------------------------
+
+GRANT_LINE = "tools: [Read, Glob, Grep, Write, Bash]\n"
+
+
+def _passed(runner: ModuleType, scene: Scene, access: str) -> dict[str, Any]:
+    """The definition a run passes, for the probe agent with *access* as its tool access."""
+    _agent(scene, AGENT_FILE.replace(GRANT_LINE, access))
+    scene.harness([INIT, RESULT])
+    _run(runner, scene)
+    argv = scene.record()["argv"]
+    return json.loads(argv[argv.index("--agents") + 1])[argv[argv.index("--agent") + 1]]
+
+
+def test_a_withheld_list_reaches_the_run_as_disallowed_tools(
+    runner: ModuleType, scene: Scene
+) -> None:
+    access = "withheld:\n  - Workflow  # starts work outside the session\n  - SendMessage\n"
+    definition = _passed(runner, scene, access)
+    assert definition["disallowedTools"] == ["Workflow", "SendMessage"]
+    assert "tools" not in definition
+    assert "withheld" not in definition
+
+
+@pytest.mark.parametrize(
+    ("access", "tools"),
+    [
+        ("tools: []\n", []),
+        ("tools:\n", []),
+        ("tools: Read, Agent(worker, reviewer)\n", ["Read", "Agent(worker, reviewer)"]),
+        ("tools: [Read, 'Agent(worker)']\n", ["Read", "Agent(worker)"]),
+    ],
+)
+def test_a_grant_reaches_the_run_whole_and_an_empty_one_as_an_empty_list(
+    runner: ModuleType, scene: Scene, access: str, tools: list[str]
+) -> None:
+    definition = _passed(runner, scene, access)
+    assert definition["tools"] == tools
+    assert "disallowedTools" not in definition
+
+
+def test_a_definition_naming_neither_form_passes_no_tool_key(
+    runner: ModuleType, scene: Scene
+) -> None:
+    definition = _passed(runner, scene, "")
+    assert "tools" not in definition
+    assert "disallowedTools" not in definition
+
+
+@pytest.mark.parametrize(
+    ("access", "cause"),
+    [
+        ("tools: [Read]\nwithheld: [Workflow]\n", "names both `tools` and `withheld`"),
+        ("withheld: [Wrokflow]\n", "`withheld` names `Wrokflow`, which this adapter does not know"),
+        (
+            "withheld: [mcp__github]\n",
+            "`withheld` names `mcp__github`, which this adapter does not",
+        ),
+        ("withheld: ['Bash(rm:*)']\n", "measured to withhold only a whole built-in tool"),
+        ("tools: [read-file]\n", "a name in a form Claude Code does not take"),
+        ("tools: [Read,\n  Grep]\n", "goes on over more than one line"),
+    ],
+)
+def test_a_tool_access_the_reader_or_the_adapter_refuses_refuses_the_run(
+    runner: ModuleType, scene: Scene, access: str, cause: str
+) -> None:
+    _agent(scene, AGENT_FILE.replace(GRANT_LINE, access))
+    scene.harness([INIT, RESULT])
+    reason = _refusal(runner, scene)
+    assert "tool access is refused" in reason
+    assert cause in reason
+    assert not scene.started()
+
+
+def test_a_tool_key_written_twice_refuses_the_run(runner: ModuleType, scene: Scene) -> None:
+    _agent(scene, AGENT_FILE.replace(GRANT_LINE, "tools: [Read]\ntools: [Grep]\n"))
+    scene.harness([INIT, RESULT])
+    assert "tools is written twice" in _refusal(runner, scene)
+    assert not scene.started()
+
+
+def test_claude_codes_own_key_beside_withheld_refuses_the_run(
+    runner: ModuleType, scene: Scene
+) -> None:
+    _agent(
+        scene, AGENT_FILE.replace(GRANT_LINE, "withheld: [Workflow]\ndisallowedTools: [Monitor]\n")
+    )
+    scene.harness([INIT, RESULT])
+    assert "outside the methodology's shape: disallowedTools" in _refusal(runner, scene)
+    assert not scene.started()
+
+
+def test_a_working_copy_with_no_reader_refuses_the_run(runner: ModuleType, scene: Scene) -> None:
+    (scene.clone / ".pkit" / "agents" / "tool_access.py").unlink()
+    scene.harness([INIT, RESULT])
+    reason = _refusal(runner, scene)
+    assert "tool_access.py is not there" in reason
+    assert "pkit sync" in reason
+    assert not scene.started()
+
+
+def test_an_adapter_with_no_declaration_of_tool_access_refuses_the_run(
+    runner: ModuleType, scene: Scene
+) -> None:
+    (scene.adapter / DECLARATION.name).unlink()
+    scene.harness([INIT, RESULT])
+    reason = _refusal(runner, scene)
+    assert "the adapter declares no tool access" in reason
+    assert "pkit sync" in reason
+    assert not scene.started()
+
+
+def test_a_declaration_the_reader_cannot_read_refuses_the_run(
+    runner: ModuleType, scene: Scene
+) -> None:
+    (scene.adapter / DECLARATION.name).write_text('{"schema_version": 2}', encoding="utf-8")
+    scene.harness([INIT, RESULT])
+    reason = _refusal(runner, scene)
+    assert "the adapter's declaration of tool access cannot be read: its schema version is 2" in (
+        reason
+    )
+    assert not scene.started()
+
+
+def test_a_reader_without_the_function_the_runner_calls_refuses_the_run(
+    runner: ModuleType, scene: Scene
+) -> None:
+    (scene.clone / ".pkit" / "agents" / "tool_access.py").write_text(
+        "class Refused(ValueError):\n    pass\n", encoding="utf-8"
+    )
+    scene.harness([INIT, RESULT])
+    assert "has no tool_access" in _refusal(runner, scene)
+
+
+@_needs_uv
+def test_the_deploys_resolution_keeps_the_methodologys_keys_for_the_run(
+    runner: ModuleType, tmp_path: Path
+) -> None:
+    adapter = tmp_path.joinpath(".pkit", "adapters", "claude-code")
+    adapter.mkdir(parents=True)
+    shutil.copy2(ADAPTER / "_resolve_agent.py", adapter / "_resolve_agent.py")
+    _copy_tool_access(tmp_path)
+    agent = tmp_path.joinpath(".pkit", "agents", "project", "probe.md")
+    agent.parent.mkdir(parents=True)
+    agent.write_text(
+        AGENT_FILE.replace(GRANT_LINE, "withheld: [Workflow, SendMessage]\n"), encoding="utf-8"
+    )
+    definition = runner.checked_definition(
+        tmp_path, "probe", None, adapter / "_resolve_agent.py", dict(os.environ)
+    )
+    assert definition["disallowedTools"] == ["Workflow", "SendMessage"]
+    agent.write_text(AGENT_FILE.replace(GRANT_LINE, "withheld: [Wrokflow]\n"), encoding="utf-8")
+    with pytest.raises(
+        runner.Refused,
+        match=r"would not resolve the agent's definition: probe: its tool access is refused",
+    ):
+        runner.checked_definition(
+            tmp_path, "probe", None, adapter / "_resolve_agent.py", dict(os.environ)
+        )
+
+
 def test_the_shape_is_refs_declared_with_the_agents_identity_and_policy(
     runner: ModuleType,
 ) -> None:
     """The runner's set of fields is the methodology's: each field of `Declared`, with
-    `reads` holding its three lists, and an agent's name, description, tools, model and
-    effort."""
+    `reads` holding its three lists, and an agent's name, description, tool access, model
+    and effort. The validator warns on a field outside the same set (ADR-086 point 2)."""
     tree = ast.parse(REFS.read_text(encoding="utf-8"))
     declared = next(
         node
@@ -871,8 +1051,9 @@ def test_the_shape_is_refs_declared_with_the_agents_identity_and_policy(
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
     }
     top = {"reads" if field.startswith("reads_") else field for field in fields}
-    methodology = top | {"name", "description", "tools", "model", "effort"}
+    methodology = top | {"name", "description", "tools", "withheld", "model", "effort"}
     assert methodology == runner.DEFINITION_FIELDS
+    assert runner.DEFINITION_FIELDS == refs.DEFINITION_FIELDS
 
 
 # --- the front matter, as the resolver writes it -----------------------------------------
@@ -916,30 +1097,6 @@ def test_a_scalar_reads_as_yaml_reads_it(runner: ModuleType, lines: list[str], v
 def test_a_scalar_the_runner_does_not_read_refuses(runner: ModuleType, lines: list[str]) -> None:
     with pytest.raises(runner.Refused, match="not in the form the runner reads"):
         runner.scalar(lines, "description")
-
-
-@pytest.mark.parametrize(
-    ("lines", "tools"),
-    [
-        (["[Read, Glob, Grep]"], ["Read", "Glob", "Grep"]),
-        (["[Read, 'Bash',", "  Write]"], ["Read", "Bash", "Write"]),
-        (["", "  - Read", "  - Write  # new files only"], ["Read", "Write"]),
-        (["Read, Grep"], ["Read", "Grep"]),
-        (["[]"], []),
-    ],
-)
-def test_the_tools_read_in_each_form(
-    runner: ModuleType, lines: list[str], tools: list[str]
-) -> None:
-    assert runner.tool_list(lines) == tools
-
-
-@pytest.mark.parametrize(
-    "lines", [["[Read, [Bash]]"], ["[Read"], ["", "  Read"], ["[Bash(git:*)]"]]
-)
-def test_tools_the_runner_does_not_read_refuse(runner: ModuleType, lines: list[str]) -> None:
-    with pytest.raises(runner.Refused, match="not in the form the runner reads"):
-        runner.tool_list(lines)
 
 
 def test_the_front_matter_splits_into_its_fields(runner: ModuleType) -> None:

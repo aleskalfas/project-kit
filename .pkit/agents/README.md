@@ -23,8 +23,10 @@ pkit:
         - .pkit/agents/core/methodology-reviewer.md
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/agents/project/overlay.yaml
+        - .pkit/agents/tool_access.py
+        - src/project_kit/agent_tool_access.py
         - .pkit/rules/core.md
-      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11"]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11", ADR-085, ADR-086]
       artefact:
         - .pkit/agents/hooks.md#
         - .pkit/agents/storyboards.md#
@@ -42,6 +44,7 @@ pkit:
         - .pkit/lifecycle/upgrade-flow.md#seed-paths
         - .pkit/decisions/README.md#citing
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
+        - .pkit/adapters/README.md#what-an-adapter-declares-as-data
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
 ---
 
@@ -76,6 +79,7 @@ The area holds the definitions core ships and those the project writes, each in 
 ├── README.md                    # this file (core-owned; propagated by sync)
 ├── hooks.md                     # a page beside it ("The pages beside this one")
 ├── storyboards.md               # a page beside it
+├── tool_access.py               # the reader of an agent's tool access ("Tool access")
 ├── core/                        # core's definitions, refreshed by every sync
 │   ├── <name>.md                # flat form: a definition with no helper
 │   └── <name>/                  # folder form: a definition with helpers beside it
@@ -92,6 +96,7 @@ The area holds the definitions core ships and those the project writes, each in 
 - **`core/`** is core's. Sync refreshes it, and the project never edits it (COR-001).
 - **`project/`** is the project's own. Sync reads it to deploy the definitions, and never writes it.
 - **Both `core/` and `project/`** follow COR-003's universal pattern.
+- **`tool_access.py`** is code, not a definition, so it sits at the area's root rather than in `core/` or `project/`. Sync copies the file with the area, and the adapters find the file at `.pkit/agents/tool_access.py` ("Tool access" below).
 - **`overlay.yaml`** stands at the top of `project/`. Its per-agent overrides sit inside it, under `overrides:`.
 - **A capability's definitions** take the same two forms in its own `agents/` folder, `.pkit/capabilities/<capability>/agents/` (COR-017, COR-026).
 
@@ -103,7 +108,7 @@ Agents and skills share one front-matter shape for the fields of the reference g
 ---
 name: release-checker
 description: Checks a release before it is tagged.
-tools: [Read, Grep, Bash]
+tools: [Read, Grep, Bash]             # or withheld: […], never both ("Tool access")
 model: sonnet                         # optional; absent is inherit ("Model and effort")
 effort: high                          # optional; absent is inherit
 reads:
@@ -128,7 +133,7 @@ You are the **release checker** for this project. …
 What each field holds:
 
 - **`name`, `description`:** the agent's name, and the one line that tooling shows of it.
-- **`tools`:** the tools the harness grants the agent, by the harness's names, such as Claude Code's `Read`, `Edit` and `Bash`. The adapter writes them in the harness's form at deploy.
+- **`tools` or `withheld`:** the agent's tool access, the tools it is granted or withheld. Each names the harness's tools, such as Claude Code's `Read`, `Edit` and `Bash`. A definition names one of the two keys or neither, never both. The adapter writes the tool access in the harness's form at deploy ("Tool access" below).
 - **`model`, `effort`:** the model the agent runs on, and the effort it reasons at. Both are optional, and absent means inherit ("Model and effort" below). Agents only.
 - **`reads`:** what the agent consults at task time, in three channels:
   - **`paths`** names files and folders, and **`records`** names decision records by id, such as `COR-NNN` or `PRJ-NNN`. A category named in either is a required read: while the overlay leaves it undefined, the deploy skips the agent.
@@ -144,6 +149,39 @@ What each field holds:
 - **`answers`:** the hooks a skill provides. Skills only.
 - **`gates`:** the records whose acceptance a skill needs before it runs. Skills only, and each entry counts as a `reads.records` entry too.
 - **`storyboards`:** the storyboards the agent drives, each by its file name beside the definition ([`storyboards.md`](storyboards.md)).
+
+**Any other key** in an agent's definition is none of these fields. `pkit refs validate`, and the `refs` member of `pkit validate`, warn of such a key at the agent's file, without failing. The deploy copies the key through unread, and a confined run of the agent refuses the key. A harness's own key is such a key, as Claude Code's `disallowedTools` is, and no check reads one as the agent's tool access.
+
+### Tool access
+
+An agent's tool access takes one of three forms (COR-013 point 7):
+
+- **A grant,** `tools`, names the tools the agent is given, and the agent has only those. A grant with no entries gives no tools.
+- **A withheld list,** `withheld`, names the tools the agent is withheld, and the agent has every other tool the harness would give it. A list with no entries withholds none.
+- **Neither:** the agent has what the harness gives it. Run as a whole session's agent, the agent has the session's tools. Run as a helper, the agent has those the session gives a helper.
+
+How the tool access is written:
+
+- **Holding a key names its form,** whatever the key holds. So a definition that holds both keys is refused, even where one of them is empty.
+- **An entry** names one of the harness's tools. It may narrow the tool with one argument in parentheses after the name, in the harness's own terms, such as `Bash(git status)`.
+- **A value** is a list, on one line or one entry to a line, or one string whose entries are separated by commas outside parentheses. A key with no value holds no entries, and a value written any other way is refused.
+
+**Grant or withhold.** A grant fails closed: a tool it does not name is not given. A withheld list fails open: a tool it does not name is given, a tool a later harness release adds among them. So a withheld list never shows that an agent lacks a tool. An agent that must lack a tool, such as one that must change no file, is granted its tools.
+
+**The reader.** `tool_access.py` is the one reader of a definition's tool access. The deploy, the agent runner and the reference validator each call it, and none reads the two keys itself. What the reader does:
+
+- **It reads the front matter's text,** not another parser's answer. It refuses a front matter with a top-level line it cannot read as a key, or with a key written twice. So no key the reader misses reaches the harness.
+- **It answers** with the definition's form and the form's entries, each with its argument, or with why the definition is refused.
+- **It answers two questions.** An agent holds a tool where its grant names the tool, or where the agent names no grant and does not withhold the tool. An agent lacks a tool only where its grant leaves the tool out. Each question reads the tool an entry names, whatever the entry's argument.
+- **It uses only the standard library,** since the adapter's scripts run the reader under the system's Python. A caller loads it from the reader's own file, and writes no bytecode into the tree.
+- **A function of the reader keeps its name and its answer.** One whose answer changes takes a new name, so an older command never reads a newer reader's answer as the command's own.
+- **A command that cannot reach the reader** refuses that step, where the tree lacks the reader or the function the command calls. Inside the validator, that is an error finding. The message says which side is behind. A project at the command's backbone version or older needs `pkit sync`, and a newer one needs the command upgraded.
+
+**The adapter** writes the reader's answer in the keys of the adapter's harness, never the author's text. The adapter declares that harness's terms as data, in `tool-access.json` in the adapter's folder. Those terms are the harness's keys, the forms a tool's name takes and the harness's built-in tools. The terms also give the withheld entries the harness was measured to withhold.
+
+**What the adapter refuses.** Against the adapter's declaration, the reader makes the adapter's refusals, since a withheld list fails open. The reader refuses a withheld list the harness cannot withhold, or whose names the adapter cannot translate. [The adapters README, "What an adapter declares as data"](../adapters/README.md#what-an-adapter-declares-as-data), says what the declaration holds. The adapter's README says what the adapter refuses, and "Deploy mechanics" below says what a refusal does at deploy.
+
+**The validator** reports as an error each definition whose tool access the reader refuses. It makes the adapter's refusals too, reading the declaration of every registered adapter that deploys agents, and names the adapter that refuses. It also reports an error for such an adapter with no declaration the reader reads. It does so too for an adapter whose declaration admits a withheld entry that the adapter's support declaration does not answer as achievable.
 
 ## Body conventions
 
@@ -246,10 +284,13 @@ Commands an agent returns are run by one of these:
   - a path with two owners
   - a hook with no provider
   - a storyboard one side leaves out
+  - a tool access the reader refuses, itself or by an adapter's declaration ("Tool access" above)
+  - an adapter that deploys agents with no declaration the reader reads, or a reader the command cannot reach
 - **The exceptions** warn in both commands:
   - a cited point its record does not hold
   - a cited operational rule that is missing or retired
   - an unknown override in the overlay ("Adopter overlay" below)
+  - a key in an agent's definition that is none of the definition's fields ("Frontmatter schema" above)
 
 **What the backward check leaves out.** It is meant for reads whose place an overlay can move, so three kinds of path in a body need no declaration:
 
@@ -447,6 +488,7 @@ Each adapter handles its own deploy (COR-005), and future adapters for other har
 1. It lists each name in `.pkit/agents/core/`, `.pkit/agents/project/` and each installed capability's `agents/` folder ([COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), in either form.
 2. It takes one source for each name ("Name-collision precedence" below).
 3. It resolves the source's front matter through the overlay ("Adopter overlay" above), and carries its model and effort ("Model and effort" above).
+   - It writes the agent's tool access from the reader's answer, in the harness's keys ("Tool access" above).
 4. It rewrites each storyboard the source names by its file name to the storyboard's path from the project's root ([`storyboards.md`](storyboards.md)).
 5. It ends the body with one sentence, which replaces the session scratch directory the harness's environment names with `.agent-workspace/`.
 6. It writes the copy to `.claude/agents/<name>.md`, with a deploy mark as the front matter's first line: `# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync`.
@@ -456,7 +498,8 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
 - **A file without the mark** at the copy's path is left as it is, and reported `skipped`. It is the project's own, or a copy from before the mark. To have the deploy write its own, delete the file and deploy again.
 - **A marked copy that no source ships any more** is removed. To keep one, delete its mark line, and it reads as the project's.
 - **A folder with no definition named after it,** such as one half written, is skipped, and the rest deploy.
-- **A skipped definition** never stops the others. A copy an earlier deploy wrote stays as it was. The run ends with the count skipped, and the remedies.
+- **A skipped definition** never stops the others. A copy an earlier deploy wrote stays as it was, but for the one skip below. The run ends with the count skipped, and the remedies.
+- **A definition refused for its tool access** is skipped, and the deploy names the cause. This skip is the one that removes the earlier copy, where that copy carries the mark. That copy may give tools the definition no longer gives (COR-013 point 7). The agent is missing until its definition is mended.
 
 Beside the deploy:
 
@@ -487,7 +530,7 @@ More on the order:
 
 A deployed definition is a resolved copy of its source, never a symlink to it. Skills under `.claude/skills/` deploy as symlinks, and agents cannot. A skill's front matter holds no placeholder today, so a symlink works there and gives authors live-edit during development. If a skill ever grows placeholders, it would switch to the same copy-based mechanism at that point.
 
-- **Why:** the copy differs from its source. Its front matter holds the overlay's paths for the placeholders, the model and effort, each storyboard's path and the deploy mark. Its body ends with the workspace sentence.
+- **Why:** the copy differs from its source. Its front matter holds the overlay's paths for the placeholders, the model and effort, and the tool access in the harness's keys. The front matter holds each storyboard's path and the deploy mark too. The copy's body ends with the workspace sentence.
 - **What follows:** an edit of a source in `.pkit/agents/` reaches the harness only once the deploy runs again, such as at the next sync. Nothing keeps the copy in step with its source automatically without running the deploy again.
 
 ## The rule-set reviewer
