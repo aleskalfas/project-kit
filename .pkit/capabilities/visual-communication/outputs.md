@@ -22,6 +22,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/switching.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
@@ -92,6 +93,7 @@ pkit:
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-018
         - visual-communication:DEC-019#2
         - visual-communication:DEC-020#1
         - visual-communication:DEC-020#2
@@ -177,7 +179,7 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
-- the `svg` renderer, at version 1.1.0
+- the `svg` renderer, at version 1.1.0, which draws the formats `svg` and `svg-modes`
 - the `pdf` renderer, at version 1.2.0
 - the `html` renderer, at version 1.3.0
 - the `css` code writer, at version 1.0.0
@@ -197,6 +199,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
 - **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
+- **What came with switching files.** The SVG renderer came to draw a second format, `svg-modes` ([The switching file](#the-switching-file)). A one-key file draws as before, so its version stays at 1.1.0, and the switching file is pinned to that version beside it. Seam 5 already hands a renderer of a format that holds modes every key of one file in one call, so the seam stays at 5 too.
 - **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stays at 5, and no other plugin's version rises.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
@@ -232,7 +235,7 @@ An entry matches a loss by its `plugin` and its `what` alone, whatever its `key`
 
 ## The SVG renderer
 
-The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files.
+The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files. Each is a *one-key file*, the file of one combination, which a key names. In the format `svg-modes` it draws a *switching file* instead, which holds several combinations and follows the reader's mode ([The switching file](#the-switching-file)).
 
 - **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
@@ -246,6 +249,30 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 
 A *preview* is a render for a person to look at, which `pkit visual render` draws. It uses up no version number, and is never an export (DEC-006 point 7). Where a component shows a version's number or its date, a preview shows them as this clone's next export would, where it can ([The facts of an export](components.md#the-facts-of-an-export)). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`. The scenes `pkit visual add` draws both ways take the same names ([The clone's local folder](files.md#the-clones-local-folder)).
 
+### The switching file
+
+A *switching file* is one SVG file that holds several combinations of modes, and draws the one the reader's signal names (DEC-018). A page shows it as any image, `![alt](path)`, and it follows the mode the browser tells it. The format `svg-modes` takes one for each page, each language and each set of combinations that share one. The file's extension stays `svg`.
+
+- **Which combinations share a file.** In one language, combinations that differ only in modes of a pair the format reads share a file. So a file serves one key over the size axes, as a page file does ([Modes](#modes)). A mode the combinations hold alike parts nothing.
+- **What the format reads.** The renderer's declaration names `svg-modes` under `holds-modes`, with the colour scheme's pairs alone: `light` and `dark` pair with the same values of `prefers-color-scheme`. It names no contrast pair, since `prefers-contrast` did not reach an image in a test. No pair lies in the foundations or in a scene. Another pair is a new version of the renderer, after a test of its own.
+- **A mode of no pair.** A piece in this format whose combinations differ in a value axis's mode of no pair it reads, such as `contrast`'s `standard` and `high`, fails the check, and every export refuses it. No file could hold that mode beside another. Draw it in a piece of its own, or export the piece as `svg`.
+- **The file's key** is the first it serves, in [key order](files.md#keys-of-combinations). So a piece of light and dark takes the default key, and a piece of dark alone takes dark's.
+- **The plain drawing** is the first key's one-key file, attribute for attribute. So a tool that reads no rule, such as a converter to PNG, draws a whole figure in that combination.
+- **A paint a rule reaches.** Each element a colour role paints carries the role as a mark beside its paint: `data-fill` or `data-stroke`. A second `<style>` holds a rule for each other key, under the reader's signals that part it from the first, such as `@media (prefers-color-scheme:dark)`. The rule repaints each mark in that key's colour and opacity, or `none` where the role has no colour there. Every selector is one attribute's, so a later rule wins.
+- **What a rule changes.** A colour, and which picture shows. Layout, text and fonts are drawn once.
+- **Arrowheads.** The page's `<defs>` holds an arrowhead for each end and each role a line's stroke takes. Its triangle carries the role as a fill mark, so the rule that repaints the role repaints it.
+- **Pictures.** A picture every key shows alike is drawn once. One that another key shows otherwise, such as a produced picture's dark variant, is drawn once for each picture the keys show. Each is marked `data-shown-in` with the keys it shows in, and a rule shows those of its key alone.
+- **One mode alone.** A piece of one mode gives a file of one key, under no rule.
+- **What stays one-key.** The format `svg` keeps a file for each combination. The previews and the viewing step go on drawing one key at a time. So a person looks at each mode through the one-key file, and each export holds the switching file to it ([What refuses an export](#what-refuses-an-export)).
+
+**What a reader sees.** The file reads the reader's signal and nothing else. The capability neither sets the mode nor sees it. What it promises is a floor: a browser that reads the rules and one that ignores them each show a whole figure, in one of the piece's modes, unless a person let a difference through an export. How far browsers carry the reader's mode, as tested:
+
+- **On 6 November 2026,** a switching file stood on a temporary page on GitHub. Chrome 157 followed the reader's system and each GitHub theme setting, and repainted at a change in an open page. Firefox 148 followed the system and repainted at a change in an open page. WebKit on macOS, through a web view, drew light under a light system. Under a dark system it drew dark on some loads only, and no GitHub setting moved it. On an iPhone, browsers generally run on WebKit.
+- **On 9 November 2026,** a person signed in to GitHub saw the file draw light under GitHub's light theme over a dark system, and switch when the computer's mode switched.
+- **A site's own switch** reaches the file only where the site sets a single CSS `color-scheme` on the page, as GitHub's stylesheets do. A site that sets none leaves the file on the system's mode, so a light site read under a dark system shows a dark figure.
+- **Not seen:** Safari itself, GitHub's other settings and surfaces, any other host or documentation site, Windows and Linux.
+- **A figure that misses the mode** stays readable where it paints its own ground. So a page of a switching file with no ground of its own asks for attention ([Scenes](checks.md#scenes)).
+
 ### What the SVG renderer loses
 
 Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
@@ -254,6 +281,8 @@ Before it draws, the capability compares each scene with the renderer's declarat
 - **an image** with no picture for the combination drawn: a produced picture with no variant for it, or a picture file that is missing or cannot be read. The message says which.
 
 The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
+
+In a [switching file](#the-switching-file) of several keys, a fill, a stroke or an image lost in one key alone names that key (`key` in [The loss report](#the-loss-report)). A role with no colour in one key paints nothing there, and an image with no picture in one key shows none there.
 
 ## The PDF renderer
 
@@ -358,11 +387,11 @@ In a file of several keys, these losses lie in one key alone (`key` in [The loss
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
-- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows three. The SVG renderer draws `svg`, the PDF renderer `pdf`, and the HTML renderer `html`.
-- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes the [page files](#the-html-renderer) that serve every language and combination the piece names ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
+- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows four. The SVG renderer draws `svg` and `svg-modes`, the PDF renderer `pdf`, and the HTML renderer `html`. `svg-modes` is an addition format 1 allows (DEC-003 point 3). A piece names `svg` or `svg-modes`, never both, since the two write files of one name.
+- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `svg-modes`, one [switching file](#the-switching-file) for each page, each language and each set of combinations that share one; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes the [page files](#the-html-renderer) that serve every language and combination the piece names ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **What a file shows of its export.** A component may show the version's number and its date. Each file shows the run's own ([The facts of an export](components.md#the-facts-of-an-export)).
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A [page file](#the-html-renderer)'s name carries none either, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A switching file is named as an SVG file, under the first key it serves: `flow.v1.en.default.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A [page file](#the-html-renderer)'s name carries none either, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), but for a copy at a place it names, and the files of the version handed out ([The lock](files.md#the-lock)).
 
 ### The current copy
@@ -398,7 +427,7 @@ versions:
 | `version` | the version's number, from 1 |
 | `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
-| `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`). A version that let a number or a date through names each under `let-through` (below) |
+| `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`). A version that let a number or a date through names each under `let-through`, and one that let an element of a switching file through names each under `differing` (below) |
 
 A version that let a version's number or its date through, though it does not fit ([What refuses an export](#what-refuses-an-export)), names each text in `recorded`:
 
@@ -414,6 +443,19 @@ let-through:
 | `element` | the trace id of the text that overflows its width, or of a component around it that gets less than it asks for |
 | `component` | the component that element lies in |
 | `version` | the version of the library that component lies in, absent for the piece's own |
+
+A version that let an element of a switching file through, though it paints a combination otherwise than the one-key file ([What refuses an export](#what-refuses-an-export)), names each in `recorded`:
+
+```yaml
+differing:
+  - {file: flow.v1.en.default.svg, key: colour-scheme.dark, element: figure/body/steps[plan]/box}
+```
+
+| Field | What it holds |
+|---|---|
+| `file` | the switching file, by its name in the version |
+| `key` | the combination it paints otherwise |
+| `element` | the trace id of the element, or of the page where the file's styles differ |
 
 `pkit visual mark-final` ends the record with one line, which names the version handed out ([The lock](files.md#the-lock)):
 
@@ -445,6 +487,8 @@ An export run is refused, and writes nothing, when:
 - the piece is final: a final piece takes no export (DEC-017 point 3);
 - the piece is published, and its lock differs from the lock of the version that wrote its current copy, or that lock cannot be read (below);
 - the piece names no format under `exports`;
+- the piece names both `svg` and `svg-modes`, which write files of one name;
+- the piece exports as `svg-modes`, and its combinations differ in a value axis's mode of no pair that format reads ([The switching file](#the-switching-file));
 - the piece has no lock yet, or its lock does not hold: a version the project does not hold or cannot read, a library the piece uses that the lock leaves out, or a major that does not fit what a library builds on;
 - the piece is published, and its lock names a version not yet released (DEC-003 point 9);
 - the brand cannot be read, or the piece names a mode its brand lacks;
@@ -456,6 +500,7 @@ An export run is refused, and writes nothing, when:
 - the piece has no page in one of its languages, so the version would hold no file in it;
 - a version's number or its date does not fit where the run fills it, unless `--use-overflowing <fact>` names the fact (below);
 - `--use-overflowing` names the language or the state, which the check measures as they stand;
+- a switching file paints a combination otherwise than the one-key file of that combination, unless `--use-differing <element>` names each such element (below);
 - a file the run would write, `exports.yaml` among them, is reached through a link;
 - a file lies where a published piece's `current-copy/` goes;
 - a published piece's `copy-place` is a place the rules refuse (DEC-017 point 8):
@@ -476,6 +521,13 @@ Each of these is found before the first write, so a refused run records no locat
 - **Measured otherwise.** An overflow measured from a table or by an estimate stops nothing, and the run says it.
 - **The language and the state** stop nothing here: they come from the piece's files, and the check measures them as they stand.
 - **What no run sees.** A longer text may wrap within its box and move what lies beside it, with nothing overflowing. Look at the pages for that ([The viewing step](#the-viewing-step)).
+
+**A switching file that differs.** The previews, the viewing step and a reviewer all see the one-key file, so nobody sees the file a page shows before a reader does. So a run holds each switching file to the one-key file of each combination it holds (DEC-018 point 1).
+
+- **What it compares.** It reads the switching file in each combination, as a browser reads its rules under that combination's signals, and the one-key file as it stands. With no browser, it compares the two element by element: each element drawn, its attributes, what it paints and its text, and the styles that hold the fonts. What the switching file writes only so a rule can reach it is left out: its marks, and the key the file names. An arrowhead is compared as it paints, whatever its id.
+- **What it names.** Each element that differs, the file, the combination's key and what differs, such as a fill. A rule the reading cannot read as a browser would is a difference at the page.
+- **The way past.** `--use-differing <element>` writes the file as it is, and may repeat. An element nobody named still stops. The record of exports keeps each element let through, and a published piece's current copy made with one asks for attention, naming whoever maintains the capability as the fault's owner. An element named that does not differ refuses nothing, and the run says so.
+- **Whose fault.** A difference is the renderer's, which only a release of the capability mends. Report it to whoever maintains the capability.
 
 **A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
 

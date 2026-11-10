@@ -135,6 +135,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-a-produced-output
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
+        - .pkit/capabilities/visual-communication/outputs.md#the-switching-file
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
@@ -437,8 +438,9 @@ Each fails, unless its row says otherwise.
 | `unknown-colour` | An element paints its fill or stroke, or a run its fill, with a role that has no colour under the brand. It is no colour role, or a library's role whose chain of defaults reaches none and which the brand gives none. | `<piece>/piece.yaml#<trace>` |
 | `component-experimental` | The piece uses an experimental component, which its library may change in any release (DEC-003 point 9). States a fact. | `<piece>/piece.yaml#<trace>` |
 | `component-deprecated` | The piece uses a deprecated component. Asks the piece's author for attention: replace it with the component its library names in its place. | `<piece>/piece.yaml#<trace>` |
+| `switching-no-ground` | The piece exports as `svg-modes`, and a page draws no ground of its own in a combination its [switching file](outputs.md#the-switching-file) holds: no box of an opaque colour over its whole frame, as the viewing step reads a ground (DEC-018 point 5). A page shows the file on its own ground, so dark text could meet a dark page. The message names the page and those combinations. Asks the piece's author for attention, never fails, and repeats until a ground is there: give the page one, in its component or its brand. | `<piece>/piece.yaml#<page's trace>` |
 
-The check reports `contrast-drawn`, `unknown-colour`, the two statuses and an `unknown-role` the lock shows at `piece.yaml`, and they name no library version. So they never take the rule of a released version.
+The check reports `contrast-drawn`, `unknown-colour`, the two statuses, `switching-no-ground` and an `unknown-role` the lock shows at `piece.yaml`, and they name no library version. So they never take the rule of a released version.
 
 ### Losses
 
@@ -495,7 +497,15 @@ The check holds a piece's [current copy](outputs.md#the-current-copy) to what it
 | `current-copy-unreadable` | A published piece's copy, or a draft's, cannot be judged. `exports.yaml` keeps no list of numbered versions, or holds a `current-copy` of no shape. Or it gives no lock of the version that wrote the copy. Where `exports.yaml` cannot be read at all, [the piece reads as final](files.md#the-lock), so `exports-unreadable` follows instead. | fails | `<piece>/exports.yaml`, or its `#current-copy` | Mend the record, then run the export. |
 | `current-copy-over-stale` | The version that wrote a published piece's copy used a produced picture while it was stale. The message names the output. | asks the piece's author for attention | `<piece>/exports.yaml#current-copy` | Run `pkit visual produce <piece> <output>`, then the export. |
 | `current-copy-let-through` | The version that wrote a published piece's copy let a version's number or its date through, though it does not fit ([what refuses an export](outputs.md#what-refuses-an-export)). The message names the fact, its text, the element and its component. It stays until a version that fits writes the copy. | fails where the project can correct the component; in a released library it asks the library's owner for attention | `<piece>/exports.yaml#current-copy` | Give the text room in the component, then run the export. |
+| `current-copy-differing` | The version that wrote a published piece's copy let an element of a switching file through, though it paints a combination otherwise than the SVG renderer's file of that combination ([what refuses an export](outputs.md#what-refuses-an-export)). The message names the element, the file and the combination's key. It stays until a version that let none through writes the copy (DEC-018 point 1). | asks whoever maintains the capability for attention, who corrects the SVG renderer in a release | `<piece>/exports.yaml#current-copy` | Once a release of the capability draws it alike, run the export. |
 | `current-copy-standing` | A draft keeps a file of its current copy, at the path the record names. A page may rely on it. Its hash does not count, so changing a byte leaves the finding. | asks the piece's author for attention | the file | Remove it, or publish the piece again. |
+
+**The formats a piece names** (DEC-018 points 2 and 4). Each of these fails, in a piece that is not final, and every export refuses the piece:
+
+| Label | What it means | Where it points | What to do |
+|---|---|---|---|
+| `exports-same-name` | The piece names both `svg` and `svg-modes` under `exports`, which write files of one name. | `<piece>/piece.yaml#exports` | Name one of them. A piece that needs a file of one fixed mode names `svg`, and a second piece serves a page. |
+| `exports-unpaired-mode` | The piece exports as `svg-modes`, and its combinations differ in a value axis's mode of no pair that format reads, such as `contrast`'s `high` ([the switching file](outputs.md#the-switching-file)). No switching file can hold it. The message names the axis and the mode, a finding for each mode. A mode the combinations hold alike parts nothing. | `<piece>/piece.yaml#modes` | Draw that mode in a piece of its own, or export the piece as `svg`. |
 
 **Where the lock differs.** An export refuses a published piece whose lock differs from the one its copy was made under ([what refuses an export](outputs.md#what-refuses-an-export)). So the fix for a copy the piece holds then names that lock, and both ways past the refusal.
 

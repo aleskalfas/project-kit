@@ -13,14 +13,16 @@
 
 Makes each format the piece declares under `exports`, in each of its languages and each
 combination of modes it names, from the scene, under the lock its `piece.yaml` holds:
-`svg`, one file for each page, `pdf`, one file that holds every page in order, and `html`,
-one page file that holds every page in order and each combination that shares it: those at
-one key over the size axes that differ only in modes a reader's signal names (DEC-023
-point 1). The run takes the piece's next number, past every version its `exports.yaml`
-records and every file of its exports folder, and every file it makes carries it:
-`<piece>.v<N>.<language>.<key>.<format>`, a page file under the first key it serves, and
-for an SVG file of a piece of more than one page `<piece>.v<N>.<language>.<key>.<n>.svg`,
-its page's number from 1, in
+`svg`, one file for each page, `svg-modes`, one switching file for each page that holds each
+combination that shares it and follows the reader's colour scheme as an image (DEC-018
+point 1), `pdf`, one file that holds every page in order, and `html`, one page file that
+holds every page in order and each combination that shares it: those at one key over the
+size axes that differ only in modes a reader's signal names (DEC-023 point 1). The run
+takes the piece's next number, past every version its `exports.yaml` records and every file
+of its exports folder, and every file it makes carries it:
+`<piece>.v<N>.<language>.<key>.<format>`, a page file or a switching file under the first
+key it serves, a switching file's extension `svg`, and for an SVG file of a piece of more
+than one page `<piece>.v<N>.<language>.<key>.<n>.svg`, its page's number from 1, in
 `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the
 clone and never committed. It then records the version in `exports.yaml`: the fingerprint
 of every file its scenes were computed from, each file's hash, and when, in which state,
@@ -34,6 +36,13 @@ element, in any library, unless `--use-overflowing version` or `--use-overflowin
 names the fact (DEC-016 point 6). The record keeps each text let through. An overflow
 measured from a table or by an estimate stops nothing, and the run says it. Naming the
 language or the state is refused: the check measures them as they stand.
+
+It holds each switching file, read in each combination it holds, to the SVG file of that
+combination, element by element, with no browser, and stops on an element it paints
+otherwise, naming it, unless `--use-differing <element>` names it (DEC-018 point 1). The
+record keeps each element let through. It refuses a piece that names both `svg` and
+`svg-modes`, which write files of one name, and one in `svg-modes` whose combinations differ
+in a value axis's mode the format pairs with no signal (DEC-018 points 2 and 4).
 
 It stops on a produced picture that is stale, naming what changed, unless `--use-stale`
 names it; the record keeps each picture used while stale, and the version of each picture
@@ -65,7 +74,7 @@ and the configuration as they were.
 
 Usage:
   pkit visual export <piece> [--use-stale <output>]... [--use-overflowing <fact>]...
-                     [--location <path>]
+                     [--use-differing <element>]... [--location <path>]
 
 Exit codes:
   0  exported and recorded
@@ -108,11 +117,26 @@ def main() -> int:
         help="export with this fact's text as it is, `version` or `date`, though it overflows; "
         "may repeat",
     )
+    parser.add_argument(
+        "--use-differing",
+        action="append",
+        default=[],
+        metavar="ELEMENT",
+        help="export a switching file as it is, though this element, by its trace id, paints a "
+        "combination otherwise than the SVG file of it; may repeat",
+    )
     parser.add_argument("--location", help="the location to take and record, where none is")
     args = parser.parse_args()
     root = project_root()
     try:
-        return _export(root, args.piece, args.use_stale, args.use_overflowing, args.location)
+        return _export(
+            root,
+            args.piece,
+            args.use_stale,
+            args.use_overflowing,
+            args.use_differing,
+            args.location,
+        )
     except (
         pl.Refused,
         location.LocationRefused,
@@ -124,7 +148,12 @@ def main() -> int:
 
 
 def _export(
-    root: Path, name: str, use_stale: list[str], use_overflowing: list[str], given: str | None
+    root: Path,
+    name: str,
+    use_stale: list[str],
+    use_overflowing: list[str],
+    use_differing: list[str],
+    given: str | None,
 ) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
@@ -135,7 +164,12 @@ def _export(
         )
     _refuse_a_lock_that_differs(piece)
     project = rendering.exportable(piece, libraries.Held(root, where.path))
-    planned = exports.plan(project, use_stale=use_stale, use_overflowing=use_overflowing)
+    planned = exports.plan(
+        project,
+        use_stale=use_stale,
+        use_overflowing=use_overflowing,
+        use_differing=use_differing,
+    )
     change = files.Change(root)
     said = location.record(change, where)
     exports.write(planned, change)
