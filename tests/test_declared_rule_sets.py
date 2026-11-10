@@ -26,6 +26,7 @@ from project_kit import sync as sync_mod
 from project_kit.cli import main
 from project_kit.manifest import read_kit_version
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 
 _PROJECTS_VERSION = read_kit_version(install_mod.find_source_kit())
 
@@ -100,6 +101,7 @@ def source(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyP
     kit = tmp_path_factory.mktemp("kit-source")
     (kit / "decisions").mkdir()
     (kit / "VERSION").write_text(f"{_PROJECTS_VERSION}\n", encoding="utf-8")
+    stage_picker(kit)
     from project_kit import cli as cli_mod
 
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit)
