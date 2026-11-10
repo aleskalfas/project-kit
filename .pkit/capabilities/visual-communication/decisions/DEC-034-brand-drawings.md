@@ -32,6 +32,7 @@ Three more records bear on it:
 - **One layout each.** A drawing draws one layout of one top, so a brand that draws two layouts alike holds two drawings.
 - **It declares nothing the content gives.** It takes the top's: the layout's slots and the fields it declares for their lists, the top's other fields, its options with their words, its states and its colour (DEC-009 point 5). So its file holds none of the keys `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`.
 - **What it holds includes** what it is for, under `about`, as every component, its parts, its own named values, the size its instance asks for (point 2), and the parts it exposes, by the names the top exposes them by (DEC-009 point 5).
+- **No token of the top.** It reads none of the top's component tokens (DEC-035 point 3, proposed in [project-kit#2979](https://github.com/aleskalfas/project-kit/pull/2979)).
 
 ### 2. What a page gets stays where the top writes it, and a drawing writes what its instance asks for
 
@@ -101,7 +102,7 @@ Three more records bear on it:
 
 ## Rationale
 
-**Point 1, the drawing's own file.** A drawing's parts are written against one layout of one top (DEC-009 point 5), so the check reads that top to judge each reference they make. A file that names what it draws is judged alone, as any component is, and two drawings of one layout are two files, which DEC-009 point 9 already reports. Content gives the top what the top declares, whichever drawing draws it, and options of a drawing's own would let a brand ask content for words the top never offered.
+**Point 1, the drawing's own file.** A drawing's parts are written against one layout of one top (DEC-009 point 5), so the check reads that top to judge each reference they make. A file that names what it draws is judged alone, as any component is, and two drawings of one layout are two files, which DEC-009 point 9 already reports. Content gives the top what the top declares, whichever drawing draws it, and options of a drawing's own would let a brand ask content for words the top never offered. Why a drawing reads none of the top's tokens is DEC-035's to say, in its point 3 and its Alternatives considered.
 
 **Point 2, sizes by where they are written.** Content is written against the top, and the top sets the room each page offers. A drawing that changed a deck's page size would change what fits on a slide under each brand. What a page asks for is its drawing's, since only the drawing knows its lowest part (DEC-022, Rationale). Splitting by where a size is written keeps the two apart. A top whose one layout is the whole top has no page size of its own to keep, since its parts are its drawing.
 
@@ -194,3 +195,4 @@ Three more records bear on it:
   - whether a brand may name a brand other than its base, and so place that brand's parts
   - a physical size with bleed, the margin printed past the trim and cut away
   - a frame around the top's own drawing, as a kind of drawing of its own
+  - what gives the tokens of a brand's own components their values, which DEC-035 point 7 leaves to the change that builds a brand's own components
