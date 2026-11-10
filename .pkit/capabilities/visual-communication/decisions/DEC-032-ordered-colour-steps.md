@@ -6,7 +6,7 @@ date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** where a list's items stand in an order, as a stack's layers do, a pattern may shade each item by its place. A brand gives each mode two colours, one for the order's first item and one for its last, and one text colour for every shade. The engine spreads the two evenly over the list, whatever its length: a stack of three layers, for example, takes the first colour, the colour halfway and the last. An item that names a concept keeps its concept's colour.
+**In plain terms:** where a list's items stand in an order, as a stack's layers do, a pattern may shade each item by its place, where the content asks or by its default. A brand gives each mode two colours, one for the order's first item and one for its last, and one text colour for every shade. The engine spreads the two evenly over the list, whatever its length: a stack of three layers, for example, takes the first colour, the colour halfway and the last. An item that names a concept keeps its concept's colour.
 
 ## Context
 
