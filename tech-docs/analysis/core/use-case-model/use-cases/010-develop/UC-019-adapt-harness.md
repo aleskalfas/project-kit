@@ -43,11 +43,13 @@ pkit:
         - COR-002
         - COR-005
         - COR-013
+        - COR-017
         - COR-028#3
         - COR-047
         - ADR-034#1
         - ADR-086#4
         - ADR-086#6
+        - ADR-087#4
       artefact:
         - ACT-component-author
         - ACT-ai-agent

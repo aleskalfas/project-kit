@@ -39,6 +39,7 @@ pkit:
         - .pkit/agents/README.md
         - .pkit/agents/definition_source.py
         - .pkit/agents/tool_access.py
+        - .pkit/lifecycle/capability_records.py
         - .pkit/lifecycle/ownership.py
         - .pkit/permissions/decide.py
       record:
