@@ -172,9 +172,11 @@ answers:
       - 20261110T155342Z-400eda56.yaml
       - 20261110T155554Z-ce4af016.yaml
       - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
       - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T220739Z-00e08993.yaml
     revalidated:
-      at: 2026-11-10T22:48:20Z
+      at: 2026-11-10T23:00:20Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
@@ -270,8 +272,10 @@ answers:
       - 20261110T153914Z-59b4ef7e.yaml
       - 20261110T155342Z-400eda56.yaml
       - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T220739Z-00e08993.yaml
     revalidated:
-      at: 2026-11-10T22:48:22Z
+      at: 2026-11-10T23:00:21Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
@@ -378,9 +382,11 @@ answers:
       - 20261110T155342Z-400eda56.yaml
       - 20261110T155554Z-ce4af016.yaml
       - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
       - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T220739Z-00e08993.yaml
     revalidated:
-      at: 2026-11-10T22:48:24Z
+      at: 2026-11-10T23:00:22Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
     read:
@@ -526,10 +532,12 @@ answers:
       - 20261110T085212Z-6049ed09.yaml
       - 20261110T144319Z-dd134ab5.yaml
       - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T220739Z-00e08993.yaml
     revalidated:
-      at: 2026-11-10T22:50:26Z
+      at: 2026-11-10T23:00:23Z
       outcome: unchanged
-      unchanged-because: Judged with the answers made apart for the agent-definition checks of 7e079af4 and 29c3a865, which leave the capability's agent and skill deploying as the README says, and for the quoting of a run under files.md's Content files, which leaves a piece's files where they were. The sections it points to now also describe component tokens, a brand's tokens under component.<library>, a stable component's tokens in a release's comparison and a producer's input that names no token; the README only points to them for a piece, a brand, the library folder, the release's comparison and produced pictures, and each pointer still holds.
+      unchanged-because: "Judged with the answers made apart for the agent-definition checks of 7e079af4 and 29c3a865, which leave the capability's agent and skill deploying as the README says, and for the quoting of a run under files.md's Content files, which leaves a piece's files where they were. The sections it points to now also describe component tokens, a brand's tokens under component.<library>, a stable component's tokens in a release's comparison and a producer's input that names no token; the README only points to them for a piece, a brand, the library folder, the release's comparison and produced pictures, and each pointer still holds. Judged too with DEC-013's trim, answered apart in 310bc3fd and 00e08993: points 1 and 5 decide what they decided, release.py changed only in its docstring, and files.md's section on the libraries the capability ships gains the shipped release's two refusals, how parallel changes meet and the released versions' cost, which the README does not state and the component tokens do not touch, so what pkit visual add takes and refuses, and what release --shipped holds and writes, stand as it says."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
     read:
       - 20261103T170439Z-32fb6096.yaml
