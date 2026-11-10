@@ -8,6 +8,8 @@ pkit:
       path:
         - .pkit/lifecycle/ownership.py
         - .pkit/agents/tool_access.py
+        - .pkit/lifecycle/capability_records.py
+        - .pkit/agents/definition_source.py
         - .pkit/lifecycle/templates/README.md
         - src/project_kit/__init__.py
         - src/project_kit/lifecycle_ownership.py
@@ -111,11 +113,13 @@ The lifecycle keeps a project's state in these places under `.pkit/`:
 
 ```
 .pkit/
-├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
+├── manifest.yaml                                    ← backbone manifest (recorded version + component registry + the project's agent choices)
 ├── agents/
-│   └── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
+│   ├── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
+│   └── definition_source.py                         ← the picker of which definition of each name is the agent, propagated as ownership.py is (the agents README, "Name-collision precedence")
 ├── lifecycle/
-│   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
+│   ├── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
+│   └── capability_records.py                        ← the reader of the registry, each capability's skips and the agent choices, propagated as ownership.py is (component-registry.md)
 ├── migrations/
 │   └── backbone/
 │       └── <major>.<minor>.0/
