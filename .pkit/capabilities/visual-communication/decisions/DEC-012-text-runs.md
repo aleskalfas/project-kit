@@ -6,13 +6,13 @@ date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a component may let a field of text hold *runs*, spans of the text each set in a style the field names. Content gives such a field a text, as before, or a list of runs, and the component gives each style its font and colour. A run may also name a concept, which colours it. For example, a terminal's line whose styles are `command`, `prompt` and `comment` takes `line: [{text: "$ ", style: prompt}, pkit visual render deck]`, its command in the first style.
+**In plain terms:** a component may let a field of text hold *runs*, spans of the text each set in a style the field names. Content gives such a field a text, as in format 1, or a list of runs, and the component gives each style its font and colour. A run may also name a concept, which gives it its colour family. For example, a terminal's line whose styles are `command`, `prompt` and `comment` takes `line: [{text: "$ ", style: prompt}, pkit visual render deck]`, its command in the first style.
 
 ## Context
 
-The capability's next slice draws texts in several styles, such as a terminal's line whose prompt, command and comment take different colours ([project-kit#2501](https://github.com/aleskalfas/project-kit/issues/2501), T6). Format 1 cannot say so:
+A slice of the capability draws texts in several styles, such as a terminal's line whose prompt, command and comment take different colours ([project-kit#2501](https://github.com/aleskalfas/project-kit/issues/2501)). Format 1 cannot say so:
 - **Content holds no look.** It holds no font or colour, and chooses only among what its libraries declare. A concept says what a thing is, and its component decides how that looks ([visual-communication:DEC-001-visual-communication-discipline] points 3 and 6).
-- **A text is set in one style.** A *text part*, the part of a component that draws one of its fields as text, sets it in the *typography role* its `style` names, which gives the font, size, weight and line height, and colours it with its *paint*, the colour role its `fill` names. The scene's text holds one role and one paint, and no run ([visual-communication:DEC-005-engine-and-plugins] points 1, 4 and 5).
+- **A text is set in one style.** A *text part*, the part of a component that draws one of its fields as text, sets it in the *typography role* its `style` names, which gives the font, size, weight and line height, and colours it with its *paint*, the colour role its `fill` names. The record of the engine gives the scene's text paragraphs of runs, but format 1 builds a text of one role and one paint, with no run ([visual-communication:DEC-005-engine-and-plugins] points 1, 4 and 5).
 - **The reserved `concept` binds only a mapping that places a component** ([visual-communication:DEC-002-files-and-validation] point 4), so it does not reach a span of text.
 
 Until validation accepts files at an older format number, the format grows only by additions that every file written before still meets ([visual-communication:DEC-003-change-over-time] point 3), so no new reserved key may refuse a field of its name. The records of a list's fields and of ties met that bound on like questions, with fields a pattern declares, a word given on each item, and keys the format fixes on a mapping that places no component ([visual-communication:DEC-010-list-item-fields] points 1, 3 and 5, [visual-communication:DEC-011-tie-ends] point 2).
@@ -26,10 +26,11 @@ Until validation accepts files at an older format number, the format grows only 
 - **A run** is a span of a text set in one style, perhaps naming a concept. A text is one or more runs joined in order, and a field that may hold them is a *field of runs*.
 - **The mark.** A component marks each field of runs with a key format 1's schema of a component does not know. The mark lies directly on one of its fields or on a slot a layout declares, never on a schema within one, such as a list's items, nor on the schema of all its fields, and no `$ref` leads to a marked schema. A field it does not mark takes what its schema says.
 - **Only a field of text.** A marked field's `type` is text and no other, and it holds no `enum`, `const` or `$ref`. The mark widens its schema to take a list of runs too, and whatever offers a component's fields to an author, such as the capability's pages, its agents or a schema an editor reads, offers that widened shape.
-- **Its value.** A field of runs takes text, read as one run in its first style (point 2), or a list of runs. A run is text, in that first style, or a mapping whose `text` holds text, and which may hold `style` (point 2) and `concept` (point 3) and no other key.
-- **Joined as written.** The runs' texts are joined in order, with nothing added between them. A line feed in a run's text ends a paragraph, and the next paragraph goes on in the same run. A list of runs fills its field, for a part's condition, where one of its runs holds text.
+- **Its value.** A field of runs takes text, read as one run, or a list of runs. A run is text, or a mapping whose `text` holds text, and which may hold `style` (point 2) and `concept` (point 3) and no other key.
+- **Joined as written.** The runs' texts are joined in order, with nothing added between them. A line feed in a run's text ends a paragraph, and the next paragraph goes on in the same run.
+- **Filled.** A list of runs fills its field, for a part's condition, where one of its runs holds text.
 - **Keys the format fixes.** A run places no component, so no reserved key binds it (DEC-002 point 4). The format fixes `text`, `style` and `concept` on a run alone, as it fixes `layout` on a page drawn in a layout (DEC-010 point 5).
-- **No id.** A run carries no id, and a list of runs holds runs, not items, so no rule of ids reaches it (DEC-001 point 3). An edit taken back from a renderer finds a run by its place among its field's runs, only while they stay as they were at the render.
+- **No id.** A run carries no id, and a list of runs holds runs, not items, so no rule of ids reaches it (DEC-001 point 3). An edit taken back from a renderer finds a run by its place among its field's runs, only while they stay as they were at the render, and changes its text.
 - **In each language,** a field's runs are its value, so their number, order and styles may differ, as its text does.
 - **Where it lies.** A field of runs is one of a component's own fields: a field of a top or of a component content places, an item included, or a slot a layout declares (DEC-010 point 5). An arrangement field, an end field, an option and a list's component field never take runs (DEC-010 points 1 and 3, DEC-011 point 2).
 
@@ -40,8 +41,8 @@ Until validation accepts files at an older format number, the format grows only 
 - **One word on each run,** given as `style: <word>`. It is no role, font or value: content chooses among what its component declares (DEC-001 point 3).
 - **The text part chooses by it, as by an option's word.** A text part that shows a field of runs gives each run the typography role and the paint its style chooses, declared, never computed (DEC-005 point 1), and two words may share a role. Where a field declares more than one word, at least one text part of the component that shows the field chooses its role, its paint or both by them. Another may show the field in one look, and draws every run in it.
 - **Only how the run is set.** A run's word chooses only that run's typography role and paint, never a place, a size, another part, a named value of the component or an option of a placed component. A text part chooses by the words of the field it shows, and by no other field's.
-- **Drawn where it is declared.** Only a text part shows a field of runs: one of the component that declares it, or, for a top, one of a drawing of its layout. A part's condition may read whether the field is filled, and no other part reads it. No part passes it on to a component it places, for now, though a part may pass a field of text on to a placed field of runs, which reads it as one run in its first style.
-- **Under every drawing.** A brand's drawing of a layout takes a field's words as words the top declares, and gives each its own look (DEC-009 point 5). It takes those a text part of it that shows the field chooses by, only the first where none does, and no run where it passes the field on, so it then fits only an instance that gives the field text. An instance whose runs name a word the drawing does not take is drawn by the top's own drawing (DEC-009 point 6). A run's concept counts for no drawing's fit, so no change of a top that point 6 counts as not breaking fails a brand's drawing.
+- **Drawn where it is declared.** Only a text part shows a field of runs: one of the component that declares it, or, for a top, one of a drawing of its layout. A part's condition may read whether the field is filled, and no other part reads it. No part of the component that declares it passes it on to a component it places, for now, though a part may pass a field of text on to a placed field of runs, which reads it as one run in its first style.
+- **Under every drawing.** A brand's drawing of a layout takes a field's words as words the top declares, and gives each its own look (DEC-009 point 5). It takes those a text part of it that shows the field chooses by, only the first where none does, and no run where it passes the field on, so it then fits only an instance that gives the field text. An instance whose runs name a word the drawing does not take is drawn by the top's own drawing (DEC-009 point 6). A run's concept counts for no drawing's fit, so no change of a top that this record's point 6 counts as not breaking fails a brand's drawing.
 
 ### 3. A run names a concept with the key `concept`
 
@@ -50,7 +51,7 @@ Until validation accepts files at an older format number, the format grows only 
 - **A state reaches every run.** A state its component gives a family replaces the instance's family, its own concept's included, and the family of each of its runs, a run's concept included. Content keeps no run's concept under such a state.
 - **A run's paint** is the paint its style chooses, or the role an `override` points its part at (DEC-001 point 6). A paint `:colour.<member>` takes that member of the run's family, and a paint that names a role takes that role, whatever the run's concept. So a concept colours a run only where the component paints the run's style from a family.
 - **Guarded as drawn.** Each run is measured against the fill under it, at its own size and weight and in its own paint, as every drawn text is (DEC-004 point 8). That measure alone guards the colour a run's concept gives it.
-- **Signs beside colour, later.** A run's concept counts toward the bound on how many concepts one piece tells apart by colour, as an item's does. A sign beside a run's colour, such as its concept's icon, waits for the change that builds icons and a legend, for runs and items alike, so this record narrows no rule of DEC-004 point 10.
+- **The bound on concepts.** A run's concept counts toward the bound on how many concepts one piece tells apart by colour, as an item's does, and this record narrows no rule of DEC-004 point 10.
 
 ### 4. Each run is measured in its own style, and lines break across runs
 
@@ -62,8 +63,9 @@ Until validation accepts files at an older format number, the format grows only 
 
 ### 5. How each choice is given, beside the records of a list's fields and of ties
 
-- **The forms those records chose.** Runs lie in a field the component declares, as a list's component is named in one (DEC-010 point 1). A run's style is a word given on each run, as an arrangement field's is on each item (DEC-010 point 3). A run's keys, `concept` among them, are keys the format fixes on a mapping that places no component (DEC-010 point 5, DEC-011 point 2).
-- **No clash and no new rule of fit.** A run's keys are the format's alone, and its words its field's, drawn only by the component that declares the field. So no other library's keys or words meet them, and no versions cease to fit together over runs (DEC-010 point 2, DEC-011 points 1 and 4).
+- **The forms those records chose.** Each choice takes a form those records chose under the same bound: a field the component declares, a word given on each run, and keys the format fixes on a mapping that places no component (DEC-010 points 1, 3 and 5). `concept` keeps format 1's shape there, as an end field keeps an option's (DEC-011 point 2).
+- **No clash.** A run's keys are the format's alone, and its words its field's, so no other library's keys or words meet them (DEC-010 point 2, DEC-011 point 1).
+- **No new rule of fit.** A field of runs, its words and the text parts of its component that draw it lie in one version of one library, and no part of that component passes it on, so no versions cease to fit together over runs (DEC-011 point 4). A brand's drawing, which another library holds, draws a top's field of runs only where it fits the instance (point 2), by the record of layouts' fit, which needs no new rule either (DEC-009 point 6).
 
 ### 6. What breaks
 
@@ -74,7 +76,7 @@ A run style's word is a name a piece uses, so removing or renaming it, or changi
 
 ### 7. What this adds to format 1, and what it keeps
 
-- **Each addition is optional,** and the schema of a content file gains no key, since it names no field's value.
+- **Each addition this record makes is optional:** no component need mark a field, and no content need give runs. The schema of a content file gains no key, since it names no field's value.
 - **How content is read.** The check reads a field of runs as text, against its schema, or as a list of runs, never against the schema's type, each run against its field's words and the piece's notations. It reads every other field as in format 1.
 - **The scene.** The scene's text holds its runs, each with its typography role, its paint and its fonts, under the one line height point 4 gives it.
 - **Every file format 1 accepted** is read and drawn as before, and raises no finding format 1 did not. Format 1's schemas refuse the mark, so none of its fields takes runs, and each text it shows is one run, in the role and the paint its part gives it.
@@ -83,16 +85,16 @@ A run style's word is a name a piece uses, so removing or renaming it, or changi
 
 Each finding below fails validation where it lies in a file the project can correct. Elsewhere, as in a released library version, it asks for attention and names who can correct it. A final piece's drawing is not judged ([visual-communication:DEC-002-files-and-validation] point 7).
 
-- **Where each lies.** A finding on what a component declares, or on what one of its parts gives, lies in the component's version. One on a brand's drawing lies in the brand's version, judged when the brand is checked alone (DEC-009 point 9). One on a run lies in the content file, at the run's source. One on how a run is drawn lies at the piece.
+- **Where each lies.** A finding on what a component declares, or on what one of its parts gives, lies in the component's version. One on a brand's drawing lies in the brand's version, judged when the brand is checked alone (DEC-009 point 9). One on a run lies in the content file, at the run, named by its field and its place among the field's runs. One on how a run is drawn lies at the piece.
 - **Fails validation:**
-  - in a component: a mark anywhere but directly on one of its fields or on a slot a layout declares, a `$ref` that leads to a marked schema, or a mark on a field whose schema takes more than text or holds `enum`, `const` or `$ref`; a field of runs with no word; a word that is no name, or appears twice
-  - in a component, a top's own drawing of a layout included: a text part that chooses by a word its field does not declare, or by a switch that leaves one of the field's words out; a field of more than one word that no text part chooses by; a part that passes a field of runs on to a component it places; a part other than a text part that reads one, beyond whether it is filled
+  - in a component: a mark anywhere but directly on one of its fields or on a slot a layout declares, a `$ref` that leads to a marked schema, or a mark on a field whose schema takes more than text or holds `enum`, `const` or `$ref`; a field of runs with no word; a word that does not take the shape of a name, or appears twice
+  - in a component, a top's own drawing of a layout included: a text part that chooses by a word its field does not declare, or by a switch that leaves one of the field's words out; a field of more than one word that no text part chooses by; a part that passes a field of runs on to a component it places; a part other than a text part that reads one, beyond a condition on whether it is filled
   - in a component or a brand's drawing: a choice by a run's style anywhere but the typography role and paint of a text part that shows its field
   - in a brand's drawing: a text part that chooses by a word the top's field does not declare (DEC-009 point 9)
   - in content: a list in a field of text that takes no runs; a run that is neither text nor a mapping whose `text` holds text, or that holds a key other than `text`, `style` and `concept`; a style its field does not declare; a concept of another shape, from a notation the piece does not name, or that its notation does not hold (DEC-004 point 11)
   - at a piece: a run below the contrast it must reach against the fill under it (DEC-004 points 8 and 11), or whose family has no member its paint reads
 - **Asks for attention, never failing:**
-  - in a brand's drawing, naming the brand's owner: a text part that leaves one of its field's words out, or chooses by none where the field declares more than one, or a part that passes a field of runs on. The top's own drawing draws each instance whose runs the drawing does not take, and the piece states it (DEC-009 point 9).
+  - in a brand's drawing, naming the brand's owner: a text part that leaves one of its field's words out, or chooses by none where the field declares more than one, or a part that passes a field of runs on. The piece states each instance the top's own drawing draws in its place (DEC-009 point 9).
   - at a piece: a run that names a concept but is painted with a role, by its style or by an `override` on its part, so that its concept shows in no colour. It names the run, and its style or the override.
 
 ## Rationale
@@ -101,7 +103,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why the component marks the fields.** The component decides how its texts look (DEC-001 point 6), so runs reach only the fields whose owners chose them, and each such field holds its words before a run names one.
 
-**Why only a field of text, widened by the mark.** Such a field refuses nothing it held when it comes to take runs, and its schema keeps checking its text. Only the check reads content against a component's fields, so the schema and the mark never disagree in use. The cost is a schema that says text where a list may stand.
+**Why only a field of text, widened by the mark.** Such a field refuses nothing it held when it comes to take runs, and its schema keeps checking its text. No tool of format 1 but the check reads content against a component's fields, and one that offers them later reads the mark with the schema (point 1), so the two never disagree in use. The cost is a schema that says text where a list may stand.
 
 **Why words, not roles.** A word says what the run is, and the component how it looks, so switching the brand restyles every run with no content changed (DEC-001 point 5).
 
@@ -113,7 +115,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why the format fixes a run's keys.** Runs then read alike in every component, for people, agents and translators, and `concept` means one thing wherever content writes it. A run holds no other key, so a later key, such as a run's link (DEC-005 point 5) or the methodology's container's key, is an addition, and none is kept free on a run (DEC-002 point 4).
 
-**Why a run's concept reaches only the paints that read a family.** A concept does so on every component content places, which leaves the component deciding how a run looks, and keeps a run's concept out of a drawing's fit. No member is promised where a run's text lies, so the measure as drawn guards its colour under any rule, and a piece may pass under one brand and fail under another, though both meet every pair they are given. The cost is a concept that shows in no colour.
+**Why a run's concept reaches only the paints that read a family.** A concept does so on every component content places, which leaves the component deciding how a run looks, and keeps a run's concept out of a drawing's fit. No member is promised where a run's text lies, so neither rule would make its colour safer, and a piece may pass under one brand and fail under another, though both meet every pair they are given. The cost is a concept that shows in no colour.
 
 **Why that asks for attention.** An item's look is its component's alone, but a run's is the style or the `override` its content chose, so its author can often mend it. Where every word of the field paints with a role, the mend is the owner's of what paints the style: the component's, or a brand's where its drawing draws the run.
 
@@ -137,7 +139,7 @@ Each finding below fails validation where it lies in a file the project can corr
 - **One set of words for all of a component's fields:** a title's run could name `prompt`, which the title draws no differently.
 - **Words the format or the foundations fix for every field, such as `strong`:** what sets a span apart differs from one kind of text to another.
 - **A run as an item that places a component:** a run would take a frame of its own, and lines could not break across runs.
-- **New reserved keys, such as `text` and `style`:** they would refuse fields format 1 accepts, such as the example component's field `text` (DEC-002 point 4).
+- **New reserved keys, such as `text` and `style`:** they would refuse fields format 1 accepts, such as one named `text` (DEC-002 point 4).
 - **Keys each component names for its runs:** runs would read differently in each component.
 - **A run as a mapping from its word to its text, such as `strong: the exact version`:** runs would read differently in each field, and a word could take a fixed key's name.
 - **Paragraphs as a list of lists of runs:** every text of runs would nest one level deeper, where a line feed already ends a paragraph.
@@ -158,15 +160,15 @@ Each finding below fails validation where it lies in a file the project can corr
   - DEC-007 point 3: each run word of each field drawn once in a component's reference renders.
   - DEC-009 points 5, 6 and 9: the words a drawing takes from the top's fields of runs, its fit by them, and the findings point 8 gives a brand's drawing.
 - **The scene and the seam.** A renderer reads each run's paint and fonts, so the seam's version rises with runs (DEC-005 point 8), and a renderer that cannot draw a run's style reports the loss (DEC-005 point 9).
-- **Sources and traces.** A run's source names its field and its place among the field's runs (DEC-005 point 5), and a text's trace id stays its part's.
+- **Sources and traces.** A run's source in the scene names it as point 8's findings do (DEC-005 point 5), and a text's trace id stays its part's.
 - **The starter's README** names each field of runs with its words, which count toward no guide of how many options a pattern holds ([visual-communication:DEC-007-starter-library] point 2).
-- **The release's comparison** of a library with its previous version reads fields of runs and their words, under point 6 (DEC-003 point 7).
-- **A weight's own file.** Whether a brand may give one family a file for each weight is its declaration of its fonts (DEC-004 point 9), which this record leaves open. Until it may, a role that keeps a family and changes its weight is measured from that family's one file with no finding, so each weight runs rely on is a family of its own.
+- **The release's comparison** of a library's stable components with its previous version reads fields of runs and their words, under point 6 (DEC-003 point 7).
+- **A weight's own file.** Whether a brand may give one family a file for each weight is its declaration of its fonts, left to the record of brands and notations (DEC-004 point 9); this record decides nothing of it.
 - **Left to later changes:**
   - a run's link, a key the format adds on a run (DEC-005 point 5)
-  - a sign beside a run's colour, such as its concept's icon or a chip on its family's fill, and a finding where two concepts of a piece share a family, with the change that builds icons and a legend (point 3)
+  - a sign beside a run's colour, such as its concept's icon or a chip on its family's fill, and a finding where two concepts of a piece share a family, with the change that builds icons and a legend, for runs and items alike (point 3)
   - a field of runs passed on to a component a part places, its words mapped as an option's switch maps them, which the starter's blocks may need when they compose ([project-kit#2501](https://github.com/aleskalfas/project-kit/issues/2501), T12)
-  - a state's declaration of whether it reaches runs that name a concept, an optional key on a state
+  - a state's declaration of whether it reaches runs that name a concept, an optional key on a state whose default keeps the state's family over a run's concept
   - the structure a tagged document or a web page gives a run, such as emphasis or code, since a run's word is its field's own and says nothing of structure to a renderer (DEC-005 point 5)
   - whether the check holds anything of a field's runs equal across languages, such as the concepts they name, left to translation (DEC-001 point 3)
   - how an edit that splits or joins runs comes back, and how a medium that returns plain text keeps them, left to the record of taking edits back (DEC-001, Implications)
