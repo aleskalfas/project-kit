@@ -11,8 +11,9 @@ point 8, DEC-017 points 1, 3, 5 and 8).
   the folders of the files handed out and of a current copy. A renderer that draws into a
   lasting medium keeps a record of what it last drew (DEC-005 point 11). No such renderer
   ships, so no piece holds one yet, and the change that builds one adds it here. Every other
-  file of the folder, as git sees it, is copied as it lies: the content, the local components,
-  and each produced picture with its record. A fingerprint names a piece's file by its path
+  file of the folder, as git sees it, is copied as it lies: the content, the brief, which no
+  command changes (DEC-029 point 4), the local components, and each produced picture with its
+  record. A fingerprint names a piece's file by its path
   within the piece's folder, so the copy makes nothing stale.
 - **The new piece's own file** (`_piece_file`): the final piece's, with `state: draft`,
   `pinned: true` and the lock of the version handed out, read from its fingerprint as marking

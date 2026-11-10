@@ -22,6 +22,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/switching.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
@@ -92,6 +93,7 @@ pkit:
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-018
         - visual-communication:DEC-019#2
         - visual-communication:DEC-020#1
         - visual-communication:DEC-020#2
@@ -120,6 +122,17 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
+        - visual-communication:DEC-027#1
+        - visual-communication:DEC-027#2
+        - visual-communication:DEC-027#3
+        - visual-communication:DEC-027#4
+        - visual-communication:DEC-027#5
+        - visual-communication:DEC-027#6
+        - visual-communication:DEC-031#1
+        - visual-communication:DEC-031#2
+        - visual-communication:DEC-031#3
+        - visual-communication:DEC-031#4
+        - visual-communication:DEC-031#5
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -166,9 +179,9 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
-- the `svg` renderer, at version 1.1.0
+- the `svg` renderer, at version 1.1.0, which draws the formats `svg` and `svg-modes`
 - the `pdf` renderer, at version 1.2.0
-- the `html` renderer, at version 1.2.0
+- the `html` renderer, at version 1.3.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -186,6 +199,8 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
 - **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
+- **What came with switching files.** The SVG renderer came to draw a second format, `svg-modes` ([The switching file](#the-switching-file)). A one-key file draws as before, so its version stays at 1.1.0, and the switching file is pinned to that version beside it. Seam 5 already hands a renderer of a format that holds modes every key of one file in one call, so the seam stays at 5 too.
+- **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stays at 5, and no other plugin's version rises.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
@@ -220,7 +235,7 @@ An entry matches a loss by its `plugin` and its `what` alone, whatever its `key`
 
 ## The SVG renderer
 
-The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files.
+The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files. Each is a *one-key file*, the file of one combination, which a key names. In the format `svg-modes` it draws a *switching file* instead, which holds several combinations and follows the reader's mode ([The switching file](#the-switching-file)).
 
 - **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
@@ -234,6 +249,30 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 
 A *preview* is a render for a person to look at, which `pkit visual render` draws. It uses up no version number, and is never an export (DEC-006 point 7). Where a component shows a version's number or its date, a preview shows them as this clone's next export would, where it can ([The facts of an export](components.md#the-facts-of-an-export)). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`. The scenes `pkit visual add` draws both ways take the same names ([The clone's local folder](files.md#the-clones-local-folder)).
 
+### The switching file
+
+A *switching file* is one SVG file that holds several combinations of modes, and draws the one the reader's signal names (DEC-018). A page shows it as any image, `![alt](path)`, and it follows the mode the browser tells it. The format `svg-modes` takes one for each page, each language and each set of combinations that share one. The file's extension stays `svg`.
+
+- **Which combinations share a file.** In one language, combinations that differ only in modes of a pair the format reads share a file. So a file serves one key over the size axes, as a page file does ([Modes](#modes)). A mode the combinations hold alike parts nothing.
+- **What the format reads.** The renderer's declaration names `svg-modes` under `holds-modes`, with the colour scheme's pairs alone: `light` and `dark` pair with the same values of `prefers-color-scheme`. It names no contrast pair, since `prefers-contrast` did not reach an image in a test. No pair lies in the foundations or in a scene. Another pair is a new version of the renderer, after a test of its own.
+- **A mode of no pair.** A piece in this format whose combinations differ in a value axis's mode of no pair it reads, such as `contrast`'s `standard` and `high`, fails the check, and every export refuses it. No file could hold that mode beside another. Draw it in a piece of its own, or export the piece as `svg`.
+- **The file's key** is the first it serves, in [key order](files.md#keys-of-combinations). So a piece of light and dark takes the default key, and a piece of dark alone takes dark's.
+- **The plain drawing** is the first key's one-key file, attribute for attribute. So a tool that reads no rule, such as a converter to PNG, draws a whole figure in that combination.
+- **A paint a rule reaches.** Each element a colour role paints carries the role as a mark beside its paint: `data-fill` or `data-stroke`. A second `<style>` holds a rule for each other key, under the reader's signals that part it from the first, such as `@media (prefers-color-scheme:dark)`. The rule repaints each mark in that key's colour and opacity, or `none` where the role has no colour there. Every selector is one attribute's, so a later rule wins.
+- **What a rule changes.** A colour, and which picture shows. Layout, text and fonts are drawn once.
+- **Arrowheads.** The page's `<defs>` holds an arrowhead for each end and each role a line's stroke takes. Its triangle carries the role as a fill mark, so the rule that repaints the role repaints it.
+- **Pictures.** A picture every key shows alike is drawn once. One that another key shows otherwise, such as a produced picture's dark variant, is drawn once for each picture the keys show. Each is marked `data-shown-in` with the keys it shows in, and a rule shows those of its key alone.
+- **One mode alone.** A piece of one mode gives a file of one key, under no rule.
+- **What stays one-key.** The format `svg` keeps a file for each combination. The previews and the viewing step go on drawing one key at a time. So a person looks at each mode through the one-key file, and each export holds the switching file to it ([What refuses an export](#what-refuses-an-export)).
+
+**What a reader sees.** The file reads the reader's signal and nothing else. The capability neither sets the mode nor sees it. What it promises is a floor: a browser that reads the rules and one that ignores them each show a whole figure, in one of the piece's modes, unless a person let a difference through an export. How far browsers carry the reader's mode, as tested:
+
+- **On 6 November 2026,** a switching file stood on a temporary page on GitHub. Chrome 157 followed the reader's system and each GitHub theme setting, and repainted at a change in an open page. Firefox 148 followed the system and repainted at a change in an open page. WebKit on macOS, through a web view, drew light under a light system. Under a dark system it drew dark on some loads only, and no GitHub setting moved it. On an iPhone, browsers generally run on WebKit.
+- **On 9 November 2026,** a person signed in to GitHub saw the file draw light under GitHub's light theme over a dark system, and switch when the computer's mode switched.
+- **A site's own switch** reaches the file only where the site sets a single CSS `color-scheme` on the page, as GitHub's stylesheets do. A site that sets none leaves the file on the system's mode, so a light site read under a dark system shows a dark figure.
+- **Not seen:** Safari itself, GitHub's other settings and surfaces, any other host or documentation site, Windows and Linux.
+- **A figure that misses the mode** stays readable where it paints its own ground. So a page of a switching file with no ground of its own asks for attention ([Scenes](checks.md#scenes)).
+
 ### What the SVG renderer loses
 
 Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
@@ -242,6 +281,8 @@ Before it draws, the capability compares each scene with the renderer's declarat
 - **an image** with no picture for the combination drawn: a produced picture with no variant for it, or a picture file that is missing or cannot be read. The message says which.
 
 The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
+
+In a [switching file](#the-switching-file) of several keys, a fill, a stroke or an image lost in one key alone names that key (`key` in [The loss report](#the-loss-report)). A role with no colour in one key paints nothing there, and an image with no picture in one key shows none there.
 
 ## The PDF renderer
 
@@ -281,7 +322,7 @@ The `html` renderer draws a scene as one *page file*: the scene's pages in one w
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
 - **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths.
 - **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
-- **Pages** follow each other down the document in the scene's order, each in the middle of the window. Each keeps its own size. The file sets no colour around them. It holds no rule on a window's width.
+- **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)).
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
 - **What the file holds.** A file asks for nothing. Its pictures lie inside it, each as the SVG renderer embeds it ([The SVG renderer](#the-svg-renderer)). Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour role, and every page reaches it.
 - **Names and words.** A family's name is written as the SVG renderer writes it. Whatever else a brand or a piece names is escaped. So none of it can end the file's `<style>` element or start another element.
@@ -302,8 +343,23 @@ A page file holds each mode a reader's signal names, such as `prefers-color-sche
 - **No control and no script.** Nothing in the page switches a mode, so a renderer adds no words and no focus stop.
 - **One mode alone.** A piece of one mode gives a file of one key, under no signal's rule. So dark alone draws dark for every reader. An axis with no mode named stays at its default.
 - **Its schemes.** CSS `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`, so the browser's own ground follows the mode. A file with no such mode names none.
-- **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade.
+- **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade. Around fixed pages, the backdrop and each page take `Canvas`, and the keyline `CanvasText` ([Fixed pages](#fixed-pages)).
 - **Pictures.** A produced picture draws the first key's variant, and a picture role the first key's file ([What the HTML renderer loses](#what-the-html-renderer-loses)). A picture file is the same in every key, so it draws as it is.
+
+### Fixed pages
+
+A deck's page file shows its slides as a viewer of slides does, each at its own size (DEC-031). The file does this where the scene says its pages are *fixed pages* ([What a scene holds](components.md#what-a-scene-holds)): the pages of a top whose layouts are its pages' forms, where the top asks for a height, as the deck does. A site's pages, a figure and what a slot of pages places are none. They lie as *Pages* in [The HTML renderer](#the-html-renderer) says, with nothing around them.
+
+- **A keyline,** a thin line, lies around each slide. So a slide's empty part reads as the slide's.
+- **A backdrop** fills the window around and between the slides. So the gap after a slide reads as a gap.
+- **Their colours** mix the browser's own. The backdrop is 7% of the browser's text colour mixed into its ground colour, and the keyline 48%. So they follow the page's mode: a dark page lies on a dark backdrop. Inside its keyline a slide lies on the browser's own ground. The file writes no colour value for them, and reads no role of the brand.
+- **The keyline reads.** It contrasts at least 3 to 1 against the backdrop and against the browser's ground, in light and in dark.
+- **More contrast.** Where the reader asks for more contrast, the keyline takes the browser's text colour, whatever modes the file holds.
+- **Forced colours.** The backdrop and each slide take the reader's background colour, and the keyline the reader's text colour.
+- **A browser that cannot mix colours** draws the keyline in its text colour and the backdrop in its ground colour.
+- **Size.** The keyline is 1 px wide and takes no room, so a slide keeps its size and its proportions. The backdrop shows 32 px wide on every side, or 4% of the window's width where that is less. In a narrower window a slide shrinks with the room that leaves it, and its keyline stays 1 px wide. In a window 500 px wide, a slide 1280 px wide is 460 px wide. Nothing scrolls sideways.
+- **The same elements.** The file holds the same elements as it would with no keyline. Only its rules differ.
+- **On screen alone.** A print holds neither the keyline nor the backdrop, until the record of how a page prints decides what of them it keeps ([project-kit#2824](https://github.com/aleskalfas/project-kit/issues/2824)).
 
 ### What the HTML renderer declares
 
@@ -311,6 +367,7 @@ The renderer draws in the default font profile, and it declares each primitive a
 
 - **`holds-modes`** names the format `html`, with each signal pair it reads ([Modes](#modes)). `colour-scheme`'s `light` and `dark` pair with the same values of `prefers-color-scheme`. `contrast`'s `standard` and `high` pair with `prefers-contrast`'s `no-preference` and `more`. No pair lies in the foundations or in a scene.
 - **`forced-colours`** names what each paint takes under a reader's forced colours: lines, opaque fills, their edge with its width, and translucent fills.
+- **`pages.fixed`** names how the file shows [fixed pages](#fixed-pages) (DEC-031 point 3). The keyline's `width`, 1 px, and its `share`, 48. The backdrop's `share`, 7. The gutter's `width`, 32 px, and its `window-share`, 4. Each share is the percent of the browser's text colour mixed into its ground colour. The gutter is the backdrop's width at each side of a page, or that share of the window's width where it is less. No project setting changes them.
 
 ### What the HTML renderer does not carry yet
 
@@ -330,11 +387,11 @@ In a file of several keys, these losses lie in one key alone (`key` in [The loss
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
-- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows three. The SVG renderer draws `svg`, the PDF renderer `pdf`, and the HTML renderer `html`.
-- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes the [page files](#the-html-renderer) that serve every language and combination the piece names ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
+- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows four. The SVG renderer draws `svg` and `svg-modes`, the PDF renderer `pdf`, and the HTML renderer `html`. `svg-modes` is an addition format 1 allows (DEC-003 point 3). A piece names `svg` or `svg-modes`, never both, since the two write files of one name.
+- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `svg-modes`, one [switching file](#the-switching-file) for each page, each language and each set of combinations that share one; for `pdf`, one file for each language and combination, which holds every page in order. For `html`, it makes the [page files](#the-html-renderer) that serve every language and combination the piece names ([Modes](#modes)). Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **What a file shows of its export.** A component may show the version's number and its date. Each file shows the run's own ([The facts of an export](components.md#the-facts-of-an-export)).
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A [page file](#the-html-renderer)'s name carries none either, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A switching file is named as an SVG file, under the first key it serves: `flow.v1.en.default.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`. A [page file](#the-html-renderer)'s name carries none either, and takes the file's key ([Modes](#modes)): `deck.v1.en.default.html`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), but for a copy at a place it names, and the files of the version handed out ([The lock](files.md#the-lock)).
 
 ### The current copy
@@ -370,7 +427,7 @@ versions:
 | `version` | the version's number, from 1 |
 | `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
-| `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`). A version that let a number or a date through names each under `let-through` (below) |
+| `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`). A version that let a number or a date through names each under `let-through`, and one that let an element of a switching file through names each under `differing` (below) |
 
 A version that let a version's number or its date through, though it does not fit ([What refuses an export](#what-refuses-an-export)), names each text in `recorded`:
 
@@ -386,6 +443,19 @@ let-through:
 | `element` | the trace id of the text that overflows its width, or of a component around it that gets less than it asks for |
 | `component` | the component that element lies in |
 | `version` | the version of the library that component lies in, absent for the piece's own |
+
+A version that let an element of a switching file through, though it paints a combination otherwise than the one-key file ([What refuses an export](#what-refuses-an-export)), names each in `recorded`:
+
+```yaml
+differing:
+  - {file: flow.v1.en.default.svg, key: colour-scheme.dark, element: figure/body/steps[plan]/box}
+```
+
+| Field | What it holds |
+|---|---|
+| `file` | the switching file, by its name in the version |
+| `key` | the combination it paints otherwise |
+| `element` | the trace id of the element, or of the page where the file's styles differ |
 
 `pkit visual mark-final` ends the record with one line, which names the version handed out ([The lock](files.md#the-lock)):
 
@@ -417,6 +487,8 @@ An export run is refused, and writes nothing, when:
 - the piece is final: a final piece takes no export (DEC-017 point 3);
 - the piece is published, and its lock differs from the lock of the version that wrote its current copy, or that lock cannot be read (below);
 - the piece names no format under `exports`;
+- the piece names both `svg` and `svg-modes`, which write files of one name;
+- the piece exports as `svg-modes`, and its combinations differ in a value axis's mode of no pair that format reads ([The switching file](#the-switching-file));
 - the piece has no lock yet, or its lock does not hold: a version the project does not hold or cannot read, a library the piece uses that the lock leaves out, or a major that does not fit what a library builds on;
 - the piece is published, and its lock names a version not yet released (DEC-003 point 9);
 - the brand cannot be read, or the piece names a mode its brand lacks;
@@ -428,6 +500,7 @@ An export run is refused, and writes nothing, when:
 - the piece has no page in one of its languages, so the version would hold no file in it;
 - a version's number or its date does not fit where the run fills it, unless `--use-overflowing <fact>` names the fact (below);
 - `--use-overflowing` names the language or the state, which the check measures as they stand;
+- a switching file paints a combination otherwise than the one-key file of that combination, unless `--use-differing <element>` names each such element (below);
 - a file the run would write, `exports.yaml` among them, is reached through a link;
 - a file lies where a published piece's `current-copy/` goes;
 - a published piece's `copy-place` is a place the rules refuse (DEC-017 point 8):
@@ -448,6 +521,13 @@ Each of these is found before the first write, so a refused run records no locat
 - **Measured otherwise.** An overflow measured from a table or by an estimate stops nothing, and the run says it.
 - **The language and the state** stop nothing here: they come from the piece's files, and the check measures them as they stand.
 - **What no run sees.** A longer text may wrap within its box and move what lies beside it, with nothing overflowing. Look at the pages for that ([The viewing step](#the-viewing-step)).
+
+**A switching file that differs.** The previews, the viewing step and a reviewer all see the one-key file, so nobody sees the file a page shows before a reader does. So a run holds each switching file to the one-key file of each combination it holds (DEC-018 point 1).
+
+- **What it compares.** It reads the switching file in each combination, as a browser reads its rules under that combination's signals, and the one-key file as it stands. With no browser, it compares the two element by element: each element drawn, its attributes, what it paints and its text, and the styles that hold the fonts. What the switching file writes only so a rule can reach it is left out: its marks, and the key the file names. An arrowhead is compared as it paints, whatever its id.
+- **What it names.** Each element that differs, the file, the combination's key and what differs, such as a fill. A rule the reading cannot read as a browser would is a difference at the page.
+- **The way past.** `--use-differing <element>` writes the file as it is, and may repeat. An element nobody named still stops. The record of exports keeps each element let through, and a published piece's current copy made with one asks for attention, naming whoever maintains the capability as the fault's owner. An element named that does not differ refuses nothing, and the run says so.
+- **Whose fault.** A difference is the renderer's, which only a release of the capability mends. Report it to whoever maintains the capability.
 
 **A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
 
@@ -698,7 +778,8 @@ The *viewing step* draws a piece's pages as images, for a person or an agent to 
 - **The size of an image.** A page is drawn 1568 pixels on its long edge, or larger where its smallest text would land under 10 pixels. No image passes 1568 pixels on either edge.
 - **Bands.** A page too tall for one such image is drawn in *bands* (DEC-022 point 7). Each band is a strip of its height as wide as the page, and all share one scale. Each band overlaps the next by the page's tallest line, so every line lies whole in one band. Where a gap between elements lies in that overlap, the band ends in it. Read every band of a page before you judge it, and a band's edge is no fault of the page.
 - **A page too wide** for one image whose smallest text reads is drawn 1568 pixels wide. Its smallest text may not read, and the report says so.
-- **The ground.** Where a page draws no ground of its own, the SVG renderer's image lies on white, which the piece never set. The HTML renderer's lies on the browser's own ground in the mode drawn, which differs between browsers. Judge a text over nothing knowing this.
+- **Under forced colours.** `--forced-colours` also draws each page file of the HTML renderer as a reader who forces their own colours sees it, in the browser's two forced palettes ([Under forced colours](#under-forced-colours)).
+- **The ground.** Where a page draws no ground of its own, the SVG renderer's image lies on white, which the piece never set. The HTML renderer's lies on the browser's own ground in the mode drawn, which differs between browsers, and under a forced palette on that palette's ground. Judge a text over nothing knowing this.
 - **No promise about pixels.** An image may change with the tool, its version or the machine (DEC-015 point 6).
 
 ### The SVG renderer's pages
@@ -711,26 +792,40 @@ A browser draws them. No other format needs one, and the capability installs non
 
 - **Which browser.** A browser of the Chromium family: the first found where Chrome and Chromium install themselves, or the one the project names ([The browser](files.md#the-browser)).
 - **The page file.** The browser reads each [page file](#the-html-renderer) as the renderer wrote it, in one start for each file. The pages drawn from one file share one scale, the largest any of them asks, as far as the widest page fits 1568 pixels. So a page's image may be larger than its own text needs. The browser draws the same bands of a page as resvg does at that scale.
+- **The window** is as wide as the widest page, with the gutter the renderer declares, 32 px, on each side. So a [fixed page](#fixed-pages) keeps its own size. The step widens the window so for every file. Each image is still one page, or one band of it, so the keyline and the backdrop lie outside every image (DEC-031 point 5).
 - **Each mode.** Each key the run draws out of a file is drawn in that start, with no reload. The step sets every signal the file reads by the browser's emulation, so the machine's own settings play no part. Each read the report names runs in each key drawn.
 - **What an image shows.** One browser's drawing, which stands for no other browser. The report names that browser and its version.
-- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window and printing. Open the page file in your own browsers to see those.
+- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window, printing, and the keyline and the backdrop around a fixed page. Open the page file in your own browsers to see those. Forced colours in the browser's two forced palettes are drawn where you ask ([Under forced colours](#under-forced-colours)).
 - **The fonts.** The browser reads the faces the file embeds. A span it draws in a font of the machine is reported.
-- **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops. The page also holds a mode for each signal the file reads. Where setting one does not repaint it, the run stops too.
+- **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops. The page also holds a box for each signal the file reads. Where setting the signal does not repaint its box, the run stops too.
 - **Its profile** lies in a throwaway folder of the clone's local folder, which the run removes, even one that stops. The browser may write files of its own elsewhere, such as a crash report.
 - **Its own sandbox** stays on. The step passes no flag that turns it off or weakens it. A sandbox around the browser, such as a session's, may still stop it ([When the browser stops](#when-the-browser-stops)).
 
+### Under forced colours
+
+Some readers have their browser replace a page's colours with a few of their own, such as white text on black. `pkit visual look <piece> --forced-colours` draws what such a reader gets, as well as the keys it draws (DEC-027).
+
+- **When it is worth asking.** Forced colours leave the layout, the words and the fonts as they are, so most looks need none. Ask where colour carries something a forced palette may lose: a translucent fill, or a picture under a text or a line. The run takes about twice as long.
+- **Two forced palettes.** The browser draws each page file in its own two: `light`, dark text on a light ground, and `dark`, the reverse. The step sets them, so the machine's own setting plays no part.
+- **Which key each shows.** A browser sets a scheme and more contrast with its forced palette. So each palette shows the key the page file holds for those signals, whichever keys you pick: the dark palette shows the dark mode where the file holds one. Your keys pick the page files, each at its size.
+- **A start of its own.** After a file's start, a second start draws it under the browser's flag that forces its colours, `--force-high-contrast`, at the same scale. The browser's emulation alone forces the text in some browsers and not in others, so the step never draws without the flag.
+- **Its first read.** That start reads its own planted page in each forced palette. It stops the run where a span left to forcing shows no ink, since the palette did not reach the text, and where a palette's ground is not lighter than its text in `light`, or darker in `dark`. Each read the report names runs in each forced image too.
+- **What it shows.** That browser's forced palettes, not a reader's own, which may hold other colours, such as a link's. A reader whose browser reports another scheme or contrast beside its forced palette may see something else. The report says so.
+- **The SVG renderer's pages** are never drawn so: resvg knows no forced colours, and the run is refused ([What refuses a run](#what-refuses-a-run)).
+
 ### When the browser stops
 
-A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8).
+A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). This holds of the start under forced colours too.
 
 - **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
 - **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
 - **A sandbox.** Where the browser's words show a sandbox, the run says that a sandbox stopped the browser. Otherwise it names what the browser said.
 - **A browser run as root.** Chrome run as root, as a container may run it, refuses to start with its own sandbox on. The run says so, apart from a sandbox, and never turns that sandbox off.
-- **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4):
+- **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4), and a fourth after a stop under forced colours (DEC-027 point 4):
   1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them ([A pipeline's drawings](#a-pipelines-drawings)). They show a pushed commit, not your working tree.
   2. the same look, run once by a person outside any sandbox, such as in their own terminal. This line is addressed to a person. It runs the clone's scripts as they stand, with that person's rights.
   3. the SVG renderer's pages, through `pkit visual look <piece> --renderer svg`. They show the layout, never the page file.
+  4. where the start under forced colours stopped, the same look without `--forced-colours`, which draws the page files in their own colours.
 - **For an agent,** a last line says what it does (DEC-024 point 6). It reads a pipeline's drawings, or asks a person, and never takes the command out of the sandbox itself. It never runs a look over the folder a person's run left.
 
 ### What a run writes
@@ -739,6 +834,7 @@ A run writes in its renderer's folder, local to the clone ([The clone's local fo
 
 - **`<piece>/`** holds the SVG renderer's pages.
 - **`<piece>.html/`** holds the HTML renderer's. No piece's name holds a `.`, so no piece takes this name.
+  - **`forced-light/` and `forced-dark/`** inside it hold the images and frames of each forced palette, where the run drew them ([Under forced colours](#under-forced-colours)). Each takes the names below, by the key its palette shows. No file of the folder takes a name without a `.`, so none takes these.
 
 A run replaces what an earlier run left in its own folder, so a folder never mixes two runs. It leaves the other renderer's folder where it lies.
 
@@ -754,7 +850,7 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
-- **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white.
+- **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white, or under a forced palette on that palette's ground.
   - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
   - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
 - **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`. Each page is read whole, once, so a text in two bands is listed once.
@@ -766,11 +862,13 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 
 Through the HTML renderer the report holds these too:
 
+- **`forced`,** on each image and each entry: the forced palette it was drawn in, `light` or `dark`, and `null` for none. An image's path names its palette's folder.
 - **`tool`:** the browser's name, its version and its program. `stands-for` says that each image stands for that browser alone.
+- **`forced`,** of the report itself: `null` where the run drew no forced palette. Otherwise the `palettes` drawn, the browser's `flag` that forced them, the `folders` they lie in, and what their images do not show, `does-not-show`.
 - **`page-files`:** each page file, with its language, its key, and `keys`, each key it holds.
 - **`words`:** each text whose spans differ between the scene and the page file, in their words, order or number, with each side's spans. The page file lost part of that text.
 - **`refused`:** each request the page made, which the browser refused. A page file asks for nothing, so each request is a fault of the file.
-- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then `sandbox`, whether a sandbox stopped it, and `as-root`, whether the browser ran as root. `go-on` lists the ways on in their order, and `for-an-agent` says what an agent does.
+- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then `sandbox`, whether a sandbox stopped it, and `as-root`, whether the browser ran as root. `forcing` is whether the start that stopped forced its colours. `go-on` lists the ways on in their order, and `for-an-agent` says what an agent does.
 
 ### What refuses a run
 
@@ -780,6 +878,7 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 - a lock that does not hold, naming why;
 - a page, a language or a key the piece does not have, naming those it has;
 - a renderer other than `svg` and `html`;
+- forced colours through the SVG renderer. Where the piece goes through it by default, the refusal names `--renderer html`;
 - a brand that cannot be read;
 - a font with no file, or a character no font holds;
 - a page with no size, or an image of one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;

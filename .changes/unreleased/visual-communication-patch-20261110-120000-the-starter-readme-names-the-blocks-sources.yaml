@@ -1,0 +1,9 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The starter's README, in its version being built, 1.1.0, gives a **Source:**
+  line for the blocks `card`, `tag` and `group` and the web blocks `row` and
+  `cell`, and each of their files names the same in a comment (#2981). The
+  `code` and `aside` blocks still name none.
