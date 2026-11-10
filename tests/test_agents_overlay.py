@@ -105,6 +105,11 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     lifecycle = proj / ".pkit" / "lifecycle"
     lifecycle.mkdir(parents=True)
     shutil.copy2(REPO / ".pkit" / "lifecycle" / "ownership.py", lifecycle / "ownership.py")
+    # The propagated reader of an agent's tool access (ADR-086), which validation
+    # loads where it has a definition to read.
+    shutil.copy2(
+        REPO / ".pkit" / "agents" / "tool_access.py", proj / ".pkit" / "agents" / "tool_access.py"
+    )
     if overlay is not None:
         (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
             overlay, encoding="utf-8"

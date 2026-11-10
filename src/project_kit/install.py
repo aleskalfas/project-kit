@@ -1284,11 +1284,14 @@ def _run_adapter_primitive(script: Path, ctx: InstallContext, *args: str) -> Non
 # matters: settings merge precedes content deploys because some skills
 # may rely on settings being in place. Adding a new primitive: extend
 # this list and document the new script's contract in the adapter README.
+# An adapter that ships `AGENT_DEPLOY_PRIMITIVE` deploys agents, so validation
+# reads its declaration of tool access (ADR-086 point 6).
+AGENT_DEPLOY_PRIMITIVE = "deploy-agents.sh"
 _ADAPTER_PRIMITIVES = (
     "merge-settings.sh",
     "merge-claude-md.sh",
     "deploy-skills.sh",
-    "deploy-agents.sh",
+    AGENT_DEPLOY_PRIMITIVE,
 )
 
 
