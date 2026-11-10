@@ -6,7 +6,7 @@ date: 2026-11-10
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a component whose look a brand may need to change apart declares a *component token* in its own file, with a type and a default that aliases a role. For example, a card in a library named `ui` declares the token `fill`, defaulting to the shared role `surface`, and paints its box with `component.ui.card.fill`. A brand that names `ui` may give the token a value, and under any other brand the box takes the brand's `surface`. No other component, and nothing a piece writes, reads the token.
+**In plain terms:** a component whose look a brand may need to change apart declares a *component token* in its own file, with a type and a default that aliases a role. For example, a card in a library named `ui` declares the token `fill`, defaulting to the shared role `surface`, and paints its box with `component.ui.card.fill`. A brand that names `ui` may give the token a value, and under a brand that gives it none the box takes the brand's `surface`. No other component, and nothing a piece writes, reads the token.
 
 ## Context
 
@@ -63,7 +63,7 @@ The Task that builds component tokens ([project-kit#2966](https://github.com/ale
 What DEC-008 point 4 says of a brand's token under a library's name, a brand's token under `component.<library>` takes too:
 - **Where the brand names the library,** each token it holds there gives a token of the library's components a value of its type. One that names no token they declare, or is of another type, gives nothing, and is a finding.
 - **Where it names none,** a token there gives the library nothing, and stays private, as a brand's other tokens do (DEC-004 point 5). Where a piece's lock holds the library with the brand, it asks the brand's owner for attention.
-- **Not under its own name.** A brand's token under `component.<its own name>`, where its own components' tokens lie, stays private and with no finding. What gives those tokens values, and how the check judges them, is left to the change that builds a brand's own components (#2573).
+- **Not under its own name.** A brand's token under `component.<its own name>`, where its own components' tokens lie, stays private and with no finding. What gives its own components' tokens values, and how the check judges a brand's tokens under `component.<its own name>`, is left to the change that builds a brand's own components (#2573).
 - **No schema refuses a file it accepted.** Only the check's judgement of a brand's tokens changes, as it did for a token under a library's own name (DEC-008 point 8).
 
 ### 8. No contrast pair names a component token
@@ -76,8 +76,8 @@ Each finding below fails validation where it lies in a file the project can corr
 - **Where each lies.** A finding on a component's tokens lies in the component's version, or in the piece that holds a local component. A finding on an override, or on what a piece writes for a program run while preparing, lies in that piece. A brand's tokens under `component.<library>` take the findings DEC-008 point 9 gives a brand's tokens under a library's name, at the places it gives them (point 7).
 - **Fails validation:**
   - a token in a piece's own component
-  - a token whose name or type points 2 and 4 do not allow, or that has no default
-  - a default that point 4 does not allow, or that leads nowhere
+  - a token of the type `picture`, one with no default, or one whose name is not of the shape point 2 gives
+  - a default that is no alias, or that aliases a component token, a role of another type, or a role of a library the component's library does not build on; or a default that leads nowhere
   - a library named `component`
   - a component that reads a component token it does not declare
   - an override, or an input a piece writes for a program run while preparing, that names a component token
@@ -94,7 +94,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Point 3, the reader.** A component token is the narrowest role, for one component's part (DEC-004 point 7). The full path is how a component already reads every role, a library's own included, and how a brand and the exports spell the token, so paints, styles and formulas gain no grammar. A token aliases one role, while a part painted from its colour family takes a role that changes with the concept or the state. Written code is another matter: a brand exports the tokens it gives values, and a runtime that styles its own copy of a component reads them as the brand promises them (DEC-004 point 5).
 
-**Point 4, type and default.** A token's type is part of its promise, as a role's is. Declared, it stays known where the role its default aliases cannot be read, so a version checked alone types the token with no brand behind it, and a release sees a change of type. Only the foundations declare a picture role. A default that followed another component's token would tie two components' promises together. So defaults run one way, from a part to a library's role and on to a shared role, as DEC-008 point 3 runs them for a library's roles.
+**Point 4, type and default.** A token's type is part of its promise, as a role's is. Declared, it stays known where the role its default aliases cannot be read, so a version checked alone types the token with no brand behind it, and a release sees a change of type. Only the foundations declare a picture role. A default that followed another component's token would tie two components' promises together. With a component token refused as a default, defaults run one way, from a part to a library's role and on to a shared role, as DEC-008 point 3 runs them for a library's roles.
 
 **Point 5, no token in a local component.** Its token would lie under the word by which `use` names the piece itself, which no library takes (DEC-002 point 4). So no brand names it (DEC-008 point 4), and it would hold its default under every brand. A component declares a token only where a brand needs to differ (DEC-004 point 7), which a local component never meets: where it lies already decides what a brand reaches, as a local top always draws itself (DEC-009 point 3). The key serves brands alone, and in all else a local component stays the same kind of data as a library's (DEC-001 point 4).
 
@@ -104,16 +104,16 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Point 8, no pairs.** At its library's defaults, a pair rests on a pair the foundations declare, each own role replaced by the role its default aliases (DEC-008 point 6). A token is no own role (DEC-008 point 1), so that step would not reach it. Drawn text, the case that most often fails, is still measured against the fill under it in every combination a piece is drawn in (DEC-004 point 8). The cost: a token's colour that is no text's ground, such as an edge's, meets no check of contrast.
 
-**Point 9, an unread token.** It breaks no invariant, and a brand's value for it is only wasted. An experimental component can drop the token at once, so its owner is asked to. A stable component's unread token is a lawful state with nothing to do yet, as a published piece's lock that lies behind is (DEC-003 point 9), so it states a fact.
+**Point 9, an unread token.** It breaks no invariant, and a brand's value for it is only wasted. An experimental component can drop the token at once, so its owner is asked to. A stable component's unread token is a lawful state with nothing to do until its next major (point 6), as a published piece's lock that lies behind is (DEC-003 point 9), so it states a fact.
 
 ### Alternatives considered
 
-- **Tokens in the library's `roles.yaml`:** DEC-008 keeps that file free of them, and the promise would lie apart from the component that keeps it.
+- **Tokens in the library's `roles.yaml`:** DEC-008's Implications keep that file free of them, and the promise would lie apart from the component that keeps it.
 - **Tokens declared under each part:** a component's public names would scatter among its private parts.
 - **A key named `roles`:** it would mix the tokens up with a library's own roles, which DEC-008 point 1 keeps apart.
 - **The part's name in the path:** renaming a private part would break every brand that gives the token a value.
 - **A path of any depth:** it adds nothing that a hyphenated name lacks.
-- **A short form relative to the component, such as `~fill`:** it adds a grammar in three places, and spells the token otherwise than the brand and the exports do.
+- **A short form relative to the component, such as `~fill`:** it adds a grammar in three places.
 - **Any component, content's override, or a producer's inputs reading any component token:** a brand's value meant for one component would restyle something else out of its author's sight, and no release could compare the token under one component's promise.
 - **A brand's drawing of a top's layout reading the top's tokens:** a copy of the top's drawing would carry the top's token names into the brand, and it restyles nothing through them that the brand's own values cannot.
 - **A token read by one entry of `parts` alone:** a brand would give two values to what it sees as one, and they could drift apart.
@@ -147,8 +147,8 @@ Each finding below fails validation where it lies in a file the project can corr
   - DEC-008 point 6: a library's pairs at their defaults are judged as before.
   - DEC-008 point 7, which point 4 applies to an own role a token's default aliases.
   - DEC-009 point 2, which point 3 applies to a brand's drawing.
-  - DEC-025 point 4: only the foundations declare a picture role.
-- **The Task that builds component tokens** ([project-kit#2966](https://github.com/aleskalfas/project-kit/issues/2966)) builds this record in its change once it is accepted, with the release's comparison of a brand's exported tokens that DEC-004 point 5 asks for.
+  - DEC-025 point 4, which point 4 follows.
+- **The Task that builds component tokens** ([project-kit#2966](https://github.com/aleskalfas/project-kit/issues/2966)) builds this record in this record's change once it is accepted, with the release's comparison of a brand's exported tokens that DEC-004 point 5 asks for.
 - **Edits to the capability's pages,** made in that change once this record is accepted, each anchored to it:
   - `components.md`, A component's file: the `tokens` key and the parts that read a token (points 1 to 4), with a card's token as the example.
   - `components.md`, Values, states and colour: the override (point 3).
