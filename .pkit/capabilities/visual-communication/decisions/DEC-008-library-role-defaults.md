@@ -49,13 +49,13 @@ The capability's next slice ships the starter and a neutral brand, which rest on
 - **Never a value.** Only a brand holds a raw value (DEC-001 point 5), so a component library still holds none.
 - **Never a component token.** A component token narrows a role for one part (DEC-004 point 7). So the defaults run one way: from a part to a library's role, and on to a shared role.
 - **A chain of defaults ends,** never in a loop. A role draws under every brand only where its chain ends at a shared role.
-- **A component token's default** may alias a library's own role, as it aliases any role (DEC-004 point 7). So a brand that gives the role a value restyles the part too.
+- **A component token's default** may alias a library's own role, as it aliases what a library's own role's default may alias, and never a component token (DEC-004 point 7; refinement per [visual-communication:DEC-035-component-tokens]). So a brand that gives the role a value restyles the part too.
 
 ### 4. A brand reaches a library's roles only where it names the library
 
 - **Named by major.** A brand reaches a library's own roles, and the component tokens of its components, only where it names that library among those it builds on, by the major it fits (DEC-001 point 5). To reach one is to give it a value, open it or alias it. So a brand's values never meet roles of a major they were not tuned for.
-- **What it owes a library it names.** It gives a value, in every combination, to each of that library's roles without a default, as it gives every shared role but a picture role one (refinement per [visual-communication:DEC-025-picture-files] point 4). Each token it holds under that library's name gives one of the library's roles a value of its type, so its private tokens lie elsewhere.
-- **Where it names none,** the library is at its defaults under that brand. A token the brand holds under that library's name gives the library nothing, and stays private, as a brand's other tokens do (DEC-004 point 5).
+- **What it owes a library it names.** It gives a value, in every combination, to each of that library's roles without a default, as it gives every shared role but a picture role one (refinement per [visual-communication:DEC-025-picture-files] point 4). Each token it holds under that library's name gives one of the library's roles a value of its type, so its private tokens lie elsewhere. A token it holds under `component.<library>` is judged as one under that library's name, but for one under `component.<its own name>` (refinement per [visual-communication:DEC-035-component-tokens]).
+- **Where it names none,** the library is at its defaults under that brand. A token the brand holds under that library's name gives the library nothing, and stays private, as a brand's other tokens do (DEC-004 point 5). So does one under `component.<library>`, but for one under `component.<its own name>` (refinement per [visual-communication:DEC-035-component-tokens]).
 - **Built on a base,** a brand gives a library's role a value only where both name the library and the base opens the role (DEC-004 point 6). A base may open a role of a library it names, whether or not it gives the role a value. So a base that does not name a library leaves the library at its defaults for every brand built on it.
 - **What naming costs.** Every project that uses the brand holds the library, and every piece that uses the brand locks it, even a piece that draws none of its components (DEC-003 point 8). Moving to a new major of the library is a breaking change of the brand (DEC-003 point 6), and along a chain the base and every brand built on it move together. So a brand names a library only to give its roles values.
 
@@ -99,9 +99,9 @@ Each finding below fails validation where it lies in a file the project can corr
   - a default that leads nowhere, or a loop of defaults
   - a pair of a library that, at its defaults, falls on no pair declared at a level as strict
   - a brand that names a library and gives one of its roles without a default no value in some combination
-  - a brand's token under the name of a library it names that gives none of the library's roles a value, since it names none or is of another type
+  - a brand's token under the name of a library it names, or under `component.<library>` for such a library, that gives none of the library's roles a value, since it names none or is of another type (refinement per [visual-communication:DEC-035-component-tokens])
   - at a lock, a part that reads a library's role whose chain gives no value under the brand, where the brand does not name the library
-- **Asks for attention, never failing:** a brand's token under the name of a library a piece locks with it, where the brand does not name that library. The token stays private, and gives the library nothing.
+- **Asks for attention, never failing:** a brand's token under the name of a library a piece locks with it, or under `component.<library>` for such a library, where the brand does not name that library (refinement per [visual-communication:DEC-035-component-tokens]). The token stays private, and gives the library nothing.
 - **Stated as a fact:** a library's own role whose chain of defaults does not end at a shared role, so that only a brand that gives it a value draws it.
 
 ## Rationale

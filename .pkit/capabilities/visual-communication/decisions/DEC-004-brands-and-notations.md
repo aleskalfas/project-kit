@@ -87,7 +87,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 ### 7. Roles a library adds lie under its own name
 
 - **Shared roles** are the foundations'. Each other library's own roles lie under a group named after the library, so a role a base adds never meets one a brand built on it adds. No library takes the name of a top group of the shared roles.
-- **A component token** is a role one component declares for one of its parts, such as a control's fill, so a brand can style that part apart from a shared role. All component tokens lie under one group, `component`, then the component's library and name.
+- **A component token** is a role one component declares for what its parts draw, such as a control's fill, so a brand can style it apart from a shared role. The component declares it in its own file, at `component.<library>.<component>.<name>`, and among components and what a piece writes only that component reads it. No library takes the name `component` (refinement per [visual-communication:DEC-035-component-tokens]).
 - **A component token's default aliases a role, never a value.** So a component library holds no raw value, and no brand has to give the token a value.
 - **A shared role the foundations add after their first version** carries a default that aliases an older role. Every brand already released still gives it a value. A picture role is the exception: it carries no default, and no brand owes it a value (refinement per [visual-communication:DEC-025-picture-files] point 4).
 - **A base may open a component token alone,** so a brand built on it restyles that one part without changing the shared role everywhere. A component declares one only where a brand needs to differ.
@@ -95,7 +95,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 8. Pairs of colours that must contrast
 
-- **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles.
+- **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles, and none of them names a component token (refinement per [visual-communication:DEC-035-component-tokens]).
 - **Checked in every combination of the axes that change a colour.**
 - **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. It measures each run of a text, a span set in one style, against the fill under that run, at the run's own size and weight (refinement per [visual-communication:DEC-012-text-runs]). Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
 
