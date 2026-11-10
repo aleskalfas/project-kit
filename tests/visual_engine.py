@@ -83,7 +83,7 @@ ROLES: dict[str, Any] = {
 
 #: The roles the tests of runs set runs in, and their fonts. Each weight is a family of its
 #: own, as the test brand's heading is, so each run is measured and drawn from its own
-#: weight's file (DEC-012, Implications, "A weight's own file"): the body, and the heading
+#: weight's file (DEC-012 point 4, "A weight's own file"): the body, and the heading
 #: in the semibold family.
 RUN_ROLES: dict[str, Any] = {
     "type.body": ROLES["type.body"],
