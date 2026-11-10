@@ -498,7 +498,12 @@ Each adapter handles its own deploy (COR-005), and future adapters for other har
    - It writes the agent's tool access from the reader's answer, in the harness's keys ("Tool access" above).
 4. It rewrites each storyboard the source names by its file name to the storyboard's path from the project's root ([`storyboards.md`](storyboards.md)).
 5. It ends the body with one sentence, which replaces the session scratch directory the harness's environment names with `.agent-workspace/`.
-6. It writes the copy to `.claude/agents/<name>.md`, with a deploy mark as the front matter's first line: `# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync`. Three lines beside the mark record what the copy was written from. They are the definition's place (`# pkit-definition:`), the digest of the text read (`# pkit-digest: sha256:…`), and the tool access read from it (`# pkit-tool-access:`). So a check can say whether the copy that runs is of the current text.
+6. It writes the copy to `.claude/agents/<name>.md`, with a deploy mark as the front matter's first line: `# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync`. Three lines beside the mark record what the copy was written from:
+   - `# pkit-definition:`, the definition's place
+   - `# pkit-digest: sha256:…`, the digest of the text read
+   - `# pkit-tool-access:`, the tool access read from that text
+
+   So a check can say whether the copy that runs is of the current text.
 
 What it reports, a line for each definition, such as `created`, `updated`, `exists`, `skipped`, `removed` or `warning`:
 
@@ -508,7 +513,7 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
   - its name has no agent
   - no place ships its name any more
 - **A folder with no definition named after it,** such as one half written, ships none, and the rest deploy.
-- **A refused agent** never stops the others, and stays the agent: no other definition's copy stands in for it (COR-013 point 8). What becomes of the copy written earlier from its definition depends on the cause:
+- **A refused agent** never stops the others, and stays the agent: no other definition's copy stands in for it (COR-013 point 8). What becomes of the copy written earlier from its definition depends on the cause, and on what the copy's mark records:
   - **Refused for its tool access,** the earlier copy is removed. It may give tools the definition no longer gives (COR-013 point 7). The agent is missing until its definition is mended.
   - **Refused for another cause,** such as a gap in the overlay, the earlier copy stays only where its mark's tool access gives nothing more. That tool access gives nothing more when it gives nothing the current text's does not, each entry read whole with its argument. The deploy then says the copy is not of the current text, and otherwise removes it.
   - **Refused because its place holds both layouts,** there is no one current text, and the earlier copy is removed.
@@ -539,7 +544,7 @@ One picker decides which, `.pkit/agents/definition_source.py`, and every part th
 
 **A capability's definition counts** while the component registry records the capability, whatever its folder holds, and the project has not skipped that definition (COR-017). So the folder of an incubated capability that was uninstalled ships nothing, though its files stay.
 
-**Between two capabilities,** the one the project chose for the name wins, else the first by name. Names compare by their characters' code points, so every machine takes the same one:
+**Between two capabilities,** the one the project chose for the name wins, else the first by name. Names compare by their characters' code points, so every machine takes the same one. The project settles a collision by its choice, or in other ways:
 
 - **The project's choice** is kept once for each agent's name, in the backbone manifest's `agent_choices` (the lifecycle reference, ["The component registry"](../lifecycle/component-registry.md)). An `override` at the collision prompt of `pkit capabilities install`, `pkit capabilities upgrade --interactive` or `pkit upgrade` against another capability's agent records it, and removes nothing. `pkit agents choose <agent> <capability>` records it at any other time. Uninstalling a capability drops its choices.
 - **A choice counts** only while it names an installed capability whose definition of the name counts. One that decides nothing, and a collision no choice settles, are warned of by the validator.
