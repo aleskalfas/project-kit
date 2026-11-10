@@ -223,8 +223,8 @@ def _content(top: Mapping[str, Any]) -> dict[str, Any]:
     for name, schema in fields.items():
         if schema.get(PAGES) is True:
             content[name] = _pages(top)
-        elif schema.get("type") in _EMPTY:
-            content[name] = _EMPTY[schema["type"]]()
+        elif (empty := _empty(schema)) is not None:
+            content[name] = empty()
     return content
 
 
@@ -237,6 +237,14 @@ def _pages(top: Mapping[str, Any]) -> list[dict[str, Any]]:
     layout = next(iter(layouts))
     page: dict[str, Any] = {"id": layout, "layout": layout}
     for slot, schema in (layouts[layout].get("slots") or {}).items():
-        if isinstance(schema, Mapping) and schema.get("type") in _EMPTY:
-            page[slot] = _EMPTY[schema["type"]]()
+        if isinstance(schema, Mapping) and (empty := _empty(schema)) is not None:
+            page[slot] = empty()
     return [page]
+
+
+def _empty(schema: Mapping[str, Any]) -> Callable[[], Any] | None:
+    """What makes the empty value of a field of `schema`, or None where a stamp leaves the
+    field out: its type is one a stamp does not leave empty, or a list of types, as a
+    component's schema lets a field declare."""
+    kind = schema.get("type")
+    return _EMPTY.get(kind) if isinstance(kind, str) else None

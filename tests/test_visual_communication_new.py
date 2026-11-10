@@ -14,7 +14,7 @@ import pytest
 
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import every_file
-from tests.visual_communication_project import CONFIG, importable, project, write
+from tests.visual_communication_project import CONFIG, add_library, importable, project, write
 from tests.visual_communication_writes import FULL, failing
 
 script, add, render, check, svg, seam, files, reading = load(
@@ -109,6 +109,57 @@ def test_a_deck_s_content_holds_one_cover_each_of_its_slots_empty(tmp_path: Path
         "    subtitle: ''\n"
         "    author: ''\n"
         "    link: ''\n"
+    )
+
+
+#: A top of the project's own library, a field and a slot of which declare a list of types.
+BOARD = """\
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: A board of pages, whose note and whose aside may be left null.
+
+fields:
+  type: object
+  properties:
+    pages:
+      type: array
+      items: {type: object}
+      x-pkit-pages: true
+    title:
+      type: string
+    note:
+      type: [string, "null"]
+
+layouts:
+  plain:
+    slots:
+      heading: {type: string}
+      aside: {type: [string, "null"]}
+    parts:
+      background:
+        box: {fill: surface}
+        width: "=:width"
+        height: "=:height"
+"""
+
+
+def test_a_field_or_slot_of_a_list_of_types_is_left_out(tmp_path: Path) -> None:
+    root = _with_libraries(tmp_path)
+    folder = add_library(root, "ours", "1.0.0", builds_on={"foundations": 1})
+    board = write(folder / "components" / "board.yaml", BOARD)
+    assert files.shape_problems(reading.read_yaml(board), "component") == []
+    stamped = _new(root, PIECE, "--top", "ours/board", *CHOSEN)
+    assert stamped.returncode == 0, stamped.stderr
+    assert (root / FOLDER / "content.en.yaml").read_text(encoding="utf-8") == (
+        "pkit_schema: visual-communication:content\n"
+        "schema_version: 1\n"
+        "pages:\n"
+        "  - id: plain\n"
+        "    layout: plain\n"
+        "    heading: ''\n"
+        "title: ''\n"
     )
 
 
