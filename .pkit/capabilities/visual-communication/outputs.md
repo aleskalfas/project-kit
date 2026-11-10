@@ -120,6 +120,12 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
+        - visual-communication:DEC-027#1
+        - visual-communication:DEC-027#2
+        - visual-communication:DEC-027#3
+        - visual-communication:DEC-027#4
+        - visual-communication:DEC-027#5
+        - visual-communication:DEC-027#6
         - visual-communication:DEC-031#1
         - visual-communication:DEC-031#2
         - visual-communication:DEC-031#3
@@ -720,7 +726,8 @@ The *viewing step* draws a piece's pages as images, for a person or an agent to 
 - **The size of an image.** A page is drawn 1568 pixels on its long edge, or larger where its smallest text would land under 10 pixels. No image passes 1568 pixels on either edge.
 - **Bands.** A page too tall for one such image is drawn in *bands* (DEC-022 point 7). Each band is a strip of its height as wide as the page, and all share one scale. Each band overlaps the next by the page's tallest line, so every line lies whole in one band. Where a gap between elements lies in that overlap, the band ends in it. Read every band of a page before you judge it, and a band's edge is no fault of the page.
 - **A page too wide** for one image whose smallest text reads is drawn 1568 pixels wide. Its smallest text may not read, and the report says so.
-- **The ground.** Where a page draws no ground of its own, the SVG renderer's image lies on white, which the piece never set. The HTML renderer's lies on the browser's own ground in the mode drawn, which differs between browsers. Judge a text over nothing knowing this.
+- **Under forced colours.** `--forced-colours` also draws each page file of the HTML renderer as a reader who forces their own colours sees it, in the browser's two forced palettes ([Under forced colours](#under-forced-colours)).
+- **The ground.** Where a page draws no ground of its own, the SVG renderer's image lies on white, which the piece never set. The HTML renderer's lies on the browser's own ground in the mode drawn, which differs between browsers, and under a forced palette on that palette's ground. Judge a text over nothing knowing this.
 - **No promise about pixels.** An image may change with the tool, its version or the machine (DEC-015 point 6).
 
 ### The SVG renderer's pages
@@ -736,24 +743,37 @@ A browser draws them. No other format needs one, and the capability installs non
 - **The window** is as wide as the widest page, with the gutter the renderer declares, 32 px, on each side. So a [fixed page](#fixed-pages) keeps its own size. The step widens the window so for every file. Each image is still one page, or one band of it, so the keyline and the backdrop lie outside every image (DEC-031 point 5).
 - **Each mode.** Each key the run draws out of a file is drawn in that start, with no reload. The step sets every signal the file reads by the browser's emulation, so the machine's own settings play no part. Each read the report names runs in each key drawn.
 - **What an image shows.** One browser's drawing, which stands for no other browser. The report names that browser and its version.
-- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window, printing, and the keyline and the backdrop around a fixed page. Open the page file in your own browsers to see those.
+- **What an image does not show.** Another browser's engine, a reader's own settings, a narrow window, printing, and the keyline and the backdrop around a fixed page. Open the page file in your own browsers to see those. Forced colours in the browser's two forced palettes are drawn where you ask ([Under forced colours](#under-forced-colours)).
 - **The fonts.** The browser reads the faces the file embeds. A span it draws in a font of the machine is reported.
-- **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops. The page also holds a mode for each signal the file reads. Where setting one does not repaint it, the run stops too.
+- **The first read.** Each start first reads a small page of its own, planted with one fault of each kind the report names. Where the report does not name each, the run stops. The page also holds a box for each signal the file reads. Where setting the signal does not repaint its box, the run stops too.
 - **Its profile** lies in a throwaway folder of the clone's local folder, which the run removes, even one that stops. The browser may write files of its own elsewhere, such as a crash report.
 - **Its own sandbox** stays on. The step passes no flag that turns it off or weakens it. A sandbox around the browser, such as a session's, may still stop it ([When the browser stops](#when-the-browser-stops)).
 
+### Under forced colours
+
+Some readers have their browser replace a page's colours with a few of their own, such as white text on black. `pkit visual look <piece> --forced-colours` draws what such a reader gets, as well as the keys it draws (DEC-027).
+
+- **When it is worth asking.** Forced colours leave the layout, the words and the fonts as they are, so most looks need none. Ask where colour carries something a forced palette may lose: a translucent fill, or a picture under a text or a line. The run takes about twice as long.
+- **Two forced palettes.** The browser draws each page file in its own two: `light`, dark text on a light ground, and `dark`, the reverse. The step sets them, so the machine's own setting plays no part.
+- **Which key each shows.** A browser sets a scheme and more contrast with its forced palette. So each palette shows the key the page file holds for those signals, whichever keys you pick: the dark palette shows the dark mode where the file holds one. Your keys pick the page files, each at its size.
+- **A start of its own.** After a file's start, a second start draws it under the browser's flag that forces its colours, `--force-high-contrast`, at the same scale. The browser's emulation alone forces the text in some browsers and not in others, so the step never draws without the flag.
+- **Its first read.** That start reads its own planted page in each forced palette. It stops the run where a span left to forcing shows no ink, since the palette did not reach the text, and where a palette's ground is not lighter than its text in `light`, or darker in `dark`. Each read the report names runs in each forced image too.
+- **What it shows.** That browser's forced palettes, not a reader's own, which may hold other colours, such as a link's. A reader whose browser reports another scheme or contrast beside its forced palette may see something else. The report says so.
+- **The SVG renderer's pages** are never drawn so: resvg knows no forced colours, and the run is refused ([What refuses a run](#what-refuses-a-run)).
+
 ### When the browser stops
 
-A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8).
+A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). This holds of the start under forced colours too.
 
 - **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
 - **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
 - **A sandbox.** Where the browser's words show a sandbox, the run says that a sandbox stopped the browser. Otherwise it names what the browser said.
 - **A browser run as root.** Chrome run as root, as a container may run it, refuses to start with its own sandbox on. The run says so, apart from a sandbox, and never turns that sandbox off.
-- **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4):
+- **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4), and a fourth after a stop under forced colours (DEC-027 point 4):
   1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them ([A pipeline's drawings](#a-pipelines-drawings)). They show a pushed commit, not your working tree.
   2. the same look, run once by a person outside any sandbox, such as in their own terminal. This line is addressed to a person. It runs the clone's scripts as they stand, with that person's rights.
   3. the SVG renderer's pages, through `pkit visual look <piece> --renderer svg`. They show the layout, never the page file.
+  4. where the start under forced colours stopped, the same look without `--forced-colours`, which draws the page files in their own colours.
 - **For an agent,** a last line says what it does (DEC-024 point 6). It reads a pipeline's drawings, or asks a person, and never takes the command out of the sandbox itself. It never runs a look over the folder a person's run left.
 
 ### What a run writes
@@ -762,6 +782,7 @@ A run writes in its renderer's folder, local to the clone ([The clone's local fo
 
 - **`<piece>/`** holds the SVG renderer's pages.
 - **`<piece>.html/`** holds the HTML renderer's. No piece's name holds a `.`, so no piece takes this name.
+  - **`forced-light/` and `forced-dark/`** inside it hold the images and frames of each forced palette, where the run drew them ([Under forced colours](#under-forced-colours)). Each takes the names below, by the key its palette shows. No file of the folder takes a name without a `.`, so none takes these.
 
 A run replaces what an earlier run left in its own folder, so a folder never mixes two runs. It leaves the other renderer's folder where it lies.
 
@@ -777,7 +798,7 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
 
-- **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white.
+- **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white, or under a forced palette on that palette's ground.
   - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
   - **`too-wide`:** true on each image of a page too wide for its smallest text to read. Another image holds no such key.
 - **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here. Through the HTML renderer, an entry is a span that left no ink, or lies off its page. Its `why` says which: `no ink` or `off the page`. Each page is read whole, once, so a text in two bands is listed once.
@@ -789,11 +810,13 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 
 Through the HTML renderer the report holds these too:
 
+- **`forced`,** on each image and each entry: the forced palette it was drawn in, `light` or `dark`, and `null` for none. An image's path names its palette's folder.
 - **`tool`:** the browser's name, its version and its program. `stands-for` says that each image stands for that browser alone.
+- **`forced`,** of the report itself: `null` where the run drew no forced palette. Otherwise the `palettes` drawn, the browser's `flag` that forced them, the `folders` they lie in, and what their images do not show, `does-not-show`.
 - **`page-files`:** each page file, with its language, its key, and `keys`, each key it holds.
 - **`words`:** each text whose spans differ between the scene and the page file, in their words, order or number, with each side's spans. The page file lost part of that text.
 - **`refused`:** each request the page made, which the browser refused. A page file asks for nothing, so each request is a fault of the file.
-- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then `sandbox`, whether a sandbox stopped it, and `as-root`, whether the browser ran as root. `go-on` lists the ways on in their order, and `for-an-agent` says what an agent does.
+- **`stopped`:** `null` where the browser drew. After [a stop](#when-the-browser-stops), what stopped it, where the step looked, the program it started and what that said. Then `sandbox`, whether a sandbox stopped it, and `as-root`, whether the browser ran as root. `forcing` is whether the start that stopped forced its colours. `go-on` lists the ways on in their order, and `for-an-agent` says what an agent does.
 
 ### What refuses a run
 
@@ -803,6 +826,7 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 - a lock that does not hold, naming why;
 - a page, a language or a key the piece does not have, naming those it has;
 - a renderer other than `svg` and `html`;
+- forced colours through the SVG renderer. Where the piece goes through it by default, the refusal names `--renderer html`;
 - a brand that cannot be read;
 - a font with no file, or a character no font holds;
 - a page with no size, or an image of one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced;

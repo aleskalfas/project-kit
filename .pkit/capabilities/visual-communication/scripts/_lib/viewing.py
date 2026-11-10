@@ -1,5 +1,5 @@
 """The viewing step: a piece's drawn pages as images a person or an agent reads
-(visual-communication DEC-015, DEC-020 point 5).
+(visual-communication DEC-015, DEC-020 point 5, DEC-027).
 
 It is no plugin, no render and no export. It uses the seam from the engine's side, as
 render and export do, and adds nothing to it. Only a person or an agent reads what it
@@ -34,6 +34,14 @@ is read, and none is used up (DEC-016 point 5).
   The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.
+- **Under forced colours,** where the caller asks (DEC-027). After a file's start, a second
+  start draws it in each of the browser's forced palettes, at the same device scale. The step
+  reads from the declaration's signal pairs which key the file holds for each palette's
+  signals (`key_shown`), and that key names the image. Each palette's images lie in a folder
+  of their own in the renderer's folder (`FORCED_FOLDER`), under the names any image takes,
+  and the report names the palette in a field of its own (`FORCED`), in each image and each
+  entry that lies on one. resvg knows no forced colours, so a run through the SVG renderer
+  that asks for them is refused.
 - **Beside them,** in the renderer's own folder of `FOLDER` (`folder_of`): each image's
   frames, one report of what the images cannot show as the renderer set it (DEC-015 point
   3), and for the HTML renderer each page file, for a person to open in their own browser.
@@ -51,7 +59,7 @@ import json
 import math
 import tempfile
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -107,6 +115,25 @@ ON_BROWSER_GROUND = "on-browser-ground"
 #: `LONG_EDGE` pixels wide (DEC-022 point 7).
 TOO_WIDE = "too-wide"
 
+#: The flag of the command that asks for the forced palettes, and the field of the report
+#: that names the one an image, or an entry that lies on it, was drawn in, empty for none
+#: (DEC-027 points 1 and 5).
+ASK_FORCED = "--forced-colours"
+FORCED = "forced"
+
+#: The folder of each forced palette's images inside the renderer's folder: a name with no
+#: `.`, which no image, frames, page file or report takes, since each of theirs holds one.
+FORCED_FOLDER = "forced-{}"
+
+#: What the report says the forced images do not show (DEC-027 point 6), after the browser
+#: that drew them.
+FORCED_UNSHOWN = (
+    "forced palette, not a reader's own, which may hold other colours, such as a link's. Each "
+    "palette is drawn with the scheme of its darkness and more contrast, so a reader whose "
+    "browser reports another scheme or contrast beside its forced palette meets a pairing no "
+    "image shows"
+)
+
 #: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
 SCALE_PLACES = 3
 
@@ -131,12 +158,14 @@ Results = Sequence[tuple[str, SceneResult]]
 @dataclass(frozen=True)
 class Asked:
     """What a run draws: its languages and keys, each page by its number or trace id, every
-    page where none is named, and the renderer it reads them through."""
+    page where none is named, the renderer it reads them through, and whether it draws each
+    page file in the browser's forced palettes too."""
 
     languages: tuple[str, ...]
     keys: tuple[str, ...]
     pages: tuple[str, ...] = ()
     renderer: str = SVG
+    forced: bool = False
 
 
 @dataclass(frozen=True)
@@ -205,24 +234,34 @@ def asked(
     every_key: bool = False,
     pages: Sequence[str] = (),
     renderer: str | None = None,
+    forced: bool = False,
 ) -> Asked:
     """What a caller's choices ask of `project`. Raises Refused for a language or a key the
-    piece does not name, naming those it does, and for a renderer the step does not read."""
+    piece does not name, naming those it does, for a renderer the step does not read, and for
+    forced colours through the SVG renderer, naming the HTML renderer's where the piece goes
+    through the SVG renderer by default (DEC-027 point 1)."""
     piece = project.piece
     if renderer is not None and renderer not in RENDERERS:
         raise pl.Refused(
             f"the viewing step reads no renderer `{renderer}`: it reads "
             f"{' and '.join(f'`{each}`' for each in RENDERERS)}"
         )
+    through = renderer or renderer_of(piece)
+    if forced and through == SVG:
+        said = (
+            f"resvg draws the SVG renderer's pages and knows no forced colours, so `{ASK_FORCED}` "
+            f"draws only the HTML renderer's"
+        )
+        if renderer is None:
+            said += (
+                f". `{piece.name}` goes through the SVG renderer by default: `pkit visual look "
+                f"{piece.name} --renderer {HTML} {ASK_FORCED}` draws its HTML renderer's pages"
+            )
+        raise pl.Refused(said)
     held = piece.languages
     chosen = _chosen(languages, held, "language", piece.name, every_language) or held[:1]
     named = _chosen(named_keys, project.keys, "key", piece.name, every_key)
-    return Asked(
-        tuple(chosen),
-        tuple(named or [first_key(project)]),
-        tuple(pages),
-        renderer or renderer_of(piece),
-    )
+    return Asked(tuple(chosen), tuple(named or [first_key(project)]), tuple(pages), through, forced)
 
 
 def renderer_of(piece: pl.Piece) -> str:
@@ -270,14 +309,17 @@ def browser_named(root: Path) -> Path | None:
 
 def browser_found(root: Path) -> dict[str, Any]:
     """The browser a run would draw the HTML renderer's pages through: its program, or None,
-    whether the configuration names it, and where the step looked where it found none.
-    Starts nothing. Raises Refused where the configuration cannot be read."""
+    whether the configuration names it, where the step looked where it found none, and the
+    forced palettes it can draw where asked (DEC-027 point 2). Starts nothing. Raises Refused
+    where the configuration cannot be read."""
     named = browser_named(root)
+    palettes = [palette.name for palette in viewing_browser.PALETTES]
+    found: dict[str, Any] = {"program": None, "named": named is not None, "looked": []}
     try:
-        program = viewing_browser.find(named)
+        found["program"] = str(viewing_browser.find(named))
     except viewing_browser.Stopped as stop:
-        return {"program": None, "named": named is not None, "looked": list(stop.looked)}
-    return {"program": str(program), "named": named is not None, "looked": []}
+        found["looked"] = list(stop.looked)
+    return {**found, "forced-palettes": palettes}
 
 
 def _chosen(
@@ -362,8 +404,9 @@ _Shown = Mapping[tuple[str, str], tuple[Mapping[str, Any], list[int]]]
 class _PageFile:
     """A page file a run draws: its name, its language, the keys it holds, the first naming
     it, the renderer's bytes, its scene with the numbers of the pages drawn of it, the device
-    scale they share, the regions of each page drawn, by its number, and each key drawn out of
-    it with its signals, in the order of its keys."""
+    scale they share, the regions of each page drawn, by its number, each key drawn out of
+    it with its signals, in the order of its keys, and the key each forced palette shows, by
+    the palette's name, none where the run asks for none."""
 
     name: str
     language: str
@@ -374,15 +417,17 @@ class _PageFile:
     scale: float
     bands: Mapping[int, tuple[Region, ...]]
     modes: Mapping[str, Mapping[str, str]]
+    forced: Mapping[str, str] = field(default_factory=dict[str, str])
 
 
 def _through_a_browser(
     project: pl.Project, results: Results, wanted: Asked, shown: _Shown, local: Path
 ) -> Viewed:
-    """The HTML renderer's page files, each drawn as it was written, in one browser start
-    (DEC-020 points 5 and 8). Every refusal comes before a file is written. A stop gives the
-    page files and a report that says what stopped it, and no image."""
-    made = _Made(project, HTML)
+    """The HTML renderer's page files, each drawn as it was written, in one browser start, and
+    where the caller asks, in a second start in the browser's forced palettes (DEC-020 points 5
+    and 8, DEC-027 point 3). Every refusal comes before a file is written. A stop of either
+    start gives the page files and a report that says what stopped it, and no image."""
+    made = _Made(project, HTML, wanted.forced)
     declared = seam.declaration(HTML, seam.RENDERER)
     combinations = dict(zip(project.keys, project.combinations, strict=True))
     planned = []
@@ -397,36 +442,60 @@ def _through_a_browser(
         modes = {
             key: signals_of(declared, HTML, combinations[key]) for key in held if key in wanted.keys
         }
+        forced = {
+            palette.name: key_shown(
+                declared, HTML, {key: combinations[key] for key in held}, palette.signals
+            )
+            for palette in (viewing_browser.PALETTES if wanted.forced else ())
+        }
         planned.append(
-            _PageFile(name, language, held, drawn.document, scene, numbers, scale, regions, modes)
+            _PageFile(
+                name, language, held, drawn.document, scene, numbers, scale, regions, modes, forced
+            )
         )
         made.page_file(language, held, name, drawn.document)
-        for key in modes:
+        drawn_in = [*((key, "") for key in modes), *((key, p) for p, key in forced.items())]
+        for key, palette in drawn_in:
             lost = [loss for loss in drawn.losses if loss.key in (None, key)]
-            made.lost(scene, language, key, numbers, lost)
+            made.lost(scene, language, key, numbers, lost, palette)
     named = browser_named(project.root)
     local.mkdir(parents=True, exist_ok=True)
+    forcing = False
     try:
         program = viewing_browser.find(named)
+        drawings = []
         with tempfile.TemporaryDirectory(prefix="page-files-", dir=local) as held:
-            drawings = [(each, _drawn(each, Path(held), program, local)) for each in planned]
+            for each in planned:
+                forcing = False
+                drawing = _drawn(each, Path(held), program, local)
+                forcing = bool(each.forced)
+                forced_drawing = _drawn(each, Path(held), program, local, True) if forcing else None
+                drawings.append((each, drawing, forced_drawing))
     except viewing_browser.Stopped as stop:
-        return made.stopped(stop)
-    for each, drawing in drawings:
+        return made.stopped(stop, forcing)
+    for each, drawing, forced_drawing in drawings:
         made.through(each, drawing, program)
+        if forced_drawing is not None:
+            made.through(each, forced_drawing, program)
     return made.viewed()
 
 
-def _drawn(planned: _PageFile, folder: Path, program: Path, local: Path) -> viewing_browser.Drawing:
+def _drawn(
+    planned: _PageFile, folder: Path, program: Path, local: Path, forced: bool = False
+) -> viewing_browser.Drawing:
     """One page file through the browser `program`, written in `folder` under its own name
-    with the renderer's bytes, so the browser reads it as the renderer wrote it, each key
-    drawn in its signals. The browser's profile lies in `local`, which the module removes.
-    Raises Stopped."""
+    with the renderer's bytes, so the browser reads it as the renderer wrote it: each key
+    drawn in its signals, or where `forced`, in a start of its own, each forced palette. The
+    browser's profile lies in `local`, which the module removes. Raises Stopped."""
     file = folder / planned.name
     file.write_bytes(planned.document)
     every = pages_of(planned.scene)
     pages = [browser_page(every[number - 1], planned.bands[number]) for number in planned.numbers]
     signals = signals_read(seam.declaration(HTML, seam.RENDERER), HTML)
+    if forced:
+        return viewing_browser.draw_forced(
+            file, pages, planned.scale, program, local, signals=signals
+        )
     modes = list(planned.modes.values())
     return viewing_browser.draw(
         file, pages, planned.scale, program, local, signals=signals, modes=modes
@@ -454,6 +523,28 @@ def signals_of(
     for axis, pair in pairs.items():
         values = pair["pairs"]
         found[pair["signal"]] = values.get(combination.get(axis), next(iter(values.values())))
+    return found
+
+
+def key_shown(
+    declared: Mapping[str, Any],
+    form: str,
+    held: Mapping[str, Mapping[str, str]],
+    signals: Mapping[str, str],
+) -> str:
+    """The key of a file of the format `form` that a reader whose browser sets `signals` gets,
+    of the keys `held`, each with its combination, the first naming the file (DEC-027 point 2).
+    As the renderer writes the file, the first key's values hold under any signals, and each
+    other key's hold where each signal that parts it from the first takes its value in
+    `signals`, the rule of more such signals after the rule of fewer, so a later rule wins
+    (DEC-023 point 4)."""
+    given = {key: signals_of(declared, form, combination) for key, combination in held.items()}
+    first = next(iter(given.values()))
+    found, most = next(iter(given)), 0
+    for key, each in given.items():
+        parted = {signal: value for signal, value in each.items() if value != first[signal]}
+        if len(parted) >= most and all(signals.get(s) == v for s, v in parted.items()):
+            found, most = key, len(parted)
     return found
 
 
@@ -506,11 +597,13 @@ def _cannot_draw(project: pl.Project, page: Mapping[str, Any], tool: str, said: 
 
 
 class _Made:
-    """What a run has drawn so far, through `renderer`."""
+    """What a run has drawn so far, through `renderer`, and whether it asks for the browser's
+    forced palettes too."""
 
-    def __init__(self, project: pl.Project, renderer: str) -> None:
+    def __init__(self, project: pl.Project, renderer: str, forced: bool = False) -> None:
         self.project = project
         self.renderer = renderer
+        self.forced = forced
         self.document = project.values()
         self.files: dict[str, bytes] = {}
         self.tool: dict[str, Any] | None = viewing_tool.TOOL if renderer == SVG else None
@@ -572,15 +665,19 @@ class _Made:
         )
 
     def through(self, planned: _PageFile, drawing: viewing_browser.Drawing, program: Path) -> None:
-        """The pages of one page file a browser drew, in each key drawn out of it: each image and
-        its frames, and what the report says of them (DEC-020 point 6, DEC-023 point 6)."""
+        """The pages of one page file a browser drew, in each key drawn out of it, or in each
+        forced palette, by the key it shows: each image and its frames, and what the report
+        says of them (DEC-020 point 6, DEC-023 point 6, DEC-027 point 5)."""
         name, _, version = drawing.browser.partition("/")
         self.tool = {"name": name, "version": version, "program": str(program)}
-        for key, shown in zip(planned.modes, drawing.shown, strict=True):
+        keys = iter(planned.modes)
+        for shown in drawing.shown:
+            key = planned.forced[shown.palette] if shown.palette else next(keys)
             self._through_in(planned, key, shown)
 
     def _through_in(self, planned: _PageFile, key: str, shown: viewing_browser.Shown) -> None:
-        """The pages of one page file a browser drew in the key `key`."""
+        """The pages of one page file a browser drew in the key `key`, under the forced palette
+        `shown` names, if any."""
         every = pages_of(planned.scene)
         numbers = {every[number - 1]["id"]: number for number in planned.numbers}
         for image in shown.images:
@@ -596,8 +693,9 @@ class _Made:
                 image.height,
                 regions[image.band - 1] if image.band else None,
                 too_wide(every[number - 1], planned.scale),
+                shown.palette,
             )
-        where = {"language": planned.language, "key": key}
+        where = {"language": planned.language, "key": key, **self._forced_in(shown.palette)}
         read = shown.read
         self.words.extend(
             {
@@ -655,15 +753,18 @@ class _Made:
         height: int,
         band: _Band | None = None,
         narrow: bool = False,
+        palette: str = "",
     ) -> None:
         """One page's image, or one band's, its frames, and its entry in the report. `narrow`
-        says the page is too wide for its smallest text to read (DEC-022 point 7)."""
+        says the page is too wide for its smallest text to read (DEC-022 point 7). An image
+        under the forced palette `palette` lies in that palette's folder (DEC-027 point 5)."""
         piece = self.project.piece.name
         every = pages_of(scene)
         page = every[number - 1]
-        at = {"language": language, "key": key, "page": page["id"]}
+        at = {"language": language, "key": key, "page": page["id"], **self._forced_in(palette)}
         stem = f"{piece}.{language}.{key}" + (f".{number}" if len(every) > 1 else "")
         stem += f".band-{band.number}" if band else ""
+        stem = f"{FORCED_FOLDER.format(palette)}/{stem}" if palette else stem
         held = {"band": band.said()} if band else {}
         self.files[f"{stem}.png"] = image
         self.files[f"{stem}.frames.json"] = _json(
@@ -698,9 +799,11 @@ class _Made:
         key: str,
         numbers: Sequence[int],
         losses: Sequence[seam.Loss],
+        palette: str = "",
     ) -> None:
         """Each loss of the pages drawn, known before the renderer ran or reported as it
-        drew, whether or not the piece accepts it (DEC-015 point 3)."""
+        drew, whether or not the piece accepts it (DEC-015 point 3), under the forced palette
+        `palette`, if any."""
         declared = seam.declaration(self.renderer, seam.RENDERER)
         pages = pages_of(scene)
         owners = {
@@ -716,6 +819,7 @@ class _Made:
                         "language": language,
                         "key": key,
                         "page": owners[loss.what],
+                        **self._forced_in(palette),
                         "plugin": loss.plugin,
                         "what": loss.what,
                         "did": loss.did,
@@ -724,9 +828,16 @@ class _Made:
                     }
                 )
 
-    def stopped(self, stop: viewing_browser.Stopped) -> Viewed:
+    def _forced_in(self, palette: str) -> dict[str, Any]:
+        """The field that names the forced palette an image, or an entry that lies on one, was
+        drawn in: none for the SVG renderer's, and empty for an image under none."""
+        return {FORCED: palette or None} if self.renderer == HTML else {}
+
+    def stopped(self, stop: viewing_browser.Stopped, forcing: bool = False) -> Viewed:
         """What a stop gives: the page files, and a report that says what stopped the browser,
-        what is missing and how to go on, and no image (DEC-020 point 8, DEC-024 point 4)."""
+        what is missing and how to go on, and no image (DEC-020 point 8, DEC-024 point 4).
+        `forcing` says it stopped a start that forced its colours, whose ways on name a run
+        without forced colours too (DEC-027 point 4)."""
         self.stop = {
             "what": stop.what,
             "looked": list(stop.looked),
@@ -734,7 +845,8 @@ class _Made:
             "said": stop.said,
             "sandbox": stop.sandbox,
             "as-root": stop.as_root,
-            "go-on": ways_on(self.project.piece.name),
+            "forcing": forcing,
+            "go-on": ways_on(self.project.piece.name, forcing),
             "for-an-agent": FOR_AN_AGENT,
         }
         return self.viewed()
@@ -761,6 +873,7 @@ class _Made:
                 f"each image shows how {self.tool['name']} {self.tool['version']} drew the page, "
                 f"and stands for no other browser"
             )
+        report[FORCED] = self._forced_said()
         report["stopped"] = self.stop
         report["page-files"] = self.page_files
         report.update(images=self.images, words=self.words, dropped=self.dropped)
@@ -768,6 +881,21 @@ class _Made:
         report["drawn-otherwise"] = self.otherwise
         report["refused"] = self.refused
         return Viewed({**self.files, REPORT: _json(report)}, report, self.stop is not None)
+
+    def _forced_said(self) -> dict[str, Any] | None:
+        """What the report says of the forced palettes a run asks for: each one, the browser's
+        flag that forced them, the folder of each, and what their images do not show (DEC-027
+        points 5 and 6). None where it asks for none."""
+        if not self.forced:
+            return None
+        names = [palette.name for palette in viewing_browser.PALETTES]
+        tool = f"{self.tool['name']} {self.tool['version']}" if self.tool else "the browser"
+        return {
+            "palettes": names,
+            "flag": viewing_browser.FORCING,
+            "folders": {name: f"{FORCED_FOLDER.format(name)}/" for name in names},
+            "does-not-show": f"each forced image shows {tool}'s own {FORCED_UNSHOWN}",
+        }
 
 
 #: What an agent does where a look stops: it opens no way out of the sandbox itself (DEC-024
@@ -779,11 +907,16 @@ FOR_AN_AGENT = (
 )
 
 
-def ways_on(piece: str) -> list[str]:
+def ways_on(piece: str, forcing: bool = False) -> list[str]:
     """The ways on from a stop of `piece`'s HTML renderer's pages, in the order of DEC-024
     point 4: a build pipeline's drawings, a way a project may take, which show a pushed commit;
     the same look run by a person outside the sandbox, a line addressed to that person; and
-    the SVG renderer's pages, which show the layout."""
+    the SVG renderer's pages, which show the layout. Where the start that stopped forced its
+    colours, a run without forced colours too (DEC-027 point 4)."""
+    unforced = [
+        f"`pkit visual look {piece} --renderer {HTML}`, without `{ASK_FORCED}`, draws the same "
+        f"page files in their own colours, in a start that forces none"
+    ]
     return [
         (
             f"a build pipeline's drawings, where the project has its pipeline draw each piece's "
@@ -799,6 +932,7 @@ def ways_on(piece: str) -> list[str]:
             f"`pkit visual look {piece} --renderer {SVG}` draws the same scenes through the SVG "
             f"renderer and resvg, whose images show the layout, never this page"
         ),
+        *(unforced if forcing else []),
     ]
 
 

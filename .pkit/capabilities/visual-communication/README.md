@@ -128,6 +128,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
         - .pkit/capabilities/visual-communication/outputs.md#the-html-renderers-pages
         - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
+        - .pkit/capabilities/visual-communication/outputs.md#under-forced-colours
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
         - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
@@ -336,19 +337,20 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Cuts** a page too tall for one image into bands, each as wide as the page, and prints them in order ([The viewing step](outputs.md#the-viewing-step)).
 - **Reads** a piece that declares `html` through the HTML renderer, and any other through the SVG renderer. `--renderer svg` or `--renderer html` names one.
 - **Needs a browser** for the HTML renderer's pages, which no other format needs. The capability installs none ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
+- **Draws under forced colours** with `--forced-colours`: each page file of the HTML renderer in the browser's two forced palettes too, in a second start, each palette's images in a folder of their own. It refuses the flag through the SVG renderer ([Under forced colours](outputs.md#under-forced-colours)).
 - **Writes** each image and its frames, and one report, in its renderer's folder, replacing what an earlier run left there. Through the HTML renderer it writes each page file too ([What a run writes](outputs.md#what-a-run-writes)).
 - **Prints** the lock, the renderer and what the report says ([What the report says](outputs.md#what-the-report-says)), then each stand-in an image shows, with why ([The viewing step](outputs.md#the-viewing-step)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
 - **Exits** 0 when it drew, whatever the report says. It exits 1 when it refused, with its renderer's folder left as it was, or when a write failed ([Commands](#commands)). It exits 2 on a usage error. It exits 3 when the browser stopped, leaving the page files and a report, and no image ([When the browser stops](outputs.md#when-the-browser-stops)).
-- **Names the ways on** where it stops ([When the browser stops](outputs.md#when-the-browser-stops)): a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages.
+- **Names the ways on** where it stops ([When the browser stops](outputs.md#when-the-browser-stops)): a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages. Where the start under forced colours stopped, it names the same look without them too.
 
 ### `pkit visual pages <piece>`
 
 Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 - **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document.
-- **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none.
+- **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
 
@@ -428,9 +430,9 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 To use it:
 
-1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). The reviewer runs no command, so it sees only what that run drew.
+1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). Add `--forced-colours` where it should see what a reader who forces their own colours gets ([Under forced colours](outputs.md#under-forced-colours)). The reviewer runs no command, so it sees only what that run drew.
 2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 
