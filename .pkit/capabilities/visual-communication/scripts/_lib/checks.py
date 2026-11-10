@@ -43,6 +43,8 @@ and 5, DEC-019 point 8).
 - the ids in each content file, a list of runs skipped, and each content file against the
   fields and options of the components it fills, each list of runs against the words of
   its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8);
+- each page and key path a piece's brief names, against the content of its source language
+  (`briefs.findings`, DEC-029 point 5);
 - the formats each piece names: two that write files of one name, `svg` and `svg-modes`
   (`same_name_findings`), and, read with the content, a format of switching files whose file
   cannot hold a value axis's mode that parts the piece's combinations (`unpaired_findings`).
@@ -132,6 +134,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from _lib import (
+    briefs,
     code,
     copies,
     current_copy,
@@ -495,6 +498,7 @@ class _Run:
             self.counts["unchecked"] += 1
             return
         self.found.extend(id_findings(piece))
+        self.found.extend(brief_findings(piece))
         lock = lock_findings(self.held, piece)
         self.found.extend(lock)
         self._copy(piece)
@@ -893,6 +897,7 @@ def kind_of(inside: str) -> str | None:
             (pl.PIECE_FILE,): "piece",
             (pl.FINDINGS_FILE,): "findings",
             (pl.EXPORTS_FILE,): "exports",
+            (fingerprint.BRIEF,): briefs.KIND,
         }
         if tuple(within) in single:
             return single[tuple(within)]
@@ -1606,6 +1611,17 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
                 )
             )
     return found
+
+
+def brief_findings(piece: pl.Piece) -> list[Finding]:
+    """What the piece's brief names that its content lacks (DEC-029 point 5), its pages
+    found through its top's declaration, read as the check of ids reads a component, before
+    the lock is checked (`briefs.findings`)."""
+    try:
+        top = _Locked(piece).component(piece.top)
+    except KeyError:
+        top = None
+    return briefs.findings(piece, top)
 
 
 def _shown(ids: set[str]) -> str:

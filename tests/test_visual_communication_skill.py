@@ -13,7 +13,9 @@ Held here:
   what to do, and every link it gives leads to a heading;
 - **what it says is what happens**: in a project with no location, the deck and the figure
   `piece.md` writes, and the local component `build-loop.md` writes, render and pass the
-  check, and a render passes over a mistyped key that the check reports.
+  check, and a render passes over a mistyped key that the check reports. The brief `piece.md`
+  writes holds its schema, names only what the deck holds, and fails the check once the deck
+  renames a page it names.
 
 The commands run in the test's own process (`tests/in_process.py`).
 """
@@ -235,7 +237,7 @@ def test_each_label_the_loop_names_is_one_the_check_reports_with_what_to_do() ->
 def test_each_table_of_labels_follows_a_link_to_checks_md() -> None:
     by_finding = _by_finding()
     tables = re.findall(r"^(.*)\n\n\| Label \|", by_finding, re.MULTILINE)
-    assert len(tables) == 3
+    assert len(tables) == 4
     for lead in tables:
         assert "(../../checks.md#" in lead, lead
 
@@ -351,6 +353,25 @@ def test_the_local_component_of_the_loop_draws_and_passes(tmp_path: Path) -> Non
     filled["slides"][1].update(YAML(typ="safe").load(fence))
     (folder / "content.en.yaml").write_text(json.dumps(filled), encoding="utf-8")
     _rendered_and_passed(root)
+
+
+def test_the_brief_of_piece_md_holds_its_schema_and_names_what_its_deck_holds(
+    tmp_path: Path,
+) -> None:
+    (brief,) = _fences(PIECE_MD, "brief")
+    assert files.shape_problems(YAML(typ="safe").load(brief), "brief") == []
+    root = project(tmp_path)
+    _add_as_written(root)
+    piece, content = _deck()
+    folder = _write_piece(root, piece, content)
+    (folder / "brief.yaml").write_text(brief, encoding="utf-8")
+    _rendered_and_passed(root)
+    (folder / "content.en.yaml").write_text(
+        content.replace("id: parts", "id: three-parts"), encoding="utf-8"
+    )
+    checked = run_main(check, PIECE, cwd=root, env={"PKIT_COMMAND_DEADLINE": None})
+    assert checked.returncode == 1
+    assert f"{FOLDER}/brief.yaml#pages.parts  [brief-page]" in checked.stdout
 
 
 def test_a_render_passes_over_a_mistyped_key_and_the_check_reports_it(tmp_path: Path) -> None:
