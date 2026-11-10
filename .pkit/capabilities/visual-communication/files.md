@@ -68,6 +68,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/neutral/tokens/*.tokens.json
         - .pkit/capabilities/visual-communication/releases/foundations/releases.yaml
         - .pkit/capabilities/visual-communication/releases/neutral/releases.yaml
+        - .pkit/capabilities/visual-communication/releases/*/1.0.0/**
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -85,6 +86,7 @@ pkit:
         - visual-communication:DEC-001#5
         - visual-communication:DEC-001#7
         - visual-communication:DEC-001#8
+        - visual-communication:DEC-001#11
         - visual-communication:DEC-002#1
         - visual-communication:DEC-002#2
         - visual-communication:DEC-002#3
@@ -702,7 +704,7 @@ The released versions and the record lie outside the version being built, and ea
 
 **How a version is released.** `pkit visual release <library> --shipped` releases the version being built as the last commit holds it, where the capability is authored. A change to it that is not committed refuses the release. It releases the version only:
 
-- **Untouched since the capability's current version was released.** No change has touched the version being built since the release step's change that wrote the version the capability's `package.yaml` carries (DEC-013 point 1). That change is the one that added the changelog's entry for that version. A change since waits for the next release that moves the capability's version. So no library is released while the capability carries a version no release wrote, as before the capability's first release.
+- **Untouched since the capability's current version was released.** No change has touched the version being built since the release step's change that wrote the version the capability's `package.yaml` carries (DEC-013 point 1). That change is the one that added the changelog's entry for that version, and its tree holds the capability's own checks. Where that history is not at hand, as in a shallow clone, the release refuses. A change since waits for the next release that moves the capability's version. So no library is released while the capability carries a version no release wrote, as before the capability's first release.
 - **Under a number of its own.** The number is not released already. It is below neither the newest released one nor one the version being built carried at an earlier release (DEC-013 point 3). A library's first release takes the number the version being built carries.
 - **On released bases.** It is checked on the newest released version of each major of each library it builds on, a base released earlier in the same change included. A base with no released version of a major the library names is released first.
 - **Read in full and compared** with its previous release ([What a release compares](#what-a-release-compares)). A finding that fails refuses it (*What each run judges* in *What the check reports*).
@@ -710,6 +712,18 @@ The released versions and the record lie outside the version being built, and ea
 The release adds the released place, whole, its `library.yaml` naming the capability's current version as the release it needs. It adds the version's entry to the record, and changes no other file of the capability's folder (DEC-013 point 2). It writes the change's patch changeset for the capability, naming the library and the version.
 
 Every change to a version the capability ships reaches a project that brings it in. So it comes with a new version of the capability, at least a patch (DEC-013 point 4).
+
+**How parallel changes meet.** Changes to a library's version being built, and its releases, meet as DEC-013 point 4 decides:
+
+- **Two changes that raise the number alike** write the same line of `library.yaml`, so they meet only where they change one file differently. Two that raise it differently meet on that line: the higher holds, and the second to merge reads the version again after its rebase.
+- **A library's release, and a change to the library merged beside it.** Whichever lands second fails the capability's own checks (DEC-013 point 6). A change that lands after the release finds the version being built carrying a released number while it differs from that version, and fails until it raises the number. A release that lands after the change fails, and waits as *How a version is released* says.
+- **A library's release, and a release of the capability.** A release of the capability may land between a library release's branch and its merge. It may have shipped, under the number the library's release fixes, files a change put into the version being built and a later change took back, which a look at the history made only on the branch would miss. So the checks read the history up to the change that brings the library's release in. Where no change touched the version being built since the release it names, the library's release passes though the capability's release landed, and names that older version of the capability.
+- **Releases of two libraries** add two places under `releases/` and change two records, so they meet nowhere but in the capability's own checks, which read a library with its base. A base and a library built on it may each need the other's new version, as when the base's next version removes an experimental component the library's newest release uses, and the library's next version uses what the base adds. Release both in one change, the base first, and the checks read them together.
+
+**What the released versions cost.** The methodology carries the capability's folder in each of its distributions, whether a project installs the capability or not. git stores a file that stays the same once; the distributions hold it once in each version.
+
+- **The first releases.** The foundations' 1.0.0 holds about 10 KB, the starter's 1.0.0 about 38 KB, and the neutral brand's 1.0.0 about 620 KB, almost all of it the fonts the brand commits (DEC-004 point 9), which compression shrinks by less than half.
+- **When DEC-013 is weighed again,** once the released versions of the libraries the capability ships pass 10 MB together, the revisit weighs holding a shipped brand's fonts once, apart from the versions (DEC-013, Implications).
 
 ### The foundations
 
