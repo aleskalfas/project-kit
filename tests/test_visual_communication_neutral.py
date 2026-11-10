@@ -8,8 +8,8 @@ family's text on every fill a component lays them on, beyond the pairs declared.
 starter's reference renders, drawn under it, pass the check, and each of their texts
 reaches its contrast as drawn in every combination (DEC-004 point 8). Its fonts and their
 licences are the files their upstream releases ship, unchanged, and each weight its
-typography roles use is a family of its own, whose file has that weight (DEC-012,
-Implications, "A weight's own file").
+typography roles use is a family of its own, whose file has that weight (DEC-012 point 4,
+"A weight's own file").
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 pinned here with the neutral brand in place of the test brand. Run in this process
@@ -431,8 +431,8 @@ def test_each_family_it_names_has_its_file(brand: Any) -> None:
 
 def test_each_typography_roles_weight_is_the_weight_of_its_familys_file(brand: Any) -> None:
     """A family's one file measures and draws it whatever its weight, so a weight its file
-    does not have would be drawn in another (DEC-012, Implications, "A weight's own file").
-    Each weight is so a family of its own."""
+    does not have would be drawn in another (DEC-012 point 4, "A weight's own file", and
+    DEC-004 point 9). Each weight is so a family of its own."""
     measured = 0
     for role, combination in itertools.product(brand.valued, brand.combinations()):
         if brand.type_of(role) != "typography":

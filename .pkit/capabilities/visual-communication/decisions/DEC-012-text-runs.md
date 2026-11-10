@@ -28,7 +28,7 @@ Until validation accepts files at an older format number, the format grows only 
 - **Only a field of text.** A marked field's `type` is text and no other, and it holds no `enum`, `const` or `$ref`. The mark widens its schema to take a list of runs too, and whatever offers a component's fields to an author, such as the capability's pages, its agents or a schema an editor reads, offers that widened shape.
 - **Its value.** A field of runs takes text, read as one run, or a list of runs. A run is text, or a mapping whose `text` holds text, and which may hold `style` (point 2) and `concept` (point 3) and no other key.
 - **Joined as written.** The runs' texts are joined in order, with nothing added between them. A line feed in a run's text ends a paragraph, and the next paragraph goes on in the same run.
-- **Filled.** A list of runs fills its field, for a part's condition, where one of its runs holds text.
+- **Filled.** A list of runs fills its field, for a part's condition, where one of its runs holds text, as text fills it where it is not empty.
 - **Keys the format fixes.** A run places no component, so no reserved key binds it (DEC-002 point 4). The format fixes `text`, `style` and `concept` on a run alone, as it fixes `layout` on a page drawn in a layout (DEC-010 point 5).
 - **No id.** A run carries no id, and a list of runs holds runs, not items, so no rule of ids reaches it (DEC-001 point 3). An edit taken back from a renderer finds a run by its place among its field's runs, only while they stay as they were at the render, and changes its text.
 - **In each language,** a field's runs are its value, so their number, order and styles may differ, as its text does.
@@ -154,9 +154,9 @@ Each finding below fails validation where it lies in a file the project can corr
 
 - **Edits to accepted records,** each citing this record:
   - DEC-001 points 3 and 6: a field's run words among content's choices, a list of runs with no ids that may differ between languages, and a run's concept and family under a state.
-  - DEC-002 points 3 and 4: a run's three fixed keys in the strict reading, with no ids and no key kept free, and a run style's word with no path marks.
+  - DEC-002 points 3 and 4: a run's three fixed keys in the strict reading, which takes a list of runs only in a field marked to take them, with no ids and no key kept free, and a run style's word with no path marks.
   - DEC-004 point 8: each run measured against the fill under it, at its own size and weight.
-  - DEC-005 points 1, 4 and 5: a text part's choice by a run's style, each run shaped and measured in its own role, lines broken across runs, and a text's runs with their paint and fonts under one line height.
+  - DEC-005 points 1, 4 and 5: a text part's choice by a run's style, each run shaped and measured in its own role, lines broken across runs, and a text's runs with their paint and fonts under one line height, each saying how it was measured.
   - DEC-007 point 3: each run word of each field drawn once in a component's reference renders.
   - DEC-009 points 5, 6 and 9: the words a drawing takes from the top's fields of runs, its fit by them, and the findings point 8 gives a brand's drawing.
 - **The scene and the seam.** A renderer reads each run's paint and fonts, so the seam's version rises with runs (DEC-005 point 8), and a renderer that cannot draw a run's style reports the loss (DEC-005 point 9).
@@ -166,7 +166,7 @@ Each finding below fails validation where it lies in a file the project can corr
 - **A weight's own file.** Whether a brand may give one family a file for each weight is its declaration of its fonts, left to the record of brands and notations (DEC-004 point 9); this record decides nothing of it.
 - **Left to later changes:**
   - a run's link, a key the format adds on a run (DEC-005 point 5)
-  - a sign beside a run's colour, such as its concept's icon or a chip on its family's fill, and a finding where two concepts of a piece share a family, with the change that builds icons and a legend, for runs and items alike (point 3)
+  - a sign beside a run's colour, such as its concept's icon or a chip on its family's fill, and a finding where two concepts of a piece share a family, with the change that builds icons and a legend, for runs and items alike (DEC-004 point 10)
   - a field of runs passed on to a component a part places, its words mapped as an option's switch maps them, which the starter's blocks may need when they compose ([project-kit#2501](https://github.com/aleskalfas/project-kit/issues/2501), T12)
   - a state's declaration of whether it reaches runs that name a concept, an optional key on a state whose default keeps the state's family over a run's concept
   - the structure a tagged document or a web page gives a run, such as emphasis or code, since a run's word is its field's own and says nothing of structure to a renderer (DEC-005 point 5)
