@@ -347,7 +347,7 @@ No path binds a file, and the capability writes no line that points an editor at
 
 A *piece* is one finished item of visual work, such as a figure (DEC-001 point 3). Its sources are one folder, `pieces/<piece>/`, named with the name shape. The folder holds `piece.yaml`, a content file for each language, the piece's local components, and its picture files in `pictures/` ([Picture files](#picture-files)). It may hold the piece's brief too ([The brief](#the-brief)).
 
-`pkit visual new <piece>` stamps a new piece's first files from a person's choices: its `piece.yaml`, a draft with no lock, a content file for each language, holding each field of its top, empty, and a brief holding its binding alone. Its first render writes the lock, as for a piece written by hand ([The lock](#the-lock)).
+`pkit visual new <piece>` stamps a new piece's first files from a person's choices, a draft with no lock, and its first render writes the lock, as for a piece written by hand ([`pkit visual new <piece>`](README.md#pkit-visual-new-piece), [The lock](#the-lock)).
 
 ### `piece.yaml`
 
