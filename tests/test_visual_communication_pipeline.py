@@ -1029,10 +1029,13 @@ def test_a_part_reading_a_librarys_roles_draws_them_at_their_defaults(tmp_path: 
     box = result.scene.find("figure/body/box")
     label = result.scene.find("figure/body/label")
     assert box is not None and label is not None
-    assert box.properties["fill"] == "test-parts.paper"
+    assert box.properties["fill"] == "component.test-parts.tag.fill"
     [[run]] = label.properties["paragraphs"]  # a text's paint lies in its runs
     assert run["fill"] == "test-parts.note"
     assert project.env.role("test-parts.gap") == project.env.role("space.2")
+    # The tag's own token takes its default, the library's paper (DEC-035 point 4).
+    token = project.env.role("component.test-parts.tag.fill")
+    assert token == project.env.role("test-parts.paper") == project.env.role("background")
 
 
 def test_the_values_document_holds_each_role_of_a_locked_library_at_its_default(

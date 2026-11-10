@@ -1,6 +1,7 @@
 """Brands: their design tokens and Resolver document in the DTCG format 2025.10, the
 foundations' declarations of the shared roles, axes, colour families and pairs (DEC-004),
-and the own roles of the component libraries resolved with a brand (DEC-008).
+the own roles of the component libraries resolved with a brand (DEC-008), and the
+component tokens of their components (DEC-035).
 
 **The foundations' declarations** (`roles.yaml`, format `roles`) name each shared role with
 its type, and a default that aliases an older role where it has one; each shared axis with
@@ -19,6 +20,16 @@ pairs each name one of its own roles. It declares no axes, no colour families an
 picture role, which the foundations' alone are. What is wrong in it never refuses it: it
 is kept as its findings, each naming its version, and a role or a pair that cannot be
 read is left out.
+
+**A component token** (`read_component_tokens`) is declared in its component's own file,
+under `tokens`, by its name alone, as `{type, default}`: its path is
+`component.<library>.<component>.<name>`. Its type is any a role takes but a picture, and
+its default, always given, aliases what a library's own role's default may alias, never a
+component token (DEC-035 points 1, 2 and 4). It is resolved as a library's own role is, so
+the scope holds it among its library's roles, and tells it apart (`Scope.tokens`). A token
+that cannot be read is left out, its finding in its component's file. No pair names one
+(DEC-035 point 8). Only its component reads it, which the engine judges where it reads the
+component (`layout`).
 
 **A scope** (`Scope`) is the roles one resolution reads: the foundations' and the own roles
 of each component library resolved with them, one version of each, under a lock or as a
@@ -87,12 +98,15 @@ own finding says so.
 
 **A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
 
-- *reached only where named:* a brand reaches a library's roles, to give one a value, open
-  it or alias it, only where its `builds-on` names that library by the major the scope's
-  version fits (`named`). A token it holds under the name of a library it names gives one
-  of its roles a value; one that names none of them, or is of another type, is a finding.
-  Under the name of a library it does not name, a token stays private, and where the scope
-  holds that library, as under a lock, it asks for attention;
+- *reached only where named:* a brand reaches a library's roles and its components'
+  tokens, to give one a value, open it or alias it, only where its `builds-on` names that
+  library by the major the scope's version fits (`named`). A token it holds under the name
+  of a library it names, or under `component.<library>`, gives one of its roles, or of its
+  components' tokens, a value; one that names none of them, or is of another type, is a
+  finding. Under the name of a library it does not name, or under `component.<library>`, a
+  token stays private, and where the scope holds that library, as under a lock, it asks
+  for attention. A token under `component.<the brand's own name>` stays private, with no
+  finding (DEC-035 point 7);
 - *defaults below every brand:* a default lies under the base's tokens and the brand's own
   sources, and is resolved after the merge, so it follows the value the brand gives the
   role it aliases. A role whose chain of defaults reaches no value has none under the
@@ -154,7 +168,7 @@ import hashlib
 import math
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -164,7 +178,7 @@ from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS, LibraryError, read_library
 from _lib.names import COMPONENT, is_name, is_segment, is_token_path
-from _lib.reading import ReadError, read_json
+from _lib.reading import ReadError, read_json, read_yaml
 
 #: The capability's extension key in DTCG files (DEC-004 point 1).
 EXTENSION = "pkit.visual-communication"
@@ -216,6 +230,19 @@ _TOKEN_KEYS = ("$value", "$type", "$description", "$extensions", "$deprecated")
 _GROUP_KEYS = ("$type", "$description", "$extensions", "$deprecated")
 _RESOLVER_KEYS = ("version", "name", "description", "sets", "modifiers", "resolutionOrder")
 
+#: The folder of a component library's version that holds its components, one file each.
+COMPONENTS = "components"
+
+#: The key of a component's file that declares its component tokens, and the keys of each
+#: token's declaration (DEC-035 point 1).
+TOKENS = "tokens"
+_DECLARATION_KEYS = ("type", "default")
+
+#: The finding on a component token that cannot be read: `tokens` of another shape, a
+#: token's name that is no name, a declaration that is not `{type, default}`, or a type
+#: no role takes or a picture (DEC-035 points 2, 4 and 9).
+TOKEN_SHAPE = "component-token-shape"
+
 
 class TokenError(Exception):
     """Declarations or a brand that cannot be read or resolved; `findings` says why."""
@@ -254,6 +281,30 @@ class Role:
     path: str
     type: str
     default: str | None = None
+
+
+@dataclass(frozen=True)
+class ComponentToken:
+    """A component token as its component declares it in its own file (DEC-004 point 7,
+    DEC-035 points 1, 2 and 4): its token path, `component.<library>.<component>.<name>`,
+    its type, the role its default aliases, the name of the component that declares it,
+    and its file as findings name it."""
+
+    path: str
+    type: str
+    default: str
+    component: str
+    file: str
+
+    @property
+    def name(self) -> str:
+        """The name the component gives the token, the last segment of its path."""
+        return self.path.rpartition(".")[2]
+
+    @property
+    def where(self) -> str:
+        """Its declaration's key path in its component's file."""
+        return f"{TOKENS}.{self.name}"
 
 
 @dataclass(frozen=True)
@@ -302,8 +353,11 @@ class Declarations:
     - `own`: for a library other than the foundations, its name, the group its own roles
       lie under; "" for the foundations, whose roles are shared.
     - `builds_on`: the libraries it builds on, by name.
-    - `findings`: what is wrong in a library's own roles that leaves the rest usable. The
-      foundations' declarations hold none: what is wrong in them refuses them.
+    - `tokens`: the component tokens its components declare, by token path (DEC-035
+      points 1 and 2); none in the foundations.
+    - `findings`: what is wrong in a library's own roles, or in its components' tokens,
+      that leaves the rest usable. The foundations' declarations hold none: what is wrong
+      in them refuses them.
     """
 
     roles: dict[str, Role]
@@ -314,6 +368,7 @@ class Declarations:
     file: str = ""
     own: str = ""
     builds_on: tuple[str, ...] = ()
+    tokens: dict[str, ComponentToken] = field(default_factory=dict)
     findings: tuple[Finding, ...] = ()
 
     @property
@@ -404,6 +459,89 @@ def read_own_roles(
         builds_on=tuple(builds_on),
         findings=tuple(problems.found),
     )
+
+
+def read_component_tokens(
+    folder: Path, *, name: str, library: str = "", root: Path | None = None
+) -> tuple[dict[str, ComponentToken], tuple[Finding, ...]]:
+    """The component tokens each component of the version of the library `name` at
+    `folder` declares under `tokens` in its own file, by token path, each at
+    `component.<name>.<component>.<token>`, with what is wrong in them (DEC-035 points 1, 2
+    and 4). `library` is `<name>@<version>`, and findings name files relative to `root`
+    when given.
+
+    Never raises: a token whose name is not a name, whose declaration is not `{type,
+    default}`, whose type no role takes or is a picture, or that carries no default or one
+    that is no alias, is left out, its finding kept. Whether its default holds the `Scope`
+    judges. A component's file that cannot be read adds nothing: the engine reports it
+    where it reads the component."""
+    found: dict[str, ComponentToken] = {}
+    problems: list[Finding] = []
+    for path in sorted((folder / COMPONENTS).glob("*.yaml")):
+        component = path.stem
+        try:
+            data = read_yaml(path)
+        except ReadError:
+            continue
+        if not is_name(component) or not isinstance(data, Mapping) or TOKENS not in data:
+            continue
+        file = path.relative_to(root).as_posix() if root is not None else path.as_posix()
+        said = _Problems(file, library)
+        declared = data[TOKENS]
+        if not isinstance(declared, Mapping):
+            said.add(
+                TOKEN_SHAPE,
+                f"`{name}/{component}`: `{TOKENS}` is not a mapping of each token's name to its "
+                f"declaration, `{{type, default}}`",
+                TOKENS,
+            )
+        for token, decl in (declared if isinstance(declared, Mapping) else {}).items():
+            token_path = f"{COMPONENT}.{name}.{component}.{token}"
+            where = f"{TOKENS}.{token}"
+            what = f"`{name}/{component}`: the token `{token}`"
+            if not is_name(token):
+                said.add(
+                    TOKEN_SHAPE,
+                    f"{what} is not a name of lower-case words joined by hyphens: one name "
+                    f"follows the component's in a token's path",
+                    where,
+                )
+            elif not isinstance(decl, Mapping) or not set(decl) <= set(_DECLARATION_KEYS):
+                said.add(TOKEN_SHAPE, f"{what} is not declared as `{{type, default}}`", where)
+            elif decl.get("type") == PICTURE:
+                said.add(
+                    TOKEN_SHAPE,
+                    f"{what} is of the type `{PICTURE}`, which no component token takes: only "
+                    f"the foundations declare a picture role",
+                    where,
+                )
+            elif decl.get("type") not in TYPES:
+                said.add(TOKEN_SHAPE, f"{what} names no type of {', '.join(TYPES)}", where)
+            elif "default" not in decl:
+                said.add(
+                    "role-default",
+                    f"{what} carries no default, and a component token always carries one, an "
+                    f"alias to a role",
+                    where,
+                )
+            else:
+                alias = _alias_of(decl["default"])
+                if alias is None:
+                    said.add(
+                        "role-default", f"{what} has a default that is no alias `{{role}}`", where
+                    )
+                else:
+                    found[token_path] = ComponentToken(
+                        token_path, decl["type"], alias, component, file
+                    )
+        problems.extend(said.found)
+    return found, tuple(problems)
+
+
+def _alias_of(value: Any) -> str | None:
+    """The token path an alias `{a.b}` names; None where `value` is no alias."""
+    match = _ALIAS.match(value) if isinstance(value, str) else None
+    return match.group(1) if match is not None else None
 
 
 def _read_roles(raw: Any, problems: _Problems, own: str = "") -> dict[str, Role]:
@@ -566,6 +704,17 @@ def _read_pairs(
             problems.add("pair-shape", f"pair {index} names no level of {', '.join(LEVELS)}", where)
             continue
         text, under = spec.get("text"), spec.get("under")
+        token = next(
+            (r for r in (text, under) if isinstance(r, str) and r.split(".")[0] == COMPONENT),
+            None,
+        )
+        if own and token is not None:
+            problems.add(
+                "pair-shape",
+                f"pair {index} names `{token}`, a component token: no pair names one",
+                where,
+            )
+            continue
         named = [r for r in (text, under) if r in roles] if own else [text, under]
         if own and is_token_path(text) and is_token_path(under) and not named:
             problems.add("pair-shape", f"pair {index} names none of the library's own roles", where)
@@ -584,23 +733,29 @@ def _read_pairs(
 
 class Scope:
     """The roles one resolution reads (DEC-008 point 1): the foundations' shared roles, and
-    the own roles of each component library resolved with them, one version of each, as
-    their declarations give them. A role's type reads from it with no brand.
+    the own roles of each component library resolved with them, and the component tokens
+    of its components, one version of each, as their declarations give them. A role's type
+    reads from it with no brand.
 
     - `foundations`: the foundations' declarations; `axes`, `families` and `top_groups`
       are theirs.
-    - `libraries`: each component library's declarations of its own roles, by its name.
-    - `roles`: every role, by its token path; `owner`, the library whose own role each is,
-      or "" for a shared role.
-    - `defaults`: the default of each own role that holds (DEC-008 point 3): an alias to a
-      role its library may reach, its own or one of a library it builds on, the shared
-      roles included where it builds on the foundations, of its type, never a component
-      token, in no loop. A default that does not hold is its library's finding, and
-      gives the role no value.
+    - `libraries`: each component library's declarations of its own roles and of its
+      components' tokens, by its name.
+    - `roles`: every role, by its token path, each component token among them; `owner`,
+      the library whose own role or component token each is, or "" for a shared role.
+    - `tokens`: each component token, by its token path (DEC-035 points 1 and 2). It is
+      resolved as a library's own role is (DEC-035 point 4), so the rest of the scope
+      reads it as one, but for the release's comparison and the reading of its library's
+      roles, which tell the two apart.
+    - `defaults`: the default of each own role and component token that holds (DEC-008
+      point 3, DEC-035 point 4): an alias to a role its library may reach, its own or one
+      of a library it builds on, the shared roles included where it builds on the
+      foundations, of its type, never a component token, in no loop. A default that does
+      not hold is its library's finding, and gives the role no value.
     - `pairs`: the foundations' pairs, then each library's that names colour roles it may
       reach.
 
-    Its findings (`findings_of`) are each library's: those its file holds, then those its
+    Its findings (`findings_of`) are each library's: those its files hold, then those its
     defaults and pairs show here. Each names the library's version."""
 
     def __init__(self, foundations: Declarations, libraries: Iterable[Declarations] = ()) -> None:
@@ -608,11 +763,17 @@ class Scope:
         self.libraries = {declared.own: declared for declared in libraries if declared.own}
         self.roles: dict[str, Role] = dict(foundations.roles)
         self.owner: dict[str, str] = dict.fromkeys(foundations.roles, "")
+        self.tokens: dict[str, ComponentToken] = {}
         for name, declared in sorted(self.libraries.items()):
             for path, role in declared.roles.items():
                 if path not in self.roles:
                     self.roles[path] = role
                     self.owner[path] = name
+            for path, token in declared.tokens.items():
+                if path not in self.roles:
+                    self.roles[path] = Role(path=path, type=token.type, default=token.default)
+                    self.owner[path] = name
+                    self.tokens[path] = token
         self.defaults: dict[str, str] = {}
         self._found: dict[str, list[Finding]] = {
             name: list(declared.findings) for name, declared in self.libraries.items()
@@ -676,20 +837,45 @@ class Scope:
                 reached.update(self.libraries[other].roles)
         return reached
 
-    def _add(self, name: str, code: str, message: str, where: str, level: str = FAILS) -> None:
+    def _add(
+        self, name: str, code: str, message: str, where: str, level: str = FAILS, file: str = ""
+    ) -> None:
+        """A finding of the library `name`, in `file`, or else in its `roles.yaml`."""
         declared = self.libraries[name]
         self._found[name].append(
-            Finding(code, level, message, file=declared.file, where=where, library=declared.label)
+            Finding(
+                code,
+                level,
+                message,
+                file=file or declared.file,
+                where=where,
+                library=declared.label,
+            )
         )
 
+    def _declared(self, name: str) -> list[tuple[str, Role, str, str]]:
+        """Each own role of the library `name`, then each component token of its components
+        the scope holds, in path order, with the file and the key path its declaration lies
+        at: its `roles.yaml`, or its component's file (DEC-035 point 1)."""
+        declared = self.libraries[name]
+        own = [
+            (path, role, declared.file, f"roles.{path}")
+            for path, role in sorted(declared.roles.items())
+        ]
+        return own + [
+            (path, self.roles[path], token.file, token.where)
+            for path, token in sorted(declared.tokens.items())
+            if self.tokens.get(path) is token
+        ]
+
     def _check_defaults(self, name: str) -> None:
-        """Each default of the library's own roles, against the roles it may reach."""
+        """Each default of the library's own roles and of its components' tokens, against
+        the roles it may reach (DEC-008 point 3, DEC-035 point 4)."""
         reach = self.reach(name)
-        for path, role in sorted(self.libraries[name].roles.items()):
+        for path, role, file, where in self._declared(name):
             target = role.default
             if target is None:
                 continue
-            where = f"roles.{path}"
             if target == COMPONENT or target.startswith(f"{COMPONENT}."):
                 self._add(
                     name,
@@ -697,6 +883,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, a component token: a role "
                     f"defaults to a role, never to the token of one part",
                     where,
+                    file=file,
                 )
             elif target in reach and self.roles[target].type != role.type:
                 self._add(
@@ -705,6 +892,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, of type "
                     f"`{self.roles[target].type}`, not `{role.type}`",
                     where,
+                    file=file,
                 )
             elif target in reach:
                 self.defaults[path] = target
@@ -716,6 +904,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, a role of `{holder}`, which "
                     f"`{name}` does not build on",
                     where,
+                    file=file,
                 )
             else:
                 self._add(
@@ -724,6 +913,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, which neither `{name}` nor a "
                     f"library it builds on declares",
                     where,
+                    file=file,
                 )
 
     def _check_loops(self) -> None:
@@ -805,11 +995,11 @@ class Scope:
         return kept
 
     def _state_ends(self, name: str) -> None:
-        """A fact for each own role whose chain of defaults ends at no shared role, so only
-        a brand that gives a value along it draws it (DEC-008 point 9). A role whose own
-        default does not hold has its failing finding instead."""
-        declared = self.libraries[name]
-        for path, role in sorted(declared.roles.items()):
+        """A fact for each own role, and each component token, whose chain of defaults ends
+        at no shared role, so only a brand that gives a value along it draws it (DEC-008
+        point 9, DEC-035 point 9). One whose own default does not hold has its failing
+        finding instead."""
+        for path, role, file, where in self._declared(name):
             if role.default is not None and path not in self.defaults:
                 continue
             end, seen = path, {path}
@@ -828,18 +1018,20 @@ class Scope:
                 "role-brand-only",
                 f"{said}, so it ends at no shared role: only a brand that gives it a value "
                 f"draws it",
-                f"roles.{path}",
+                where,
                 level=FACT,
+                file=file,
             )
 
 
 def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scope:
     """The scope of the library versions whose folders `folders` gives, by name: the
-    foundations' declarations, and the own roles of each other library of kind `components`
-    whose folder holds a `roles.yaml` (DEC-008 point 8). A library whose `library.yaml`
-    cannot be read adds nothing, its own check reporting it. Where `folders` holds no
-    foundations, as for a library that builds on none, the scope holds no shared role.
-    Findings name files relative to `root` when given. Raises TokenError for the
+    foundations' declarations, and of each other library of kind `components`, the own
+    roles its `roles.yaml` declares (DEC-008 point 8) and the component tokens its
+    components declare (DEC-035 point 1), where it has either. A library whose
+    `library.yaml` cannot be read adds nothing, its own check reporting it. Where `folders`
+    holds no foundations, as for a library that builds on none, the scope holds no shared
+    role. Findings name files relative to `root` when given. Raises TokenError for the
     foundations' declarations."""
 
     def shown(path: Path) -> str:
@@ -854,7 +1046,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
     own = []
     for name, folder in sorted(folders.items()):
         path = folder / "roles.yaml"
-        if name == FOUNDATIONS or not path.is_file():
+        if name == FOUNDATIONS or not (path.is_file() or (folder / COMPONENTS).is_dir()):
             continue
         try:
             library = read_library(folder)
@@ -862,15 +1054,31 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
             continue
         if library.kind != "components":
             continue
-        own.append(
-            read_own_roles(
+        builds_on = [need.name for need in library.builds_on]
+        tokens, problems = read_component_tokens(
+            folder, name=library.name, library=library.label, root=root
+        )
+        if path.is_file():
+            declared = read_own_roles(
                 path,
                 name=library.name,
                 library=library.label,
                 shown=shown(path),
-                builds_on=[need.name for need in library.builds_on],
+                builds_on=builds_on,
             )
-        )
+        elif tokens or problems:
+            declared = Declarations(
+                roles={},
+                axes={},
+                families={},
+                pairs=(),
+                label=library.label,
+                own=library.name,
+                builds_on=tuple(builds_on),
+            )
+        else:
+            continue
+        own.append(replace(declared, tokens=tokens, findings=(*declared.findings, *problems)))
     return Scope(foundations, own)
 
 
@@ -2265,45 +2473,63 @@ class _BrandReader:
             path = self._alias(token.value) or ""
         return False
 
+    def _library_of(self, path: str) -> tuple[str, str]:
+        """The library a brand's token at `path` lies under, and the group it lies in: the
+        library's name, its own roles' group, or `component.<library>`, where the tokens of
+        its components lie (DEC-008 point 4, DEC-035 point 7). None, as "", for a token
+        under `component.<the brand's own name>`, where its own components' tokens lie,
+        and for one under `component` alone."""
+        segments = path.split(".")
+        if segments[0] != COMPONENT:
+            return segments[0], segments[0]
+        if len(segments) < 2 or segments[1] == self.name:
+            return "", ""
+        return segments[1], f"{COMPONENT}.{segments[1]}"
+
     def _check_library_tokens(self) -> None:
-        """Each of the brand's tokens under the name of a library of the scope (DEC-008
-        point 4): where the brand names the library, one that is none of its roles, or is
-        of another type, is a finding; where it does not, the token stays private and asks
-        for attention."""
+        """Each of the brand's tokens under the name of a library of the scope, or under
+        `component.<library>` (DEC-008 point 4, DEC-035 point 7): where the brand names the
+        library, one that is none of its roles or of its components' tokens, or is of
+        another type, is a finding; where it does not, the token stays private and asks for
+        attention. A token under `component.<the brand's own name>` is private, and judged
+        here no further (#2573)."""
         for file, tokens in sorted(self.flat.items()):
             for path, token in tokens.items():
-                library = path.split(".")[0]
+                library, group = self._library_of(path)
                 declared = self.scope.libraries.get(library)
                 if declared is None:
                     continue
-                role = declared.roles.get(path)
+                under_tokens = group != library
+                role = (declared.tokens if under_tokens else declared.roles).get(path)
+                theirs = "its components' tokens" if under_tokens else "its roles"
                 if library not in self.named:
                     self._keep(
                         "library-token-private",
-                        f"`{path}` lies under `{library}`, which the brand does not name, by the "
+                        f"`{path}` lies under `{group}`, which the brand does not name, by the "
                         f"major of {declared.label}, among the libraries it builds on, so it stays "
                         f"private and gives `{library}` nothing",
                         file,
                         path,
                         ATTENTION,
-                        fix=f"name `{library}` in `builds-on` to give its roles values, or move "
+                        fix=f"name `{library}` in `builds-on` to give {theirs} values, or move "
                         f"`{path}` to a group of the brand's own",
                         who=f"the owner of the brand {self.name}",
                     )
                 elif role is None:
                     self._keep(
                         "library-token",
-                        f"`{path}` lies under `{library}`, which the brand names, but is none of "
-                        f"its roles: a token under a library the brand names gives one of its "
-                        f"roles a value, and the brand's private tokens lie in groups of its own",
+                        f"`{path}` lies under `{group}`, and the brand names `{library}`, but it "
+                        f"is none of {theirs}: a token there gives one of them a value, and the "
+                        f"brand's private tokens lie in groups of its own",
                         file,
                         path,
                     )
                 elif token.type is not None and token.type != role.type:
+                    noun = "component token" if under_tokens else "role"
                     self._keep(
                         "library-token",
-                        f"`{path}` is of type `{token.type}`, but the role `{path}` of `{library}` "
-                        f"is of type `{role.type}`, so it gives the role no value",
+                        f"`{path}` is of type `{token.type}`, but the {noun} `{path}` of "
+                        f"`{library}` is of type `{role.type}`, so it gives the {noun} no value",
                         file,
                         path,
                     )
