@@ -35,6 +35,7 @@ pkit:
         - visual-communication:DEC-003#7
         - visual-communication:DEC-004#2
         - visual-communication:DEC-004#3
+        - visual-communication:DEC-004#7
         - visual-communication:DEC-004#9
         - visual-communication:DEC-004#10
         - visual-communication:DEC-005#1
@@ -231,7 +232,7 @@ An option takes a value from what the component declares, never a free number or
 
 ### Tokens
 
-A *component token* is a role one component declares for what its parts draw, so that a brand may restyle that component alone (DEC-035 points 1 and 2). A card in a library named `ui` could declare a token for its box:
+A *component token* is a role one component declares for what its parts draw, so that a brand may restyle that component alone (DEC-004 point 7, DEC-035 points 1 and 2). A card in a library named `ui` could declare a token for its box:
 
 ```yaml
 tokens:
