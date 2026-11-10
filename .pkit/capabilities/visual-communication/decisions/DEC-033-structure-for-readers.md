@@ -1,7 +1,7 @@
 ---
 id: DEC-033
 title: A piece tells a reader who does not see it what each of its texts and pictures is
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
