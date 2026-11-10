@@ -153,7 +153,7 @@ The step's browser half lies behind one module of the capability, on the standar
 ### 10. What this leaves to other records
 
 - **How a page holds its modes is [visual-communication:DEC-023-html-page-modes]'s.** resvg no longer reads this page, so its limits on a paint fall away. That record keeps a mode settable from outside the file, so the step can read the real file.
-- **What a reader who does not see the page gets is [project-kit#2740](https://github.com/aleskalfas/project-kit/issues/2740)'s,** and it shrinks, since each text now lies once. It keeps how these elements carry the words of a run's structure ([project-kit#2739](https://github.com/aleskalfas/project-kit/issues/2739)), emphasis or a link across a line break among them. It keeps a reading order that differs from the draw order, selection and find-in-page over lines placed apart, a keyboard reader, what a shape or a picture says, and a person's reading with a screen reader.
+- **What a reader who does not see the page gets is [project-kit#2740](https://github.com/aleskalfas/project-kit/issues/2740)'s,** and it shrinks, since each text now lies once. It keeps how these elements carry the words of a run's structure ([visual-communication:DEC-033-structure-for-readers]), emphasis or a link across a line break among them. It keeps how the page spells a reading order a component names, selection and find-in-page over lines placed apart, a keyboard reader, how the page spells a picture's text, and a person's reading with a screen reader (refinement per [visual-communication:DEC-033-structure-for-readers] points 5 and 6).
 
 ## Rationale
 

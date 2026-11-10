@@ -31,7 +31,7 @@ Terms:
 ### 1. Content names a picture file in a field that an `image` part shows
 
 - **What an `image` part shows.** One of four things, each named by one property: `produced`, as format 1 has it, `content`, `file` or `role`. A part names exactly one of them.
-- **`content: <field>`.** The field's value is the name of a picture file of the piece (point 2), held as text.
+- **`content: <field>`.** The field's value is the name of a picture file of the piece (point 2), held as text. The field's mark may name the field of the picture's text (refinement per [visual-communication:DEC-033-structure-for-readers] point 5).
 - **Each language names its own.** Each content file gives its own, as it gives its own text, and a picture shared by every language is named in each.
 - **An empty field draws nothing.** The part is not drawn, and has zero size at its place ([visual-communication:DEC-005-engine-and-plugins] point 3).
 - **A file, never a produced output, for now.**
@@ -133,7 +133,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 ### 11. What stays out
 
-- **A picture's text,** what a reader who does not see it gets, is left to the record of a run's structure ([project-kit#2739](https://github.com/aleskalfas/project-kit/issues/2739)).
+- **A picture's text,** what a reader who does not see it gets, is left to the record of a run's structure ([visual-communication:DEC-033-structure-for-readers] point 5).
 - **What else waits,** beyond what a point marks as waiting, is listed under Implications.
 
 ## Rationale
