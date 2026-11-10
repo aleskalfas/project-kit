@@ -27,6 +27,8 @@ Terms:
 
 ## Decision
 
+**A piece tells a reader who does not see it what each of its texts and pictures is.**
+
 ### 1. The format fixes one vocabulary of structure, and each renderer spells it
 
 - **Words of the format's own,** which name no medium, hold structure in the scene, such as `emphasis` or `heading`. No library declares one.
