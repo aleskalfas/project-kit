@@ -1,12 +1,11 @@
 component: visual-communication
 kind: none
 body: >
-  DEC-026 is proposed: a printed HTML page file sets its pages one after
-  another down the reader's sheets, and moves a page that does not fit whole
-  to the next sheet. A page taller than a sheet runs on. It is to break
-  between a text's lines, never through one, and a record of its own decides
-  how; until then the browser picks where. Only a fixed page, such as a deck's
-  slide, prints inside its keyline, and the backdrop stays on screen. Each
-  page prints on the browser's ground in its own colours, and the file picks
-  no mode for print (#2824). The record designs ahead: no command, file, flag or format
-  changes, so no surface moves.
+  Design-ahead: DEC-026, accepted, decides how a printed HTML page file sets
+  its pages: one after another down the reader's sheets, a page that does not
+  fit moved whole to the next sheet, and a page taller than a sheet run on.
+  Only a fixed page, such as a deck's slide, prints inside its keyline, and the
+  backdrop stays on screen. Each page prints on the browser's ground in its own
+  colours, and the file picks no mode for print (#2824). DEC-020, DEC-023 and
+  DEC-031 state what it decides of them, and the page on outputs says what such
+  a print will give. Nothing is built yet, so no command, file or check moves.
