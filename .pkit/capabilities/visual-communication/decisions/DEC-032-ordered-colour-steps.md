@@ -1,7 +1,7 @@
 ---
 id: DEC-032
 title: An order's places take colour steps, spread evenly between two ends each brand gives
-status: proposed
+status: accepted
 date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
