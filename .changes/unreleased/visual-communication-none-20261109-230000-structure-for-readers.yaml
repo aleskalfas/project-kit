@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-033 decides how a piece declares what a reader who does not see it gets:
+  a run's structure and its link, a text's heading or caption, a list, a
+  picture's text and a reading order, in words the format fixes and each
+  renderer spells (#2739). The record is proposed and designs ahead: the
+  changes that build it come later, so no surface moves yet.
