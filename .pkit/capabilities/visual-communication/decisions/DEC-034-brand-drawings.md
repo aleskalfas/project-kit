@@ -35,7 +35,7 @@ Five facts bear on the answers:
 - **The declaration.** A brand declares a drawing by holding a component whose file names, under the key `draws`, a top by `<library>/<component>` and one of its layouts: `draws: {top: <library>/<component>, layout: <layout>}`. This is the declaration DEC-009 point 8 leaves to this change. Nothing else lists a brand's drawings, so a drawing and what it draws are read and checked as one file.
 - **A drawing is a component that declares `draws`.** Every other component a brand holds is one that content may place, as any library's is (DEC-004 point 1).
 - **One layout each.** A drawing draws one layout of one top. A brand that draws two layouts alike holds two drawings.
-- **It declares nothing the content gives.** It takes the top's: the layout's slots and the fields it declares for their lists, the top's other fields, its options with their words, its states and its colour (DEC-009 point 5). So its file holds no key by which a component declares what content gives it, `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends` among them.
+- **It declares nothing the content gives.** It takes the top's: the layout's slots and the fields it declares for their lists, the top's other fields, its options with their words, its states and its colour (DEC-009 point 5). So its file holds none of the keys `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`.
 - **What it holds:** what it is for, under `about`, as every component, its parts, its own named values, the size its instance asks for (point 2), and the parts it exposes, by the names the top exposes them by (DEC-009 point 5).
 
 ### 2. What a page gets stays where the top writes it, and a drawing writes what its instance asks for
