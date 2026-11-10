@@ -1,6 +1,6 @@
 # Starting a piece
 
-A piece is a folder under the location's `pieces/`. It holds `piece.yaml`, which says what the piece is, and a content file for each language, which says what it shows ([A piece](../../files.md#a-piece)). You bring its libraries first, write both files by hand, and let the first render write the lock.
+A piece is a folder under the location's `pieces/`. It holds `piece.yaml`, which says what the piece is, and a content file for each language, which says what it shows ([A piece](../../files.md#a-piece)). It may keep a brief too, which says what the piece must show and why its design is as it is ([The brief](../../files.md#the-brief)). You bring its libraries first, write its files by hand, and let the first render write the lock.
 
 ## 1. Bring the libraries
 
@@ -66,7 +66,51 @@ modes:
   colour-scheme: [light, dark]
 ```
 
-## 4. Write the content
+## 4. Write the brief
+
+The brief, `pieces/<piece>/brief.yaml`, is written for whoever makes or reviews the piece, and no reader sees it ([The brief](../../files.md#the-brief)). It keeps what the content does not: what each picture must make visible, and why the design is as it is. So a reviewer can fail a page that loses the point, and a later designer can change one choice without breaking another.
+
+- **When to keep one.** Keep one for a piece that explains, or whose pictures carry an order, a flow or a grouping a reader must see. A quick figure needs none. Nothing that draws or checks a piece needs one.
+- **The intent first, from whoever asks.** Before you design, write the `goals` and the `relations` from what whoever asked for the piece says, and show them to that person. A relation says in words what a picture must make visible between its parts, such as levels that each rest on the one below. A goal says what the audience must be able to do after the piece.
+- **A part for each page.** `piece` holds what concerns the whole piece, and `pages` a part for each page, keyed by the page's id in the content. A page's part names a page the content holds. Until you start a page in step 5, write its intent under `piece`, and move it under `pages` once the page has its id. A figure keeps all of its brief under `piece`.
+- **A takeaway only where the page has no lead.** Where the page's content states its point, such as a slide's `lead`, that is its takeaway, and the brief does not repeat it. A cover often has none.
+- **The reasons as you design.** Write each reason as you make the choice it explains, in step 5 and in the build loop. List them in the order the choices are made: `structure`, `form`, `hierarchy`, `type`, `colour`, `space`. Each names the principle it rests on, by its name and its source. A reason with no principle is taste, which nobody can judge.
+- **Words, ids and key paths alone.** A key path names a part of the content as a tie's end does, by the keys and ids that lead to it, each item of a list by its id: from the page in a page's part, as `lead`, and from the content's top in the piece's part, as `slides[parts].visual.items[brand]`. Write no value, no layout and no text the content shows. A brand's values and a component's look are theirs, and a requirement for more than this piece is a rule.
+- **Its binding,** `pkit_schema: visual-communication:brief` and `schema_version: 1`, opens it, as every file of the capability's format.
+
+The brief of the deck in step 5, once its pages hold their ids:
+
+```yaml
+pkit_schema: visual-communication:brief
+schema_version: 1
+piece:
+  goals:
+    - A new member of the team can name the three parts of a piece, and what each is for.
+pages:
+  parts:
+    relations:
+      - text: The three parts are kinds of one thing side by side, none ranked above the others.
+        relates: [visual.items]
+    reasons:
+      - aspect: structure
+        about: visual.items
+        text: The parts are three kinds of one thing, with no order among them.
+        principle:
+          name: Categorical and ordered attributes
+          source: Tamara Munzner, Visualization Analysis and Design
+      - aspect: form
+        about: visual.items
+        text: Items of one size and one colour, so that no part reads as more than another.
+        principle:
+          name: Ordered visual variables
+          source: Jacques Bertin, Semiology of Graphics
+```
+
+The slide `parts` states its point in its `lead`, so its part holds no takeaway.
+
+No command writes the brief, and nothing that draws the piece reads it. The check fails a page or a key path it names that the content does not hold: an id you renamed in the content leaves it naming what is gone ([The brief](../../checks.md#the-brief)).
+
+## 5. Write the content
 
 Write `pieces/<piece>/content.<language>.yaml` for each language. The content says what the piece shows, and names no position, size, colour or font ([Content files](../../files.md#content-files)).
 
@@ -123,7 +167,7 @@ caption: Two of the parts of a piece.
 
 Where no library component fits, write the rest first, then write a local component ([A local component](build-loop.md#a-local-component)).
 
-## 5. Draw it once
+## 6. Draw it once
 
 `pkit visual render <piece>` draws the piece. For a piece with no lock yet, it also writes the lock.
 
