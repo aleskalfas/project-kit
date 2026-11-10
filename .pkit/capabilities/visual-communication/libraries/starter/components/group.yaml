@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# Where its form comes from (DEC-007 point 3): Yuri Engelhardt's containment, as for the
+# groups pattern, whose groups it draws.
 about: >-
   One group of items that belong together: a box with rounded corners on its colour
   family's fill, which holds a head, a tag and the group's items, one under another, the

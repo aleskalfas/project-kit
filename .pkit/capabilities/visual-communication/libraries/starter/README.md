@@ -120,6 +120,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 ### `card`
 
 - **Form:** a box with rounded corners that holds a head, a tag and a text, one under another, each where the content gives it.
+- **Source:** Material Design's card, IBM Carbon's tile and the GOV.UK Design System's summary card.
 - **Fields:** `head`, `tag` and `text`, each optional. `text` is a field of runs, its words `plain` and `strong`, `plain` the default.
 - **Options:**
   - `fill`: `plain`, the default, lies on the surface; `tint` lies on its colour family's fill, its texts in the family's text.
@@ -128,12 +129,14 @@ A block draws one item of a pattern, or stands alone where content places it.
 ### `tag`
 
 - **Form:** a short label on a small box with rounded corners, all in its colour family: its fill, its edge and its text. It is as large as its label, on one line.
+- **Source:** the GOV.UK Design System's tag, IBM Carbon's tag and Material Design's chip.
 - **Fields:** `label`, required.
 - **Options:** none. Placed alone or in a list, it takes its concept's family. A card's tag stays `neutral`, even on a tinted card.
 
 ### `group`
 
 - **Form:** a box with rounded corners on its colour family's fill, edged in the family's line. It holds a head, a tag and its items, one under another, the head and the tag where the content gives them. Its items stand in a column, each as wide as the group.
+- **Source:** Yuri Engelhardt's containment, as for the `groups` pattern.
 - **Fields:** `head` and `tag`, each optional, and the list `items`.
 - **Lists:** `items`, each drawn by the `card`, unless the component field `item` names another.
 - **Options:** none. A group's tag stays `neutral`, as a card's does.
@@ -260,6 +263,7 @@ A web block draws one item of a web part's list.
 ### `row`
 
 - **Form:** cells side by side, sharing the row's width, and a rule along its foot.
+- **Source:** the rows of the GOV.UK Design System's table and of the U.S. Web Design System's table, as for the `table`.
 - **Lists:** `cells`, each drawn by the `cell`, unless the component field `cell` names another.
 - **Arrangement field:** `span`, on each cell, its words `normal`, `narrow` and `wide`. A `normal` cell, the default, takes two shares of the row, a `narrow` one one, and a `wide` one three.
 - **Options:** none.
@@ -267,6 +271,7 @@ A web block draws one item of a web part's list.
 ### `cell`
 
 - **Form:** a head in a strong type, a text, or both, one under the other, each broken to the cell's width.
+- **Source:** the cells of the GOV.UK Design System's table and of the U.S. Web Design System's table, as for the `table`.
 - **Fields:** `head` and `text`, each optional. A first row of heads names the table's columns.
 - **Options:** none.
 
