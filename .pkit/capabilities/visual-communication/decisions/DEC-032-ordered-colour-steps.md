@@ -6,7 +6,7 @@ date: 2026-11-09
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** where a list's items stand in an order, such as a stack of layers, the content, or the pattern by default, may have them shaded by their place. A brand gives two colours for each mode, the order's *ends*: one for its first item and one for its last, with one text colour for every shade, or *step*. The engine spreads the two ends evenly over the list, whatever its length. A stack of three layers takes the first end, the colour halfway and the last end. Every medium draws the steps the engine computed. A brand that gives none draws every step alike. Every brand keeps the text readable on both ends, and makes the first end stand out from the page at least as much as the last. A step shows only where an item stands: an item that says what it is keeps its own colour, and the order shows by position too. This record decides that method, not how a library draws the steps or which colours a brand gives. It overturns parts of two accepted records, which refused a ramp of colours by place and kept the engine's way of colouring as it stood.
+**In plain terms:** where a list's items stand in an order, as the layers of a stack do, the content may have them shaded by their place, or the pattern may by default. A brand gives two colours for each mode, the order's *ends*: one for its first item and one for its last, with one text colour for every shade, or *step*. The engine spreads the two ends evenly over the list, whatever its length. A stack of three layers takes the first end, the colour halfway and the last end. Every medium draws the steps the engine computed. A brand that gives none draws every step alike. Every brand keeps the text readable on both ends, and makes the first end stand out from the page at least as much as the last. A step shows only where an item stands: an item that says what it is keeps its own colour, and the order shows by position too. This record decides that method, not how a library draws the steps or which colours a brand gives. It overturns parts of two accepted records, which refused a ramp of colours by place and kept the engine's way of colouring as it stood.
 
 ## Context
 
@@ -85,7 +85,7 @@ Stated as a fact, at a piece's lock: a list that takes the steps by its word, un
 
 - **The foundations gain three roles with defaults,** which break nothing, so they take a minor version ([visual-communication:DEC-013-shipped-library-releases] point 3). The schemas of a library's roles and of a pattern grow by additions every file written before still meets ([visual-communication:DEC-003-change-over-time] point 3), so no migration is owed (COR-010).
 - **Every brand draws every piece as before,** except where a list takes the steps. A release that makes the steps a pattern's default changes how its places look, as a change of a place's family does, and an item's concept still comes first, so it breaks nothing (DEC-003 point 6, DEC-010 point 7).
-- **What a library heeds on a step.** A step may lie far in lightness from every family's fill. So a part that holds on every family may fail on a step, measured as drawn. So a pattern's owner audits its own item components on the steps before a release that makes them its default. An item component of another library, which content or an item names, is its draft's author's to catch at render, as any change of look is (DEC-001 point 7).
+- **What a library heeds on a step.** A step may lie far in lightness from every family's fill. A part that keeps its contrast on every family may then fail on a step, measured as drawn. So a pattern's owner audits its own item components on the steps before a release that makes them its default. An item component of another library, which content or an item names, is its draft's author's to catch at render, as any change of look is (DEC-001 point 7).
 - **Two accepted records are overturned in part.** Each stays accepted, with the passages overturned as they stood, under a *Partially superseded by* top line:
   - **DEC-010's refusal of a ramp** in its rejected alternative "Roles named by a place". Its reason still holds of roles: the two roles the steps spread between are written in the foundations, and a step is no role (point 1).
   - **DEC-028's statement that the model of colour stays,** in its Rationale, and its rejected alternative "The order's colour in the engine's model". Of that alternative's two reasons, the engine still judges no page's point (point 3). The other, that content can point an order's parts at a role, still holds, but no role gives a ramp, so it does not meet the need.
@@ -150,13 +150,13 @@ Each is made once a person accepts this record, in the change that proposes it, 
 
 - **The Tasks it implies** lie under the Feature of the deck's redesign ([project-kit#2882](https://github.com/aleskalfas/project-kit/issues/2882)): the foundations' three roles, their declaration of the ends and their checks; the engine's spread, a step's values with the scene and the seam's version, with the renderers that read them; and the design of the starter's patterns and of the neutral brand's ends. The Task that makes the steps a starter pattern's default depends on the one that gives the neutral brand its ends, since without them every place of such a list draws alike.
 - **The capability's pages** gain, each in the Task that builds what it says, since a page says how the capability works now:
-  - `components.md`, How the engine computes a scene: how a step is spread, its gamut mapping, its alpha and its rounding
-  - `components.md`, Values, states and colour: which parts of an item component do not show a step, and which may fail on one
-  - `checks.md`, Brands, tokens and contrast: the order's findings, with which end is the darker in a light mode and in a dark one
+  - `components.md`: how the engine spreads a step, with its gamut mapping, its alpha and its rounding
+  - `components.md`: which parts of an item component do not show a step, and which may fail on one
+  - `checks.md`: the order's findings, and which end is the darker in a light mode and in a dark one
 - **Left open:**
   - how one item shows both the concept it names and its step. A split of an item's family member by member, or content pointing a part at its own place's step, changes how an item takes its colour (DEC-001 point 6), so it comes as a record of its own.
   - the other principles every shipped brand follows, as DEC-028 leaves them
   - an order whose emphasis falls on its last place, or whose source is drawn last, which content would choose by a word of its own, never a brand by its ends; and an order continued over two lists
-  - a picture a producer makes, or a live view, that must match a step. Only the ends reach them, so each would spread them by this record's rule.
+  - a picture a producer makes, or a live view, that must match a step. Only the ends reach them, so each would spread them as the engine does.
   - steps for a quantity, such as a heat map's
 - **Revisit this record** if a brand needs to tune the middle of its ramp.
