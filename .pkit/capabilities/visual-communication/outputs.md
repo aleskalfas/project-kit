@@ -708,7 +708,7 @@ The CSS writer writes one style sheet. Form 1 spells it as follows.
 The rules come in this order:
 
 1. **`:root`** holds every token, at the combination of every default.
-2. **One rule for each mode** of each axis, `[data-<axis>="<mode>"]`: the axes in the order of their names, each axis's modes in the order the foundations declare them. A mode that is not the default holds every token the axis changes in some combination, at that mode, with every other axis at its default. The default mode holds each token whose first axis that changes it, in name order, is this axis, at every default. So an area may set a default mode inside another area.
+2. **One rule for each mode** of each axis, `[data-<axis>="<mode>"]`: the axes in the order of their names, each axis's modes in the order the foundations declare them, or the brand an axis of its own. A mode that is not the default holds every token the axis changes in some combination, at that mode, with every other axis at its default. The default mode holds each token whose first axis that changes it, in name order, is this axis, at every default. So an area may set a default mode inside another area.
 3. **One rule for each combination** of two or more modes that are not their axis's default, in key order, its selectors joined: `[data-colour-scheme="dark"][data-contrast="high"]`. It holds only the tokens whose value there differs from what the rules before it give. More attributes are more specific, so it wins over the rules of fewer.
 
 A rule with no token is not written. A rule holds each token once, in the order of the token paths. A comment opens the sheet, and names the form and the lock. The test brand gives this sheet, its comment left out and its rules cut short:

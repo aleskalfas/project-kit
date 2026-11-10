@@ -278,9 +278,9 @@ values:
 
 - **What it reads.** The mode the scene's key holds, else the axis's default. So a piece that names no size draws the default's branch ([How the engine computes a scene](#how-the-engine-computes-a-scene)).
 - **The default is named, and takes what is left out.** The switch names the axis's default. A mode it leaves out takes that branch, so `tablet` above takes `desktop`'s. A new mode draws as the default does until a component names it.
-- **Only a size axis a piece can name.** The foundations declare it ([`roles.yaml`](files.md#rolesyaml)). A value axis is refused, since one scene serves each of its modes.
+- **Only a shared size axis.** The foundations declare it ([`roles.yaml`](files.md#rolesyaml)). A value axis is refused, since one scene serves each of its modes. So is a brand's own size axis, since a component serves every brand ([Axes and modes](files.md#axes-and-modes)): a scene at one of its modes reads the shared axes alone.
 - **The size is the page's.** A component reads the size the piece is drawn at, whatever room its placer gives it. It answers to its slot only by formulas on `:width`.
-- **What is refused,** at any depth: a marked name that reads no size axis a piece can name, and a branch that is no mode. So is a switch with no branch for the axis's default.
+- **What is refused,** at any depth: a marked name that reads no shared size axis, and a branch that is no mode. So is a switch with no branch for the axis's default.
 
 **A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
 
