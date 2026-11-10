@@ -197,11 +197,11 @@ A library the capability ships reaches the location only through [`pkit visual a
 The skill `visual-author` walks steps 1 to 6 with you, or with the agent that draws for you. `pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/visual-author/` ([the Claude Code adapter's README, `deploy-skills.sh`](../../adapters/claude-code/README.md#deploy-skillssh)). Its `piece.md` starts a piece, and its `build-loop.md` renders, checks, reads and mends it until it can stop.
 
 1. **Bring the libraries.** [`pkit visual add <library>`](#pkit-visual-add-library) copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand: bring the neutral brand, or write the project's own ([Brands](files.md#brands)).
-2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)). A picture it shows, such as a photo, lies in its `pictures/` folder ([Picture files](files.md#picture-files)).
+2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)). A picture it shows, such as a photo, lies in its `pictures/` folder ([Picture files](files.md#picture-files)). Its brief, where it keeps one, says what each page must show and why its design is as it is ([The brief](files.md#the-brief)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
-6. **Commit the piece's folder:** `piece.yaml`, the content, its `pictures/` and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
+6. **Commit the piece's folder:** `piece.yaml`, the content, its brief, its `pictures/` and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
 7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
@@ -295,12 +295,12 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
+- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)). In `svg-modes` it makes a switching file, which follows the reader's mode, and holds it to the one-key file of each combination it holds ([The switching file](outputs.md#the-switching-file)).
 - **Keeps a published piece's current copy,** replacing it whole in the piece's folder, or writing it at the place the piece names, and naming each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
 - **Shows** the run's own number and date in every file, where a component shows them ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and `--use-overflowing <fact>` a version's number or its date that does not fit. Each may repeat.
+- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, `--use-overflowing <fact>` a version's number or its date that does not fit, and `--use-differing <element>` an element of a switching file that paints a combination otherwise than the one-key file. Each may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual mark-final <piece> <version>`
@@ -309,7 +309,7 @@ Marks a piece final, and names the version handed out, whatever changed since ([
 
 - **Puts back the lock** that version was made under, and names it. It puts back nothing else.
 - **Names what does not follow a new brand,** where the lock it puts back names another brand than the lock it replaces ([The lock](files.md#the-lock)). It stops on none of it.
-- **Says what else changed,** each input that still does not verify, and each number or date the version let through. It stops on none of it.
+- **Says what else changed,** each input that still does not verify, and each number or date and each element of a switching file the version let through. It stops on none of it.
 - **Says what no longer holds of the lock,** and goes on.
 - **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
 - **Names the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
@@ -385,7 +385,7 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 - **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.
 - **Commits nothing,** and makes no branch. Land the diff as you land any change, or discard it.
 - **Says so and writes nothing** where nothing moves.
-- **Stops** on an edit since the copy, on a stale picture, and on a number or a date that does not fit, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, and `--use-overflowing <fact>` a fact whose text to use as it is. Each may repeat.
+- **Stops** on an edit since the copy, on a stale picture, on a number or a date that does not fit, and on an element of a switching file that differs, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, `--use-overflowing <fact>` a fact whose text to use as it is, and `--use-differing <element>` an element to write as it is. Each may repeat.
 - **Says** where no file of the copy stood, so the change shows only an after, and names each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Names** each finding that fails under the moved lock, and stops on none of them.
 - **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.

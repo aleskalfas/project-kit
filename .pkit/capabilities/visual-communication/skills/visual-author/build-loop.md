@@ -16,7 +16,7 @@ It prints:
 - **`loss:`** each loss a renderer reports that the piece does not accept ([The loss report](../../outputs.md#the-loss-report)).
 - **`findings:`** how many it kept in `findings.yaml`.
 
-**Exit 0 is no pass.** The render exits 0 once it has drawn, findings or not. It judges no content against its components, so it draws over a mistyped key and prints nothing of it. Only the check reports that. Exit 1 means it refused, and drew nothing ([Draw it once](piece.md#5-draw-it-once)).
+**Exit 0 is no pass.** The render exits 0 once it has drawn, findings or not. It judges no content against its components, so it draws over a mistyped key and prints nothing of it. Only the check reports that. Exit 1 means it refused, and drew nothing ([Draw it once](piece.md#6-draw-it-once)).
 
 ## 2. Check
 
@@ -51,6 +51,8 @@ A finding in a library version that the project does not correct asks for attent
 - **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language, one mode or one size alone, such as a longer word that breaks a line.
 
 **How to read them.** Open each image, one at a time, and read it as the piece's `audience` would. Go through what the content gives, part by part, then look over the page as a whole. A frame file beside each image gives each element's trace id and its box in the image's pixels, so you can name what you found.
+
+**Against the brief.** Where the piece keeps a brief, read each page against its part and the whole piece's: does the page make visible each relation, serve each goal, and leave the reader with its takeaway, or its lead? Read the reasons last, once you have judged the page, so they do not steer what you see, and check that each still holds of the drawing ([The brief](../../files.md#the-brief)).
 
 **A page in bands.** A page too tall for one image, such as a phone's web page, is drawn in bands, each an image as wide as the page. Read every band of the page, in order, before you judge it. Each overlaps the next by a line, so a part cut at a band's edge shows whole in the band beside it ([The viewing step](../../outputs.md#the-viewing-step)).
 
@@ -186,6 +188,15 @@ From the scenes ([Scenes](../../checks.md#scenes)):
 | `loss` | Change what draws it, or ask a person. Only a person accepts a loss, with a reason ([Accepting a loss](../../outputs.md#accepting-a-loss)). |
 | `not-checked` | Run `pkit visual render <piece>`, and commit `findings.yaml`. |
 
+In the brief ([The brief](../../checks.md#the-brief)):
+
+| Label | What to do |
+|---|---|
+| `brief-page` | Key the part by the id of a page the content holds, or give the page that id. Before the page exists, keep its intent under `piece`. |
+| `brief-path` | Name the part by the keys and ids the content file writes, from the page in a page's part. The message names the nearest key or id. |
+
+Mend the brief, not the content, where an id was renamed on purpose. Never change what the brief asks to clear a finding: its goals and relations are what whoever asked for the piece wants.
+
 In the files and the libraries ([Files and binding](../../checks.md#files-and-binding), [Libraries and locks](../../checks.md#libraries-and-locks)):
 
 | Label | What to do |
@@ -208,13 +219,22 @@ The loop ends when all three hold.
 2. **The pages read.** Each page you drew reads as its `audience` needs, and each entry of `report.json` is answered.
 3. **What was not looked at is named.** Report which pages, languages and keys nobody read. What you did not see is not looked at, never clean.
 
-**When to hand the images to `graphic-design-reviewer`.** It reports what no check measures ([The reviewer](../../README.md#the-reviewer)). Dispatch it:
+**When to hand the images to `graphic-design-reviewer`.** It reports what no check measures, whether the pages keep the capability's rules, and whether they show what the piece's brief asks ([The reviewer](../../README.md#the-reviewer)). Dispatch it:
 
 - where a page is dense, since no check measures overlaps or alignment
 - where a change reached pages you did not read yourself
 - before the piece goes to its audience
 - where you cannot read an image yourself
 
-Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. Mend a fault it reports as in step 4. Its findings are advice, and it changes nothing. Where its harness reads no image it stops and says so, and those pages stay not looked at.
+Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. Where its harness reads no image it stops and says so, and those pages stay not looked at.
 
-**Then commit** the piece's folder: `piece.yaml`, the content, any local component, its `pictures/`, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.
+It reads the piece's brief, and the capability's rule sets, beside the images. Its report names the brief it read, or that the piece has none. Each finding is one of four kinds, kept apart by what it cites:
+
+- **A fault,** from its list of what no check measures, such as text over text. Mend it as in step 4.
+- **A rule finding,** which cites a rule of the capability's rule sets by its id. Mend the page so it keeps the rule. Today such a finding only informs.
+- **A brief finding,** which cites the part of the brief a page does not show: a relation, a goal, a takeaway, or a reason that does not hold of the drawing. Mend the drawing, in the content or a component, so it shows what the brief asks. Where you changed a choice on purpose, write its reason again. Never draw a relation the brief names as another to fit what a library draws.
+- **A note,** anything else worth a look, which never fails.
+
+Its findings are advice, and it changes nothing. Where a piece keeps no brief, it has none to judge against, and says so.
+
+**Then commit** the piece's folder: `piece.yaml`, the content, its brief, any local component, its `pictures/`, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.

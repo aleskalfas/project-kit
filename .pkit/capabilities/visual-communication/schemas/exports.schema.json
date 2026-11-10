@@ -77,7 +77,7 @@
             "$ref": "defs.schema.json#/$defs/fingerprint"
           },
           "files": {
-            "description": "Each file the version made, by name, with its SHA-256. A name is `<piece>.v<N>.<language>.<key>.svg`, `.pdf` for a PDF, or `.html` for a page file; an SVG file of a piece of more than one page adds the page's number, from 1, before `.svg`, and a PDF or a page file, which holds every page, adds none. A page file that holds several combinations takes the first key it serves.",
+            "description": "Each file the version made, by name, with its SHA-256. A name is `<piece>.v<N>.<language>.<key>.svg`, a switching file's too (DEC-018 point 2), `.pdf` for a PDF, or `.html` for a page file; an SVG file of a piece of more than one page adds the page's number, from 1, before `.svg`, and a PDF or a page file, which holds every page, adds none. A page file or a switching file that holds several combinations takes the first key it serves.",
             "type": "object",
             "propertyNames": {
               "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*\\.v[1-9][0-9]*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf|\\.html)$"
@@ -169,6 +169,35 @@
                     "version": {
                       "description": "The version of the library the component lies in, as the lock named it.",
                       "$ref": "defs.schema.json#/$defs/version"
+                    }
+                  }
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "differing": {
+                "description": "Each element of a switching file the version let through, though it paints a combination the file holds otherwise than the SVG renderer's file of that combination, as `--use-differing` named it (DEC-018 point 1): the file, the combination's key, and the element. Absent where the version let none through.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "file",
+                    "key",
+                    "element"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "file": {
+                      "description": "The name of the version's file the element lies in.",
+                      "$ref": "#/properties/versions/items/properties/files/propertyNames"
+                    },
+                    "key": {
+                      "description": "The key of the combination the file paints the element otherwise in.",
+                      "$ref": "defs.schema.json#/$defs/key"
+                    },
+                    "element": {
+                      "description": "The trace id of the element, or of the page where the file differs as a whole.",
+                      "$ref": "defs.schema.json#/$defs/trace"
                     }
                   }
                 },

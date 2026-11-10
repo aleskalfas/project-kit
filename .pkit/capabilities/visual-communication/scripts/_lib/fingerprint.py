@@ -33,8 +33,9 @@ from the fields an input names:
 - `findings-key`, the key of a piece's findings record: the piece's own files, each locked
   library version's files, and each font of the location's `fonts/` the piece's scenes
   read. A piece's own files are every file of its folder but `findings.yaml`,
-  `exports.yaml` and any file under `handed-out/` or `current-copy/`; under `produced/`,
-  only each output's `record.yaml` is one, since it holds the hash of each of its pictures.
+  `exports.yaml`, its brief, `brief.yaml`, which no scene reads (DEC-029 point 4), and any
+  file under `handed-out/` or `current-copy/`; under `produced/`, only each output's
+  `record.yaml` is one, since it holds the hash of each of its pictures.
 - `produced-record`, a produced output's record: its declaration, the part of `piece.yaml`
   at `[produced, <output>]`; each value it read, in each combination it serves; each
   variant's pixel size; and the producer's version.
@@ -87,6 +88,10 @@ HASH = "sha256"
 #: The files of a piece's folder that are no input of its scenes: what a render and an
 #: export rewrite.
 _PIECE_RECORDS = ("findings.yaml", "exports.yaml")
+
+#: A piece's brief, which no renderer, export or producer reads (DEC-029 point 4), so it is
+#: no input of its scenes either: a change to it moves no lock and stales no output.
+BRIEF = "brief.yaml"
 
 #: The folder of a piece that holds the files of the version handed out, and the one that
 #: holds a published piece's current copy (DEC-016 point 3).
@@ -393,13 +398,13 @@ def library_version_inputs(
 
 def piece_files(piece: Path, files: Iterable[Path]) -> list[Path]:
     """A piece's own files, among every file of its folder: all but its findings and
-    exports records, and any file under the folders of the version handed out and the
-    current copy, whatever its name; and, under `produced/`, only each output's
+    exports records, its brief, and any file under the folders of the version handed out
+    and the current copy, whatever its name; and, under `produced/`, only each output's
     `record.yaml`, which holds the hash of each of its pictures."""
     own = []
     for path in files:
         parts = path.relative_to(piece).parts
-        if len(parts) == 1 and parts[0] in _PIECE_RECORDS:
+        if len(parts) == 1 and parts[0] in (*_PIECE_RECORDS, BRIEF):
             continue
         if len(parts) > 1 and parts[0] in (HANDED_OUT, CURRENT_COPY):
             continue

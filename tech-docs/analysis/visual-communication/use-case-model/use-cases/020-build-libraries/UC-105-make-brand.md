@@ -6,6 +6,16 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
+shortfalls:
+  - at: 6
+    issue: "#2573"
+    record: visual-communication:DEC-001#5
+  - at: 7
+    issue: "#2573"
+    record: visual-communication:DEC-001#5
+  - at: "6a"
+    issue: "#2573"
+    record: visual-communication:DEC-007#4
 pkit:
   friction:
     anchors:
@@ -47,7 +57,14 @@ pkit:
 4. For each mode, the developer gives the values that differ in it, such as a dark mode's own logo or a phone's smaller one.
 5. For each axis, the developer says whether its modes alter only colours and pictures, or any value, such as sizes, spacing and fonts.
 6. The developer adds how the brand draws each layout of each kind of piece it serves.
+
+> [!WARNING]
+> **Not built yet:** a brand cannot hold how it draws a layout, so each layout is drawn by the top library component that declares it. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that a brand holds how it draws the layouts of the kinds of piece it serves, and #2573 tracks it.
+
 7. The system checks that the brand draws each layout of each kind of piece it serves, with the content slots that kind names.
+
+> [!WARNING]
+> **Not built yet:** the system makes no such check, since a brand cannot hold how it draws a layout. DEC-001 point 5 decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
 
 **Variants:**
 
@@ -56,6 +73,9 @@ pkit:
 - **3a.** Other brands are meant to build on this one, such as an online platform's brand that each of its games restyles. The developer lists which of its named values a brand built on it may alter ([UC-106](UC-106-build-brand-on-brand.md)).
 - **4a.** The developer gives the logo in some modes of one size and not in others, or as files of two shapes there. The system reports it, since the modes of one size share one layout.
 - **6a.** A part of the look has a form of the brand's own, unlike any library component of the starter library. The brand keeps it as a library component of its own. Otherwise the brand gives values to a library component of the starter library, and never copies it.
+
+> [!WARNING]
+> **Not built yet:** a brand cannot hold a library component of its own, since its check and its release read only its values. [DEC-007 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#4-the-form-to-the-starter-the-values-to-the-brand) decides that a brand keeps a form it alone uses as a part of its own, and #2573 tracks it.
 
 **Postconditions:** A piece that names the brand is drawn in its look, in each mode of each of its axes.
 
