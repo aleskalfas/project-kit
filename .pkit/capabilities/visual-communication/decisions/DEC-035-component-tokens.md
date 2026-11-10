@@ -16,6 +16,8 @@ The Task that builds component tokens ([project-kit#2966](https://github.com/ale
 
 ## Decision
 
+**A component declares its tokens in its own file, and no other component or piece reads them.**
+
 ### 1. A component declares its tokens in its own file
 
 - **Under `tokens`,** an optional key of the component's file. It maps each token's name to its declaration, `{type, default}`, as a library's `roles.yaml` maps a role's path to its declaration. A component that declares no token reads as before.
