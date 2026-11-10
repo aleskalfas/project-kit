@@ -1,0 +1,10 @@
+component: visual-communication
+kind: none
+body: >
+  Design-ahead: DEC-035, proposed, decides how a component declares its
+  component tokens, under `tokens` in its own file, and that among components
+  and what a piece writes only that component reads them (#2966). It names
+  what a release compares of a stable component's tokens, and how a brand's
+  tokens under `component.<library>` are judged. Nothing is built yet, so no
+  command, file or check moves. The build that follows in the same pull
+  request replaces this changeset with its own.
