@@ -502,7 +502,10 @@ Each adapter handles its own deploy (COR-005), and future adapters for other har
 What it reports, a line for each definition, such as `created`, `updated`, `exists`, `skipped`, `removed` or `warning`:
 
 - **A file without the mark** at the copy's path is never written over, and is reported `skipped`. It is the project's own, or a copy from before the mark, and the harness may run it in the agent's place. To have the deploy write its own, delete the file and deploy again.
-- **A marked copy that is not the agent's** is removed, and named. Such a copy was written from another definition than the agent's, or its name has no agent, or no place ships it any more. To keep one, delete its mark line, and it reads as the project's.
+- **A marked copy that is not the agent's** is removed, and named. To keep one, delete its mark line, and it reads as the project's. A marked copy is not the agent's where any of these holds:
+  - it was written from another definition than the agent's
+  - its name has no agent
+  - no place ships its name any more
 - **A folder with no definition named after it,** such as one half written, ships none, and the rest deploy.
 - **A refused agent** never stops the others, and stays the agent: no other definition's copy stands in for it (COR-013 point 8). What becomes of the copy written earlier from its definition depends on the cause:
   - **Refused for its tool access,** the earlier copy is removed. It may give tools the definition no longer gives (COR-013 point 7). The agent is missing until its definition is mended.
@@ -523,7 +526,7 @@ Beside the deploy:
 
 The project, an installed capability and core may each ship a definition of one name. At most one of them is the agent of that name (COR-013 point 8).
 
-One picker decides which, `.pkit/agents/definition_source.py`, and every part that deploys, runs, checks or names an agent asks it. They are the deploy, the agent runner, `pkit agents`, `pkit refs validate`, `pkit new agent` and `pkit new storyboard` without `--namespace`. So are `pkit status`, the delegate's check and the capabilities' collision checks. It learns which capabilities are installed, their skips and the project's choices from the lifecycle's reader of capability records, `.pkit/lifecycle/capability_records.py`.
+One picker decides which, `.pkit/agents/definition_source.py`, and every part that deploys, runs, checks or names an agent asks it. They are the deploy, the agent runner, `pkit agents`, `pkit refs validate`, `pkit new agent` and `pkit new storyboard` without `--namespace`. So are `pkit status`, the delegate's check and the capabilities' collision checks. The picker learns the installed capabilities, their skips and the project's choices from the lifecycle's reader of capability records, `.pkit/lifecycle/capability_records.py`.
 
 **A definition** is its place and its name. A place ships it as the canonical file alone, `<name>.md`, or in a folder, `<name>/<name>.md` (COR-015). A folder without its canonical file ships none.
 
