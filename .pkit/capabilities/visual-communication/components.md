@@ -232,17 +232,18 @@ An option takes a value from what the component declares, never a free number or
 
 ### Tokens
 
-A *component token* is a role one component declares for what its parts draw, so that a brand may restyle that component alone (DEC-004 point 7, DEC-035 points 1 and 2). A card in a library named `ui` could declare a token for its box:
+A *component token* is a role one component declares for what its parts draw, so that a brand may restyle that component alone (DEC-004 point 7, DEC-035 points 1 and 2). A card in a library named `ui` could declare tokens for its box:
 
 ```yaml
 tokens:
   fill: {type: color, default: '{surface}'}
+  gap: {type: dimension, default: '{space.1}'}
 parts:
   box:
-    box: {fill: component.ui.card.fill, stroke: line}
+    box: {fill: component.ui.card.fill, stroke: line, x: "=@component.ui.card.gap"}
 ```
 
-- **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`. The card's token above is `component.ui.card.fill`.
+- **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
 - **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. It never aliases a component token, the component's own included.
 - **A token names what it styles, not a part.** Several of the component's parts may read one token, such as a box's edge and a divider line that a brand restyles as one.
 - **Its own parts read it by its full path,** wherever they read a role. A paint names it, as in `fill: component.ui.card.fill`. So does a text's style, and a formula reads it as `@component.ui.card.gap` ([References](#references)). No other component reads it, and nothing a piece writes names one.
