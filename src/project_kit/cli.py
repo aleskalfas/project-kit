@@ -5670,10 +5670,12 @@ def refs_validate() -> None:
     found = refs_mod.validate_corpus(target_root)
     issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
     overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
+    unknown_fields = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_FIELD]
     warnings = [
         issue
         for issue in found
-        if issue.kind in refs_mod.WARNING_KINDS and issue.kind != refs_mod.UNKNOWN_OVERRIDE
+        if issue.kind in refs_mod.WARNING_KINDS
+        and issue.kind not in (refs_mod.UNKNOWN_OVERRIDE, refs_mod.UNKNOWN_FIELD)
     ]
     lines = [
         cli_render.style(
@@ -5709,6 +5711,17 @@ def refs_validate() -> None:
             )
         )
         for issue in overrides:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if unknown_fields:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(unknown_fields)} warning(s) of a key outside an agent definition's "
+                "fields, which do not fail the check:",
+            )
+        )
+        for issue in unknown_fields:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     click.echo("\n".join(lines) + "\n", nl=False)
     if issues:

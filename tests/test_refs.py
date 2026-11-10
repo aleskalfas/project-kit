@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parents[1]
+READER = REPO / ".pkit" / "agents" / "tool_access.py"
 
 # --- fixtures -------------------------------------------------------
 
@@ -25,6 +27,8 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for area in ("agents", "skills", "decisions"):
         for ns in ("core", "project"):
             (tmp_path / ".pkit" / area / ns).mkdir(parents=True)
+    # The reader of an agent's tool access, as sync copies it (ADR-086 point 1).
+    shutil.copy2(READER, tmp_path / ".pkit" / "agents" / READER.name)
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
@@ -1295,7 +1299,8 @@ Body never mentions the storyboard path.
 
 
 def test_validate_storyboards_flags_missing_read_tool(kit_target: Path) -> None:
-    """Declaring storyboards without Read in tools is a violation — runtime can't load them."""
+    """Declaring storyboards under a grant without Read is a violation — runtime can't load
+    them."""
     storyboard = kit_target / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
     storyboard.parent.mkdir(parents=True)
     storyboard.write_text("# Storyboard\n", encoding="utf-8")
@@ -1316,7 +1321,294 @@ Body cites `.pkit/agents/project/a/storyboard.md`.
     )
 
     issues = refs.validate_corpus(kit_target)
-    assert any("Read" in i.diagnosis and "tools" in i.diagnosis for i in issues)
+    assert any("tool access does not give it `Read`" in i.diagnosis for i in issues)
+
+
+def _storyboarded(root: Path, access: str) -> list[refs.Issue]:
+    """The storyboard findings for agent `a`, which declares and cites its storyboard,
+    with *access* as its tool access."""
+    storyboard = root / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
+    storyboard.parent.mkdir(parents=True)
+    storyboard.write_text(
+        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n",
+        encoding="utf-8",
+    )
+    (storyboard.parent / "a.md").write_text(
+        f"---\nname: a\ndescription: test\n{access}storyboards:\n"
+        "  - .pkit/agents/project/a/storyboard.md\n---\n"
+        "Load `.pkit/agents/project/a/storyboard.md` at session start.\n",
+        encoding="utf-8",
+    )
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.STORYBOARD]
+
+
+@pytest.mark.parametrize(
+    "access",
+    ["", "withheld: [Workflow, SendMessage]\n", "tools: [Read(src/**), Edit]\n", "withheld:\n"],
+)
+def test_the_storyboard_check_passes_an_agent_its_tool_access_gives_read(
+    kit_target: Path, access: str
+) -> None:
+    """No grant gives `Read`, and neither does a withheld list that leaves it out; a
+    grant naming `Read` with an argument holds it (ADR-085 point 2)."""
+    assert _storyboarded(kit_target, access) == []
+
+
+@pytest.mark.parametrize(
+    "access", ["withheld: [Workflow, Read]\n", "tools: []\n", "tools: Edit, Bash\n"]
+)
+def test_the_storyboard_check_fails_an_agent_its_tool_access_denies_read(
+    kit_target: Path, access: str
+) -> None:
+    issues = _storyboarded(kit_target, access)
+    assert [i.diagnosis.split(":")[0] for i in issues] == [
+        "declares storyboards but its tool access does not give it `Read`"
+    ]
+
+
+# --- tool access (ADR-086) --------------------------------------------
+
+
+def test_a_tool_access_the_reader_refuses_is_an_error(kit_target: Path) -> None:
+    _write_agent(
+        kit_target,
+        "project",
+        "both",
+        "---\nname: both\ntools: [Read]\nwithheld: [Workflow]\n---\n# Both\n",
+    )
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert [i.location for i in found] == [".pkit/agents/project/both.md"]
+    assert "its tool access is refused: it names both `tools` and `withheld`" in found[0].diagnosis
+    outcome = refs.outcome(kit_target)
+    assert any(f.severity.value == "error" and "names both" in f.message for f in outcome.findings)
+
+
+def test_a_tool_access_in_a_form_the_reader_does_not_read_is_an_error(kit_target: Path) -> None:
+    _write_agent(kit_target, "project", "a", "---\nname: a\ntools: [Read,\n  Grep]\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert len(found) == 1
+    assert "goes on over more than one line" in found[0].diagnosis
+
+
+def test_a_key_outside_a_definitions_fields_is_a_warning(kit_target: Path) -> None:
+    _write_agent(
+        kit_target,
+        "project",
+        "a",
+        "---\nname: a\ndescription: x\ndisallowedTools: [Workflow]\ncolor: blue\n---\n# A\n",
+    )
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.UNKNOWN_FIELD]
+    assert [i.diagnosis.split(",")[0] for i in found] == [
+        "holds `disallowedTools`",
+        "holds `color`",
+    ]
+    assert refs.UNKNOWN_FIELD in refs.WARNING_KINDS
+    outcome = refs.outcome(kit_target)
+    assert {f.severity.value for f in outcome.findings} == {"warning"}
+
+
+def test_a_skills_own_keys_are_no_definition_fields_finding(kit_target: Path) -> None:
+    _write_skill(kit_target, "project", "s", "---\nname: s\nargument-hint: x\n---\n# S\n")
+    assert not [i for i in refs.validate_corpus(kit_target) if i.kind == refs.UNKNOWN_FIELD]
+
+
+def test_an_unreachable_reader_is_one_error_where_there_is_an_agent_to_read(
+    kit_target: Path,
+) -> None:
+    (kit_target / ".pkit" / "agents" / "tool_access.py").unlink()
+    assert not [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    for name in ("a", "b"):
+        _write_agent(kit_target, "project", name, f"---\nname: {name}\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert [i.location for i in found] == [".pkit/agents/tool_access.py"]
+    assert "holds no reader of an agent's tool access" in found[0].diagnosis
+    assert "run `pkit sync`" in found[0].diagnosis
+
+
+def test_a_reader_without_a_function_the_validator_calls_is_an_error(kit_target: Path) -> None:
+    (kit_target / ".pkit" / "agents" / "tool_access.py").write_text(
+        "def tool_access(text):\n    return None\n", encoding="utf-8"
+    )
+    _write_agent(kit_target, "project", "a", "---\nname: a\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert len(found) == 1
+    assert "has no holds, Refused, which this command calls" in found[0].diagnosis
+
+
+# --- what an adapter that deploys agents refuses (ADR-086 point 6) -----------------------------
+
+CLAUDE_CODE = REPO / ".pkit" / "adapters" / "claude-code"
+
+
+def _adapters(root: Path, *adapters: tuple[str, str]) -> None:
+    """Register each adapter of *adapters*, as `(name, how)`: `deploy` ships a deploy of
+    agents, `runner` registers an agent runner, and `neither` does neither. Each holds the
+    Claude Code adapter's declaration of tool access and support declaration, which a test
+    then changes or removes."""
+    (root / ".pkit" / "schemas").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        REPO / ".pkit" / "schemas" / "harness-support.schema.json",
+        root / ".pkit" / "schemas" / "harness-support.schema.json",
+    )
+    for name, how in adapters:
+        folder = root / ".pkit" / "adapters" / name
+        folder.mkdir(parents=True)
+        package = f"schema_version: 1\ncomponent:\n  kind: adapter\n  name: {name}\n"
+        if how == "deploy":
+            (folder / "deploy-agents.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+        if how == "runner":
+            (folder / "run-agent.py").write_text("", encoding="utf-8")
+            package += "commands:\n  run-agent:\n    script: run-agent.py\n    help: Run.\n"
+        (folder / "package.yaml").write_text(package, encoding="utf-8")
+        for declaration in ("tool-access.json", "harness-support.yaml"):
+            shutil.copy2(CLAUDE_CODE / declaration, folder / declaration)
+    (root / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 2.1.0\ncomponents:\n"
+        + "".join(
+            f"  - kind: adapter\n    name: {name}\n    manifest: m.yaml\n" for name, _ in adapters
+        ),
+        encoding="utf-8",
+    )
+
+
+def _access_findings(root: Path, access: str = "") -> list[refs.Issue]:
+    _write_agent(root, "project", "a", f"---\nname: a\ndescription: x\n{access}---\n# A\n")
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.TOOL_ACCESS]
+
+
+@pytest.mark.parametrize(
+    ("access", "cause"),
+    [
+        ("withheld: [Wrokflow]\n", "`withheld` names `Wrokflow`, which this adapter does not know"),
+        ("withheld: ['Bash(rm:*)']\n", "measured to withhold only a whole built-in tool"),
+        ("tools: [read-file]\n", "a name in a form Claude Code does not take"),
+        ("withheld: [Workflow]\ndisallowedTools: [Monitor]\n", "own key `disallowedTools`"),
+    ],
+)
+def test_a_tool_access_an_adapter_refuses_is_an_error_naming_the_adapter(
+    kit_target: Path, access: str, cause: str
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    found = _access_findings(kit_target, access)
+    assert [i.location for i in found] == [".pkit/agents/project/a.md"]
+    assert found[0].diagnosis.startswith(
+        "the claude-code adapter refuses its tool access, since Claude Code cannot enforce or "
+        "translate it: "
+    )
+    assert cause in found[0].diagnosis
+    outcome = refs.outcome(kit_target)
+    assert any(f.severity.value == "error" and cause in f.message for f in outcome.findings)
+
+
+@pytest.mark.parametrize("access", ["", "withheld: [Workflow, Monitor]\n", "tools: [Read]\n"])
+def test_a_tool_access_every_adapter_takes_is_no_finding(kit_target: Path, access: str) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    assert _access_findings(kit_target, access) == []
+
+
+def test_a_definition_passes_only_where_every_adapter_that_deploys_agents_takes_it(
+    kit_target: Path,
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"), ("other", "runner"))
+    declaration = kit_target / ".pkit" / "adapters" / "other" / "tool-access.json"
+    document = json.loads(declaration.read_text(encoding="utf-8"))
+    document.update(harness="Other", withheld_admits=[])
+    declaration.write_text(json.dumps(document), encoding="utf-8")
+    found = _access_findings(kit_target, "withheld: [Workflow]\n")
+    assert [i.diagnosis.split(",")[0] for i in found] == [
+        "the other adapter refuses its tool access"
+    ]
+    assert "Other was not measured to withhold any tool" in found[0].diagnosis
+
+
+@pytest.mark.parametrize("how", ["deploy", "runner"])
+def test_an_adapter_that_deploys_agents_with_no_declaration_is_an_error(
+    kit_target: Path, how: str
+) -> None:
+    _adapters(kit_target, ("claude-code", how))
+    (kit_target / ".pkit" / "adapters" / "claude-code" / "tool-access.json").unlink()
+    found = _access_findings(kit_target)
+    assert [i.location for i in found] == [".pkit/adapters/claude-code/tool-access.json"]
+    assert "the claude-code adapter deploys agents and declares no tool access" in (
+        found[0].diagnosis
+    )
+
+
+def test_an_adapter_that_deploys_no_agents_owes_no_declaration(kit_target: Path) -> None:
+    _adapters(kit_target, ("claude-code", "neither"))
+    (kit_target / ".pkit" / "adapters" / "claude-code" / "tool-access.json").unlink()
+    assert _access_findings(kit_target, "withheld: [Wrokflow]\n") == []
+
+
+def test_a_declaration_the_reader_cannot_read_is_an_error(kit_target: Path) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    (kit_target / ".pkit" / "adapters" / "claude-code" / "tool-access.json").write_text(
+        '{"schema_version": 2}', encoding="utf-8"
+    )
+    found = _access_findings(kit_target, "withheld: [Wrokflow]\n")
+    assert [i.location for i in found] == [".pkit/adapters/claude-code/tool-access.json"]
+    assert "its declaration of tool access cannot be read: its schema version is 2" in (
+        found[0].diagnosis
+    )
+
+
+@pytest.mark.parametrize(
+    ("support", "why"),
+    [
+        (None, "does not answer `session-agent-withheld-tools` as achievable"),
+        ("[]", "does not answer `session-agent-withheld-tools` as achievable"),
+        ("not-achievable", "does not answer `session-agent-withheld-tools` as achievable"),
+        ("unparsable", "its support declaration cannot be read"),
+    ],
+)
+def test_admitting_a_withheld_entry_the_support_declaration_does_not_answer_is_an_error(
+    kit_target: Path, support: str | None, why: str
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    path = kit_target / ".pkit" / "adapters" / "claude-code" / "harness-support.yaml"
+    text = path.read_text(encoding="utf-8")
+    if support is None:
+        path.unlink()
+    elif support == "[]":
+        path.write_text(
+            text.replace('harness_versions: ["2.1.319", "2.1.319"]', "harness_versions: []"),
+            encoding="utf-8",
+        )
+    elif support == "not-achievable":
+        answer = text.index("  session-agent-withheld-tools:")
+        path.write_text(
+            text[:answer]
+            + "  session-agent-withheld-tools:\n    grade: not-achievable\n"
+            + "    harness_versions: unbounded\n    evidence: e\n",
+            encoding="utf-8",
+        )
+    else:
+        path.write_text("requirements: [\n", encoding="utf-8")
+    found = _access_findings(kit_target)
+    assert [i.location for i in found] == [
+        ".pkit/adapters/claude-code/tool-access.json/withheld_admits"
+    ]
+    assert "declaration of tool access admits a withheld entry, while" in found[0].diagnosis
+    assert why in found[0].diagnosis
+
+
+def test_the_shipped_adapters_declarations_agree(kit_target: Path) -> None:
+    """The Claude Code adapter admits a withheld entry, and its support declaration answers
+    a session's agent withheld tools from a measurement."""
+    _adapters(kit_target, ("claude-code", "deploy"))
+    assert _access_findings(kit_target) == []
+
+
+def test_a_reader_that_reads_no_declaration_is_an_error_where_an_adapter_deploys_agents(
+    kit_target: Path,
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    reader = kit_target / ".pkit" / "agents" / "tool_access.py"
+    text = reader.read_text(encoding="utf-8")
+    reader.write_text(text.replace("def read_declaration(", "def _read_declaration("), "utf-8")
+    found = _access_findings(kit_target)
+    assert [i.location for i in found] == [".pkit/agents/tool_access.py"]
+    assert "has no read_declaration, which this command calls" in found[0].diagnosis
 
 
 def _make_storyboarded_agent(

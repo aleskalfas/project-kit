@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
         - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/findings.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
@@ -93,6 +94,9 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
+        - visual-communication:DEC-029#4
+        - visual-communication:DEC-029#5
+        - visual-communication:DEC-030#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -113,6 +117,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
         - .pkit/capabilities/visual-communication/files.md#brands
+        - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#content-files
         - .pkit/capabilities/visual-communication/files.md#how-the-files-are-read
@@ -135,6 +140,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-a-produced-output
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
+        - .pkit/capabilities/visual-communication/outputs.md#the-switching-file
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
@@ -202,7 +208,7 @@ A few findings that lie in a library folder name no version, so their level stan
 
 ## What each run judges
 
-Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, what its state owes of its current copy, whether a published lock is behind, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
+Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, what its brief names, its lock, what its state owes of its current copy, whether a published lock is behind, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
 
 **A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns against the default component of each list it declares fields for, a drawing of a top's layout included. Its findings are `arrangement-clash`, `end-clash` and `tie-default` (DEC-010 point 9, DEC-011 point 8). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
 
@@ -210,7 +216,7 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
-**A final piece.** The check reads its files, its lock and the version handed out, and no more (DEC-002 point 7, DEC-017 point 4). A piece is final by its state or by its record of exports, and one whose record cannot be read reads as final ([the lock](files.md#the-lock)). The check reads the binding of each of its files, and what its lock names. It holds the piece's state and lock to the version handed out, and each file of that version to its hash. No finding at the lock stops this (*The version handed out*, under [Exports](#exports)). It computes no scene and reads no findings record. It leaves out the piece's ids, its content against its components, the libraries read under its lock, its brand, its notations, its produced pictures and its current copy. So a content file may be missing, or hold what its components refuse, and no finding follows. A library its content came to use is no finding either. A content file that cannot be read, or whose binding is broken, takes its finding as any file does, and the lock is still read. A version its lock names that no longer matches what was released fails as `library-changed`, once, in a run on the piece alone too. A finding at its lock fails only where something other than a move mends it (*At a final piece's lock*, under [Libraries and locks](#libraries-and-locks)). The summary counts the piece apart, as left out as final.
+**A final piece.** The check reads its files, its lock and the version handed out, and no more (DEC-002 point 7, DEC-017 point 4). A piece is final by its state or by its record of exports, and one whose record cannot be read reads as final ([the lock](files.md#the-lock)). The check reads the binding of each of its files, and what its lock names. It holds the piece's state and lock to the version handed out, and each file of that version to its hash. No finding at the lock stops this (*The version handed out*, under [Exports](#exports)). It computes no scene and reads no findings record. It leaves out the piece's ids, what its brief names, its content against its components, the libraries read under its lock, its brand, its notations, its produced pictures and its current copy. So a content file may be missing, or hold what its components refuse, and no finding follows. A library its content came to use is no finding either. A content file that cannot be read, or whose binding is broken, takes its finding as any file does, and the lock is still read. A version its lock names that no longer matches what was released fails as `library-changed`, once, in a run on the piece alone too. A finding at its lock fails only where something other than a move mends it (*At a final piece's lock*, under [Libraries and locks](#libraries-and-locks)). The summary counts the piece apart, as left out as final.
 
 `pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
 
@@ -310,6 +316,15 @@ Each content file is read against the `fields` and `options` of each component i
 | `run-key` | A run holds a key other than `text`, `style` and `concept`, an `id` included. The message names the nearest, where one is close. | Rename or remove the key. |
 | `run-style` | A run names a style its field does not declare. The message names the field's words, and the nearest, where one is close. | Name a word of the field's run styles ([fields](components.md#fields)). |
 | `runs-unmarked` | A field that takes text holds a list, and its component does not mark it as taking runs. | Give the field text, or have its component mark it as a field of runs. |
+
+### The brief
+
+A piece's brief names pages of the piece and parts of its content ([the brief](files.md#the-brief), DEC-029 point 5). Each name is read against the content of the piece's source language, since an id is the same in every language. Each finding fails, at `<piece>/brief.yaml#<where>`, where `<where>` leads to the name in the brief, such as `pages.layers.relations#1.relates#2`. The brief's shape is the core's data validation's, so the check leaves a part of another shape to it. A piece with no brief raises none of these. A final piece's brief goes unread, but for its binding. Whether the drawing shows what the brief asks is no check's: the capability's reviewer reads it, and reports a brief finding (DEC-030 point 6; [the reviewer](README.md#the-reviewer)).
+
+| Label | What it means | What to do |
+|---|---|---|
+| `brief-page` | A page's part is keyed by an id that no page of the content carries. A top whose layouts are its pages' forms holds its pages in the list it marks, such as a deck's `slides`, and another top in each slot it marks as holding pages. A top that is a page alone, such as a figure, holds none. The message names the pages, and the nearest, where one is close. Where the top's file cannot be read, the pages' parts go unjudged, and the lock's findings say why. | Key the part by the id of a page the content holds, or give the page that id in the content. Before the page exists, write its intent under `piece`. A piece of one page keeps all of its brief under `piece`. |
+| `brief-path` | A key path, in a relation's `relates` or a reason's `about`, is no key path, or names nothing in the content: a key the content does not give there, an id its list lacks, a step into a list with no id, or an id on a value that is no list. A page's part reads it from the page, and the piece's part from the content's top. The message names the nearest key or id, where one is close. | Name the part by the keys and ids the content file writes ([the brief](files.md#the-brief)). |
 
 ### Brands, tokens and contrast
 
@@ -437,8 +452,9 @@ Each fails, unless its row says otherwise.
 | `unknown-colour` | An element paints its fill or stroke, or a run its fill, with a role that has no colour under the brand. It is no colour role, or a library's role whose chain of defaults reaches none and which the brand gives none. | `<piece>/piece.yaml#<trace>` |
 | `component-experimental` | The piece uses an experimental component, which its library may change in any release (DEC-003 point 9). States a fact. | `<piece>/piece.yaml#<trace>` |
 | `component-deprecated` | The piece uses a deprecated component. Asks the piece's author for attention: replace it with the component its library names in its place. | `<piece>/piece.yaml#<trace>` |
+| `switching-no-ground` | The piece exports as `svg-modes`, and a page draws no ground of its own in a combination its [switching file](outputs.md#the-switching-file) holds: no box of an opaque colour over its whole frame, as the viewing step reads a ground (DEC-018 point 5). A page shows the file on its own ground, so dark text could meet a dark page. The message names the page and those combinations. Asks the piece's author for attention, never fails, and repeats until a ground is there: give the page one, in its component or its brand. | `<piece>/piece.yaml#<page's trace>` |
 
-The check reports `contrast-drawn`, `unknown-colour`, the two statuses and an `unknown-role` the lock shows at `piece.yaml`, and they name no library version. So they never take the rule of a released version.
+The check reports `contrast-drawn`, `unknown-colour`, the two statuses, `switching-no-ground` and an `unknown-role` the lock shows at `piece.yaml`, and they name no library version. So they never take the rule of a released version.
 
 ### Losses
 
@@ -495,7 +511,15 @@ The check holds a piece's [current copy](outputs.md#the-current-copy) to what it
 | `current-copy-unreadable` | A published piece's copy, or a draft's, cannot be judged. `exports.yaml` keeps no list of numbered versions, or holds a `current-copy` of no shape. Or it gives no lock of the version that wrote the copy. Where `exports.yaml` cannot be read at all, [the piece reads as final](files.md#the-lock), so `exports-unreadable` follows instead. | fails | `<piece>/exports.yaml`, or its `#current-copy` | Mend the record, then run the export. |
 | `current-copy-over-stale` | The version that wrote a published piece's copy used a produced picture while it was stale. The message names the output. | asks the piece's author for attention | `<piece>/exports.yaml#current-copy` | Run `pkit visual produce <piece> <output>`, then the export. |
 | `current-copy-let-through` | The version that wrote a published piece's copy let a version's number or its date through, though it does not fit ([what refuses an export](outputs.md#what-refuses-an-export)). The message names the fact, its text, the element and its component. It stays until a version that fits writes the copy. | fails where the project can correct the component; in a released library it asks the library's owner for attention | `<piece>/exports.yaml#current-copy` | Give the text room in the component, then run the export. |
+| `current-copy-differing` | The version that wrote a published piece's copy let an element of a switching file through, though it paints a combination otherwise than the SVG renderer's file of that combination ([what refuses an export](outputs.md#what-refuses-an-export)). The message names the element, the file and the combination's key. It stays until a version that let none through writes the copy (DEC-018 point 1). | asks whoever maintains the capability for attention, who corrects the SVG renderer in a release | `<piece>/exports.yaml#current-copy` | Once a release of the capability draws it alike, run the export. |
 | `current-copy-standing` | A draft keeps a file of its current copy, at the path the record names. A page may rely on it. Its hash does not count, so changing a byte leaves the finding. | asks the piece's author for attention | the file | Remove it, or publish the piece again. |
+
+**The formats a piece names** (DEC-018 points 2 and 4). Each of these fails, in a piece that is not final, and every export refuses the piece:
+
+| Label | What it means | Where it points | What to do |
+|---|---|---|---|
+| `exports-same-name` | The piece names both `svg` and `svg-modes` under `exports`, which write files of one name. | `<piece>/piece.yaml#exports` | Name one of them. A piece that needs a file of one fixed mode names `svg`, and a second piece serves a page. |
+| `exports-unpaired-mode` | The piece exports as `svg-modes`, and its combinations differ in a value axis's mode of no pair that format reads, such as `contrast`'s `high` ([the switching file](outputs.md#the-switching-file)). No switching file can hold it. The message names the axis and the mode, a finding for each mode. A mode the combinations hold alike parts nothing. | `<piece>/piece.yaml#modes` | Draw that mode in a piece of its own, or export the piece as `svg`. |
 
 **Where the lock differs.** An export refuses a published piece whose lock differs from the one its copy was made under ([what refuses an export](outputs.md#what-refuses-an-export)). So the fix for a copy the piece holds then names that lock, and both ways past the refusal.
 
@@ -619,7 +643,7 @@ A file is read once, one way, so the same file gives the same hash on every mach
 | An export | each version of `exports.yaml` ([the record of exports](outputs.md#the-record-of-exports)) | As a piece's findings, and the part of `piece.yaml` at `exports`. Two files are read as [What an export leaves out](#what-an-export-leaves-out) says. |
 | A released library version | its entry in the list, as `hash` ([files](files.md#the-library-folder)); for a version the capability ships, its entry in the library's record too ([files](files.md#the-libraries-the-capability-ships)) | Every file of the version's folder, its `library.yaml` with the release it needs included. |
 
-A piece's *own files* are the files of its folder as git lists them, tracked or untracked but not ignored. Each picture file of its `pictures/` is one, whether or not an image shows it (DEC-025 point 2). They leave out `findings.yaml` and `exports.yaml`. Under `produced/`, only each output's `record.yaml` is one of them, since it holds the hash of each of its pictures. A library version's files are listed the same way.
+A piece's *own files* are the files of its folder as git lists them, tracked or untracked but not ignored. Each picture file of its `pictures/` is one, whether or not an image shows it (DEC-025 point 2). They leave out `findings.yaml` and `exports.yaml`. They leave out the piece's brief, `brief.yaml`, too, which nothing drawn reads, so a change to it stales nothing (DEC-029 point 4). Under `produced/`, only each output's `record.yaml` is one of them, since it holds the hash of each of its pictures. A library version's files are listed the same way.
 
 No fingerprint reads a file under two folders of a piece, whatever its name (DEC-016 point 3). `handed-out/` holds the files of a version handed out, and `current-copy/` a published piece's current copy.
 

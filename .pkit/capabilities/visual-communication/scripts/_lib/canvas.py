@@ -1,14 +1,20 @@
 """The canvas: a scene projected onto a page, and written as SVG (visual-communication DEC-005
 points 4, 5, 9 and 10).
 
-The SVG renderer (`plugins/svg.py`) draws through it. A second renderer subclasses it, and
-replaces only what differs from SVG, each in a method of its own:
+The SVG renderer (`plugins/svg.py`) draws through it. A second renderer, or a second form of
+the SVG renderer's file, subclasses it, and replaces only what differs, each in a method of
+its own:
 
 - **How a paint is written:** `_paint_attributes`. Which colour a role takes, and the loss of
-  a role with none, stay here.
+  a role with none, stay here, in `_paint`.
 - **The arrow markers:** `_markers`, which keys them on the colour a stroke is written in, so
   a subclass that writes a paint otherwise replaces it too. `_arrow_markers` defines what it
-  recorded.
+  recorded, each through `_marker`, which draws the triangle in the paint it is handed.
+- **A rule of the page:** `_rules`, which writes nothing here. A subclass that repaints the
+  page by a rule writes it after the page's style, once its elements are drawn.
+- **A picture:** `_image`, which draws the picture of the combination drawn through
+  `_picture`. A subclass that shows another picture in another combination draws each
+  through `_picture` too.
 - **The font faces:** `_font_faces`, which writes those of a page. A text records what it
   draws in each, whichever writes them.
 - **A span's placing:** `_span_place`. Where the engine's widths start a span stays here.
@@ -247,8 +253,14 @@ class Canvas:
             ]
         )
         style = f"<style>{self._font_faces()}text{{white-space:pre}}</style>"
-        defs = f"{style}{self._arrow_markers()}"
+        defs = f"{style}{self._rules()}{self._arrow_markers()}"
         return f"<svg {head}><defs>{defs}</defs><g {group}>{body}</g></svg>\n"
+
+    def _rules(self) -> str:
+        """What the page's `<defs>` holds after its style, before its arrowheads: nothing here.
+        A subclass that repaints the page by a rule of its own writes that rule here, once the
+        page's elements are drawn."""
+        return ""
 
     def _element(self, element: Mapping[str, Any]) -> str:
         kind = element.get("type")
@@ -459,9 +471,11 @@ class Canvas:
         if all(run.get(key) == first.get(key) for key in keys):
             return []
         weight = run.get("font-weight")
-        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
-        if len(paint) == 2 and paint[1][1] is None:
-            paint[1] = ("fill-opacity", "1")  # the text's own opacity is not the run's
+        paint = [
+            # the text's own opacity is not the run's
+            ("fill-opacity", "1") if name == "fill-opacity" and value is None else (name, value)
+            for name, value in self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+        ]
         return [
             ("font-family", font_families(run)),
             ("font-size", number(run.get("font-size", 0))),
@@ -477,10 +491,18 @@ class Canvas:
             why = unshown(element, self.key, self.scene.get("piece"))
             self._lose(element["id"], seam.LEFT_OUT, why)
             return ""
+        return self._picture(element, shown)
+
+    def _picture(
+        self, element: Mapping[str, Any], shown: seam.Shown, *more: tuple[str, Any]
+    ) -> str:
+        """An image drawn as the picture `shown`, embedded whole as the data of its kind, with
+        `more` attributes after its trace id."""
         data = base64.b64encode(shown.file.read_bytes()).decode("ascii")
         attributes = attribute_text(
             [
                 ("data-id", element["id"]),
+                *more,
                 ("x", number(element["x"])),
                 ("y", number(element["y"])),
                 ("width", number(element["width"])),
@@ -497,23 +519,26 @@ class Canvas:
         """The arrowhead markers the page draws, in the order of their ids: a triangle as
         long as five strokes are wide, its tip at the line's end, pointing away from the
         line."""
-        markers = []
-        for marker, (which, colour, alpha) in sorted(self._arrows.items()):
-            tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
-            attributes = attribute_text(
-                [
-                    ("id", marker),
-                    ("viewBox", "0 0 10 10"),
-                    ("refX", tip),
-                    ("refY", "5"),
-                    ("markerWidth", "5"),
-                    ("markerHeight", "5"),
-                    ("orient", "auto"),
-                ]
-            )
-            fill = attribute_text([("d", shape), ("fill", colour), ("fill-opacity", alpha)])
-            markers.append(f"<marker {attributes}><path {fill}/></marker>")
-        return "".join(markers)
+        return "".join(
+            self._marker(marker, which, [("fill", colour), ("fill-opacity", alpha)])
+            for marker, (which, colour, alpha) in sorted(self._arrows.items())
+        )
+
+    def _marker(self, marker: str, which: str, paint: list[tuple[str, Any]]) -> str:
+        """The arrowhead marker `marker` at the end `which`, its triangle painted by `paint`."""
+        tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
+        attributes = attribute_text(
+            [
+                ("id", marker),
+                ("viewBox", "0 0 10 10"),
+                ("refX", tip),
+                ("refY", "5"),
+                ("markerWidth", "5"),
+                ("markerHeight", "5"),
+                ("orient", "auto"),
+            ]
+        )
+        return f"<marker {attributes}><path {attribute_text([('d', shape), *paint])}/></marker>"
 
     # -- fonts
 

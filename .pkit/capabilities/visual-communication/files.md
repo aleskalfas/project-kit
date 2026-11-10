@@ -49,10 +49,13 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/rendering.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/schemas/config.schema.json
         - .pkit/capabilities/visual-communication/schemas/piece.schema.json
         - .pkit/capabilities/visual-communication/schemas/content.schema.json
+        - .pkit/capabilities/visual-communication/schemas/brief.schema.json
+        - .pkit/capabilities/visual-communication/schemas/brief.yaml
         - .pkit/capabilities/visual-communication/schemas/libraries.schema.json
         - .pkit/capabilities/visual-communication/schemas/library.schema.json
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
@@ -128,6 +131,7 @@ pkit:
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-018#4
         - visual-communication:DEC-019#1
         - visual-communication:DEC-019#2
         - visual-communication:DEC-019#3
@@ -152,11 +156,13 @@ pkit:
         - visual-communication:DEC-025#8
         - visual-communication:DEC-025#9
         - visual-communication:DEC-025#10
+        - visual-communication:DEC-029
+        - visual-communication:DEC-030#6
 ---
 
 # The files of the visual work
 
-Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand`, the test libraries `tests` and `test-parts` and the test notation `test-notation` exist for the tests only.
+Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library, from the capability's test files, and from the reference instance of the brief's schema. The test brand `test-brand`, the test libraries `tests` and `test-parts` and the test notation `test-notation` exist for the tests only.
 
 ## Contents
 
@@ -218,7 +224,7 @@ browser: ~/browsers/chromium/chrome
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Three commands change the library folder, and no other does:
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file, a brief or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Three commands change the library folder, and no other does:
 
 - **`pkit visual add`** changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through this command (DEC-003 point 5).
 - **`pkit visual release`** writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)).
@@ -238,6 +244,7 @@ The table names the schema each file binds to (see [The binding](#the-binding)),
 | `libraries/<library>/<version>/pictures/<file>`, a picture file | none: a PNG or a JPEG ([Picture files](#picture-files)) | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` and `pkit visual upgrade` rewrite its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
+| `pieces/<piece>/brief.yaml` | `brief` | a person ([The brief](#the-brief)) |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
 | `pieces/<piece>/pictures/<file>`, a picture file | none: a PNG or a JPEG ([Picture files](#picture-files)) | a person |
 | `pieces/<piece>/produced/<output>/record.yaml`, and a PNG for each variant | `produced-record` | `pkit visual produce` |
@@ -325,7 +332,7 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
 No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
@@ -336,7 +343,7 @@ No path binds a file, and the capability writes no line that points an editor at
 
 ## A piece
 
-A *piece* is one finished item of visual work, such as a figure (DEC-001 point 3). Its sources are one folder, `pieces/<piece>/`, named with the name shape. The folder holds `piece.yaml`, a content file for each language, the piece's local components, and its picture files in `pictures/` ([Picture files](#picture-files)).
+A *piece* is one finished item of visual work, such as a figure (DEC-001 point 3). Its sources are one folder, `pieces/<piece>/`, named with the name shape. The folder holds `piece.yaml`, a content file for each language, the piece's local components, and its picture files in `pictures/` ([Picture files](#picture-files)). It may hold the piece's brief too ([The brief](#the-brief)).
 
 ### `piece.yaml`
 
@@ -370,7 +377,7 @@ lock:
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
+| `exports` | yes | The formats an export makes, of `svg`, `svg-modes`, `pdf` and `html` (*Exports* in *What is made from a piece*). `svg` and `svg-modes` write files of one name, so a piece names one of them. `svg-modes` takes no mode of no pair it reads that parts the piece's combinations (DEC-018 point 4). |
 | `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). `pkit visual mark-final` sets `final`. A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins a draft's lock. No other state reads it. |
@@ -500,10 +507,70 @@ caption: The flow.
 - **`state`** names a state the component declares, such as `state: marked`.
 - **`override`** points a painted part of the component at another role, by its token path, never at a value. `override: {b: accent}` paints the part `b` with `accent`.
 - **`concept`** names what the component it places stands for: a concept of a notation the piece names, as `<notation>/<concept>`, such as `concept: test-notation/store` ([Notations](#notations)). The concept gives the component its colour family; how a component paints with its family is in *Components*.
-- **A field of runs,** one its component marks as taking runs (*Components*), takes text, as any field of text does, or a list of *runs*: spans of its text, each in a style of its own (DEC-012 point 1). A run is text, set in the field's first style, or a mapping of `text`, which holds text, and perhaps `style`, one of the words of the field's run styles, and `concept`, written as above, which gives the run its colour family. The format fixes these three keys on a run, which places no component, so a run holds no other key and no reserved key binds it. The runs' texts are joined as written, with nothing between them. The field is filled where one of its runs holds text. A run carries no id: a list of runs holds runs, not items, so no rule of ids reaches it. A terminal's line, its command in the field's first style: `line: [{text: "$ ", style: prompt}, pkit visual render deck, {text: "  # draws every page", style: comment}]`.
+- **A field of runs,** one its component marks as taking runs (*Components*), takes text, as any field of text does, or a list of *runs*: spans of its text, each in a style of its own (DEC-012 point 1). A run is text, set in the field's first style, or a mapping of `text`, which holds text, and perhaps `style`, one of the words of the field's run styles, and `concept`, written as above, which gives the run its colour family. The format fixes these three keys on a run, which places no component, so a run holds no other key and no reserved key binds it. The runs' texts are joined as written, with nothing between them. YAML drops the spaces at the edges of a plain text, so a run with a space at its edge is written in quotes, and so is a run whose text YAML would read as another value, such as `null` or `true` ([How the files are read](#how-the-files-are-read)). The field is filled where one of its runs holds text. A run carries no id: a list of runs holds runs, not items, so no rule of ids reaches it. A terminal's line, its command in the field's first style: `line: [{text: "$ ", style: prompt}, pkit visual render deck, {text: "  # draws every page", style: comment}]`.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
 Each key of a mapping that places a component must be a field or an option of that component, an arrangement field or an end field of its list where the mapping is an item, or a reserved key. A key that both an item's component and its list declare is read by neither (DEC-010 point 2, DEC-011 point 1). A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.
+
+### The brief
+
+A piece may keep one *brief*, `brief.yaml` in its folder. It says what the piece must show, and why its design is as it is (DEC-029). The content says what the piece shows. The brief says what the content does not: what each picture must make visible, what the piece is for, and why each choice of its design was made. It is written for whoever makes or reviews the piece, and no reader of the piece sees it. It has no language: one brief serves every language of the piece, written in the language its makers work in, and is never translated. Nothing that draws or checks a piece needs one.
+
+A brief of a deck whose slide `layers` shows how the levels of a method rest on each other, trimmed from the reference instance:
+
+```yaml
+pkit_schema: visual-communication:brief
+schema_version: 1
+piece:
+  goals:
+    - A newcomer can say where a decision lives, and which layer carries it out.
+pages:
+  cover:
+    takeaway: The talk is about how the method's parts fit together.
+  layers:
+    relations:
+      - text: >-
+          Each level rests on the one below it, and the decisions are the source of all
+          the others.
+        relates: [visual.levels]
+    reasons:
+      - aspect: form
+        about: visual.levels
+        text: >-
+          A stepped pyramid, narrowest at the top, so that width carries the order and the
+          top reads as the source.
+        principle:
+          name: Ordered visual variables
+          source: Jacques Bertin, Semiology of Graphics
+```
+
+- **`piece`** is the part for the whole piece. It holds what concerns the piece, or more than one of its pages. A piece of one page, such as a figure, keeps all of its brief here, its takeaway included. So does the intent of a page not yet in the content. Whoever starts the page gives it its id in the content, and its part can then lie under `pages`.
+- **`pages`** holds a part for each page the brief speaks of, keyed by the id the page carries in the content, such as a slide's id. A page the brief names carries an id, as anything another part of the piece names does ([Content files](#content-files)).
+
+Each part may hold these fields:
+
+| Field | What it holds |
+|---|---|
+| `relations` | What a picture must make visible between the parts it shows, such as levels that each rest on the one below, a flow read one way, or kinds of one thing kept apart. Each relation gives its `text`, and perhaps `relates`, the parts of the content it relates, each by its key path. |
+| `goals` | What the piece, or the page, must achieve with its audience, such as what the audience can do after it, one sentence each. |
+| `takeaway` | The one point a reader should leave the page with, only where the page has no *lead*. A lead is the text the page's content gives to state its point, such as a slide's lead under its title. No field says which text that is, so whoever writes or reviews the page reads it from the content. Where the page has a lead, the lead is its takeaway, and the brief does not repeat it. A cover or a section page often has none. |
+| `reasons` | Why each choice of the design was made, one reason for each choice, listed in the order of their aspects. |
+
+A reason holds these fields:
+
+| Field | Required | What it holds |
+|---|---|---|
+| `aspect` | yes | What the choice is about, one of six, in the order the choices are made. `structure`: what the content's structure is, such as levels or a sequence. `form`: the form chosen for it, and the *visual variables* that carry the structure, the properties of a mark that can carry a difference, such as its position, size, lightness or hue. `hierarchy`: what is seen first, and what is ranked below it. `type`, `colour` and `space`: the brand's roles of each that the page takes, and what each colour marks. |
+| `about` | no | The part of the page the reason is about, by its key path; in the piece's part, the part of the content. Without it, the reason is about the whole page, or the whole piece. |
+| `text` | yes | Why the choice was made. |
+| `principle` | yes | The principle the choice rests on: its `name`, and its `source`, such as an author and a work. A reason that names no principle is taste, which nobody can judge. |
+
+- **A key path** names a part of the content as a tie's end names its item ([Content files](#content-files)). It joins the keys the content file writes with `.`, and names each item of a list by its id, as `[<id>]`, never by its place. It may end at a field, a list's included. A page's part starts the path at its page, as `visual.levels`. The piece's part starts it at the content's top, as `slides[layers]`, or a site's `header`. A part inside a local component, or in shared content, takes no key path, since a key path reaches only the piece's own content: name it in the words.
+- **What a brief never holds.** Nothing the content holds: its text, its pictures, the component that draws each part, and any value or layout. Nothing `piece.yaml` declares: who the piece is for, where it is shown, whether it explains, its libraries and its lock. No reason for a library's own choice, such as why a brand's accent is the colour it is, which lives with the library. No requirement that binds more than this piece, which lives in a rule set.
+- **The methodology's container,** `pkit`, is kept free at the brief's top and in each mapping of it, as in a content file ([Reserved words](#reserved-words)). Its schema refuses every other key it does not declare.
+- **Who writes it.** A person, or an agent working for one. Its goals and relations come from whoever asks for the piece, and its reasons from whoever designs it, as they design.
+- **No command changes what it says.** No renderer, export or producer reads it. So a change to it moves no lock, changes no scene, and stales no output: no fingerprint reads it (*The input set of each kind* in *What the check reports*). `pkit visual take-up` copies it with the rest of a final piece's folder, as it is ([The lock](#the-lock)). An id renamed in the content leaves the brief naming what is gone, which the check fails until a person mends the brief.
+- **What the check reads of it.** Its shape is the core's data validation's. The check fails a page or a key path the brief names that names nothing in the content of the piece's source language: `brief-page` and `brief-path`, under *The brief* in *What the check reports*. A final piece's brief goes unread, but for its binding. Whether the drawn pages show what the brief asks is no check's to say. The capability's reviewer reads them against it, and reports each part of the brief a page does not show as a brief finding (DEC-030 point 6; *The reviewer* in the capability's README).
 
 ## Picture files
 

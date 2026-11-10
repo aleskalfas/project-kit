@@ -2,6 +2,8 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
+# The design systems its form comes from (DEC-007 point 3): Material Design's card, IBM
+# Carbon's tile and the GOV.UK Design System's summary card.
 about: >-
   A box with rounded corners that holds a head, a tag and a text, each where the content
   gives it, one under another. It is as wide as it is given, and as tall as what it

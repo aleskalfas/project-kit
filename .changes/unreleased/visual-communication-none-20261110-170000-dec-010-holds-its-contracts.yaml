@@ -1,0 +1,6 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-010, the record of a list's fields, is trimmed in place to hold its
+  contracts, each said once (#2991). Every point keeps its id, and no
+  decision, page, file format or check changes, so no surface moves.

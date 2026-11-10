@@ -1246,17 +1246,22 @@ def browser_for(
     documents = {name: as_read(root, piece, language) for name, language in files.items()}
     held = {
         "functions": FUNCTIONS,
-        "documents": {viewing_browser.PLANTED_FILE: planted(), **documents},
+        "documents": {
+            viewing_browser.PLANTED_FILE: planted(),
+            viewing_browser.PLANTED_FORCED_FILE: planted(forced=True),
+            **documents,
+        },
         **plan,
     }
     return name_browser(root, stand_in(tmp_path / "browser", held))
 
 
 class Browser:
-    """`viewing_browser.draw` in a browser's place: what each call was handed, the file's bytes
-    as it read them among it. It draws each page in each mode at the scale it is given, an
-    image of each region a page is handed with, as `read` says, or as it says of that mode
-    where it is a function of one, or raises `stops` at the call of that number, from 1."""
+    """`viewing_browser.draw` in a browser's place, and `draw_forced` as `forced`: what each
+    call was handed, the file's bytes as it read them among it. It draws each page in each mode,
+    or each forced palette, at the scale it is given, an image of each region a page is handed
+    with, as `read` says, or as it says of that mode where it is a function of one, or raises
+    `stops` at the call of that number, from 1."""
 
     def __init__(
         self,
@@ -1280,6 +1285,34 @@ class Browser:
         signals: Mapping[str, Sequence[str]] | None = None,
         modes: Sequence[Mapping[str, str]] = ({},),
     ) -> Any:
+        return self._drawn(file, wanted, scale, program, folder, signals, [("", m) for m in modes])
+
+    def forced(
+        self,
+        file: Path,
+        wanted: Any,
+        scale: float,
+        program: Path,
+        folder: Path,
+        *,
+        signals: Mapping[str, Sequence[str]] | None = None,
+    ) -> Any:
+        palettes = [
+            (each.name, {**each.signals, **viewing_browser.FORCED})
+            for each in viewing_browser.PALETTES
+        ]
+        return self._drawn(file, wanted, scale, program, folder, signals, palettes)
+
+    def _drawn(
+        self,
+        file: Path,
+        wanted: Any,
+        scale: float,
+        program: Path,
+        folder: Path,
+        signals: Mapping[str, Sequence[str]] | None,
+        modes: Sequence[tuple[str, Mapping[str, str]]],
+    ) -> Any:
         self.calls.append(
             {
                 "name": file.name,
@@ -1289,7 +1322,8 @@ class Browser:
                 "program": program,
                 "folder": folder,
                 "signals": dict(signals or {}),
-                "modes": [dict(mode) for mode in modes],
+                "modes": [dict(mode) for _, mode in modes],
+                "palettes": [palette for palette, _ in modes if palette],
             }
         )
         if len(self.calls) in self.stops:
@@ -1311,9 +1345,12 @@ class Browser:
             self.version,
             tuple(
                 viewing_browser.Shown(
-                    dict(mode), images, self.read(mode) if callable(self.read) else self.read
+                    dict(mode),
+                    images,
+                    self.read(mode) if callable(self.read) else self.read,
+                    palette,
                 )
-                for mode in modes
+                for palette, mode in modes
             ),
         )
 
@@ -1323,6 +1360,7 @@ def browser(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Browser
     """The browser `draw` is handed, in place of one."""
     drawn = Browser()
     monkeypatch.setattr(viewing.viewing_browser, "draw", drawn)
+    monkeypatch.setattr(viewing.viewing_browser, "draw_forced", drawn.forced)
     yield drawn
 
 
@@ -2017,7 +2055,13 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
     shown = run_look(root, "tags", "--renderer", "html")
     assert shown.returncode == 0, shown.stderr
     report = html_report(root, "tags")
-    place = {"language": "en", "key": "default", "page": "figure", "element": label}
+    place = {
+        "language": "en",
+        "key": "default",
+        viewing.FORCED: None,
+        "page": "figure",
+        "element": label,
+    }
     assert report["words"] == [{**place, "scene": [["Ready"]], "document": [[["Rea"]]]}]
     assert report["dropped"] == [{**place, "text": "Ready", "why": "no ink"}]
     assert report["drawn-otherwise"] == [
@@ -2025,7 +2069,12 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
         {**place, "text": "Ready", "why": "font of the machine", "fonts": ["Times"]},
     ]
     assert report["refused"] == [
-        {"language": "en", "key": "default", "url": "https://example.invalid/a.png"}
+        {
+            "language": "en",
+            "key": "default",
+            viewing.FORCED: None,
+            "url": "https://example.invalid/a.png",
+        }
     ]
     [loss] = report["losses"]
     assert (loss["plugin"], loss["what"], loss["did"]) == ("html", label, "left-out")
@@ -2184,6 +2233,296 @@ def test_an_image_of_a_page_with_a_ground_says_nothing_of_the_browsers(
     [image] = html_report(root)["images"]
     assert image[viewing.ON_BROWSER_GROUND] is False
     assert "on the browser's ground" not in shown.stdout
+
+
+# --- under forced colours (DEC-027) --------------------------------------------------------------
+
+FORCED = viewing.ASK_FORCED
+
+#: The emulation of each forced palette, in the order a forced start draws them.
+PALETTE_MODES = [
+    {**palette.signals, **viewing_browser.FORCED} for palette in viewing_browser.PALETTES
+]
+
+
+def every_image(root: Path, piece: str = PIECE) -> list[str]:
+    """Each image of the HTML renderer's folder, at its path within it."""
+    folder = html_folder(root, piece)
+    return sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*.png"))
+
+
+def test_forced_colours_draw_each_page_file_in_both_palettes_after_its_keys(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """The caller's key picks the file; each palette picks the key it shows: the light one the
+    light key, the dark one the dark key."""
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == 0, shown.stderr
+    plain, forced = browser.calls
+    assert plain["name"] == forced["name"] == f"{PIECE}.en.default.html"
+    assert plain["modes"] == [LIGHT_SIGNALS] and plain["palettes"] == []
+    assert forced["modes"] == PALETTE_MODES and forced["palettes"] == ["light", "dark"]
+    assert forced["scale"] == plain["scale"] and forced["signals"] == plain["signals"]
+    report = html_report(root)
+    assert [(each["key"], each[viewing.FORCED], each["image"]) for each in report["images"]] == [
+        ("default", None, f"{PIECE}.en.default.png"),
+        ("default", "light", f"forced-light/{PIECE}.en.default.png"),
+        (DARK_KEY, "dark", f"forced-dark/{PIECE}.en.{DARK_KEY}.png"),
+    ]
+    assert every_image(root) == sorted(each["image"] for each in report["images"])
+    frames = json.loads(
+        (html_folder(root) / f"forced-dark/{PIECE}.en.{DARK_KEY}.frames.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert (frames["key"], frames[viewing.FORCED]) == (DARK_KEY, "dark")
+    assert frames["image"] == f"forced-dark/{PIECE}.en.{DARK_KEY}.png"
+
+
+def test_the_report_names_the_forced_palettes_their_flag_their_folders_and_what_they_miss(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == 0, shown.stderr
+    said = html_report(root)[viewing.FORCED]
+    assert said["palettes"] == ["light", "dark"]
+    assert said["flag"] == viewing_browser.FORCING == "--force-high-contrast"
+    assert said["folders"] == {"light": "forced-light/", "dark": "forced-dark/"}
+    assert said["does-not-show"].startswith(
+        "each forced image shows Chrome 157.0.1.2's own forced palette, not a reader's own, "
+    )
+    folder = f"{viewing.folder_of(PIECE, 'html')}/"
+    lines = shown.stdout.splitlines()
+    assert (
+        f"forced colours: light, dark, forced by Chrome's flag `--force-high-contrast`; their "
+        f"images lie in {folder}forced-light/, {folder}forced-dark/"
+    ) in lines
+    assert f"forced colours do not show: {said['does-not-show']}" in lines
+
+
+def test_a_run_that_asks_for_no_forced_colours_draws_none_and_names_none(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    assert [call["palettes"] for call in browser.calls] == [[]]
+    report = html_report(root)
+    assert report[viewing.FORCED] is None
+    assert {each[viewing.FORCED] for each in report["images"]} == {None}
+    assert not [path for path in html_folder(root).iterdir() if path.is_dir()]
+    assert "forced" not in shown.stdout
+
+
+def test_a_forced_run_replaces_the_forced_folders_an_earlier_run_left(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    assert run_look(root, PIECE, "--renderer", "html", FORCED).returncode == 0
+    assert run_look(root, PIECE, "--renderer", "html").returncode == 0
+    assert every_image(root) == [f"{PIECE}.en.default.png"]
+
+
+@pytest.mark.parametrize(
+    ("args", "default"),
+    [
+        pytest.param(["--renderer", "svg"], False, id="named"),
+        pytest.param([], True, id="by-default"),
+    ],
+)
+def test_forced_colours_of_the_svg_renderer_are_refused_with_its_folder_as_it_was(
+    flow: Path, browser: Browser, args: list[str], default: bool
+) -> None:
+    assert run_look(flow, PIECE, "--renderer", "svg").returncode == 0
+    before = written(flow)
+    shown = run_look(flow, PIECE, *args, FORCED)
+    assert shown.returncode == 1
+    assert shown.stderr.startswith(
+        "error: resvg draws the SVG renderer's pages and knows no forced colours, so "
+        "`--forced-colours` draws only the HTML renderer's"
+    )
+    way_on = f"`pkit visual look {PIECE} --renderer html --forced-colours`"
+    assert (way_on in shown.stderr) == default
+    assert written(flow) == before
+    assert browser.calls == []
+
+
+@pytest.mark.parametrize(
+    ("palette", "key"),
+    [
+        ("light", "contrast.high"),
+        ("dark", "colour-scheme.dark+contrast.high"),
+    ],
+)
+def test_each_forced_palette_shows_the_key_a_file_of_both_value_axes_holds_for_it(
+    tmp_path: Path, palette: str, key: str
+) -> None:
+    root = starter_project(tmp_path)
+    project = viewing.opened(root, "tag")
+    held = dict(zip(project.keys, project.combinations, strict=True))
+    signals = next(each.signals for each in viewing_browser.PALETTES if each.name == palette)
+    declared = seam.declaration("html", seam.RENDERER)
+    assert viewing.key_shown(declared, "html", held, signals) == key
+
+
+@pytest.mark.parametrize(
+    ("held", "shown"),
+    [
+        pytest.param(
+            {"default": {"colour-scheme": "light"}, "dark": {"colour-scheme": "dark"}},
+            ["default", "dark"],
+            id="two-schemes",
+        ),
+        pytest.param(
+            {"default": {"colour-scheme": "dark"}}, ["default", "default"], id="one-scheme"
+        ),
+        pytest.param(
+            {"default": {"contrast": "standard"}, "high": {"contrast": "high"}},
+            ["high", "high"],
+            id="contrast-alone",
+        ),
+        pytest.param({"default": {}}, ["default", "default"], id="no-value-axis"),
+    ],
+)
+def test_a_file_shows_each_forced_palette_the_key_its_rules_give_those_signals(
+    held: dict[str, dict[str, str]], shown: list[str]
+) -> None:
+    declared = seam.declaration("html", seam.RENDERER)
+    assert [
+        viewing.key_shown(declared, "html", held, palette.signals)
+        for palette in viewing_browser.PALETTES
+    ] == shown
+
+
+def test_the_command_names_the_forced_palette_wherever_it_names_a_forced_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = html_flow(tmp_path)
+    label = "figure/body/steps[plan]/head"
+    dim = viewing_browser.Read(
+        (),
+        (viewing_browser.Dropped("figure", label, "Plan the work.", viewing_browser.NO_INK),),
+        (),
+        (),
+        ("https://example.invalid/a.png",),
+    )
+    clean = viewing_browser.Read((), (), (), (), ())
+    drawn = Browser(lambda mode: dim if mode.get("prefers-color-scheme") == "dark" else clean)
+    monkeypatch.setattr(viewing.viewing_browser, "draw", drawn)
+    monkeypatch.setattr(viewing.viewing_browser, "draw_forced", drawn.forced)
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == 0, shown.stderr
+    report = html_report(root)
+    assert [(each["key"], each[viewing.FORCED]) for each in report["dropped"]] == [
+        (DARK_KEY, "dark")
+    ]
+    assert [each[viewing.FORCED] for each in report["refused"]] == ["dark"]
+    lines = shown.stdout.splitlines()
+    assert (
+        f"dropped: figure (en, {DARK_KEY}, forced dark): a span of the text `{label}` left no "
+        f"ink: 'Plan the work.'"
+    ) in lines
+    assert (
+        f"refused: en, {DARK_KEY}, forced dark: a request for https://example.invalid/a.png"
+    ) in lines
+
+
+def test_a_loss_of_the_key_a_forced_palette_shows_lies_on_its_image(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """The dark key is not asked for, yet the dark palette shows it, with its loss."""
+    root = html_flow(tmp_path)
+    a_dark_picture_of_its_own(root)
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == 0, shown.stderr
+    [loss] = html_report(root)["losses"]
+    assert (loss["key"], loss[viewing.FORCED], loss["did"]) == (DARK_KEY, "dark", "approximated")
+    assert any(
+        each.startswith(f"loss: {loss['page']} (en, {DARK_KEY}, forced dark): ")
+        for each in shown.stdout.splitlines()
+    )
+
+
+def test_a_forced_image_of_a_page_with_no_ground_lies_on_its_palettes_ground(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    on_white(root)
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == 0, shown.stderr
+    images = html_report(root)["images"]
+    assert [each[viewing.ON_BROWSER_GROUND] for each in images] == [True, True, True]
+    lines = shown.stdout.splitlines()
+    assert (
+        f"on the forced palette's ground: {images[1]['page']} (en, default, forced light) draws "
+        f"no ground of its own, so it lies on the ground of Chrome's `light` forced palette"
+    ) in lines
+    assert not [each for each in lines if "on the browser's ground" in each and "forced" in each]
+
+
+def test_a_stop_of_the_forced_start_leaves_no_image_and_names_a_run_without_forced_colours(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    what = (
+        "the first read set the forced palette `light`, and a span with no paint, left to "
+        "forcing, left no ink, so the forced palette did not reach the text"
+    )
+    browser.stops[2] = viewing_browser.Stopped(what, program="b")
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == look.STOPPED
+    assert every_image(root) == []
+    stop = html_report(root)["stopped"]
+    assert stop["what"] == what and stop["forcing"] is True
+    assert stop["go-on"] == viewing.ways_on(PIECE, True)
+    assert stop["go-on"][:-1] == viewing.ways_on(PIECE)
+    assert stop["go-on"][-1] == (
+        f"`pkit visual look {PIECE} --renderer html`, without `--forced-colours`, draws the "
+        f"same page files in their own colours, in a start that forces none"
+    )
+    assert [line for line in shown.stderr.splitlines() if line.startswith("go on: ")] == [
+        f"go on: {way}" for way in stop["go-on"]
+    ]
+
+
+def test_a_stop_of_the_plain_start_of_a_forced_run_names_no_run_without_them(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b")
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == look.STOPPED
+    assert len(browser.calls) == 1
+    stop = html_report(root)["stopped"]
+    assert stop["forcing"] is False and stop["go-on"] == viewing.ways_on(PIECE)
+
+
+def test_a_forced_run_starts_the_browser_again_for_a_file_forcing_its_colours(
+    tmp_path: Path,
+) -> None:
+    """Through the stand-in's pipe: the file's own start, then one under the flag, whose first
+    read is its own and whose every emulation forces the colours."""
+    root = drawing_project(tmp_path, picture=False)
+    program = browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"})
+    shown = run_look(root, PIECE, "--renderer", "html", FORCED)
+    assert shown.returncode == 0, shown.stderr
+    starts = [each["flags"] for each in logged(program) if "flags" in each]
+    assert [viewing_browser.FORCING in flags for flags in starts] == [False, True]
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [
+        viewing_browser.PLANTED_FILE,
+        "flow.en.default.html",
+        viewing_browser.PLANTED_FORCED_FILE,
+        "flow.en.default.html",
+    ]
+    assert emulated_after_the_file(program) == PALETTE_MODES
+    assert [(each["key"], each[viewing.FORCED]) for each in html_report(root)["images"]] == [
+        ("default", None),
+        ("default", "light"),
+        (DARK_KEY, "dark"),
+    ]
 
 
 # --- a page too tall for one image, in bands, and one too wide (DEC-022 point 7) -----------------
@@ -2634,10 +2973,11 @@ def test_it_lists_the_languages_the_keys_the_pages_and_each_renderers_tool(
     assert lines[2] == "pages in en:"
     assert lines[3].startswith("  1: deck/slides[")
     tool_line = viewing_tool.TOOL
-    assert lines[-3:] == [
+    assert lines[-4:] == [
         "renderer: svg by default",
         f"tool of svg: resvg {tool_line['version']}, through resvg-py {tool_line['wheel']}",
         f"tool of html: a browser, named in the configuration: {program}",
+        "forced palettes of html: light, dark, drawn where `look` is asked `--forced-colours`",
     ]
 
 
@@ -2653,7 +2993,12 @@ def test_it_lists_a_document_for_a_machine(tmp_path: Path) -> None:
     assert listed["renderer"] == "svg"
     assert listed["tools"] == {
         "svg": viewing_tool.TOOL,
-        "html": {"program": str(program), "named": True, "looked": []},
+        "html": {
+            "program": str(program),
+            "named": True,
+            "looked": [],
+            "forced-palettes": ["light", "dark"],
+        },
     }
 
 
@@ -2675,7 +3020,8 @@ def test_it_says_where_it_looked_where_no_browser_is_found(
     found = json.loads(shown.stdout)["tools"]["html"]
     assert found["program"] is None and found["named"] is False
     assert str(tmp_path / "no-browser") in found["looked"]
-    plain = run_pages(root, "tag").stdout.splitlines()[-1]
+    assert found["forced-palettes"] == ["light", "dark"]
+    plain = run_pages(root, "tag").stdout.splitlines()[-2]
     assert plain.startswith(
         "tool of html: none, so a run stops: no browser of the Chromium family was found; "
         "looked at: "

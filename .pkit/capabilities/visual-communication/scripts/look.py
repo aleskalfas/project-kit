@@ -10,7 +10,7 @@
 # ]
 # ///
 """visual-communication capability — look: draw a piece's pages as images, in the clone's
-local folder, for a person or an agent to read (DEC-015, DEC-020 point 5).
+local folder, for a person or an agent to read (DEC-015, DEC-020 point 5, DEC-027).
 
 It reads the piece's own file with its lock, computes the scenes under that lock and never
 moves it. It runs no helper and no producer, draws a produced picture as it stands, keeps
@@ -33,6 +33,13 @@ it, a page too wide for its smallest text to read among it. See `_lib/viewing.py
   file holds the modes a reader's signal names, and each key picked is drawn out of the file
   that holds it, its signals set through the browser. Each page file lies beside the images,
   for a person to open in their own browser.
+- **Under forced colours,** with `--forced-colours`, the browser also draws each page file
+  in its two forced palettes, light and dark, in a second start under its own flag that
+  forces its colours. Each palette shows the key the file holds for the signals the browser
+  sets with it. Its images lie in a folder of their own, `forced-light/` or `forced-dark/`,
+  under the names any image takes, and the report names the palette of each image and of
+  each entry that lies on one. resvg knows no forced colours, so the SVG renderer's pages
+  are never drawn so.
 
 Its shebang reads no network. Where the script has no environment yet, `uv run --script`
 asks the index once its cached answer is stale, and fails offline, though the cache holds
@@ -43,16 +50,19 @@ every package this one does.
 Usage:
   pkit visual look <piece> [--page <page>]... [--language <language>]... [--key <key>]...
                            [--every-language] [--every-key] [--renderer svg|html]
+                           [--forced-colours]
 
 Exit codes:
   0  drawn; what the images cannot show, if anything, is printed and in the report
-  1  refused: the renderer's folder is as it was. Or a write failed: it names the file, and
-     every file is as it was before the run, or each it could not put back is named
+  1  refused, forced colours asked of the SVG renderer among it: the renderer's folder is as
+     it was. Or a write failed: it names the file, and every file is as it was before the
+     run, or each it could not put back is named
   2  usage error
-  3  stopped: no browser ran, or one stopped part way, or its first read failed. The HTML
-     renderer's folder holds the page files and a report that says what stopped it, and no
-     image. It names the ways on: a build pipeline's drawings, the same look run by a person
-     outside any sandbox, and the SVG renderer's pages (DEC-024 point 4)
+  3  stopped: no browser ran, or one stopped part way, or the first read of either start
+     failed. The HTML renderer's folder holds the page files and a report that says what
+     stopped it, and no image. It names the ways on: a build pipeline's drawings, the same look
+     run by a person outside any sandbox, and the SVG renderer's pages (DEC-024 point 4), and
+     where the start that forces the browser's colours stopped, a run without them
 """
 
 from __future__ import annotations
@@ -109,6 +119,13 @@ def main() -> int:
         help="the renderer whose pages to draw, `svg` or `html`; default `html` for a piece "
         "that declares it, `svg` otherwise",
     )
+    parser.add_argument(
+        viewing.ASK_FORCED,
+        dest="forced",
+        action="store_true",
+        help="draw each page file of the HTML renderer in the browser's two forced palettes "
+        "too, light and dark, each in a folder of its own",
+    )
     args = parser.parse_args()
     root = project_root()
     try:
@@ -134,6 +151,7 @@ def _look(root: Path, args: argparse.Namespace) -> int:
         every_key=args.every_key,
         pages=args.page,
         renderer=args.renderer,
+        forced=args.forced,
     )
     folder = viewing.folder_of(args.piece, wanted.renderer)
     pl.writable(root, root / folder / viewing.REPORT)
@@ -157,6 +175,14 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
     if report.get("stands-for"):
         print(f"drawn by: {tool['name']} {tool['version']}, {tool['program']}")
         print(f"stands for: {report['stands-for']}")
+    forced = report.get(viewing.FORCED)
+    if forced:
+        folders = ", ".join(f"{folder}{each}" for each in forced["folders"].values())
+        print(
+            f"forced colours: {', '.join(forced['palettes'])}, forced by {tool['name']}'s flag "
+            f"`{forced['flag']}`; their images lie in {folders}"
+        )
+        print(f"forced colours do not show: {forced['does-not-show']}")
     for each in report.get("page-files", []):
         print(f"page file: {folder}{each['file']}, to open in your own browser")
     through_svg = report["renderer"]["name"] == viewing.SVG
@@ -173,7 +199,13 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
             )
         if through_svg and image["on-white"]:
             print(f"on white: {_at(image)} draws no ground of its own")
-        if not through_svg and image["on-browser-ground"]:
+        if not through_svg and image["on-browser-ground"] and image.get(viewing.FORCED):
+            print(
+                f"on the forced palette's ground: {_at(image)} draws no ground of its own, so "
+                f"it lies on the ground of {tool['name']}'s `{image[viewing.FORCED]}` forced "
+                f"palette"
+            )
+        elif not through_svg and image["on-browser-ground"]:
             print(
                 f"on the browser's ground: {_at(image)} draws no ground of its own, so it lies "
                 f"on {tool['name']}'s own ground in `{image['key']}`, not on white"
@@ -193,7 +225,8 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
     for each in report.get("profiles", []):
         print(f"profile: {_at(each)}: `{each['element']}` shows `{each['picture']}`: {each['why']}")
     for each in report.get("refused", []):
-        print(f"refused: {each['language']}, {each['key']}: a request for {each['url']}")
+        under = f", forced {each[viewing.FORCED]}" if each.get(viewing.FORCED) else ""
+        print(f"refused: {each['language']}, {each['key']}{under}: a request for {each['url']}")
     if stand_ins:
         print(f"look: {stand_ins}")
     print(f"report: {folder}{viewing.REPORT}")
@@ -264,17 +297,19 @@ def _otherwise(each: Mapping[str, Any]) -> str:
 
 def _bands(report: Mapping[str, Any], first: Mapping[str, Any]) -> str:
     """The images of the bands of the page whose first band `first` shows, in order."""
-    at = ("language", "key", "page")
+    at = ("language", "key", "page", viewing.FORCED)
     return ", ".join(
         image["image"]
         for image in report["images"]
-        if "band" in image and all(image[each] == first[each] for each in at)
+        if "band" in image and all(image.get(each) == first.get(each) for each in at)
     )
 
 
 def _at(place: Mapping[str, Any]) -> str:
-    """Which image something lies on."""
-    return f"{place['page']} ({place['language']}, {place['key']})"
+    """Which image something lies on, naming its forced palette where it has one."""
+    forced = place.get(viewing.FORCED)
+    under = f", forced {forced}" if forced else ""
+    return f"{place['page']} ({place['language']}, {place['key']}{under})"
 
 
 if __name__ == "__main__":
