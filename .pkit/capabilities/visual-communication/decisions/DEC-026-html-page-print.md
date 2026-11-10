@@ -1,7 +1,7 @@
 ---
 id: DEC-026
 title: A printed page file sets its pages one after another, each whole where it fits a sheet
-status: proposed
+status: accepted
 date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
