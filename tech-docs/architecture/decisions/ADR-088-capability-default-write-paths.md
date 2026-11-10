@@ -8,13 +8,13 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-**In plain terms:** a capability may name where the agents it ships write ([COR-073](../../../.pkit/decisions/core/COR-073-capability-grant-defaults.md)), and this record says how project-kit builds that. A capability lists each such category in its package file, with its owning agent and a query that answers the default. Installing it asks the query, writes the answer into the agents overlay with a mark that repeats the value, and only then deploys, asking first where the answer names a folder that already holds files. For example, after `visual-communication.work: ["visual/"]  # pkit-written: ["visual/"]` is written, `pkit agents reconcile --write` may move the value to the query's newer answer while it still matches its mark; once a person edits it, it is the project's. The deploy refuses a grant that lies in, or holds, what the next sync overwrites, whichever definition deploys.
+**In plain terms:** a capability may name where the agents it ships write ([COR-073](../../../.pkit/decisions/core/COR-073-capability-grant-defaults.md)), and this record says how project-kit builds that. A capability lists each such category in its package file, with its owning agent and a query that answers the default. Installing it asks the query, writes the answer into the agents overlay with a mark that repeats the value, and only then deploys, asking first where the answer names a folder that already holds files. For example, after `visual-communication.work: ["visual/"]  # pkit-written: ["visual/"]` is written, `pkit agents reconcile --write` may move the value to the query's newer answer while it still matches its mark; once a person edits it, it is the project's. The deploy checks every category a capability's agent names, whichever definition deploys, and refuses a grant that lies in, or holds, what the next sync overwrites, a copy pulled from an external source included.
 
 ## Context
 
 COR-073, accepted on 8 November 2026, leaves five questions of its build to an architecture record: the declaration's layout, the form of the query's answer, how a writer keeps what it wrote, how install readies the query, and what a preview shows of a query not ready.
 
-The maintainer decided the record's three open choices on 10 November 2026, each as it proposed:
+The maintainer decided the record's three choices on 10 November 2026, each as the record recommends:
 - **Whether the deploy's test widens to a grant that holds what sync overwrites, for core's write-carrying categories too, with no migration:** "accept widening" ([the comment that records it](https://github.com/aleskalfas/project-kit/issues/2961#issuecomment-6781174085); point 7).
 - **Whether only `pkit agents reconcile --write` moves a value still as written:** "yes" ([the comment that records it](https://github.com/aleskalfas/project-kit/issues/2961#issuecomment-6781226048); point 6).
 - **Whether a default never lies in the capability's folder, its `project/` folder included:** "yes never inside capability folder" ([the comment that records it](https://github.com/aleskalfas/project-kit/issues/2961#issuecomment-6781305674); point 3).
@@ -36,8 +36,8 @@ A capability's *write categories* are the overlay categories it declares for its
   - an `owner` the capability does not ship, or whose `owns` does not name the category
   - another agent of the capability that names the category in its `owns`
   - a `default-query` that names no leaf, or one without the query contract, or one with `reads`
-- **The package schema** admits the block with its keys closed, as it closes every block, and its `schema_version` does not move.
-- **Overlay validation warns,** failing nothing, of a dotted category that no installed capability declares, at the top level or in an override. It warns where an unknown override is warned of: in `pkit agents` and in the `refs` member of `pkit validate`.
+- **The package schema** admits the block with its keys closed, and its `schema_version` does not move.
+- **Overlay validation warns,** failing nothing, of a dotted category that no installed capability declares, at the top level or in an override. It warns where an unknown override is warned of.
 
 ### 2. The default query prints one document of paths
 
@@ -60,7 +60,7 @@ A writer of a default checks each path of an answer (COR-073 points 3 and 5). Ea
 
 ### 4. The line a writer writes ends with a mark that repeats its value
 
-- **Where a writer writes.** A writer writes a write category only where neither the top level nor the owner's override gives it a value. A bare key at the top level gives none, as the deploy reads it (ADR-051 point 1), so a writer rewrites that line. A commented stub gives none either, and a writer leaves it and adds the line.
+- **Where a writer writes.** A writer writes a write category only where neither the top level nor the owner's override gives it a value. A bare key at the top level gives none, so a writer rewrites that line. A commented stub gives none either, and a writer leaves it and adds the line.
 - **The line** is at the top level, on one line, its value in flow form, each path a double-quoted string as JSON writes it. A category with no default, and a query that answers no path, get `[]`.
 - **The written mark** ends that line: a comment, `# pkit-written:`, then the same value again.
 - **A comment line above it** says that the value is the capability's default, and that an edit makes it the project's. It does not open with the category's name, so no reader takes it for a commented stub. Its wording is the build's.
@@ -71,7 +71,7 @@ A writer of a default checks each path of an answer (COR-073 points 3 and 5). Ea
 - **Every other state is the project's.** No writer writes or moves such a line.
 - **A move** rewrites that one line, its value and its mark, as a text edit. Every other byte of the overlay stays as it was.
 - **Neither the line nor its comment** holds a path into the capability's folder or a citation of the capability.
-- **No reader of categories changes.** The deploy, the status report and validation read the line as YAML, where the mark is a comment.
+- **No reader of categories changes,** the deploy, the status report and validation among them.
 
 ### 5. Install provisions the query, writes the defaults, then deploys
 
@@ -85,7 +85,7 @@ A writer of a default checks each path of an answer (COR-073 points 3 and 5). Ea
 6. the tail install shares with `upgrade`: the rules index, the adapters' deploy, `.pkit/.gitignore`, and last the provisioning of the capability's query commands
 7. the questions the capability's points declare (COR-061)
 
-- **Only install and register write a default,** so step 5 stays out of the tail they share with `pkit capabilities upgrade` and `pkit upgrade`. Those commands' deploy skips an owner whose category is undefined, and names the fill commands (point 6).
+- **Of the commands that run the shared tail, only these three write a default,** so step 5 stays out of the tail they share with `pkit capabilities upgrade` and `pkit upgrade`. Those commands' deploy skips an owner whose category is undefined, and names the fill commands (point 6).
 - **Over a path that is absent or holds nothing,** running install is the consent. A path holds content when it is a file, or a folder with any entry, which is `adopt`'s test with files added.
 - **Over content, at a terminal,** install asks once for the run, listing each `category = paths` with its owner. It asks only where standard input and standard output are both terminals, ADR-065 point 4's test.
 - **On a "no", or off a terminal,** install leaves each category over content undefined, and names the fill commands. It still writes the categories over absent or empty paths. Install takes no `--yes` for this.
@@ -93,7 +93,7 @@ A writer of a default checks each path of an answer (COR-073 points 3 and 5). Ea
 - **Install never fails on a default.** It reports each outcome, and the deploy skips the owner loudly.
 - **A missing overlay** gets no default from install. Install names `pkit agents reconcile --write`.
 - **Each write prints** the category, its paths, the overlay's path, and that an edit makes the value the project's.
-- **The questions come after the defaults.** A question that moves the capability's location leaves the value written before it behind, still as written, so `pkit agents` shows it and `reconcile --write` moves it. Install asks no query again.
+- **The questions come after the defaults.** A question that moves the capability's location leaves the value written before it, still as written, to point 6. Install asks no query again.
 - **`--plan`** shows the wiring the install would make (COR-053 point 8), and no default.
 - **A dry run** asks no query and provisions nothing. It lists each write category in one of three states:
   - set by the project, and left as it is
@@ -109,15 +109,15 @@ The *fill commands* are `pkit agents reconcile --write` and `pkit agents adopt`,
   - each move, from the value written to the new answer
   - each refused answer, and each query with no answer, with why
 - **`--write`** makes each write and each move the dry run shows, and writes nothing for a query with no answer or a refused answer. Over content, `--write` is its consent, as for a documentation folder (COR-049 point 5).
-- **`reconcile` provisions nothing.** A query whose environment is not provisioned gives no answer, and its reason names `pkit sync`.
+- **`reconcile` provisions nothing,** so a query whose environment is not provisioned gives it no answer.
 - **A write category comes first** among `reconcile`'s states. It is neither one of core's write-carrying categories nor one with a conventional folder.
-- **`pkit agents adopt <agent>`** writes each write category the agent owns that point 4 lets it write: the query's answer, or `[]`. It creates no folder for one. Over content, it takes `adopt`'s consent: one question, or `--yes`, or a refusal off a terminal. It moves nothing.
+- **`pkit agents adopt <agent>`** writes each write category the agent owns that point 4 lets it write: the query's answer, or `[]`. It creates no folder for one. Over content, it takes `adopt`'s consent (COR-049 point 5). It moves nothing.
 - **`pkit agents`** asks the query of each line still as written, and writes nothing. Where the answer differs, it shows the line, the answer and `pkit agents reconcile`. Where the query gives no answer, it says why.
 
 ### 7. The deploy checks every category a capability's agent names with one test
 
 - **The test.** A grant may not reach content the lifecycle layer's test counts as managed by sync, nor a registered externally-sourced capability's folder outside its `project/` ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
-- **Reach** means that either path holds the other, as ADR-051 point 3 reads overlap, so `.pkit/` and `.` reach such content. A glob is read as the folder that holds its first glob character, so `**` reaches the whole repository.
+- **Reach** means that either path holds the other, as ADR-051 point 3 reads overlap. A glob is read as the folder that holds its first glob character.
 - **The categories it binds,** in any channel of any definition that names them:
   - each category core declares write-carrying
   - each category in the `owns` of an agent a capability ships, whatever the capability's origin, declared or not. A project's definition that wins by name is still bound, as is any other definition that names the category.
@@ -130,7 +130,7 @@ The *fill commands* are `pkit agents reconcile --write` and `pkit agents adopt`,
 
 **Point 2.** The answer is a list of repository paths, which is what an anchor-kind resolver already prints. A data point's envelope carries a schema version because consumers merge and version a slot's value. Nothing merges this answer, and its shape has no schema of its own to version.
 
-**Point 3.** Writing the paths that pass would grant a value no query answered: the agent would own some of the capability's paths and not others, with nothing in the overlay to say which were dropped. Uninstall leaves the line, yet deletes a shipped capability's whole folder, `project/` included ([COR-031](../../../.pkit/decisions/core/COR-031-capability-origin.md)), so the agent would keep a grant over work that is gone. Uninstall also counts a path into the folder as a reference, and would refuse without `--force`. A default must hold wherever the capability is shipped, so its origin changes nothing. The reason is core's own rule, so COR-073 states the narrowing itself.
+**Point 3.** Writing the paths that pass would grant a value no query answered: the agent would own some of the capability's paths and not others, with nothing in the overlay to say which were dropped. Uninstall leaves the line, yet deletes a shipped capability's whole folder, `project/` included ([COR-031](../../../.pkit/decisions/core/COR-031-capability-origin.md)), so the agent would keep a grant over work that is gone. Uninstall also counts a path into the folder as a reference, and would refuse without `--force`. A default must hold wherever the capability is shipped, so its origin changes nothing.
 
 **Point 4.**
 - **The mark.** COR-073 keeps the written value beside the line, where a reader of the overlay sees it (point 5). A comment adds no key for a reader of categories to skip, the resolver of every adapter included. A reserved key would need each of them to skip it, and could take a name a project already uses.
@@ -186,12 +186,11 @@ The *fill commands* are `pkit agents reconcile --write` and `pkit agents adopt`,
   - **COR-073 point 5, "Seen, not only moved"** (point 6 here) will say: "The agents' status report shows a value still as written whose default now answers otherwise, and names the fill command that moves it."
   - **COR-073's Implications bullet on the fill commands** (point 6 here) will say: "The commands that fill missing overlay categories write a default's answer, or the empty list. The one that only shows what it would write until it is told to write also moves a value still as written, and its preview shows each write and move. The command that also creates a conventional folder writes a declared category's answer instead of refusing it, creates no folder for it, and moves no value."
   - **COR-073's Implications bullet "No migration"** (point 7 here) will say: "No migration. Nothing a project wrote is rewritten. Three kinds of grant stop deploying, each refused loudly at the deploy, naming its entry. One is a capability's agent granted what sync overwrites. Another is a category of core's that carries writes into a copy pulled from an external source. The third is a category of core's that carries writes, granted a folder that holds what sync overwrites, such as the repository's root. Each hands an agent writes the next sync would lose. No migration can narrow the third, since only the project knows which paths it meant. No shipped capability's agent owns a category yet, and none declares one."
-  - **ADR-051 point 2's first sentence** (point 7 here) will say: "No path in the category may lie inside sync-managed content, or hold any of it — the no-shared-files invariant applied at the agent surface, which is COR-044's mechanical layer, widened to a path that holds such content (refinement per ADR-088). This binds every category the check binds (point 3), core's write-carrying categories included, and a registered externally-sourced capability's folder outside its `project/` counts as sync-managed (COR-073 point 2); ADR-088 point 7 holds the test." Its Summary's "**no path in the category may be sync-managed**" will say "**no path in the category may be sync-managed, or hold sync-managed content**".
+  - **ADR-051 point 2's first sentence** (point 7 here) will say: "No path in the category may lie inside sync-managed content, or hold any of it — the no-shared-files invariant applied at the agent surface, from COR-044's mechanical layer (refinement per ADR-088). This binds every category the check binds (point 3), core's write-carrying categories included, and the check refuses a path that reaches a registered externally-sourced capability's folder outside its `project/` alike (COR-073 point 2); ADR-088 point 7 holds the test."
+  - **ADR-051's Summary** (point 7 here): "**no path in the category may be sync-managed**" will say "**no path in the category may be sync-managed, or hold sync-managed content**".
   - **ADR-051 point 3** (point 7 here) gains, after its sentence on the predicate implemented once in the lifecycle layer: "The check binds core's write-carrying categories and every category in the `owns` of an agent a capability ships, in any definition that names it. The lifecycle layer decides which categories it binds, beside the predicate, and every writer of a capability's default asks the same predicate (refinement per ADR-088)."
   - **ADR-051 point 7** (point 1 here) gains: "A category a capability declares has one owner by its declaration, which validation checks, and its dotted name is never the project's. The single-consumer convention stays for core's categories (refinement per ADR-088)."
-  - **ADR-065 point 11's row for `.pkit/agents/project/overlay.yaml`** (point 5 here) will name as its writers "also `pkit agents reconcile --write`, where the overlay is missing (COR-013), and a capability's install and register, and the install in the methodology's source, writing the defaults the capability declares (refinement per ADR-088)", and as its consent "its own `--write`; for a default, the run, or over a path that holds content, a person's answer at a terminal". The fill commands stay unlisted for these writes, as point 11 leaves writers outside the lifecycle unlisted.
-- **Left as they stand:** ADR-065's other points, since no transition writes a default, and point 14's marker already refuses install, `adopt` and `reconcile --write` inside a migration.
+  - **ADR-065 point 11's row for `.pkit/agents/project/overlay.yaml`** (point 5 here) will name as its writers "also `pkit agents reconcile --write`, where the overlay is missing (COR-013), and a capability's install and register, and the install in the methodology's source, writing the defaults the capability declares (refinement per ADR-088)", and as its consent "its own `--write`; for a default, the run, or over a path that holds content, a person's answer at a terminal". The fill commands stay unlisted for these writes, as point 11 leaves writers outside the lifecycle unlisted, and no other point of ADR-065 changes.
 - **Task [project-kit#2961](https://github.com/aleskalfas/project-kit/issues/2961)** builds points 1 to 7, in this pull request once this record is accepted; its body names the code, documents and tests.
-- **Versioning (PRJ-002).** The backbone's changes are a surface change, declared in a changeset. A capability that declares the block needs a backbone whose package schema admits it, so its changeset says `requires_backbone: release`.
+- **Versioning (PRJ-002).** A capability that declares the block needs a backbone whose package schema admits it, and its changeset declares that floor.
 - **No migration** (COR-073). The package schema gains an optional key. The backbone's changeset note names the deploy's refusal of the third kind of grant COR-073's edited "No migration" names, and its fix.
-- **Every record this one cites is accepted.**
