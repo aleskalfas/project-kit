@@ -68,6 +68,8 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/neutral/tokens/*.tokens.json
         - .pkit/capabilities/visual-communication/releases/foundations/releases.yaml
         - .pkit/capabilities/visual-communication/releases/neutral/releases.yaml
+        - .pkit/capabilities/visual-communication/releases/*/1.0.0/**
+        - tests/test_visual_communication_shipped_libraries.py
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -85,6 +87,7 @@ pkit:
         - visual-communication:DEC-001#5
         - visual-communication:DEC-001#7
         - visual-communication:DEC-001#8
+        - visual-communication:DEC-001#11
         - visual-communication:DEC-002#1
         - visual-communication:DEC-002#2
         - visual-communication:DEC-002#3
@@ -710,6 +713,28 @@ The released versions and the record lie outside the version being built, and ea
 The release adds the released place, whole, its `library.yaml` naming the capability's current version as the release it needs. It adds the version's entry to the record, and changes no other file of the capability's folder (DEC-013 point 2). It writes the change's patch changeset for the capability, naming the library and the version.
 
 Every change to a version the capability ships reaches a project that brings it in. So it comes with a new version of the capability, at least a patch (DEC-013 point 4).
+
+**How parallel changes meet.** Changes to a library's version being built, and its releases, meet as DEC-013 point 4 decides:
+
+- **Two changes that raise the number alike** write the same line of `library.yaml`, so they meet only where they change one file differently. Two that raise it differently meet on that line: the higher holds, and the second to merge reads the version again after its rebase.
+- **A library's release, and a change to the library merged beside it.** Whichever lands second fails the capability's own checks. A change that lands after the release finds the version being built carrying a released number while it differs from that version, and fails until it raises the number. A release that lands after the change finds a change since the release that wrote the capability's version, and fails. Make the release again after the next release that moves the capability's version.
+- **A library's release, and a release of the capability.** A release of the capability may land between a library release's branch and its merge. It may have shipped, under the number the library's release fixes, files a change put into the version being built and a later change took back, which a look at the history made only on the branch would miss. So the checks read the history up to the change that brings the library's release in. Where no change touched the version being built since the release it names, the library's release passes though the capability's release landed, and names that older version of the capability.
+- **Releases of two libraries** add two places under `releases/` and change two records, so they meet nowhere but in the capability's own checks, which read a library with its base. A base and a library built on it may each need the other's new version, as when the base's next version removes an experimental component the library's newest release uses, and the library's next version uses what the base adds. Release both in one change, the base first, and the checks read them together.
+
+**The capability's own checks.** `tests/test_visual_communication_shipped_libraries.py`, in the suite of the repository the capability is authored in, holds them (DEC-013 point 6). The default branch's required checks run them on each change as it would merge, and a project's validation never runs them. Each reads a version in full, through the routine a release reads it through, so every component, a brand's tokens and its fonts are read, whether a piece places them or not. They check that:
+
+1. **Each released version** under `releases/` matches the hash its record keeps, and the engine reads its files. Any other finding in a released version is printed, and fails nothing.
+2. **Every released version was untouched since the release it names:** no change touched the version being built between the release step's change that wrote that version of the capability and the change that brings the release onto the default branch, that change included. Where that history is not at hand, as in a shallow clone, the check fails.
+3. **The newest released versions read together,** each on the newest released version of each major it builds on, so a new project can lock them together.
+4. **Each version being built reads and checks** on the versions being built of its bases. A finding in it fails as one in a project's own library not yet released does, at the level the check gives it.
+5. **A version being built that carries a released number** differs from that released version only in the release it needs, and none carries a number below the newest released one.
+6. **A version being built breaks nothing its major promises:** the release's comparison with the newest released version of its major finds no break. An addition fails nothing, since whether a change is a patch or a minor is the owner's judgement.
+
+**What the released versions cost.** Each release adds its version whole under `releases/`, and nothing removes it (DEC-013 point 2). The methodology carries every capability's folder in each of its distributions, its wheel and its source archive, whether a project installs the capability or not. git stores a file that stays the same once; the distributions hold it once in each version.
+
+- **The first releases.** The foundations' 1.0.0 holds about 10 KB, the starter's 1.0.0 about 38 KB, and the neutral brand's 1.0.0 about 620 KB, almost all of it the fonts the brand commits (DEC-004 point 9), which compression barely shrinks.
+- **When DEC-013 is weighed again:** once the released versions of the libraries the capability ships pass 10 MB together, as its Implications say.
+- **The remedy then weighed.** A shipped brand names its fonts by hash, as DEC-004 point 9 lets a brand name a font it may not ship. The capability holds each font once, apart from the versions, and `pkit visual add` copies each font into the location's font folder (DEC-002 point 1). Each font is then held once, not once in each version. It changes those two points, and the library copy of DEC-001 point 11, a released version held whole, so it waits for the need.
 
 ### The foundations
 
