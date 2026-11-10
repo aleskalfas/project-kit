@@ -324,6 +324,12 @@ def _scratchpad(root: Path) -> Outcome:
     return scratchpads.outcome(root)
 
 
+def _visibility(root: Path) -> Outcome:
+    from project_kit import visibility
+
+    return visibility.outcome(root)
+
+
 _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("manifests", _manifests, "the backbone manifest and the component registry"),
     ("schemas", _schemas, "every schema pair, pointered instance and backbone file schema"),
@@ -343,6 +349,7 @@ _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     ("process", _process, "every process definition resolves, its states in one detection mode"),
     ("data", _data, "adopter data files bound to a capability schema"),
     ("scratchpad", _scratchpad, "each scratchpad note lies in one state folder"),
+    ("visibility", _visibility, "no file the rendered .pkit/.gitignore ignores is tracked"),
 )
 
 BACKBONE_VALIDATORS: tuple[Validator, ...] = tuple(

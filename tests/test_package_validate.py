@@ -18,6 +18,7 @@ from click.testing import CliRunner
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
+from ruamel.yaml import YAML
 
 from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
@@ -891,21 +892,33 @@ def test_depends_on_must_carry_the_generated_mark(
 # process-journal ignore line over (#1120).
 STALE_JOURNAL_LINE = ".pkit/capabilities/project-management/project/process/**/*.journal.jsonl"
 
+# The same line, as the `demo` package of these tests would have declared it.
+DEMO_JOURNAL_LINE = ".pkit/capabilities/demo/project/process/**/*.journal.jsonl"
+
 # The journal settings under which the render drops a component's claim.
 JOURNALS_COMMITTED = process_journal.JournalSettings(enabled=True, committed=True)
 
 
-@pytest.mark.parametrize("pattern", [STALE_JOURNAL_LINE, process_journal.JOURNAL_GLOB])
+@pytest.mark.parametrize(
+    ("pattern", "outside"), [(DEMO_JOURNAL_LINE, False), (process_journal.JOURNAL_GLOB, True)]
+)
 def test_a_runtime_ignore_entry_declaring_committed_process_journals_is_warned(
-    schema: dict[str, Any], component_dir: Path, pattern: str
+    schema: dict[str, Any], component_dir: Path, pattern: str, outside: bool
 ) -> None:
     """Journals' ignore line is the backbone's; while the project commits them the
-    render drops a component's claim on them — a warning, never an error."""
+    render drops a component's claim on them — a warning, never an error. The
+    backbone's own pattern reaches every capability's folder, so a component
+    declaring it is also refused (ADR-009 rule 7)."""
     raw = _package(runtime_ignore=[".pkit/capabilities/demo/project/instance/*.json", pattern])
     findings = pv.validate_package(
         raw, schema, component_dir=component_dir, expected_name="demo", journal=JOURNALS_COMMITTED
     )
-    assert _messages(findings, pv.Severity.ERROR) == {}
+    expected_errors = (
+        {"/runtime_ignore/1": pv.runtime_ignore_outside_message(pattern, DEMO_FOLDER)}
+        if outside
+        else {}
+    )
+    assert _messages(findings, pv.Severity.ERROR) == expected_errors
     assert _messages(findings, pv.Severity.WARNING) == {
         "/runtime_ignore/1": pv.journal_claim_message(pattern)
     }
@@ -923,7 +936,7 @@ def test_a_claim_on_journals_kept_out_of_version_control_is_not_warned(
     schema: dict[str, Any], component_dir: Path, journal: process_journal.JournalSettings
 ) -> None:
     """While the journals stay ignored the claim is redundant: nothing to warn about."""
-    raw = _package(runtime_ignore=[STALE_JOURNAL_LINE])
+    raw = _package(runtime_ignore=[DEMO_JOURNAL_LINE])
     findings = pv.validate_package(
         raw, schema, component_dir=component_dir, expected_name="demo", journal=journal
     )
@@ -946,6 +959,107 @@ def test_a_runtime_ignore_entry_that_is_not_a_journal_is_not_warned(
         raw, schema, component_dir=component_dir, expected_name="demo", journal=JOURNALS_COMMITTED
     )
     assert findings == []
+
+
+# --- a runtime_ignore entry lies in its component's own folder (ADR-009 rule 7) ---
+
+DEMO_FOLDER = ".pkit/capabilities/demo/"
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        # No `/` before its end: it matches at any depth under `.pkit/`.
+        "config.yaml",
+        "*.log",
+        "project/local/",
+        # Another component's folder, or every capability's.
+        ".pkit/capabilities/other/project/local/",
+        ".pkit/capabilities/demo-other/project/x.json",
+        ".pkit/capabilities/*/project/local/",
+        ".pkit/**/local/",
+        "**/config.yaml",
+        # The backbone's own files.
+        ".pkit/permissions/project/diagnose.yaml",
+        ".pkit/project/config.yaml",
+        # A negation, which the folder's path does not open.
+        "!.pkit/capabilities/demo/project/keep.json",
+    ],
+)
+def test_a_runtime_ignore_entry_outside_the_component_folder_is_refused(
+    schema: dict[str, Any], component_dir: Path, pattern: str
+) -> None:
+    """Every tracked file `.pkit/.gitignore` ignores is untracked, so an entry that
+    reaches past the component's own folder would untrack another's files."""
+    raw = _package(runtime_ignore=[".pkit/capabilities/demo/project/local/", pattern])
+    assert _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR) == {
+        "/runtime_ignore/1": pv.runtime_ignore_outside_message(pattern, DEMO_FOLDER)
+    }
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        ".pkit/capabilities/demo/project/local/",
+        ".pkit/capabilities/demo/project/instance/*.json",
+        ".pkit/capabilities/demo/**/cache/",
+        ".pkit/capabilities/demo/",
+        ".pkit/capabilities/demo",
+    ],
+)
+def test_a_runtime_ignore_entry_in_the_component_folder_is_accepted(
+    schema: dict[str, Any], component_dir: Path, pattern: str
+) -> None:
+    assert _validate(_package(runtime_ignore=[pattern]), schema, component_dir) == []
+
+
+def test_an_adapter_s_runtime_ignore_entry_lies_in_the_adapter_s_folder(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    component = {"kind": "adapter", "name": "demo", "version": "0.1.0"}
+    inside = ".pkit/adapters/demo/project/state.json"
+    outside = ".pkit/capabilities/demo/project/state.json"
+    raw = _package(component=component, runtime_ignore=[inside, outside])
+    assert _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR) == {
+        "/runtime_ignore/1": pv.runtime_ignore_outside_message(outside, ".pkit/adapters/demo/")
+    }
+
+
+def test_an_entry_the_relative_path_check_refuses_is_not_refused_twice(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _package(runtime_ignore=["../elsewhere/x"])
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert errors == {
+        "/runtime_ignore/0": "'../elsewhere/x' is not a repository-relative path: it contains a "
+        "`..` segment."
+    }
+
+
+def test_the_outside_message_names_the_folder_and_what_untracking_would_reach() -> None:
+    message = pv.runtime_ignore_outside_message("config.yaml", DEMO_FOLDER)
+    assert "'config.yaml' lies outside this component's own folder, .pkit/capabilities/demo/" in (
+        message
+    )
+    assert "ADR-009 rule 7" in message
+    assert "`pkit visibility untrack --runtime-ignored`" in message
+    assert "untrack files another component owns" in message
+
+
+@pytest.mark.parametrize(
+    "package",
+    sorted(REPO.glob(".pkit/capabilities/*/package.yaml"))
+    + sorted(REPO.glob(".pkit/adapters/*/package.yaml")),
+    ids=lambda p: p.parent.name,
+)
+def test_every_shipped_runtime_ignore_entry_lies_in_its_component_folder(package: Path) -> None:
+    """The whole check, run on the shipped declarations alone: each passes."""
+    raw = YAML(typ="safe").load(package.read_text(encoding="utf-8"))
+    folder = pv.component_folder(raw["component"])
+    assert folder == f".pkit/{package.parent.parent.name}/{package.parent.name}/"
+    assert folder is not None
+    for pattern in raw.get("runtime_ignore", []):
+        assert pv.lies_in_folder(pattern, folder), (package, pattern)
 
 
 @pytest.mark.parametrize(

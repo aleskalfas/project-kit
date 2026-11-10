@@ -14,20 +14,25 @@ ever written**:
 
 `untrack` is also a standalone, footprint-restricted, precondition-guarded verb
 (the one backbone gesture that mutates adopter git-index state, bounded per
-ADR-009 rule 5). pkit co-edits nothing the adopter owns: the visibility modes
-write only `info/exclude`, which git owns, and only within its own delimited
-region.
+ADR-009 rule 5). With `runtime_ignored` it removes only the tracked files the
+rendered `.pkit/.gitignore` ignores, a part of the footprint. pkit co-edits
+nothing the adopter owns: the visibility modes write only `info/exclude`, which
+git owns, and only within its own delimited region.
 
 Separately, this module renders the pkit-owned `.pkit/.gitignore` for the
 runtime-local files pkit writes (ADR-009 rule 7), wholesale from the backbone's
 and each installed component's declarations and from the project's
 configuration — the backbone's choice for the process journals taking
-precedence over a component entry that still claims them.
+precedence over a component entry that still claims them. An ignore rule does
+not untrack a file git already tracks, so the `visibility` member of `pkit
+validate` warns of each tracked file the render ignores (`outcome`).
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +41,7 @@ import click
 
 from project_kit import cli_render, process_journal
 from project_kit.manifest import read_backbone_manifest
+from project_kit.validators import Finding, Outcome, Severity
 
 # Core's OWN footprint. Naming `.pkit/` here is not the layering inversion
 # ADR-009 rule 1 forbids — rule 1 bars core from naming adapter- or
@@ -419,6 +425,157 @@ def _staged_footprint(target_root: Path, fp: list[str]) -> list[str]:
     return sorted(p for p in res.stdout.split("\0") if p)
 
 
+# --- tracked runtime-ignored files (ADR-009 rules 5 and 7) ---------------------
+
+
+class RuntimeIgnoreUnmatched(Exception):
+    """Git could not match the tracked files against the render, so the set of
+    tracked runtime-ignored files is not known (`tracked_runtime_ignored`)."""
+
+
+# The variables that point a git command at another repository than the folder
+# it runs in, as a hook's environment may: removed for the scratch repository.
+_REPOSITORY_VARIABLES = frozenset({"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"})
+
+
+def _run_git(
+    cwd: Path, *args: str, stdin: str | None = None, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    """A git command whose paths survive any bytes a file name holds."""
+    return subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        input=stdin,
+        env=env,
+        capture_output=True,
+        encoding="utf-8",
+        errors="surrogateescape",
+        check=False,
+    )
+
+
+def tracked_runtime_ignored(target_root: Path) -> list[str]:
+    """The files git tracks under `.pkit/` that `.pkit/.gitignore` ignores, as
+    the declarations and configuration render it (ADR-009 rule 7): what `pkit
+    visibility untrack --runtime-ignored` removes from the index, and what the
+    `visibility` member of `pkit validate` warns of.
+
+    An ignore rule does not untrack a file git already tracks, so a file
+    committed before a component declared it stays tracked. Git's own matcher
+    decides, in a scratch repository whose only ignore rules are the render: the
+    project's root `.gitignore`, `.git/info/exclude` (where private visibility
+    hides all of `.pkit/`) and global excludes neither widen nor hide the set.
+    The 1.150.0 backbone migration (`002-untrack-runtime-ignored-files`) matches
+    the same way, from the rendered file. Sorted; empty outside a git work tree.
+    Raises `RuntimeIgnoreUnmatched` when git cannot match."""
+    try:
+        inside = _run_git(target_root, "rev-parse", "--is-inside-work-tree")
+    except OSError:
+        return []  # no git: nothing is tracked
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        return []
+    listed = _run_git(target_root, "ls-files", "-z", "--", ".pkit/")
+    if listed.returncode != 0:
+        raise RuntimeIgnoreUnmatched(f"git ls-files exited {listed.returncode}")
+    tracked = [path for path in listed.stdout.split("\0") if path]
+    if not tracked:
+        return []
+    ignore_case = _run_git(target_root, "config", "--bool", "core.ignoreCase").stdout.strip()
+    env = {k: v for k, v in os.environ.items() if k not in _REPOSITORY_VARIABLES}
+    with tempfile.TemporaryDirectory() as scratch:
+        repo = Path(scratch) / "repo"
+        init = _run_git(
+            Path(scratch), "-c", "init.defaultBranch=scratch", "init", "-q", str(repo), env=env
+        )
+        if init.returncode != 0:
+            raise RuntimeIgnoreUnmatched(
+                f"git init of a scratch repository exited {init.returncode}"
+            )
+        (repo / ".git" / "info").mkdir(parents=True, exist_ok=True)
+        (repo / ".git" / "info" / "exclude").write_text("", encoding="utf-8")
+        (repo / ".pkit").mkdir()
+        (repo / ".pkit" / ".gitignore").write_text(
+            render_runtime_ignore_content(target_root), encoding="utf-8"
+        )
+        matched = _run_git(
+            repo,
+            "-c",
+            f"core.excludesFile={os.devnull}",
+            "-c",
+            f"core.ignoreCase={ignore_case or 'false'}",
+            "check-ignore",
+            "--no-index",
+            "-z",
+            "--stdin",
+            stdin="\0".join(tracked) + "\0",
+            env=env,
+        )
+    # check-ignore exits 1 when nothing matches; anything above 1 is an error.
+    if matched.returncode > 1:
+        raise RuntimeIgnoreUnmatched(f"git check-ignore exited {matched.returncode}")
+    return sorted(path for path in matched.stdout.split("\0") if path)
+
+
+def _tracked_runtime_ignored_or_refuse(target_root: Path) -> list[str]:
+    try:
+        return tracked_runtime_ignored(target_root)
+    except RuntimeIgnoreUnmatched as exc:
+        raise click.ClickException(
+            f"could not match the tracked files under .pkit/ against .pkit/.gitignore ({exc}); "
+            "nothing was untracked."
+        ) from exc
+
+
+def _staged_paths(target_root: Path, paths: list[str]) -> list[str]:
+    """Which of `paths`, each read as itself and never as a pattern, have staged changes."""
+    res = _run_git(
+        target_root, "--literal-pathspecs", "diff", "--cached", "--name-only", "-z", "--", *paths
+    )
+    if res.returncode != 0 or not res.stdout:
+        return []
+    return sorted(p for p in res.stdout.split("\0") if p)
+
+
+# What the `visibility` member says at each tracked file `.pkit/.gitignore` ignores.
+_TRACKED_RUNTIME_IGNORED = (
+    "tracked, though .pkit/.gitignore ignores it: a component declares it runtime-local "
+    "(ADR-009 rule 7), and an ignore rule does not untrack a file git already tracks. "
+    "Run `pkit visibility untrack --runtime-ignored`, then commit the removal; the working "
+    "copy stays."
+)
+
+
+def outcome(target_root: Path) -> Outcome:
+    """The `visibility` member of `pkit validate`: each file git tracks that
+    `.pkit/.gitignore`, as the declarations render it, ignores
+    (`tracked_runtime_ignored`), a warning at the file naming the fix. So a file
+    a component declares after a project committed it is found without a
+    migration of its own. A warning, since the project works on with the file
+    tracked, and the fix is a commit the operator makes. Where git cannot match,
+    one warning at `.pkit/.gitignore` says so."""
+    try:
+        tracked = tracked_runtime_ignored(target_root)
+    except RuntimeIgnoreUnmatched as exc:
+        return Outcome(
+            ("tracked files not matched against .pkit/.gitignore; 1 warning(s).",),
+            (
+                Finding(
+                    ".pkit/.gitignore",
+                    f"could not match the tracked files under .pkit/ against it ({exc}), so "
+                    "a tracked file it ignores is not reported. The tracked files under "
+                    ".pkit/ that an ignore file matches: "
+                    "`git ls-files -ci --exclude-per-directory=.gitignore -- .pkit/`.",
+                    Severity.WARNING,
+                ),
+            ),
+        )
+    findings = tuple(Finding(path, _TRACKED_RUNTIME_IGNORED, Severity.WARNING) for path in tracked)
+    return Outcome(
+        (f"{len(findings)} tracked file(s) .pkit/.gitignore ignores; {len(findings)} warning(s).",),
+        findings,
+    )
+
+
 # --- info/exclude region management ------------------------------------------
 
 
@@ -515,11 +672,21 @@ def _remove_region(target_root: Path) -> bool:
 
 
 def untrack(
-    target_root: Path, *, dry_run: bool = False, confirm: Callable[[str], bool] | None = None
+    target_root: Path,
+    *,
+    dry_run: bool = False,
+    confirm: Callable[[str], bool] | None = None,
+    runtime_ignored: bool = False,
 ) -> str:
     """Remove already-tracked footprint files from the index (working copies
-    preserved). Footprint-only, confirm-gated, clean-precondition guarded."""
-    fp = footprint(target_root)
+    preserved). Footprint-only, confirm-gated, clean-precondition guarded.
+
+    With `runtime_ignored`, only the tracked files the rendered `.pkit/.gitignore`
+    ignores (`tracked_runtime_ignored`), a part of the footprint, each path read
+    as itself: the standing fix for a file a component declares runtime-local
+    after a project committed it (ADR-009 rules 5 and 7)."""
+    noun = "runtime-ignored" if runtime_ignored else "footprint"
+    fp = [] if runtime_ignored else footprint(target_root)
     busy = _repo_busy(target_root)
     if busy:
         raise click.ClickException(
@@ -529,26 +696,32 @@ def untrack(
     # Nothing tracked → clean no-op. Checked before the staged-changes guard so
     # a re-run after a prior untrack (which leaves *staged deletions* of these
     # paths) is idempotent rather than a false "staged changes" refusal.
-    tracked = _tracked_footprint(target_root, fp)
+    if runtime_ignored:
+        tracked = _tracked_runtime_ignored_or_refuse(target_root)
+    else:
+        tracked = _tracked_footprint(target_root, fp)
     if not tracked:
         return (
-            cli_render.style("strong", "untrack: no tracked footprint files — nothing to remove.")
+            cli_render.style("strong", f"untrack: no tracked {noun} files — nothing to remove.")
             + "\n"
         )
 
-    # A still-tracked footprint file carrying a staged *modification* would
-    # entangle the removal with a pending index — refuse (ADR-009 rule 5).
-    staged = [p for p in _staged_footprint(target_root, fp) if p in set(tracked)]
+    # A still-tracked file carrying a staged *modification* would entangle the
+    # removal with a pending index — refuse (ADR-009 rule 5).
+    if runtime_ignored:
+        staged = _staged_paths(target_root, tracked)
+    else:
+        staged = [p for p in _staged_footprint(target_root, fp) if p in set(tracked)]
     if staged:
         raise click.ClickException(
-            "refusing to untrack — footprint paths have staged changes:\n"
+            f"refusing to untrack — {noun} paths have staged changes:\n"
             + "\n".join(f"  {p}" for p in staged)
             + "\nCommit or unstage them first."
         )
 
     lines = [
         cli_render.style(
-            "strong", f"{len(tracked)} tracked footprint file(s) would be removed from the index:"
+            "strong", f"{len(tracked)} tracked {noun} file(s) would be removed from the index:"
         )
     ]
     lines += [f"  {p}" for p in tracked[:20]]
@@ -566,12 +739,17 @@ def untrack(
     if confirm is not None and not confirm("\n".join(lines) + "\n\nProceed?"):
         return cli_render.style("strong", "untrack: cancelled — files left tracked.") + "\n"
 
-    res = _git(target_root, "rm", "--cached", "--quiet", "--", *tracked)
+    if runtime_ignored:
+        res = _run_git(
+            target_root, "--literal-pathspecs", "rm", "--cached", "--quiet", "--", *tracked
+        )
+    else:
+        res = _git(target_root, "rm", "--cached", "--quiet", "--", *tracked)
     if res.returncode != 0:
         raise click.ClickException(f"git rm --cached failed:\n{res.stderr.strip()}")
     return (
         cli_render.style(
-            "strong", f"untracked {len(tracked)} footprint file(s) (working copies kept)."
+            "strong", f"untracked {len(tracked)} {noun} file(s) (working copies kept)."
         )
         + "\n"
     )

@@ -86,7 +86,7 @@ def _install_capability_with_runtime_ignore(
     `runtime_ignore:`, and register it in the backbone manifest — mirroring how
     `repo` fabricates the adapter's `footprint:`."""
     cdir = root / ".pkit" / "capabilities" / name
-    cdir.mkdir(parents=True)
+    cdir.mkdir(parents=True, exist_ok=True)
     body = (
         f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {name}\n"
         "  version: 0.1.0\nruntime_ignore:\n" + "".join(f"  - {p}\n" for p in runtime_ignore)
@@ -739,3 +739,182 @@ def test_sync_renders_the_region_with_the_derivable_state(
         monkeypatch.setattr(install, step, lambda *_a, **_k: None, raising=False)
     sync.regenerate_derivable_state(install.InstallContext(repo, repo / ".pkit", dry_run=False))
     assert vis._region_lines(_exclude_file(repo).read_text(encoding="utf-8")) == vis.footprint(repo)
+
+
+# --- tracked runtime-ignored files: found by validate, untracked by the verb ------
+#
+# ADR-009 rules 5 and 7: an ignore rule does not untrack a file git already
+# tracks, so a file a component declares after a project committed it is found
+# by `pkit validate`'s `visibility` member and removed from the index by
+# `pkit visibility untrack --runtime-ignored`, with no migration of its own.
+
+# Declared by the backbone's seam.
+_PROVENANCE = ".pkit/permissions/project/sandbox-provenance.yaml"
+# Declared by the `demo` capability the tests below install.
+_DEMO_LOCAL = ".pkit/capabilities/demo/project/local/state.json"
+# Declared by no component: a capability's shared configuration.
+_DEMO_CONFIG = ".pkit/capabilities/demo/project/config.yaml"
+
+
+def _commit_files(root: Path, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    # `-f`: the rendered `.pkit/.gitignore`, or a global excludes file, may ignore them.
+    _git(root, "add", "-f", "--", *files)
+    _git(root, "commit", "-qm", "commit files before their declaration")
+
+
+@pytest.fixture
+def declared(repo: Path) -> Path:
+    """`repo` with a capability declaring `project/local/`, and three files
+    committed before the declaration: two it declares, one it does not."""
+    _commit_files(repo, {_PROVENANCE: "per machine\n", _DEMO_LOCAL: "{}\n", _DEMO_CONFIG: "a: 1\n"})
+    _install_capability_with_runtime_ignore(
+        repo, "demo", [".pkit/capabilities/demo/project/local/"]
+    )
+    return repo
+
+
+def _tracked_files(root: Path) -> set[str]:
+    return set(_git(root, "ls-files", "-z").split("\0")) - {""}
+
+
+def test_tracked_runtime_ignored_lists_the_declared_tracked_files_only(declared: Path) -> None:
+    assert vis.tracked_runtime_ignored(declared) == sorted([_DEMO_LOCAL, _PROVENANCE])
+
+
+def test_tracked_runtime_ignored_reads_no_other_ignore_file(declared: Path) -> None:
+    """The project's own ignore files neither widen the set nor hide it: the root
+    `.gitignore` ignoring the config, and private visibility hiding all of `.pkit/`."""
+    (declared / ".gitignore").write_text(f"{_DEMO_CONFIG}\n", encoding="utf-8")
+    _exclude_file(declared).write_text(f"{vis._BEGIN}\n.pkit/\n{vis._END}\n", encoding="utf-8")
+    assert vis.tracked_runtime_ignored(declared) == sorted([_DEMO_LOCAL, _PROVENANCE])
+
+
+def test_tracked_runtime_ignored_follows_the_declarations_not_a_stale_render(
+    declared: Path,
+) -> None:
+    (declared / ".pkit" / ".gitignore").write_text("# stale\n", encoding="utf-8")
+    assert vis.tracked_runtime_ignored(declared) == sorted([_DEMO_LOCAL, _PROVENANCE])
+
+
+def test_tracked_runtime_ignored_outside_a_work_tree_is_empty(tmp_path: Path) -> None:
+    assert vis.tracked_runtime_ignored(tmp_path) == []
+
+
+def test_untrack_runtime_ignored_removes_the_declared_files_and_keeps_their_copies(
+    declared: Path,
+) -> None:
+    out = vis.untrack(declared, confirm=lambda _m: True, runtime_ignored=True)
+    assert "untracked 2 runtime-ignored file(s)" in out
+    tracked = _tracked_files(declared)
+    assert _PROVENANCE not in tracked and _DEMO_LOCAL not in tracked
+    # The rest of the footprint, and every working copy, stay.
+    assert {_DEMO_CONFIG, ".claude/agents/critic.md"} <= tracked
+    assert (declared / _PROVENANCE).read_text(encoding="utf-8") == "per machine\n"
+    assert (declared / _DEMO_LOCAL).is_file()
+    # Staged, not committed; a second run finds nothing.
+    assert "nothing to remove" in vis.untrack(
+        declared, confirm=lambda _m: True, runtime_ignored=True
+    )
+
+
+def test_untrack_runtime_ignored_reads_each_path_as_itself(repo: Path) -> None:
+    """A tracked file named like a pattern is removed alone: `*.pid` declared, the
+    file literally named `*.pid` matches it, `sub/shared.pid` does not."""
+    literal = ".pkit/capabilities/demo/project/*.pid"
+    other = ".pkit/capabilities/demo/project/sub/shared.pid"
+    _commit_files(repo, {literal: "1\n", other: "2\n"})
+    _install_capability_with_runtime_ignore(repo, "demo", [literal])
+    assert vis.tracked_runtime_ignored(repo) == [literal]
+    vis.untrack(repo, confirm=lambda _m: True, runtime_ignored=True)
+    tracked = _tracked_files(repo)
+    assert literal not in tracked and other in tracked
+
+
+def test_untrack_runtime_ignored_dry_run_and_cancel_leave_the_index(declared: Path) -> None:
+    before = _git(declared, "ls-files", "--stage")
+    out = vis.untrack(declared, dry_run=True, runtime_ignored=True)
+    assert "2 tracked runtime-ignored file(s) would be removed from the index:" in out
+    assert "dry-run" in out
+    assert "cancelled" in vis.untrack(declared, confirm=lambda _m: False, runtime_ignored=True)
+    assert _git(declared, "ls-files", "--stage") == before
+
+
+def test_untrack_runtime_ignored_keeps_the_bounds_of_the_verb(declared: Path) -> None:
+    (declared / _PROVENANCE).write_text("changed\n", encoding="utf-8")
+    _git(declared, "add", "-f", _PROVENANCE)
+    with pytest.raises(click.ClickException, match="runtime-ignored paths have staged changes"):
+        vis.untrack(declared, confirm=lambda _m: True, runtime_ignored=True)
+    (declared / ".git" / "MERGE_HEAD").write_text("deadbeef\n", encoding="utf-8")
+    with pytest.raises(click.ClickException, match="merge is in progress"):
+        vis.untrack(declared, confirm=lambda _m: True, runtime_ignored=True)
+
+
+def test_the_validate_member_warns_at_each_tracked_file_naming_the_fix(declared: Path) -> None:
+    result = vis.outcome(declared)
+    assert result.summary == ("2 tracked file(s) .pkit/.gitignore ignores; 2 warning(s).",)
+    assert [(f.location, f.severity.value) for f in result.findings] == [
+        (_DEMO_LOCAL, "warning"),
+        (_PROVENANCE, "warning"),
+    ]
+    assert "`pkit visibility untrack --runtime-ignored`" in result.findings[0].message
+    vis.untrack(declared, confirm=lambda _m: True, runtime_ignored=True)
+    assert vis.outcome(declared).findings == ()
+
+
+def test_the_validate_member_follows_the_journal_setting(repo: Path) -> None:
+    """A tracked journal is found while the render ignores journals, and not
+    while the project commits them, the backbone's own seam."""
+    journal = ".pkit/capabilities/demo/project/process/page/a.journal.jsonl"
+    _commit_files(repo, {journal: "{}\n"})
+    assert [f.location for f in vis.outcome(repo).findings] == [journal]
+    config = repo / ".pkit" / "project" / "config.yaml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(
+        "process:\n  journal:\n    enabled: true\n    committed: true\n", encoding="utf-8"
+    )
+    assert vis.outcome(repo).findings == ()
+
+
+def test_the_validate_member_finds_nothing_outside_a_work_tree(tmp_path: Path) -> None:
+    assert vis.outcome(tmp_path).findings == ()
+
+
+def test_the_validate_member_says_when_git_cannot_match(
+    declared: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _fails(_root: Path) -> list[str]:
+        raise vis.RuntimeIgnoreUnmatched("git check-ignore exited 128")
+
+    monkeypatch.setattr(vis, "tracked_runtime_ignored", _fails)
+    (finding,) = vis.outcome(declared).findings
+    assert finding.location == ".pkit/.gitignore"
+    assert finding.severity.value == "warning"
+    assert "git check-ignore exited 128" in finding.message
+
+
+def test_cli_validate_runs_the_visibility_member(
+    declared: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(declared)
+    result = CliRunner().invoke(main, ["validate", "--only", "visibility"])
+    assert result.exit_code == 0, result.output  # warnings never fail
+    assert f"warning  {_PROVENANCE}" in result.output
+    assert "0 error(s), 2 warning(s)" in result.output
+
+
+def test_cli_visibility_untrack_runtime_ignored(
+    declared: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(declared)
+    preview = CliRunner().invoke(main, ["visibility", "untrack", "--runtime-ignored", "--dry-run"])
+    assert preview.exit_code == 0, preview.output
+    assert _PROVENANCE in preview.output and ".claude/agents/critic.md" not in preview.output
+    piped = CliRunner().invoke(main, ["visibility", "untrack", "--runtime-ignored"], input="y\n")
+    assert piped.exit_code == 1
+    assert "refusing to remove the tracked runtime-ignored files" in piped.output
+    assert "Run `pkit visibility untrack --runtime-ignored` at a terminal." in piped.output
+    assert _PROVENANCE in _tracked_files(declared)

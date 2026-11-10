@@ -10,7 +10,7 @@ pkit:
         - src/project_kit/visibility.py
         - src/project_kit/upgrade.py
         - src/project_kit/default_branch.py
-      record: [COR-010, COR-059, "COR-048#5", "COR-050#12", "COR-050#14", "COR-054#3", "ADR-065#14"]
+      record: [COR-010, COR-059, "COR-048#5", "COR-050#12", "COR-050#14", "COR-054#3", "ADR-009#7", "ADR-065#14"]
       artefact:
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
@@ -44,6 +44,7 @@ A change that alters an installed project's state observably, and breaks against
 - **Ships none:**
   - a pure addition, such as a new skill, schema, record or component
   - a documentation refinement, an internal refactor or a behaviour-preserving fix
+  - a new `runtime_ignore` entry, though a project may already track a file it names. An ignore rule does not untrack a file, so `pkit validate`'s `visibility` member warns at each tracked file `.pkit/.gitignore` ignores. Its fix is `pkit visibility untrack --runtime-ignored`, then a commit of the removal ([ADR-009](../../tech-docs/architecture/decisions/ADR-009-git-footprint-visibility.md) rules 5 and 7). The 1.150.0 backbone migration untracked the files declared before it, and only an upgrade runs it.
   - a section's heading renamed or removed in a document the methodology or a component ships. A project that receives the document cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change mends the anchors on the heading, as validation requires (COR-050 point 12).
 
 A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change.

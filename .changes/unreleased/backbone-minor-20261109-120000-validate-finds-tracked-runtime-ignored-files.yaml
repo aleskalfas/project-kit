@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit validate` gains a fourteenth backbone member, `visibility`, which warns
+  at each file git tracks that `.pkit/.gitignore` ignores (ADR-009 rule 7;
+  #1119). An ignore rule does not untrack a file, so a file a component
+  declares runtime-local after a project committed it stayed tracked with
+  nothing to say so. The warning names the fix: `pkit visibility untrack
+  --runtime-ignored`, a new flag that removes only those files from the index,
+  confirm-gated like the rest of `untrack`, each working copy kept. So a later
+  declaration needs no untrack migration of its own. The `packages` member
+  also refuses a `runtime_ignore` entry outside its component's own folder,
+  `.pkit/capabilities/<name>/` or `.pkit/adapters/<name>/`, since an entry
+  outside would untrack another component's files. Every shipped declaration
+  lies in its own folder; a project's own capability whose entry lies outside
+  fails `pkit validate` until the entry is moved.

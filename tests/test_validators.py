@@ -57,6 +57,7 @@ BACKBONE_ORDER = [
     "process",
     "data",
     "scratchpad",
+    "visibility",
 ]
 
 CLEAN_ANSWER = {"summary": ["3 thing(s) checked; 0 error(s)."], "findings": []}
