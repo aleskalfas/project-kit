@@ -28,6 +28,7 @@ pkit:
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
+        - .pkit/adapters/claude-code/README.md#deploy-skillssh
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
