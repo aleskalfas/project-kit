@@ -247,7 +247,7 @@ parts:
 - **A token names what it styles, not a part.** Several of the component's parts may read one token, such as a box's edge and a divider line that a brand restyles as one.
 - **Its own parts read it by its full path,** wherever they read a role. A paint names it, as in `fill: component.ui.card.fill`. So does a text's style, and a formula reads it as `@component.ui.card.gap` ([References](#references)). No other component reads it, and nothing a piece writes names one.
 - **Its value** is a brand's, where the brand names the library and gives it one, and else its default's, as for a library's own role ([`roles.yaml`](files.md#rolesyaml)).
-- **A local component declares no token.** It reads the role the token's default would alias.
+- **A local component declares no token.** Where it would want one, let its parts read the role the token's default would alias.
 
 ### Parts
 
