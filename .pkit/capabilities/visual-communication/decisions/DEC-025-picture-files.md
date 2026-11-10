@@ -133,7 +133,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 ### 11. What stays out
 
-- **A picture's text,** what a reader who does not see it gets, is left to the record of a run's structure ([visual-communication:DEC-033-structure-for-readers] point 5).
+- **A picture's text,** what a reader who does not see it gets, is left to the record of what a reader who does not see a piece gets ([visual-communication:DEC-033-structure-for-readers] point 5).
 - **What else waits,** beyond what a point marks as waiting, is listed under Implications.
 
 ## Rationale
