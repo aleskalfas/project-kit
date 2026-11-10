@@ -21,6 +21,7 @@ hyphens dropped, each space a hyphen, and a repeat numbered.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -451,6 +452,7 @@ def test_refs_validate_warns_of_an_agent_citing_a_point_and_passes(records: Path
     """An agent's body is read the same way: a warning at `<file>:<line>`, exit 0."""
     agents = records / ".pkit" / "agents" / "core"
     agents.mkdir(parents=True)
+    shutil.copy2(REPO / ".pkit" / "agents" / "tool_access.py", agents.parent / "tool_access.py")
     (agents / "reader.md").write_text(
         "---\nname: reader\ndescription: t\nreads:\n  records: [COR-900]\n---\n"
         "# Reader\n\nPer COR-900 point 1, and COR-900 point 7.\n",

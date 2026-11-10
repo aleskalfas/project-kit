@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tool-access.schema.json",
+  "title": "Tool access",
+  "description": "Formal shape of an adapter's declaration of tool access, `.pkit/adapters/<name>/tool-access.json` (ADR-086 point 4): its harness's key for each form of an agent's tool access, the forms a tool's name may take, its built-in tools, and the withheld entries it was measured to withhold. The agents area's reader, `.pkit/agents/tool_access.py`, reads it and makes the adapter's refusals against it, refusing a version or a key it does not know. tool-access.yaml beside this file documents the fields, and is the declaration at its emptiest. Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "harness",
+    "keys",
+    "name_forms",
+    "known_tools",
+    "withheld_admits"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "A pointer at this schema, for an editor."
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "harness": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "The harness's name, as a refusal says it."
+    },
+    "keys": {
+      "type": "object",
+      "description": "The harness's key for each form of tool access (COR-013 point 7): the key the deploy writes a grant (`tools`) or a withheld list (`withheld`) under. One key for each form, never one for both.",
+      "required": [
+        "tools",
+        "withheld"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "$ref": "#/$defs/key"
+        },
+        "withheld": {
+          "$ref": "#/$defs/key"
+        }
+      }
+    },
+    "name_forms": {
+      "type": "array",
+      "description": "The forms a tool's name may take in the harness. An entry whose name takes none of them is refused, and so is one narrowed by an argument where no form it takes admits one.",
+      "items": {
+        "$ref": "#/$defs/shape"
+      }
+    },
+    "known_tools": {
+      "type": "array",
+      "description": "The harness's built-in tools, by name. A withheld name outside them is refused, since a name the harness does not know would withhold nothing.",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+      }
+    },
+    "withheld_admits": {
+      "type": "array",
+      "description": "The shapes of the withheld entries the harness was measured to withhold, which may be none. A withheld entry that takes none of them is refused. An adapter admits one only where its support declaration answers `session-agent-withheld-tools` as achievable for some version (ADR-085 point 3, ADR-086 point 6).",
+      "items": {
+        "$ref": "#/$defs/shape"
+      }
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+      "description": "A top-level key of a definition's front matter."
+    },
+    "shape": {
+      "type": "object",
+      "description": "A shape an entry may take: a tool's name its pattern matches, and whether an argument may narrow the tool.",
+      "required": [
+        "pattern",
+        "argument",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "A regular expression in Python's dialect that matches a whole name. It narrows the reader's own grammar of a name, and never widens it."
+        },
+        "argument": {
+          "type": "boolean",
+          "description": "Whether an argument in parentheses after the name may narrow the tool."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "The shape in words, which a refusal names."
+        }
+      }
+    }
+  }
+}
