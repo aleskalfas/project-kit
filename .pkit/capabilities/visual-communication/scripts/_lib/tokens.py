@@ -45,9 +45,14 @@ format may add:
 - *The Resolver document* has `version`, `sets` and `modifiers`, and `resolutionOrder`
   naming each set and modifier once as `{"$ref": "#/sets/<n>"}` or
   `{"$ref": "#/modifiers/<n>"}`; later wins. A source is `{"$ref": "<token file>"}`, a
-  file of the brand's version folder. Each modifier is a shared axis the brand varies:
+  file of the brand's version folder. A modifier is a shared axis the brand varies:
   its contexts are the modes it gives, the axis's default among them, and its default the
-  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary.
+  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary. A modifier may
+  hold `$extensions`. One that names its kind in the capability's extension key,
+  `{"kind": "value"}` or `{"kind": "size"}`, is an axis of the brand's own (DEC-004 point
+  2): its contexts are its modes, two or more, its default one of them. Only a brand that
+  builds on no other declares one, and none takes a shared axis's name (`own-axis-name`),
+  so a new shared axis breaks such a brand (DEC-004 point 5).
 - *Fonts* lie in the capability's extension key, `pkit.visual-communication`, on a
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
@@ -66,7 +71,10 @@ format may add:
   modifier varies it, with the modes that modifier gives. A brand built on another has
   its base's sizes. So a brand that gives no size keeps its combinations when the
   foundations declare a size axis, and a piece that names a size it lacks is refused,
-  the refusal naming the brand, and its base, that do not give it (`combinations_of`).
+  the refusal naming the brand, and its base, that do not give it (`combinations_of`);
+- *each axis of its own, whole,* in a brand with no base, and a brand built on it keeps
+  it. An `Axis` of a brand's own is `own`. A key, a combination and a name in code read it
+  as they read a shared one (DEC-004 point 3).
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
 roles' defaults, then resolves aliases. Every shared role but a picture role must resolve
@@ -122,8 +130,8 @@ its major is the one the entry names. In each combination:
   the tokens of the library that writes it, never a token its base keeps private, which
   fails. So a base may reshape its private tokens freely;
 - *the base's axes:* the brand varies values on its base's axes, by their names and modes,
-  its base's sizes among them. A modifier for another axis, a context for another mode, or
-  another default fails;
+  its base's sizes and its own axes among them. A modifier for another axis, one that
+  declares an axis of its own, a context for another mode, or another default fails;
 - *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
   has no brand's own roles), so each link of a chain opens at most what the last opens.
   A base opens a role of a library only where it names that library, and a brand built on
@@ -204,6 +212,12 @@ VALUE_AXIS_TYPES = ("color", PICTURE)
 #: The axes' kinds.
 AXIS_KINDS = ("value", "size")
 
+#: The key of the capability's extension point on a modifier that declares an axis of the
+#: brand's own, which gives the axis's kind (DEC-004 points 1 and 2).
+KIND = "kind"
+
+_MODIFIER_KEYS = ("contexts", "default", "description", "$extensions")
+
 #: The contrast each level of a pair must reach (WCAG 2.2: 1.4.3 and 1.4.11).
 LEVELS = {"text": 4.5, "large-text": 3.0, "marks": 3.0}
 
@@ -238,12 +252,14 @@ class RoleWithoutValue(UnknownRole, UnvaluedRole):
 
 @dataclass(frozen=True)
 class Axis:
-    """A shared axis: its name, its kind (`value` or `size`), its modes and its default."""
+    """An axis: its name, its kind (`value` or `size`), its modes and its default; `own`,
+    whether it is a brand's own rather than shared (DEC-004 point 2)."""
 
     name: str
     kind: str
     modes: tuple[str, ...]
     default: str
+    own: bool = False
 
 
 @dataclass(frozen=True)
@@ -933,8 +949,9 @@ class Brand:
     - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
     - `scope`: the roles it is resolved against.
     - `axes`: the axes it has, each a key's axis: every shared value axis, whole, whether
-      it varies it or not, and each shared size axis it or its base gives, with the modes
-      given (DEC-021 point 2). They are the axes and modes it exports (DEC-004 point 5).
+      it varies it or not, each shared size axis it or its base gives, with the modes
+      given (DEC-021 point 2), and each axis of its own or its base's, whole (DEC-004 point
+      2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
       their version fits, whose roles it reaches (DEC-008 point 4).
     - `roles`: the token paths it exports, in path order: the shared roles, each shared
@@ -1209,6 +1226,7 @@ class _BrandReader:
         self.fatal: list[Finding] = []
         self.kept: list[Finding] = []
         self.flat: dict[str, dict[str, _Token]] = {}
+        self.own: dict[str, Axis] = {}
 
     # findings
 
@@ -1538,9 +1556,11 @@ class _BrandReader:
     def _read_modifiers(
         self, raw: Any, rel: str, base: Brand | None
     ) -> dict[str, dict[str, tuple[str, ...]]]:
-        """Each modifier, one of the shared axes, by the contexts of the modes it gives, the
-        axis's default among them (DEC-004 point 1); a brand built on another keeps its
-        base's axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
+        """Each modifier by the contexts of the modes it gives (DEC-004 point 1): a shared
+        axis the brand varies, the axis's default among them, or, in a brand that builds on
+        no other, an axis of its own (`_read_own`), whose kind the capability's extension
+        point gives (DEC-004 point 2). A brand built on another keeps its base's axes, modes
+        and defaults (DEC-004 point 6), and adds or changes none."""
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
@@ -1548,7 +1568,24 @@ class _BrandReader:
         modifiers = {}
         for name, spec in raw.items():
             where = f"modifiers.{name}"
+            if not isinstance(spec, Mapping) or set(spec) - set(_MODIFIER_KEYS):
+                self._fail(
+                    "resolver-shape",
+                    f"the modifier `{name}` holds more than `contexts`, `default`, "
+                    f"`description` and `$extensions`",
+                    rel,
+                    where,
+                )
+                continue
+            kind = self._own_kind(name, spec, rel, where)
+            if kind == "":
+                continue
             axis = axes.get(name)
+            if kind is not None:
+                axis = self._read_own(name, kind, spec, base, rel, where)
+                if axis is None:
+                    continue
+                self.own[name] = axis
             if axis is None and base is not None:
                 self._fail(
                     "base-axis",
@@ -1561,17 +1598,8 @@ class _BrandReader:
             if axis is None:
                 self._fail(
                     "brand-axis",
-                    f"the modifier `{name}` is no shared axis; format 1 reads no axis of a "
+                    f"the modifier `{name}` is no shared axis, and declares no axis of the "
                     f"brand's own (the shared axes: {', '.join(sorted(self.scope.axes))})",
-                    rel,
-                    where,
-                )
-                continue
-            if not isinstance(spec, Mapping) or set(spec) - {"contexts", "default", "description"}:
-                self._fail(
-                    "resolver-shape",
-                    f"the modifier `{name}` holds more than `contexts`, `default` and "
-                    f"`description`",
                     rel,
                     where,
                 )
@@ -1631,15 +1659,117 @@ class _BrandReader:
             }
         return modifiers
 
+    def _own_kind(self, name: str, spec: Mapping[str, Any], rel: str, where: str) -> str | None:
+        """The kind of the axis of the brand's own that the modifier `name` declares in the
+        capability's extension point, `{"kind": "value"}` or `{"kind": "size"}` (DEC-004
+        points 1 and 2); None where it declares none, as a modifier of a shared axis does,
+        and "" where its extension cannot be read, a finding."""
+        extensions = spec.get("$extensions", {})
+        if not isinstance(extensions, Mapping):
+            self._fail(
+                "resolver-shape",
+                f"`$extensions` of the modifier `{name}` is not an object",
+                rel,
+                f"{where}.$extensions",
+            )
+            return ""
+        if EXTENSION not in extensions:
+            return None
+        declared = extensions[EXTENSION]
+        if (
+            not isinstance(declared, Mapping)
+            or set(declared) != {KIND}
+            or declared[KIND] not in (AXIS_KINDS)
+        ):
+            self._fail(
+                "own-axis",
+                f"the modifier `{name}` declares an axis of the brand's own, and gives no kind of "
+                f"{', '.join(AXIS_KINDS)}: its `{EXTENSION}` holds `{KIND}` alone",
+                rel,
+                f"{where}.$extensions.{EXTENSION}",
+            )
+            return ""
+        return str(declared[KIND])
+
+    def _read_own(
+        self,
+        name: str,
+        kind: str,
+        spec: Mapping[str, Any],
+        base: Brand | None,
+        rel: str,
+        where: str,
+    ) -> Axis | None:
+        """The axis of the brand's own the modifier `name` declares, of `kind` (DEC-004 point
+        2): its modes are its contexts, in their order, two or more, and its default one of
+        them. A brand built on another adds none (point 6), and no axis of a brand's own
+        takes a shared axis's name, which a new shared axis may come to take (point 5).
+        None where it does not hold, a finding."""
+        if base is not None:
+            self._fail(
+                "base-axis",
+                f"the modifier `{name}` declares an axis of the brand's own, and a brand built "
+                f"on {base.label} adds no axis: it varies only its base's axes: "
+                f"{', '.join(sorted(base.axes))}",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if name in self.scope.axes:
+            self._fail(
+                "own-axis-name",
+                f"the modifier `{name}` declares an axis of the brand's own by the name of a "
+                f"shared axis: rename the brand's axis, or leave out `{EXTENSION}` to vary the "
+                f"shared one",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if not is_name(name):
+            self._fail(
+                "own-axis",
+                f"the axis `{name}` of the brand's own is not a name of lower-case words of "
+                f"letters and digits joined by hyphens",
+                rel,
+                where,
+            )
+            return None
+        contexts = spec.get("contexts")
+        if (
+            not isinstance(contexts, Mapping)
+            or len(contexts) < 2
+            or not all(is_name(mode) for mode in contexts)
+        ):
+            self._fail(
+                "own-axis",
+                f"the axis `{name}` of the brand's own must have one context for each of its "
+                f"modes, two or more, each a name of lower-case words",
+                rel,
+                f"{where}.contexts",
+            )
+            return None
+        default = spec.get("default")
+        if default not in contexts:
+            self._fail(
+                "own-axis",
+                f"the default of the axis `{name}` of the brand's own is not one of its modes: "
+                f"{', '.join(contexts)}",
+                rel,
+                f"{where}.default",
+            )
+            return None
+        return Axis(name=name, kind=kind, modes=tuple(contexts), default=str(default), own=True)
+
     def _axes(
         self, modifiers: Mapping[str, Mapping[str, tuple[str, ...]]], base: Brand | None
     ) -> dict[str, Axis]:
-        """The axes the brand has (DEC-021 point 2): its base's, where it builds on one;
-        else every shared value axis, whole, and each shared size axis a modifier varies,
-        with the modes that modifier gives, in the order the foundations declare them."""
+        """The axes the brand has (DEC-021 point 2, DEC-004 point 2): its base's, where it
+        builds on one; else every shared value axis, whole, and each shared size axis a
+        modifier varies, with the modes that modifier gives, in the order the foundations
+        declare them, then each axis of its own."""
         if base is not None:
             return dict(base.axes)
-        return {
+        shared = {
             name: axis
             if axis.kind == "value"
             else Axis(
@@ -1651,6 +1781,7 @@ class _BrandReader:
             for name, axis in self.scope.axes.items()
             if axis.kind == "value" or name in modifiers
         }
+        return {**shared, **self.own}
 
     def _read_sources(self, raw: Any, rel: str, where: str) -> tuple[str, ...]:
         if not isinstance(raw, list):
@@ -1896,7 +2027,7 @@ class _BrandReader:
                 continue
             contexts, mode = modifiers[name], combination[name]
             if mode not in contexts and base is None:
-                mode = self.scope.axes[name].default
+                mode = self.scope.axes[name].default  # an axis of its own gives every mode
             files.extend(contexts.get(mode, ()))
         return files
 

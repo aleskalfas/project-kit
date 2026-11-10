@@ -14,6 +14,7 @@ loaded.
 from __future__ import annotations
 
 import io
+import json
 import shutil
 import sys
 from collections.abc import Mapping
@@ -239,3 +240,43 @@ def write_piece(root: Path, name: str, location: str = "visual", **fields: Any) 
     )
     piece.update(fields)
     return write(root / location / "pieces" / name / "piece.yaml", yaml_text(piece))
+
+
+#: A colour and a dimension that no mode of the test brand gives, for an axis of a brand's own.
+WINTER_ACCENT = {"colorSpace": "srgb", "components": [0.2, 0.4, 0.6], "alpha": 1}
+COMPACT_SPACE = {"value": 6, "unit": "px"}
+
+
+def giving_own_axis(
+    folder: Path,
+    name: str = "season",
+    kind: str = "value",
+    contexts: Mapping[str, Any] | None = None,
+    default: str | None = None,
+) -> Path:
+    """The brand at `folder`, made to declare an axis of its own, `name`, of `kind`, as a
+    modifier of its Resolver document whose kind lies in the capability's extension point
+    (visual-communication DEC-004 points 1 and 2). By default, a value axis `season` gives
+    `summer`, its default, as the brand is, and `winter` with another accent; a size axis
+    gives its first mode as the brand is and its second with a smaller `space.3`. `contexts`
+    and `default` replace those."""
+    resolver = next(folder.glob("*.resolver.json"))
+    if contexts is None:
+        if kind == "value":
+            given = {"accent": {"$type": "color", "$value": WINTER_ACCENT}}
+            modes = ("summer", "winter")
+        else:
+            given = {"space": {"$type": "dimension", "3": {"$value": COMPACT_SPACE}}}
+            modes = ("roomy", "compact")
+        source = f"tokens/{name}.tokens.json"
+        write(folder / source, json.dumps(given))
+        contexts = {modes[0]: [], modes[1]: [{"$ref": source}]}
+    data = json.loads(resolver.read_text(encoding="utf-8"))
+    data["modifiers"][name] = {
+        "contexts": dict(contexts),
+        "default": next(iter(contexts)) if default is None else default,
+        "$extensions": {"pkit.visual-communication": {"kind": kind}},
+    }
+    data["resolutionOrder"].append({"$ref": f"#/modifiers/{name}"})
+    resolver.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return folder
