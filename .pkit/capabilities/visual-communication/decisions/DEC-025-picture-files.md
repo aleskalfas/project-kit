@@ -147,8 +147,8 @@ Each finding below fails validation where it lies in a file the project can corr
 **Why a library's file is the component's.** A library's plain files are part of its form, set apart from raw values (DEC-001 point 5), and which file a mode shows is the brand's to choose. A brand built on another keeps its parts, so a `file` in a brand's own part would show the base's logo under every such brand (DEC-004 point 6).
 
 **Why a logo is a brand's value.** Three forms were weighed:
-- **A logo given as content, and a brand's own logo drawn by the brand's drawing of a layout** ([visual-communication:DEC-009-layout-defaults] point 2). It asks for nothing new, but a logo given as content stays when the brand changes (DEC-001 point 3), and a dark mode has no logo of its own. A brand takes over a whole layout to show its logo, and its drawing still cannot reach inside a `header` that a slot holds.
-- **A named file of the brand, which a part asks the piece's brand for.** It needs no new type of role, but it follows no mode, and needs rules of its own for a base, for what a base opens and for what a brand exports, which roles already have.
+- **A logo given as content, and a brand's own logo drawn by the brand's drawing of a layout** ([visual-communication:DEC-009-layout-defaults] point 2). Rejected. It asks for nothing new, but a logo given as content stays when the brand changes (DEC-001 point 3), and a dark mode has no logo of its own. A brand takes over a whole layout to show its logo, and its drawing still cannot reach inside a `header` that a slot holds.
+- **A named file of the brand, which a part asks the piece's brand for.** Rejected. It needs no new type of role, but it follows no mode, and needs rules of its own for a base, for what a base opens and for what a brand exports, which roles already have.
 - **A picture as a brand's value,** the form chosen. A brand already holds pictures as values, which a value axis changes and a part names by role (DEC-004 points 1 and 2). For a type and one rule, a dark logo, a phone's logo and a base's logo need nothing new.
 
 **Why no brand owes a picture role, and only a picture goes without.** A shared role with no default breaks every brand once the foundations are released (DEC-004 point 5), and a default aliases an older role, never a value (DEC-004 point 7), where no picture role exists to alias. A part not drawn takes the place a missing optional part takes, which every formula already holds (DEC-005 point 3). A missing colour or size has nothing to draw in its place.
@@ -179,17 +179,17 @@ Each finding below fails validation where it lies in a file the project can corr
 
 ### Alternatives considered
 
-- **A shared picture role whose default is a blank picture:** a blank would draw an empty frame under every brand without a logo.
-- **A path relative to the piece's folder:** each way out of the folder would need a rule of its own.
-- **One file for every language:** it would refuse a screenshot, which shows its language.
-- **A `content` field that may also name a produced output,** put off until a producer ships.
-- **A pinned decoding library for the PDF renderer,** put off: it would add only a 16-bit or an interlaced PNG, and an animation, a turn and CMYK would still draw otherwise in a browser and in a PDF.
-- **A fact at each picture, or at each piece whose part shows no logo:** each fires on every piece and asks nothing of anyone, the shape DEC-009 rejects in its Alternatives considered.
-- **The change of brand stated by the check, from a brand recorded at the last render:** the check would read a moment that has passed, not the files as they are.
-- **A picture role's value as a token of the capability's own type:** the brand's file would leave the DTCG format.
-- **A picture role's files carried in the scene, as a produced picture's variants are:** a value would reach a renderer two ways, and the scene would hold a brand's files.
-- **A shared picture role at the top of the shared roles, as `logo`:** each later picture role would reserve one more library name.
-- **The picture group after the foundations' first release, in their next major:** every library and piece built on the foundations would move to that major for one name, and a shared header would show no logo until then.
+- **A shared picture role whose default is a blank picture.** Rejected. A blank would draw an empty frame under every brand without a logo.
+- **A path relative to the piece's folder.** Rejected. Each way out of the folder would need a rule of its own.
+- **One file for every language.** Rejected. It would refuse a screenshot, which shows its language.
+- **A `content` field that may also name a produced output.** Put off until a producer ships.
+- **A pinned decoding library for the PDF renderer.** Put off. It would add only a 16-bit or an interlaced PNG, and an animation, a turn and CMYK would still draw otherwise in a browser and in a PDF.
+- **A fact at each picture, or at each piece whose part shows no logo.** Rejected. Each fires on every piece and asks nothing of anyone, the shape DEC-009 rejects in its Alternatives considered.
+- **The change of brand stated by the check, from a brand recorded at the last render.** Rejected. The check would read a moment that has passed, not the files as they are.
+- **A picture role's value as a token of the capability's own type.** Rejected. The brand's file would leave the DTCG format.
+- **A picture role's files carried in the scene, as a produced picture's variants are.** Rejected. A value would reach a renderer two ways, and the scene would hold a brand's files.
+- **A shared picture role at the top of the shared roles, as `logo`.** Rejected. Each later picture role would reserve one more library name.
+- **The picture group after the foundations' first release, in their next major.** Rejected. Every library and piece built on the foundations would move to that major for one name, and a shared header would show no logo until then.
 
 ## Implications
 

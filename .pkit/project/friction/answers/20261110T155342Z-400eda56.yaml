@@ -94,7 +94,7 @@ answers:
     revalidated:
       at: 2026-11-10T15:53:42Z
       outcome: unchanged
-      unchanged-because: "DEC-025's trim changes no rule: points 1 to 5 and 8 to 10 decide what they decided, so what this page says of picture files, their encodings and fixes, picture roles, a move onto another brand and the picture group still matches them."
+      unchanged-because: "DEC-025's trim changes no rule: points 1 to 5 and 8 to 10 decide what they decided, so what this page says of picture files, their encodings, picture roles, a move onto another brand and the picture group still matches them, and point 5 has the capability's reference name each refused encoding's fix, which this page does under \"The encodings read\". pictures.py changes only a comment, which comes to cite that section."
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
       - 20261103T053645Z-9b958b41.yaml
@@ -363,7 +363,7 @@ answers:
     revalidated:
       at: 2026-11-10T15:53:48Z
       outcome: unchanged
-      unchanged-because: "DEC-025's trim changes no rule: points 2, 3, 4, 5, 7 and 9 still decide which picture files are judged, each picture finding and its severity, and the fact a brand's version states, as this page tables them."
+      unchanged-because: "DEC-025's trim changes no rule: points 2, 3, 4, 5, 7 and 9 still decide which picture files are judged, each picture finding and its severity, and the fact a brand's version states, as this page tables them. pictures.py changes only a comment, so the findings it reports stay as tabled."
   - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
     read:
       - 20261104T173450Z-30d17cb6.yaml
