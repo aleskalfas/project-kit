@@ -7,7 +7,11 @@ body: >
   The deploy and the agent runner write an agent's tool access as the agents
   area's reader answers it: a grant as `tools`, a withheld list as
   `disallowedTools`, and no key for an agent that names neither (ADR-085,
-  ADR-086, #2951). The adapter declares Claude Code's terms for tool access as
+  ADR-086, #2951). An agent whose `tools:` holds nothing now deploys with an
+  empty list, so it gets no tools; the deploy used to copy the empty line. To
+  keep the tools it had, delete the line: an agent that names neither key gets
+  the session's tools. One whose `tools:` is written as `null` or `~` is now
+  refused. The adapter declares Claude Code's terms for tool access as
   data, in `tool-access.json`: its keys, the forms a tool's name takes, the
   built-in tools it knows, and the withheld entries it admits. By that
   declaration the reader refuses a withheld name the adapter does not know as
