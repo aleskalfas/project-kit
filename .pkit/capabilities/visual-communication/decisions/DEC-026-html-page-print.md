@@ -29,6 +29,8 @@ Terms:
 
 ## Decision
 
+**A printed page file sets its pages one after another on the sheets its reader picks, each whole where it fits one.**
+
 ### 1. Pages follow one another down the sheets
 
 - **Each page follows the one before it,** as on screen, in the middle of the sheet's area, after the gap the renderer declares (DEC-020 point 4).
