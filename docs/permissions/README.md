@@ -362,7 +362,7 @@ Next: replace the illustrative entries with this capability's own privilege(s) a
 $ pkit capabilities register my-cap | grep Registered
   Registered incubated capability 'my-cap' v0.1.0 (in-repo) at .pkit/capabilities/my-cap/
 $ pkit schemas validate
-  Validated 8 schema(s) and 6 backbone file schema(s). All checks passed.
+  Validated 9 schema(s) and 6 backbone file schema(s). All checks passed.
 ```
 
 - **Edit the two files.** Replace their illustrative entries with your privilege and its deny. Write the privilege's key bare, and name it in a grant with the scoped token `[privilege-catalog:my-cap:<name>]` ([the reference, "Authoring a fragment"](../../.pkit/permissions/README.md#authoring-a-fragment-pkit-permissions-scaffold-cap)).
