@@ -29,6 +29,7 @@ from tests.visual_communication_project import (
     add_library,
     bound,
     copy_library,
+    giving_own_axis,
     project,
     write,
     yaml_text,
@@ -840,14 +841,16 @@ def compared_foundations(tmp: Path, later: Change, earlier: Change | None = None
     return compared(root, "foundations", "1.0.0", "1.1.0")
 
 
-def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_a_minor(
+def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their_release_1_0_0(
     tmp_path: Path,
 ) -> None:
     """The version being built of the foundations, compared with their release 1.0.0, adds
     the shared size axis `device`, the top `site` and its role `size.site`, and the length
-    of a line, `size.line`, and changes nothing else. No brand can hold an axis of its own
-    yet, so a new shared axis is an addition (DEC-021 point 9, DEC-004 point 5), as are a
-    new component and a new role with a default (DEC-003 point 1, DEC-022 point 8)."""
+    of a line, `size.line`, and changes nothing else. A brand may now hold an axis of its own,
+    whose name a new shared axis may meet, so `device` breaks their release 1.0.0 (DEC-004
+    point 5): it lands in a release of the foundations before brands can hold their own
+    axes, or in a major (DEC-021 point 9). The rest are additions (DEC-003 point 1, DEC-022
+    point 8)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -855,14 +858,16 @@ def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_
 
     found = compared(root, "foundations", "1.0.0", built)
 
-    assert said(found.breaks) == []
+    assert said(found.breaks) == [
+        "shared axis `device`: is new, a name a brand's own axis may hold, which then fails "
+        "(DEC-004 point 5)"
+    ]
     assert said(found.additions) == [
         "`foundations/site`: is new (DEC-003 point 1)",
         "shared role `size.line`: is new, with a default (DEC-004 point 5)",
         "shared role `size.site`: is new, with a default (DEC-004 point 5)",
-        "shared axis `device`: is new (DEC-004 point 5)",
     ]
-    assert found.segment == "minor"
+    assert found.segment == "major"
 
 
 def roles(data: Any) -> Any:
@@ -953,8 +958,11 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
             density={"kind": "size", "modes": ["compact", "roomy"], "default": "roomy"}
         ),
         None,
-        [],
-        "shared axis `density`: is new (DEC-004 point 5)",
+        [
+            "shared axis `density`: is new, a name a brand's own axis may hold, which then "
+            "fails (DEC-004 point 5)"
+        ],
+        None,
     ),
     "a pair's level lowered": (
         lambda d: put(d["pairs"][0], "level", "large-text"),
@@ -1269,6 +1277,64 @@ def test_a_value_mode_a_brand_ceases_to_give_is_no_break(tmp_path: Path) -> None
     )
 
     assert (found.breaks, found.additions) == ((), ())
+
+
+def compared_own(tmp: Path, earlier: Change | None, later: Change | None) -> Any:
+    """The test brand 1.0.0 compared with 1.1.0, each given the axis of its own `earlier` and
+    `later` give its version folder, or none where None."""
+    was = brand_location(tmp / "earlier", "1.0.0", None, None)
+    now = brand_location(tmp / "later", "1.1.0", None, None)
+    for held, version, change in ((was, "1.0.0", earlier), (now, "1.1.0", later)):
+        if change is not None:
+            change(held.root / LOCATION / "libraries" / "test-brand" / version)
+    version = libraries.Version.parse
+    return comparison.compare(
+        full_read.read(was, "test-brand", version("1.0.0")),
+        full_read.read(now, "test-brand", version("1.1.0")),
+    )
+
+
+def season(**given: Any) -> Change:
+    """A value axis of the brand's own, `season`, its two modes taking no source of their
+    own, or as `given` says (`giving_own_axis`)."""
+    contexts = {"summer": [], "winter": []}
+    return lambda folder: giving_own_axis(folder, **{"contexts": contexts, **given})
+
+
+def test_a_brands_own_new_axis_with_a_default_is_an_addition(tmp_path: Path) -> None:
+    found = compared_own(tmp_path, None, season())
+    assert (said(found.breaks), said(found.additions)) == (
+        [],
+        ["axis `season`: is new (DEC-004 point 5)"],
+    )
+    assert found.segment == "minor"
+
+
+@pytest.mark.parametrize(
+    ("later", "breaks"),
+    [
+        (None, ["axis `season`: is removed (DEC-004 point 5)"]),
+        (
+            season(name="weather"),
+            ["axis `season`: is removed (DEC-004 point 5)"],
+        ),
+        (
+            season(default="winter"),
+            ["axis `season`: takes `winter` by default, where it took `summer` (DEC-004 point 5)"],
+        ),
+        (
+            season(kind="size"),
+            ["axis `season`: is a size axis, where it was a value axis (DEC-004 point 5)"],
+        ),
+    ],
+    ids=["removed", "renamed", "default", "kind"],
+)
+def test_a_brands_own_axis_removed_renamed_or_changed_breaks_it(
+    tmp_path: Path, later: Change | None, breaks: list[str]
+) -> None:
+    found = compared_own(tmp_path, season(), later)
+    assert said(found.breaks) == breaks
+    assert found.segment == "major"
 
 
 # --- a shape that follows a size (DEC-021 points 3 and 7) ---------------------------------------
