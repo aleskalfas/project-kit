@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: core
+# pkit-digest: sha256:8f15bf7326823803417587a57bd9d7bee0a06556b7334aa16b966b81457cd770
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: rule-set-reviewer
 description: Judges one change against the accepted rules that bind on each 
   artefact it alters or brings under a rule, read only from the rule sets 

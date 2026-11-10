@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:software-engineering
+# pkit-digest: sha256:99433d69a1a942960b53be669175448fc0a687eeac9b08303a0c4326bd45d901
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: docs-reviewer
 description: Documentation reviewer of the software-engineering code-review 
   panel. Reviews a PR for documentation completeness (new public surface 
