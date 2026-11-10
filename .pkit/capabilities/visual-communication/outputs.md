@@ -123,10 +123,7 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
-        - visual-communication:DEC-026#1
-        - visual-communication:DEC-026#2
-        - visual-communication:DEC-026#3
-        - visual-communication:DEC-026#5
+        - visual-communication:DEC-026
         - visual-communication:DEC-027#1
         - visual-communication:DEC-027#2
         - visual-communication:DEC-027#3
@@ -374,7 +371,7 @@ DEC-026 decides how a page file prints: its pages follow one another down the sh
 - **The scale.** A page shrinks to the area's width and never grows past its own size, so it prints at the area's width over its own width, at most 1 (DEC-026 point 2). A page 1,280 px wide prints at about 0.56 of its size on A4 upright, at margins of 0.4 in. A deck's slides share one shape, a site's pages take the top's width (DEC-022 point 3), and a page alone is one page, so each of these prints at one scale.
 - **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), reaches about 3.7 to 1 against a white sheet, in light and in dark (DEC-026 point 3). Under more contrast a dark page's keyline is white on the white sheet, and the page's own ground marks its edge there. In a dark mode, the page's dark ground, printed in its own colours, also sets it apart from the white sheet (DEC-026 point 5).
 - **A fixed page prints narrower** than the sheet's area, by its keyline's width on each side: 2 px in all (DEC-026 point 3).
-- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). The renderer places each line alone, so a break may cut or move a line of text. In the runs behind DEC-026 ([project-kit#2850](https://github.com/aleskalfas/project-kit/pull/2850)), a page that ran on broke where the sheet ended. There Chrome may move a line over the next, or print a letter twice. Firefox cuts a line through, and prints none of the page's shapes past its first sheet. No run reached Safari.
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). The renderer places each line alone, so a break may cut or move a line of text. In the runs DEC-026's Context names as its evidence ([project-kit#2850](https://github.com/aleskalfas/project-kit/pull/2850)), a page that ran on broke where the sheet ended. There Chrome may move a line over the next, or print a letter twice. Firefox cuts a line through, and prints none of the page's shapes past its first sheet. No run reached Safari.
 
 ### What the HTML renderer declares
 
