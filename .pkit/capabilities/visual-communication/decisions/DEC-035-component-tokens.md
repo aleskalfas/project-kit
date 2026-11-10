@@ -42,7 +42,7 @@ Until validation accepts files at an older format number, the format grows only 
 - **No library takes the name `component`,** so no library's own roles, which lie under its name, meet a token's path. It joins the names of the top groups of the shared roles, which DEC-004 point 7 keeps from every library.
 - **No part's name in the path.** A part stays private unless the component exposes it, so its library may rename it freely ([visual-communication:DEC-005-engine-and-plugins] point 3). A token's path is public, since a brand gives it a value and exports it (DEC-004 point 5). So renaming a part renames no token.
 - **A token names what it styles, not the part that reads it.** Several of the component's parts may read one token, so a brand restyles them as one.
-- **What a base opens.** A base opens a token, or a group of tokens by whole segments of its path, as DEC-004 point 6 has it for any role. A group opens only the tokens of the libraries the base names (DEC-008 point 4).
+- **What a base opens.** A base opens a token, or a group of tokens by whole segments of its path, as DEC-004 point 6 has it for any role, whether or not it gives the token a value, as DEC-008 point 4 has it for a library's role. A group opens only the tokens of the libraries the base names (DEC-008 point 4).
 
 ### 3. Only the declaring component reads a token
 
@@ -68,7 +68,7 @@ Until validation accepts files at an older format number, the format grows only 
 ### 5. A piece's own component declares no token
 
 - **No brand could reach it.** Its token would lie under the word by which `use` names the piece itself, which no library takes ([visual-communication:DEC-002-files-and-validation] point 4). So no brand names it (DEC-008 point 4), and the token would hold its default under every brand.
-- **A component declares a token only where a brand needs to differ** (DEC-004 point 7), which a local component never meets. It reads the role the token's default would alias. Where a component lies already decides what a brand reaches, as a local top always draws itself (DEC-009 point 3).
+- **A component declares a token only where a brand needs to differ** (DEC-004 point 7), which a local component never meets. Where a component lies already decides what a brand reaches, as a local top always draws itself (DEC-009 point 3).
 
 ### 6. A release compares a stable component's tokens under its promise
 
@@ -175,11 +175,16 @@ Each finding below fails validation where it lies in a file the project can corr
 - **The Task that builds component tokens** ([project-kit#2966](https://github.com/aleskalfas/project-kit/issues/2966)) builds this record, in this record's change once it is accepted. The component's schema gains `tokens`. The capability reads and resolves tokens, a brand's values for them, its exports and the document of values. The release's comparison reads a brand's exported tokens, as DEC-004 point 5 has it, and a stable component's tokens, as point 6 has it. The check reports point 9's findings.
 - **Edits to the capability's pages,** made in that change once this record is accepted, each anchored to it:
   - `components.md`, A component's file: the `tokens` key, a token's declaration, and the parts that read one, with a card's token as the example.
-  - `files.md`, A library's roles: where a component's token lies, how its default resolves under a base and a brand, and how a brand's token under `component.<library>` is judged.
-  - `files.md`, Open roles: what a base opens of a library's component tokens, as DEC-008 point 4 has it for a library's role.
+  - `components.md`, Values, states and colour: an `override` never names a component token.
+  - `components.md`, Formulas, References and Errors: a formula reads its component's own token by its full path, and no other.
+  - `files.md`, `roles.yaml`: a component token's default lies below every brand's value, as a library's own role's does.
+  - `files.md`, A library's roles: where a component's token lies, and how a brand's token under `component.<library>` is judged.
+  - `files.md`, Open roles: a base opens a token, or a group of tokens, whether or not it gives the token a value.
+  - `files.md`, Content files: an `override` never names a component token.
   - `files.md`, What a release compares: a stable component's tokens and a brand's exported component tokens, in place of the line that they are not compared yet.
-  - `checks.md`, Brands, tokens and contrast: point 9's findings on a component's tokens and the parts that read them, and on a brand's token under `component.<library>`.
-  - `checks.md`, Content against components: an override that names a component token.
+  - `outputs.md`, Produced pictures, Declaring a produced output: a producer's input never names a component token.
+  - `checks.md`, Brands, tokens and contrast: point 9's findings on a component's tokens and their defaults, and on a brand's token under `component.<library>`, and the `open-unknown` row for a token a base opens.
+  - `checks.md`, Scenes: a part that reads a token its component does not declare, or one with no value under the brand, and an `override` that names a component token.
   - `checks.md`, Produced pictures: a producer's input that names a component token.
 - **Left to the change that builds a brand's own components** ([project-kit#2573](https://github.com/aleskalfas/project-kit/issues/2573)): what gives the tokens of a brand's own components their values, and how the check judges a brand's tokens under its own name.
 - **Revisit this record** if a component needs one of its tokens to follow another, its tokens need contrast pairs of their own, or a brand's drawing needs a top's tokens.
