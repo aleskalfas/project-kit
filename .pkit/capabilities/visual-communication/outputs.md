@@ -133,6 +133,9 @@ pkit:
         - visual-communication:DEC-031#3
         - visual-communication:DEC-031#4
         - visual-communication:DEC-031#5
+        - visual-communication:DEC-033#5
+        - visual-communication:DEC-033#7
+        - visual-communication:DEC-033#8
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -301,6 +304,13 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 ### What the PDF renderer does not carry yet
 
 The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)).
+
+The file is PDF 1.7. In the later version that tags it, three of the words a reader who does not see a piece gets take a form of their own:
+
+- **Emphasis.** PDF 1.7's standard structure types hold `Code` and `Link`, and none for emphasis. That version writes `emphasis` and `strong` as structure types of the file's own, `Em` and `Strong`, which the file's role map maps to the standard `Span` (DEC-033 point 7). A tool that reads the file's own types reads the emphasis. One that reads through the role map, as common tools do, reads a span, and loses the emphasis alone. So the emphasis reaches fewer tools than the HTML page's own element does. No tool that reads the file's own types has been tried. The renderer's declaration and this page will say so, and no loss stands for it.
+- **An instance's text.** A PDF's `Alt` on the element that holds an instance's texts stands in for them, so a tool that reads it reads none of them. That version writes an instance's text before what the instance holds, in another form, which this page names when the version comes (DEC-033 point 5).
+- **A picture not drawn.** That version writes a picture it leaves out as a `Figure` element whose `Alt` holds the picture's text, with the image's frame as its bounding box, and nothing drawn in it (DEC-033 point 8). A tool that reads the tags reads that text at the picture's place.
+- **PDF 2.0, later.** `Em` and `Strong` are standard types of PDF 2.0, in its own namespace of types. A move to it is a version of the renderer of its own, after a test of the tools that read it (DEC-033 point 7).
 
 ### What the PDF renderer loses
 
