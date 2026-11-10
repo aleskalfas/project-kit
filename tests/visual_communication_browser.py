@@ -12,7 +12,9 @@ other grounds under a reader's signal set to a value, keyed `signal:value`. `req
 the document asks for. A `fault` names a method, and the document it strikes in, if any.
 
 **The signals.** What `Emulation.setEmulatedMedia` set shows in every picture it takes, so a
-page repaints as its signals change; under `repaints: false`, no picture shows them.
+page repaints as its signals change; under `repaints: false`, no picture shows them. The
+colours a forced palette gives the planted page follow the scheme set: `colours`, by scheme,
+names others.
 
 **What it leaves.** Each line of the log it writes is a JSON message, its flags and its process
 first.
@@ -43,6 +45,12 @@ VERSION = "Chrome/1.2.3"
 
 #: What a span of a face in the file answers.
 HELD_FONT = {"familyName": "Held", "isCustomFont": True, "glyphCount": 4}
+
+#: The ground and the text colour each scheme's forced palette gives, as a browser computes them.
+COLOURS = {
+    "light": {"ground": "rgb(255, 255, 255)", "text": "rgb(0, 0, 0)"},
+    "dark": {"ground": "rgb(0, 0, 0)", "text": "rgb(255, 255, 255)"},
+}
 
 
 def stand_in(folder: Path, plan: Mapping[str, Any]) -> Path:
@@ -219,6 +227,9 @@ class _Browser:
     def ran(self, name: str, arguments: Sequence[Any]) -> Any:
         if name == "read":
             return self.plan["documents"][self.document]["pages"]
+        if name == "colours":
+            scheme = self.media.get("prefers-color-scheme", "light")
+            return self.plan.get("colours", COLOURS)[scheme]
         if name == "ground":
             self.ground = arguments[1]
         elif name == "alone":
