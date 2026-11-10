@@ -97,6 +97,12 @@ pkit:
         - visual-communication:DEC-029#4
         - visual-communication:DEC-029#5
         - visual-communication:DEC-030#6
+        - visual-communication:DEC-035#3
+        - visual-communication:DEC-035#4
+        - visual-communication:DEC-035#5
+        - visual-communication:DEC-035#7
+        - visual-communication:DEC-035#8
+        - visual-communication:DEC-035#9
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -113,6 +119,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#switches
         - .pkit/capabilities/visual-communication/components.md#text
         - .pkit/capabilities/visual-communication/components.md#ties-and-connectors
+        - .pkit/capabilities/visual-communication/components.md#tokens
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
@@ -328,7 +335,7 @@ A piece's brief names pages of the piece and parts of its content ([the brief](f
 
 ### Brands, tokens and contrast
 
-The check reads each brand, checked alone and under each piece's lock, against the roles of the libraries it is resolved with: the foundations' `roles.yaml`, and the own roles of each library of components ([`roles.yaml`](files.md#rolesyaml), [brands](files.md#brands)). It judges a library's own roles with it.
+The check reads each brand, checked alone and under each piece's lock, against the roles of the libraries it is resolved with: the foundations' `roles.yaml`, and the own roles of each library of components and its components' tokens ([`roles.yaml`](files.md#rolesyaml), [tokens](components.md#tokens), [brands](files.md#brands)). It judges a library's own roles and its components' tokens with it.
 
 Each of these findings names the version it lies in, so it asks for attention where the project does not correct the version ([Severities](#severities)). Where only a lock shows it, it lies at the lock instead, and its level stands ([What each run judges](#what-each-run-judges)).
 
@@ -336,12 +343,15 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 
 | Label | What it means | Level |
 |---|---|---|
-| `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
+| `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, a component token, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
 | `roles-declaration` | A library other than the foundations declares `axes` or `families`, which are the foundations' alone. It is not read. | fails |
 | `role-picture` | A library other than the foundations declares a role of the type `picture`. Only the foundations declare a picture role (DEC-025 point 4). The role is not read. | fails |
-| `role-default`, `default-dangling`, `default-loop` | A library's own role has a default that is no alias, or that aliases a component token, a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). The role takes no default. | fails |
+| `role-default`, `default-dangling`, `default-loop` | A library's own role, or a component token, has a default that is no alias, or that aliases a component token, a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). A component token with no default is `role-default` too, found in its component's file at `#tokens.<name>`. The role takes no default. | fails |
+| `component-token-shape` | A component's `tokens` is not a mapping, or a token's name is not of the name shape, its declaration is not `{type, default}`, or its type is no role's type, or `picture` ([tokens](components.md#tokens)). The token is left out. | fails |
+| `component-token-local` | A piece's own component declares `tokens`. Only a library's component declares tokens. Found where the piece's scenes are computed, at `<piece>/components/<component>.yaml#tokens`. | fails |
+| `component-token-unread` | A component declares a token its file reads nowhere, so a brand's value for it changes nothing. Found where a version is checked alone. In an experimental component, which may drop it at once, it asks the library's owner for attention; in a stable or deprecated one, which keeps it until the library's next major, it states a fact. | asks the library's owner for attention, or states a fact |
 | `pair-defaults` | A library's pair, at its defaults, falls on no pair the foundations, the library or a library it builds on declares at a level as strict (DEC-008 point 6). | fails |
-| `role-brand-only` | A library's own role whose chain of defaults does not end at a shared role, so only a brand that gives it a value draws it. States a fact. | states a fact |
+| `role-brand-only` | A library's own role, or a component token, whose chain of defaults does not end at a shared role, so only a brand that gives it a value draws it. States a fact. | states a fact |
 | `base-loop`, `base-kind` | The brands build on each other in a loop, or the base a brand marks is no brand. Stops the brand. | fails |
 | `base-shape` | `builds-on` marks more than one base, or marks one otherwise than as `{name, major, base: true}`. A brand has one base at most. Stops the brand. | fails |
 | `base-lock` | The lock names no version the project holds of the base a brand builds on, or names one of another major. Stops the brand. A fault of the lock, it names no version, so it always fails. | fails |
@@ -361,11 +371,11 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `picture-role-modes` | Within one key over the size axes, a picture role takes a file in some combinations of the value axes, and none in others ([Picture roles](files.md#picture-roles)). The message names each. | fails |
 | `picture-role-proportion` | Within one key over the size axes, the files a picture role takes are of two proportions of width to height or more. The message names each file, its pixels and its key. | fails |
 | `picture-role-unvalued` | The brand gives a shared picture role, such as `picture.logo`, no value. Its version states it once, checked alone, and no piece does (DEC-025 point 9). | states a fact |
-| `open-shape`, `open-unknown` | `open` in the brand's `library.yaml` is not a list, or names no role the brand exports, nor a group of them, or names roles of a library the brand does not name. | fails |
+| `open-shape`, `open-unknown` | `open` in the brand's `library.yaml` is not a list, or names no role the brand exports, nor a group of them, or names roles of a library the brand does not name, a component token among them. A base's open roles take a role or a component token of a library it names whether or not the base gives it a value ([open roles](files.md#open-roles)). | fails |
 | `open-wider` | An entry of the brand's `open` names roles its base does not open to it. It opens only those its base opens. | fails |
 | `library-role-missing` | The brand names a library and gives one of its roles that has no default no value in some combination (DEC-008 point 4). | fails |
-| `library-token` | A token under the name of a library the brand names gives none of its roles a value: it names none of them, or is of another type. | fails |
-| `library-token-private` | A token under the name of a library a piece locks with the brand, which the brand does not name. It stays private, and gives the library nothing. A lock shows it, so it lies at the lock. | asks the brand's owner for attention |
+| `library-token` | A token under the name of a library the brand names, or under `component.<library>`, gives none of its roles, nor of its components' tokens, a value: it names none of them, or is of another type. | fails |
+| `library-token-private` | A token under the name of a library a piece locks with the brand, or under `component.<library>`, which the brand does not name. It stays private, and gives the library nothing. A lock shows it, so it lies at the lock. | asks the brand's owner for attention |
 | `font-shape` | The capability's extension on a font token is not of its shape, or gives one family two files. | fails |
 | `font-missing` | A font family the brand names has no file, or names a file the version folder or the location's `fonts/` does not hold. | fails |
 | `pair-contrast` | A declared pair is below the contrast its level needs, in some combination of the brand's axes (DEC-004 points 8 and 11). A library's pair is measured only where the brand's values reach it ([`roles.yaml`](files.md#rolesyaml)). | fails |
@@ -421,13 +431,14 @@ Each fails, unless its row says otherwise.
 | `size-switch` | A switch or a `when` by a marked name, such as `:device`, reads no size axis a piece can name. That is a value axis, or one the locked foundations lack. Or it names a branch that is no mode of its axis, or no branch for the axis's default ([switches](components.md#switches)). The message names the size axes, or the axis's modes. Name a size axis the foundations declare, give its default a branch, and drop each branch that is no mode. | the component, `#<key path>` |
 | `size-repeat` | Two `repeat` parts or more over one list, one with a `when` by a size: at some mode, not exactly one may be drawn. Every part over the list counts, whatever its `when` ([repeating over a list](components.md#repeating-over-a-list-row-and-column)). The message names the parts, the list, the mode and how many may be drawn there. Change the parts' `when`s so that exactly one may be drawn at each mode, the default's branch taking the modes it leaves out. | the component, `#<key path>` of the first `when` by a size among those parts |
 | `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
+| `component-token-undeclared` | A part reads a component token its component does not declare, in a paint, a text's style or a formula. Only the component that declares a token reads it ([tokens](components.md#tokens)). | the component, `#<key path>` |
 | `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role that has no value under the brand ([errors](components.md#errors)). A role no library declares is found in the component. A library's role with no value is found where [errors](components.md#errors) says, and the message names the library, the role and the part. | the component; a library's role with no value, `<piece>/piece.yaml#lock` |
 | `unknown-component` | The piece's top, a part or an item names no component. A component whose file is present and cannot be read is `component-unreadable`, and what names it takes no finding. | the top's, `<piece>/piece.yaml#top`; a part's or an item's, the content or the component that names it, `#<trace>` |
 | `component-unreadable` | A component's file is present and cannot be read: the message gives the reader's error, or says the file is not a mapping ([how the files are read](files.md#how-the-files-are-read)). Nothing is drawn where it is placed. The check leaves it out where a `file-unreadable` or `binding` finding names the file. | the component's file |
 | `not-top` | The piece's top declares no layouts, neither one for the whole top nor its pages' forms ([layouts](components.md#layouts)). | the top's component |
 | `places-itself` | A component places itself, directly or through others ([placing a component](components.md#placing-a-component-use-and-slot)). | the component |
 | `page-in-page` | A slot of pages, or a top whose layouts are its pages' forms, lies inside a page, so each page it holds is a page inside a page. One is a site placed in a slide's slot. A top component with no slot of pages is part of the page that holds it, never a page inside it ([layouts](components.md#layouts)). | the content, `#<trace>` |
-| `option-word`, `option-missing`, `unknown-item`, `unknown-state`, `override`, `content-shape` | What a component was given does not fit it: a word its option does not take, a missing option that names an item, an item no list holds, a state it does not declare, an `override` that names no painted part or no role, a field of the wrong shape. | the content, a value a part passed on from it included; else the component whose part gave it, or left it out |
+| `option-word`, `option-missing`, `unknown-item`, `unknown-state`, `override`, `content-shape` | What a component was given does not fit it: a word its option does not take, a missing option that names an item, an item no list holds, a state it does not declare, an `override` that names no painted part, no role or a component token, a field of the wrong shape. | the content, a value a part passed on from it included; else the component whose part gave it, or left it out |
 | `loop` | References make a loop. The message names every element in it. | the component |
 | `no-size` | A component asks for no size and is given none, or a list shares its size equally, or by its items' weights, and is given none. | the component |
 | `division-by-zero` | A formula divides by zero. | the component |
@@ -475,7 +486,7 @@ A produced picture and its record are described in [What is made from a piece](o
 | `produced-record-unreadable` | The record cannot be read, or is not bound. | fails | the record |
 | `produced-variant-missing` | The record names a variant whose file is missing. | fails | the record, `#variants.<key>` |
 | `produced-variant-changed` | A variant's file is not the one the producer wrote: its hash differs from the record's. | fails | the variant's file, `#variants.<key>` |
-| `produced-unverified` | The picture cannot be checked against what it was made from. It fails where the fault lies in the piece's declaration of the output; mend it, then produce. Otherwise, as when the lock or the brand cannot be read, it asks the piece's authors for attention. | fails, or asks for attention | `<piece>/piece.yaml#produced.<output>`, or the record |
+| `produced-unverified` | The picture cannot be checked against what it was made from. It fails where the fault lies in the piece's declaration of the output, such as an input that names a component token ([declaring a produced output](outputs.md#declaring-a-produced-output)); mend it, then produce. Otherwise, as when the lock or the brand cannot be read, it asks the piece's authors for attention. | fails, or asks for attention | `<piece>/piece.yaml#produced.<output>`, or the record |
 | `produced-stale` | The picture is stale ([what makes an output stale](#what-makes-an-output-stale)). The message names each change. | asks the piece's authors for attention | the record, `#fingerprint` |
 | `produced-points` | A point is missing from a variant, names a variant that does not exist, is not two numbers, or lies outside the variant's pixels; or variants one scene holds differ in pixel size or in a point's place. | fails | the record, `#points` |
 
