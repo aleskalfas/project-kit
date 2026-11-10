@@ -1,11 +1,14 @@
 """The viewing step's browser (`_lib/viewing_browser.py`, visual-communication DEC-020 points 6
-to 9, DEC-031 point 5): how it finds a browser, what one start asks of it, the window that holds
-each page at its own size with its gutters, the four reads, the first read of a page with
-planted faults, its bounds, and what a stop says.
+to 9, DEC-031 point 5, DEC-027 points 2 to 4): how it finds a browser, what one start asks of
+it, the window that holds each page at its own size with its gutters, the four reads, the first
+read of a page with planted faults, its bounds, what a stop says, and the start that forces its
+colours.
 
 A stand-in program speaks the pipe in the browser's place (`visual_communication_browser`), so
-these tests need no browser. The one that starts a real browser skips where none is found, or
-where a sandbox stops the one found. No test holds a pixel as a contract (DEC-015 point 6).
+these tests need no browser. The ones that start a real browser skip where none is found, or
+where a sandbox stops the one found. The one that holds that a start forced by the emulation
+alone stops skips too where that browser's emulation forces the text. No test holds a pixel as
+a contract (DEC-015 point 6).
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ from fontTools.ttLib import TTFont
 
 from tests.in_process import load
 from tests.visual_communication_browser import (
+    COLOURS,
     HELD_FONT,
     VERSION,
     called,
@@ -51,6 +55,7 @@ FUNCTIONS = {
     "alone": viewing_browser.ALONE,
     "unground": viewing_browser.UNGROUND,
     "settle": viewing_browser.SETTLE,
+    "colours": viewing_browser.COLOURS,
 }
 
 #: What a sandbox's stop has made browsers say: Chrome and Chromium in a sandbox around them,
@@ -117,11 +122,17 @@ def clean() -> dict[str, Any]:
     return one_page(span("hello", 0), span("world", 1))
 
 
-def planted() -> dict[str, Any]:
-    """The planted page as a browser reads it: each fault where the module planted it."""
+def planted(forced: bool = False) -> dict[str, Any]:
+    """The planted page as a browser reads it: each fault where the module planted it. Where
+    `forced`, as a start that forces its colours writes it, its span left to forcing showing
+    ink."""
     index = 0
     texts = []
-    for element, lines in viewing_browser.PLANTED_TEXTS.items():
+    held_texts = {
+        **viewing_browser.PLANTED_TEXTS,
+        **(viewing_browser.FORCED_TEXTS if forced else {}),
+    }
+    for element, lines in held_texts.items():
         drawn = []
         for line in lines:
             spans = []
@@ -137,7 +148,12 @@ def planted() -> dict[str, Any]:
                         face=held,
                         x=float(planted_span.left),
                         fonts=[MACHINE_FONT if machine else HELD_FONT],
-                        ink=() if planted_span.colour == viewing_browser.UNPAINTED else DARK,
+                        ink=(
+                            ()
+                            if planted_span.colour == viewing_browser.UNPAINTED
+                            and not planted_span.forced
+                            else DARK
+                        ),
                     )
                 )
                 index += 1
@@ -189,7 +205,11 @@ def cured(document: dict[str, Any], finding: tuple[str, ...]) -> dict[str, Any]:
 
 def plan(**changes: Any) -> dict[str, Any]:
     """A plan under which a stand-in draws `clean` with nothing to say."""
-    documents = {viewing_browser.PLANTED_FILE: planted(), FILE: clean()}
+    documents = {
+        viewing_browser.PLANTED_FILE: planted(),
+        viewing_browser.PLANTED_FORCED_FILE: planted(forced=True),
+        FILE: clean(),
+    }
     documents.update(changes.pop("documents", {}))
     return {"functions": FUNCTIONS, "documents": documents, **changes}
 
@@ -1161,6 +1181,34 @@ def test_the_first_read_sets_each_later_value_of_each_signal_the_others_at_their
     ]
 
 
+def test_the_first_read_judges_each_signal_by_its_own_mode_box(tmp_path: Path) -> None:
+    """Each box is drawn once with every signal at its first value, then again as its own
+    signal takes each later value: the clip of each box, in the page's px."""
+    _, program = in_modes(tmp_path)
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    file_opened = len(methods) - 1 - methods[::-1].index("Page.navigate")
+    clips = [
+        {side: each["params"]["clip"][side] for side in ("x", "y", "width", "height")}
+        for each in messages[:file_opened]
+        if each.get("method") == "Page.captureScreenshot"
+    ]
+    first, second = (
+        {"x": float(left), "y": 440.0, "width": 24.0, "height": 24.0} for left in (8, 56)
+    )
+    assert clips[:4] == [first, second, first, second]
+
+
+def test_a_mode_box_is_clipped_where_a_narrower_window_shrinks_the_planted_page() -> None:
+    page = {"x": 10.0, "y": 20.0, "width": 240.0, "height": 240.0}
+    assert viewing_browser._mode_box(page, 1) == {
+        "x": 10.0 + 28.0,
+        "y": 20.0 + 220.0,
+        "width": 12.0,
+        "height": 12.0,
+    }
+
+
 def test_a_first_read_whose_page_does_not_repaint_as_a_signal_is_set_stops(
     tmp_path: Path,
 ) -> None:
@@ -1189,6 +1237,277 @@ def test_the_planted_page_holds_a_mode_for_each_signal_the_file_reads() -> None:
     assert page.count("background:var(--pkit-mode-") == len(SIGNALS)
     plain = viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes())
     assert "--pkit-mode-" not in plain
+
+
+# Under forced colours.
+
+
+def forced_drawn(
+    tmp_path: Path, signals: Mapping[str, Sequence[str]] = SIGNALS, **changes: Any
+) -> tuple[Any, Path]:
+    """What `draw_forced` gives under `plan(**changes)`, and the stand-in that gave it."""
+    program, pages = _started(tmp_path, None, changes)
+    drawing = viewing_browser.draw_forced(
+        _file(tmp_path), pages, 2.0, program, tmp_path / "local", signals=signals
+    )
+    return drawing, program
+
+
+def forced_stopped(tmp_path: Path, **changes: Any) -> tuple[Any, Path]:
+    """The stop `draw_forced` raises under `plan(**changes)`, and the stand-in that gave it."""
+    program, pages = _started(tmp_path, None, changes)
+    with pytest.raises(viewing_browser.Stopped) as stop:
+        viewing_browser.draw_forced(
+            _file(tmp_path), pages, 2.0, program, tmp_path / "local", signals=SIGNALS
+        )
+    return stop.value, program
+
+
+#: Each emulation of a forced palette, in the order a forced start draws them.
+PALETTE_MODES = [
+    {**palette.signals, **viewing_browser.FORCED} for palette in viewing_browser.PALETTES
+]
+
+
+def test_the_forced_palettes_are_the_browsers_light_and_dark_with_more_contrast() -> None:
+    assert [(each.name, dict(each.signals), each.light) for each in viewing_browser.PALETTES] == [
+        ("light", {"prefers-color-scheme": "light", "prefers-contrast": "more"}, True),
+        ("dark", {"prefers-color-scheme": "dark", "prefers-contrast": "more"}, False),
+    ]
+    assert viewing_browser.FORCED == {"forced-colors": "active"}
+
+
+def test_a_forced_start_passes_the_flag_that_forces_the_browsers_colours(tmp_path: Path) -> None:
+    _, program = forced_drawn(tmp_path / "forced")
+    assert viewing_browser.FORCING in logged(program)[0]["flags"]
+    _, plain = drawn(tmp_path / "plain")
+    assert viewing_browser.FORCING not in logged(plain)[0]["flags"]
+
+
+def test_a_forced_start_holds_each_page_at_its_own_size_with_its_gutters(tmp_path: Path) -> None:
+    """Its window is the first start's: the widest page, with the gutter on each side, so a
+    fixed page keeps its size under forced colours too (DEC-031 point 5)."""
+    pages = [
+        page("narrow", 400.5, 300.0, text("a", [span("a", 0)])),
+        page("wide", 1280.0, 720.0, text("b", [span("b", 1)])),
+    ]
+    _, program = forced_drawn(tmp_path, documents={FILE: {"pages": pages}})
+    (window,) = [flag for flag in logged(program)[0]["flags"] if flag.startswith("--window-size=")]
+    assert window.split("=")[1].split(",")[0] == "1344"
+
+
+def test_no_flag_of_a_forced_start_touches_or_weakens_the_browsers_sandbox(
+    tmp_path: Path,
+) -> None:
+    _, program = forced_drawn(tmp_path)
+    names = {flag.split("=")[0] for flag in logged(program)[0]["flags"]}
+    assert names == {
+        *viewing_browser.FLAGS,
+        viewing_browser.FORCING,
+        "--user-data-dir",
+        "--force-device-scale-factor",
+        "--window-size",
+        "about:blank",
+    }
+    assert not names & set(UNSAFE_FLAGS)
+    assert not [name for name in names for word in UNSAFE_WORDS if word in name]
+
+
+def test_each_forced_palette_is_drawn_with_forced_colours_and_its_signals_in_order(
+    tmp_path: Path,
+) -> None:
+    drawing, program = forced_drawn(tmp_path)
+    assert [each.palette for each in drawing.shown] == ["light", "dark"]
+    assert [dict(each.signals) for each in drawing.shown] == PALETTE_MODES
+    assert emulated(after_the_file_opened(program)) == PALETTE_MODES
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [viewing_browser.PLANTED_FORCED_FILE, FILE]
+    assert len([each for each in logged(program) if "flags" in each]) == 1
+
+
+def test_each_forced_palettes_images_and_reads_are_its_own(tmp_path: Path) -> None:
+    dim = span("dim", 1, **{"ink-when": {"prefers-color-scheme:dark": []}})
+    drawing, _ = forced_drawn(tmp_path, documents={FILE: one_page(span("hello", 0), dim)})
+    light, dark = drawing.shown
+    assert light.read.dropped == ()
+    assert [(each.text, each.why) for each in dark.read.dropped] == [
+        ("dim", viewing_browser.NO_INK)
+    ]
+    (image,) = dark.images
+    *_, media = json.loads(image.image[24:])
+    assert media == PALETTE_MODES[1]
+
+
+def test_a_plain_draw_draws_in_no_forced_palette(tmp_path: Path) -> None:
+    drawing, program = in_modes(tmp_path)
+    assert {each.palette for each in drawing.shown} == {""}
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [viewing_browser.PLANTED_FILE, FILE]
+    assert not [each for each in emulated(logged(program)) if "forced-colors" in each]
+
+
+def test_the_forced_first_read_sets_forced_colours_in_every_emulation(tmp_path: Path) -> None:
+    """The repaint of each signal's box, then the reads in each forced palette."""
+    _, program = forced_drawn(tmp_path)
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    file_opened = len(methods) - 1 - methods[::-1].index("Page.navigate")
+    first = {**MODES[0], **viewing_browser.FORCED}
+    assert emulated(messages[:file_opened]) == [
+        first,
+        {**first, "prefers-color-scheme": "dark"},
+        {**first, "prefers-contrast": "more"},
+        first,
+        *PALETTE_MODES,
+    ]
+
+
+def test_a_forced_palette_that_does_not_reach_the_text_stops_the_start(tmp_path: Path) -> None:
+    document = planted(forced=True)
+    held = next(
+        each for each in document["pages"][0]["texts"] if each["id"] == viewing_browser.FORCED_TEXT
+    )
+    held["lines"][0][0]["ink"] = ()
+    stop, program = forced_stopped(
+        tmp_path, documents={viewing_browser.PLANTED_FORCED_FILE: document}
+    )
+    assert stop.what == (
+        "the first read set the forced palette `light`, and a span with no paint, left to "
+        "forcing, left no ink, so the forced palette did not reach the text"
+    )
+    assert not [each for each in called(program, "Page.navigate") if each["url"].endswith(FILE)]
+
+
+@pytest.mark.parametrize(
+    ("scheme", "than"),
+    [("light", "lighter"), ("dark", "darker")],
+)
+def test_a_forced_palette_that_is_not_what_its_name_says_stops_the_start(
+    tmp_path: Path, scheme: str, than: str
+) -> None:
+    colours = {"light": COLOURS["light"], "dark": COLOURS["dark"]}
+    colours[scheme] = {"ground": "rgb(18, 18, 18)", "text": "rgb(18, 18, 18)"}
+    stop, _ = forced_stopped(tmp_path, colours=colours)
+    assert stop.what == (
+        f"the first read set the forced palette `{scheme}`, and the browser gave it a ground of "
+        f"rgb(18, 18, 18), not {than} than its text of rgb(18, 18, 18), so its images would "
+        f"show what their name denies"
+    )
+
+
+def test_a_forced_palettes_colour_of_another_form_stops_the_start(tmp_path: Path) -> None:
+    colours = {**COLOURS, "light": {"ground": "Canvas", "text": "CanvasText"}}
+    stop, _ = forced_stopped(tmp_path, colours=colours)
+    assert stop.what.startswith("the browser gave an answer that cannot be read: ")
+    assert "Canvas" in stop.what
+
+
+@pytest.mark.parametrize(
+    ("colour", "luminance"),
+    [
+        ("rgb(255, 255, 255)", 1.0),
+        ("rgb(0, 0, 0)", 0.0),
+        ("rgba(255, 255, 255, 0)", 1.0),
+        ("rgb(18, 18, 18)", 0.006),
+    ],
+)
+def test_a_colour_the_browser_computes_is_read_for_its_luminance(
+    colour: str, luminance: float
+) -> None:
+    assert viewing_browser._luminance(colour) == pytest.approx(luminance, abs=0.001)
+
+
+@pytest.mark.parametrize(
+    "finding",
+    [(viewing_browser.NO_INK, "no-paint-alone", "alone"), (viewing_browser.WORDS, "run-swallowed")],
+    ids=["ink", "words"],
+)
+def test_a_planted_fault_unnamed_in_a_forced_palette_stops_the_start(
+    tmp_path: Path, finding: tuple[str, ...]
+) -> None:
+    document = cured(planted(forced=True), finding)
+    stop, _ = forced_stopped(tmp_path, documents={viewing_browser.PLANTED_FORCED_FILE: document})
+    assert stop.what.startswith(
+        f"the first read in the forced palette `light` did not name {' '.join(finding)}"
+    )
+
+
+def test_a_palette_that_does_not_set_a_signal_the_file_reads_is_refused(tmp_path: Path) -> None:
+    program, pages = _started(tmp_path, None, {})
+    with pytest.raises(ValueError, match="the forced palette `light` sets"):
+        viewing_browser.draw_forced(
+            _file(tmp_path),
+            pages,
+            2.0,
+            program,
+            tmp_path / "local",
+            signals={**SIGNALS, "prefers-reduced-motion": ("no-preference", "reduce")},
+        )
+    assert logged(program) == []
+
+
+def test_the_forced_planted_page_keeps_its_mode_boxes_and_its_spans_with_no_paint_out(
+    tmp_path: Path,
+) -> None:
+    """Out of forcing, so each box repaints by its own signal and each span with no paint
+    stays a planted fault; the span left to forcing is the one that is not kept out."""
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    page = viewing_browser._planted_html(face, SIGNALS, forced=True)
+    kept = viewing_browser.KEPT_OUT
+    assert page.count(f"background:var(--pkit-mode-0);{kept}") == 1
+    assert page.count(f"background:var(--pkit-mode-1);{kept}") == 1
+    assert page.count(f"color:{viewing_browser.UNPAINTED};{kept}") == 3
+    assert page.count(f'color:{viewing_browser.UNPAINTED}"') == 1
+    forced_line = page.split(f'="{viewing_browser.FORCED_TEXT}"')[1].split("</div></div>")[0]
+    assert f">{viewing_browser.FORCED_SPAN}</span>" in forced_line
+    assert kept not in forced_line
+    assert f"{viewing_browser.GROUND_MARK} " in page
+    assert f"background:{viewing_browser.GROUND_COLOUR}" in page
+
+
+def test_the_forced_planted_pages_layer_takes_the_renderers_rule_under_forced_colours() -> None:
+    """The browser forces no colour a shape's attribute holds, so the page mirrors the rule the
+    renderer writes for an opaque fill with no stroke, from the declaration."""
+    (html_declaration,) = load("visual-communication", "plugins.html_declaration")
+    forced = html_declaration.DECLARATION["forced-colours"]
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    page = viewing_browser._planted_html(face, SIGNALS, forced=True)
+    assert (
+        f"@media (forced-colors:active){{[data-layer] rect{{fill:{forced['opaque-fills']};"
+        f"stroke:{forced['edge']['colour']};stroke-width:{forced['edge']['width']}px}}}}"
+    ) in page
+
+
+def test_the_plain_planted_page_holds_nothing_of_forcing() -> None:
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    page = viewing_browser._planted_html(face, SIGNALS)
+    assert "forced-color" not in page
+    assert viewing_browser.FORCED_TEXT not in page
+    assert viewing_browser.GROUND_MARK not in page
+
+
+def test_the_forced_planted_page_as_the_scene_holds_it_adds_the_span_left_to_forcing() -> None:
+    plain, forced = viewing_browser.PLANTED_PAGE, viewing_browser.PLANTED_FORCED_PAGE
+    assert forced.texts == (
+        *plain.texts,
+        viewing_browser.Text(viewing_browser.FORCED_TEXT, ((viewing_browser.FORCED_SPAN,),)),
+    )
+    assert viewing_browser.FORCED_FINDING not in viewing_browser.PLANTED_FINDINGS
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"fault": {"kind": "die", "method": "Page.captureScreenshot", "document": FILE}},
+        {"colours": {**COLOURS, "dark": COLOURS["light"]}},
+    ],
+    ids=["died", "first-read"],
+)
+def test_a_forced_starts_profile_is_removed_even_on_a_stop(
+    tmp_path: Path, changes: dict[str, Any]
+) -> None:
+    forced_stopped(tmp_path, **changes)
+    assert list((tmp_path / "local").iterdir()) == []
 
 
 # A real browser.
@@ -1335,6 +1654,176 @@ def REFERENCE_SCENE() -> Mapping[str, Any]:
     from tests.test_visual_communication_html import REFERENCE
 
     return REFERENCE
+
+
+@real_browser
+def test_a_real_browser_under_forced_colours_names_each_planted_fault_in_each_palette(
+    tmp_path: Path,
+) -> None:
+    """The forced start reads its own planted page first; read as a file too, each palette's
+    reads name each planted fault, and the span left to forcing shows ink in each."""
+    file = tmp_path / "planted.html"
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    file.write_text(viewing_browser._planted_html(face, SIGNALS, forced=True), encoding="utf-8")
+    browser = found_browser()
+    assert browser is not None
+    try:
+        drawing = viewing_browser.draw_forced(
+            file,
+            [viewing_browser.PLANTED_FORCED_PAGE],
+            2.0,
+            browser,
+            tmp_path / "local",
+            signals=SIGNALS,
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    light, dark = drawing.shown
+    for shown in (light, dark):
+        assert viewing_browser._named(shown.read) == viewing_browser.PLANTED_FINDINGS
+    assert light.images[0].image != dark.images[0].image
+    assert list((tmp_path / "local").iterdir()) == []
+
+
+@real_browser
+def test_a_real_browser_draws_the_reference_file_in_each_forced_palette_clean(
+    tmp_path: Path,
+) -> None:
+    from tests.test_visual_communication_html import reference, reference_picture
+
+    file = tmp_path / "reference.html"
+    file.write_bytes(reference({"square": reference_picture(tmp_path)}).document)
+    browser = found_browser()
+    assert browser is not None
+    pages = scene_pages(REFERENCE_SCENE())
+    signals = {"prefers-color-scheme": ("light", "dark")}
+    try:
+        drawing = viewing_browser.draw_forced(
+            file, pages, 1.0, browser, tmp_path / "local", signals=signals
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    light, dark = drawing.shown
+    assert light.read == dark.read == viewing_browser.Read((), (), (), (), ())
+    assert [each.image for each in light.images] != [each.image for each in dark.images]
+
+
+@dataclasses.dataclass(frozen=True)
+class EmulationAlone:
+    """What the browser found shows of the span left to forcing where only the emulation
+    forces its colours: the browser, with its version and its program, and the forced palettes,
+    in order, in which the span showed no ink."""
+
+    browser: str
+    unreached: tuple[str, ...]
+
+
+@pytest.fixture(scope="module")
+def emulation_alone(tmp_path_factory: pytest.TempPathFactory) -> EmulationAlone:
+    """The forced start's first read's probe, in a start without the flag that forces the
+    browser's colours: the planted page as that read writes it, read in each forced palette's
+    emulation, and whether the span left to forcing left ink (DEC-027 point 4). Some browsers
+    force the text under the emulation alone, and some leave it in the file's colours."""
+    place = tmp_path_factory.mktemp("emulation-alone")
+    file = place / viewing_browser.PLANTED_FORCED_FILE
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    file.write_text(viewing_browser._planted_html(face, SIGNALS, forced=True), encoding="utf-8")
+    program = found_browser()
+    assert program is not None
+    modes = [
+        (palette.name, {**palette.signals, **viewing_browser.FORCED})
+        for palette in viewing_browser.PALETTES
+    ]
+    try:
+        drawing = viewing_browser._start(
+            file,
+            [viewing_browser.PLANTED_FORCED_PAGE],
+            2.0,
+            program,
+            place / "local",
+            SIGNALS,
+            modes,
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        raise
+    unreached = tuple(
+        shown.palette
+        for shown in drawing.shown
+        if viewing_browser.FORCED_FINDING in viewing_browser._named(shown.read)
+    )
+    return EmulationAlone(f"{drawing.browser} ({program})", unreached)
+
+
+def forced_without_the_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """The planted page drawn by the forced start of the browser found, its flag that forces
+    the browser's colours swapped for one that changes nothing, so the emulation alone forces
+    them: the drawing, or the stop its first read raised. The test skips where a sandbox stopped
+    the browser."""
+    monkeypatch.setattr(viewing_browser, "FORCING", "--no-first-run")
+    file = tmp_path / "planted.html"
+    file.write_text(
+        viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes()), encoding="utf-8"
+    )
+    browser = found_browser()
+    assert browser is not None
+    try:
+        return viewing_browser.draw_forced(
+            file,
+            [viewing_browser.PLANTED_PAGE],
+            2.0,
+            browser,
+            tmp_path / "local",
+            signals=SIGNALS,
+        )
+    except viewing_browser.Stopped as stop:
+        if stop.sandbox:
+            pytest.skip(f"a sandbox stopped the browser: {stop}")
+        return stop
+
+
+@real_browser
+def test_a_real_browser_whose_colours_only_the_emulation_forces_stops_the_forced_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, emulation_alone: EmulationAlone
+) -> None:
+    """Where the emulation alone forces the shapes and leaves the text in the file's colours,
+    as Chrome 157 does, the span left to forcing shows no ink without the flag, and the first
+    read stops. Where it forces the text too, the span shows ink, and the first read rightly
+    passes (DEC-027 point 4): the test skips there, naming the browser."""
+    if not emulation_alone.unreached:
+        pytest.skip(
+            f"{emulation_alone.browser} forces the text under its emulation alone, so the span "
+            "left to forcing shows ink in each forced palette without the flag"
+        )
+    stop = forced_without_the_flag(tmp_path, monkeypatch)
+    assert isinstance(stop, viewing_browser.Stopped)
+    assert stop.what.endswith("so the forced palette did not reach the text")
+
+
+@real_browser
+def test_a_real_browsers_forced_start_stops_exactly_where_the_span_left_to_forcing_shows_no_ink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, emulation_alone: EmulationAlone
+) -> None:
+    """In any browser, without the flag: the first read stops, naming the first forced palette
+    in which the span left to forcing showed no ink, and draws where it showed ink in each
+    (DEC-027 point 4)."""
+    drawn_or_stopped = forced_without_the_flag(tmp_path, monkeypatch)
+    stopped = (
+        drawn_or_stopped.what if isinstance(drawn_or_stopped, viewing_browser.Stopped) else None
+    )
+    expected = (
+        f"the first read set the forced palette `{emulation_alone.unreached[0]}`, and a span "
+        "with no paint, left to forcing, left no ink, so the forced palette did not reach the "
+        "text"
+        if emulation_alone.unreached
+        else None
+    )
+    assert stopped == expected, emulation_alone.browser
 
 
 def drawn_by_a_real_browser(file: Path, pages: Sequence[Any], scale: float, tmp_path: Path) -> Any:

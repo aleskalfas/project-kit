@@ -128,6 +128,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
         - .pkit/capabilities/visual-communication/outputs.md#the-html-renderers-pages
         - .pkit/capabilities/visual-communication/outputs.md#when-the-browser-stops
+        - .pkit/capabilities/visual-communication/outputs.md#under-forced-colours
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
         - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
@@ -294,12 +295,12 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
+- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)). In `svg-modes` it makes a switching file, which follows the reader's mode, and holds it to the one-key file of each combination it holds ([The switching file](outputs.md#the-switching-file)).
 - **Keeps a published piece's current copy,** replacing it whole in the piece's folder, or writing it at the place the piece names, and naming each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
 - **Shows** the run's own number and date in every file, where a component shows them ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and `--use-overflowing <fact>` a version's number or its date that does not fit. Each may repeat.
+- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, `--use-overflowing <fact>` a version's number or its date that does not fit, and `--use-differing <element>` an element of a switching file that paints a combination otherwise than the one-key file. Each may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual mark-final <piece> <version>`
@@ -308,7 +309,7 @@ Marks a piece final, and names the version handed out, whatever changed since ([
 
 - **Puts back the lock** that version was made under, and names it. It puts back nothing else.
 - **Names what does not follow a new brand,** where the lock it puts back names another brand than the lock it replaces ([The lock](files.md#the-lock)). It stops on none of it.
-- **Says what else changed,** each input that still does not verify, and each number or date the version let through. It stops on none of it.
+- **Says what else changed,** each input that still does not verify, and each number or date and each element of a switching file the version let through. It stops on none of it.
 - **Says what no longer holds of the lock,** and goes on.
 - **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
 - **Names the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
@@ -336,19 +337,20 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Cuts** a page too tall for one image into bands, each as wide as the page, and prints them in order ([The viewing step](outputs.md#the-viewing-step)).
 - **Reads** a piece that declares `html` through the HTML renderer, and any other through the SVG renderer. `--renderer svg` or `--renderer html` names one.
 - **Needs a browser** for the HTML renderer's pages, which no other format needs. The capability installs none ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
+- **Draws under forced colours** with `--forced-colours`: each page file of the HTML renderer in the browser's two forced palettes too, in a second start, each palette's images in a folder of their own. It refuses the flag through the SVG renderer ([Under forced colours](outputs.md#under-forced-colours)).
 - **Writes** each image and its frames, and one report, in its renderer's folder, replacing what an earlier run left there. Through the HTML renderer it writes each page file too ([What a run writes](outputs.md#what-a-run-writes)).
 - **Prints** the lock, the renderer and what the report says ([What the report says](outputs.md#what-the-report-says)), then each stand-in an image shows, with why ([The viewing step](outputs.md#the-viewing-step)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
 - **Exits** 0 when it drew, whatever the report says. It exits 1 when it refused, with its renderer's folder left as it was, or when a write failed ([Commands](#commands)). It exits 2 on a usage error. It exits 3 when the browser stopped, leaving the page files and a report, and no image ([When the browser stops](outputs.md#when-the-browser-stops)).
-- **Names the ways on** where it stops ([When the browser stops](outputs.md#when-the-browser-stops)): a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages.
+- **Names the ways on** where it stops ([When the browser stops](outputs.md#when-the-browser-stops)): a build pipeline's drawings, where the project has its pipeline draw them ([A pipeline's drawings](outputs.md#a-pipelines-drawings)); the same look, run once by a person outside any sandbox; and the SVG renderer's pages. Where the start under forced colours stopped, it names the same look without them too.
 
 ### `pkit visual pages <piece>`
 
 Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 - **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document.
-- **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none.
+- **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
 
@@ -383,7 +385,7 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 - **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.
 - **Commits nothing,** and makes no branch. Land the diff as you land any change, or discard it.
 - **Says so and writes nothing** where nothing moves.
-- **Stops** on an edit since the copy, on a stale picture, and on a number or a date that does not fit, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, and `--use-overflowing <fact>` a fact whose text to use as it is. Each may repeat.
+- **Stops** on an edit since the copy, on a stale picture, on a number or a date that does not fit, and on an element of a switching file that differs, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, `--use-overflowing <fact>` a fact whose text to use as it is, and `--use-differing <element>` an element to write as it is. Each may repeat.
 - **Says** where no file of the copy stood, so the change shows only an after, and names each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Names** each finding that fails under the moved lock, and stops on none of them.
 - **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.
@@ -428,9 +430,9 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 To use it:
 
-1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). The reviewer runs no command, so it sees only what that run drew.
+1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). Add `--forced-colours` where it should see what a reader who forces their own colours gets ([Under forced colours](outputs.md#under-forced-colours)). The reviewer runs no command, so it sees only what that run drew.
 2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the pages, languages and modes it looked at, and the bands of each page it read. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 

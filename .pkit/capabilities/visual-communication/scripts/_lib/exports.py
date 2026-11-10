@@ -1,4 +1,5 @@
-"""Numbered exports of a piece, and their record (visual-communication DEC-006 point 7).
+"""Numbered exports of a piece, and their record (visual-communication DEC-006 point 7,
+DEC-018 points 1 to 4).
 
 - **What a run makes.** Each format the piece declares under `exports`, in each of its
   languages and each combination of modes it names, drawn from the scene of its key over
@@ -8,8 +9,19 @@
   and each set of combinations that share a file, which holds every page in order: those
   at one key over the size axes that differ only in modes a reader's signal names, as the
   HTML renderer's declaration pairs them (`pipeline.files_of`, DEC-023 point 1). A
-  combination whose mode no signal names takes a file of its own. A piece with no page in
-  one of its languages is refused.
+  combination whose mode no signal names takes a file of its own. `svg-modes` makes one
+  switching file for each page, language and set of combinations that share one, grouped
+  by the SVG renderer's pairs alike (DEC-018 points 1 and 2). A piece with no page in one
+  of its languages is refused.
+- **Formats a piece cannot take** (`same_names`, `unpaired`). `svg-modes` and `svg` write
+  files of one name, so a piece that names both is refused. So is one in `svg-modes` whose
+  combinations differ in a value axis's mode of no pair the format reads, since no file of
+  it could hold both (DEC-018 points 2 and 4). The check fails both.
+- **A switching file matches the one-key file** (`Differing`). Each switching file, read in
+  each combination it holds, is held to the file `svg` would draw of that combination,
+  element by element, with no browser (`switching.differences`). A difference stops the run,
+  naming the element, unless the person names that element to let it through; the record
+  keeps each element let through. An element named that differs nowhere is said.
 - **A number for each run.** Version `N` is one more than the highest the piece's
   `exports.yaml` records or a file in the piece's exports folder carries, shared by every
   file the run makes; each file is named `<piece>.v<N>.<language>.<key>.<format>`, and a
@@ -47,7 +59,8 @@
   it made, and what is only recorded: when, the piece's state, the capability's release,
   the renderers' versions, each produced output the scenes used with the version used
   (the `value` of its record's fingerprint, by which the check knows it), those used
-  while stale (DEC-006 point 7), and each number or date let through, where one was.
+  while stale (DEC-006 point 7), each number or date let through, where one was, and
+  each element of a switching file let through, where one was.
 - **The current copy.** A published piece's run also makes a copy of each file of the
   version, in its folder or at the place it names, and the record names the version that
   wrote it (`current_copy`). The run names each file of the last copy it left behind. A
@@ -72,7 +85,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import current_copy, fingerprint, framing, layout, records
+from _lib import current_copy, fingerprint, framing, layout, records, switching
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change
@@ -84,7 +97,12 @@ from _lib.scene import Element, Scene, SceneResult
 from _lib.text import MEASURED
 
 #: The renderer that draws each format a piece may export in format 1.
-RENDERERS = {"svg": "svg", "pdf": "pdf", "html": "html"}
+RENDERERS = {"svg": "svg", "svg-modes": "svg", "pdf": "pdf", "html": "html"}
+
+#: Each format of switching files, with the format of its renderer's one-key file, which it
+#: is held to, element by element, and whose files take the same names (DEC-018 points 1
+#: and 2).
+SWITCHING = {"svg-modes": "svg"}
 
 #: The formats whose file holds every page of a scene, in order: one file for each
 #: language and each set of combinations its renderer holds in one file, one combination
@@ -153,6 +171,29 @@ class Overflow:
 
 
 @dataclass(frozen=True)
+class Differing:
+    """An element of a switching file that paints a combination it holds otherwise than its
+    renderer's file of that combination (DEC-018 point 1): the file, the combination's key,
+    the element's trace id, and what differs."""
+
+    file: str
+    key: str
+    element: str
+    why: str
+
+    @property
+    def said(self) -> str:
+        """The difference in words: the element, the file, the key, and what differs."""
+        return f"`{self.element}` of `{self.file}` in `{self.key}`: {self.why}"
+
+    @property
+    def entry(self) -> dict[str, str]:
+        """What the record of exports keeps of the element once a person lets it through: the
+        file, the key and the element."""
+        return {"file": self.file, "key": self.key, "element": self.element}
+
+
+@dataclass(frozen=True)
 class Planned:
     """An export computed and not yet written: its number, each file's name and bytes, the
     record's versions with the new one last, the produced outputs used while stale, those
@@ -161,7 +202,8 @@ class Planned:
     and the scenes with the stand-ins, which the findings rest on (DEC-016 point 5). Then
     what it filled its facts with, each text it let through, each overflow measured
     otherwise than from a font file, and each fact named to be let through that did not
-    overflow."""
+    overflow. Last, each element of a switching file it let through, and each element named
+    to be let through that differs nowhere (DEC-018 point 1)."""
 
     piece: pl.Piece
     number: int
@@ -177,6 +219,8 @@ class Planned:
     let_through: tuple[Overflow, ...]
     estimated: tuple[Overflow, ...]
     not_overflowing: tuple[str, ...]
+    differing: tuple[Differing, ...] = ()
+    not_differing: tuple[str, ...] = ()
 
     @property
     def folder(self) -> Path:
@@ -197,16 +241,23 @@ def file_name(
     piece: str, number: int, language: str, key: str, form: str, page: int | None = None
 ) -> str:
     """An exported file's name: the piece, the version, the language, the combination's
-    key and the format, with the page's number before the format where `page` names one,
-    as for the file of each page of a piece of more than one page. A file that holds every
-    page, as a PDF or a page file does, names none. A file that holds several combinations
-    names the first it serves."""
+    key and the format's `extension`, with the page's number before it where `page` names
+    one, as for the file of each page of a piece of more than one page. A file that holds
+    every page, as a PDF or a page file does, names none. A file that holds several
+    combinations names the first it serves."""
     numbered = "" if page is None else f".{page}"
-    return f"{piece}.{version_text(number)}.{language}.{key}{numbered}.{form}"
+    return f"{piece}.{version_text(number)}.{language}.{key}{numbered}.{extension(form)}"
+
+
+def extension(form: str) -> str:
+    """The extension of a file of the format `form`: its own name, but for a format of
+    switching files, which takes its one-key format's, so the word and the extension part
+    (DEC-018 point 1)."""
+    return SWITCHING.get(form, form)
 
 
 def formats_said() -> str:
-    """Each format a piece may export in, in words: `svg`, `pdf` or `html`."""
+    """Each format a piece may export in, in words: `svg`, `svg-modes`, `pdf` or `html`."""
     named = [f"`{form}`" for form in RENDERERS]
     return f"{', '.join(named[:-1])} or {named[-1]}"
 
@@ -274,26 +325,40 @@ def plan(
     *,
     use_stale: Sequence[str] = (),
     use_overflowing: Sequence[str] = (),
+    use_differing: Sequence[str] = (),
     now: datetime | None = None,
     written: Mapping[Path, bytes] | None = None,
     way_past_stale: Callable[[Collection[str]], str] | None = None,
     way_past_overflow: Callable[[Collection[str]], str] | None = None,
+    way_past_differing: Callable[[Collection[str]], str] | None = None,
 ) -> Planned:
     """The next export of the project's piece, computed: every file drawn, the record's
     new version written out, and every file it writes checked. `use_overflowing` names each
-    fact whose text the run uses as it is, though it overflows. `now` is the time the record
-    keeps, whose date the files show, by default this run's. `written` gives the bytes of
-    each file the same change writes before it, such as `piece.yaml` with its lock moved,
-    which the fingerprint reads in place of the file. `way_past_stale` and
-    `way_past_overflow` say, from every output stale or every fact that overflows, the way
-    past it, where a run takes another than an export's. Raises Refused, naming what stops
-    it, so `write` refuses nothing."""
+    fact whose text the run uses as it is, though it overflows, and `use_differing` each
+    element of a switching file it writes as it is, though it differs from the one-key file.
+    `now` is the time the record keeps, whose date the files show, by default this run's.
+    `written` gives the bytes of each file the same change writes before it, such as
+    `piece.yaml` with its lock moved, which the fingerprint reads in place of the file.
+    `way_past_stale`, `way_past_overflow` and `way_past_differing` say, from every output
+    stale, every fact that overflows or every element that differs, the way past it, where a
+    run takes another than an export's. Raises Refused, naming what stops it, so `write`
+    refuses nothing."""
     piece = project.piece
     if not piece.exports:
         raise pl.Refused(
             f"{piece.file(pl.PIECE_FILE)} declares no format under `exports`: name "
             f"{formats_said()} there"
         )
+    named = same_names(piece.exports)
+    if named:
+        one_key, form = named[0]
+        raise pl.Refused(
+            f"{piece.file(pl.PIECE_FILE)} names both `{one_key}` and `{form}` under `exports`, "
+            f"which write files of one name: name one of them"
+        )
+    parting = unpaired(project)
+    if parting:
+        raise pl.Refused(f"{piece.file(pl.PIECE_FILE)}: {unpaired_said(parting)}")
     undeclared = sorted(set(use_stale) - set(piece.produced))
     if undeclared:
         named = ", ".join(f"`--use-stale {output}`" for output in undeclared)
@@ -358,7 +423,20 @@ def plan(
         )
         said = "; ".join(overflow.said for overflow in stopping)
         raise pl.Refused(f"a number or a date the export fills does not fit: {said}. {way}")
-    files = _drawn(project, drawn, number)
+    files, differing = _drawn(project, drawn, number)
+    stopping_differing = [each for each in differing if each.element not in use_differing]
+    if stopping_differing:
+        way = (
+            "Name each such element with `--use-differing <element>` to export its file as it "
+            "is, and report it to whoever maintains the capability"
+            if way_past_differing is None
+            else way_past_differing({each.element for each in differing})
+        )
+        said = "; ".join(each.said for each in stopping_differing)
+        raise pl.Refused(
+            f"a switching file paints a combination otherwise than the SVG renderer's file of "
+            f"that combination: {said}. {way}"
+        )
     sources = pl.findings_key_sources(
         project.root, project.held, piece, project.lock, sorted(project.env.fonts_read)
     )
@@ -385,6 +463,8 @@ def plan(
     }
     if measured:
         entry["recorded"]["let-through"] = [overflow.entry for overflow in measured]
+    if differing:
+        entry["recorded"]["differing"] = [each.entry for each in differing]
     not_stale = sorted(set(use_stale) - set(stale))
     copy = current_copy.made(piece, number, files)
     planned = Planned(
@@ -402,6 +482,8 @@ def plan(
         measured,
         tuple(overflow for overflow in found if not overflow.measured),
         tuple(sorted(set(use_overflowing) - {overflow.fact for overflow in found})),
+        tuple(differing),
+        tuple(sorted(set(use_differing) - {each.element for each in differing})),
     )
     writable(planned)
     return planned
@@ -583,17 +665,21 @@ def used_versions(project: pl.Project) -> dict[str, str]:
 
 def _drawn(
     project: pl.Project, results: Sequence[tuple[str, SceneResult]], number: int
-) -> dict[str, bytes]:
+) -> tuple[dict[str, bytes], list[Differing]]:
     """Each file of the export and its bytes, by its name, format by format as the piece
     declares them: for a format of `DOCUMENTS`, one for each language and each set of
     combinations its renderer holds in one file, which holds every page in order, named by
     the first key it serves (`pipeline.drawn`); for another, one for each page, language and
-    combination, the pages of each in order. Raises Refused where a language has no page,
-    since the version would hold no file in it."""
+    combination, or set of combinations a switching file holds, the pages of each in order.
+    Then each element of a switching file that paints a combination it holds otherwise than
+    the one-key file of that combination (`held_to`). Raises Refused where a language has no
+    page, since the version would hold no file in it."""
     piece = project.piece
     files: dict[str, bytes] = {}
+    differing: list[Differing] = []
     for form in piece.exports:
-        for language, (key, *_), drawn in pl.drawn(project, results, RENDERERS[form], form=form):
+        for language, served, drawn in pl.drawn(project, results, RENDERERS[form], form=form):
+            key = served[0]
             if not drawn.pages:
                 raise pl.Refused(
                     f"`{piece.name}` has no page in `{language}`, so the export would hold no "
@@ -603,12 +689,95 @@ def _drawn(
                 files[file_name(piece.name, number, language, key, form)] = drawn.document
                 continue
             several = len(drawn.pages) > 1
-            for index, page in enumerate(drawn.pages, start=1):
-                name = file_name(
-                    piece.name, number, language, key, form, index if several else None
-                )
+            names = [
+                file_name(piece.name, number, language, key, form, index if several else None)
+                for index in range(1, len(drawn.pages) + 1)
+            ]
+            for name, page in zip(names, drawn.pages, strict=True):
                 files[name] = page.svg.encode("utf-8")
-    return files
+            if form in SWITCHING:
+                differing.extend(held_to(project, results, form, language, served, names, drawn))
+    return files, differing
+
+
+def held_to(
+    project: pl.Project,
+    results: Sequence[tuple[str, SceneResult]],
+    form: str,
+    language: str,
+    served: Sequence[str],
+    names: Sequence[str],
+    drawn: Any,
+) -> list[Differing]:
+    """Each element of the switching files `drawn`, of `form` in `language`, named `names` page
+    by page, that paints a combination of `served` otherwise than the renderer's file of that
+    combination, in the format `SWITCHING` names (DEC-018 point 1). Each file is read in each
+    combination under the signals the renderer's declaration pairs with its modes."""
+    renderer = RENDERERS[form]
+    pairs = seam.declaration(renderer, seam.RENDERER)["holds-modes"][form]
+    combinations = dict(zip(project.keys, project.combinations, strict=True))
+    shown = [(each, result) for each, result in results if each == language]
+    found = []
+    for _, (key,), one in pl.drawn(project, shown, renderer, served, form=SWITCHING[form]):
+        signals = signals_of(combinations[key], pairs)
+        for name, page, expected in zip(names, drawn.pages, one.pages, strict=True):
+            found.extend(
+                Differing(name, key, difference.element, difference.why)
+                for difference in switching.differences(page.svg, expected.svg, signals)
+            )
+    return found
+
+
+def signals_of(
+    combination: Mapping[str, str], pairs: Mapping[str, Mapping[str, Any]]
+) -> dict[str, str]:
+    """What a reader's signals hold in `combination`, as the signal `pairs` a renderer's
+    declaration names for a format pair its modes: one for each axis of a pair."""
+    return {
+        pair["signal"]: pair["pairs"][combination[axis]]
+        for axis, pair in pairs.items()
+        if combination.get(axis) in pair.get("pairs", {})
+    }
+
+
+def same_names(formats: Sequence[str]) -> list[tuple[str, str]]:
+    """Each two of `formats` that write files of one name, as a format of switching files and
+    its renderer's one-key format do (DEC-018 point 2): the one-key format, then the other."""
+    return [(one_key, form) for form, one_key in SWITCHING.items() if {form, one_key} <= {*formats}]
+
+
+def unpaired(project: pl.Project) -> list[tuple[str, str, str]]:
+    """Each format of switching files the piece exports in, with each value axis's mode of no
+    pair that format reads that parts two combinations the piece names: the format, the axis
+    and the mode (DEC-018 point 4). A switching file holds every mode of a value axis, so no
+    file could hold such a mode beside another. A mode the combinations hold alike parts
+    nothing, and a size axis's modes take files of their own."""
+    piece = project.piece
+    axes = project.brand.axes
+    found = []
+    for form in piece.exports:
+        if form not in SWITCHING:
+            continue
+        pairs = seam.declaration(RENDERERS[form], seam.RENDERER)["holds-modes"][form]
+        for axis in sorted({axis for combination in project.combinations for axis in combination}):
+            if axes[axis].kind == "size":
+                continue
+            held = list(dict.fromkeys(combination[axis] for combination in project.combinations))
+            paired = pairs.get(axis, {}).get("pairs", {})
+            if len(held) > 1:
+                found.extend((form, axis, mode) for mode in held if mode not in paired)
+    return found
+
+
+def unpaired_said(found: Sequence[tuple[str, str, str]]) -> str:
+    """Why a piece's combinations do not fit its format of switching files, from `unpaired`."""
+    named = "; ".join(
+        f"`{form}` reads no pair of `{axis}`'s mode `{mode}`" for form, axis, mode in found
+    )
+    return (
+        f"its combinations differ in a mode no switching file of its format can hold: {named}. "
+        f"Draw that mode in a piece of its own, or export the piece as `svg`"
+    )
 
 
 def writable(planned: Planned) -> None:
@@ -657,7 +826,8 @@ def report(planned: Planned) -> Iterator[str]:
     """What a run says of a planned export, a line each: each file, each file of the current
     copy, each it left behind, each picture used while stale or named and not stale, each
     text let through, each overflow measured otherwise than from a font file, each fact named
-    that did not overflow, and the version recorded."""
+    that did not overflow, each element of a switching file let through or named and not
+    differing, and the version recorded."""
     piece = planned.piece
     for file in planned.files:
         yield f"export: {FOLDER}/{piece.name}/{file}"
@@ -679,4 +849,8 @@ def report(planned: Planned) -> Iterator[str]:
         )
     for fact in planned.not_overflowing:
         yield f"not overflowing, so used as it is: {fact}"
+    for each in planned.differing:
+        yield f"let through: {each.said}"
+    for element in planned.not_differing:
+        yield f"not differing, so used as it is: {element}"
     yield f"export: version {planned.number} recorded in {piece.file(pl.EXPORTS_FILE)}"

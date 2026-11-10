@@ -65,11 +65,12 @@
       "type": "boolean"
     },
     "exports": {
-      "description": "The formats a numbered export makes (DEC-006 point 7): `svg`, a file for each page, `pdf`, a file that holds every page, and `html`, a page file that holds every page and the modes a reader's signal names (DEC-023 point 1); may be empty.",
+      "description": "The formats a numbered export makes (DEC-006 point 7): `svg`, a file for each page and combination, `svg-modes`, a switching file for each page that holds the modes a reader's signal names and follows the reader as an image (DEC-018 point 1), `pdf`, a file that holds every page, and `html`, a page file that holds every page and the modes a reader's signal names (DEC-023 point 1); may be empty. `svg` and `svg-modes` write files of one name, so a piece names one of them (DEC-018 point 2).",
       "type": "array",
       "items": {
         "enum": [
           "svg",
+          "svg-modes",
           "pdf",
           "html"
         ]

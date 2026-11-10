@@ -11,7 +11,9 @@ with the piece (visual-communication DEC-017 points 1, 2 and 8).
   does (DEC-016 point 1), with the lock put back and the state as it stood, so neither of the
   run's own writes counts. A version made before that reading read a file whole, and the run
   says which (`Planned.read_whole`). It names each number or date the version let through,
-  and stops on none (`Planned.let_through`): nothing mends a file that went out.
+  and each element of a switching file it let through, and stops on none
+  (`Planned.let_through`, `Planned.differing`, DEC-017 point 1): nothing mends a file that
+  went out.
 - **A lock that no longer holds refuses nothing.** The run says what the check will find of
   it (`Planned.lock_faults`), read as the check reads a final piece's, and goes on.
 - **A lock of another brand.** Where the lock put back names another brand than the lock it
@@ -53,8 +55,9 @@ class Planned:
     exports; each input that still does not verify; each file the version read whole, of those
     an export now reads in part; what no longer holds of the lock, a line each; the version
     that wrote the piece's current copy, where another did; each number or date the version
-    let through, in words; and, where the lock put back names another brand, what does not
-    follow it, a line each."""
+    let through, in words; where the lock put back names another brand, what does not
+    follow it, a line each; and each element of a switching file the version let through, in
+    words."""
 
     piece: pl.Piece
     number: int
@@ -68,6 +71,7 @@ class Planned:
     copy_writer: int | None
     let_through: tuple[str, ...]
     rebranded: tuple[str, ...] = ()
+    differing: tuple[str, ...] = ()
 
 
 def plan(piece: pl.Piece, held: Held, number: int) -> Planned:
@@ -100,6 +104,7 @@ def plan(piece: pl.Piece, held: Held, number: int) -> Planned:
         _copy_writer(piece, record, number),
         tuple(current_copy.let_through_said(each) for each in current_copy.let_through(version)),
         _rebranded(piece, held, lock),
+        tuple(current_copy.differing_said(each) for each in current_copy.differing(version)),
     )
     _writable(planned)
     return planned
@@ -128,8 +133,9 @@ def write(planned: Planned, change: Change) -> None:
 
 def report(planned: Planned) -> list[str]:
     """What a mark says, a line each: each file kept, the lock put back, what does not follow
-    its brand where it names another, what else changed, each text let through, what no longer
-    holds of the lock, the current copy, and the version recorded."""
+    its brand where it names another, what else changed, each text and each element of a
+    switching file let through, what no longer holds of the lock, the current copy, and the
+    version recorded."""
     piece, number = planned.piece, planned.number
     locked = ", ".join(f"{library} {planned.lock[library]}" for library in sorted(planned.lock))
     said = [f"handed out: {piece.file(f'{HANDED_OUT}/{name}')}" for name in planned.files]
@@ -145,6 +151,11 @@ def report(planned: Planned) -> list[str]:
         f"let through: version {number} shows {text}, which does not fit, and no check judges "
         f"it once the piece is final"
         for text in planned.let_through
+    )
+    said.extend(
+        f"let through: version {number}'s switching file paints {element} otherwise than the "
+        f"SVG renderer's file of that combination, and no check judges it once the piece is final"
+        for element in planned.differing
     )
     said.extend(planned.lock_faults)
     if planned.copy_writer is not None:
