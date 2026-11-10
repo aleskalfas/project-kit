@@ -1,0 +1,19 @@
+# Every export of this piece, numbered (planning note, point 13). Written by `visual.py export`.
+versions:
+- version: 1
+  made: '2026-11-01T13:07:23+01:00'
+  state: draft
+  brand: ibm/deck
+  mode: carbon/light
+  font_profile: standard
+  files:
+    en: friday-slice.v1.en.pdf
+    cs: friday-slice.v1.cs.pdf
+  libraries:
+    foundations: 0.1.0
+    starter: 0.1.0
+    pkit: 0.1.0
+    ibm: 0.1.0
+    neutral: 0.1.0
+  engine: 0.1.0
+  content_sha256: 1af3d19744fc889348b70233244a43ba4c442412a692543cd6ad00aacdfc8e1c
