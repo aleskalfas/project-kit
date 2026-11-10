@@ -84,7 +84,7 @@ modes:
   colour-scheme: [light, dark]
 ```
 
-- **A content file for each language,** holding each field of the top, empty. A deck's or a site's pages are one page, in the top's first layout, with each of its slots empty. You fill it in step 5.
+- **A content file for each language,** holding each field of the top it can leave empty, empty; a field of another type, such as a number, is left out. A deck's or a site's pages are one page, in the top's first layout, with each of its slots empty. You fill it in step 5.
 - **`brief.yaml`,** holding its binding and nothing else. You fill it in step 4.
 
 It refuses, and writes nothing, where:

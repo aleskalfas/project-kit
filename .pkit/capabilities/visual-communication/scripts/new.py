@@ -16,7 +16,8 @@ person chooses (DEC-002 points 3 and 5, DEC-029 point 4).
 It writes `pieces/<piece>/` in the location: `piece.yaml`, with the top, the brand, the
 notations, the languages, the modes, the exports, `audience`, `shown` and `explains` it is
 given, and `state: draft`; a content file for each language, holding each field of the
-top, empty; and a brief that holds its binding and says nothing yet (`_lib/stamping.py`).
+top it can leave empty, empty, a field of another type, such as a number, left out; and a
+brief that holds its binding and says nothing yet (`_lib/stamping.py`).
 It writes no lock: the first render writes it, as for a piece written by hand.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
