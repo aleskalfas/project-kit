@@ -6,7 +6,7 @@ date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a pattern, such as a row of cards, may declare for a list it repeats a field in which content names one component for every item, and declares the fields an item may carry for how the pattern arranges it. Those that take a word, its arrangement fields, take one the pattern declares, never a number: a card given `span: wide` takes a larger share of the row than one given `span: narrow`. A list of ties also carries two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]). Where an item's component and its list both claim a key, neither reads it. Each page of a top whose layouts are its pages' forms, such as a deck's, names its layout with the key `layout`, or names its own component, and never names a layout by the component that draws it. A colour by place keys on where an item stands in its list, never on a word it carries. Every file format 1 accepted reads and draws as before.
+**In plain terms:** a pattern, such as a row of cards, may declare for a list it repeats a field in which content may name one component for every item, and declares the fields an item may carry for how the pattern arranges it. Those that take a word, its arrangement fields, take one the pattern declares, never a number. A weight is such a field, and the pattern turns its word into a share of the row. A list of ties also carries two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]). Where an item's component and its list both claim a key, neither reads it. Each page of a top whose layouts are its pages' forms, such as a deck's, names its layout with the key `layout`, or names its own component, and never names a layout by the component that draws it. A colour by place keys on where an item stands in its list, never on a word it carries. Every file format 1 accepted reads and draws as before.
 
 ## Context
 
@@ -14,7 +14,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Decision
 
-**A pattern may declare, for a list it repeats, a field in which content may name the list's component, and declares the fields its items may carry for its arrangement: arrangement fields, each taking a word it declares, and in a list of ties two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]); each page of a top whose layouts are its pages' forms names its layout with the key `layout`, or names its component; and a colour by place keys on an item's position, never on what it carries.**
+**A pattern may declare, for a list it repeats, a field in which content may name the list's component, and the fields its items may carry for its arrangement: arrangement fields, each taking a word it declares, and in a list of ties two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]).**
 
 ### 1. Content names a list's component in a field its pattern declares
 
@@ -42,8 +42,8 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 - **An option given on each item.** An arrangement field takes one word from a list the pattern declares, as an option of words takes one (DEC-001 point 6). The first word is the default, which an item that leaves the field out takes, so no arrangement field is required, and adding one asks nothing of content.
 - **Never a number, a size, a raw value or text.** What a word stands for, such as a share, lies in the pattern's data, where its formulas lie and a number with no unit may stand ([visual-communication:DEC-005-engine-and-plugins] point 1).
-- **A size or a position in space, never a look.** A word sets how the pattern sizes its item and where it sets it, such as its share of a row or its side of a line. It never sets a colour, a role or a state.
-- **The pattern chooses by it as by an option** (refinement per [visual-communication:DEC-021-size-and-shape]). The pattern gives each word its effect, read for each item, as it gives an option's word its effect, so the choice is declared, never computed. The engine chooses by an option, by whether a field is filled and by the size a piece is drawn at, and arranges items by the content's order, the declared options and the size (DEC-005 points 1 and 2). This record widens the first, an option, to one given on each item, and changes nothing else in how a component chooses.
+- **A size or a position in space, never a look.** A word sets how the pattern sizes its item and where it sets it, such as its share of a row or its side of a line. It never sets a colour, a role or a state. What an item is, its concept and its state say, and how it looks inside, its component draws (DEC-001 point 6, and point 6 below).
+- **The pattern chooses by it as by an option** (refinement per [visual-communication:DEC-021-size-and-shape]). The pattern gives each word its effect, read for each item, as it gives an option's word its effect, so the choice is declared, never computed. A component chooses by an option, by whether a field is filled and by the size a piece is drawn at, and the content's order, the declared options and the size decide how items are arranged (DEC-005 points 1 and 2). This record widens the first, an option, to one given on each item, and changes nothing else in how a component chooses.
 - **It never chooses, filters or sorts.** The items keep the content's order, and none is left out for what it holds (DEC-005 point 2).
 - **No word names an item** (refinement per [visual-communication:DEC-011-tie-ends]). An option may name an item by its id (DEC-001 point 6), and an arrangement field names none: a list of ties names its ends in end fields (point 2).
 
@@ -128,7 +128,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why a word, never a number.** Content chooses only among what its libraries declare, and holds no literal size (DEC-001 point 3). A word from a declared list is checked by the schema and drawn once for each word, where no set of renders could show every number (DEC-001, Rationale). What an item shows is its component's, so an arrangement field holds no text either.
 
-**Why an arrangement field is an option given on each item.** The pattern switches on its word as on an option's, so it adds no way to choose beside the engine's three (point 3, refinement per [visual-communication:DEC-021-size-and-shape]), and it is given on each item since the choice is the item's own. A word that set a look would give content a second way to say what an item is, beside its concept and its state, and how an item looks inside is its component's to draw (DEC-001 point 6).
+**Why an arrangement field is an option given on each item.** The pattern switches on its word as on an option's, so it adds no way for a component to choose beside the record of the engine's three: an option, a filled field and the size a piece is drawn at (refinement per [visual-communication:DEC-021-size-and-shape]). It is given on each item, since the choice is the item's own. A word that set a look would give content a second way to say what an item is, beside its concept and its state.
 
 **Why a weight is an arrangement field.** An item's share of its row is the item's own, so it lies on the item, where the founding record lets a pattern declare fields for its arrangement (DEC-001 point 6).
 
@@ -167,6 +167,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 - **The capability's pages** hold the spelling of each addition, written there by the change that builds it.
 - **The starter's patterns** each declare a component field for each list they repeat, and its README names each pattern's arrangement fields with their words, as it names its options; the arrangement fields count toward the guide of about four options a pattern holds ([visual-communication:DEC-007-starter-library] point 2).
+- **The record of ties** ([visual-communication:DEC-011-tie-ends]) builds on how content gives a list, naming a tie's ends in the end fields of points 2 and 3.
 - **Translation.** A page's layout, an item's component, and an arrangement field's or option's word are written in each language's content. Whether the check holds each equal in every language, and how it matches an item or a page of one language to another's, is left to translation (DEC-001 point 3, and Implications).
 - **The release's comparison** of a library's stable components with its previous version (DEC-003 point 7) reads component fields, arrangement fields and their words, the field that holds a top's pages, and whether a top's layouts are its pages' forms, under point 7.
 - **Trace ids.** An item's trace id comes from its list's part and the item's id or place, whatever component draws it (DEC-005 point 5).
