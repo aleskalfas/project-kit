@@ -135,6 +135,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-a-produced-output
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
+        - .pkit/capabilities/visual-communication/outputs.md#the-switching-file
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync

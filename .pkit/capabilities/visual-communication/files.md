@@ -128,6 +128,7 @@ pkit:
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
+        - visual-communication:DEC-018#4
         - visual-communication:DEC-019#1
         - visual-communication:DEC-019#2
         - visual-communication:DEC-019#3
@@ -370,7 +371,7 @@ lock:
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes, of `svg`, `svg-modes`, `pdf` and `html` (*Exports* in *What is made from a piece*). `svg` and `svg-modes` write files of one name, so a piece names one of them. `svg-modes` takes no mode of no pair it reads that parts the piece's combinations (*The switching file* in *What is made from a piece*). |
+| `exports` | yes | The formats an export makes, of `svg`, `svg-modes`, `pdf` and `html` (*Exports* in *What is made from a piece*). `svg` and `svg-modes` write files of one name, so a piece names one of them. `svg-modes` takes no mode of no pair it reads that parts the piece's combinations (DEC-018 point 4). |
 | `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). `pkit visual mark-final` sets `final`. A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins a draft's lock. No other state reads it. |
