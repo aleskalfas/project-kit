@@ -54,7 +54,9 @@ def runner() -> ModuleType:
 def _request(in_folder: Path, **overrides: object) -> dict[str, object]:
     request: dict[str, object] = {
         "schema_version": 1,
-        "agent": "code-reviewer",
+        # A name no place of the methodology ships, so the harness loads it by name
+        # (ADR-087 point 3): the reviewer the project wrote into `.claude/agents/`.
+        "agent": "my-reviewer",
         "brief": "Review pull request 99.",
         "folder": str(in_folder),
         "limit_seconds": 30,
@@ -71,7 +73,7 @@ def _script(path: Path, body: str) -> Path:
     return path
 
 
-def _deploy(folder: Path, name: str = "code-reviewer") -> None:
+def _deploy(folder: Path, name: str = "my-reviewer") -> None:
     agents = folder / ".claude" / "agents"
     agents.mkdir(parents=True, exist_ok=True)
     (agents / f"{name}.md").write_text("---\nname: x\n---\n", encoding="utf-8")
@@ -168,7 +170,15 @@ def test_the_command_line_is_the_closed_set(runner: ModuleType) -> None:
         "--effort",
         "low",
     ]
-    assert set(runner.FLAGS) == {"-p", "--agent", "--effort"}
+    assert runner.command("claude", "run-1", None, {"prompt": "p"}) == [
+        "claude",
+        "-p",
+        "--agents",
+        '{"run-1": {"prompt": "p"}}',
+        "--agent",
+        "run-1",
+    ]
+    assert set(runner.FLAGS) == {"-p", "--agents", "--agent", "--effort"}
 
 
 @pytest.mark.parametrize(
@@ -182,7 +192,6 @@ def test_the_command_line_is_the_closed_set(runner: ModuleType) -> None:
         "--allowed-tools",
         "--add-dir",
         "--settings",
-        "--agents",
         "--mcp-config",
     ],
 )
@@ -208,12 +217,12 @@ def test_the_agent_is_found_where_claude_code_finds_it(runner: ModuleType, tmp_p
     home = tmp_path / "home"
     env = {"CLAUDE_CONFIG_DIR": str(home)}
     assert runner.agent_file("code-reviewer", folder, env) is None
-    _deploy(tmp_path / "elsewhere")  # not above the folder: not found
+    _deploy(tmp_path / "elsewhere", "code-reviewer")  # not above the folder: not found
     assert runner.agent_file("code-reviewer", folder, env) is None
     (home / "agents").mkdir(parents=True)
     (home / "agents" / "mine.md").write_text("x", encoding="utf-8")
     assert runner.agent_file("mine", folder, env) == home / "agents" / "mine.md"
-    _deploy(project)
+    _deploy(project, "code-reviewer")
     assert runner.agent_file("code-reviewer", folder, env) == (
         project / ".claude" / "agents" / "code-reviewer.md"
     )
@@ -297,7 +306,7 @@ def test_a_run_finishes_with_the_harness_exit(tmp_path: Path, env: dict[str, str
         "reason": "",
     }
     seen = json.loads(record.read_text(encoding="utf-8"))
-    assert seen["argv"] == ["-p", "--agent", "code-reviewer", "--effort", "max"]
+    assert seen["argv"] == ["-p", "--agent", "my-reviewer", "--effort", "max"]
     assert seen["brief"] == "Review --dangerously-skip-it"
     assert Path(seen["cwd"]).resolve() == tmp_path.resolve()
     assert seen["deadline"] is None

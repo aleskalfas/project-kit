@@ -944,9 +944,9 @@ def test_sync_reads_every_record_before_it_copies_anything(
         caps._copy_capability_tree,
     )
 
-    def _read(target_root: Path, name: str) -> caps.CapabilityRecord:
+    def _read(target_root: Path, name: str, **kwargs: Any) -> caps.CapabilityRecord:
         events.append(f"read {name}")
-        return read(target_root, name)
+        return read(target_root, name, **kwargs)
 
     def _copy_area(*args: Any, **kwargs: Any) -> None:
         events.append("copy")

@@ -1,0 +1,34 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  One picker in the agents area, `.pkit/agents/definition_source.py`, decides
+  which definition of each name is the agent, and every part that deploys,
+  runs, checks or names an agent asks it (ADR-087, #2954): the deploy, the
+  agent runner, `pkit agents`, `pkit refs validate`, `pkit new agent`, `pkit
+  new storyboard` without `--namespace`, `pkit status`, the delegate's check
+  and the capabilities' collision checks. It reads which capabilities are
+  installed, their skips and the project's choices through one reader in the
+  lifecycle area, `.pkit/lifecycle/capability_records.py`, and sync copies both
+  with their areas. The project's definition wins, then an installed
+  capability's, then core's (COR-013 point 8). A capability's definition counts
+  only while the component registry records it, so the folder of an incubated
+  capability that was uninstalled no longer ships agents. Between two
+  capabilities the one the project chose wins, else the first by name in
+  code-point order, the same under every locale; where the deploy used to take
+  the first the shell listed, the agent of a name two capabilities ship may
+  change. The project's choice is kept once for each agent's name in
+  `.pkit/manifest.yaml` under `agent_choices`. An `override` at the collision
+  prompt of `pkit capabilities install`, `pkit capabilities upgrade
+  --interactive` or `pkit upgrade` against another capability's agent records
+  it and removes nothing, the new `pkit agents choose <agent> <capability>`
+  records it at any other time, and uninstalling a capability drops its
+  choices. `pkit refs validate` warns of each collision no choice settles and
+  each choice that decides nothing, and reports as an error each name whose
+  winning place holds both layouts, each definition whose front matter names
+  another agent than its file, and each name whose records it cannot read.
+  `pkit status` counts a deployed copy whose agent it cannot tell apart from
+  the stale ones. Uninstalling a capability no longer removes a deployed agent core,
+  another capability or the project ships: the deploy after it writes the
+  definition that now wins.

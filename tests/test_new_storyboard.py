@@ -14,6 +14,8 @@ from project_kit import storyboards
 from project_kit.cli import main
 from project_kit.manifest import ORIGIN_INCUBATED_IN_REPO
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
+from tests.backbone_manifest import register_capabilities
 
 
 @pytest.fixture
@@ -25,6 +27,8 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).
     (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    # The picker of an agent's definition and the reader of the records (ADR-087).
+    stage_picker(tmp_path / ".pkit")
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
@@ -178,7 +182,9 @@ def test_stamp_project_wins_over_core_collision(kit_target: Path) -> None:
 
 
 def _make_capability_agent(root: Path, capability: str, name: str, *, flat: bool = False) -> Path:
-    """An agent inside a capability (the capability carries a package.yaml)."""
+    """An agent inside a capability (the capability carries a package.yaml), which
+    the registry records, so its definition counts (COR-017)."""
+    register_capabilities(root, capability)
     cap_dir = root / ".pkit" / "capabilities" / capability
     cap_dir.mkdir(parents=True, exist_ok=True)
     (cap_dir / "package.yaml").write_text(

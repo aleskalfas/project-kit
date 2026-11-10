@@ -275,7 +275,9 @@ def run_upgrade(
     # copy replaces.
     from project_kit import capabilities as caps
 
-    plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
+    plans = plan_capabilities(
+        target_root, source_kit, caps.read_capability_records(target_root, release=source_kit)
+    )
     moves = component_moves(target_root, source_kit, manifest) if manifest is not None else []
     _report_component_moves(moves)
 
@@ -294,7 +296,7 @@ def run_upgrade(
     loaded_rules.refuse_index_clash(target_root, command="upgrade")
     _resolve_compatibility(components, target_root, source_kit, target_version)
     _check_capability_dep_conflicts_for_upgrade(target_root, plans, force=force)
-    answers = _settle_new_collisions(target_root, plans, dry_run=dry_run)
+    answers = _settle_new_collisions(target_root, plans, dry_run=dry_run, release=source_kit)
     plans = [answers.in_force(plan) for plan in plans]
     # Every shipped capability the bundle ships moves with the release.
     moving = [plan for plan in plans if plan.disposition in COPIES]
@@ -333,6 +335,7 @@ def run_upgrade(
         _move_root_manifests(target_root, plans, dry_run=False)
         _record_new_skips(target_root, moving, answers)
         caps.apply_overrides(target_root, answers.overridden, dry_run=False)
+        caps.record_agent_choices(target_root, answers.choices, dry_run=False)
         propagate(ctx, moving)
         register_adapters(target_root)
         reread = read_backbone_manifest(target_root)
@@ -496,7 +499,7 @@ def component_moves(
             source = caps.find_capability_in_source(source_kit, entry.name)
             if source is None:
                 continue
-            recorded = caps.read_capability_record(target_root, entry.name).version
+            recorded = caps.read_capability_version(target_root, entry.name)
             move = capability_move(entry.name, recorded, source.package.version)
             if move is not None:
                 moves.append(move)
@@ -560,7 +563,7 @@ def _capability_manifests_at_root(target_root: Path, manifest: BackboneManifest)
         for entry in manifest.components
         if entry.kind == "capability"
         and entry.origin == ORIGIN_KIT_SHIPPED
-        and caps.read_capability_record(target_root, entry.name).at_root
+        and caps.capability_root_manifest_path(target_root, entry.name).is_file()
     ]
 
 
@@ -695,12 +698,15 @@ class CollisionAnswers:
     """What a person chose for each new collision in step 1 (ADR-065 point 6).
 
     *skips* holds the artefacts each capability's copy leaves out, by
-    capability, and *overridden* the project's artefacts an override removes in
-    step 2, before the copy.
+    capability, *overridden* the project's artefacts an override removes in
+    step 2, before the copy, and *choices* the capability an override chose for
+    an agent's name another capability ships, which step 2 records in the
+    backbone manifest (COR-017, ADR-065 point 6).
     """
 
     skips: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=lambda: {})
     overridden: tuple[Path, ...] = ()
+    choices: Mapping[str, str] = field(default_factory=lambda: {})
 
     def in_force(self, plan: CapabilityPlan) -> CapabilityPlan:
         """*plan* with the skips in force: those its record holds and those chosen."""
@@ -712,7 +718,11 @@ class CollisionAnswers:
 
 
 def _settle_new_collisions(
-    target_root: Path, plans: Sequence[CapabilityPlan], *, dry_run: bool
+    target_root: Path,
+    plans: Sequence[CapabilityPlan],
+    *,
+    dry_run: bool,
+    release: Path | None = None,
 ) -> CollisionAnswers:
     """The collision flow of a transition of the backbone (ADR-065 point 6, COR-017).
 
@@ -724,7 +734,10 @@ def _settle_new_collisions(
     asks override, skip or inspect for each. With nobody to answer it refuses,
     before anything is written, and names a terminal re-run or a rename. A dry
     run lists each collision and asks nothing. No capability is held back, so
-    the project stays at one release (COR-059 point 7).
+    the project stays at one release (COR-059 point 7). Which agents' definitions
+    count is the picker's, loaded from *release*, the release the transition
+    brings (ADR-087 point 2); an override of an agent another capability ships
+    records the project's choice of the capability for the name.
     """
     from project_kit import capabilities as caps
 
@@ -742,6 +755,7 @@ def _settle_new_collisions(
             plan.source,
             skipped=plan.record.skipped if plan.record is not None else (),
             released=released,
+            release=release,
         )
     ]
     if not found:
@@ -776,6 +790,7 @@ def _settle_new_collisions(
     click.echo()
     skips: dict[str, list[tuple[str, str]]] = {}
     overridden: list[Path] = []
+    choices: dict[str, str] = {}
     for name, finding in found:
         choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
         artefact = (finding.artifact_kind, finding.artifact_name)
@@ -783,10 +798,12 @@ def _settle_new_collisions(
             skips.setdefault(name, []).append(artefact)
         else:
             overridden.extend(caps.project_artefact_paths(target_root, *artefact))
+            choices.update(caps.overridden_agent_choices([finding], {finding.artifact_name}, name))
     click.echo()
     return CollisionAnswers(
         skips={name: tuple(chosen) for name, chosen in skips.items()},
         overridden=tuple(overridden),
+        choices=choices,
     )
 
 
