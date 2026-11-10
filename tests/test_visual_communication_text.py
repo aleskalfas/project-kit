@@ -280,8 +280,8 @@ def runs(*given: tuple[str, Any]) -> list[Any]:
 
 def test_each_weight_a_run_is_drawn_in_is_a_family_of_its_own() -> None:
     """The test brand gives its heading's weight a family and a file of its own, and the
-    tests of runs do too, so no run is measured from another weight's file (DEC-012,
-    Implications, "A weight's own file")."""
+    tests of runs do too, so no run is measured from another weight's file (DEC-012 point 4,
+    "A weight's own file")."""
     tokens = json.loads(
         (FIXTURES / "test-brand" / "1.0.0" / "tokens" / "base.tokens.json").read_text()
     )

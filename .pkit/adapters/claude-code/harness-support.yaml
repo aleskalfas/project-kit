@@ -100,3 +100,25 @@ requirements:
       settings file either. The gap comes from how the adapter starts a run,
       not from the harness, so nothing an adopter keeps closes it; #2352 takes
       it up.
+  session-agent-withheld-tools:
+    grade: at-cost
+    cost: >-
+      Measured only for a whole built-in tool, named without an argument, so
+      a definition withholds only such tools: the adapter refuses to deploy
+      or run one that withholds a tool it does not know as built in, a tool
+      narrowed by an argument, or an MCP server's tool (its declaration of
+      tool access, `tool-access.json`).
+    harness_versions: ["2.1.319", "2.1.319"]
+    evidence: >-
+      Measured with Claude Code 2.1.319 on macOS, from the init message a
+      session reports at its start, for an agent whose definition names only
+      `disallowedTools`, which the adapter writes for `withheld` (ADR-085
+      point 1). The agent kept every other tool, a connected MCP server's
+      included, and the withheld tools were absent. That held for an agent
+      given on the command line, as the agent runner gives one, for one named
+      by the `agent` setting, as a project's default agent is, and with agent
+      teams on.
+  # helper-withheld-tools is left unanswered, so it reads as indeterminate
+  # (COR-047 point 3): a helper's tools are visible only inside a session, and
+  # nobody has measured a helper withheld a tool yet (ADR-085 point 3). Only
+  # whoever measures it answers it.

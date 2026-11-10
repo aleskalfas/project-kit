@@ -626,6 +626,8 @@ This folder holds the reference's pages, the shared library, the backbone file s
 ├── harness-requirements.schema.json
 ├── harness-support.yaml       # the shape of each adapter's support declaration (COR-047)
 ├── harness-support.schema.json
+├── tool-access.yaml           # the shape of each adapter's declaration of tool access (ADR-086)
+├── tool-access.schema.json
 └── …                          # further pairs the core owns, one per namespace
 ```
 
