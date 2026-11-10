@@ -47,7 +47,9 @@ Three terms:
   - a list, and its entries (point 4)
   - a picture's text, or that it needs none, and an instance's text (point 5)
   - a reading order (point 6)
-- **A word beyond these is an addition.** It refuses no file (DEC-003 point 3). A renderer reads it as something new, so the seam's version rises with it (DEC-005 point 8). A renderer that does not spell it leaves it undeclared, and the check reports it lost, but in a format whose files are pictures (point 9).
+- **A word beyond these is an addition.** It refuses no file (DEC-003 point 3). A renderer reads it as something new, so the seam's version rises with it (DEC-005 point 8).
+- **Declared as a property is.** A renderer declares each word it spells, as it declares each primitive and property it draws (DEC-005 point 9). One it does not spell it leaves undeclared, and the check reports it lost, but where point 9 exempts it.
+- **Named as the web names them.** The words take WAI-ARIA's role names where the meanings match, as the scene's properties take SVG's (DEC-005 point 5). `decoration` is ARIA's presentation, named for what an author means by it. A word added later takes its name so.
 - **Spelled by each renderer,** but where this record spells a case no renderer should settle alone: emphasis in a PDF (point 7), an instance's text (point 5), a picture a renderer does not draw (point 8) and a format whose files are pictures (point 9). Where two kinds of span cross, the format says which splits (point 3).
 - **Spelled in the format by the changes that build it.** How a component writes each declaration below, and how the scene holds it, is set there. The first of them sets the scene's whole shape (point 10). Each spelling is a key that format 1's schemas do not know, so no file they accepted holds one.
 
@@ -65,9 +67,8 @@ Three terms:
 - **A block of code.** A text read as a paragraph, whose every run is `code`, reads as one block of code, its paragraphs its lines, kept as written. A text marked otherwise, such as a heading, keeps its mark, and its runs read as spans of code (point 4).
 - **One structure for the field, under every drawing.** It lies with the field's words, so each text part that shows the field carries it. A brand's drawing of a layout takes it with the words the top declares, and declares none of its own (DEC-009 point 5). It counts for no drawing's fit, as a run's concept does not (DEC-012 point 2).
 - **What a change of it breaks.** A change of the structure a word names, one added or removed included, breaks no library. A word says what a run is. Its look and its structure are how the component shows that, to the eye and to a reader's tools. A change of either changes how a piece shows a word, as a change of a word's role or paint does (DEC-012 point 6). A piece meets it only when its lock moves (DEC-003 point 8).
-- **A judgement accepted with the record.** The record of change over time calls a change of look not breaking, since the lock and the before-and-after protect each piece (DEC-003 point 6). The lock protects a piece from a change of structure too, but the before-and-after does not show one (below). Counting it not breaking anyway is a judgement, which accepting this record accepts.
-- **Said where it is released.** No image shows such a change. So the comparison a release makes of each stable component with its previous version states it, as a fact, for whoever releases the library (DEC-003 point 7).
-- **A known limit.** A person who moves a lock sees a before-and-after of images (DEC-001 point 7). Until a before-and-after names a change of the reader's side, that person does not see one (Implications).
+- **Shown where a lock moves.** No image shows such a change. So the before-and-after names it: beside each page that differs, it names each structure, mark, picture's or instance's text and reading order that differs between its two scenes ([visual-communication:DEC-019-lock-moves-and-pruning] point 5). The lock and the before-and-after then protect each piece from it, as from a change of look (DEC-003 point 6).
+- **Said where it is released.** The comparison a release makes of each stable component with its previous version states it too, as a fact, for whoever releases the library (DEC-003 point 7).
 
 ### 3. A run may hold a link, under the key `link`
 
@@ -77,7 +78,7 @@ Three terms:
 - **Read by one standard.** The check reads an address by one published standard's syntax, so it answers the same on every machine. The change that builds links names the standard, and the code that reads it.
 - **What the check refuses:** a link that is no text, is empty, or holds a space or a control character. It also refuses an address of another scheme, such as `javascript`, `data` or `file`, and a web address with no host. So is a web address that carries a user's name or password.
 - **Never followed by the capability.** The engine reads no network, so no check follows a link, and a dead one passes (DEC-001 point 8).
-- **One link across runs.** Runs next to each other in one paragraph whose addresses are the same text are one link. So a link may hold runs of several styles, and cross a line's break.
+- **One link across runs.** Runs next to each other in one paragraph whose addresses are the same text are one link. So a link may hold runs of several styles, and cross a line's break. The scene holds it as one link. A medium that places a text's lines apart spells it as its own record decides, and reports any loss ([visual-communication:DEC-020-html-page-drawing] point 10).
 - **Within one paragraph.** A link ends where its paragraph ends. A linked run that goes on past a line feed gives a link of that address in each paragraph it reaches.
 - **A link never splits.** Where a link and a span of one structure cross, the span splits at the link's edges, and each part keeps its structure. So every medium nests them alike.
 - **In each language its own.** A run's link is part of its field's value, which differs between languages as its runs do (DEC-012 point 1). So each language may link to a page in its own language. Whether the check holds any link equal across languages is translation's to decide (DEC-012, Implications).
@@ -129,7 +130,7 @@ Three terms:
 - **A picture with no text,** not marked as needing none, still takes its place, as a picture whose text is missing. A renderer marks it so where its medium can.
 - **Never required.** At format 1 no field becomes required, and no file it accepted takes a new failure (DEC-003 point 3, DEC-012 point 7). So a picture with no text only asks for attention. A component may still require its field, as it requires any.
 - **An instance may take a text too,** as a diagram of boxes and lines may. A component names a field, under the same rules, as the text of the whole its instance draws, the same under every drawing. The reader's side gets that text first, then what the instance holds, in its reading order. So the text says what joins the labels, and hides nothing they hold.
-- **Written before, never in place.** A renderer writes an instance's text as an element of its own, before what the instance holds. It never writes it as a text that stands in for them, as a PDF's `Alt` on the element that holds them would.
+- **Read before, never in place.** A renderer gives a reader's tools an instance's text before what the instance holds, and never in its stead. A form that stands in for what it holds, as a PDF's `Alt` on the element that holds them does, hides them, so a renderer writes the text in another form, which its reference page names.
 - **An instance's text is never asked for.** An instance with none reads what it holds, and none is marked as needing none.
 - **What a change of it breaks.** A field of a picture's or an instance's text added where there was none breaks nothing. Pointing the text at another field, or a field given up for needing none, changes what the text content fills says. So it breaks, as DEC-003 point 6 counts such a change.
 
@@ -170,27 +171,30 @@ Three terms:
 
 - **A fact of a format.** A renderer's declaration may say of a format that its files are *pictures*: each read as one whole, whose text the document that shows it gives. It says so beside the format, as it names a format that holds modes (DEC-005 point 9).
 - **The format fixes what a picture leaves out:** the words of point 1, but a run's link. A link stays out of it, since a seeing reader who opens the file alone follows one. Nothing a seeing reader sees is among them, such as a frame, a paint, a font or a text's words. So no loss of the drawing hides in the fact.
-- **No loss for them.** For a format whose files are pictures, the check reports no loss of these words, and neither does the renderer. A word the vocabulary gains later joins them, with no new declaration.
-- **The first exception** to a renderer reporting what it does not draw (DEC-001 point 2). Accepting this record accepts it.
-- **The SVG renderer's two formats are pictures** (DEC-020): the SVG format and its format of a switching file. It draws a run's link, as SVG's own link. A keyboard reader who opens such a file alone moves through its links in draw order, a small loss its reference page states.
+- **No loss for them.** For a format whose files are pictures, the check reports no loss of these words, and neither does the renderer.
+- **A later word joins only when its change says so,** and only a word no seeing reader acts on. So a link on a picture, left to a later change (point 3), stays out of it.
+- **The cost.** A file of such a format handed out alone has no document around it to give its text. A reader who does not see it gets none of its structure, and nothing reports that.
+- **The first exception** to a renderer reporting what it does not draw (DEC-001 point 2). Accepting this record accepts it, with its cost.
+- **The SVG renderer's two formats are pictures** (DEC-020, [visual-communication:DEC-018-copy-follows-reader-mode] point 4): the SVG format and its format of a switching file. It draws a run's link, as SVG's own link. A keyboard reader who opens such a file alone moves through its links in draw order, a small loss its reference page states.
 - **The PDF and HTML renderers' formats** are not pictures, and carry each word. The change that brings a word into the scene makes both carry it, so no piece is told of a loss in between. Where one cannot yet, the check reports the loss until it does.
 
 ### 10. What this adds to format 1, and what still holds
 
-- **Added, each optional:**
+- **Added to the format, each optional:**
   - a run structure for each word of a field's run styles
   - the key `link` on a run
   - a field's mark of its text's structure, a caption's with the field it captions
   - a list field's mark that it reads as a list or as no list
   - a picture field's mark that names the field of its text, an image part's field of text or its mark that it needs none, and a component's field of its instance's text
   - a component's reading order of its parts
-  - a renderer's fact that a format's files are pictures
+- **Added to the seam,** whose version is apart from the format's (DEC-005 point 8):
   - in the scene, each of these, with a heading's level and each list
+  - in a renderer's declaration, each word it spells, and the fact that a format's files are pictures
 - **The format number stays 1.** Each is an addition that every file written before still meets (DEC-003 points 1 and 3). Format 1's schemas know none of these keys, so no file they accepted holds one, and no field becomes required.
 - **No new failure on a file format 1 accepted.** Each finding that fails reads a key format 1 refused.
 - **New attention, on files format 1 accepted.** A picture with no field for its text asks for attention, once in the version of each component that shows one today. This is less than DEC-012 point 7 promised for runs, under which no finding arose at all. It refuses nothing (DEC-003 point 3).
 - **The seam's version rises in the first change.** A renderer reads what it did not read before, so the seam rises in the change of a text's structure and a reading order (DEC-005 point 8). That change sets the scene's shape for every word of point 1. So the changes of a run's link and structure, and of a picture's text, fill it with no rise of their own. A later change that must reshape it raises the seam again.
-- **A renderer's own version** rises in each change that alters its output (DEC-005 point 9). The PDF and HTML renderers' rise with the first change, since every list field then reads as a list. The SVG renderer's rises only with the change of a run's link.
+- **A renderer's own version** rises in each change that alters its output (DEC-005 point 9). The PDF and HTML renderers' rise with each of the three changes, the first included, since every list field then reads as a list. The SVG renderer's rises only with the change of a run's link.
 
 ### 11. What the checks report, and how severely
 
@@ -210,7 +214,7 @@ Each finding below fails validation where it lies in a file the project can corr
   - in a component that names no reading order: a field it marks `heading` whose text part it draws after another of its text parts (point 4).
   - at a piece that exports a format whose files are not pictures: a picture whose text field the content leaves out. It names the field and the content's author.
   - at a piece: a run that holds a link and is drawn in the same role and paint as a run of its text that holds none. It names the run. The content's author may give it another word, or the component's owner declare one. A text whose every run is one link has nothing to compare, and is not judged.
-- **What a brand's drawing adds** to the findings on drawings: a picture's text named by an image part of `file` or `role`, and a reading order, judged as in a component (DEC-009 point 9).
+- **What a brand's drawing adds** to the findings on drawings: a picture's text named by an image part of `file` or `role`, a reading order, and a heading drawn after another text, each judged as in a component (DEC-009 point 9).
 
 ## Rationale
 
@@ -252,7 +256,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why the draw order by default.** It is fixed and known: the component writes its parts in order, and the content orders its items. A component writes its parts mostly in the order a reader takes them, as a title before its body. An order computed from where elements lie on a page would misread two columns, and change with a page's size.
 
-**Why a component orders only its own parts, and a drawing its own.** A component's inside is private, so its library may change it freely (DEC-005 point 3). An order that reached into a placed component would break when that component changed. A brand's drawing has parts of its own, which no other drawing shares, so only it can order them.
+**Why a component orders only its own parts, and a drawing its own.** A component's inside is private, so its library may change it freely (DEC-005 point 3). An order that reached into a placed component would break when that component changed. A brand's drawing has parts of its own, which no other drawing shares, so only it can order them. A reading order follows where parts lie, which is the drawing's: a drawing that sets a subtitle above its title reads it first, as a seeing reader does. So switching the brand may change the order, as it changes where each part lies, and changes no structure.
 
 **Why emphasis in a PDF takes a type of its own.** It keeps the file at PDF 1.7, and holds the emphasis in a form that version defines. A tool that reads only the standard types reads a span, so the emphasis reaches fewer tools than the HTML page's does. A move to PDF 2.0 carries it as a standard type, but the renderer would have to meet PDF 2.0 throughout, and no tool that reads it was tried, for two words.
 
@@ -285,6 +289,7 @@ Each finding below fails validation where it lies in a file the project can corr
 - **An instance's text read in place of what it holds.** Rejected. It would hide the texts, links and headings a diagram's cards hold.
 - **A reading order computed from where elements lie.** Rejected. It misreads columns, and changes with a page's size.
 - **A reading order that reaches into placed components.** Rejected. It would break when a placed component changed its private parts.
+- **A reading order of the top's fields, which every drawing takes, as it takes their marks.** Rejected. A drawing sets where the fields lie, so a reader who does not see would take them in another order than a seeing reader does. An order of fields would also reach into the blocks a drawing passes them to.
 - **PDF 2.0, with `Em` and `Strong` as standard types.** Rejected for now. The renderer would have to meet PDF 2.0 throughout, untried with the tools that read it, for two words.
 - **Emphasis in a PDF reported as `approximated`.** Rejected. The file holds the emphasis in a form PDF 1.7 defines, which a tool that reads the file's own types reads (point 7).
 - **A picture not drawn that takes its text out too.** Rejected. A reader who does not see the page would lose a text that a fault of the drawing took.
@@ -294,30 +299,32 @@ Each finding below fails validation where it lies in a file the project can corr
 
 ## Implications
 
-- **The change of a text's structure and a reading order** sets the scene's whole shape of the reader's side, and raises the seam (point 10). It builds a field's marks, a heading's computed level, each list and a list field's mark, a component's reading order, and the fact that a format's files are pictures. It sets how a component writes them, and how the scene holds them. The PDF and HTML renderers carry each word it brings in, and the SVG renderer's two formats say their files are pictures.
+- **The change of a text's structure and a reading order** sets the scene's whole shape of the reader's side, and raises the seam (point 10). It builds a field's marks, a heading's computed level, each list and a list field's mark, a component's reading order, and the fact that a format's files are pictures. It sets how a component writes them, how the scene holds them, and how a renderer declares each word it spells. The before-and-after comes to name each difference of the reader's side (point 2). The PDF and HTML renderers carry each word it brings in, and the SVG renderer's two formats say their files are pictures.
 - **The change of a run's link and structure** builds the key `link`, the check of its address, and a run structure for each word of a field's run styles. It names the standard an address is read by, and code that reads it on the terms the capability's code takes ([visual-communication:DEC-002-files-and-validation] point 8). The SVG renderer comes to draw links, and its version rises.
 - **The change of a picture's text** builds a picture field's mark that names its text, an image part's field of text and its mark that it needs none, an instance's text, and a picture not drawn that keeps its text (point 8).
 - **The shipped libraries' components** come to declare their marks, their words' structures, their pictures' texts and their reading orders, each in a release of its library ([visual-communication:DEC-013-shipped-library-releases]). What each declares is its component's design, not this record's. A release that gives every picture a field for its text leaves no attention of point 11 standing on its library.
-- **The PDF renderer** becomes a tagged PDF in these changes. It writes each structure as its reference page says, and emphasis as point 7 says. Its `not-carried` loses each item as it comes to carry it, and goes when it is empty. A table reads as lists then, so no loss stands for one.
+- **The PDF renderer** becomes a tagged PDF in these changes. It writes each structure as its reference page says, and emphasis as point 7 says. Its declaration comes to name each word it spells. Its `not-carried`, a list no check reads, loses each item as it comes to carry it, and goes when it is empty. A table reads as lists then, so no loss stands for one.
 - **The HTML renderer** spells the reader's side as #2740's record decides, and its `not-carried` goes the same way.
 - **#2740's body** comes to say that its test's table reads as a list of lists, until the change of a table's words.
 - **The Feature's criterion on links** is met by a run's link.
 - **The capability's pages,** `components.md`, `files.md`, `checks.md` and `outputs.md`, describe each with the change that builds it. No page changes its text here.
 - **Edits to accepted records,** made once this record is accepted, each citing it. Accepting this record accepts them (COR-066 point 5). They wait for that acceptance.
-  - **DEC-001, point 2, "What a renderer cannot draw".** It comes to add that a renderer may say a format's files are pictures. Such a file carries none of the reader's side the format lists, links aside, and no loss is reported for it.
+  - **DEC-001, point 2, "What a renderer cannot draw".** It comes to add that a renderer may say a format's files are pictures. Such a file carries none of the reader's side the format lists, links aside, and no loss is reported for it. This is the one exception to a renderer reporting what it does not draw.
   - **DEC-001, point 3, "Runs".** It comes to add that a run may also hold a link, which may differ between languages, as its text does.
-  - **DEC-001, point 7, "A library's release never changes a piece others rely on".** "After a before-and-after of what the move changes" comes to add that the before-and-after shows what is drawn. A change of the reader's side is stated by the release's comparison (point 2), until a before-and-after names one.
+  - **DEC-001, point 5, "Switching the brand changes how a piece looks".** It comes to add that switching the brand may also change the order a page reads in, as it changes where each part lies, and the text of a picture the brand chose. It changes no structure.
   - **DEC-002, point 3, "Strict".** "A run's known keys are `text`, `style` and `concept`" comes to name `link` too.
   - **DEC-002, point 4, "Reserved keys".** "It fixes `text`, `style` and `concept` on a run" comes to read `text`, `style`, `concept` and `link`.
   - **DEC-003, point 6, "What breaks".** It comes to add that a change of the structure a component gives a word or a field, or of its reading order, does not break, as a change of look does not. Pointing a picture's, an instance's or a caption's text at another field, or giving a picture's field up for needing none, breaks.
   - **DEC-003, point 7, "The promise is checked".** It comes to add that the comparison also states, as a fact, each change of a stable component's run structures, text marks, fields of a picture's or an instance's text, and reading order.
   - **DEC-005, point 5, "Primitives at the leaves".** A text's bullet comes to add that each run holds its structure where its word names one, and that a text holds its mark, a heading with its level. "Draw order is the tree's order" comes to add that the reading order follows it, unless a component names another. The bullet on documents and PDF files comes to say that the scene holds the reader's side in words that name no medium, which each renderer spells. Those are each run's structure and link, each text's structure, each list, each picture's or instance's text, and each reading order a component names. Tables stay promised, and come with a later change.
-  - **DEC-005, point 9, "Each declares what it supports".** It comes to add that a renderer names each of its formats whose files are pictures. "Losses are known before a plugin runs" comes to add that a format whose files are pictures loses none of the reader's side the format lists. "One fallback for renderers" comes to add that the picture takes the text of the instance the part draws, or else the texts of the part in their reading order.
+  - **DEC-005, point 9, "Each declares what it supports".** It comes to add that a renderer declares each word of the reader's side it spells, as it declares each primitive and property, and names each of its formats whose files are pictures. "Losses are known before a plugin runs" comes to add that a format whose files are pictures loses none of the reader's side the format lists. "One fallback for renderers" comes to add that the picture takes the text of the instance the part draws, or else the texts of the part in their reading order.
   - **DEC-006, point 2, "None of the piece's words".** It comes to add that a picture's text is content too, in a field tied to the picture.
-  - **DEC-009, point 5, "A drawing is written against the top".** It comes to add that a drawing takes the structure and the marks the top declares for each word and each field, a picture's text with its field, and declares none of its own but the texts of the pictures it chose by `file` or `role`. **Point 6, "A drawing that does not fit"** comes to add that a run's structure, a run's link, a picture's text and an instance's text count for no drawing's fit. **Point 9** comes to add, to the findings that fail validation, a drawing's picture's text named by an image part of `file` or `role`, and its reading order, judged as in a component (point 11).
+  - **DEC-009, point 5, "A drawing is written against the top".** It comes to add that a drawing takes the structure and the marks the top declares for each word and each field, a picture's text with its field, and declares none of its own but the texts of the pictures it chose by `file` or `role`, and the reading order of its own parts. **Point 6, "A drawing that does not fit"** comes to add that a run's structure, a run's link, a picture's text and an instance's text count for no drawing's fit. **Point 9** comes to add, to the findings that fail validation, a drawing's picture's text named by an image part of `file` or `role`, and its reading order, and to those that ask for attention, a heading drawn after another text, each judged as in a component (point 11).
   - **DEC-012, its summary.** "a mapping of its `text`, its `style` and perhaps its `concept`" comes to add "or its `link`". **Point 1**, its bullet "A run" that names a run's keys, and "Keys the format fixes": a run may also hold `link`, and the format fixes it with the other three. **Point 2, "Only how the run is set"**: a run's word also chooses the run's structure, which its field declares for the word. **Point 8**'s finding on a run with another key comes to name `link` among the keys it allows. **Implications, "Left to later changes"**: the bullets on a run's link and on a run's structure come to cite this record.
-  - **DEC-020, point 10, "What a reader who does not see the page gets".** Its citation of #2739 comes to cite this record. Its item "what a shape or a picture says" comes to read: how the page spells a picture's text. This record decides that a shape is decoration and a picture's text is content.
+  - **DEC-020, point 10, "What a reader who does not see the page gets".** Its citation of #2739 comes to cite this record. Its item "what a shape or a picture says" comes to read: how the page spells a picture's text. This record decides that a shape is decoration and a picture's text is content. Its item "a reading order that differs from the draw order" comes to read: how the page spells a reading order a component names.
+  - **DEC-019, point 5, "The before-and-after stays a command".** "prints each page that differs" comes to add: and names each structure, mark, picture's or instance's text and reading order that differs between its two scenes.
   - **DEC-025, point 1, "`content: <field>`".** It comes to add that the field's mark may name the field of the picture's text. **Point 11, "A picture's text"** comes to cite this record in place of the issue.
+- **Read against, and left as they stand:** DEC-003 point 3, DEC-005 points 3 and 8, [visual-communication:DEC-010-list-item-fields], [visual-communication:DEC-011-tie-ends], DEC-018 point 6, DEC-023 point 4 and DEC-031 point 4.
 - **Left to later changes:**
   - a table's words, for its rows, its cells and its header cells
   - whether a list reads as ordered, where its pattern numbers its items
@@ -330,6 +337,5 @@ Each finding below fails validation where it lies in a file the project can corr
   - whether a picture's text says what the picture shows, which a graphic rule or the reviewer would judge
   - a picture role's text that the brand gives
   - a file's own title, which a reader's tools announce first
-  - a before-and-after that names each structure, text or reading order that differs, since no image shows one ([visual-communication:DEC-019-lock-moves-and-pruning])
   - how the agent that translates carries a picture's text and a run's link
 - **Revisit this record** if #2740's test finds a word a reader's tools cannot get from the HTML page, or if a screen reader misreads the PDF's own types or a figure with nothing drawn. Revisit it too if a computed level misleads in a real piece, or if the PDF renderer moves to PDF 2.0. A renderer whose medium is no picture yet holds no reader's side, such as a whiteboard service's, revisits point 9.
