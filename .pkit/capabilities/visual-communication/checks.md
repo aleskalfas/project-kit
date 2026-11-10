@@ -319,7 +319,7 @@ Each content file is read against the `fields` and `options` of each component i
 
 ### The brief
 
-A piece's brief names pages of the piece and parts of its content ([the brief](files.md#the-brief), DEC-029 point 5). Each name is read against the content of the piece's source language, its first, since an id is the same in every language. Each finding fails, at `<piece>/brief.yaml#<where>`, where `<where>` leads to the name in the brief, such as `pages.layers.relations#1.relates#2`. The brief's shape is the core's data validation's, so the check leaves a part of another shape to it. A piece with no brief raises none of these. A final piece's brief goes unread, but for its binding. Whether the drawing shows what the brief asks is no check's: the capability's reviewer reads it, and reports a brief finding (DEC-030 point 6; [the reviewer](README.md#the-reviewer)).
+A piece's brief names pages of the piece and parts of its content ([the brief](files.md#the-brief), DEC-029 point 5). Each name is read against the content of the piece's source language, since an id is the same in every language. Each finding fails, at `<piece>/brief.yaml#<where>`, where `<where>` leads to the name in the brief, such as `pages.layers.relations#1.relates#2`. The brief's shape is the core's data validation's, so the check leaves a part of another shape to it. A piece with no brief raises none of these. A final piece's brief goes unread, but for its binding. Whether the drawing shows what the brief asks is no check's: the capability's reviewer reads it, and reports a brief finding (DEC-030 point 6; [the reviewer](README.md#the-reviewer)).
 
 | Label | What it means | What to do |
 |---|---|---|
