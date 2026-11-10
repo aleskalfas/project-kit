@@ -49,7 +49,10 @@ agent_choices:
 
 - **Who reads them:** the lifecycle's reader of capability records, `.pkit/lifecycle/capability_records.py`, which reads the registry and each capability's skips too. The agents area's picker reads all three through it to name which definition of each name is the agent (the agents README, "Name-collision precedence").
 - **What does not read:** a file that does not read is answered as unreadable, never as recording nothing. A backbone manifest that does not parse leaves the registry and the choices unreadable. An `agent_choices` that is not that mapping leaves only the choices unreadable.
-- **Who writes them:** an `override` against another capability's agent at an install's, an upgrade's or a transition's collision prompt, and `pkit agents choose <agent> <capability>`. The command refuses a choice that would decide nothing. Such a choice names a capability that is not installed or ships no agent of that name. Or it names one whose definition of the name the project skipped.
+- **Who writes them:** an `override` against another capability's agent at an install's, an upgrade's or a transition's collision prompt, and `pkit agents choose <agent> <capability>`. The command refuses a choice that would decide nothing, one that names any of these:
+  - a capability that is not installed
+  - one that ships no agent of that name
+  - one whose definition of the name the project skipped
 - **Why there:** a mapping kept once for each name cannot disagree with itself, and the write that unregisters a capability drops its choices in the same file. The shell parsers of the registry read only list entries that name a kind, so none mistakes a choice for a capability.
 
 **Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant. For a **capability**, whether the capability's *subtree* is also deleted is origin-dependent. A kit-shipped copy is deleted, an incubated (adopter-authored) subtree is kept unless explicitly purged (COR-031 D4, see "Uninstall: origin-aware removal" below).
@@ -150,11 +153,9 @@ It refuses with the structural problems listed. This is self-validation, not sou
 
 Once those pass, **what gets deleted depends on origin** — origin-blind deletion would destroy adopter-authored work, the exact hazard COR-031 exists to prevent:
 
-**Whatever the origin,** the write that removes the registry entry drops the project's choices of the capability in the same file. Once the capability is unregistered, none of its definitions counts. So the next agents deploy removes each copy written from them, and writes the agent of each name (the agents README, "Deploy mechanics"). A deploy that fails after the registry write leaves those copies until the next sync's deploy.
-
 - **`kit-shipped`** — the subtree is a disposable copy of kit source. Uninstall deletes the subtree, removes the registry entry, and re-runs deploy (deploy's stale-removal pass then drops the harness symlinks, since the source is gone). Unchanged from before.
 - **`incubated-in-repo`:** the subtree is the adopter's *only* copy of authored work. So uninstall unregisters in place. It removes the registry entry and drops the capability's deployed harness skills and agents. It leaves the authored subtree on disk, and the CLI reports "unregistered in place; your authored files are kept at `<path>`".
-  - **The undeploy primitive, for skills:** the lifecycle runs each installed adapter's undeploy primitive, `undeploy-capability.sh <name>`, found by name as the deploy primitives are. The skills deploy reads the registry, and would drop the skills too. Skills keep this step until [project-kit#2956](https://github.com/aleskalfas/project-kit/issues/2956) decides their rules, as the Implications of ADR-087 say. The primitive removes no agent: the agents deploy does that.
+  - **The undeploy primitive, for skills:** the lifecycle runs each installed adapter's undeploy primitive, `undeploy-capability.sh <name>`, found by name as the deploy primitives are. The skills deploy reads the registry, and would drop the skills too. Skills keep this step until their own rules are decided. The primitive removes no agent: the agents deploy does that.
   - **What each side does:** the adapter removes the skills it deployed for that capability (the adapters README, "Primitives the lifecycle calls"). The lifecycle names the capability and carries no harness path.
   - **An adapter with no undeploy primitive** is named in a `warning` line, since its harness may still carry the capability's skills. It is never skipped silently.
   - **The order:** the undeploy runs before the registry entry is removed. So a failing adapter leaves the capability registered, and the uninstall can run again.
@@ -165,3 +166,5 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - **`--purge`** is refused there. A capability leaves the source through git.
   - **No caller deletes the source:** the guard sits in the uninstall function every caller goes through, which resolves the running code's tree itself.
   - **Run by other code,** uninstall refuses there before anything else, as install, upgrade and register do.
+
+**Whatever the origin,** the write that removes the registry entry drops the project's choices of the capability in the same file. Once the capability is unregistered, none of its definitions counts. So the next agents deploy removes each copy written from them, and writes the agent of each name (the agents README, "Deploy mechanics"). A deploy that fails after the registry write leaves those copies until the next sync's deploy.

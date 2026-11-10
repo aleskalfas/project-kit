@@ -40,7 +40,7 @@ pkit:
         - .pkit/schemas/backbone/config.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - .pkit/schemas/backbone/rule-set.schema.json
-      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1"]
+      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1", "ADR-087#1", "ADR-087#2"]
       artefact:
         - .pkit/lifecycle/manifest.md
         - .pkit/lifecycle/component-registry.md

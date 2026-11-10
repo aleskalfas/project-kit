@@ -492,8 +492,9 @@ The values are those of Claude Code, the one harness an adapter ships for today.
 Each adapter handles its own deploy (COR-005), and future adapters for other harnesses ship their own deploy primitives. For Claude Code, `.pkit/adapters/claude-code/deploy-agents.sh` does it, and `pkit init` and `pkit sync` run it:
 
 1. It asks the picker which definition of each name is the agent ("Name-collision precedence" below). The picker reads the project's place, each capability folder's and core's ([COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), in either form.
-2. It refuses, before reading its text, an agent whose place holds both layouts, and one whose front matter gives another name than its file's.
+2. It refuses, before reading its text, an agent whose place holds both layouts.
 3. It resolves the source's front matter through the overlay ("Adopter overlay" above), and carries its model and effort ("Model and effort" above).
+   - It refuses an agent whose front matter gives another name than its file's.
    - It writes the agent's tool access from the reader's answer, in the harness's keys ("Tool access" above).
 4. It rewrites each storyboard the source names by its file name to the storyboard's path from the project's root ([`storyboards.md`](storyboards.md)).
 5. It ends the body with one sentence, which replaces the session scratch directory the harness's environment names with `.agent-workspace/`.
@@ -509,7 +510,7 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
 - **A folder with no definition named after it,** such as one half written, ships none, and the rest deploy.
 - **A refused agent** never stops the others, and stays the agent: no other definition's copy stands in for it (COR-013 point 8). What becomes of the copy written earlier from its definition depends on the cause:
   - **Refused for its tool access,** the earlier copy is removed. It may give tools the definition no longer gives (COR-013 point 7). The agent is missing until its definition is mended.
-  - **Refused for another cause,** such as a gap in the overlay, the earlier copy stays only where its mark's tool access gives nothing more. It gives nothing more when it gives nothing the current text's does not, each entry read whole with its argument. The deploy then says the copy is not of the current text, and otherwise removes it.
+  - **Refused for another cause,** such as a gap in the overlay, the earlier copy stays only where its mark's tool access gives nothing more. That tool access gives nothing more when it gives nothing the current text's does not, each entry read whole with its argument. The deploy then says the copy is not of the current text, and otherwise removes it.
   - **Refused because its place holds both layouts,** there is no one current text, and the earlier copy is removed.
   - A copy whose mark records no definition is read as the agent's only where one place ships the name. One whose mark records no tool access is never kept.
 
@@ -518,7 +519,7 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
 
 Beside the deploy:
 
-- **An uninstall.** Once a capability is unregistered, none of its definitions counts. The deploy the lifecycle runs after it removes each copy written from them, and writes the definition that now wins for each name. Without that deploy, the copies stay until the next sync's. The adapter's `undeploy-capability.sh <name>` removes no agent: it keeps its role for skills ([the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls)).
+- **An uninstall.** Once a capability is unregistered, none of its definitions counts. The deploy the lifecycle runs after the uninstall removes each copy written from them, and writes the definition that now wins for each name. Without that deploy, the copies stay until the next sync's. The adapter's `undeploy-capability.sh <name>` removes no agent: it keeps its role for skills ([the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls)).
 - **Grants.** Where the adapter's permission hook is registered, the permission model decides each call of a dispatched agent. It applies the agent's own grants and the shared baseline (COR-028). The permissions reference says how a call's subject is found.
 - **Dispatching.** A session dispatches an agent by its definition's name, and gives it no name of its own. While Claude Code's agent teams are on, a named one's result arrives cut at 4064 characters, as [the adapter declares](../adapters/claude-code/README.md#harness-support-harness-supportyaml).
 
