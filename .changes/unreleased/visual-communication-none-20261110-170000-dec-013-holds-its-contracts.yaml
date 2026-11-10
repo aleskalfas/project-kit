@@ -1,0 +1,6 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-013 is trimmed in place and decides what it decided; the libraries'
+  README and files.md take the data it held, and release.py's docstring names
+  the release's own order (#2989). No surface moves.
