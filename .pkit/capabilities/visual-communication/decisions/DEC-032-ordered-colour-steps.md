@@ -26,6 +26,8 @@ Terms:
 
 ## Decision
 
+**An order's places may take colour steps, spread evenly between two ends each brand gives.**
+
 ### 1. A brand gives two ends and a text, as three shared roles
 
 - **Three roles.** The foundations declare `family.order.first`, the first end, `family.order.last`, the last end, and `family.order.text`, the text on every step. Each has a value under every brand in every combination of its modes, given or from its default, and a brand exports them as every shared role (DEC-004 point 5).
