@@ -7,6 +7,7 @@ the import a run makes when it draws."""
 
 from __future__ import annotations
 
+import re
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
@@ -379,6 +380,43 @@ def test_a_number_named_is_let_through_and_the_record_keeps_it(tmp_path: Path) -
             "version": "1.1.0",
         }
     ]
+
+
+# --- an element of a switching file that differs (DEC-018 point 1) ------------------------------
+
+
+def differing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The piece published as switching files and exported once, the `tests` library at 1.1.0
+    too, and the switching file's rules, from now to the end of the test, repainting nothing,
+    so each element a rule repaints differs from its one-key file in the dark scheme."""
+    root = published(tmp_path, exports=["svg-modes"])
+    monkeypatch.setattr(svg.Switching, "_key_rules", lambda self, key: "")
+    return root
+
+
+def test_an_element_that_differs_stops_it_and_names_the_line_that_goes_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = differing(tmp_path, monkeypatch)
+    said = refused(root, "--use-differing", "figure/caption")
+    assert said.startswith(
+        "error: a switching file paints a combination otherwise than the SVG renderer's file "
+        "of that combination: `figure/background` of `flow.v2.en.default.svg` in "
+        "`colour-scheme.dark`: "
+    )
+    [line] = re.findall(r"`(pkit visual upgrade [^`]*)`\n$", said)
+    named = line.removeprefix("pkit visual upgrade flow ").split(" ")
+    assert named[:2] == ["--use-differing", "figure/background"]
+    assert set(named[0::2]) == {"--use-differing"}
+    assert "figure/caption" in named
+    done = lines(root, *named)
+    let_through = [each for each in done if each.startswith("let through: `figure/")]
+    assert len(let_through) == len(named) // 2
+    assert record_of(root)["versions"][-1]["recorded"]["differing"][0] == {
+        "file": "flow.v2.en.default.svg",
+        "key": "colour-scheme.dark",
+        "element": "figure/background",
+    }
 
 
 def test_it_draws_no_preview_and_keeps_its_look_ahead_in_the_local_folder(tmp_path: Path) -> None:

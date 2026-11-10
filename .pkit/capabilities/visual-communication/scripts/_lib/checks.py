@@ -1,7 +1,8 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
-points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-019 point 8).
+points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
+and 5, DEC-019 point 8).
 
 **File-level findings, every run:**
 
@@ -43,7 +44,11 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-019 point 
   fields and options of the components it fills, each list of runs against the words of
   its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8);
 - each page and key path a piece's brief names, against the content of its source language
-  (`briefs.findings`, DEC-029 point 5).
+  (`briefs.findings`, DEC-029 point 5);
+- the formats each piece names: two that write files of one name, `svg` and `svg-modes`
+  (`same_name_findings`), and, read with the content, a format of switching files whose file
+  cannot hold a value axis's mode that parts the piece's combinations (`unpaired_findings`).
+  Each fails, and an export refuses the piece (DEC-018 points 2 and 4).
 
 **Scene findings** (`scene_findings`): what computing a piece's scenes finds, in every
 language and at every key over the size axes, a finding that differs by key naming the key
@@ -52,8 +57,11 @@ owners of a value, a loop, a missing exposed part or point, a page inside a page
 concept the piece's notations do not hold, a switch or a `when` by a size that reads no
 size axis a piece can name), a produced picture that is missing, contrast as drawn, a
 colour role the brand lacks, each loss of the renderers that draw the piece that nobody
-accepted, the components it uses that are experimental or deprecated, and content drawn at
-one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7). A
+accepted, the components it uses that are experimental or deprecated, content drawn at
+one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7), and,
+for a piece that exports switching files, a page with no ground of its own in a
+combination its file holds, which asks for attention and never fails (`_no_ground`,
+DEC-018 point 5). A
 render keeps them in the piece's `findings.yaml`, keyed by a fingerprint of every file
 they were computed from. The check reads that record while its key verifies, and computes
 the scenes now otherwise. It computes no more once the validator's bound
@@ -89,7 +97,9 @@ reads and before a lock finding stops the piece, so each of these stands beside 
   version that wrote the copy read has changed (`published_findings`). So it is held to that
   version, and not to the last. A copy made over a stale output asks for attention. A copy
   made with a number or a date let through fails, at the component the text did not fit,
-  so it asks for attention in a released library, naming its owner (DEC-016 point 6);
+  so it asks for attention in a released library, naming its owner (DEC-016 point 6). A
+  copy made with an element of a switching file let through asks for attention, naming
+  whoever maintains the capability (DEC-018 point 1);
 - a draft with a file of its own current copy standing asks for attention, whatever the file
   holds (`standing_findings`);
 - a final piece raises none of these, since no export can mend its copy (`_final`).
@@ -222,7 +232,21 @@ COPY_STALE = "current-copy-stale"
 COPY_UNREADABLE = "current-copy-unreadable"
 COPY_OVER_STALE = "current-copy-over-stale"
 COPY_LET_THROUGH = "current-copy-let-through"
+COPY_DIFFERING = "current-copy-differing"
 COPY_STANDING = "current-copy-standing"
+
+#: The findings on formats a piece cannot take (DEC-018 points 2 and 4): two that write files
+#: of one name, and a format of switching files whose file cannot hold the piece's modes.
+EXPORTS_SAME_NAME = "exports-same-name"
+EXPORTS_UNPAIRED = "exports-unpaired-mode"
+
+#: The finding on a page of a switching file with no ground of its own in a mode it holds
+#: (DEC-018 point 5).
+SWITCHING_NO_GROUND = "switching-no-ground"
+
+#: Who corrects a switching file that paints a combination otherwise than its renderer's
+#: one-key file: the fault is the capability's (DEC-018 point 1).
+CAPABILITY = "whoever maintains the capability, who corrects the SVG renderer in a release"
 
 #: The findings on what a final piece owes of the version handed out (DEC-017 point 6), and on
 #: a record of exports that cannot be read, which makes a piece final (DEC-017 point 3).
@@ -478,6 +502,7 @@ class _Run:
         lock = lock_findings(self.held, piece)
         self.found.extend(lock)
         self._copy(piece)
+        self.found.extend(same_name_findings(piece))
         self.found.extend(behind_findings(self.held, piece))
         if lock:
             self.counts["unchecked"] += 1
@@ -493,6 +518,7 @@ class _Run:
             self.counts["unchecked"] += 1
             return
         self._lock_found(piece, [*project.scope.findings, *project.brand.findings])
+        self.found.extend(unpaired_findings(project))
         self._library_names(project)
         self._notation_findings(project)
         self.found.extend(content_findings(project))
@@ -1182,6 +1208,45 @@ def _no_format(piece: pl.Piece) -> Finding:
     )
 
 
+def same_name_findings(piece: pl.Piece) -> list[Finding]:
+    """A failing finding for each two formats the piece names that write files of one name, as
+    `svg-modes` and `svg` do (DEC-018 point 2). An export refuses such a piece."""
+    return [
+        Finding(
+            EXPORTS_SAME_NAME,
+            FAILS,
+            f"`{piece.name}` names both `{one_key}` and `{form}` under `exports`, which write "
+            f"files of one name",
+            file=piece.file(pl.PIECE_FILE),
+            where="exports",
+            fix=f"name one of them; a piece that needs a file of one fixed mode names `{one_key}`, "
+            f"and a second piece serves a page",
+        )
+        for one_key, form in exports.same_names(piece.exports)
+    ]
+
+
+def unpaired_findings(project: pl.Project) -> list[Finding]:
+    """A failing finding for each value axis's mode of no pair a format of switching files
+    reads that parts two combinations the piece names (DEC-018 point 4). No switching file can
+    hold it, and an export refuses such a piece."""
+    piece = project.piece
+    return [
+        Finding(
+            EXPORTS_UNPAIRED,
+            FAILS,
+            f"`{piece.name}` exports as `{form}`, whose switching file holds a value axis's modes "
+            f"by the reader's signals, and reads no pair of `{axis}`'s mode `{mode}`, which "
+            f"its combinations differ in",
+            file=piece.file(pl.PIECE_FILE),
+            where="modes",
+            fix=f"draw `{axis}`'s mode `{mode}` in a piece of its own, or export this piece as "
+            f"`{exports.SWITCHING[form]}`",
+        )
+        for form, axis, mode in exports.unpaired(project)
+    ]
+
+
 def published_findings(
     held: Held,
     piece: pl.Piece,
@@ -1195,7 +1260,9 @@ def published_findings(
     back to published is held to it. A copy made over a stale output asks for attention. A
     copy made with a number or a date let through fails in the library version of the
     component the text did not fit, so it asks for attention in a released one, naming its
-    owner, until a version that fits writes the copy (DEC-016 point 6)."""
+    owner, until a version that fits writes the copy (DEC-016 point 6). A copy made with an
+    element of a switching file let through asks for attention, and names whoever maintains
+    the capability as the fault's owner (DEC-018 point 1)."""
     record = piece.file(pl.EXPORTS_FILE)
     if entry is None:
         said = f"the published piece `{piece.name}` has no current copy of its own"
@@ -1243,6 +1310,23 @@ def published_findings(
                 where=current_copy.FIELD,
                 fix=f"run {pl.produce_command(piece.name, output)}, then {fix}",
                 who=AUTHOR,
+            )
+        )
+    for each in current_copy.written_differing(entry, versions):
+        said = (
+            f"the current copy of `{piece.name}`, which version {number} wrote, was made with "
+            f"{current_copy.differing_said(each)} let through, which paints that combination "
+            f"otherwise than the SVG renderer's file of it"
+        )
+        found.append(
+            Finding(
+                COPY_DIFFERING,
+                ATTENTION,
+                said,
+                file=record,
+                where=current_copy.FIELD,
+                fix=f"once a release of the capability draws it alike, {fix}",
+                who=CAPABILITY,
             )
         )
     for each in current_copy.written_let_through(entry, versions):
@@ -2410,6 +2494,7 @@ def scene_findings(
                 if not accepted(loss, piece.accepted_losses):
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
+        found.extend(_no_ground(piece, scene, colours, served))
         for finding in _once_on_pages(found, result.shared):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
@@ -2629,6 +2714,63 @@ def _walk(
                 x + float(element.get("x", 0)),
                 y + float(element.get("y", 0)),
             )
+
+
+def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]]) -> bool:
+    """Whether `page` draws a ground of its own in the colours `colours`: a box of an opaque
+    colour over its whole frame. Where it draws none, an image of it lies on what the reader
+    of it shows around it: white through the SVG renderer's viewing step, the browser's own
+    ground through the HTML renderer's, and a page's around a switching file (DEC-015 point 5,
+    DEC-018 point 5, DEC-023 point 7). The viewing step reads it so too."""
+    width, height = float(page["width"]), float(page["height"])
+    for element, x, y in _walk(page.get("children", [])):
+        colour = colours.get(element.get("fill") or "")
+        if element.get("type") == "box" and colour and float(colour.get("alpha", 1)) >= 1:
+            left, top = x + float(element.get("x", 0)), y + float(element.get("y", 0))
+            right, bottom = left + float(element["width"]), top + float(element["height"])
+            if left <= 0 and top <= 0 and right >= width and bottom >= height:
+                return True
+    return False
+
+
+def _no_ground(
+    piece: pl.Piece,
+    scene: Mapping[str, Any],
+    colours: Mapping[str, Mapping[str, Any]],
+    served: Sequence[str],
+) -> list[Finding]:
+    """For a piece that exports switching files, a call for attention on each page that draws
+    no ground of its own in a combination its file holds, naming the page and those
+    combinations (DEC-018 point 5). A page shows the file on its own ground, so dark text
+    could meet a dark page. It never fails, and repeats until the page has a ground.
+    `colours` holds each colour role's value by key, and `served` the keys the scene
+    serves."""
+    if not any(form in exports.SWITCHING for form in piece.exports):
+        return []
+    found = []
+    for page in _pages(scene):
+        bare = [
+            key
+            for key in served
+            if not draws_ground(page, {role: by_key[key] for role, by_key in colours.items()})
+        ]
+        if bare:
+            named = " and ".join(f"`{key}`" for key in bare)
+            found.append(
+                Finding(
+                    SWITCHING_NO_GROUND,
+                    ATTENTION,
+                    f"the page `{page['id']}` draws no ground of its own in {named}, so a page "
+                    f"that shows its switching file shows its own ground under it, and a text "
+                    f"may meet a ground of its own colour",
+                    file=pl.PIECE_FILE,
+                    where=str(page["id"]),
+                    fix="give the page a ground of an opaque colour over its whole frame, in its "
+                    "component or its brand, in each mode its file holds",
+                    who=AUTHOR,
+                )
+            )
+    return found
 
 
 def _pages(scene: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:

@@ -92,13 +92,15 @@ class Move:
 @dataclass(frozen=True)
 class Named:
     """What a person named to a run: each library version to move to, each input that changed
-    since the copy, each stale output to use as it is, and each fact whose text to use as it
-    is, though it overflows."""
+    since the copy, each stale output to use as it is, each fact whose text to use as it is,
+    though it overflows, and each element of a switching file to write as it is, though it
+    differs from the one-key file."""
 
     versions: Sequence[str] = ()
     edited: Sequence[str] = ()
     use_stale: Sequence[str] = ()
     use_overflowing: Sequence[str] = ()
+    use_differing: Sequence[str] = ()
 
     def line(
         self,
@@ -106,10 +108,13 @@ class Named:
         edited: Sequence[str],
         use_stale: Sequence[str],
         use_overflowing: Sequence[str] | None = None,
+        use_differing: Sequence[str] | None = None,
     ) -> str:
-        """The command that runs again with these versions, `edited`, `use_stale` and
-        `use_overflowing`, by default the facts named to this run."""
+        """The command that runs again with these versions, `edited`, `use_stale`,
+        `use_overflowing` and `use_differing`, by default the facts and the elements named to
+        this run."""
         facts = self.use_overflowing if use_overflowing is None else use_overflowing
+        elements = self.use_differing if use_differing is None else use_differing
         words = [
             "pkit visual upgrade",
             piece,
@@ -117,6 +122,7 @@ class Named:
             *(f"--edited {name}" for name in edited),
             *(f"--use-stale {output}" for output in use_stale),
             *(f"--use-overflowing {fact}" for fact in facts),
+            *(f"--use-differing {element}" for element in elements),
         ]
         return " ".join(words)
 
@@ -223,9 +229,11 @@ def plan(move: Move, named: Named) -> Planned:
         project,
         use_stale=named.use_stale,
         use_overflowing=named.use_overflowing,
+        use_differing=named.use_differing,
         written=written,
         way_past_stale=_way_past_stale(piece.name, edited, named),
         way_past_overflow=_way_past_overflow(piece.name, edited, named),
+        way_past_differing=_way_past_differing(piece.name, edited, named),
     )
     pl.writable(piece.root, piece.folder / pl.FINDINGS_FILE)
     found = checks.scene_findings(project, export.results)
@@ -314,6 +322,28 @@ def _way_past_overflow(
         line = named.line(piece, edited, named.use_stale, sorted({*facts, *named.use_overflowing}))
         return (
             f"Give each room in its component, or name its fact to use its text as it is: `{line}`"
+        )
+
+    return way
+
+
+def _way_past_differing(
+    piece: str, edited: Sequence[str], named: Named
+) -> Callable[[Collection[str]], str]:
+    """What says the way past an element of a switching file that paints a combination
+    otherwise than the one-key file, from every element that does: the line that names them
+    all (DEC-018 point 1)."""
+
+    def way(elements: Collection[str]) -> str:
+        line = named.line(
+            piece,
+            edited,
+            named.use_stale,
+            use_differing=sorted({*elements, *named.use_differing}),
+        )
+        return (
+            f"Name each to write its file as it is, and report it to whoever maintains the "
+            f"capability: `{line}`"
         )
 
     return way
