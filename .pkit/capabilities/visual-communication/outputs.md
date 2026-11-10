@@ -104,6 +104,7 @@ pkit:
         - visual-communication:DEC-020#7
         - visual-communication:DEC-020#8
         - visual-communication:DEC-021#8
+        - visual-communication:DEC-022#3
         - visual-communication:DEC-022#7
         - visual-communication:DEC-023#1
         - visual-communication:DEC-023#2
@@ -122,6 +123,9 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
+        - visual-communication:DEC-026#1
+        - visual-communication:DEC-026#2
+        - visual-communication:DEC-026#3
         - visual-communication:DEC-027#1
         - visual-communication:DEC-027#2
         - visual-communication:DEC-027#3
@@ -359,7 +363,17 @@ A deck's page file shows its slides as a viewer of slides does, each at its own 
 - **A browser that cannot mix colours** draws the keyline in its text colour and the backdrop in its ground colour.
 - **Size.** The keyline is 1 px wide and takes no room, so a slide keeps its size and its proportions. The backdrop shows 32 px wide on every side, or 4% of the window's width where that is less. In a narrower window a slide shrinks with the room that leaves it, and its keyline stays 1 px wide. In a window 500 px wide, a slide 1280 px wide is 460 px wide. Nothing scrolls sideways.
 - **The same elements.** The file holds the same elements as it would with no keyline. Only its rules differ.
-- **On screen alone.** A print holds neither the keyline nor the backdrop, until the record of how a page prints decides what of them it keeps ([project-kit#2824](https://github.com/aleskalfas/project-kit/issues/2824)).
+- **On screen alone.** A print holds neither the keyline nor the backdrop until the renderer prints as DEC-026 decides. [Printing](#printing) says what a print will hold then.
+
+### Printing
+
+DEC-026 decides how a page file prints: its pages follow one another down the sheets, as many to a sheet as fit, each whole where it fits one. Only a fixed page prints inside its keyline, and no backdrop prints. The renderer does not print so yet. It will once the change that builds that record lands ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)). Such a print gives what follows.
+
+- **A deck's slides fit a sheet.** A 16:9 slide fits the area of a sheet of A4 or Letter, upright or turned, so none is cut there, and none runs on (DEC-026 point 1). Two 16:9 slides share a sheet of A4 upright, so a deck printed as a handout takes fewer sheets.
+- **The scale.** A page prints at its width's scale: the area's width over the page's width (DEC-026 point 2). A page 1,280 px wide prints at about 0.56 of its size on A4 upright. A deck's slides share one shape, a site's pages take the top's width (DEC-022 point 3), and a page alone is one page, so each of these prints at one scale.
+- **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), reaches about 3.7 to 1 against a white sheet, in light and in dark (DEC-026 point 3). In a dark mode, the page's dark ground inside the keyline also sets it apart from the white sheet.
+- **A fixed page prints narrower** than the sheet's area, by its keyline's width on each side: a few px (DEC-026 point 3).
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). The renderer places each line alone, so a break may cut or move a line of text. In the runs behind DEC-026, a page that ran on broke where the sheet ended. There Chrome may move a line over the next, or print a letter twice. Firefox cuts a line through, and prints none of the page's shapes past its first sheet.
 
 ### What the HTML renderer declares
 
