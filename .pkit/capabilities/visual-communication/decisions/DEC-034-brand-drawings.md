@@ -24,6 +24,8 @@ Three more records bear on it:
 
 ## Decision
 
+**A brand's drawing names its layout in its own file, and keeps the sizes and the field names its top sets.**
+
 ### 1. A drawing names in its own file the top and the layout it draws
 
 - **The declaration.** A brand declares a drawing by holding a component whose file names, under the key `draws`, a top by `<library>/<component>` and one of its layouts: `draws: {top: <library>/<component>, layout: <layout>}`. Nothing else lists a brand's drawings.
