@@ -14,7 +14,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Decision
 
-**A pattern may declare, for a list it repeats, a field in which content may name the list's component, and the fields its items may carry for its arrangement: arrangement fields, each taking a word it declares, and in a list of ties two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]).**
+**A pattern may declare, for a list it repeats, a field in which content may name the list's component, and declares the fields its items may carry for its arrangement: arrangement fields, each taking a word it declares, and in a list of ties two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]).**
 
 ### 1. Content names a list's component in a field its pattern declares
 
