@@ -1,7 +1,7 @@
 ---
 id: DEC-035
 title: A component declares its tokens in its own file, and no other component or piece reads them
-status: proposed
+status: accepted
 date: 2026-11-10
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
