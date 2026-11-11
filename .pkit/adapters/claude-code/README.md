@@ -18,7 +18,8 @@ pkit:
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
         - .pkit/agents/tool_access.py
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+        - .pkit/cli/install-pkit.sh
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks, working-run-probe]
@@ -48,7 +49,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 ├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
-└── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start
+└── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start, and the install script where no pkit is on the PATH
 ```
 
 ### `settings/`
@@ -462,6 +463,16 @@ The harness-neutral contract is the permissions README's (*The agent workspace*:
 **Where the start hook does not run.** A confined run loads no project settings, so the start hook does not run there. The runner passes the definition the resolver writes, so the sentence reaches the run all the same. An adopter's own `SessionStart` or `SubagentStart` entry in `.claude/settings.json` wins over the baseline's, as every key outside `permissions` does. Add the adapter's matcher group beside your own to keep both.
 
 **What stays as it was.** The permission hook's ask on an `Edit` or `Write` outside the repository is unchanged. Such a write that the sentence did not stop meets that ask, never a silent allow. No allow rule names the scratch directory (ADR-060, "Alternatives considered").
+
+### Where no `pkit` is on the `PATH`
+
+The start hook adds one line to its context where no `pkit` command is on the `PATH` it runs with ([#3005](https://github.com/aleskalfas/project-kit/issues/3005)):
+
+> No `pkit` command is on the `PATH`: run `sh .pkit/cli/install-pkit.sh` at the project's root to install this project's version.
+
+The line names the install script, which installs the version the project pins or records ([ADR-090](../../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md) point 4). [The CLI reference, "Installing pkit on PATH"](../../cli/README.md#installing-pkit-on-path), says how to run it. The hook names the script and never runs it, as no hook does (ADR-090 point 3).
+
+Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches each session and each subagent at its start, as the workspace sentence does, and no confined run, which loads no project settings.
 
 ### Harness support (`harness-support.yaml`)
 
