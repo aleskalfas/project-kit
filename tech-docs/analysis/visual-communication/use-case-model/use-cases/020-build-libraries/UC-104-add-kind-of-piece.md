@@ -7,11 +7,8 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 shortfalls:
-  - at: 2
-    issue: "#2573"
-    record: visual-communication:DEC-001#5
   - at: "2a"
-    issue: "#2573"
+    issue: "#3019"
     record: visual-communication:DEC-004#6
   - at: "4a"
     issue: "#2573"
@@ -53,10 +50,6 @@ pkit:
 
 1. The developer adds the top library component of the new kind of piece to a library the project owns. It names the layouts such a piece has, and the content slots of each layout.
 2. For each brand the project uses, the developer adds how that brand draws each new layout.
-
-> [!WARNING]
-> **Not built yet:** a brand cannot hold how it draws a layout, so each layout is drawn by the top library component that declares it. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that a brand holds how it draws the layouts of the kinds of piece it serves, and #2573 tracks it.
-
 3. The developer starts a piece of the new kind, and fills the content slots of its layouts.
 4. The system draws the piece in its brand, as it draws any other kind of piece.
 
@@ -65,12 +58,12 @@ pkit:
 - **2a.** A brand the project uses is one another project shares, so the project's copy is never edited. The developer builds a brand on it that adds the new layouts ([UC-106](UC-106-build-brand-on-brand.md)), or asks its library owner to add them.
 
 > [!WARNING]
-> **Not built yet:** a brand cannot hold how it draws a layout, so neither way adds the new layouts. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another may add layouts its base lacks, and #2573 tracks it.
+> **Not built yet:** a brand built on another draws by its own drawings alone, never by its base's. So a brand built on the shared one draws the new layouts, but each layout the shared brand draws is drawn there by its top's own drawing. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another keeps its base's layouts, and #3019 tracks it.
 
 - **4a.** The brand lacks a layout the new kind names, or draws it with other content slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
 
 > [!WARNING]
-> **Not built yet:** the system names no layout a brand lacks, since a brand cannot hold how it draws a layout. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
+> **Not built yet:** the system names no layout a brand lacks. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
 
 **Postconditions:** Pieces of the new kind are made and drawn like any other, and the capability's own files are as they were.
 

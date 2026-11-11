@@ -149,7 +149,7 @@ pkit:
 
 # visual-communication capability
 
-Visual work made from reusable parts. A *piece*, such as a presentation or a figure in a documentation page, keeps its content as data. Libraries give it its look: components that arrange and draw the content, brands that hold the values (colours, fonts, sizes), and notations that say what a thing is. Several renderers draw the same piece, as a vector picture, a web page or objects on a whiteboard service, and a piece is handed out as a file such as a PDF. A project installs the capability when its visuals should share a look, reuse what was made before, appear under more than one brand or in more than one language, and be checked like the rest of its work.
+Visual work made from reusable parts. A *piece*, such as a presentation or a figure in a documentation page, keeps its content as data. Libraries give it its look: components that arrange and draw the content, brands that hold the values (colours, fonts, sizes) and may draw a layout their own way, and notations that say what a thing is. Several renderers draw the same piece, as a vector picture, a web page or objects on a whiteboard service, and a piece is handed out as a file such as a PDF. A project installs the capability when its visuals should share a look, reuse what was made before, appear under more than one brand or in more than one language, and be checked like the rest of its work.
 
 ## What this capability ships
 

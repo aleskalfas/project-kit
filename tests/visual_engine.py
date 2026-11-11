@@ -242,11 +242,13 @@ def draw(
     use: str = "lab/top",
     language: str = "en",
     facts: Any = None,
+    choice: Any = None,
     **environment: Any,
 ) -> Any:
     """The scene of a piece whose top is `use`, and its findings, its facts filled by `facts`
-    or by the stand-ins of a draft."""
+    or by the stand-ins of a draft, each layout drawn as `choice` says."""
     return scene.compute_scene(
+        choice=choice,
         piece="test-piece",
         top=use,
         content=dict(content or {}),
