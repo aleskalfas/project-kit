@@ -287,13 +287,15 @@ def judged(root: Path, code: str) -> list[tuple[str, str, str]]:
 
 
 def test_the_brand_checked_alone_judges_each_drawing_it_holds(tmp_path: Path) -> None:
-    """A drawing that holds what the content gives fails in the brand's version, though no
-    piece draws it."""
+    """A drawing that holds what the content gives, or carries a status, fails in the
+    brand's version, though no piece draws it."""
     root = deck(tmp_path)
-    hold(root, cover(fields={"type": "object"}, draws={"top": "foundations/deck", "layout": "end"}))
+    drawn = {"top": "foundations/deck", "layout": "end"}
+    hold(root, cover(fields={"type": "object"}, status="stable", draws=drawn))
     found = judged(root, layout.DRAWING_SHAPE)
     file = f"{BRAND_COMPONENTS}/cover.yaml"
     assert ("fails", file, "fields") in found
+    assert ("fails", file, "status") in found
     assert ("fails", file, "draws") in found
 
 
@@ -309,7 +311,7 @@ def test_the_check_states_at_the_piece_each_page_left_to_the_decks_own_drawing(
 
 def test_a_component_library_whose_component_declares_draws_fails(tmp_path: Path) -> None:
     root = deck(tmp_path)
-    data = {**cover(), "status": "experimental"}
+    data = cover()
     write(
         root
         / "visual/libraries/foundations"
@@ -340,13 +342,20 @@ def test_the_schema_refuses_a_drawing_that_names_no_layout() -> None:
     assert files.shape_problems(cover(draws={"top": "foundations/deck"}), "component") != []
 
 
+def test_the_schema_asks_a_status_of_every_component_but_a_drawing() -> None:
+    """Every component but a drawing carries a status (DEC-034 point 8)."""
+    assert files.shape_problems(cover(status="experimental"), "component") != []
+    no_drawing = cover(draws=None, status=None)
+    assert files.shape_problems(no_drawing, "component") != []
+    assert files.shape_problems({**no_drawing, "status": "stable"}, "component") == []
+
+
 # --- the engine: what a drawing declares and writes ------------------------------------------
 
 
 def look(parts: dict[str, Any], **keys: Any) -> dict[str, Any]:
     """A brand's drawing of `lab/top`'s layout `frame`."""
     return {
-        "status": "experimental",
         "about": "A drawing a test draws.",
         "draws": {"top": "lab/top", "layout": "frame"},
         "parts": dict(parts),
@@ -382,6 +391,12 @@ def test_a_drawing_that_declares_what_the_content_gives_fails(key: str) -> None:
     assert (layout.DRAWING_SHAPE, key) in issues(look({"caption": CAPTION}, **{key: {}}))
 
 
+def test_a_drawing_that_carries_a_status_fails() -> None:
+    assert (layout.DRAWING_SHAPE, layout.STATUS) in issues(
+        look({"caption": CAPTION}, status="stable")
+    )
+
+
 def test_a_piece_s_own_component_declares_no_drawing() -> None:
     found = issues(look({"caption": CAPTION}), use="piece/look")
     assert (layout.DRAWING_SHAPE, layout.DRAWS) in found
@@ -408,7 +423,6 @@ def test_a_drawing_that_reads_a_token_of_its_top_fails() -> None:
 
 def page_look(preferred: dict[str, Any] | None) -> dict[str, Any]:
     drawing = {
-        "status": "experimental",
         "about": "A brand's cover.",
         "draws": {"top": "foundations/deck", "layout": "cover"},
         "parts": {

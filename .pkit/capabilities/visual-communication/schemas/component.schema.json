@@ -7,7 +7,6 @@
   "required": [
     "pkit_schema",
     "schema_version",
-    "status",
     "about"
   ],
   "additionalProperties": false,
@@ -22,7 +21,7 @@
       "const": 1
     },
     "status": {
-      "description": "What its library promises of it (DEC-003 point 7).",
+      "description": "What its library promises of it (DEC-003 point 7). Every component carries one, but a drawing, which carries none (DEC-034 point 8).",
       "enum": [
         "experimental",
         "stable",
@@ -186,7 +185,7 @@
       ]
     },
     "draws": {
-      "description": "On a brand's component, the top it draws, by `<library>/<component>`, and the one of its layouts it draws, which makes it a drawing (DEC-009 point 2, DEC-034 point 1). A drawing declares nothing the content gives: it takes the top's fields, the layout's slots and lists, the top's options, states and colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`.",
+      "description": "On a brand's component, the top it draws, by `<library>/<component>`, and the one of its layouts it draws, which makes it a drawing (DEC-009 point 2, DEC-034 point 1). A drawing declares nothing the content gives: it takes the top's fields, the layout's slots and lists, the top's options, states and colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. Nothing names a drawing, so it carries no `status` (DEC-034 point 8).",
       "type": "object",
       "required": [
         "top",
@@ -245,9 +244,19 @@
           "required": [
             "ends"
           ]
+        },
+        {
+          "required": [
+            "status"
+          ]
         }
       ]
     }
+  },
+  "else": {
+    "required": [
+      "status"
+    ]
   },
   "$defs": {
     "field-schema": {

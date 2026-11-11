@@ -7,8 +7,9 @@ foundations they build on, and reads each version in full (`full_read.read`) bef
 compares them. A component library `parts` carries one component of each shape the records
 name: a pattern of fields, options, states, an exposed part, a list and runs; a pattern of
 ties and the component that draws them; a top whose layouts are its pages' forms; a top of
-one layout; a deprecated component; and two experimental ones. For each record, a change it
-names as a break is found as one, and a change it names as none is not.
+one layout; a deprecated component; and two experimental ones. The test brand holds a
+stable component of its own and the fixture's drawing of the deck's cover. For each record,
+a change it names as a break is found as one, and a change it names as none is not.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import pytest
 
 from tests.in_process import load
 from tests.visual_communication_project import (
+    FIXTURES,
     FOUNDATIONS,
     RELEASED_FOUNDATIONS,
     TEST_BRAND,
@@ -1419,6 +1421,198 @@ def test_a_value_mode_a_brand_ceases_to_give_is_no_break(tmp_path: Path) -> None
     )
 
     assert (found.breaks, found.additions) == ((), ())
+
+
+# --- a brand's components (DEC-034 point 8, DEC-003 point 7) ------------------------------------
+
+#: A stable component of the test brand's own: its label on a box, ringed by a token of its
+#: own that defaults to a shared role.
+BADGE = bound(
+    "component",
+    status="stable",
+    about="A badge: its label on a ringed box.",
+    fields={
+        "type": "object",
+        "required": ["label"],
+        "properties": {"label": {"type": "string"}, "note": {"type": "string"}},
+    },
+    tokens={"rim": {"type": "color", "default": "{text-primary}"}},
+    parts={
+        "back": {
+            "box": {"fill": "surface", "stroke": "component.test-brand.badge.rim"},
+            "width": "=:width",
+            "height": "=:height",
+        },
+        "label": {
+            "text": {"content": "label", "style": "type.body", "fill": "text-primary"},
+            "width": "=:width",
+        },
+    },
+    preferred={"width": "=@space.4 * 10", "height": "=label.bottom"},
+)
+
+#: The test brand's drawing of the deck's cover, which carries no status.
+COVER = reading.read_yaml(FIXTURES / "drawings" / "cover.yaml")
+
+
+def holding(tmp: Path, version: str, components: Mapping[str, Any]) -> Any:
+    """A location that holds the foundations, the test library and the test brand at
+    `version`, built on both, which holds `components`, each by its name."""
+    held = parts_brand_location(tmp, version, gives_fill=False)
+    folder = held.root / LOCATION / "libraries" / "test-brand" / version / "components"
+    for name, data in components.items():
+        write(folder / f"{name}.yaml", yaml_text(data))
+    return libraries.Held(held.root, LOCATION)
+
+
+def compared_components(tmp: Path, earlier: Mapping[str, Any], later: Mapping[str, Any]) -> Any:
+    """The test brand 1.0.0, holding the components `earlier`, compared with 1.1.0, holding
+    `later`."""
+    version = libraries.Version.parse
+    return comparison.compare(
+        full_read.read(holding(tmp / "earlier", "1.0.0", earlier), "test-brand", version("1.0.0")),
+        full_read.read(holding(tmp / "later", "1.1.0", later), "test-brand", version("1.1.0")),
+    )
+
+
+def badge(**changes: Any) -> dict[str, Any]:
+    """The badge, each of `changes` set at its key, or removed where it is None."""
+    data = copy.deepcopy(BADGE)
+    for key, value in changes.items():
+        if value is None:
+            data.pop(key, None)
+        else:
+            data[key] = value
+    return data
+
+
+def ringed(default: str, type_: str = "color") -> dict[str, Any]:
+    """The badge's `tokens`, its rim defaulting to `default`."""
+    return {"rim": {"type": type_, "default": default}}
+
+
+def changed_look(data: Any) -> dict[str, Any]:
+    """The drawing with a part of its look removed and a value changed."""
+    data = copy.deepcopy(dict(data))
+    del data["parts"]["band"]
+    data["parts"]["title"]["y"] = "=margin"
+    data["values"]["margin"] = "=@space.3"
+    return data
+
+
+@pytest.mark.parametrize(
+    "earlier,later",
+    [
+        ({"cover": COVER}, {"cover": changed_look(COVER)}),
+        ({"cover": COVER}, {}),
+        ({}, {"cover": COVER}),
+    ],
+    ids=["its-look", "removed", "begins-to-serve"],
+)
+def test_a_brands_drawing_is_passed_over_and_a_base_that_begins_to_serve_a_top_needs_no_major(
+    tmp_path: Path, earlier: Mapping[str, Any], later: Mapping[str, Any]
+) -> None:
+    """A drawing carries no status, so neither its look, its parts, nor its arrival or
+    departure is named. The test brand is the test edition's base, so a later version that
+    holds a drawing it did not begins to serve a top: a minor release may carry it."""
+    found = compared_components(tmp_path, earlier, later)
+
+    assert (found.breaks, found.additions, found.segment, found.allowed) == ((), (), "patch", True)
+
+
+@pytest.mark.parametrize("status", ["stable", "deprecated"])
+def test_a_promised_component_that_becomes_a_drawing_breaks_as_one_removed_does(
+    tmp_path: Path, status: str
+) -> None:
+    found = compared_components(tmp_path, {"cover": badge(status=status)}, {"cover": COVER})
+
+    assert said(found.breaks) == [
+        f"`test-brand/cover`: is a drawing, where it was {status} (DEC-034 point 8)"
+    ]
+    assert not found.allowed
+
+
+def test_an_experimental_component_may_become_a_drawing_and_a_drawing_that_ceases_is_new(
+    tmp_path: Path,
+) -> None:
+    became = compared_components(
+        tmp_path / "became", {"cover": badge(status="experimental")}, {"cover": COVER}
+    )
+    ceased = compared_components(tmp_path / "ceased", {"cover": COVER}, {"cover": BADGE})
+
+    assert (became.breaks, became.additions) == ((), ())
+    assert (said(ceased.breaks), said(ceased.additions)) == (
+        [],
+        ["`test-brand/cover`: is new, where it was a drawing (DEC-034 point 8)"],
+    )
+
+
+#: Each change of the badge, and what it is named: its breaks, then its additions.
+BRAND_CASES: dict[str, tuple[Mapping[str, Any], Mapping[str, Any], list[str], list[str]]] = {
+    "removed": (
+        {"badge": BADGE},
+        {},
+        ["`test-brand/badge`: is removed, where it was stable (DEC-003 points 6 and 7)"],
+        [],
+    ),
+    "marked-experimental": (
+        {"badge": BADGE},
+        {"badge": badge(status="experimental")},
+        ["`test-brand/badge`: is marked experimental, where it was stable (DEC-003 point 7)"],
+        [],
+    ),
+    "field-removed": (
+        {"badge": BADGE},
+        {"badge": badge(fields={**BADGE["fields"], "properties": {"label": {"type": "string"}}})},
+        ["`test-brand/badge`, field `note`: is removed (DEC-003 point 6)"],
+        [],
+    ),
+    "token-retyped": (
+        {"badge": BADGE},
+        {"badge": badge(tokens=ringed("{space.1}", "dimension"))},
+        [
+            "`test-brand/badge`, token `component.test-brand.badge.rim`: is of type "
+            "`dimension`, where it was `color` (DEC-003 point 6, DEC-035 point 6)"
+        ],
+        [],
+    ),
+    "token-off-the-shared-roles": (
+        {"badge": BADGE},
+        {"badge": badge(tokens=ringed("{test-parts.warning}"))},
+        [
+            "`test-brand/badge`, token `component.test-brand.badge.rim`: no longer ends its "
+            "chain of defaults at a shared role (DEC-035 point 6)"
+        ],
+        [],
+    ),
+    "token-new": (
+        {
+            "badge": badge(
+                tokens=None, parts={**BADGE["parts"], "back": {"box": {"fill": "surface"}}}
+            )
+        },
+        {"badge": BADGE},
+        [],
+        ["`test-brand/badge`, token `component.test-brand.badge.rim`: is new (DEC-035 point 6)"],
+    ),
+    "experimental-removed": ({"badge": badge(status="experimental")}, {}, [], []),
+    "new": ({}, {"badge": BADGE}, [], ["`test-brand/badge`: is new (DEC-003 point 1)"]),
+}
+
+
+@pytest.mark.parametrize(
+    "earlier,later,breaks,additions", BRAND_CASES.values(), ids=BRAND_CASES.keys()
+)
+def test_a_brands_other_components_are_compared_as_a_component_librarys_are(
+    tmp_path: Path,
+    earlier: Mapping[str, Any],
+    later: Mapping[str, Any],
+    breaks: list[str],
+    additions: list[str],
+) -> None:
+    found = compared_components(tmp_path, earlier, later)
+
+    assert (said(found.breaks), said(found.additions)) == (breaks, additions)
 
 
 # --- a shape that follows a size (DEC-021 points 3 and 7) ---------------------------------------
