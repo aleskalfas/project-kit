@@ -237,7 +237,8 @@ Ask the `software-engineer` agent to make the change, such as the code an issue 
 3. Where a design fork arises that the corpus does not settle, it names the fork and its trade-off, and you decide.
 4. Where the change makes a document owe an answer, it writes the answers the change check asks of your change. Any other answer is yours to decide ([the next task](#decide-the-answers-your-change-was-not-asked-for)).
 5. It reads its diff again against the corpus, and corrects what does not conform.
-6. It hands the change back for review, and its hand-off says whether it wrote answers. It opens no pull request, invokes no reviewer, and merges nothing.
+6. It commits only the files its change touched, each by name. A file it finds changed that its change did not touch stays out of the commit, as it was, and its hand-off names it.
+7. It hands the change back for review, and its hand-off says whether it wrote answers. It opens no pull request, invokes no reviewer, and merges nothing.
 
 ### A walking skeleton
 
