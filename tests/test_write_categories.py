@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 from pathlib import Path
 
 import click
@@ -200,6 +201,53 @@ def test_the_query_runs_from_the_root_and_its_failure_is_no_answer(tmp_path: Pat
     assert isinstance(wcat.ask(root, category), wcat.NoAnswer)
     _answer(root, "visual/", note="the recorded location")
     assert wcat.ask(root, category) == wcat.Answer(("visual/",), "the recorded location")
+
+
+def _query_script(root: Path, body: str) -> None:
+    """Replace the capability's default query with *body*."""
+    script = root / ".pkit" / "capabilities" / "drawing" / "scripts" / "default-work.py"
+    script.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    script.chmod(0o755)
+
+
+@pytest.mark.process("the run's environment is the runner's to set, so a process reads it")
+def test_the_query_runs_offline_marked_and_no_base_reaches_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A default query is marked offline, and the base a pipeline names never reaches
+    it, as for every query command (ADR-088 point 2; REQ-007)."""
+    root = _project(tmp_path)
+    _query_script(
+        root,
+        "import json, os\n"
+        "paths = ['offline/' if os.environ.get('PKIT_OFFLINE') == '1' else 'online/']\n"
+        "paths += ['base/'] if 'PKIT_CHECK_BASE' in os.environ else []\n"
+        "print(json.dumps({'paths': paths}))\n",
+    )
+    monkeypatch.setenv("PKIT_CHECK_BASE", "origin/main")
+    (category,) = wcat.installed(root)
+    assert wcat.ask(root, category) == wcat.Answer(("offline/",))
+
+
+# Serial: a machine busy with other test workers may not start the script within the bound.
+@pytest.mark.serial
+@pytest.mark.process("the bound kills a process, so one has to run past it")
+def test_a_query_that_outlives_the_bound_gives_no_answer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The backbone stops a default query at its bound and reads no answer from it
+    (ADR-088 point 2; REQ-006)."""
+    from project_kit import command_runner
+
+    root = _project(tmp_path)
+    _query_script(root, "import time\ntime.sleep(60)\n")
+    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 1)
+    (category,) = wcat.installed(root)
+    started = time.monotonic()
+    answer = wcat.ask(root, category)
+    assert time.monotonic() - started < 15
+    assert isinstance(answer, wcat.NoAnswer)
+    assert "did not answer within 1 s" in answer.reason
 
 
 @pytest.mark.parametrize(
