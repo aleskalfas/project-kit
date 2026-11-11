@@ -623,7 +623,9 @@ class _Run:
         point 1). A brand is read over its base, a component library's own roles are
         judged, and its patterns too, against their lists' default components, read
         through an environment of the engine that no piece or brand stands behind
-        (`default_clashes`, DEC-010 point 9); the foundations' declarations are read; a
+        (`default_clashes`, DEC-010 point 9); a brand's components are judged as a
+        component library's are, and its drawings as drawings (`drawing_findings`,
+        DEC-034 point 10); the foundations' declarations are read; a
         notation is checked under each lock alone. Each finding lies in the version. A
         version that names majors no versions fit, or one of which the project holds no
         version, cannot be checked alone, which is the finding it shows.
@@ -676,6 +678,7 @@ class _Run:
                 found: Sequence[Finding] = [
                     *scope.findings_of(name),
                     *unread_tokens(self.held, library, env),
+                    *drawing_findings(self.held, library, env),
                 ]
             elif library.kind == "components":
                 scope = tokens.read_scope(folders, root=self.root)
@@ -684,17 +687,28 @@ class _Run:
                     *scope.findings_of(name),
                     *default_clashes(self.held, library, env),
                     *unread_tokens(self.held, library, env),
+                    *drawing_findings(self.held, library, env),
                 ]
             elif library.kind == "brand" and FOUNDATIONS in folders:
+                scope = tokens.read_scope(folders, root=self.root)
                 brand = tokens.read_brand(
                     library.folder,
-                    tokens.read_scope(folders, root=self.root),
+                    scope,
                     fonts=self.root / self.location / pl.FONTS,
                     root=self.root,
                     locked=folders,
                 )
+                # Each component it holds is judged as a component library's is, and a
+                # drawing as a drawing (DEC-034 points 1 and 10).
+                env = pl.LibraryEnv(chosen, scope)
                 # What the version alone states, which no piece's lock reads (DEC-025 point 9).
-                found = [*brand.findings, *brand.facts]
+                found = [
+                    *brand.findings,
+                    *brand.facts,
+                    *default_clashes(self.held, library, env),
+                    *unread_tokens(self.held, library, env),
+                    *drawing_findings(self.held, library, env),
+                ]
             else:
                 found = []
         except tokens.TokenError as exc:
@@ -875,6 +889,46 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                             "in a version of its own",
                         )
                     )
+    return found
+
+
+def drawing_findings(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
+    """What the version alone shows of the drawings among its components (DEC-034 points 1,
+    2, 5 and 10), each component read through `env`. A component of a library that is no
+    brand that declares `draws` fails, since only a brand's component draws a layout. A
+    brand's drawing is read against the top it names, from the versions the brand is
+    checked alone with, and each finding the engine makes of it fails in its file: a key of
+    what the content gives, a top or a layout there is none of, a size it may not write, a
+    field it shows by no part named after it, and a token of its top it reads. A top's own
+    drawing that shows a field by no part named after it asks the top's owner for
+    attention, and never fails (`layout.own_drawing_findings`). A component that cannot be
+    read is the scene's to report."""
+    ctx = layout.Context(env, "")
+    found: list[Finding] = []
+    drawings: dict[str, str] = {}
+    for path in held.files(library.name, library.version):
+        if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
+            continue
+        use, file = f"{library.name}/{path.stem}", path.relative_to(held.root).as_posix()
+        try:
+            data = env.component(use)
+        except KeyError:
+            continue
+        if layout.DRAWS in data and library.kind != "brand":
+            found.append(layout.held_drawing_finding(use, file=file, library=library.label))
+        elif layout.DRAWS in data:
+            drawings[use] = file
+            ctx.component(use)
+        else:
+            component = ctx.component(use)
+            if component is not None and component.top:
+                found.extend(
+                    layout.own_drawing_findings(component, file=file, library=library.label)
+                )
+    for finding in ctx.findings:
+        use = finding.extra.get("component")
+        if isinstance(use, str) and use in drawings and finding.library == library.label:
+            found.append(dataclasses.replace(finding, file=drawings[use]))
     return found
 
 
@@ -3039,10 +3093,26 @@ def renderers(piece: pl.Piece) -> list[str]:
 def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[seam.Loss]:
     """What a renderer will lose of a scene, known from its declaration before it runs
     (DEC-005 point 9): a primitive it does not draw it refuses, and a property it does not
-    draw it leaves out."""
+    draw it leaves out. One whose format has a physical page and does not map the physical
+    size the scene's root holds onto it draws each page at its own unit, an approximation
+    it names at the top; one whose format has none loses nothing (DEC-034 point 3)."""
     plugin = str(declaration["name"])
     draws: Mapping[str, Mapping[str, Any]] = declaration.get("draws", {})
     found: list[seam.Loss] = []
+    physical = scene.get("physical-size")
+    held: Mapping[str, Any] = declaration.get("physical-size", {})
+    if isinstance(physical, Mapping) and held.get("page") is True and held.get("maps") is not True:
+        children = scene.get("children") or [{}]
+        size = f"{physical.get('width')} by {physical.get('height')} mm"
+        found.append(
+            seam.Loss(
+                plugin,
+                str(children[0].get("id", "")),
+                seam.APPROXIMATED,
+                f"the {plugin} renderer draws each page at its own unit, not at the top's "
+                f"physical size of {size}",
+            )
+        )
     for element, _, _ in _walk(scene.get("children", [])):
         kind, what = str(element.get("type")), str(element.get("id"))
         if kind not in draws:

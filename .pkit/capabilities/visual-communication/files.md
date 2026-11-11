@@ -108,6 +108,7 @@ pkit:
         - visual-communication:DEC-008#5
         - visual-communication:DEC-008#6
         - visual-communication:DEC-008#7
+        - visual-communication:DEC-009#3
         - visual-communication:DEC-009#7
         - visual-communication:DEC-010#1
         - visual-communication:DEC-010#2
@@ -162,6 +163,9 @@ pkit:
         - visual-communication:DEC-025#10
         - visual-communication:DEC-029
         - visual-communication:DEC-030#6
+        - visual-communication:DEC-034#1
+        - visual-communication:DEC-034#3
+        - visual-communication:DEC-034#8
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
         - visual-communication:DEC-035#3
@@ -820,7 +824,8 @@ A library the capability ships breaks nothing within a major ([The libraries the
 A change of how something looks breaks nothing (DEC-003 point 6). So it passes over a brand's values, a component's colour, the look of its states and parts, and each drawing. What it compares, kind by kind:
 
 - **Every library.** A change of its kind breaks, and so does a library it builds on taken at a new major (DEC-003 point 6). A notation is compared by these alone.
-- **A component library's components.** Only a component the earlier version marks stable or deprecated is compared (DEC-003 point 7). An experimental one may change in any release, so only a new component is named, as an addition (DEC-003 point 1). A stable or deprecated component removed breaks, and so does one marked experimental. One marked deprecated breaks nothing.
+- **A library's components,** a component library's or a brand's. Only a component the earlier version marks stable or deprecated is compared (DEC-003 point 7). An experimental one may change in any release, so only a new component is named, as an addition (DEC-003 point 1). A stable or deprecated component removed breaks, and so does one marked experimental. One marked deprecated breaks nothing.
+- **A brand's drawings.** A drawing carries no status, so it is passed over, its look and its parts, and neither a new drawing nor one removed is named (DEC-034 point 8). So a base that begins to serve a top breaks nothing, and a release within its major carries it, as it carries a brand's beginning to draw a layout (DEC-009 point 7). A component the earlier version marks stable or deprecated, which the later declares a drawing, breaks, as one removed does. A drawing that ceases to be one is a new component, an addition.
 - **A compared component,** part by part:
   - **Its fields.** A field removed breaks, and so does one newly required, or new and required (DEC-003 point 6, DEC-009 point 7). A new optional field is an addition (DEC-009 point 7).
   - **What a field takes.** A field breaks where it no longer takes a type, a value or a count of items it took. A key below it, removed or newly required, breaks it too (DEC-003 point 6). Another change of its schema, such as its `description`, is neither a break nor an addition.
@@ -830,7 +835,8 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
   - **Its ties.** End fields declared for a list it held break, and so do its end fields swapped or one removed (DEC-011 point 6). So does a component that ceases to take ends. A new list of ties is an addition.
   - **A top's layouts.** A layout or a slot removed breaks, and so does a new required slot (DEC-003 point 6, DEC-009 point 7). A top that makes its layouts its pages' forms, or ceases to, breaks too (DEC-010 point 7). A new layout and a new optional slot are additions. A slot of a page's form is compared as a field is, and a slot that comes to hold pages, or ceases to, breaks.
   - **Whether a top asks for a height.** A top that starts or ceases to ask for one breaks, since every page's size changes with it (DEC-022 point 8). A layout's height, said, changed or dropped, breaks nothing. A page under a top that asks for a height gets that height.
-  - **Its tokens** ([Tokens](components.md#tokens)). A token removed or of another type breaks, and so does one whose default's chain no longer ends at a shared role, where it did (DEC-035 point 6). A new token is an addition, whatever its chain ends at. Any other change, such as a default pointed at another role, or a part that starts or stops reading a token, is neither.
+  - **A top's physical size.** A top that comes to declare one, ceases to, or changes its proportion breaks, since every page's height follows it (DEC-034 point 3). Two sizes have the same proportion where one, scaled to the other's width, gives the other's height within the rounding of whole millimetres, each side of each size taken as any length within half a millimetre of it. So A2 after A1, or A3 after A4, keeps the proportion, and US Letter after A4 changes it. A size changed in the same proportion is a change of how the pages look, and breaks nothing: each page draws as before, only larger or smaller in print. A top that moves from a height by a formula to a physical size is named once, as coming to declare one.
+  - **Its tokens** ([Tokens](components.md#tokens)). A token removed or of another type breaks, and so does one whose default's chain no longer ends at a shared role, where it did (DEC-035 point 6). A new token is an addition, whatever its chain ends at. Any other change, such as a default pointed at another role, or a part that starts or stops reading a token, is neither. A brand's own component's tokens are compared so too, as its file declares them.
 - **A library's own roles.** A role promises what the components that read it promise (DEC-008 point 7). So only an own role a stable or deprecated component reads, directly or through a default, a default of one of its tokens included, can break. It breaks where it is removed, changes type, or no longer ends its chain of defaults at a shared role, where it did. A new one such a component reads breaks where its chain ends at no shared role, and any other new own role is an addition.
 - **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
 - **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition, and so is a new picture role, which no brand owes a value. A new top group of the shared roles breaks, even where each of its roles carries a default. No library takes its name (DEC-004 point 7), so it fails a library already named so (DEC-025 point 10).
@@ -844,6 +850,8 @@ Where either version cannot be read with its bases, or the later one cannot read
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
 
 The capability ships one brand to start from ([The neutral brand](#the-neutral-brand)). A project may write its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
+
+A brand's version may hold components, in `components/<component>.yaml`, as a component library's does. Among them are its *drawings*: each a component whose file names, under `draws`, the top and the one layout of it that it draws, such as `draws: {top: foundations/deck, layout: cover}` (DEC-034 point 1). Nothing else lists a brand's drawings, and content never names one. A drawing draws only for a top whose library the brand names among those it builds on (DEC-009 point 3). The brand checked alone reads each component it holds, as a component library's are read, and each drawing against the top it names ([A brand's drawing](components.md#a-brands-drawing)).
 
 ### Token files
 

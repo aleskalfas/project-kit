@@ -2,12 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "component.schema.json",
   "title": "A component — visual-communication capability",
-  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, whether it takes ends, its component tokens, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words, or on a size axis a piece can name, by its marked name. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, whether it takes ends, its component tokens, the layouts of a top component, which may be its pages' forms, the physical size a top's pages print at, and, on a brand's component, the top and the layout it draws. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words, or on a size axis a piece can name, by its marked name. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
     "schema_version",
-    "status",
     "about"
   ],
   "additionalProperties": false,
@@ -22,7 +21,7 @@
       "const": 1
     },
     "status": {
-      "description": "What its library promises of it (DEC-003 point 7).",
+      "description": "What its library promises of it (DEC-003 point 7). Every component carries one, but a drawing, which carries none (DEC-034 point 8).",
       "enum": [
         "experimental",
         "stable",
@@ -162,6 +161,25 @@
         }
       }
     },
+    "physical-size": {
+      "description": "The trim size a top's pages print at, in millimetres (DEC-034 point 3): on a page alone, or a top whose layouts are its pages' forms, and no other component. No formula reads it. The top asks for its height through it, so its `preferred` says no height: the engine sets the height from the width it asks for and the size's proportion.",
+      "type": "object",
+      "required": [
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
     "layouts": {
       "description": "A top component's layouts, by name: one, whose slots name the top's fields; or, where the layouts are the forms its pages take, one or more, each drawing a page with its own parts.",
       "type": "object",
@@ -184,7 +202,80 @@
           }
         }
       ]
+    },
+    "draws": {
+      "description": "On a brand's component, the top it draws, by `<library>/<component>`, and the one of its layouts it draws, which makes it a drawing (DEC-009 point 2, DEC-034 point 1). A drawing declares nothing the content gives: it takes the top's fields, the layout's slots and lists, the top's options, states and colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. Nothing names a drawing, so it carries no `status` (DEC-034 point 8).",
+      "type": "object",
+      "required": [
+        "top",
+        "layout"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "top": {
+          "$ref": "defs.schema.json#/$defs/use"
+        },
+        "layout": {
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      }
     }
+  },
+  "if": {
+    "required": [
+      "draws"
+    ]
+  },
+  "then": {
+    "not": {
+      "anyOf": [
+        {
+          "required": [
+            "fields"
+          ]
+        },
+        {
+          "required": [
+            "options"
+          ]
+        },
+        {
+          "required": [
+            "states"
+          ]
+        },
+        {
+          "required": [
+            "colour"
+          ]
+        },
+        {
+          "required": [
+            "lists"
+          ]
+        },
+        {
+          "required": [
+            "layouts"
+          ]
+        },
+        {
+          "required": [
+            "ends"
+          ]
+        },
+        {
+          "required": [
+            "status"
+          ]
+        }
+      ]
+    }
+  },
+  "else": {
+    "required": [
+      "status"
+    ]
   },
   "$defs": {
     "field-schema": {

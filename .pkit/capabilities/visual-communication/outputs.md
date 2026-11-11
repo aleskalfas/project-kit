@@ -135,6 +135,8 @@ pkit:
         - visual-communication:DEC-031#3
         - visual-communication:DEC-031#4
         - visual-communication:DEC-031#5
+        - visual-communication:DEC-033
+        - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -145,6 +147,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#tokens
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
+        - .pkit/capabilities/visual-communication/components.md#a-physical-size
         - .pkit/capabilities/visual-communication/files.md#axes-and-modes
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
         - .pkit/capabilities/visual-communication/files.md#picture-roles
@@ -154,6 +157,8 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+      source:
+        - html-page-print-runs
 ---
 
 # What is made from a piece
@@ -184,29 +189,31 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
 - the `svg` renderer, at version 1.1.0, which draws the formats `svg` and `svg-modes`
-- the `pdf` renderer, at version 1.2.0
-- the `html` renderer, at version 1.3.0
+- the `pdf` renderer, at version 1.3.0
+- the `html` renderer, at version 1.4.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
 No producer ships yet.
 
-Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, the kinds of axis it spells, and whether it takes a `prefix`.
+Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. Under `physical-size` it also declares whether its format has a physical page, `page`, and whether it maps a top's physical size onto it, `maps` (DEC-034 point 3). A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, the kinds of axis it spells, and whether it takes a `prefix`.
 
 Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG, PDF and HTML renderers and the CSS and JSON code writers call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
-- **The seam's version** is 5. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). Version 5 hands a renderer, for each language and combination it draws, the picture each image shows there, by the image's trace id: the file and its kind, a PNG or a JPEG (DEC-025 point 7). It is handed one for every source of an image, and reads nothing else for a picture. What a producer and a code writer are handed and return is as version 1 had it, the document of values apart.
+- **The seam's version** is 6. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). Version 5 hands a renderer, for each language and combination it draws, the picture each image shows there, by the image's trace id: the file and its kind, a PNG or a JPEG (DEC-025 point 7). It is handed one for every source of an image, and reads nothing else for a picture. Version 6 hands a renderer the physical size of the piece's top on the scene's root ([What a scene holds](components.md#what-a-scene-holds)). What a producer and a code writer are handed and return is as version 1 had it, the document of values apart.
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
-- **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
-- **What came with switching files.** The SVG renderer came to draw a second format, `svg-modes` ([The switching file](#the-switching-file)). A one-key file draws as before, so its version stays at 1.1.0, and the switching file is pinned to that version beside it. Seam 5 already hands a renderer of a format that holds modes every key of one file in one call, so the seam stays at 5 too.
-- **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stays at 5, and no other plugin's version rises.
+- **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stayed at 5.
+- **What came with switching files.** The SVG renderer came to draw a second format, `svg-modes` ([The switching file](#the-switching-file)). A one-key file draws as before, so its version stays at 1.1.0, and the switching file is pinned to that version beside it. Seam 5 already hands a renderer of a format that holds modes every key of one file in one call, so the seam stayed at 5 too.
+- **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stayed at 5, and no other plugin's version rose.
+- **What rose with print.** The HTML renderer rose to 1.4.0, since its file prints each page as [Printing](#printing) says. It read nothing new from the scene, so the seam stayed at 5, and no other plugin's version rose.
+- **What rose with a physical size.** The scene's root came to hold the physical size of the piece's top. A renderer that did not read it would draw a printed page at a wrong size with no error, so the seam rose to 6, and every plugin's declaration names it. The PDF renderer rose to 1.3.0, since it draws each page at that size ([The PDF renderer](#the-pdf-renderer)). A scene with none draws as before. The SVG and HTML renderers draw as before, and the code writers read no scene, so their versions stay.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
-- **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
+- **What rose with picture roles.** The document rose to 2, and the seam stayed at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
 - **None of these versions** is the format number of the files a project keeps.
 
@@ -222,7 +229,7 @@ A *loss* is something a plugin cannot take as it is given. Every loss has one fo
 | `why` | why, in words |
 | `key` | only in a file of several keys, the key the loss lies in, where it lies in that key alone. No other loss carries it |
 
-Before a plugin runs, the capability compares what the plugin is handed with its declaration, and reports what the plugin cannot take. A renderer also reports what it finds while it draws. An input a producer cannot take is refused before it runs ([Declaring a produced output](#declaring-a-produced-output)). What a producer could not make as it was handed, it returns with its picture, and its record keeps ([What a producer writes and returns](#what-a-producer-writes-and-returns)).
+Before a plugin runs, the capability compares what the plugin is handed with its declaration, and reports what the plugin cannot take. A renderer whose format has a physical page, and which maps no physical size onto it, would draw each page at its own unit: where the scene's root holds a physical size, that is `approximated`, at the top's trace id (DEC-034 point 3). No renderer the capability ships loses one. A renderer also reports what it finds while it draws. An input a producer cannot take is refused before it runs ([Declaring a produced output](#declaring-a-produced-output)). What a producer could not make as it was handed, it returns with its picture, and its record keeps ([What a producer writes and returns](#what-a-producer-writes-and-returns)).
 
 ### Accepting a loss
 
@@ -247,6 +254,7 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 - **Shapes and text.** A box's stroke lies inside its frame. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
 - **Pictures.** Each picture is embedded whole, as the data of its kind: a PNG as PNG data, a JPEG as JPEG data. A colour profile it carries stays with it (DEC-025 point 5). A produced picture draws the variant that serves the combination drawn ([Variants](#variants)), and a picture role the file the brand gives it there ([Primitives](components.md#primitives)). A picture file draws itself.
 - **Fonts.** Each font the page draws in, for each family and weight a run is drawn in, is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
+- **A physical size.** An SVG file is a picture, drawn at the size whatever shows it gives, so its format has no physical page. Its declaration says so under `physical-size`, and it draws a top with a physical size as any other, losing nothing (DEC-034 point 3).
 - **The same bytes.** Lengths are written to 1/100 px, and attributes in one order, so the same scene and values give the same file.
 
 ### Previews
@@ -292,8 +300,8 @@ In a [switching file](#the-switching-file) of several keys, a fill, a stroke or 
 
 The `pdf` renderer draws a scene as one PDF file for each language and each combination of modes the piece names. The file holds the scene's pages in order, one PDF page for each. It draws the exports a piece declares as `pdf` ([Exports](#exports)); previews stay SVG.
 
-- **Pages.** Each page is as large as its frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the inch. Format 1's top components declare no physical size, so the renderer's declaration states this mapping as its `unit` (DEC-001 point 2).
-- **The largest page.** A PDF reader holds a page of at most 14,400 pt on a side, which is 19,200 px. A larger page, such as a phone's page of a long site, is drawn smaller to fit. It keeps its proportions, and its long side is 14,400 pt. The renderer reports it ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
+- **Pages.** Where the scene's root holds the physical size of the piece's top ([A physical size](components.md#a-physical-size)), every page is that size, at 72 pt to 25.4 mm, and is drawn by one scale: the page's width in pt over its width in px (DEC-034 point 3). The page's height follows its width in that proportion, so the scale fits it too. So the page's width, a brand's value, sets how large the brand's type prints: a poster 640 px wide at A1, 594 by 841 mm, is drawn at about 2.63 pt to a px. Elsewhere a page is as large as its frame, each px of the scene 0.75 pt of the page, CSS's 96 px to the inch. The renderer's declaration states that mapping as its `unit` (DEC-001 point 2), and says under `physical-size` that its format has a physical page and that it maps a top's physical size onto it.
+- **The largest page.** A PDF reader holds a page of at most 14,400 pt on a side, which is 19,200 px at 0.75 pt to a px, or 5,080 mm. A larger page, such as a phone's page of a long site, is drawn smaller to fit. It keeps its proportions, and its long side is 14,400 pt. The renderer reports it ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
 - **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
@@ -305,6 +313,13 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 ### What the PDF renderer does not carry yet
 
 The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)).
+
+The file is PDF 1.7. In the later version that tags it, three of the cases DEC-033 settles take a form of their own. This page names two of them now, and the third when that version comes (DEC-033 point 1):
+
+- **Emphasis.** PDF 1.7's standard structure types hold none for emphasis. That version writes `emphasis` and `strong` as structure types of the file's own, `Em` and `Strong`, each mapped to `Span`. A tool that reads the file's own types reads the emphasis. Some tools read them as less than the element an HTML page writes for emphasis. That this form counts as carried is a judgement, not a test's finding. That version's declaration names both words, and no loss stands for them (DEC-033 point 7).
+- **An instance's text,** the text a component gives to the whole its instance draws, such as a diagram. A reader's tools take it before the texts the instance holds, never in their stead, since a text read in their stead would hide them and the links and headings among them. That version writes it in a form that keeps them, which this page names when the version comes (DEC-033 point 5).
+- **A picture not drawn.** That version writes a picture it leaves out, where the picture has a text, as a `Figure` element whose `Alt` holds the picture's text, with the image's frame as its bounding box, and nothing drawn in it. So a reader's tools read the text at the picture's place in the reading order (DEC-033 point 8).
+- **PDF 2.0, later.** PDF 2.0 holds both kinds of emphasis as standard types. A move to it is a version of the renderer of its own, after a test of the tools that read it (DEC-033 point 7).
 
 ### What the PDF renderer loses
 
@@ -326,7 +341,8 @@ The `html` renderer draws a scene as one *page file*: the scene's pages in one w
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
 - **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths.
 - **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
-- **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)).
+- **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). In print the pages follow each other down the sheets ([Printing](#printing)).
+- **A physical size.** A page file is read in a window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026 point 4). So its format has no physical page of its own, and it draws a top with a physical size as any other, losing nothing (DEC-034 point 3). The PDF export draws each page at that size.
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
 - **What the file holds.** A file asks for nothing. Its pictures lie inside it, each as the SVG renderer embeds it ([The SVG renderer](#the-svg-renderer)). Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour role, and every page reaches it.
 - **Names and words.** A family's name is written as the SVG renderer writes it. Whatever else a brand or a piece names is escaped. So none of it can end the file's `<style>` element or start another element.
@@ -363,17 +379,21 @@ A deck's page file shows its slides as a viewer of slides does, each at its own 
 - **A browser that cannot mix colours** draws the keyline in its text colour and the backdrop in its ground colour.
 - **Size.** The keyline is 1 px wide and takes no room, so a slide keeps its size and its proportions. The backdrop shows 32 px wide on every side, or 4% of the window's width where that is less. In a narrower window a slide shrinks with the room that leaves it, and its keyline stays 1 px wide. In a window 500 px wide, a slide 1280 px wide is 460 px wide. Nothing scrolls sideways.
 - **The same elements.** The file holds the same elements as it would with no keyline. Only its rules differ.
-- **On screen alone.** A print holds neither the keyline nor the backdrop until the renderer prints as DEC-026 decides. [Printing](#printing) says what a print will hold then.
+- **On screen alone.** The backdrop, the gutter and the keyline as an outline are a screen's. In print a slide lies inside its keyline as its border, with no backdrop ([Printing](#printing)).
 
 ### Printing
 
-DEC-026 decides how a page file prints: its pages follow one another down the sheets, as many to a sheet as fit, each whole where it fits one. Only a fixed page prints inside its keyline, and no backdrop prints. The renderer does not print so yet. It will once the Task that builds that record lands, filed under [project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570). Such a print gives what follows.
+The renderer prints a page file as DEC-026 decides: its pages follow one another down the sheets, as many to a sheet as fit, each whole where it fits one. Only a fixed page prints inside its keyline, and no backdrop prints. The file holds these rules for print alone, beside the screen's, and the screen's rules hold nothing of print.
 
-- **A deck's slides fit a sheet.** A 16:9 slide fits the area of a sheet of A4 or Letter, upright or turned, so none is cut there, and none runs on (DEC-026 point 1). Two 16:9 slides share a sheet of A4 upright.
+- **Each page whole on one sheet.** The file asks the browser to keep each page on one sheet, by CSS's `break-inside: avoid`, so a page that does not fit the rest of a sheet moves whole to the next. A page taller than the sheet's area runs on. No rule forces a break, and two pages lie the screen's gap apart (DEC-026 point 1).
+- **A deck's slides fit a sheet.** A 16:9 slide fits the area of a sheet of A4 or Letter, upright or turned, so none is cut there, and none runs on (DEC-026 point 1). Two 16:9 slides share a sheet of A4 upright, and each takes a sheet of its own turned, in Chrome and in Firefox ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)).
 - **The scale.** A page shrinks to the area's width and never grows past its own size, so it prints at the area's width over its own width, at most 1, and a fixed page at the area less its keyline over its own width (DEC-026 points 2 and 3). A page 1,280 px wide prints at about 0.56 of its size on A4 upright, at margins of 0.4 in. A deck's slides share one shape, a site's pages take the top's width (DEC-022 point 3), and a page alone is one page, so each of these prints at one scale.
+- **A fixed page inside its keyline.** In print the keyline is the page's border, of the width and the colour the keyline takes on screen, under more contrast and forced colours too. The page is at most the sheet's area less the keyline on each side, 2 px in all, so the page and its keyline move to a sheet together (DEC-026 point 3).
 - **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), keeps at least 3 to 1 against a white sheet, in light and in dark (DEC-026 point 3). Under more contrast a dark page's keyline is white on the white sheet, and the page's own ground marks its edge there. In a dark mode, the page's dark ground, printed in its own colours, also sets it apart from the white sheet (DEC-026 point 5).
-- **A fixed page prints narrower** than the sheet's area, by its keyline's width on each side: 2 px in all (DEC-026 point 3).
-- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In Firefox the text below a cut may part from its shapes. Safari's only check is a person's print (DEC-026 point 7).
+- **Each page in its own colours.** Each page lies on the browser's ground colour, and the file asks the browser to print the page, and what it holds, in their own colours, by CSS's `print-color-adjust: exact`. The document around the pages takes neither, so the sheet around them prints as the reader's setting for backgrounds says. No mode is picked for print: the reader's signals pick it, as the browser sets them when it prints (DEC-026 point 5).
+- **The sheet is the reader's.** The file holds no page rule, so the reader's print dialog sets the sheet's size, its margins and its orientation, with its header, its footer and its scale (DEC-026 point 4).
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In the print runs, Chrome cut each shape the sheet's end crossed, a part on each sheet, and kept each text on its shapes. Firefox printed a page's shapes on its first sheet alone, and lost the line the first sheet's end crossed ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)). WebKit printed nothing under the tool the runs used, so Safari's only check is a person's print (DEC-026 point 7).
+- **Firefox and a page narrower than the area.** In Firefox, the text of a page narrower than the sheet's area prints at a larger scale than its shapes, near the area's width over the page's, so its lines drift off their boxes. A page the area shrinks, such as a deck's slide, keeps its text on its shapes there ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)).
 
 ### What the HTML renderer declares
 
@@ -381,7 +401,9 @@ The renderer draws in the default font profile, and it declares each primitive a
 
 - **`holds-modes`** names the format `html`, with each signal pair it reads ([Modes](#modes)). `colour-scheme`'s `light` and `dark` pair with the same values of `prefers-color-scheme`. `contrast`'s `standard` and `high` pair with `prefers-contrast`'s `no-preference` and `more`. No pair lies in the foundations or in a scene.
 - **`forced-colours`** names what each paint takes under a reader's forced colours: lines, opaque fills, their edge with its width, and translucent fills.
+- **`physical-size`** says that its format has no physical page, and maps no physical size (*A physical size* in [The HTML renderer](#the-html-renderer)).
 - **`pages.fixed`** names how the file shows [fixed pages](#fixed-pages) (DEC-031 point 3). The keyline's `width`, 1 px, and its `share`, 48. The backdrop's `share`, 7. The gutter's `width`, 32 px, and its `window-share`, 4. Each share is the percent of the browser's text colour mixed into its ground colour. The gutter is the backdrop's width at each side of a page, or that share of the window's width where it is less. No project setting changes them.
+- **`pages.print`** names how the file prints ([Printing](#printing), DEC-026 point 6): its pages down the sheets, each kept whole on one sheet where it fits, the sheet's area as the window, a fixed page inside its keyline as a border, and each page on the browser's ground in its own colours. It leaves the sheet to the reader and the break to the browser. Print has no width or share of its own: the keyline's are those of `pages.fixed`.
 
 ### What the HTML renderer does not carry yet
 

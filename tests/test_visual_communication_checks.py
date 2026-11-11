@@ -79,6 +79,7 @@ from tests.visual_communication_project import (
     findings_,
     svg_declaration,
     pdf_declaration,
+    html_declaration,
     fingerprint,
     copies,
     reading,
@@ -91,6 +92,7 @@ from tests.visual_communication_project import (
     "findings",
     "plugins.svg_declaration",
     "plugins.pdf_declaration",
+    "plugins.html_declaration",
     "fingerprint",
     "copies",
     "reading",
@@ -1288,6 +1290,48 @@ def test_a_renderers_losses_are_known_from_its_declaration_before_it_runs() -> N
             "why": "the flat renderer draws no `ellipse`",
         },
     ]
+
+
+#: A poster's trim size, in millimetres (DEC-034 point 3).
+A1 = {"width": 594, "height": 841}
+
+
+def test_a_renderer_whose_format_has_a_page_and_maps_no_physical_size_approximates_it() -> None:
+    """It draws each page at its own unit, an approximation named at the top (DEC-034 point
+    3). Without a physical size on the root, it loses nothing."""
+    declaration = {
+        "name": "sheet",
+        "draws": {"group": dict.fromkeys(("x", "y", "width", "height"), "draws")},
+        "physical-size": {"page": True, "maps": False},
+    }
+    scene = {**page(), "physical-size": A1}
+    assert [loss.as_dict() for loss in checks.losses(scene, declaration)] == [
+        {
+            "plugin": "sheet",
+            "what": "figure",
+            "did": "approximated",
+            "why": "the sheet renderer draws each page at its own unit, not at the top's "
+            "physical size of 594 by 841 mm",
+        }
+    ]
+    assert checks.losses(page(), declaration) == []
+
+
+def test_no_shipped_renderer_loses_a_physical_size() -> None:
+    """The PDF renderer maps it onto its page; an SVG file and a page file have no physical
+    page of their own, so they lose nothing (DEC-034 point 3)."""
+    scene = {**page(), "physical-size": A1}
+    declared = {
+        each.DECLARATION["name"]: each.DECLARATION
+        for each in (svg_declaration, pdf_declaration, html_declaration)
+    }
+    assert {name: d["physical-size"] for name, d in declared.items()} == {
+        "svg": {"page": False, "maps": False},
+        "pdf": {"page": True, "maps": True},
+        "html": {"page": False, "maps": False},
+    }
+    for declaration in declared.values():
+        assert checks.losses(scene, declaration) == []
 
 
 def test_the_svg_renderer_loses_nothing_of_the_skeleton_piece(tmp_path: Path) -> None:
