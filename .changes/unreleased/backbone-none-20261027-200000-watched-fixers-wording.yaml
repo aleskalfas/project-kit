@@ -3,5 +3,6 @@ kind: none
 body: >
   Internal. The adapters and permissions READMEs and the evidence of the
   harness requirement `unattended-confined-run` say that only a drift
-  command's run nobody watches is confined and depends on it. Nothing you
-  run changes.
+  command's run nobody watches is confined and depends on it, and
+  `pkit agents run --help` says that nobody can answer the agent during its
+  run, where it said nobody watches it. Nothing you run changes.
