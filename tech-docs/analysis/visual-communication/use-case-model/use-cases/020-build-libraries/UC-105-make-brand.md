@@ -11,7 +11,7 @@ shortfalls:
     issue: "#2573"
     record: visual-communication:DEC-001#5
   - at: "6a"
-    issue: "#2573"
+    issue: "#3020"
     record: visual-communication:DEC-007#4
 pkit:
   friction:
@@ -68,7 +68,7 @@ pkit:
 - **6a.** A part of the look has a form of the brand's own, unlike any library component of the starter library. The brand keeps it as a library component of its own. Otherwise the brand gives values to a library component of the starter library, and never copies it.
 
 > [!WARNING]
-> **Not built yet:** a brand cannot hold a library component of its own, since its check and its release read only its values. [DEC-007 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#4-the-form-to-the-starter-the-values-to-the-brand) decides that a brand keeps a form it alone uses as a part of its own, and #2573 tracks it.
+> **Not built yet:** a release does not compare the library components a brand holds between its versions, so it finds no break in them, even where the later version removes one the earlier marks stable. [DEC-007 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#4-the-form-to-the-starter-the-values-to-the-brand) decides that a brand keeps a form it alone uses as a part of its own, and #3020 tracks it.
 
 **Postconditions:** A piece that names the brand is drawn in its look, in each mode of each of its axes.
 

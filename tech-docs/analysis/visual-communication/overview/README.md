@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:3f1022beeabc67886d1eac08a3a3b7e468a2b1840a61be3ef6666f962361cb7f -->
+<!-- pkit:overview reads=5 fingerprint=sha256:0fe50598770683dcd7601a149e6c12bbd333d064c1bd11701ecc292d6a9056ca -->
 
 [Visual work keeps its content and its look as data, and renderers only project it](../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md).
 
@@ -139,11 +139,12 @@ flowchart LR
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
-- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#2573`
+- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#3019`
 - [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md): variant 4a, decided by `visual-communication:DEC-001#5`, tracked in `#2573`
 - [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md): step 7, decided by `visual-communication:DEC-001#5`, tracked in `#2573`
-- [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md): variant 6a, decided by `visual-communication:DEC-007#4`, tracked in `#2573`
-- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#2573`
+- [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md): variant 6a, decided by `visual-communication:DEC-007#4`, tracked in `#3020`
+- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#3019`
+- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#3020`
 - [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md): step 2, decided by `visual-communication:DEC-001#1`, tracked in `#2584`
 
 ### Diagrams

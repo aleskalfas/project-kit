@@ -8,7 +8,7 @@ other-actors:
 requirements: []
 shortfalls:
   - at: "2a"
-    issue: "#2573"
+    issue: "#3019"
     record: visual-communication:DEC-004#6
   - at: "4a"
     issue: "#2573"
@@ -58,7 +58,7 @@ pkit:
 - **2a.** A brand the project uses is one another project shares, so the project's copy is never edited. The developer builds a brand on it that adds the new layouts ([UC-106](UC-106-build-brand-on-brand.md)), or asks its library owner to add them.
 
 > [!WARNING]
-> **Not built yet:** a brand cannot hold how it draws a layout, so neither way adds the new layouts. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another may add layouts its base lacks, and #2573 tracks it.
+> **Not built yet:** a brand built on another draws by its own drawings alone, never by its base's. So a brand built on the shared one draws the new layouts, but each layout the shared brand draws is drawn there by its top's own drawing. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another keeps its base's layouts, and #3019 tracks it.
 
 - **4a.** The brand lacks a layout the new kind names, or draws it with other content slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
 
