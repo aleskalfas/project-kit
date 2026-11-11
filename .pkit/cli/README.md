@@ -89,7 +89,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/capabilities/visual-communication/scripts/look.py
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8", ADR-083]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, PRJ-015, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8", ADR-083, ADR-090]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#the-reference-graph
@@ -157,11 +157,13 @@ The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `ca
 
 ## Installing pkit on PATH
 
-**Recommended (per PRJ-004):** install the highest release of pkit globally via `uv tool install`, naming the tag `latest`:
+**Recommended (per PRJ-004 and PRJ-015):** install the highest release of pkit globally via `uv tool install`, naming the tag `latest`:
 
 ```
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+uv tool install git+https://github.com/aleskalfas/project-kit.git@latest
 ```
+
+The repository is public, so the install needs no SSH key and no token ([PRJ-015](../decisions/project/PRJ-015-https-install-form.md)). pkit fetches its own later releases from the same URL, compiled into it: `pkit upgrade`'s lookup and install, and the router's run of a pin. None of these fetches waits at a terminal for a credential ([ADR-090](../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md)).
 
 The release-tag workflow moves `latest` to each new release's commit, and by design nothing else writes it. `pkit init` ends by printing this command, unless it finds a `pkit` already installed on your PATH. A `pkit` that `uv run` or `uvx` puts there for one run does not count. Only a tagged install ties pkit's version to one content. `latest` sits only on a release's commit, so the version a project records names the content it holds ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12).
 
@@ -170,7 +172,7 @@ To move the tool to a newer release, run the command again with `--force`. `pkit
 **A given release:** name its tag instead, where a project needs a release other than the highest:
 
 ```
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
+uv tool install git+https://github.com/aleskalfas/project-kit.git@v<version>
 ```
 
 `<version>` is a release from the repository's [releases page](https://github.com/aleskalfas/project-kit/releases). The release tags are the versions: `latest` names none, and `pkit upgrade`'s lookup of the latest release skips it.
@@ -179,10 +181,47 @@ After this, `pkit` is on PATH; the binary works against any project-kit-adopting
 
 **One install for everyone — no separate router.** The installed binary is CWD- and pin-aware (per [ADR-039](../../tech-docs/architecture/decisions/ADR-039-pkit-entry-point-router.md)): on every invocation it cheaply picks a route *before* loading the CLI. Inside a project-kit source checkout it runs that checkout's working tree; in an adopter that pins a version (`.pkit/version-pin`, per [ADR-049](../../tech-docs/architecture/decisions/ADR-049-per-project-version-pin.md)) different from the running binary it runs that pinned version under `uvx …@<pin>` (an unresolvable pin degrades loudly to running self, never a hard fail); otherwise it runs in-process. Adopters and contributors therefore share this **single** install — there is no separate shim to put on PATH. Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard the re-exec'd process inherits. On the source-checkout route the router also sets `PKIT_CLI_VERSION` to the checkout's `.pkit/VERSION` so version-provenance reports `cli == tree` (in a checkout the running code *is* the tree, but package metadata can lag a `.pkit/VERSION`-only bump); an explicit `PKIT_CLI_VERSION` in the environment wins, and the other routes leave it unset so a genuine installed-CLI-vs-tree drift still shows.
 
+**A fresh clone with nobody at the keyboard: the install script.** A pipeline's runner, a container or a hosted agent's machine installs its project's pkit with `.pkit/cli/install-pkit.sh`, which every clone of a project that commits its `.pkit/` carries ([ADR-090](../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md)). Put uv's command folder first on the `PATH`, and export it, before you run the script:
+
+```
+export PATH="$(uv tool dir --bin):$PATH"
+sh .pkit/cli/install-pkit.sh
+```
+
+- **What it installs:** the version the project pins, read as the router reads `.pkit/version-pin`, or else the `backbone_version` the manifest records. Never `latest`. It installs through `uv tool install` from the URL above at the tag `v<version>`, with git's terminal prompt off, so it is no installer of its own (PRJ-015 point 4).
+- **It never replaces a pkit it finds installed.** It installs only where uv lists no pkit among its tools and the `PATH` finds no `pkit` but the project's own dispatcher. A pkit it finds stays as it is, whatever its version.
+- **The check, and when it succeeds.** Whether it installed or found a pkit installed, it runs the `pkit` the `PATH` finds, from the project's root, asked for its version. That `pkit`'s router routes the run as it routes any command, and fetches the pin where it would. The script exits 0 only where the run reports the project's version: that version installed, or another version whose router runs the pin.
+- **Its verdict holds in its own environment:** its `PATH`, the routing variables it inherits, such as `PKIT_NO_ROUTE`, and the project it sits in. A later step whose environment differs, such as a pipeline's next step, may find another `pkit` or none. Success names the version the project's commands run, not a whole state: sync's guard still stops them over an unfinished upgrade or raise, and names the remedy.
+- **It refuses, or fails, before the check,** and installs nothing:
+  - a pin that is no bare release version `MAJOR.MINOR.PATCH`, such as `v1.2.3`, which the router would never match: mend it with `pkit pin <version>`
+  - nothing pinned, and a manifest that records no version: choose a version and install it as this section says
+  - no `uv` on the `PATH`
+  - an install that fails, such as where a sandbox keeps writes out of uv's folders
+- **It fails after the check:**
+  - where the `PATH` finds no `pkit`, naming the folder uv put the command in, for you to add to the `PATH`
+  - where the `PATH` finds the project's own dispatcher first, which shadows the installed pkit and would only name this script again: uv's folder goes before it on the `PATH`
+  - where the `pkit` that ran reports another version, or none, as where its router cannot fetch the pin. It leaves that pkit as it is, and names how to run the project's version without moving it, `uvx --from git+https://github.com/aleskalfas/project-kit.git@v<version> project-kit <command>`, and the forced install, `uv tool install --force …@v<version>`, for whoever owns the machine to run on purpose.
+- **Another install at the same moment.** The script takes no lock. Another install can land between its look and its own install, and of two installs the later stands. The router still runs a pinned project's pin wherever it can fetch it, and sync's guard stops an unpinned project's commands under another version. A machine that runs such installs at once gives each its own uv tool folder, or pins its projects.
+- **When it runs, and what it leaves alone.** It runs only when invoked: by a person, a pipeline's step, a host's setup command or an agent, and never from a hook or a pkit command. It names no host's folders, since uv chooses where the command goes, and it changes no `PATH` and no shell profile. It fetches no history, so a shallow clone stays shallow. In the methodology's source repository the router runs the checkout's own code whatever is installed, so the check reports the checkout's version.
+
+**A project pinned below the release that ships the install script.** That pin's own code fetches over SSH. On a machine with no SSH key, install a pkit of that release or later by hand, from the HTTPS URL above. Its router fetches the pin over HTTPS, and the project's commands run. The pin's own `pkit upgrade` and `pkit pin <version>` still fetch over SSH, so they cannot raise the pin there. The installed tool raises it, run with routing bypassed and naming a release that ships the install script, or later:
+
+```
+PKIT_NO_ROUTE=1 pkit pin <version>
+```
+
+A raise to such a release, interrupted, leaves the content ahead of a pin below it. The script installs the pin and succeeds, and sync's guard then stops the project's commands until the raise is finished. The pin's code cannot finish it on a machine with no SSH key, and the content's own release can, run from the HTTPS URL with routing bypassed:
+
+```
+PKIT_NO_ROUTE=1 uvx --from git+https://github.com/aleskalfas/project-kit.git@v<content version> project-kit pin <content version>
+```
+
+**A machine that reaches github.com over SSH alone** keeps these lines, and configures its own git and uv to send the fetches over SSH, such as by git's URL rewriting (`url.<base>.insteadOf`). pkit writes none of that configuration, since a rule there reaches every repository the machine fetches (PRJ-015 point 2). Whatever URL installed pkit, it fetches its later releases from the URL compiled into it, through the machine's git and uv, so that configuration reaches those fetches too.
+
 **The development install, from main:** the same URL with no tag installs main's head.
 
 ```
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git
+uv tool install git+https://github.com/aleskalfas/project-kit.git
 ```
 
 Its version names the last release, while its files may be newer. So no version vouches for its content. Sync's guard compares its version like any other, and the comparison vouches for nothing (ADR-065 point 12). Use it to try work no release ships yet. Nothing checks whether an install is tagged. An install of a commit no release tags is untagged, such as main's head or a branch's (`@<branch>`).
@@ -407,7 +446,7 @@ Reconciles your project at the release it records, and moves no version ([COR-05
 
 **Sync's guard: it stops under another version.** Sync copies the running pkit's content (ADR-033), so it runs only where that is the release your project records, and only over a finished upgrade. Before it writes anything, under `--dry-run` too, it stops under a pkit at another version than `backbone_version`, over an unfinished upgrade, over a missing manifest or one whose `backbone_version` is no version, and under a pin newer than the running pkit, and **nothing overrides it** ([the lifecycle reference's upgrade flow, "Sync's guard"](../lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over); ADR-065 point 7). Its message names the remedy for the state it finds, the first of these that matches (ADR-065 point 8):
 
-1. **Pinned, and the router could not fetch the pin,** so it ran your installed pkit instead (offline, say): reconnect and run `pkit sync` again, since the router runs the pin whenever it can fetch it, or run the pin through `uvx --from …@v<pin> project-kit sync`. Where SSH keys are what fail, install the pin's version from the repository's HTTPS URL, `uv tool install --force git+https://github.com/aleskalfas/project-kit.git@v<pin>`, and the router then runs it with no fetch. To move on purpose, `pkit unpin` and then `pkit upgrade`. Not a bare `pkit upgrade`, which refuses under the fallback ([`upgrade`](#upgrade)). A pin that is no version is one the router can never fetch: the message then names replacing it with `pkit pin`, or moving on purpose.
+1. **Pinned, and the router could not fetch the pin,** so it ran your installed pkit instead (offline, say): reconnect and run `pkit sync` again, since the router runs the pin whenever it can fetch it, or run the pin through `uvx --from …@v<pin> project-kit sync`. To move on purpose, `pkit unpin` and then `pkit upgrade`. Not a bare `pkit upgrade`, which refuses under the fallback ([`upgrade`](#upgrade)). A pin that is no version is one the router can never fetch: the message then names replacing it with `pkit pin`, or moving on purpose.
 2. **No manifest, or a `backbone_version` that is no version:** `pkit upgrade`, which writes the manifest at its version and runs every backbone migration once ([the lifecycle reference's upgrade flow, "The replay: a missing completion"](../lifecycle/upgrade-flow.md#the-replay-a-missing-completion)).
 3. **The running pkit older than the content or the pin (#1212):** run the version the project needs. A project that pins a version is run at its pin: reconnect and re-run, or run it directly with `uvx --from …@v<pin> project-kit sync`. `pkit pin <version>` moves the pin instead, to a version no older than the content. A project whose content is ahead of its pin, as an interrupted pin raise leaves it, is pinned at its content with `pkit pin <content version>`, or finished with `pkit upgrade`. A project with no pin needs a pkit at its content's version, run with `uvx` or installed. Here "the content" is the newer of `backbone_version` and `completed_version`. pkit never moves a project to an older version: its migrations are forward-only (COR-010), and a pin is never moved down (ADR-049). To roll a project back, the message names reverting the commit of each upgrade since that version, which restores every file those upgrades changed, inside `.pkit/` and outside ([the lifecycle reference's upgrade flow, "Rolling back an upgrade"](../lifecycle/upgrade-flow.md#rolling-back-an-upgrade)).
 4. **The last upgrade incomplete:** `pkit upgrade`, which finishes it. With no `completed_version`, it runs every backbone migration once. Otherwise it runs them from `completed_version`. If a migration fails every time, fix its cause and run `pkit upgrade` again, or roll the project back by reverting the upgrade's commit ([the lifecycle reference's upgrade flow, "Two recorded states, and an interrupted upgrade"](../lifecycle/upgrade-flow.md#two-recorded-states-and-an-interrupted-upgrade)). The revert restores both recorded versions and every file the upgrade changed, inside `.pkit/` and outside. An upgrade not yet committed is undone over every file `git status` lists ([the lifecycle reference's upgrade flow, "Rolling back an upgrade"](../lifecycle/upgrade-flow.md#rolling-back-an-upgrade)).
@@ -426,7 +465,7 @@ An older or another pkit is a normal state, not a defect, and a version vouches 
 
 **A hook need that no provider binds.** After its deploy, sync warns of each agent's or skill's `needs:` entry whose hook no provider binds, naming the agent and the hook. The warning writes nothing and fails nothing ([the hooks reference, "Unsatisfied needs"](../agents/hooks.md#unsatisfied-needs)). `init`, `upgrade` and a capability's install, register, upgrade and uninstall warn the same.
 
-**In a pipeline.** A project that does not pin a version, run by a pkit installed fresh in each run, meets the stop at every release until it pins. Commit a pin (`pkit pin`, or the pin `pkit upgrade` writes by default), so the router runs the project's version, or install the project's version in the pipeline: `uv tool install --force git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>`. The router fetches over SSH, so a pinned pipeline without SSH keys installs the pin's version itself, from the HTTPS URL above.
+**In a pipeline.** A project that does not pin a version, run by a pkit installed fresh in each run, meets the stop at every release until it pins. Commit a pin (`pkit pin`, or the pin `pkit upgrade` writes by default), so the router runs the project's version, or install the project's version in the pipeline: `uv tool install --force git+https://github.com/aleskalfas/project-kit.git@v<version>`. In place of a pkit installed fresh, the install script installs the version the project records, or its pin ("Installing pkit on PATH").
 
 **`--force` is ignored,** for this release, and a later release removes it: a recorded version never moves down ([the lifecycle README, "The downgrade guard on capability refresh"](../lifecycle/README.md#the-downgrade-guard-on-capability-refresh)). The release's migration names each file of your project that runs `pkit sync --force`.
 
@@ -480,7 +519,7 @@ Concretely, a pinned project's `upgrade` runs under its pin's code in one of two
 2. **A recorded state ahead of the pin**, in `backbone_version` or `completed_version`, as an interrupted raise leaves it → it refuses before it writes anything, since its own transition would take the content down to the pin. Offline, its message names reconnecting: online, the hand-over to the latest release finishes the raise. Online, no release is newer than the pin, and the message names the remedies for a pkit older than the content (see [`sync`](#sync), its third remedy).
 3. **Otherwise** → it runs the transition to its pin itself, in its own process, which already runs the pin's code. This is the case when the pin is the latest release, when it is ahead of the newest release, and when the release source is unreachable (offline, no credentials, timeout), which it reports with a warning. Content behind the pin, or a transition to the pin left incomplete, is finished here. A project already current at its pin says "Already at backbone" and changes nothing. pkit never moves a pin down (migrations are forward-only, COR-010).
 
-**Under the router's fallback it refuses** ([the lifecycle reference's upgrade flow, "Sync's guard"](../lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over)). When the router cannot fetch the pin, it runs the installed pkit instead and marks the run (`PKIT_PIN_UNRESOLVED`). Run there, `upgrade` would move the project and its pin to the installed pkit's version, not to a release it resolved. So it refuses whether that pkit is older or newer than the pin, before the tool update and before it writes anything. It refuses under `--dry-run` too, and no flag overrides it, `--force` included. A run with routing bypassed on purpose (`PKIT_NO_ROUTE=1`) is not a fallback, and neither is a routed child that inherited the mark. The message names the fallback's remedies, as sync's first remedy does ([`sync`](#sync)): reconnect and run `pkit upgrade` again, run the pin through `uvx`, or install the pin's version from the HTTPS URL where SSH keys fail. To move on purpose, `pkit unpin`, then `pkit upgrade`. A pin that is no version is one the router can never fetch: the message then names replacing it with `pkit pin`, or moving on purpose.
+**Under the router's fallback it refuses** ([the lifecycle reference's upgrade flow, "Sync's guard"](../lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over)). When the router cannot fetch the pin, it runs the installed pkit instead and marks the run (`PKIT_PIN_UNRESOLVED`). Run there, `upgrade` would move the project and its pin to the installed pkit's version, not to a release it resolved. So it refuses whether that pkit is older or newer than the pin, before the tool update and before it writes anything. It refuses under `--dry-run` too, and no flag overrides it, `--force` included. A run with routing bypassed on purpose (`PKIT_NO_ROUTE=1`) is not a fallback, and neither is a routed child that inherited the mark. The message names the fallback's remedies, as sync's first remedy does ([`sync`](#sync)): reconnect and run `pkit upgrade` again, or run the pin through `uvx`. To move on purpose, `pkit unpin`, then `pkit upgrade`. A pin that is no version is one the router can never fetch: the message then names replacing it with `pkit pin`, or moving on purpose.
 
 An **un-pinned** project's `upgrade` takes the tool update above, syncs content from the running tool's bundle, and ends by pinning the project at that version, unless `--no-pin` is passed ([ADR-064](../../tech-docs/architecture/decisions/ADR-064-upgrade-pins-by-default.md); see *Pinning is the default* above).
 
