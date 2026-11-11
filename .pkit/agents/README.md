@@ -388,7 +388,7 @@ Four rules apply to a write-carrying category:
    - The difference from a bare or absent key is mechanical, not cosmetic. `[]` resolves to an empty `owns:`, so the agent deploys inert, owning nothing. A bare or absent key does not resolve at all, so the agent is skipped.
    - The first install writes the `[]`. An install from before the category upgrades into the skipped state, since sync cannot add a key to the project's overlay. `pkit agents reconcile --write` fills the `[]` to restore parity ("Diagnosing + repairing the overlay" below).
 2. **File granularity, not subtree grants.** List definition files and predicate-script folders, not a capability's whole subtree. Never list a capability's `package.yaml`, since registering a predicate belongs to the `pkit process` commands, which own that stamp.
-3. **Nothing sync manages.** No entry may reach content the next sync overwrites, which is the no-shared-files invariant at the agent's surface (core rule 1). The deploy's resolver refuses such an entry, names it with its category, and skips the agent rather than deploy an invalid grant. `.pkit/lifecycle/ownership.py` holds the test and the categories it binds. Every adapter's resolver imports it, so a second harness cannot silently skip the check ([ADR-088](../../tech-docs/architecture/decisions/ADR-088-capability-default-write-paths.md) point 7):
+3. **Nothing sync manages.** No entry may reach content the next sync overwrites, which is the no-shared-files invariant at the agent's surface (core rule 1). The deploy's resolver refuses such an entry, names it with its category, and skips the agent rather than deploy an invalid grant. `.pkit/lifecycle/ownership.py` holds the test and the categories it binds. Every adapter's resolver imports it, so a second harness cannot silently skip the check:
    - **Reach** means that either path holds the other. So the repository's root and `.pkit/` are refused, since each holds managed content. A glob is read as the folder that holds its first glob character.
    - **What sync manages:**
      - core's areas, and a shipped capability's own subtree: managed
@@ -403,7 +403,7 @@ Four rules apply to a write-carrying category:
 
 ### A capability's write categories
 
-A capability declares the categories its agents write, and install writes each one's default into the overlay ([COR-073](../decisions/core/COR-073-capability-grant-defaults.md), [ADR-088](../../tech-docs/architecture/decisions/ADR-088-capability-default-write-paths.md)). An edit makes the value the project's.
+A capability declares the categories its agents write, and install writes each one's default into the overlay ([COR-073](../decisions/core/COR-073-capability-grant-defaults.md)). An edit makes the value the project's.
 
 - **The declaration.** The capability's `package.yaml` lists them under `write_categories` ([the manifest reference, "Field layout and casing"](../lifecycle/manifest.md#field-layout-and-casing)). A category is named `<capability>.<word>`, and `owner` names the one agent that owns it. An optional `default-query` names the query command that answers its default.
 - **The default query** prints one document, `{"paths": [...]}`, with an optional one-line `note` that a writer prints beside what it writes. It runs from the project's root with `--json`, offline-marked and bounded, and is asked afresh each time. A failure, a timeout or another shape is no answer. `{"paths": []}` answers no path.
