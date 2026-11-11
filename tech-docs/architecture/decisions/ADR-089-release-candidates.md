@@ -1,7 +1,7 @@
 ---
 id: ADR-089
 title: A release candidate lives only in its tag, and reaches only a project that asks for it
-status: proposed
+status: accepted
 date: 2026-10-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
