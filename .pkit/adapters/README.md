@@ -136,7 +136,7 @@ Beside its scripts, an adapter states what its harness does in declarations, fil
 
 An agent's definition names its tool access in the methodology's terms. What a harness takes is its adapter's to know. So an adapter that deploys agents declares its harness's terms in `tool-access.json`, and the agents area's reader, `.pkit/agents/tool_access.py`, makes the adapter's refusals against them.
 
-- **Which adapter declares it:** one that ships `deploy-agents.sh`, or registers an agent runner.
+- **Which adapter declares it:** one that deploys agents, that is, one that ships `deploy-agents.sh` or registers an agent runner.
 - **Its format:** JSON, since the agent runner reads it under the system's Python. Its shape is `.pkit/schemas/tool-access.schema.json`, and `.pkit/schemas/tool-access.yaml` says what each field holds.
 
 Its fields:
