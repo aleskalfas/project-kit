@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:software-engineering
-# pkit-digest: sha256:0f8c5d533148b3a5a21813025754ba1678e2459e87c23573f3e6b60f21e794d7
+# pkit-digest: sha256:54187f82c92e22c9422b538d4a700a7033c8ac8e54dc37ecd72736d1e4c3cf65
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"]
 name: software-engineer
 description: Producer agent — authors and edits code under the project's own 
