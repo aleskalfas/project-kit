@@ -98,6 +98,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles, and none of them names a component token (refinement per [visual-communication:DEC-035-component-tokens]).
 - **Checked in every combination of the axes that change a colour.**
 - **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. It measures each run of a text, a span set in one style, against the fill under that run, at the run's own size and weight (refinement per [visual-communication:DEC-012-text-runs]). Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
+- **An order's ends.** The text on an order's steps is a declared pair with each of the order's two ends, at the level for text. In every combination, that text is lighter than both ends or darker than both, by WCAG's relative luminance. The first end contrasts with the page's ground, the shared role the foundations declare for it, at least as much as the last does, by WCAG's ratio, an end with alpha measured over it (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 2).
 
 ### 9. Fonts come from committed files, and a missing font refuses the render
 
@@ -110,6 +111,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 ### 10. A notation maps concepts to roles, read with its name
 
 - **What a concept maps to.** A notation lists the concepts of one subject. Each maps to a *colour family*, a group of colour roles that paints one thing, such as its line, its fill and the text on it, which the foundations declare. A concept may also map to an icon among the notation's marks, and to a shape from a list the foundations declare. It never maps to a value, so each brand colours a concept its own way.
+- **An order's roles.** The foundations also declare an order's two ends and its text, apart from the families a notation maps to, and which end is the first. No concept maps to a role of an order (refinement per [visual-communication:DEC-032-ordered-colour-steps] points 1 and 6).
 - **Colour is never the only sign.** The foundations' families bound how many concepts one piece tells apart by colour. An icon or a shape tells the rest apart.
 - **An icon follows the brand,** tinted by a role of its concept's family.
 - **A concept is read with its notation's name,** as a component is read with its library's. A piece uses concepts only from the notations it names.
@@ -166,7 +168,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 ## Implications
 
-- **The foundations** declare the shared roles with their types, the shared axes with their common modes, the colour families, the shapes, and the contrast pairs among shared roles.
+- **The foundations** declare the shared roles with their types, the shared axes with their common modes, the colour families, an order's two ends and its text with which end is the first (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 1), the shapes, and the contrast pairs among shared roles.
 - **The capability's schema for a brand** names the extension point, the kinds of value a value axis may change, and how a key is spelled. The capability's reference gives each code writer's spelling.
 - **The walking skeleton** reads a base brand and its open roles, and resolves two value axes, the colour scheme and the contrast. It writes the brand out as CSS under the naming rule, and checks contrast and missing fonts at the severities of point 11.
 - **The record of the engine and its plugins** decides how text is measured, and the document of a brand's resolved values that code writers and producers read ([visual-communication:DEC-005-engine-and-plugins] points 4 and 7).

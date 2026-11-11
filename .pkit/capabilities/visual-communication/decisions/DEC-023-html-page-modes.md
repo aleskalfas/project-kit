@@ -51,7 +51,7 @@ A small page in DEC-020's form held four keys over the foundations' two value ax
 
 ### 3. A paint is a custom property
 
-- **One custom property for each colour role the file paints,** in the CSS writer's spelling. HTML text and the shapes of a layer read the same property.
+- **One custom property for each colour role the file paints,** in the CSS writer's spelling. HTML text and the shapes of a layer read the same property. Each step of an order the file paints takes one too, under a name no role's spelling by the CSS writer can take, and its value in each mode comes with the scene (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 5).
 - **A mode is a set of their values.** So text and shapes change together, an arrowhead defined once for a role serves every mode, and a colour's alpha lies in its value.
 - **At the file's size.** Each mode's values are its key's, and that key's combination takes the file's size. So a colour a size changes takes that size's value in every mode of the file.
 - **The renderer writes these rules itself,** for the keys the file holds and the roles it paints. It shares the writer's spelling, never its output (DEC-005 point 7).
@@ -80,7 +80,7 @@ A small page in DEC-020's form held four keys over the foundations' two value ax
 
 ### 7. A page with no ground lies on the browser's own ground
 
-- **The file names its schemes.** CSS's `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`. The browser's ground then follows the mode, and the file sets no colour value around its pages (DEC-020 point 4). A keyline and a backdrop mix the browser's colours (refinement per [visual-communication:DEC-031-html-page-backdrop] point 3).
+- **The file names its schemes.** CSS's `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`. The browser's ground then follows the mode, and the file sets no colour value around its pages (DEC-020 point 4). A keyline and a backdrop mix the browser's colours (refinement per [visual-communication:DEC-031-html-page-backdrop] point 3). In print each page lies on the browser's ground, and the file asks the browser to keep the colours of its pages and their keylines exactly, and nothing around them (refinement per [visual-communication:DEC-026-html-page-print] point 5).
 - **No check reads that ground,** which differs between browsers. A file with no such mode names no scheme, so its page lies on the browser's default ground, white in the test. Only a person catches a light text that fades there.
 - **Under forced colours,** one rule of the file gives each line, stroke and arrowhead the reader's text colour. A fill opaque in every key the file holds takes the reader's background colour, with an edge in that text colour. The browser colours the text itself. The backdrop and each fixed page take the reader's background colour, and the keyline the reader's text colour (refinement per [visual-communication:DEC-031-html-page-backdrop] point 3).
 - **A translucent fill stays.** A line over it, or over a picture, may fade.
