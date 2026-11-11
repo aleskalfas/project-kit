@@ -135,6 +135,7 @@ pkit:
         - visual-communication:DEC-031#3
         - visual-communication:DEC-031#4
         - visual-communication:DEC-031#5
+        - visual-communication:DEC-033
         - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
       artefact:
@@ -309,6 +310,13 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 ### What the PDF renderer does not carry yet
 
 The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)).
+
+The file is PDF 1.7. In the later version that tags it, three of the cases DEC-033 settles take a form of their own. This page names two of them now, and the third when that version comes (DEC-033 point 1):
+
+- **Emphasis.** PDF 1.7's standard structure types hold none for emphasis. That version writes `emphasis` and `strong` as structure types of the file's own, `Em` and `Strong`, each mapped to `Span`. A tool that reads the file's own types reads the emphasis. Some tools read them as less than the element an HTML page writes for emphasis. That this form counts as carried is a judgement, not a test's finding. That version's declaration names both words, and no loss stands for them (DEC-033 point 7).
+- **An instance's text,** the text a component gives to the whole its instance draws, such as a diagram. A reader's tools take it before the texts the instance holds, never in their stead, since a text read in their stead would hide them and the links and headings among them. That version writes it in a form that keeps them, which this page names when the version comes (DEC-033 point 5).
+- **A picture not drawn.** That version writes a picture it leaves out, where the picture has a text, as a `Figure` element whose `Alt` holds the picture's text, with the image's frame as its bounding box, and nothing drawn in it. So a reader's tools read the text at the picture's place in the reading order (DEC-033 point 8).
+- **PDF 2.0, later.** PDF 2.0 holds both kinds of emphasis as standard types. A move to it is a version of the renderer of its own, after a test of the tools that read it (DEC-033 point 7).
 
 ### What the PDF renderer loses
 
