@@ -1,0 +1,20 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A brand built on a base keeps its base's form, and a top a brand holds draws
+  itself (#3019, DEC-009 point 4, DEC-034 points 4 and 8). Along a chain of
+  brands, the brand nearest the root that serves a top keeps its form: its
+  drawings draw under every brand built on it, and the top's own drawing draws
+  each layout it leaves. A brand serves a top where it draws one of its layouts,
+  or holds the top. A brand built on a base draws a top its base does not serve;
+  its drawing of a top its base serves now draws nothing, and each piece under it
+  states the fact `drawing-base-serves`. A drawing draws only where its own brand
+  names the top's library, never through its base's naming. A top a brand holds
+  is drawn by its own drawing alone: a brand's drawing of it fails as
+  `drawing-held-top` where the brand is checked alone and where a release reads
+  it, so a brand that holds such a drawing now fails where it passed before. A
+  piece whose top a brand holds, drawn under a brand that is neither that brand
+  nor built on it, locks the holding brand and asks its author for attention as
+  `top-of-other-brand`.
