@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:a4bf0e0a7335110778e46c6e1410e440d5859497dde9da19db6956dc62232ee8 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:636400240bac9174f989ded54bd58c8723968e47b17c11c1d03710b62b9a3a43 -->
 
 [Visual work keeps its content and its look as data, and renderers only project it](../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md).
 
@@ -41,9 +41,9 @@ Build the libraries pieces are made from, and carry their look into code, so all
 **Its use cases:**
 
 - [UC-103 — Improve a library component without breaking a piece](../use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md)
-- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md) ([not built yet](#not-built-yet): variant 2a, variant 4a)
+- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md) ([not built yet](#not-built-yet): variant 4a)
 - [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md) ([not built yet](#not-built-yet): step 7)
-- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md) ([not built yet](#not-built-yet): variant 2a)
+- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md)
 - [UC-107 — Use a brand's values in code](../use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md)
 - [UC-109 — Take in a library another project shares](../use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md)
 - [UC-110 — Add a library component and mark it stable](../use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md)
@@ -139,10 +139,8 @@ flowchart LR
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
-- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#3019`
 - [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md): variant 4a, decided by `visual-communication:DEC-001#5`, tracked in `#2573`
 - [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md): step 7, decided by `visual-communication:DEC-001#5`, tracked in `#2573`
-- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md): variant 2a, decided by `visual-communication:DEC-004#6`, tracked in `#3019`
 - [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md): step 2, decided by `visual-communication:DEC-001#1`, tracked in `#2584`
 
 ### Diagrams
