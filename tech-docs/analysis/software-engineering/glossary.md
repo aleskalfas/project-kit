@@ -45,8 +45,9 @@ builds-on:
         name: Merge authoriser
         needs:
           - Have a reviewer other than their writer check a change's answers, so no merge I authorise rests on an answer that does not hold.
+          - Have a change's code reviewed for correctness and security before I authorise its merge.
   - analysis: project-management
-    version: 2.0.0
+    version: 2.1.0
     terms:
       - {id: TERM-authorisation, name: authorisation}
       - {id: TERM-bypass, name: bypass}
@@ -147,7 +148,7 @@ TERM-walking-skeleton:
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
-- **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor, 1.0.0.
+- **From core at 2.0.0:** the areas up to `030-change`. The links name software-engineering's floor, 2.0.0.
   - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
@@ -184,15 +185,16 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
     - Have a reviewer other than their writer check a change's answers, so no merge I authorise rests on an answer that does not hold.
-- **From project-management at 2.0.0:** its terms of planning work into Tasks, reviewing a pull request and merging it. No release holds project-management's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor of project-management, 0.55.0.
-  - **Term:** [authorisation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-authorisation--authorisation)
-  - **Term:** [bypass](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-bypass--bypass)
-  - **Term:** [Feature](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-feature--feature)
-  - **Term:** [issue](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-issue--issue)
-  - **Term:** [merge gate](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-merge-gate--merge-gate)
-  - **Term:** [required reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-required-reviewer--required-reviewer)
-  - **Term:** [Task](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-task--task)
-  - **Term:** [verdict](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-verdict--verdict)
+    - Have a change's code reviewed for correctness and security before I authorise its merge.
+- **From project-management at 2.1.0:** its terms of planning work into Tasks, reviewing a pull request and merging it. The links name release 2.1.0, the first to ship software-engineering's floor of project-management, 0.56.0.
+  - **Term:** [authorisation](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-authorisation--authorisation)
+  - **Term:** [bypass](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-bypass--bypass)
+  - **Term:** [Feature](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-feature--feature)
+  - **Term:** [issue](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-issue--issue)
+  - **Term:** [merge gate](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-merge-gate--merge-gate)
+  - **Term:** [required reviewer](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-required-reviewer--required-reviewer)
+  - **Term:** [Task](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-task--task)
+  - **Term:** [verdict](https://github.com/aleskalfas/project-kit/blob/v2.1.0/tech-docs/analysis/project-management/glossary.md#term-verdict--verdict)
 
 ## TERM-code-review-panel — code-review panel
 

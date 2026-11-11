@@ -89,6 +89,7 @@ pkit:
         - visual-communication:DEC-034#4
         - visual-communication:DEC-034#5
         - visual-communication:DEC-034#6
+        - visual-communication:DEC-034#7
         - visual-communication:DEC-034#8
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
@@ -281,7 +282,7 @@ parts:
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
-- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
+- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
 
 The figure draws its caption only when the content gives one:
 
@@ -321,8 +322,22 @@ values:
 - **What it reads.** The mode the scene's key holds, else the axis's default. So a piece that names no size draws the default's branch ([How the engine computes a scene](#how-the-engine-computes-a-scene)).
 - **The default is named, and takes what is left out.** The switch names the axis's default. A mode it leaves out takes that branch, so `tablet` above takes `desktop`'s. A new mode draws as the default does until a component names it.
 - **Only a size axis a piece can name.** The foundations declare it ([`roles.yaml`](files.md#rolesyaml)). A value axis is refused, since one scene serves each of its modes.
-- **The size is the page's.** A component reads the size the piece is drawn at, whatever room its placer gives it. It answers to its slot only by formulas on `:width`.
-- **What is refused,** at any depth: a marked name that reads no size axis a piece can name, and a branch that is no mode. So is a switch with no branch for the axis's default.
+- **The size is the page's.** A component reads the size the piece is drawn at, whatever room its placer gives it. It answers to its slot only by formulas on `:width`, and a drawing of a layout also by `:as`, below.
+- **What is refused,** at any depth: a marked name that reads no size axis a piece can name, other than `:as` in a drawing of a layout, and a branch that is no mode. So is a switch with no branch for the axis's default.
+
+**A switch on `:as`,** `{by: ":as", page: <value>, part: <value>}`, chooses by whether the instance is a page. Only a drawing of a layout reads it, the top's own or a brand's ([Layouts](#layouts)). It serves wherever a switch on a size does, and as a `when`. A drawing of the figure could draw a backdrop only where the figure is a page:
+
+```yaml
+  backdrop:
+    when: {by: ":as", page: true, part: false}
+    box: {fill: surface}
+    width: "=:width"
+    height: "=:height"
+```
+
+- **Its values.** `page`, where the instance is a page, and `part`, where it lies inside another page, as a figure in a slide's slot does. The engine sets it from where the instance lies in its piece, and no content gives it. So the piece's top that is a page alone reads `page`, and so does each page of a deck.
+- **The default is named, and takes what is left out.** The switch names `page`, the default, and `part` takes that branch where the switch leaves it out.
+- **What is refused,** at any depth: a switch on `:as` in a component that is no drawing of a layout, a branch that is no value of it, and a switch with no branch for `page`.
 
 **A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
 
@@ -436,6 +451,8 @@ layouts:
 - **A top that is a page alone keeps one layout,** as the figure does. Its content is the top's own mapping, whose keys are the top's fields, and a top with one layout may declare a field named `layout`. So the key cannot choose among forms of such a top without refusing a file format 1 accepts.
 
 A page inside a page is reported: what a slot of pages places, where that slot lies inside a page, and each page of a top whose layouts are its pages' forms, where that top lies inside one.
+
+**A drawing may choose by whether its instance is a page** (DEC-034 point 7). A layout's drawing, the top's own or a brand's, reads `:as` in a switch or a `when` ([Switches](#switches)): `page` where its instance is a page, and `part` where the instance lies inside another page. So one drawing of the figure may draw page dressing, such as a backdrop or the brand's mark, where the figure is the piece's top, and leave it out where the figure is placed in a slide. A drawing that reads no `:as` draws alike in both.
 
 The site is a top whose layouts are its pages' forms, and which asks for its width alone ([The foundations](files.md#the-foundations)). So its layout `standard` says its page's height, by its lowest part. Each page is as tall as its content. The site's file, trimmed, its descriptions and its background left out:
 
@@ -641,6 +658,7 @@ preferred:
   - **A part with no `when`** is drawn at every mode.
   - **A `when` that names a field or an option's words** may draw its part at every mode, as the content or the option decides.
   - **A `when` by a size** reads the mode's branch: `true` draws its part, and a field or an option's words may draw it.
+  - **A `when` by `:as`,** in a drawing of a layout, may draw its part at every mode where its branch for `page` or for `part` may, since its instance may lie as either ([Switches](#switches)).
 
 ### Ties and connectors
 
@@ -800,6 +818,7 @@ Each drawn property names its source in `sources`:
 - **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, whether a stand-in or real text fills it ([The facts of an export](#the-facts-of-an-export)).
 - **`option:<name>`:** a value a switch on that option chose.
 - **`size:<axis>`:** a value a switch on that size axis chose, such as `size:device`.
+- **`:as`:** a value a switch on `:as` chose, by whether its instance is a page ([Switches](#switches)). It is a kind of its own, and names neither value.
 - **`default:<library>/<component>`:** the component's own value, such as the picture file an image names by `file`. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes. It is also the source of the picture role an image shows.
 - **`engine`:** a value the engine computed, such as a text's measured height, an item's frame or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.

@@ -248,6 +248,23 @@ def test_the_format_takes_a_switch_and_a_when_by_a_size(path: str, value: Any) -
     assert sized_issues(data) == []
 
 
+BY_AS: list[tuple[str, Any]] = [
+    ("parts.label.x", {"by": ":as", "page": "=pad", "part": "=@space.1"}),
+    ("parts.label.when", {"by": ":as", "page": True, "part": "tags"}),
+]
+
+
+@pytest.mark.parametrize(("path", "value"), BY_AS)
+def test_the_format_takes_a_switch_and_a_when_by_as_which_only_a_drawing_reads(
+    path: str, value: Any
+) -> None:
+    """The schema takes `:as` as it takes a size's marked name, and the engine reads it only
+    in a drawing of a layout, which this component is not (DEC-034 point 7)."""
+    data = changed(path, value)
+    assert problems(data) == []
+    assert [(code, where) for code, where, _ in engine_issues(data)] == [(engine.AS_SWITCH, path)]
+
+
 REFUSED_BY_SIZE: list[tuple[str, str, Any]] = [
     ("a `when` by a size alone", "parts.label.when", {"by": ":device"}),
     (
