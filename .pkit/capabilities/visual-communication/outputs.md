@@ -145,6 +145,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#tokens
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
+        - .pkit/capabilities/visual-communication/components.md#a-physical-size
         - .pkit/capabilities/visual-communication/files.md#axes-and-modes
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
         - .pkit/capabilities/visual-communication/files.md#picture-roles
