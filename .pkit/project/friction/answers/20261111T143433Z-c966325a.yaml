@@ -1,0 +1,604 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-002-project-owned-writers.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T14:34:33Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares, with their consent (ADR-088). The requirement asks that every write to project-owned content come from a writer a record names, and cites point 11 for the writers of first install, sync and the transition. The new writers are named by point 11 itself, and none of them is sync, so its statement, measure and tests hold."
+  - artefact: .pkit/lifecycle/manifest.md
+    read:
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T14:34:35Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The page gives the package metadata's fields, their validation, the manifest's keys and the registered commands as the schema and the code take them today, and names no writer of the overlay. The write-categories block ADR-088 adds to the package metadata is not built yet; the page anchors package.schema.json and package_validate.py, so the change in #2961 that adds it is asked of it. Its fields and commands hold."
+  - artefact: .pkit/lifecycle/component-registry.md
+    read:
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T14:34:37Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares, the run being the consent, or a person's answer at a terminal over a path that holds content (ADR-088). The page sets out the checks and steps of install, register and uninstall as the code runs them today, and none writes a default yet: ADR-088 decides what the build in #2961 adds. The page anchors capabilities.py and install.py, so the change that builds the write is asked of its install steps. Its checks and steps hold."
+  - artefact: .pkit/lifecycle/upgrade-flow.md
+    read:
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T14:34:39Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088), which keeps the defaults out of the tail install shares with upgrade. The page's steps of a transition create the overlay only as a seed path where it is missing, and write no default, so they hold against this edit. The deferrals of ADR-049, ADR-064 and ADR-065 to the build for #2211 are kept, since release candidates are not built yet."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "ADR-049, ADR-064 and ADR-065 let a pin name a release candidate, add pkit upgrade --pre with its hand-over, its guard against a candidate nobody asked for and its remedy for a move cut short, have a move to a candidate always pin and pkit unpin refuse on one, and read the window's lower bound in PEP 440 order, none built yet. The page's steps of a transition gain them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "ADR-049, ADR-064 and ADR-065 let a pin name a release candidate, add pkit upgrade --pre with its hand-over, its guard against a candidate nobody asked for and its remedy for a move cut short, have a move to a candidate always pin and pkit unpin refuse on one, and read the window's lower bound in PEP 440 order, none built yet. The page's steps of a transition gain them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065
+          reason: "ADR-049, ADR-064 and ADR-065 let a pin name a release candidate, add pkit upgrade --pre with its hand-over, its guard against a candidate nobody asked for and its remedy for a move cut short, have a move to a candidate always pin and pkit unpin refuse on one, and read the window's lower bound in PEP 440 order, none built yet. The page's steps of a transition gain them with the build for #2211."
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T14:34:50Z
+      outcome: unchanged
+      unchanged-because: "The edits: ADR-051 has the deploy refuse a path that lies in sync-managed content or holds any of it, for core's write-carrying categories and every category in the owns of an agent a capability ships, in any definition, the lifecycle layer deciding which categories the check binds beside the predicate, and a category a capability declares owned by one agent by its declaration (ADR-088). The README gives is_sync_managed and its first consumer, the check that a write-carrying category names no sync-managed content, as the code runs them today, and the code tests neither a path that holds such content nor a capability's category yet: ADR-088 decides what the build in #2961 adds. The README anchors ownership.py, so the change that builds the wider test is asked of it. Its account of the predicate holds."
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T14:34:52Z
+      outcome: unchanged
+      unchanged-because: "The edits: ADR-051 has the deploy refuse a path that lies in sync-managed content or holds any of it, for core's write-carrying categories and every category in the owns of an agent a capability ships, in any definition, the lifecycle layer deciding which categories the check binds, and a category a capability declares owned by one agent by its declaration. ADR-065 point 11 names a capability's install and register, and the install in the methodology's source, as writers into the overlay of the defaults it declares (ADR-088). The README states the overlay, core's write-carrying categories, their check and the fill commands as the code runs them today, and no command declares, writes or checks a capability's category, nor refuses a path that holds sync-managed content, yet: ADR-088 decides what the build in #2961 adds. The README anchors agents_overlay.py, capabilities.py, install.py, ownership.py and the deploy script, so the change that builds them is asked of it. Its sections hold."
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T14:34:54Z
+      outcome: unchanged
+      unchanged-because: "The edits: ADR-051 has the deploy refuse a path that lies in sync-managed content or holds any of it, for core's write-carrying categories and every category in the owns of an agent a capability ships, and keeps the single-consumer convention for core's categories (ADR-088). The README says the process-author agent owns only process-authoring-targets, shipped as an empty list, and can never own content sync manages, the deploy refusing an entry that resolves into it, which the code does today and the wider test keeps. Its grant, what the agent can never own and its one-definition discipline hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T14:35:05Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The use case's self-host sync regenerates derived state and writes no default, which ADR-088 keeps out of sync. Variant 2d gives the in-source install as the code runs it today, recording the capability and copying nothing, and no install writes a default yet: ADR-088 decides what the build in #2961 adds. Its path and variants hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T14:35:07Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The use case is first install by pkit init, which creates the overlay as a seed path by point 11's row for the seed paths, which the edit leaves as it was, and is none of those writers. Its steps hold."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T084307Z-31fa735e.yaml
+    revalidated:
+      at: 2026-11-11T14:35:09Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The journey's steps name the use cases that adopt the system, adding a capability among them through UC-023, and its own text says nothing of who writes the overlay; what a capability's install writes belongs to that use case's page. It holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T14:35:11Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The use case's sync regenerates the derivable state point 11 lists, which the edit leaves as it was, and writes no default, which ADR-088 keeps out of sync and upgrade. Its steps hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T14:35:13Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The use case's upgrade creates each missing seed path, the overlay among them, and regenerates derived state, and writes no default, since ADR-088 keeps the defaults out of the tail install shares with upgrade and no transition writes one. Its steps hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T14:35:26Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The use case runs each project at the version it pins, through the router and the transition, neither of which writes a default, and names no writer of the overlay. It holds."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-006-start-on-new-machine.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T14:35:29Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The journey readies a clone on a new machine by putting the CLI on it and running a fresh clone's sync at the project's pin, none of which installs a capability or writes a default, and names no writer of the overlay. It holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T14:35:31Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The use case keeps an agent's intermediate files in the agent workspace, which point 11 lists as derivable state the edit leaves as it was, and names no writer of the overlay. It holds."
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261027T191803Z-5aae943e.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T084307Z-31fa735e.yaml
+    revalidated:
+      at: 2026-11-11T14:35:33Z
+      outcome: unchanged
+      unchanged-because: "The edit: ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The README's upgrade section says the project stays at its recorded version until pkit upgrade moves it, runs the migrations a breaking change needs and pins it, and names no writer of the overlay; ADR-088 keeps the defaults out of upgrade. It holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T14:35:35Z
+      outcome: unchanged
+      unchanged-because: "The edits: ADR-051 has the deploy refuse a path that lies in sync-managed content or holds any of it, for core's write-carrying categories and every category a capability's agent owns, and a category a capability declares owned by one agent by its declaration (ADR-088). Point 1, which variants 8a and 8b cite for process-authoring-targets shipped empty and absent after an upgrade, is unchanged, and the use case's process-author writes only in the files the project grants it, which the wider test keeps. It holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T14:35:37Z
+      outcome: unchanged
+      unchanged-because: "The edits: ADR-051's Summary and points 2, 3 and 7 have the deploy refuse a path that lies in sync-managed content or holds any of it, for core's write-carrying categories and every category a capability's agent owns, in any definition (ADR-088); point 6, which the use case cites for owns being metadata that nothing at run time holds an agent to, is unchanged. Variant 6c gives the skip of an agent whose write-carrying category names a sync-managed path as the code runs it today, and the code refuses neither a path that holds such content nor a capability's category yet: ADR-088 decides what the build in #2961 adds. The use case anchors ownership.py and the deploy script, so that change is asked of it. It holds."
