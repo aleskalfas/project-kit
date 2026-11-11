@@ -24,6 +24,7 @@ pkit:
         - project-management:DEC-032#D1
         - project-management:DEC-032#D3
         - project-management:DEC-032#D4
+        - project-management:DEC-032#D5
         - project-management:DEC-050
         - project-management:DEC-055#3
         - COR-013
@@ -61,11 +62,11 @@ pkit:
 
 **Assumptions:**
 
-- The project has software-engineering installed, or registered in place where software-engineering is developed. The adapter deploys its `code-reviewer` and `security-reviewer` agent definitions ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
+- The project has software-engineering installed, or registered in place where software-engineering is developed. The adapter deploys software-engineering's `code-reviewer` and `security-reviewer` agent definitions ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
 - The merge gate requires both reviewers where a pull request's diff touches code, whatever the issues it closes ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). project-management runs each reviewer on the pull request's head, posts its verdict and counts it, as `project-management:UC-062` describes ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - The project's list of paths that are not code narrows what touches code. A pull request that changes only such paths needs neither reviewer (project-management DEC-032 point D1).
-- Where the project opts out of a reviewer, with a reason, the merge gate does not require it (`review_opt_outs.py`). The change's code then merges without that reviewer's judgement.
-- In human review mode, both verdicts only advise, and a person's approval satisfies the merge gate ([project-management DEC-027](../../../../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md) and [DEC-032 point D3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d3--the-resolved-set-is-and-composed-the-gate-checker-generalises-across-paths-the-singleton-cap-lifts)).
+- Where the project opts out of a reviewer, with a reason, the merge gate does not require that reviewer ([project-management DEC-032 point D5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d5--activation-is-install-driven-the-resolved-set-is-recomputed-at-gate-time) and `review_opt_outs.py`). The change's code then merges without that reviewer's judgement.
+- Where `review.mode` resolves to `human` for the pull request, both verdicts only advise ([project-management DEC-032 point D3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d3--the-resolved-set-is-and-composed-the-gate-checker-generalises-across-paths-the-singleton-cap-lifts)). A person's approval then satisfies the merge gate ([project-management DEC-027](../../../../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md)).
 - Each reviewer carries only knowledge that holds in any project. It reads the project's own standards from the conventions corpus the project names ([software-engineering DEC-002 point 4](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#4-knowledge-split)).
 - Only its definition holds each reviewer to when it blocks, and to the knowledge it carries. Neither is a contract a check validates ([software-engineering DEC-002](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md), "Implications"). A verdict is an AI agent's judgement, which can miss a defect.
 
@@ -74,7 +75,7 @@ pkit:
 **Main path:**
 
 1. The `code-reviewer` and the `security-reviewer` each read the pull request and its diff (`code-reviewer.md` and `security-reviewer.md`).
-2. Each reviewer reads the conventions corpus the project names, and notes which of its standards bear on the diff ([software-engineering DEC-002 point 4](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#4-knowledge-split)).
+2. Each reviewer reads the conventions corpus the project names, and notes which of the corpus's standards bear on the diff ([software-engineering DEC-002 point 4](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#4-knowledge-split)).
 3. The `code-reviewer` judges the diff's correctness, the quality of its code and the design of its interfaces ([software-engineering DEC-002 point 1](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel)).
 4. The `security-reviewer` judges the diff for security defects (DEC-002 point 1). Two such defects are a secret on a command line and a shell command built from outside input. It judges the change's code against [REQ-060](../../../requirements/quality/REQ-060-secret-off-command-line.md): a secret never goes on a command line.
 5. Each reviewer tags each of its findings ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
