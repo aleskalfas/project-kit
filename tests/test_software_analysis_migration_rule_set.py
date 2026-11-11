@@ -23,6 +23,7 @@ from project_kit import declared_rule_sets as drs
 from project_kit import migrations
 from project_kit import rule_sets as rs
 from tests.adopter_repo import MakeAdopterRepo
+from tests.analysis_repo import release_reaches
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "software-analysis"
@@ -67,9 +68,10 @@ def test_the_migration_creates_the_set_install_would_create(
     text = (project / CREATED).read_text(encoding="utf-8")
     assert text == planned.text
     # The set the capability declares, as DEC-001's, DEC-002's and DEC-004's Implications
-    # give it: it selects the three kinds of requirement and the view beside the four.
+    # give it: it selects the three kinds of requirement and the view beside the four, and
+    # pins `SAN` at the major it ships, 2 since its judgement rules were accepted (#1727).
     assert text.startswith(
-        "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+        "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@2]\n"
         "scope:\n  types: [software-analysis:actor, software-analysis:term, "
         "software-analysis:domain-model-view, "
         "software-analysis:use-case, software-analysis:journey, "
@@ -117,7 +119,7 @@ def test_the_migration_leaves_a_set_that_inherits_san_alone(
     own = project / "docs" / "rule-sets" / "ours.md"
     own.parent.mkdir(parents=True)
     own.write_text(
-        "---\nrule-set: OURS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+        "---\nrule-set: OURS\nversion: 1.0.0\ninherits: [software-analysis:SAN@2]\n"
         "scope:\n  types: [software-analysis:actor]\nrules: {}\n---\n\n# OURS\n",
         encoding="utf-8",
     )
@@ -171,10 +173,10 @@ def test_the_migration_never_fails_the_upgrade_when_the_answer_cannot_be_read(
 
 def test_the_migration_lies_where_the_declaration_first_ships() -> None:
     """A project installed at or after the version that first declares the set never
-    runs it, so a set it removed stays removed (COR-017). The declaration ships in the
-    capability's next release, 0.2.0: the package still records the release before it,
-    or that release."""
+    runs it, so a set it removed stays removed (COR-017). The declaration first shipped in
+    the capability's 0.2.0, so the migration lies there, under a version the capability's
+    release reaches, or no upgrade runs it."""
     package = YAML(typ="safe").load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     assert package["project_rule_set"]["name"] == "ANALYSIS"
     assert MIGRATION.parent.name == "0.2.0"
-    assert Version(package["component"]["version"]) <= Version("0.2.0")
+    assert Version(MIGRATION.parent.name) <= Version(release_reaches())

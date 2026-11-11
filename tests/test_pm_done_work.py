@@ -1076,12 +1076,16 @@ def _wire_main_seams(
     agent_gate_result=None,
     pr_body: str | None = "## Test plan\n- [x] ok\n",
     issues=None,
+    required=(),
 ):
     """Monkeypatch done-work's heavy seams so main() reaches the CI gate.
 
     Membership/session-guard/branch/PR resolution and the approval gate are
     all stubbed to succeed; `_gh_get_status_rollup` returns *rollup* so the
-    real `evaluate_ci_gate` decides. Returns a dict recording the merge and
+    real `evaluate_ci_gate` decides. *required* is the checks the PR's base
+    requires, by name, or the reason they cannot be read as a string (#1965);
+    `calls["required_read"]` lists each base they were read for. Returns a
+    dict recording the merge and
     audit side-effects the CI-gate outcome drives (so a test can assert the
     red-CI-under-`--bypass`-only path never reaches the merge).
 
@@ -1207,9 +1211,18 @@ def _wire_main_seams(
     reading = rollup if isinstance(rollup, dw._RollupReading) else dw._RollupReading(tuple(rollup))
     monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: reading)
 
+    def _stub_required(base, config):
+        calls.setdefault("required_read", []).append(base)
+        if isinstance(required, str):
+            return dw.RequiredChecks(base, problem=required)
+        return dw.RequiredChecks(base, tuple(required))
+
+    monkeypatch.setattr(dw, "_gh_get_required_checks", _stub_required)
+
     def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
         calls["ci_audit"] = True
         calls["ci_audit_head"] = head
+        calls["ci_audit_checks"] = checks
         return True
 
     def _stub_approval_audit(issue_number, reason, config, *, head=""):
@@ -1347,20 +1360,103 @@ def test_green_ci_needs_no_bypass_ci(dw, monkeypatch):
     assert calls["ci_audit"] is False
 
 
-# ---- checks that cannot be read (#1946) --------------------------------
+# ---- checks that cannot be read (#1946), and no check reported (#1965) --
 #
-# A project that runs no checks gets an empty rollup back, and passes. A
-# rollup that cannot be read is no answer, never one of no checks: the gate
-# refuses, names why, and writes nothing.
+# GitHub answers an empty rollup in a project that runs no checks, and for a
+# head just pushed, before its checks started. It passes only where the PR's
+# base requires no check; otherwise it is refused as a pending one is, naming
+# the cause. A rollup that cannot be read is no answer, never one of no checks:
+# the gate refuses, names why, and writes nothing.
 
 
-def test_a_rollup_with_no_checks_passes_and_merges(dw, monkeypatch, capsys) -> None:
+def test_a_rollup_with_no_checks_passes_where_the_base_requires_none(
+    dw, monkeypatch, capsys
+) -> None:
     calls = _wire_main_seams(dw, monkeypatch, rollup=[])
     run = dw.run(["42", "--yes"])
     assert (run.kind, run.exit_code) == (dw.MERGED, 0)
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
-    assert "  ci-status: green (no checks configured)" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "  ci-status: green (no check reported, and the base branch requires none)" in out
+
+
+def test_the_required_checks_are_read_for_the_prs_base(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=[])
+    monkeypatch.setattr(
+        dw,
+        "_find_pr_for_branch",
+        lambda branch, config: {
+            "number": 496,
+            "title": "fix: x",
+            "isDraft": False,
+            "headRefOid": "sha-head",
+            "baseRefName": "trunk",
+        },
+    )
+    dw.run(["42", "--yes"])
+    assert calls["required_read"] == ["trunk"]
+
+
+def test_a_rollup_with_checks_reads_no_requirement(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, required=("checks",))
+    assert dw.run(["42", "--yes"]).kind == dw.MERGED
+    assert "required_read" not in calls
+
+
+@pytest.mark.parametrize(
+    ("required", "pending", "cause"),
+    [
+        (
+            ("checks", "docs"),
+            "checks (EXPECTED), docs (EXPECTED)",
+            "the base branch requires checks: they have not started yet, or will not start",
+        ),
+        (
+            "HTTP 403: Forbidden",
+            "none reported (required checks unread: HTTP 403: Forbidden)",
+            "the checks the base branch requires could not be read (HTTP 403: Forbidden), so "
+            "the gate cannot tell that it requires none",
+        ),
+    ],
+)
+def test_a_rollup_with_no_checks_is_pending_where_the_base_may_require_some(
+    dw, monkeypatch, capsys, required, pending, cause
+) -> None:
+    """Refused as a pending check is, with a re-run to outlast it: nothing
+    posted, moved or merged (#1965)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=[], required=required)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 1, True)
+    assert run.reason == "[refused] CI-status gate for PR #496: checks are not all green."
+    assert (calls["merged"], calls["moved"], calls["ci_audit"]) == (False, False, False)
+    err = " ".join(capsys.readouterr().err.split())
+    assert f"failing/pending: {pending} no check has been reported on the PR's head, and " in err
+    assert f"{cause}. → wait for the checks to pass" in err
+
+
+def test_bypass_ci_clears_a_rollup_with_no_checks_the_base_requires(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=[], required=("checks",))
+    run = dw.run(["42", "--yes", "--bypass-ci", "the runner is down"])
+    assert run.kind == dw.MERGED
+    assert calls["ci_audit_checks"] == ("checks (EXPECTED)",)
+    assert calls["merged"] is True
+
+
+def test_gh_get_required_checks_reads_through_the_pm_gh_helper(dw, monkeypatch) -> None:
+    asked = []
+
+    def gh(args, config, **kwargs):
+        asked.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, '{"protected": false}', "")
+
+    monkeypatch.setattr(dw, "gh_run", gh)
+    reading = dw._gh_get_required_checks("main", {})
+    assert reading.problem == "GitHub's rules for main are not a list of rules"
+    assert asked == [
+        "repos/{owner}/{repo}/branches/main",
+        "repos/{owner}/{repo}/rules/branches/main",
+    ]
 
 
 @pytest.mark.parametrize("bypass", [[], ["--bypass-ci", "flaky"]])
@@ -1948,8 +2044,14 @@ def _fake_git(
     import subprocess
 
     seen: list[list[str]] = []
+    real_run = subprocess.run
 
     def fake_run(argv, **kwargs):
+        # Only git is faked: any other command, such as `pkit repository base`, which
+        # project-management's one pkit start looks `subprocess.run` up for when it
+        # runs (#2322), runs as it would without this fake.
+        if not argv or argv[0] != "git":
+            return real_run(argv, **kwargs)
         seen.append(list(argv))
         if argv[:2] == ["git", "symbolic-ref"]:
             return subprocess.CompletedProcess(
@@ -1967,6 +2069,10 @@ def _fake_git(
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_d_stderr)
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
+    # The settled branch is the backbone's answer, read through pm's one start
+    # of a `pkit` call, which this global stub of `subprocess.run` would answer
+    # too; the clean-up's subject is git, so the branch is stood in here.
+    monkeypatch.setattr(dw.pr_merge.default_branch, "name", lambda config: "main")
     monkeypatch.setattr(dw.subprocess, "run", fake_run)
     return seen
 
@@ -2523,13 +2629,15 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
 
 # ---- an issue that never reached Review (#1162) -------------------------
 #
-# workflow.yaml declares a Task's move to done from Review — the merge's move —
-# and no In Progress → Done. A Task whose PR was opened without `review-work`
-# is still In Progress when done-work runs, so `move-issue --to done` after the
-# merge refused, and done-work warned about a state that did not exist while
-# the pr-merge close went on to set state:done. done-work now moves such an
-# issue to Review just before the merge, so each move it makes is a declared
-# one. The tests read the real schemas: the transition table decides.
+# workflow.yaml declares a Task's move to done from Review — the merge's move,
+# the one done-work makes. Its In Progress → Done is close-issue's, the close
+# of a Task completed without a pull request (#2282). A Task whose PR was
+# opened without `review-work` is still In Progress when done-work runs, so
+# `move-issue --to done` after the merge refused, and done-work warned about a
+# state that did not exist while the pr-merge close went on to set state:done.
+# done-work now moves such an issue to Review just before the merge, so the
+# merge's move is the declared one. The tests read the real schemas: the
+# transition table decides.
 
 
 _Issue = dict[str, Any]
@@ -2550,6 +2658,8 @@ def _task(state_label: str, *, state: str = "OPEN") -> _Issue:
 
 
 _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
+    # In Progress → Done is declared for a Task, as close-issue's completed
+    # close; the merge's own move is done-work's, from Review.
     (_task("state:in-progress"), ("in-progress", "review")),
     (_task("state:review"), None),
     (_task("state:review", state="CLOSED"), None),
@@ -2557,6 +2667,8 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
     ({**_task("state:in-progress"), "title": "no type prefix"}, None),
     # A container may move In Progress → Done directly; nothing leads in.
     ({**_task("state:in-progress"), "title": "[Feature] widgets"}, None),
+    # No single declared move leads a Backlog Task to the merge's move.
+    (_task("state:backlog"), None),
 ]
 
 
@@ -2570,6 +2682,7 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
         "unread",
         "untyped",
         "container-in-progress",
+        "task-in-backlog",
     ],
 )
 def test_the_lead_in_is_read_from_the_transition_table(
@@ -2583,7 +2696,20 @@ def test_the_lead_in_is_read_from_the_transition_table(
     if expected is None:
         assert lead_in is None
     else:
+        assert lead_in is not None
         assert (lead_in.from_state, lead_in.to_state) == expected
+
+
+def test_the_lead_in_says_where_the_merge_s_move_is_declared(dw: ModuleType) -> None:
+    from ruamel.yaml import YAML
+
+    lead_in = dw._lead_in_to_done(_task("state:in-progress"), CAPABILITY_ROOT_DW, YAML(typ="safe"))
+    assert lead_in is not None
+    assert lead_in.describe() == (
+        "in-progress → review before the merge, review → done after it (workflow.yaml "
+        "declares the merge's move to done from review, not from in-progress, for this "
+        "issue's type)"
+    )
 
 
 def _wire_lead_in(

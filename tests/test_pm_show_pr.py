@@ -15,6 +15,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import RESOLVER, RESOLVING, register_kinds
+from tests.friction_documents import CONFIG, SOURCE, T1, document, friction_config, guide
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "show-pr.py"
 
@@ -298,14 +302,40 @@ def test_review_field_no_comments_shows_clear_message(sp) -> None:
 # --- staleness annotation (Fix 3) + read-surface semantics (Fix 2) ------
 
 
-def _commit(ts):
-    return {"committedDate": ts}
+# The head of the PRs below, whose commit is dated 06-01 whatever test reads it:
+# a verdict naming no head is judged by when that head arrived (#2930).
+_ARRIVED_HEAD = "e" * 40
 
 
-def test_review_field_marks_verdict_stale_when_predates_latest_commit(sp) -> None:
-    # Verdict at 06-02, latest commit at 06-05 -> verdict is stale; the gate
-    # would not count it, so the read surface flags it.
-    s = sp._summarise(
+def _commit(ts="2026-06-01T00:00:00Z"):
+    return {"oid": _ARRIVED_HEAD, "committedDate": ts}
+
+
+def _judged(sp, pr, arrived="2026-06-05T00:00:00Z"):
+    """The view of `pr`, each verdict judged by the gate's rule, the PR's head
+    having arrived on GitHub at `arrived` — or never, read, when it is a
+    reason the arrival cannot be read."""
+    head_arrival = sys.modules["_lib.head_arrival"]
+    answer = (
+        head_arrival.HeadArrival(timestamp=arrived)
+        if arrived[:1].isdigit()
+        else head_arrival.HeadArrival(error=arrived)
+    )
+    rule = sp.PrReview(
+        sp.Resolution(),
+        author_delta=sp.author_delta,
+        base_kept=sp.base_kept,
+        ruled_altered=sp.ruled_altered,
+        head_arrival=lambda pr_view, head: answer,
+    ).freshness_rule(pr)
+    return sp._summarise(pr, rule)
+
+
+def test_review_field_marks_verdict_stale_when_predates_the_head_s_arrival(sp) -> None:
+    # Verdict at 06-02, the head arrived at 06-05 -> verdict is stale; the
+    # gate would not count it, so the read surface flags it.
+    s = _judged(
+        sp,
         {
             "title": "feat: x",
             "body": "body",
@@ -313,20 +343,21 @@ def test_review_field_marks_verdict_stale_when_predates_latest_commit(sp) -> Non
             "comments": [
                 _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
             ],
-            "commits": [_commit("2026-06-05T00:00:00Z")],
-        }
+            "commits": [_commit()],
+        },
     )
     assert s["review"][0]["stale"] is True
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert (
-        "(stale — no reviewed head recorded; posted before the latest commit; "
-        "the merge gate will not count it)"
+        "(stale — no reviewed head recorded; posted before the head eeeeeee arrived at "
+        "2026-06-05T00:00:00Z; the merge gate will not count it)"
     ) in blob
 
 
 def test_review_field_fresh_verdict_unmarked(sp) -> None:
-    # Verdict at 06-06 is strictly after the latest commit at 06-05 -> fresh.
-    s = sp._summarise(
+    # Verdict at 06-06 is strictly after the head arrived at 06-05 -> fresh.
+    s = _judged(
+        sp,
         {
             "title": "feat: x",
             "body": "body",
@@ -334,18 +365,19 @@ def test_review_field_fresh_verdict_unmarked(sp) -> None:
             "comments": [
                 _local_verdict_comment("critic", "APPROVED", ts="2026-06-06T00:00:00Z"),
             ],
-            "commits": [_commit("2026-06-05T00:00:00Z")],
-        }
+            "commits": [_commit()],
+        },
     )
     assert s["review"][0]["stale"] is False
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert "(stale —" not in blob
 
 
-def test_review_field_verdict_at_exact_commit_ts_is_stale(sp) -> None:
-    # Freshness is strict (verdict must be AFTER the commit); an equal
+def test_review_field_verdict_at_the_exact_arrival_is_stale(sp) -> None:
+    # Freshness is strict (verdict must be AFTER the arrival); an equal
     # timestamp is stale, as the gate's freshness rule holds it.
-    s = sp._summarise(
+    s = _judged(
+        sp,
         {
             "title": "feat: x",
             "body": "body",
@@ -353,16 +385,16 @@ def test_review_field_verdict_at_exact_commit_ts_is_stale(sp) -> None:
             "comments": [
                 _local_verdict_comment("critic", "APPROVED", ts="2026-06-05T00:00:00Z"),
             ],
-            "commits": [_commit("2026-06-05T00:00:00Z")],
-        }
+            "commits": [_commit()],
+        },
     )
     assert s["review"][0]["stale"] is True
 
 
-def test_review_field_no_commits_marks_a_headless_verdict_stale(sp) -> None:
-    # No resolvable commit timestamp -> a verdict naming no reviewed head
-    # cannot be judged, and the gate (which refuses then) would not count it:
-    # shown stale with the reason, not an error. The verdict is still shown.
+def test_review_field_by_default_marks_a_headless_verdict_stale(sp) -> None:
+    # The view's default rule reads no arrival -> a verdict naming no reviewed
+    # head cannot be judged, and the gate would not count it: shown stale
+    # with the reason, not an error. The verdict is still shown.
     s = sp._summarise(
         {
             "title": "feat: x",
@@ -377,15 +409,14 @@ def test_review_field_no_commits_marks_a_headless_verdict_stale(sp) -> None:
     assert s["review"][0]["stale"] is True
     blob = "\n".join(sp._field_lines_for(s)["review"])
     assert "APPROVED" in blob
-    assert "the latest commit's time is unknown" in blob
+    assert "arrived cannot be read" in blob
 
 
-def test_review_field_commit_without_timestamp_marks_a_headless_verdict_stale(
-    sp,
-) -> None:
-    # A commit entry with neither committedDate nor authoredDate yields no
-    # anchor -> stale, with the reason, rather than an error.
-    s = sp._summarise(
+def test_review_field_an_unread_arrival_marks_a_headless_verdict_stale(sp) -> None:
+    # GitHub's activity on the head branch cannot be read -> stale, with the
+    # reason, rather than an error; the commit's own date is not read instead.
+    s = _judged(
+        sp,
         {
             "title": "feat: x",
             "body": "body",
@@ -393,12 +424,14 @@ def test_review_field_commit_without_timestamp_marks_a_headless_verdict_stale(
             "comments": [
                 _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
             ],
-            "commits": [{"oid": "abc123"}],
-        }
+            "commits": [_commit()],
+        },
+        arrived="gh api repos/o/r/activity failed: HTTP 404: Not Found",
     )
     assert s["review"][0]["stale"] is True
     assert s["review"][0]["freshness"] == (
-        "no reviewed head recorded; the latest commit's time is unknown"
+        "no reviewed head recorded; when the head eeeeeee arrived cannot be read: "
+        "gh api repos/o/r/activity failed: HTTP 404: Not Found"
     )
 
 
@@ -485,19 +518,20 @@ def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
     # from a reviewer the gate's membership filter would drop. Both appear here
     # (show-pr applies no freshness/membership filter) — the corrected
     # semantics: read surface = superset, gate = filtered subset.
-    s = sp._summarise(
+    s = _judged(
+        sp,
         {
             "title": "feat: x",
             "body": "body",
             "state": "OPEN",
             "comments": [
-                # stale (predates latest commit) — gate drops, read surface shows
+                # stale (predates the head's arrival) — gate drops, read surface shows
                 _local_verdict_comment("critic", "APPROVED", ts="2026-06-02T00:00:00Z"),
                 # a reviewer the gate might not require — read surface still shows
                 _local_verdict_comment("passer-by", "CHANGES_REQUESTED", ts="2026-06-06T00:00:00Z"),
             ],
-            "commits": [_commit("2026-06-05T00:00:00Z")],
-        }
+            "commits": [_commit()],
+        },
     )
     by_name = {e["reviewer"]: e for e in s["review"]}
     assert set(by_name) == {"critic", "passer-by"}
@@ -511,7 +545,8 @@ def test_review_read_surface_is_superset_of_gate_set(sp) -> None:
 def _three_round_pr(sp):
     # docs-reviewer blocks twice, then approves; critic approves once. The
     # array is shuffled so the test pins posting order, not gh's order.
-    return sp._summarise(
+    return _judged(
+        sp,
         {
             "title": "feat: x",
             "body": "body",
@@ -537,8 +572,8 @@ def _three_round_pr(sp):
                     reasons="round two: help text stale",
                 ),
             ],
-            "commits": [_commit("2026-06-05T00:00:00Z")],
-        }
+            "commits": [_commit()],
+        },
     )
 
 
@@ -741,3 +776,241 @@ def test_mergeable_field_prints_the_bare_value(sp, monkeypatch, capsys) -> None:
     code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "mergeable"], answer)
     assert code == 0
     assert capsys.readouterr().out == "MERGEABLE\n"
+
+
+# --- what land-work tells, for anyone not at land-work (DEC-065 point 2) -------------
+
+HEAD = "c" * 40
+LEFT_AT = "b" * 40
+PR_VIEW = {
+    "number": 99,
+    "title": "x",
+    "state": "OPEN",
+    "headRefOid": HEAD,
+    "headRefName": "feat/42-thing",
+    "baseRefName": "integration",
+    "isCrossRepository": False,
+    "body": (
+        "Closes #42\n\n## What changed in each updated document\n\n"
+        "- `docs/guide.md`: The guide names the flag.\n"
+    ),
+}
+ANSWERS = [
+    {"location": "docs/guide.md", "answer": "updated", "asked": True},
+    {"location": "docs/api.md", "answer": "unchanged", "reason": "Holds.", "asked": True},
+    {"location": "docs/cli.md", "answer": "deferred", "reason": "Until #7.", "asked": True},
+]
+#: What land-work prints of `ANSWERS`, and `--field answers` with it.
+TOLD = (
+    'What changed in docs/guide.md: "The guide names the flag."\n'
+    'Left out of date: docs/cli.md: "Until #7."\n'
+)
+
+
+def _answering(sp, monkeypatch, *, answers=None, problem=None, grants=(), needs_checkout=False):
+    """The change check answering `answers`, or `problem`, and the grant list's change
+    `grants`. Returns each (head, base, source, from_checkout) `derive` was asked for."""
+    asked: list[tuple] = []
+    fa = sp.friction_answers
+
+    def derive(head, base, *, source=None, from_checkout=True):
+        asked.append((head, base, source, from_checkout))
+        if problem is not None:
+            return fa.Derivation(head, problem=problem, needs_checkout=needs_checkout)
+        document = {"base": {"commit": LEFT_AT}, "answers": answers or []}
+        return fa.Derivation(head, document=document, answers=tuple(answers or ()))
+
+    monkeypatch.setattr(fa, "derive", derive)
+    monkeypatch.setattr(sp.pr_head, "branch_remote", lambda branch: "origin")
+    monkeypatch.setattr(sp.fixers, "change_between", lambda *args: grants)
+    return asked
+
+
+def test_answers_field_is_in_the_valid_fields_list(sp) -> None:
+    assert "answers" in sp.PR_FIELD_NAMES
+
+
+def test_answers_field_prints_what_land_work_tells(sp, monkeypatch, capsys) -> None:
+    """Derived at the PR's head against its base, a stacked PR's included, and no
+    verdict is resolved for it: only what is told is printed, a line each."""
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    code, _calls, resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == TOLD
+    assert asked == [
+        (
+            HEAD,
+            "integration",
+            sp.pr_head.Source("origin", "refs/heads/feat/42-thing"),
+            False,
+        )
+    ]
+    assert resolved == []
+
+
+def test_answers_field_prints_a_grant_change_as_land_work_does(sp, monkeypatch, capsys) -> None:
+    grant = sp.fixers.GrantChange("fixer", "page", True, sp.fixers.GRANTED)
+    _answering(sp, monkeypatch, answers=[], grants=(grant,))
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == f"{grant.said()}\n"
+
+
+def test_answers_field_says_so_where_there_is_nothing_to_tell(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, answers=[])
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == f"{sp.NOTHING_TOLD_MESSAGE}\n"
+
+
+def test_answers_that_cannot_be_derived_say_why_and_tell_nothing(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, problem="the base could not be fetched")
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "the answers at PR #99's head could not be derived: the base could not" in err
+    assert "checkout" not in err
+
+
+def test_a_head_that_needs_its_resolver_says_where_the_answers_can_be_read(
+    sp, monkeypatch, capsys
+) -> None:
+    _answering(sp, monkeypatch, problem="the check refused", needs_checkout=True)
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "could not be derived: the check refused" in err
+    assert sp.HEAD_PROGRAMS_MESSAGE.format(head=HEAD[:7]) in err
+
+
+def _head_replacing_its_resolver(
+    make_adopter_repo: MakeAdopterRepo, ran: Path
+) -> tuple[AdopterRepo, str]:
+    """A change whose answers need a registered kind's resolver, and whose head replaces
+    that resolver with one that leaves `ran` behind. The clone is on `main`."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    capability = register_kinds(
+        repo.root, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING
+    )
+    repo.write({"sources/alpha.md": "alpha\n"})
+    repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    resolver = capability / RESOLVER
+    planted = resolver.read_text(encoding="utf-8") + f"open({str(ran)!r}, 'w').close()\n"
+    resolver.write_text(planted, encoding="utf-8")
+    repo.write({"sources/alpha.md": "alpha, captured again\n"})
+    repo.commit("the source and its resolver change", files=None)
+    deferred = document(
+        "sourced",
+        anchors={"source": ["alpha"]},
+        at=T1,
+        deferred=[("source", "alpha", "the recapture is checked with the next release")],
+    )
+    repo.commit("defer the source", {"docs/sourced.md": deferred})
+    head = repo.head()
+    repo.checkout("main")
+    return repo, head
+
+
+@pytest.mark.usefixtures("answers_in_files")
+@pytest.mark.process(
+    "the view's route end to end: only a real change check refuses, and only a real "
+    "resolver started from a checkout shows that the mark this test reads means a start"
+)
+def test_the_answers_view_starts_no_program_the_head_holds(
+    sp, make_adopter_repo, pkit_on_path, tmp_path_factory, monkeypatch, capsys
+) -> None:
+    """Read from a clone on `main`, a head that replaced its resolver stops the view:
+    no checkout is made, and the head's program is not started. Without `from_checkout`
+    the same head starts it, which is what the view must not do. And what the view says
+    of a checkout at the head holds: run there, it reads the answers and starts it."""
+    ran = tmp_path_factory.mktemp("outside-the-repository") / "the-head-s-resolver-ran"
+    repo, head = _head_replacing_its_resolver(make_adopter_repo, ran)
+    fa = sp.friction_answers
+    checkouts: list[str] = []
+    checkout = fa._checkout
+
+    def recorded(at: str):
+        checkouts.append(at)
+        return checkout(at)
+
+    monkeypatch.setattr(fa, "_checkout", recorded)
+    view = {**PR_VIEW, "headRefOid": head, "headRefName": "feature", "baseRefName": "main"}
+    capability_root = repo.root / ".pkit" / "capabilities" / "project-management"
+
+    assert sp._told_at_head(view, 99, capability_root) is None
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert sp.HEAD_PROGRAMS_MESSAGE.format(head=head[:7]) in err
+    assert checkouts == []
+    assert not ran.exists()
+
+    found = fa.derive(head, "main")
+    assert found.problem is None, found.problem
+    assert checkouts == [head]
+    assert ran.exists()
+
+    ran.unlink()
+    repo.checkout("feature")
+    assert sp._told_at_head(view, 99, capability_root)
+    assert checkouts == [head]
+    assert ran.exists()
+
+
+def test_what_a_head_says_reaches_the_terminal_escaped_and_json_keeps_its_bytes(
+    sp, monkeypatch, capsys
+) -> None:
+    """Each line a head can write into is printed with its control characters escaped,
+    and its lines kept. Machine-readable output carries the text as it came, since no
+    terminal reads it as text (DEC-067 point 7)."""
+    told = 'What changed in docs/a.md: "\x1b[2Kerased\u202e"'
+    monkeypatch.setattr(sp, "_told_at_head", lambda *_a: [told, "next line"])
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "\x1b" not in out and "\u202e" not in out
+    assert "\\x1b[2Kerased\\u202e" in out and "next line" in out.splitlines()
+
+    view = {**PR_VIEW, "title": "fix: a \x1b[2Ktitle", "body": "one\r\ntwo \x1b[1A\r\n"}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "body"], view)
+    out = capsys.readouterr().out
+    assert code == 0 and out == "one\r\ntwo \\x1b[1A\r\n\n"
+
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--json"], view)
+    out = capsys.readouterr().out
+    assert code == 0 and json.loads(out)["title"] == "fix: a \x1b[2Ktitle"
+
+
+def test_a_grant_list_that_cannot_be_read_tells_nothing(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, answers=ANSWERS, grants=sp.fixers.ChangeUnread("no such commit"))
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "the fixers' grant list could not be read: no such commit" in err
+
+
+def test_answers_field_needs_the_head_and_the_base(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    view = {**PR_VIEW, "baseRefName": ""}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
+    assert code == 2 and asked == []
+    assert "GitHub named no head or no base for PR #99" in capsys.readouterr().err
+
+
+def test_a_pr_from_a_fork_is_fetched_by_the_ref_its_base_keeps(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=[])
+    monkeypatch.setattr(sp.pr_head, "base_remote", lambda base: "upstream")
+    view = {**PR_VIEW, "isCrossRepository": True}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
+    assert code == 0
+    assert asked[0][2] == sp.pr_head.Source("upstream", "refs/pull/99/head")
+
+
+def test_no_other_view_runs_the_change_check(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "title"], PR_VIEW)
+    assert code == 0 and asked == []

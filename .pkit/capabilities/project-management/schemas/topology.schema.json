@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "topology.schema.json",
   "title": "The topology of seats",
-  "description": "Formal shape of `.pkit/capabilities/project-management/project/topology.yaml` (DEC-059 points 1 to 3): the seats a project that runs agents in parallel declares, in its committed configuration, and the settings they share. Every clone reads it from the default branch. A seat's number is its place in `seats`, counted from one, retired seats included. `scripts/_lib/topology.py` reads it and `check-topology` checks it, adding what this schema cannot see: a seat name used twice, more than one organizer seat, a seat with no state issue, a scope naming what the project does not declare, the `label` ownership substrate, and a seat deleted or moved against the default branch. Companion per COR-018.",
+  "description": "Formal shape of `.pkit/capabilities/project-management/project/topology.yaml` (DEC-059 points 1 to 3): the seats a project that runs agents in parallel declares, in its committed configuration, the settings they share, and the pools of workers it may declare (DEC-061 point 1). Every clone reads it from the default branch. A seat's number is its place in `seats`, counted from one, retired seats included. `scripts/_lib/topology.py` reads it and `check-topology` checks it, adding what this schema cannot see: a seat name used twice, more than one organizer seat, a seat with no state issue, a scope naming what the project does not declare, a seat naming a pool the topology does not declare, a seat naming pools where the topology declares none, a planner's seat naming a pool, the `label` ownership substrate, and a seat deleted or moved against the default branch. Code that cannot read the file in full, a key or a value this schema does not hold among it, takes no work, no seat and no release by force (DEC-061 point 9). Companion per COR-018.",
   "type": "object",
   "required": ["schema_version", "seats"],
   "additionalProperties": false,
@@ -31,6 +31,10 @@
           "description": "The mode in which a seat is released (DEC-059 point 5). `tolerant`, the default and the only mode built: a seat stays taken until its clone releases it, or until a release by force."
         }
       }
+    },
+    "pools": {
+      "$ref": "#/$defs/pools",
+      "description": "Optional. The pools of workers the topology declares, each by a neutral name that never changes, such as `alpha` (DEC-061 point 1). A person puts a Milestone into a pool by a `Pool: <name>` line in its description, and a seat that builds takes its work only from the open Milestones of the pools it serves. Its presence declares pools, so an empty list leaves every seat that builds with nothing of its own choosing. Absent: every seat takes from the one shared pool (DEC-059 point 7)."
     },
     "seats": {
       "type": "array",
@@ -85,8 +89,21 @@
           "retired": {
             "type": "boolean",
             "description": "Whether the seat has left the topology. A retired seat stays in its place and cannot be taken."
+          },
+          "pools": {
+            "$ref": "#/$defs/pools",
+            "description": "The pools a seat that builds, a worker or a lead, serves: it takes its work only from their open Milestones (DEC-061 point 5). Each is one the top-level `pools` declares. A planner's seat names none, and a seat that builds and names none takes nothing of its own choosing where the topology declares pools."
           }
         }
+      }
+    }
+  },
+  "$defs": {
+    "pools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z](?:[a-z0-9-]{0,38}[a-z0-9])?$"
       }
     }
   }

@@ -371,6 +371,78 @@ def test_sync_invokes_installed_adapter_primitives(
     assert "deploy-agents.sh" in calls
 
 
+# --- hook needs, which every deploy warns of (COR-013 point 4, #2467) ---
+
+_CONSUMER_AGENT = (
+    "---\nname: consumer\ndescription: Test.\nneeds: [workflow.do-thing]\n---\n\n"
+    "# Consumer\n\nCalls `workflow.do-thing`.\n"
+)
+
+
+def _need_warnings(output: str) -> list[str]:
+    return [line for line in output.splitlines() if "needs hook" in line]
+
+
+def test_sync_warns_of_a_hook_need_no_provider_answers(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The deploy names the agent and the hook, and the sync still completes."""
+    agent = installed_target / ".pkit" / "agents" / "project" / "consumer.md"
+    agent.write_text(_CONSUMER_AGENT, encoding="utf-8")
+    capsys.readouterr()
+
+    sync.run_sync(installed_target, dry_run=True)
+    assert _need_warnings(capsys.readouterr().out) == [], "a dry run deploys nothing"
+
+    sync.run_sync(installed_target)
+
+    output = capsys.readouterr().out
+    assert _need_warnings(output) == [
+        "  warning      agent 'consumer' (.pkit/agents/project/consumer.md) needs hook "
+        "'workflow.do-thing', which no skill answers and no package provides (COR-013 point 4)."
+    ]
+    assert "Sync complete." in output
+
+
+def test_sync_says_nothing_of_a_hook_need_a_skill_answers(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (installed_target / ".pkit" / "agents" / "project" / "consumer.md").write_text(
+        _CONSUMER_AGENT, encoding="utf-8"
+    )
+    skills = installed_target / ".pkit" / "skills" / "project"
+    skills.mkdir(parents=True, exist_ok=True)
+    (skills / "doer.md").write_text(
+        "---\nname: doer\ndescription: Test.\nanswers: [workflow.do-thing]\n---\n\n"
+        "# Doer\n\nAnswers `workflow.do-thing`.\n",
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    sync.run_sync(installed_target)
+
+    output = capsys.readouterr().out
+    assert _need_warnings(output) == []
+    assert "Sync complete." in output
+
+
+def test_the_hook_need_report_fails_nothing_on_a_front_matter_it_cannot_read(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    skills = installed_target / ".pkit" / "skills" / "project"
+    skills.mkdir(parents=True, exist_ok=True)
+    (skills / "broken.md").write_text("---\nname: [broken\n---\n\n# Broken\n", encoding="utf-8")
+    ctx = install.InstallContext(
+        target_root=installed_target, source_kit=install.find_source_kit(), dry_run=False
+    )
+
+    install.report_unsatisfied_needs(ctx)
+
+    assert capsys.readouterr().out.startswith(
+        "  warning      hook needs not checked: a front matter or package.yaml could not be read ("
+    )
+
+
 # Each seed path a project deleted (ADR-065 point 11), relative to the project root.
 _SEED_PATHS = (
     ".pkit/agents/project",
@@ -1607,8 +1679,9 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pinned, the router could not fetch the pin and ran this pkit: the message names
-    reconnecting, the pin through uvx, an HTTPS install of the pin, and moving on
-    purpose with `pkit unpin` first, never a bare `pkit upgrade`."""
+    reconnecting, the pin through uvx, and moving on purpose with `pkit unpin`
+    first, never a bare `pkit upgrade`. It names no install of the pin by hand,
+    which fetches from the URL the router fetches from (ADR-090 point 1)."""
     _record_states(installed_target, _OLDER, _OLDER)
     _write_pin(installed_target, _OLDER)
     monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _OLDER)
@@ -1619,7 +1692,8 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     assert f"This project pins pkit {_OLDER}, which the router could not fetch" in message
     assert "Reconnect and run `pkit sync` again" in message
     assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
-    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{_OLDER}`" in message
+    assert "uv tool install" not in message
+    assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
     assert "Run `pkit upgrade`" not in message
 

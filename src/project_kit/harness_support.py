@@ -246,6 +246,23 @@ def load_declaration(root: Path, adapter: str) -> dict[str, Any] | None:
     return dict(_load_yaml(path, shown))
 
 
+def answers_achievable(root: Path, adapter: str, requirement: str) -> bool:
+    """Whether `adapter`'s support declaration answers `requirement` as achievable for
+    some version: `supported` or `at-cost`, for every version or for a tested range.
+    No declaration, no answer, an answer for no version and `not-achievable` are
+    not. Raises `SupportError` where the declaration cannot be read."""
+    document = load_declaration(root, adapter) or {}
+    answers: Any = document.get("requirements") or {}
+    answer: Any = cast(Mapping[str, Any], answers).get(requirement)
+    if not isinstance(answer, Mapping):
+        return False
+    fields = cast(Mapping[str, Any], answer)
+    versions: Any = fields.get("harness_versions")
+    tested = cast(list[Any], versions) if isinstance(versions, list) else []
+    covered = versions == UNBOUNDED or len(tested) > 0
+    return fields.get("grade") in (SUPPORTED, AT_COST) and covered
+
+
 def registered_adapters(root: Path) -> list[str]:
     """Each adapter the backbone manifest registers, in its order: the project's
     harness, as the run command reads it (ADR-066 point 1)."""

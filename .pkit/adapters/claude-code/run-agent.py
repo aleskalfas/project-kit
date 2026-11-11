@@ -58,6 +58,7 @@ does: no `uv`, nothing to provision.
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import json
 import os
 import queue
@@ -70,6 +71,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 REQUEST_VERSION = 1
@@ -240,10 +242,27 @@ TEMP_VARIABLES = ("TMPDIR", "CLAUDE_CODE_TMPDIR")
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 
 #: Where the backbone runs this runner from: the working copy's adapter folder
-#: (ADR-066 point 3). The deploy's resolver lies beside it.
+#: (ADR-066 point 3). The deploy's resolver lies beside it, and so does the
+#: adapter's declaration of tool access, which the reader reads (ADR-086 point 4).
 ADAPTER_FOLDER = Path(__file__).resolve().parent
 ADAPTER_PATH = (".pkit", "adapters", "claude-code")
 RESOLVER = "_resolve_agent.py"
+
+#: The flag that has the resolver keep the methodology's keys of tool access,
+#: `tools` and `withheld`, which the runner reads and then writes in Claude
+#: Code's (ADR-086 point 4).
+METHODOLOGY_KEYS_FLAG = "--methodology-keys"
+
+#: The agents area's reader of an agent's tool access, in the working copy
+#: (ADR-086 point 1), and the functions the runner calls in it.
+READER_PATH = (".pkit", "agents", "tool_access.py")
+READER_FUNCTIONS = (
+    "tool_access",
+    "read_declaration",
+    "declaration_path",
+    "harness_refusal",
+    "BadDeclaration",
+)
 
 #: The longest the runner waits for the harness's version, and for the
 #: deploy's resolution of the agent. Both count against the run's limit.
@@ -323,7 +342,7 @@ RULE_FAMILY = {
 #: The rule families a run's tools fall in.
 RUN_FAMILIES = frozenset(RULE_FAMILY.get(tool, tool) for tool in RUN_TOOLS)
 
-#: A tool's name in a rule, or in an agent's tools.
+#: A tool's name in a rule.
 TOOL_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 
 #: A command token a rule may hold: none holds whitespace, a quote, `*`, `(`,
@@ -339,13 +358,15 @@ FOLDER_REFUSED = re.compile(r"[*?\[\]{}()\\\x00-\x1f\x7f]")
 #: The front-matter fields of the methodology's shape (ADR-066 point 3): those
 #: of `refs.Declared`, the shape the methodology gives its agents and skills,
 #: with `reads` holding its three lists, and an agent's name, description,
-#: tools, model and effort. A parity test holds this set to
-#: `src/project_kit/refs.py`. Any other field refuses the run.
+#: tool access (`tools` or `withheld`, COR-013 point 7), model and effort. A
+#: parity test holds this set to `src/project_kit/refs.py`. Any other field
+#: refuses the run, Claude Code's own `disallowedTools` among them.
 DEFINITION_FIELDS = frozenset(
     {
         "name",
         "description",
         "tools",
+        "withheld",
         "model",
         "effort",
         "reads",
@@ -1092,41 +1113,69 @@ def scalar(lines: list[str], field: str) -> str:
     return _plain(head, rest, field)
 
 
-def _item(text: str, field: str) -> str:
-    if text[:1] in ('"', "'"):
-        return _quoted(text, [], field)
-    return _plain(text, [], field)
+def load_module(path: Path, name: str) -> ModuleType:
+    """The module at *path*, loaded from its file, writing no bytecode beside it.
+    Raises `Refused`, naming the file, where it is absent or cannot load."""
+    if not path.is_file():
+        raise Refused(f"{path} is not there. Run `pkit sync`, which copies it with this runner")
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise Refused(f"{path} cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        raise Refused(f"{path} cannot be loaded: {exc}") from None
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
 
 
-def tool_list(lines: list[str], field: str = "tools") -> list[str]:
-    """The agent's tools: a flow list, a block list, or one comma-separated
-    string."""
-    head, rest = lines[0].strip(), lines[1:]
-    if head.startswith("["):
-        raw = " ".join([head, *(line.strip() for line in rest)])
-        close = raw.find("]")
-        tail = raw[close + 1 :].strip() if close != -1 else ""
-        if close == -1 or (tail and not tail.startswith("#")):
-            raise _unreadable(field, "is not a closed list")
-        body = raw[1:close]
-        if any(mark in body for mark in "[]{}"):
-            raise _unreadable(field, "nests a collection")
-        names = [_item(item.strip(), field) for item in body.split(",") if item.strip()]
-    elif head == "" or head.startswith("#"):
-        names = []
-        for line in rest:
-            text = line.strip()
-            if not text or text.startswith("#"):
-                continue
-            if not text.startswith("- "):
-                raise _unreadable(field, f"holds {text!r} in a list")
-            names.append(_item(_without_comment(text[2:].strip()), field))
-    else:
-        names = [name.strip() for name in scalar(lines, field).split(",") if name.strip()]
-    for name in names:
-        if not TOOL_NAME.fullmatch(name):
-            raise _unreadable(field, f"names {name!r}, which is not a tool's name")
-    return names
+def tool_access(
+    working_copy: Path, text: str, fields: dict[str, list[str]]
+) -> tuple[str, list[str]] | None:
+    """The tool access of the resolved definition *text*, as the working copy's
+    reader answers it (ADR-086): Claude Code's key for its form, and its
+    entries, each whole; None where it names neither form. Refuses where the
+    working copy has no reader with the functions the runner calls, where the
+    adapter's declaration of tool access cannot be read, where the reader
+    refuses the definition, or where Claude Code cannot enforce or translate its
+    access, by that declaration."""
+    reader = load_module(working_copy.joinpath(*READER_PATH), "pkit_agents_tool_access")
+    missing = [name for name in READER_FUNCTIONS if not callable(getattr(reader, name, None))]
+    if missing:
+        raise Refused(
+            f"the working copy's reader of an agent's tool access has no {', '.join(missing)}. "
+            "Run `pkit sync`, which copies it with this runner (ADR-086 point 5)"
+        )
+    try:
+        declaration = reader.read_declaration(ADAPTER_FOLDER)
+    except reader.BadDeclaration as exc:
+        raise Refused(
+            "the adapter's declaration of tool access cannot be read: "
+            f"{exc}. Run `pkit sync`, which copies it with this runner"
+        ) from None
+    if declaration is None:
+        raise Refused(
+            "the adapter declares no tool access: "
+            f"{reader.declaration_path(ADAPTER_FOLDER)} is not there. Run `pkit sync`, which "
+            "copies it with this runner"
+        )
+    try:
+        access = reader.tool_access(text)
+    except reader.Refused as exc:
+        raise Refused(f"the agent's tool access is refused: {exc}") from None
+    problem = reader.harness_refusal(access, list(fields), declaration)
+    if problem is not None:
+        raise Refused(
+            f"the agent's tool access is refused, since {declaration.harness} cannot enforce or "
+            f"translate it: {problem}"
+        )
+    if access.form is None:
+        return None
+    return declaration.keys[access.form], [str(entry) for entry in access.entries]
 
 
 def resolve_definition(
@@ -1138,11 +1187,13 @@ def resolve_definition(
     env: dict[str, str],
     timeout: float = RESOLVE_SECONDS,
 ) -> str:
-    """The deploy's resolution of the agent's file: its text. Refuses where the
-    resolver fails, or warns that it drops a value the run passes."""
+    """The deploy's resolution of the agent's file, with the methodology's keys
+    of tool access: its text. Refuses where the resolver fails, a definition
+    refused for its tool access among them, or warns that it drops a value the
+    run passes."""
     try:
         done = subprocess.run(
-            [str(resolver), str(source), agent, str(overlay)],
+            [str(resolver), str(source), agent, str(overlay), METHODOLOGY_KEYS_FLAG],
             cwd=str(cwd),
             env={key: value for key, value in env.items() if key not in RUN_VARIABLES},
             stdin=subprocess.DEVNULL,
@@ -1185,8 +1236,10 @@ def checked_definition(
     """The agent's definition as a confined run passes it (ADR-066 point 3):
     the deploy's resolution of the file the deploy picks, checked against the
     methodology's shape. It holds the description, the body as the prompt, the
-    tools, the model and the effort, the caller's effort over the
-    definition's. The other fields of the shape are read and never passed."""
+    tool access in Claude Code's key (ADR-085 point 1), the model and the
+    effort, the caller's effort over the definition's. The other fields of the
+    shape are read and never passed. The tool access is the reader's answer,
+    refused where the reader or the adapter refuses it (ADR-086)."""
     source = agent_source(working_copy, agent)
     if source is None:
         raise Refused(
@@ -1218,8 +1271,10 @@ def checked_definition(
     if not prompt.strip():
         raise Refused("the agent's definition has no instructions")
     definition: dict[str, Any] = {"description": description, "prompt": prompt}
-    if "tools" in fields:
-        definition["tools"] = tool_list(fields["tools"])
+    access = tool_access(working_copy, text, fields)
+    if access is not None:
+        key, entries = access
+        definition[key] = entries
     model = scalar(fields["model"], "model").strip() if "model" in fields else ""
     if model:
         definition["model"] = model

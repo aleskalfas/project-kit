@@ -1,0 +1,81 @@
+# The test modules the process guard does not hold (tests/README.md, "Running the
+# suite"; tests/in_process.py). A test in a module listed here may start `pkit` or a
+# capability script without the `process` mark. Nothing is ever added: a module not
+# listed, a new one included, is held. A change that marks or converts a module's
+# starts takes the module out.
+#
+# What is left when #2313 closed (#2329). Each module listed starts at least one
+# process the guard counts, without the mark. The 282 modules that started none were
+# taken out. These stay as they are because #2313's slices converted the slow areas,
+# and what is left costs little: in a full run on 31 October, 481 tests here started
+# 728 processes, and in CI those tests took about 300 s, 7% of the suite's
+# test-seconds. Each group below says what its modules start.
+
+# The backbone starts a component as its runner runs it: a validator, filler,
+# exporter, resolver, predicate or command of a capability the test installs or
+# makes, started by the runner, the dispatcher, provisioning or the process engine.
+# 191 tests, about 160 s in CI.
+test_command_runner.py
+test_connections_status.py
+test_data_points.py
+test_dispatcher.py
+test_doc_examples_commands.py
+test_docs_roots.py
+test_package_validate.py
+test_pm_closure_cascade_parity.py
+test_pm_engine_said.py
+test_pm_lifecycle_classifier.py
+test_point_questions.py
+test_process_authoring.py
+test_process_classified_engine.py
+test_process_composition_guard.py
+test_process_depends_on_engine.py
+test_provisioning.py
+test_rule_sets.py
+test_self_host_documentation.py
+test_status.py
+test_sync.py
+test_validators.py
+
+# A test runs a capability's script as the program it is: its `--help`, its exit
+# code and streams, a lock held across processes, a driver that imports its `_lib`,
+# a gate's or a hook's whole run, or several programs that must agree. 165 tests,
+# about 110 s in CI.
+test_default_branch.py
+test_demo_recording_storyboards.py
+test_evidence_validate.py
+test_living_docs_skill.py
+test_pm_bootstrap_gate_integration.py
+test_pm_decline_use_case_task.py
+test_pm_done_work.py
+test_pm_drift_queue.py
+test_pm_hooks.py
+test_pm_scripts_smoke.py
+test_pm_session_guard_integration.py
+test_pm_show_issue.py
+test_pm_show_pr.py
+test_pm_work_loop.py
+
+# `pkit` itself as a process: run as the program it is (its version, a signal, a
+# landing killed midway, an agent's run), or called by project-management's code or
+# `scripts/short_check.py`, which these tests do not route in-process. 125 tests,
+# about 30 s in CI.
+test_agent_confinement.py
+test_agent_runs.py
+test_landing_scenarios.py
+test_migrations.py
+test_parity.py
+test_pm_accepted_records.py
+test_pm_agent_runs.py
+test_pm_decision_ids.py
+test_pm_done_work_agent_gate.py
+test_pm_issue_branch.py
+test_pm_land_work.py
+test_pm_merge_queue_lib.py
+test_pm_pr_base_branch.py
+test_pm_review_pr.py
+test_pm_start_work.py
+test_pm_stale_marking_equals_gate_count.py
+test_pm_use_case_citations.py
+test_pull_request_land.py
+test_short_check.py

@@ -16,7 +16,7 @@ A path anchor matches as both friction checks match it, and a path under
 project receives by sync ties nothing, and neither does a path anchor of a record that is
 not accepted. Only accepted records are listed, a superseded one by the records that
 replace it, the project's own first. Core rule 22 tells an agent to run it before it
-changes files, and the rules README lists the rule's section.
+changes files, under core.md's section "Before changing files".
 """
 
 from __future__ import annotations
@@ -488,44 +488,45 @@ def test_in_this_repository_a_module_leads_to_the_page_that_anchors_it() -> None
 # --- the rule ---------------------------------------------------------------------------------
 
 CORE_RULES = REPO / ".pkit" / "rules" / "core.md"
-RULES_README = REPO / ".pkit" / "rules" / "README.md"
 DECISIONS_README = REPO / ".pkit" / "decisions" / "README.md"
 SECTION = "## Before changing files"
 README_SECTION = "## Finding the records a path leads to"
 
 
+RULE_22_HEADING = "### 22. Read the records a change's files lead to first (RS-OPS-022)"
+
+
 def _rule_22() -> str:
+    """Rule 22's statement, read from under its heading in the loaded file a session
+    loads, which is generated from the backbone's loaded set `OPS` (COR-068)."""
     text = CORE_RULES.read_text(encoding="utf-8")
     section = text.split(f"\n{SECTION}\n", 1)[1].split("\n## ", 1)[0]
-    paragraphs = [p.strip() for p in section.split("\n\n") if p.strip().startswith("22. ")]
-    assert len(paragraphs) == 1, "rule 22 is not the one numbered rule of its section"
-    return paragraphs[0]
+    headings = [line for line in section.splitlines() if line.startswith("### ")]
+    assert RULE_22_HEADING in headings, "rule 22 is not in its section"
+    return section.split(f"{RULE_22_HEADING}\n", 1)[1].split("\n### ", 1)[0].strip()
 
 
 def test_rule_22_tells_an_agent_to_run_the_lookup_before_changing_files() -> None:
     rule = _rule_22()
     assert rule.startswith(
-        "22. **When you change the system, read first the accepted records its files lead to.**"
+        "**When you change the system, read first the accepted records its files lead to.**"
     )
     assert "`pkit refs records-for`" in rule
-    assert "tied to them directly" in rule
-    assert "read that artefact" in rule
+    assert "ties to them directly" in rule
+    assert "read each artefact it reaches them through" in rule
 
 
 def test_rule_22_cites_the_readme_that_holds_its_rationale_and_the_issue() -> None:
     rule = _rule_22()
     assert '"Finding the records a path leads to"' in rule
-    assert "https://github.com/aleskalfas/project-kit/issues/2165" in rule
+    assert "project-kit#2165" in rule
     assert README_SECTION in DECISIONS_README.read_text(encoding="utf-8")
 
 
-def test_rule_22_stands_after_rule_21_and_before_the_rationale() -> None:
+def test_rule_22_stands_after_rule_21_and_before_where_the_rules_came_from() -> None:
     text = CORE_RULES.read_text(encoding="utf-8")
-    assert text.index("\n21. ") < text.index(f"\n{SECTION}\n") < text.index("\n## Where rationale")
-
-
-def test_the_rules_readme_lists_the_section() -> None:
-    text = RULES_README.read_text(encoding="utf-8")
-    section = text.split("\n## What goes in `core.md`\n", 1)[1].split("\n## ", 1)[0]
-    assert "Seven categories:" in section
-    assert "- **Before changing files** — " in section
+    assert (
+        text.index("\n### 21. ")
+        < text.index(f"\n{SECTION}\n")
+        < text.index("\n## Where these rules came from")
+    )

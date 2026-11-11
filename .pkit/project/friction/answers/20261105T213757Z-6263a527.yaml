@@ -1,0 +1,258 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-merge-gate
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-05T21:37:57Z
+      outcome: unchanged
+      unchanged-because: "The entry lists what a pull request must meet to land: each verdict standing, its checks green, its checkboxes ticked. ci_checks.py gains two readers that set when land-work starts the reviewers, and evaluate_ci_gate, which done-work's gate reads, is not altered, so those conditions are the same."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T21:42:34Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces: review-work's reading of the change check, its refusal of a closing reference and the check reading what a change would land all leave step 7's title check, opening and move to Review standing. This change alters only when land-work starts the reviewers, after UC-061 ends with the Task in Review, and the use case names no landing, so each move holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T21:38:13Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+    revalidated:
+      at: 2026-11-05T21:42:45Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces: the hand-off from review-work to UC-062, the closing keyword and the head the gate judged stand together. UC-062 now gains variant 4d, where the review starts beside checks still running, and a sentence on variant 7a. The journey states no order of checks and review, its variant 2a still rejoins on a verdict that requests changes, and the merge still ends at the head the gate judged."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:38:29Z
+      outcome: unchanged
+      unchanged-because: land-work.py changed when the reviewers start. UC-090 rests on land-work only for the count of the fixers' proposals it prints, which this change does not touch, so the listing it describes holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+    revalidated:
+      at: 2026-11-05T21:42:55Z
+      outcome: unchanged
+      unchanged-because: "Judged with the four answers it replaces: the text they left stands as one, with the open question on review rounds gone, the operator added, and steps 4 and 6a reworded. This change starts the reviewers on the named checks on a run without --yes. Step 1 sends that run to UC-062 steps 2 to 10, which carry the order, and step 5's --yes run still waits for every check and keeps each verdict. The stop on a branch behind its base applies at both waits, and the guarantees on authorisation, the change check and a verdict's head did not move."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+    revalidated:
+      at: 2026-11-05T21:43:04Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers it replaces: they reworded step 2's needs and the rule on the merge authoriser, and the filed Tasks and the landed pull request the journey needs stand together. land-work.py now changes the order of checks and review on a run without --yes. The journey lands through UC-089, which defers to UC-062, states no such order, and rests on the merge gate and the authorisation of a head, and neither moved."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:39:04Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:43:15Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces: COR-050 point 7's warning and the rewording for DEC-065, on how a sentence is read and what the person is told, leave what the engineer writes and leaves to a person as the reference says. The section it links gained the checks that start the review. This reference says only that land-work runs the same review as one of its steps, which it still does through review-pr at the pinned head, so the line holds."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261105T091216Z-b5483b71.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:43:22Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces: the loss of UC-001's aside, COR-050 point 7's warning and the rewording for DEC-065 of what the landing command shows leave the guide's build task and its answers as it says. The section it links gained the checks that start the review. The guide says land-work runs the same review as one of its steps and to land once the reviewers approve, and a merge still needs every check passed and every verdict fresh, so what it tells a user to do holds."

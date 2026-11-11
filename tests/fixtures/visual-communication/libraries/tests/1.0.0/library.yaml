@@ -1,0 +1,13 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# The component library the engine's tests draw with: a pattern of steps in a row, the
+# card that draws each step, a block that draws a produced picture and exposes its
+# points, a pattern that places a label at one of them, and a block that shows the facts
+# of its export. No project locks it.
+name: tests
+version: 1.0.0
+kind: components
+needs-release: 0.1.0
+builds-on:
+  - {name: foundations, major: 1}

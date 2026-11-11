@@ -526,7 +526,9 @@ def test_catalog_views_show_the_folder(tmp_path: Path) -> None:
     target = tmp_path / "proj"
     (target / ".pkit" / "schemas").mkdir(parents=True)
     shutil.copy(CATALOG_PATH, target / ".pkit" / "schemas" / "privilege-catalog.yaml")
-    shutil.copytree(PERMISSIONS, target / ".pkit" / "permissions")
+    shutil.copytree(
+        PERMISSIONS, target / ".pkit" / "permissions", ignore=shutil.ignore_patterns("__pycache__")
+    )
 
     assert f"[inside: {WS}/]" in perm.catalog(target)
 

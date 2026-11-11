@@ -105,6 +105,11 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     lifecycle = proj / ".pkit" / "lifecycle"
     lifecycle.mkdir(parents=True)
     shutil.copy2(REPO / ".pkit" / "lifecycle" / "ownership.py", lifecycle / "ownership.py")
+    # The propagated reader of an agent's tool access (ADR-086), which validation
+    # loads where it has a definition to read.
+    shutil.copy2(
+        REPO / ".pkit" / "agents" / "tool_access.py", proj / ".pkit" / "agents" / "tool_access.py"
+    )
     if overlay is not None:
         (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
             overlay, encoding="utf-8"
@@ -470,11 +475,51 @@ def test_cli_agents_skip_report_leads_with_adopt_and_names_reconcile(tmp_path, m
     proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
     _agent(proj / ".pkit" / "agents" / "core", "needs-arch", owns=["<architecture-docs>"])
     monkeypatch.chdir(proj)
-    result = CliRunner().invoke(main, ["agents"])
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
     assert result.exit_code == 0, result.output
-    assert "pkit agents adopt" in result.output
-    assert "pkit agents reconcile --write" in result.output
+    footer = _skip_footer(result.output)
+    assert "Deploy the skipped agent(s):  pkit agents adopt <agent>" in footer
+    assert "pkit agents reconcile --write" in footer
     assert "overlay.yaml" in result.output
+    assert "No conventional folder" not in footer
+
+
+def _skip_footer(output: str) -> str:
+    """The `pkit agents` status footer: from the `Skipped:` line to the command list,
+    which names `pkit agents adopt` whatever is skipped."""
+    return output.split("Skipped:", 1)[1].split("Commands", 1)[0]
+
+
+def test_cli_agents_names_no_adopt_for_a_category_with_no_conventional_folder(
+    tmp_path, monkeypatch
+):
+    """`adopt` refuses a category with no conventional folder, so the skip report
+    names only what works: the overlay, or `reconcile --write` (#2469)."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    _agent(proj / ".pkit" / "agents" / "project", "release-checker", owns=["<release-notes>"])
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+    assert result.exit_code == 0, result.output
+    footer = _skip_footer(result.output)
+    assert "No conventional folder (release-notes)" in footer
+    assert "overlay.yaml" in footer and "pkit agents reconcile --write" in footer
+    assert "adopt" not in footer
+
+
+def test_cli_agents_names_adopt_only_for_the_agents_it_serves(tmp_path, monkeypatch):
+    """An agent lacking a category with no conventional folder is no agent `adopt`
+    serves, even where another category it lacks has one."""
+    proj = _project(tmp_path, overlay="workflow-docs:\n  - README.md\n")
+    core = proj / ".pkit" / "agents" / "core"
+    _agent(core, "needs-arch", owns=["<architecture-docs>"])
+    _agent(core, "mixed", owns=["<architecture-docs>", "<release-notes>"])
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+    assert result.exit_code == 0, result.output
+    footer = _skip_footer(result.output)
+    assert "Deploy needs-arch:  pkit agents adopt <agent>" in footer
+    assert "Deploy the skipped agent(s)" not in footer
+    assert "No conventional folder (release-notes)" in footer
 
 
 def test_cli_agents_never_load_bearing(tmp_path, monkeypatch):
@@ -1390,3 +1435,111 @@ def test_adopt_guidance_in_render_status(tmp_path, monkeypatch):
     result = CliRunner().invoke(main, ["agents"])
     assert result.exit_code == 0, result.output
     assert "pkit agents adopt" in result.output
+
+
+# --- unknown overrides (#2468) ------------------------------------------------
+
+# Each kind of `overrides:` entry once: two the deploy ignores and three it reads.
+_OVERRIDES = (
+    "code-paths:\n  - src/\n"
+    "overrides:\n"
+    "  critc:\n    model: sonnet\n"  # an agent no source ships
+    "  critic:\n"
+    "    code-pths:\n      - lib/\n"  # a category critic's definition does not name
+    "    code-paths:\n      - app/\n"  # resolves
+    "    effort: high\n"  # a policy key, no category
+    "  cap-agent:\n    docs:\n      - d/\n"  # resolves, for a capability's agent
+)
+
+
+def _overrides_project(tmp_path: Path, overlay: str = _OVERRIDES) -> Path:
+    proj = _project(tmp_path, overlay=overlay)
+    _agent(proj / ".pkit" / "agents" / "core", "critic", owns=["<code-paths>"], body="<code-paths>")
+    _agent(
+        proj / ".pkit" / "capabilities" / "my-cap" / "agents",
+        "cap-agent",
+        reads_patterns=["<docs>"],
+        body="<docs>",
+    )
+    return proj
+
+
+def test_unknown_overrides_name_each_key_the_deploy_ignores(tmp_path):
+    found = ao.unknown_overrides(_overrides_project(tmp_path))
+
+    assert [u.key for u in found] == ["overrides.critc", "overrides.critic.code-pths"]
+    assert found[0].reason == "no source ships an agent named critc"
+    assert found[1].reason == (
+        "critic's definition, .pkit/agents/core/critic.md, names no category <code-pths>"
+    )
+
+
+def test_an_override_that_resolves_is_no_unknown_override(tmp_path):
+    overlay = "overrides:\n  critic:\n    code-paths:\n      - app/\n    model: sonnet\n"
+    proj = _overrides_project(tmp_path, overlay)
+
+    assert ao.unknown_overrides(proj) == []
+    st = {s.name: s for s in ao.agent_overlay_statuses(proj)}["critic"]
+    assert st.deployable
+
+
+def test_an_unknown_category_is_judged_by_the_definition_that_deploys(tmp_path):
+    """A shadowed definition deploys nothing, so a category only it names is unknown."""
+    proj = _overrides_project(tmp_path, "overrides:\n  critic:\n    code-paths:\n      - app/\n")
+    _agent(proj / ".pkit" / "agents" / "project", "critic", owns=["<own-paths>"])
+
+    (found,) = ao.unknown_overrides(proj)
+    assert found.key == "overrides.critic.code-paths"
+    assert ".pkit/agents/project/critic.md" in found.reason
+
+
+def test_the_deploy_still_deploys_an_agent_beside_an_unknown_override(tmp_path):
+    proj = _overrides_project(tmp_path)
+    overlay = proj / ".pkit" / "agents" / "project" / "overlay.yaml"
+
+    code, fm, _err = _resolve_via_adapter(
+        proj / ".pkit" / "agents" / "core" / "critic.md", "critic", overlay
+    )
+    assert code == 0
+    assert fm is not None and fm["owns"] == ["app/"]
+
+
+def test_cli_agents_warns_of_each_unknown_override_and_passes(tmp_path, monkeypatch):
+    monkeypatch.chdir(_overrides_project(tmp_path))
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+
+    assert result.exit_code == 0, result.output
+    section = result.output.split("UNKNOWN OVERRIDES", 1)[1].split("Commands", 1)[0]
+    assert "⚠ overrides.critc  " in section
+    assert "no source ships an agent named critc" in section
+    assert "⚠ overrides.critic.code-pths  " in section
+    assert "overrides.critic.code-paths" not in section
+    assert "cap-agent" not in section
+
+
+def test_cli_agents_shows_no_unknown_overrides_where_each_resolves(tmp_path, monkeypatch):
+    overlay = "overrides:\n  critic:\n    code-paths:\n      - app/\n"
+    monkeypatch.chdir(_overrides_project(tmp_path, overlay))
+    result = CliRunner().invoke(main, ["--color", "never", "agents"])
+
+    assert result.exit_code == 0, result.output
+    assert "UNKNOWN OVERRIDES" not in result.output
+
+
+def test_validation_warns_of_each_unknown_override_and_passes(tmp_path, monkeypatch):
+    from project_kit import refs
+    from project_kit.validators import Severity
+
+    proj = _overrides_project(tmp_path)
+    findings = [f for f in refs.outcome(proj).findings if "is ignored" in f.message]
+
+    assert [(f.location, f.severity) for f in findings] == [
+        (".pkit/agents/project/overlay.yaml", Severity.WARNING)
+    ] * 2
+    assert findings[0].message.startswith("`overrides.critc` is ignored: no source ships")
+    assert findings[1].message.startswith("`overrides.critic.code-pths` is ignored: critic's")
+
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["--color", "never", "refs", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "2 warning(s) of an override the deploy ignores" in result.output

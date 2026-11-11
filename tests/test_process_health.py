@@ -32,6 +32,10 @@ Built on a fixture pair of capabilities: `design` (upstream `screen` keyed
 process + `catalog` singleton) whose detection reads per-subject marker files,
 and `delivery` (downstream `unit` process) declaring the contract and supplying
 the `candidates` / `resolve` seam scripts, file-backed at the repo root.
+
+Each predicate the walk starts runs in the test's own process, its command still
+found through the runner's one lookup (`tests/in_process.py`,
+`start_in_process`); a test marked `process` starts it as a process.
 """
 
 from __future__ import annotations
@@ -40,6 +44,7 @@ import json
 import stat
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -49,6 +54,21 @@ from project_kit import cli_render
 from project_kit import process_health as ph
 from project_kit.cli import main
 from project_kit.process import ProcessEngine
+from tests.in_process import MARK, start_in_process
+
+
+@pytest.fixture(autouse=True)
+def predicates_started(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process
+    (`start_in_process`), but in a test that keeps its process. No bytecode is written,
+    so a script a test rewrites is read afresh and the repository gains no file."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    if request.node.get_closest_marker(MARK) is not None:
+        return []
+    return start_in_process(monkeypatch)
+
 
 # --- fixture process definitions ------------------------------------------
 
@@ -296,8 +316,12 @@ _NOOP = "import json\nprint(json.dumps({'result': False, 'reason': 'noop'}))\n"
 
 
 def _write_script(path: Path, body: str) -> None:
+    """An executable predicate script whose `main` runs `body`, as a process and in this
+    process alike."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    code = "import sys\n\n\ndef main():\n" + textwrap.indent(body, "    ")
+    code += "\n\nif __name__ == '__main__':\n    sys.exit(main())\n"
+    path.write_text("#!/usr/bin/env python3\n" + code, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
@@ -950,6 +974,7 @@ def test_cli_exits_zero_when_clean(health_repo, monkeypatch) -> None:
     assert "0 missed, 0 indeterminate" in result.output
 
 
+@pytest.mark.process("pkit process health end to end, each predicate a process given its subject")
 def test_cli_exits_non_zero_on_misses_with_flow_direction_header(health_repo, monkeypatch) -> None:
     repo = health_repo()
     for i in range(1, 8):
@@ -1087,7 +1112,7 @@ _UNEVALUABLE = {
 # exits 2: what reaches the report is the words alone.
 _ESCAPE_LADEN = (
     "import sys\n"
-    "sys.stderr.buffer.write(b'\\x1b[2J\\x1b]0;pwned\\x07source \\x1b[31mdown\\x1b[0m\\x00\\n')\n"
+    "sys.stderr.write('\\x1b[2J\\x1b]0;pwned\\x07source \\x1b[31mdown\\x1b[0m\\x00\\n')\n"
     "sys.exit(2)\n"
 )
 
@@ -1110,14 +1135,30 @@ def _the_unevaluable(payload: dict) -> dict:
     return finding
 
 
-@pytest.mark.parametrize("seam", sorted(_UNEVALUABLE))
+#: How a predicate is broken, the cause its finding names, and what it said.
+_WAYS = (
+    ("cannot-start", "could not start: [Errno 13] Permission denied", None),
+    ("garbage", "printed no JSON document on its standard output", None),
+    ("escape-laden", "exited 2", "source down"),
+)
+
+
+def _unevaluable_case(seam: str, how: str, cause: str, said: str | None):
+    """One seam broken one way. A script that is not executable keeps its process, as
+    the system refuses only a process its start. So does the escape-laden resolve: what
+    a real script writes on its standard error, as the report a person reads shows it."""
+    if how == "cannot-start":
+        marks = [pytest.mark.process("a script the system will not run: only a process start")]
+    elif (seam, how) == ("resolve", "escape-laden"):
+        marks = [pytest.mark.process("a seam script's own standard error, as a person reads it")]
+    else:
+        marks = []
+    return pytest.param(seam, how, cause, said, marks=marks, id=f"{how}-{cause}-{said}-{seam}")
+
+
 @pytest.mark.parametrize(
-    ("how", "cause", "said"),
-    [
-        ("cannot-start", "could not start: [Errno 13] Permission denied", None),
-        ("garbage", "printed no JSON document on its standard output", None),
-        ("escape-laden", "exited 2", "source down"),
-    ],
+    ("seam", "how", "cause", "said"),
+    [_unevaluable_case(seam, *way) for way in _WAYS for seam in sorted(_UNEVALUABLE)],
 )
 def test_an_unevaluable_predicate_s_finding_says_why(
     health_repo, monkeypatch, seam: str, how: str, cause: str, said: str | None

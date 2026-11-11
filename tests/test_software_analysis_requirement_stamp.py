@@ -43,6 +43,7 @@ from tests.analysis_repo import (
     below_floor,
     field_hint,
     fill,
+    fingerprint,
     front,
     installed,
     new,
@@ -81,14 +82,14 @@ def _template_body(kind: str) -> str:
 # --- each kind in its place ------------------------------------------------------------------
 
 
-# Slow by design: two stamps for each kind, each a script that starts several `pkit` processes.
 @pytest.mark.parametrize("kind", sorted(KINDS))
 def test_each_kind_is_stamped_in_its_place_rendered_from_its_structure(
     project: AdopterRepo, kind: str
 ) -> None:
     """The file lies in its kind's folder, named `REQ-NNN-<slug>.md`. Its front matter is
-    its template's, with its id, its title, its actors and what it refines, and its
-    statement, its measure and where it holds each holding the field's declared hint. Its
+    its template's, with its id, its title, its actors and what it refines, its
+    statement, its measure and where it holds each holding the field's declared hint, and
+    its `obligation` the fingerprint of those texts, each read as empty. Its
     body is its template's, the heading reading the id, the kind and the title. In an
     area, it lies in the area's folder of its kind's place."""
     place, shown = KINDS[kind]
@@ -103,6 +104,9 @@ def test_each_kind_is_stamped_in_its_place_rendered_from_its_structure(
         "statement": field_hint(kind, "statement"),
         "measure": field_hint(kind, "measure"),
         "applies-to": field_hint(kind, "applies-to"),
+        # The fingerprint of its texts as written, each a hint, a comment, read as empty
+        # (software-analysis DEC-006 point 6).
+        "obligation": fingerprint({t: "" for t in ("statement", "measure", "applies-to")}, kind),
         "actors": ["ACT-tester"],
         "refines": [],
         "pkit": {
@@ -125,7 +129,6 @@ def test_each_kind_is_stamped_in_its_place_rendered_from_its_structure(
 # --- one numbering ---------------------------------------------------------------------------
 
 
-# Slow by design: eight stamps, each a script that starts several `pkit` processes.
 def test_requirements_share_one_numbering_with_the_default_branch_and_its_history(
     project: AdopterRepo,
 ) -> None:
@@ -167,7 +170,6 @@ def _freed_by(repo: AdopterRepo, commit: str, ids: tuple[str, ...]) -> None:
     repo.write({SETTING: f"{SETTINGS_TEXT}numbering:\n  freed-by:\n{written}"})
 
 
-# Slow by design: four stamps, each a script that starts several `pkit` processes.
 def test_the_numbering_setting_frees_a_requirement_s_id(project: AdopterRepo) -> None:
     """A pilot's requirements deleted from the default branch, their ids listed in the
     setting under the commit that removed them: the stamp gives the ids again, and says
@@ -191,7 +193,6 @@ def test_the_numbering_setting_frees_a_requirement_s_id(project: AdopterRepo) ->
     )
 
 
-# Slow by design: two stamps, each a script that starts several `pkit` processes.
 def test_a_requirement_moved_to_another_kind_then_deleted_is_not_freed(
     project: AdopterRepo,
 ) -> None:
@@ -217,7 +218,6 @@ def test_a_requirement_moved_to_another_kind_then_deleted_is_not_freed(
 # --- its actors and what it refines ----------------------------------------------------------
 
 
-# Slow by design: five stamps and the check, each a script that starts `pkit` processes.
 def test_its_actors_and_what_it_refines_are_written_and_anchored(project: AdopterRepo) -> None:
     """`--actor` and `--refines`, each repeatable and each once, are written in `actors`
     and `refines`, and each is an artefact anchor, beside the records and paths given
@@ -252,7 +252,7 @@ def test_its_actors_and_what_it_refines_are_written_and_anchored(project: Adopte
 # --- what it refuses -------------------------------------------------------------------------
 
 
-# Slow: five stamps, built once per session; the first test to ask pays it in its setup.
+# Five stamps, built once per session; the first test to ask pays them in its setup.
 def _ground(repo: AdopterRepo) -> None:
     """`prepare`, then the actor ACT-tester, the actor ACT-retired withdrawn, the use case
     UC-001, the quality requirement REQ-001, and the constraint REQ-002 withdrawn."""

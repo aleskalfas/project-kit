@@ -72,6 +72,8 @@ def ownership():
         ("agents/project/overlay.yaml", True),
         ("agents/core/critic.md", False),
         ("rules/project.md", True),
+        # The capabilities' rules index is rendered for each project (ADR-076 point 2).
+        ("rules/capabilities.md", True),
         ("rules/core.md", False),
         ("decisions/project/PRJ-001-x.md", True),
         ("decisions/core/COR-001-x.md", False),
@@ -228,6 +230,7 @@ def test_kit_owned_content_still_ships(built_wheel: Path) -> None:
         "process": "process/README.md",
         "lifecycle": "lifecycle/ownership.py",
         "migrations": "migrations/backbone/README.md",
+        "rule-sets": "rule-sets/ops.md",
         # `decisions/core` is hook-filtered since #909 (a static directory
         # entry shipped untracked files); `VERSION` is a static single-file
         # entry — covered so a change to the static list is caught here too.

@@ -44,6 +44,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# The one start of a `pkit` call, dual-form as the modules that import this one
+# import it: part of the `_lib` package, or standalone-by-path.
+try:
+    from _lib import backbone
+except ImportError:  # pragma: no cover - `scripts/_lib/` itself on sys.path
+    import backbone  # type: ignore[no-redef]
+
 #: The backbone's key (COR-054 point 1), and pm's transitional one.
 BACKBONE_KEY = "repository.default-branch"
 ALIAS_KEY = "default_branch"
@@ -107,7 +114,7 @@ _warned: set[str] = set()
 
 
 def read(
-    explicit: str | None = None, *, cwd: Path | None = None, run: Runner = subprocess.run
+    explicit: str | None = None, *, cwd: Path | None = None, run: Runner = backbone.run
 ) -> Reading:
     """The backbone's answer for the working directory — `cwd`, else the process's,
     with `explicit` the base it reads — asked once per run. Raises Unanswered."""
@@ -124,7 +131,7 @@ def read(
     return answer
 
 
-def name(config: Mapping[str, Any], *, run: Runner = subprocess.run) -> str:
+def name(config: Mapping[str, Any], *, run: Runner = backbone.run) -> str:
     """The default branch: the backbone's; pm's own `default_branch` only until the
     upgrade carries it over. Raises Unanswered."""
     backbone = read(run=run).default_branch
@@ -148,7 +155,7 @@ def name(config: Mapping[str, Any], *, run: Runner = subprocess.run) -> str:
     return alias
 
 
-def branch(named: str, *, run: Runner = subprocess.run) -> Base:
+def branch(named: str, *, run: Runner = backbone.run) -> Base:
     """The branch `named` resolved as the backbone resolves every branch named as a
     base (COR-054 point 2) — asked afresh, since a fetch may just have moved it.
     Raises Unanswered."""
@@ -156,7 +163,7 @@ def branch(named: str, *, run: Runner = subprocess.run) -> Base:
     return read(named, run=run).base
 
 
-def check_base(explicit: str | None = None, *, run: Runner = subprocess.run) -> Base:
+def check_base(explicit: str | None = None, *, run: Runner = backbone.run) -> Base:
     """A diff-scoped check's base: `explicit`, else `$PKIT_CHECK_BASE`, else the default
     branch, with where HEAD left it (COR-054 point 3). Raises Unanswered."""
     return read(explicit, run=run).base

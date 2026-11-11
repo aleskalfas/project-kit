@@ -41,6 +41,8 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from _lib import backbone
+
 POINT = "pkit::work-tracking:doc-check"
 POINT_VERSION = 1
 
@@ -170,7 +172,7 @@ class ResolvedPoint:
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
-def read_point(run: Runner = subprocess.run) -> ResolvedPoint:
+def read_point(run: Runner = backbone.run) -> ResolvedPoint:
     """Read the resolved point through `pkit connections resolve --json`.
 
     The command exits 1 on an unresolved point and still prints its document,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -10,9 +12,23 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import data_points as dp
+from project_kit import install
+from project_kit import status as status_module
 from project_kit.cli import main, status
 from project_kit.status import _data_point_lines, _skill_owner
 from tests.adopter_repo import MakeAdopterRepo
+from tests.shipped_rule_sets import shipped_rules
+
+
+@pytest.fixture(autouse=True)
+def personal_skills(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Claude Code's personal skills folder as status reads it: the test's own, missing
+    until the test makes it, whatever personal skills the machine running the suite holds."""
+    folder = tmp_path_factory.mktemp("home") / ".claude" / "skills"
+    monkeypatch.setattr(status_module, "_personal_skills_folder", lambda: folder)
+    return folder
 
 
 @pytest.fixture
@@ -105,8 +121,21 @@ def _deploy_agent(root: Path, name: str, *, marked: bool = True) -> None:
 
 
 def _deployed(output: str) -> list[str]:
-    """The adapter section's lines after `settings.json`."""
-    return _section(output, "Adapter: claude-code").splitlines()[1:]
+    """The adapter section's lines after `settings.json`, up to the rules index's."""
+    lines = _section(output, "Adapter: claude-code").splitlines()[1:]
+    ends = [i for i, line in enumerate(lines) if line.startswith("    rules index")]
+    return lines[: ends[0]] if ends else lines
+
+
+def test_status_reports_the_rules_index_after_the_agents(installed_target: Path) -> None:
+    """The capabilities' rules index, beside the deployed skills and agents (ADR-076):
+    first install renders it, including no capability's rules yet."""
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    lines = _section(result.output, "Adapter: claude-code").splitlines()
+    assert lines[-1] == (
+        f"    {'rules index':<18} .pkit/rules/capabilities.md, including no capability's rules"
+    )
 
 
 def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target: Path) -> None:
@@ -129,13 +158,49 @@ def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target:
     assert name in kit_block
 
 
-def test_status_names_the_deploy_commands_when_nothing_is_deployed(installed_target: Path) -> None:
-    result = CliRunner().invoke(status, [])
+# The adapter script that makes what each line of the adapter section reports.
+_MADE_BY = {
+    "settings.json": "merge-settings.sh",
+    "skills": "deploy-skills.sh",
+    "agents": "deploy-agents.sh",
+}
+
+
+def test_each_remedy_status_names_is_a_command_the_installed_pkit_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """In a project `pkit init` made, with no settings, skill or agent under `.claude/`,
+    status names a remedy for each. Each is a command of the installed `pkit`, and runs
+    the adapter script that makes what is missing (#2463). The adapter scripts are
+    recorded, not run, so `init` leaves the three out."""
+    ran: list[str] = []
+
+    def _record(script: Path, _ctx: install.InstallContext, *_args: str) -> None:
+        ran.append(f"{script.parent.name}/{script.name}")
+
+    monkeypatch.setattr(install, "_run_adapter_primitive", _record)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    monkeypatch.chdir(tmp_path)
+    made = CliRunner().invoke(main, ["init"])
+    assert made.exit_code == 0, made.output
+
+    result = CliRunner().invoke(main, ["status"])
     assert result.exit_code == 0, result.output
-    assert _deployed(result.output) == [
-        f"    {'skills':<18} 0 deployed (run 'pkit deploy-skills')",
-        f"    {'agents':<18} 0 deployed (run 'pkit deploy-agents')",
+    lines = _section(result.output, "Adapter: claude-code").splitlines()[:3]
+    assert lines == [
+        f"    {'settings.json':<18} not present (run 'pkit sync')",
+        f"    {'skills':<18} 0 deployed (run 'pkit sync')",
+        f"    {'agents':<18} 0 deployed (run 'pkit sync')",
     ]
+    for line in lines:
+        remedy = re.search(r"\(run '([^']+)'\)", line)
+        assert remedy is not None, line
+        program, *arguments = shlex.split(remedy.group(1))
+        assert program == "pkit"
+        ran.clear()
+        outcome = CliRunner().invoke(main, arguments)
+        assert outcome.exit_code == 0, outcome.output
+        assert f"claude-code/{_MADE_BY[line.split()[0]]}" in ran, (line, ran)
 
 
 def test_status_lists_a_capabilitys_skills_and_agents_under_the_capability(
@@ -222,6 +287,110 @@ def test_status_lists_the_project_namespace_last_and_a_copy_nothing_ships_apart(
 )
 def test_a_skill_belongs_to_where_its_link_leads(link: str, owner: str | None) -> None:
     assert _skill_owner(link) == owner
+
+
+# --- a personal skill that hides a deployed one (#3033) ----------------------------
+
+HIDDEN = "hidden skills"
+CORE_SKILL = ("decision-author", ".pkit/skills/core/decision-author.md")
+
+
+def _personal_skill(folder: Path, name: str) -> Path:
+    """A skill `name` in the personal skills `folder`: a folder holding a file status
+    never reads."""
+    skill = folder / name
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text(f"---\nname: {name}\n---\n", encoding="utf-8")
+    return skill
+
+
+def _hidden(*paths: Path) -> list[str]:
+    """The warning status gives of a deployed skill hidden at each of `paths`."""
+    head = (
+        f"⚠ {len(paths)} hidden by a personal skill of the same name, "
+        "which Claude Code runs instead:"
+    )
+    return [f"    {HIDDEN:<18} {head}", *(f"{ITEM}{path.name}, by {path}" for path in paths)]
+
+
+def _status_output() -> str:
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    return result.output
+
+
+def test_status_warns_of_a_deployed_skill_a_personal_skill_hides(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    """A folder in the personal skills folder named as a deployed skill hides it: status
+    names the skill and the personal folder, beside the skills deployed, and says Claude
+    Code runs the personal one (#3033)."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    _deploy_skill(installed_target, "schema", ".pkit/skills/core/schema/schema.md")
+    hiding = _personal_skill(personal_skills, "decision-author")
+
+    lines = _deployed(_status_output())
+    assert lines[:3] == [
+        f"    {'skills':<18} 2 deployed from core:",
+        f"{ITEM}decision-author -> ../../../.pkit/skills/core/decision-author.md",
+        f"{ITEM}schema -> ../../../.pkit/skills/core/schema/schema.md",
+    ]
+    assert lines[3:5] == _hidden(hiding)
+    assert lines[5].startswith(f"    {'agents':<18} ")
+
+
+def test_status_says_nothing_of_a_personal_skill_the_project_does_not_deploy(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    """A personal skill hides only a deployed skill of its name."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    _personal_skill(personal_skills, "my-notes")
+
+    assert HIDDEN not in _status_output()
+
+
+@pytest.mark.parametrize("linked", ["the skill's folder", "the personal skills folder"])
+def test_status_follows_a_link_in_the_personal_skills_folder(
+    installed_target: Path,
+    personal_skills: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    linked: str,
+) -> None:
+    """A link in place of a personal skill's folder, or of the personal skills folder itself,
+    is followed, and the warning names the folder where Claude Code looks."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    store = tmp_path_factory.mktemp("store")
+    stored = _personal_skill(store, "decision-author")
+    if linked == "the skill's folder":
+        personal_skills.mkdir(parents=True)
+        (personal_skills / "decision-author").symlink_to(stored, target_is_directory=True)
+    else:
+        personal_skills.parent.mkdir(parents=True)
+        personal_skills.symlink_to(store, target_is_directory=True)
+
+    lines = _deployed(_status_output())
+    assert lines[2:4] == _hidden(personal_skills / "decision-author")
+
+
+def test_status_says_nothing_where_the_machine_has_no_personal_skills_folder(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    _deploy_skill(installed_target, *CORE_SKILL)
+    assert not personal_skills.exists()
+
+    assert HIDDEN not in _status_output()
+
+
+def test_a_personal_skills_folder_that_is_the_projects_own_hides_nothing(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    """Where the project's root is the home folder, the personal skills folder is the
+    project's `.claude/skills/`, and each deployed skill is its own personal skill."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    personal_skills.parent.mkdir(parents=True)
+    personal_skills.symlink_to(installed_target / ".claude" / "skills", target_is_directory=True)
+
+    assert HIDDEN not in _status_output()
 
 
 def test_status_reports_agents_inventory(installed_target: Path) -> None:
@@ -444,10 +613,19 @@ def _section(output: str, heading: str) -> str:
     return output.split(f"\n  {heading}\n", 1)[1].split("\n\n", 1)[0]
 
 
-def test_status_reports_no_rule_sets_on_a_fresh_install(installed_target: Path) -> None:
+def test_status_reports_the_shipped_rule_sets_alone_on_a_fresh_install(
+    installed_target: Path,
+) -> None:
+    """A fresh install holds the backbone's rule sets alone, which pin nothing (COR-068;
+    ADR-075 point 1)."""
+    rules = len(shipped_rules(installed_target))
+    assert rules > 0
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
-    assert _section(result.output, "Rule sets").split() == ["found", "none"]
+    assert _section(result.output, "Rule sets").splitlines() == [
+        f"    {'found':<18} 1 rule set(s), {rules} rule(s)",
+        f"    {'pins':<18} none",
+    ]
 
 
 def test_status_shows_each_pin_behind_the_inherited_major_with_the_fix(
@@ -465,8 +643,9 @@ def test_status_shows_each_pin_behind_the_inherited_major_with_the_fix(
         f"review what changed in CMN, then update the pin to CMN@2 in `inherits` of "
         f"{PROJECT_SETS}/doc.md"
     )
+    shipped = len(shipped_rules(installed_target))  # the backbone's set, beside the three
     assert _section(result.output, "Rule sets").splitlines() == [
-        f"    {'found':<18} 3 rule set(s), 0 rule(s)",
+        f"    {'found':<18} 4 rule set(s), {shipped} rule(s)",
         f"    {'pins':<18} 2 checked, 1 behind the inherited set's major:",
         "                         DOC pins CMN@1; CMN is at 2.1.0",
         f"                           fix: {fix}",

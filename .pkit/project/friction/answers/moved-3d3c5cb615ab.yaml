@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
-    revalidated:
-      at: 2026-10-24T21:03:43Z
-      outcome: unchanged
-      unchanged-because: ACT-planner's note names the planner where it said the role, and keeps why its name is not project manager. Its needs are the same, so this requirement holds.

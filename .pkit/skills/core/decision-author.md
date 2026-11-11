@@ -7,9 +7,11 @@ gates:
   - COR-006
   - COR-008
   - COR-025
+  - COR-066
 reads:
   records:
     - COR-024
+    - COR-039
     - COR-046
     - COR-049
   paths:
@@ -39,6 +41,7 @@ The current declared dependencies:
 - **COR-006** — artifact roles. Used so this skill cites authoritative docs/decisions rather than restating them.
 - **COR-008** — git workflow conventions. Used for the commit-message format in the final step.
 - **COR-025** — the ADR decision space. Used to pick the record's kind in the first step.
+- **COR-066** — a decision reaches the default branch only accepted. Point 5 is used in step 8, for the edits a new record names, and in the last step, where they follow its acceptance and are shown before the merge. Point 1 is used in the last step, where a person accepts the record in its change before the work that rests on it.
 
 ## Procedure
 
@@ -109,11 +112,17 @@ Before showing the draft, walk it against each discipline that binds its kind (s
 
 If any check fails, revise.
 
-### 8. Show the draft for review
+### 8. Name its edits to the records it changes
 
-Surface the draft to the user. Do **not** commit until approved. The acceptance gate forbids using the new record as a basis for downstream work until it's accepted; the same caution applies to committing — uncommitted drafts can still be revised cheaply.
+In the new record's `## Implications`, name each edit this change makes to an accepted record: one it refines, overturns in part or replaces whole. Each name says what the edit makes that record say, not only where it goes. [COR-066](../../decisions/core/COR-066-accepted-before-landing.md) point 5 decides that the Implications name them, and `.pkit/decisions/README.md`, "Refining an accepted record", says which edits those are. Make none yet: they rest on the new record, so they follow its acceptance (step 11). For a record it replaces whole, see also "Superseding an existing record" under Variations.
 
-### 9. Commit (after approval)
+The new record decides nothing against a record the project receives from elsewhere. A change it needs there is proposed where that record is kept, and nothing rests on that change until the project receives it accepted. Proposing it changes another repository, so surface it to the user rather than make it (core rule 19, [COR-039](../../decisions/core/COR-039-session-repo-mutation-boundary.md)).
+
+### 9. Show the draft for review
+
+Surface the draft, with the edits its Implications name, to the user. Do **not** commit until approved. The acceptance gate forbids using the new record as a basis for downstream work until it's accepted; the same caution applies to committing — uncommitted drafts can still be revised cheaply.
+
+### 10. Commit (after approval)
 
 Per COR-008, use conventional-commits format. Type is `decision`; scope reflects the area:
 
@@ -127,9 +136,20 @@ Status: proposed.
 Co-Authored-By: <as appropriate>
 ```
 
-The record lands as `proposed`. Acceptance is a separate gesture (status flip + a follow-up commit, per the acceptance gate). Do **not** mark the new record `accepted` in the same commit unless the user explicitly approves both the addition and the acceptance together.
+The record reaches the default branch only accepted ([COR-066](../../decisions/core/COR-066-accepted-before-landing.md) point 1), so a person accepts it in this same change (next step).
+
+### 11. Have it accepted, then make its edits
+
+In this order (COR-066 points 1 and 5):
+
+1. **Ask a person to accept the record** in this change. Before they accept, show them the words of each edit its Implications name, drafted in the conversation or in the agent workspace, never in git. Write `accepted` only on their word, in a commit of its own, `decision(<scope>): accept <ID> <short title>`. Where the user explicitly approves the record's addition and its acceptance together, step 10's commit may add it `accepted` instead.
+2. **Make the edits its Implications name, as shown,** in this change, in commits after the acceptance, each as `.pkit/decisions/README.md`, "Refining an accepted record", says. Make none beyond them: another edit that changes what a record decides is a decision of its own (COR-066 point 5).
+3. **Then the work** that rests on the record, in this change or in a change built on it that lands no earlier.
+4. **Before the merge, show the edits** to the person who authorises it, beside the list of what the change makes accepted, where no component that carries out merges shows them. That person reads each edit before the change lands (COR-066 point 5).
+
+Where the person refuses the record, close the change as COR-066 point 1 says. Where nobody can accept it yet, leave it `proposed`, make no edit and build nothing on it, and say that the change cannot land.
 
 ## Variations
 
 - **Refining an existing accepted record** — not this skill's work: this skill authors new records. A refinement that introduces no new decision is an edit in place, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
-- **Superseding an existing record** — this skill authors the superseding record; set `supersedes:` in its frontmatter to the id of a record it replaces whole, such as `supersedes: PRJ-NNN`. A record that overturns another only in part sets none. The edit to the superseded record is a separate step, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
+- **Superseding an existing record** — this skill authors the superseding record; set `supersedes:` in its frontmatter to the id of a record it replaces whole, such as `supersedes: PRJ-NNN`. A record that overturns another only in part sets none. Name the edit to the superseded record in the new record's Implications (step 8), and make it once the new record is accepted (step 11).

@@ -1,0 +1,35 @@
+# The released versions of a library the capability ships (visual-communication
+# DEC-013 point 2), each with its hash. `pkit visual release <library> --shipped` adds
+# each one; nothing changes an entry once it is added.
+
+pkit_schema: visual-communication:libraries
+schema_version: 1
+libraries:
+  foundations:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: true
+        hash:
+          form: 1
+          hash: sha256
+          format: 1
+          value: ab284bba652eda2ee0a0aac0f1f67d5258d36d5aa89d0aae66f38a94a8735ffc
+          inputs:
+            - library: foundations
+              version: 1.0.0
+              path: components/deck.yaml
+              sha256: ca873f7ffebd71d2d91aae6c98feae0838c17bd0696927ba0753b6e00fe48c1e
+            - library: foundations
+              version: 1.0.0
+              path: components/figure.yaml
+              sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+            - library: foundations
+              version: 1.0.0
+              path: library.yaml
+              sha256: 5232f7c279e8a693b956b1f7a35e2d2050ef71d1fd95c5722f7784e7c3e1471a
+            - library: foundations
+              version: 1.0.0
+              path: roles.yaml
+              sha256: 8c5c29cd8d9797a7527fb2979fc830415c14f09bfa9ed47f96bceeb6d609d92a

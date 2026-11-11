@@ -1,0 +1,14 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: cells
+    layout: standard
+    main:
+      use: starter/table
+      rows:
+        - id: kinds
+          cells:
+            - {id: head, head: Nur ein Kopf}
+            - {id: text, text: "Nur ein Text, auf die Breite seiner Zelle umbrochen."}
+            - {id: both, head: Ein Kopf, text: Und ein Text darunter.}

@@ -1,6 +1,6 @@
 ---
 id: VIEW-kinds-and-structures
-title: Kinds and their structures
+title: Artefact kinds and their declared structures
 status: active
 explains:
   - TERM-artefact-kind
@@ -12,6 +12,7 @@ pkit:
   friction:
     anchors:
       record:
+        - software-analysis:DEC-001
         - software-analysis:DEC-001#1
         - software-analysis:DEC-001#2
         - software-analysis:DEC-001#3
@@ -25,20 +26,20 @@ pkit:
         - TERM-candidate
 ---
 
-# VIEW-kinds-and-structures — Kinds and their structures
+# VIEW-kinds-and-structures — Artefact kinds and their declared structures
 
 A part left out of an [artefact](../../core/glossary.md#term-artefact--artefact) reads the same as a part forgotten. A template that writers copy drifts from any other statement of its shape ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). So each [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) declares its parts once, as data, in its [declared structure](../glossary.md#term-declared-structure--declared-structure), and the [stamp](../../core/glossary.md#term-stamp--stamp) writes each part holding its [hint](../glossary.md#term-hint--hint). A [project](../../core/glossary.md#term-project--project) reviews the shipped parts on a [candidate](../glossary.md#term-candidate--candidate) of its own, and adds parts of its own by a [tightening](../glossary.md#term-tightening--tightening).
 
 ```mermaid
 classDiagram
-  accTitle: Kinds and their structures
-  accDescr: Each artefact kind declares one declared structure, which gives each of its parts a hint. A tightening adds to one declared structure and names the project's rule. A candidate is of one artefact kind.
+  accTitle: Artefact kinds and their declared structures
+  accDescr: Each artefact kind declares one declared structure, which gives each of its parts a hint. A tightening adds to one declared structure and names the project's rule. A candidate is of one artefact kind, or is a revalidation record.
   class ArtefactKind["Artefact kind"]
   ArtefactKind : schema
-  ArtefactKind : place and type
+  ArtefactKind : place and artefact type
   class DeclaredStructure["Declared structure"]
   DeclaredStructure : parts in order
-  DeclaredStructure : forms
+  DeclaredStructure : checked forms
   class Hint
   Hint : what goes there
   Hint : example
@@ -49,15 +50,15 @@ classDiagram
   ArtefactKind "1" --> "1" DeclaredStructure : declares
   DeclaredStructure "1" --> "*" Hint : gives each part
   Tightening "*" --> "1" DeclaredStructure : adds to
-  Candidate "*" --> "1" ArtefactKind : is of
+  Candidate "*" --> "0..1" ArtefactKind : is of
 ```
 
 ```mermaid
 flowchart LR
   accTitle: How a candidate moves
-  accDescr: The stamp writes a candidate with a hint in each part. A writer fills the parts and deletes the hints. A person confirms the candidate, which is committed and takes its id, or discards it.
+  accDescr: The stamp writes a candidate with a hint in each part. A writer fills the parts and deletes the hints. A person confirms the candidate or discards it. A confirmed candidate is committed, and one that is an artefact takes its id.
   stamped([The stamp writes the candidate, a hint in each part]) --> filled[Candidate filled]
-  filled -->|a person confirms it| committed[Committed, its id taken]
+  filled -->|a person confirms it| committed[Committed, an artefact taking its id]
   filled -->|a person discards it| discarded[Discarded, no id taken]
 ```
 
@@ -73,7 +74,7 @@ An artefact kind is a category of what an analysis holds, such as its actors, it
 
 - its schema, which checks a member's front matter whatever any [rule](../../core/glossary.md#term-rule--rule)'s status ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
 - its [declared structure](../glossary.md#term-declared-structure--declared-structure) (DEC-001 point 1)
-- its place, and the type the place gives its members ([DEC-001 point 2](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them))
+- its place, and the artefact type the place gives its members ([DEC-001 point 2](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them))
 
 **Relations:**
 
@@ -91,15 +92,15 @@ An artefact kind is a category of what an analysis holds, such as its actors, it
 
 Defined in [TERM-declared-structure](../glossary.md#term-declared-structure--declared-structure).
 
-**Why:** A script checks only a structure it can read, and a template that writers copy drifts from any other statement of it. Declared once as data, the structure gives the check one home, and a template rendered from it cannot disagree with the check ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** A script checks only a structure it can read, and a template that writers copy drifts from any other statement of it. Declared once as data, the structure gives [validation](../../core/glossary.md#term-validation--validation) one home, and a template rendered from it cannot disagree with validation ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A declared structure lists, in order, the parts that each member of one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) carries in its body, or that each [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) carries. Each part has a permanent id, a label and an example, and a [hint](../glossary.md#term-hint--hint) where a writer fills it. A part may take a form a script checks. The [stamp](../../core/glossary.md#term-stamp--stamp) writes each body from it, and the kind's template is the same rendering.
+A declared structure lists, in order, the parts that each member of one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) carries in its body, or that each [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) carries. Each part has a permanent id, a label and an example, and a [hint](../glossary.md#term-hint--hint) where a writer fills it. A part may take a [checked form](../glossary.md#term-checked-form--checked-form). The [stamp](../../core/glossary.md#term-stamp--stamp) writes each body from it, and the kind's template is the same rendering.
 
 **Attributes:**
 
 - its parts in their order, each with its id, its label, its example, and its hint where a writer fills it ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
-- the form of a part or of a front-matter field, such as one sentence for a goal (DEC-001 point 1)
-- the ids of the parts its kind retired, which are never given again (DEC-001 point 1)
+- the checked form of a part or of a front-matter field, such as one sentence for a goal (DEC-001 point 1)
+- the ids of the parts its artefact kind or the revalidation record's kind retired, which are never given again (DEC-001 point 1)
 
 **Relations:**
 
@@ -134,16 +135,16 @@ A hint is a marked comment on one line, `<!-- pkit:hint … -->`, which says wha
 
 **Always true:**
 
-- A hint left in is refused whatever any [rule](../../core/glossary.md#term-rule--rule)'s status, and the check's message repeats it (DEC-001 point 1).
-- A hint binds nothing. What binds is a part's presence, its order and its form (DEC-001 point 1).
+- A hint left in is refused whatever any [rule](../../core/glossary.md#term-rule--rule)'s status, and [validation](../../core/glossary.md#term-validation--validation)'s message repeats it (DEC-001 point 1).
+- A hint binds nothing. What binds is a part's presence, its order and its [checked form](../glossary.md#term-checked-form--checked-form) (DEC-001 point 1).
 
 ## Tightening
 
 Defined in [TERM-tightening](../glossary.md#term-tightening--tightening).
 
-**Why:** The shipped parts come from established practice, not from a [project](../../core/glossary.md#term-project--project)'s own software. What a project's review of them finds goes into its own changes to the structure. Those serve the project alone, so the project decides whether each binds ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** The shipped parts come from established practice, not from a [project](../../core/glossary.md#term-project--project)'s own software. What a project's review of them finds goes into its own edits to the [declared structure](../glossary.md#term-declared-structure--declared-structure). Those serve the project alone, so the project decides whether each binds ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A tightening is a group of a project's own changes to one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind)'s [declared structure](../glossary.md#term-declared-structure--declared-structure), in the [capability](../../core/glossary.md#term-capability--capability)'s `project/structures.yaml`. It adds parts, makes a part required, or closes the kind's list of labels. It names the project's own [rule](../../core/glossary.md#term-rule--rule) that asks for it.
+A tightening is a group of a project's own edits to one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind)'s declared structure, in the [capability](../../core/glossary.md#term-capability--capability)'s `project/structures.yaml`. It adds parts, makes a part required, or closes the kind's list of labels. It names the project's own [rule](../../core/glossary.md#term-rule--rule) that asks for it.
 
 **Attributes:**
 
@@ -158,27 +159,27 @@ A tightening is a group of a project's own changes to one [artefact kind](../glo
 
 **Always true:**
 
-- It never drops, loosens or reorders a shipped part, and adds no form and no kind (DEC-001 point 1).
+- It never drops, loosens or reorders a shipped part, and adds no [checked form](../glossary.md#term-checked-form--checked-form) and no artefact kind (DEC-001 point 1).
 - A new label, hint or example for a shipped part is no tightening, and names no rule (DEC-001 point 1).
 
 ## Candidate
 
 Defined in [TERM-candidate](../glossary.md#term-candidate--candidate).
 
-**Why:** The shipped parts are a starting point a [project](../../core/glossary.md#term-project--project) reviews, never a default it skips, and only its own examples show whether they suit it. On a brownfield project, the code, the documents and the decisions are the ground truth, and a person confirms what is drawn from them ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** The shipped parts are a starting point a [project](../../core/glossary.md#term-project--project) reviews, never a default it skips, and only its own examples show whether they suit it. On a project that has code, documents and decisions already, those are the ground truth, and a person confirms what is drawn from them ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](../../core/glossary.md#term-artefact--artefact) written as a draft, which is not committed until a person accepts it. A project fills one with a real case of its own, to judge its kind's parts. On a brownfield project, candidates are derived from what exists, and a person confirms each.
+A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](../../core/glossary.md#term-artefact--artefact) or a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) written as a draft, which is not committed until a person accepts it. A project fills one with a real case of its own, to judge the parts of its [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) or of the revalidation record's kind. On a project that has code, documents and decisions already, candidates are derived from them, and a person confirms each.
 
 **Attributes:**
 
-- its [artefact kind](../glossary.md#term-artefact-kind--artefact-kind), and what is filled in its parts ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
-- on a brownfield project, what it was drawn from: the code, a document or a decision ([DEC-001 point 9](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding))
+- its artefact kind, or the revalidation record's kind, and what is filled in its parts ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
+- where it is derived from what a project has already, what it was drawn from: the code, a document or a decision ([DEC-001 point 9](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding))
 
 **Relations:**
 
-- It is of one artefact kind (DEC-001 point 1).
+- It is of one artefact kind, or of the revalidation record's kind (DEC-001 point 1).
 
-**States:** A candidate is drafted and filled, then confirmed and committed, or discarded. Once committed, it is an artefact in force, and its id is taken for good (DEC-001 points 1, [3](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers) and 9).
+**States:** A candidate is drafted and filled, then confirmed and committed, or discarded. Once committed, a candidate artefact is in force, and its id is taken for good. A candidate revalidation record stays as it was written (DEC-001 points 1, [3](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers) and 9).
 
 **Always true:**
 
@@ -189,25 +190,30 @@ A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](
 
 Each concept below lists the use cases, journeys and requirements whose text links its term.
 
-**Artefact kind:** None.
+**Artefact kind:**
+
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
+- [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)
 
 **Declared structure:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
-- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
+- [REQ-053 · Functional · Validation holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
 
 **Hint:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
 
 **Tightening:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
 
 **Candidate:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
 - [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)

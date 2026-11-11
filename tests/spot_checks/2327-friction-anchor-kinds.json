@@ -1,0 +1,20 @@
+[
+  {
+    "id": "fd-resolver-answers-a-file-no-state-holds",
+    "file": "src/project_kit/friction_discovery.py",
+    "find": "        if not isinstance(item, str) or item not in files:",
+    "replace": "        if not isinstance(item, str):"
+  },
+  {
+    "id": "fd-resolver-run-again-for-each-anchor",
+    "file": "src/project_kit/friction_discovery.py",
+    "find": "        if key not in self._resolved:",
+    "replace": "        if True:"
+  },
+  {
+    "id": "fc-registered-anchor-asks-about-its-own-file",
+    "file": "src/project_kit/friction_check.py",
+    "find": "            if rel not in own and (entry := diff.by_path.get(rel)) is not None",
+    "replace": "            if (entry := diff.by_path.get(rel)) is not None"
+  }
+]

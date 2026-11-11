@@ -1012,6 +1012,23 @@ def test_the_listing_leaves_out_the_git_directory_and_a_repository_inside(
     assert run.changed(before, run.listing(root)) == ["a.txt", "docs", "docs/cloned"]
 
 
+def test_the_listing_lists_a_link_and_nothing_behind_it(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    (root / "docs").mkdir(parents=True)
+    (tmp_path / "outside").mkdir()
+    (root / "docs" / "link").symlink_to(tmp_path / "outside")
+    before = run.listing(root)
+
+    (tmp_path / "outside" / "new").write_text("behind the link", encoding="utf-8")
+    unchanged = run.changed(before, run.listing(root))
+    (root / "docs" / "link").unlink()
+    (root / "docs" / "link").symlink_to(tmp_path)
+
+    assert sorted(before) == ["docs", "docs/link"]
+    assert unchanged == []
+    assert run.changed(before, run.listing(root)) == ["docs/link"]
+
+
 def test_removing_the_scratch_area_changes_no_mode_outside_it(tmp_path: Path) -> None:
     parent = tmp_path / "parent"
     (parent / "area" / "locked").mkdir(parents=True)

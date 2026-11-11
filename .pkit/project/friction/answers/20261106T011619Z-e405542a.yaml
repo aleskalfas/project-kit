@@ -1,0 +1,59 @@
+answers:
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T01:16:19Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's `validate` section only gains a bullet saying the landing check is no validator. Its configuration section gains the `decisions` key, and its consent rule now names `pkit init --refuse-proposals` among the writers and reads `--yes` as one explicit confirmation flag. This page reads that section only for the `process.journal` keys, which it sets with `pkit config set ... --yes`, and both stand.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T01:16:20Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's `validate` section only gains a bullet saying the landing check is no validator. Its configuration section gains the `decisions` key, and its consent rule now names the install's flag among the writers and the explicit flags. This page sends the reader to that section for the configuration's keys, and says of `pkit config set docs.internal` only that it declares the old folder, which stands.
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T01:16:22Z
+      outcome: unchanged
+      unchanged-because: Install.py only gains the write of that key behind the opt-in flag, so an install without it runs as before, and the CLI reference's `init` section only gains the `--refuse-proposals` flag. Its `validate` section only gains a bullet saying the landing check is no validator. Its configuration section gains the `decisions` key, and its consent rule now names that flag among the writers and the explicit flags. This page reads that section for `rule-sets.plain-file-budget` alone, and the consent it speaks of is a capability's install to its rules, so neither moves.
+  - artefact: docs/capabilities/living-docs/010-set-up-your-spaces.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T01:16:24Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's configuration section gains the `decisions` key, and its consent rule now names the install's flag among the writers and the explicit flags. This guide sends the reader there for `friction.surface` alone, and how that key is declared stands.
+  - artefact: docs/schemas/README.md
+    read:
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T01:16:26Z
+      outcome: unchanged
+      unchanged-because: Project_config.py only gains the new key's name as a constant, the configuration schema only adds the `decisions` block, and the page on backbone files only names the `decisions` key. The CLI reference's `init` section only gains the `--refuse-proposals` flag, and its `validate` section only gains a bullet saying the landing check is no validator. Its configuration section gains the `decisions` key, and its consent rule now names that flag among the writers and the explicit flags. This page says `pkit config set` needs `--yes` off a terminal, which still holds of that command, since the new flag is the install's.

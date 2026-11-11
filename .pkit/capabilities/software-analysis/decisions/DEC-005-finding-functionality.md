@@ -37,6 +37,13 @@ An area is one function of the component, which a reader recognises by what it d
 A path is several of one actor's own use cases, which it takes in turn, end to end, toward one goal that none of them reaches alone. Where the use cases make a path, a journey tells it (DEC-001 point 1).
 - **Its seams.** Each step takes up what an earlier one left, such as a state its postconditions make true, or a file it writes. Each such hand-over is a seam, where the path can break.
 - **Read from content.** A path is there where one actor takes its use cases in turn toward one goal. A precondition that an earlier use case of the same actor makes true is a sign of one, never proof. Use cases the actor never takes in turn toward one goal make no path, however many it has.
+- **Whose use cases, and which signs** (refinement per [software-analysis:DEC-007-path-edges]):
+  - **The actor's own** use cases are those whose goal is its own, whoever does their work.
+  - **Any hand-over** one of them states with another, in a trigger or a step, is a sign as a precondition is.
+  - **A step that names the next use case** hands over to it, where that use case has a trigger of its own. A use case that runs only inside that step is part of the one that names it.
+  - **What a use case reaches alone** is what its own steps make true.
+  - **A standing condition** is a state that later runs rely on without end. It joins a path only where the actor takes the use cases in turn toward one goal.
+  - **A goal a run did not meet** is a sign judged the same way, and a mere remedy makes none.
 - **Told.** A journey of the path's actor tells it where its steps, or the steps one of its variants takes, run through the path's use cases in their order. So a stretch of a longer path, and a shorter path a variant takes, are told by that journey.
 - **Across areas.** A path's steps may lie in several areas. Its journey is one, whichever areas it passes through.
 - **Another actor's use case** on the way is no step of the path. The journey relies on it (DEC-001 point 4). A path across components is told as one journey in each analysis (DEC-001, "What listing them costs").
@@ -121,7 +128,7 @@ This record partially supersedes DEC-001. Each overturned passage stays in DEC-0
 **What the rule costs.**
 - **Readings for a person.** Whether two goals name one function, and whether use cases make a path, are readings the rule does not settle. Many of its findings wait for a person (COR-057), and a gate that holds a merge for such a finding holds changes to the analysis more often.
 - **A goal no reviewer sees change.** A change to an area's goal alters no artefact, so the reviewer does not judge the area's use cases in it (COR-057 point 1). No rule judges a goal's words, so a goal may join several functions. The rule still reads what the area's use cases serve, and the overview shows the goal to every reader.
-- **A path left untold by another change.** Withdrawing a journey, or changing a use case's actor or goal, can leave a path untold in use cases the change does not touch. The change owns that break, and its reviewer reads the actor's use cases and journeys to find it.
+- **A path left untold by another change.** Withdrawing a journey can leave a path untold in use cases the change does not touch. So can changing a use case's actor, goal, trigger or steps (refinement per [software-analysis:DEC-007-path-edges]). The change owns that break, and its reviewer reads the actor's use cases and journeys to find it.
 - **All at once.** An analysis comes under the rule when its set's pin moves to the major that accepts it (COR-051 point 7). Each flat use case and each untold path breaks it then, and each use case moved into an area is revalidated in the same change (COR-050 point 3).
 
 ### Alternatives considered

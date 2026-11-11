@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "piece.schema.json",
+  "title": "A piece — visual-communication capability",
+  "description": "Formal shape of a piece's `piece.yaml` (DEC-001 points 3 and 7, DEC-002 point 5, DEC-003 point 8, DEC-004 point 10): what the piece is, its notations, its state, its modes, what it produces, the losses it accepts, the place of its current copy, and its lock. A person writes it; a render rewrites only its lock, keeping every other byte. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "top",
+    "brand",
+    "languages",
+    "audience",
+    "shown",
+    "explains",
+    "exports",
+    "state"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:piece`.",
+      "const": "visual-communication:piece"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "top": {
+      "description": "The piece's top component, as a use.",
+      "$ref": "defs.schema.json#/$defs/use"
+    },
+    "brand": {
+      "description": "The brand the piece is drawn in, by its library's name.",
+      "$ref": "defs.schema.json#/$defs/library-name"
+    },
+    "notations": {
+      "description": "The notations its content names concepts from, each by its library's name (DEC-004 point 10).",
+      "type": "array",
+      "items": {
+        "$ref": "defs.schema.json#/$defs/library-name"
+      },
+      "uniqueItems": true
+    },
+    "languages": {
+      "description": "The languages of the piece's content, the first its source language; each has its `content.<language>.yaml`.",
+      "type": "array",
+      "items": {
+        "$ref": "defs.schema.json#/$defs/language"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "audience": {
+      "description": "Who the piece is for, in words.",
+      "$ref": "defs.schema.json#/$defs/text"
+    },
+    "shown": {
+      "description": "Where the piece is shown, in words.",
+      "$ref": "defs.schema.json#/$defs/text"
+    },
+    "explains": {
+      "description": "Whether the piece explains, rather than only shows.",
+      "type": "boolean"
+    },
+    "exports": {
+      "description": "The formats a numbered export makes (DEC-006 point 7): `svg`, a file for each page and combination, `svg-modes`, a switching file for each page that holds the modes a reader's signal names and follows the reader as an image (DEC-018 point 1), `pdf`, a file that holds every page, and `html`, a page file that holds every page and the modes a reader's signal names (DEC-023 point 1); may be empty. `svg` and `svg-modes` write files of one name, so a piece names one of them (DEC-018 point 2).",
+      "type": "array",
+      "items": {
+        "enum": [
+          "svg",
+          "svg-modes",
+          "pdf",
+          "html"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "state": {
+      "description": "The piece's stage of life, which says who moves its lock (DEC-003 point 8): a draft, whose lock each render moves; a final piece, whose lock never moves; or a published piece, whose lock moves only through a change a person reviews.",
+      "enum": [
+        "draft",
+        "final",
+        "published"
+      ]
+    },
+    "modes": {
+      "description": "The modes the piece is drawn in, by axis; an axis it names none of is drawn in its default.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      }
+    },
+    "pinned": {
+      "description": "Whether a draft's lock is pinned: it moves only when a person moves it. It is read of a draft alone.",
+      "type": "boolean"
+    },
+    "produced": {
+      "description": "Each picture a producer makes for the piece (DEC-006 points 1 to 4): the producer, the roles it reads, by input, and the pixel size of each variant.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "producer",
+          "inputs",
+          "pixels"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "producer": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "inputs": {
+            "description": "Each input of the producer names a role, by its token path, never a raw value.",
+            "type": "object",
+            "propertyNames": {
+              "$ref": "defs.schema.json#/$defs/name"
+            },
+            "additionalProperties": {
+              "$ref": "defs.schema.json#/$defs/token-path"
+            }
+          },
+          "pixels": {
+            "type": "object",
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "accept-losses": {
+      "$ref": "defs.schema.json#/$defs/accept-losses"
+    },
+    "copy-place": {
+      "description": "The folder a published piece's current copy lies in, in place of the piece's folder (DEC-006 point 7, DEC-017 point 8): a plain path, such as the place the documentation's rules put a page's produced images. An export refuses a place the rules refuse.",
+      "$ref": "defs.schema.json#/$defs/repository-path"
+    },
+    "lock": {
+      "description": "The version of each library the piece uses; a render writes it.",
+      "$ref": "defs.schema.json#/$defs/lock"
+    }
+  }
+}

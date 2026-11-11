@@ -18,7 +18,7 @@ reads:
   paths:
     - .pkit/rules/core.md
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/manifest.md
     - .pkit/permissions/README.md
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-017-capability-pattern.md
@@ -86,7 +86,7 @@ A capability registered under any of these names before it was reserved stays re
 
 Read `.pkit/decisions/core/COR-017-capability-pattern.md`. Every capability ships:
 
-- `package.yaml` — component metadata (`schema_version`, `kind: capability`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
+- `package.yaml` — component metadata (`schema_version`, `kind: capability`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/manifest.md`, "Package metadata (`package.yaml`)").
 - `README.md` — adopter-facing intro: the discipline, the commands, the conventions.
 - Some non-empty subset of `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/`. A capability with no decisions and no skills is suspicious — at minimum, you'd expect one decision establishing the discipline's invariant plus one skill or script operationalising it.
 - `migrations/` — the capability's migrations, one folder for each version they bring an installed project to (`<major>.<minor>.0/`). It stays empty until the capability lands a change that breaks against an installed project's state. That change ships its migration here, stamped with `pkit new migration --tier capability --component <name> --name <slug>` through the `migration-author` skill (COR-010). A version transition runs it when it moves the project to that version (COR-059).
@@ -148,10 +148,11 @@ Cite other capability decisions in the same capability using the form `[<this-ca
 
 ### 6. Author the skills, agents, scripts, and schemas
 
-Skills, agents, scripts, and schemas in a capability follow the same shapes as their area-shipped counterparts (per COR-006). Two notes specific to capabilities:
+Skills, agents, scripts, and schemas in a capability follow the same shapes as their area-shipped counterparts (per COR-006). Three notes specific to capabilities:
 
 - Skills and agents may cite *this capability's* decisions in body prose via the `[<name>:DEC-NNN-slug]` form. The validator (`pkit refs validate`) walks capability subtrees and resolves these citations.
 - Scripts can be Python with PEP 723 inline metadata (so adopters can run them via `uv run` without a host project) or shell. If a script needs Python dependencies, declare them inline so the script is self-installing.
+- If the capability keeps lasting state in the agent workspace — files that must outlast the session that wrote them, such as a queue that waits for a person — keep it under a direct child named after the capability, `.agent-workspace/<name>/`. Every agent working in the checkout shares that folder, and `pkit workspace remove` refuses any path at or under a child named after a registered capability, so an agent clearing its own files never removes the capability's (core rule 16, and `.pkit/cli/README.md`, "Workspace commands").
 
 ### 6b. (Optional) Ship a permission fragment
 

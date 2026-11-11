@@ -187,7 +187,7 @@ None, in the sense of `owns` (COR-013): you write no tracked file. The analysis 
 - [software-analysis:DEC-002-analysis-requirements] — the three kinds of requirement, what a requirement anchors and refines (point 6), and the requirements a use case or journey lists (point 7), through which the cascade reaches them.
 - [software-analysis:DEC-004-domain-model-views] — the domain-model view, what it anchors (point 5), and each term's link to its section (point 7). A view anchors the terms it explains and no code, so a change of code reaches it only through a term. So when you revalidate a term, read the section of the view that explains it too, and judge the view when the term's revalidation changes it.
 - `.pkit/capabilities/software-analysis/README.md` — the four-to-two table, when a record is kept, where the analysis lives, each artefact's fields, and the commands.
-- `.pkit/capabilities/software-analysis/scripts/_lib/resolve.py` — the rules `pkit analysis propose` decides by, and the evidence shapes they name; `_lib/answers.py` — the commands it gives for each.
+- `.pkit/capabilities/software-analysis/scripts/_lib/resolve.py` — the rules `pkit analysis propose` decides by, and the evidence shapes they name; `.pkit/capabilities/software-analysis/scripts/_lib/answers.py` — the commands it gives for each.
 - `.pkit/capabilities/software-analysis/skills/analysis-author/revalidation-record.md` — the record.
 - `.pkit/project/config.yaml` — the backbone configuration: the documentation roots (COR-049) and the friction key's mode, places and declared surface (COR-050 point 14).
 - COR-050 — anchors, friction, the three answers, and the writers that give them.

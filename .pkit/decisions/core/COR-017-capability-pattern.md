@@ -69,6 +69,8 @@ Capability content is not enumerated in the manifest — the directory layout co
 
 **A declared project rule set.** A capability may ship a method rule set: rules of its own, which bind in a project only through a rule set of the project's (COR-051 points 6 and 7). Such a capability may declare one project rule set in its manifest, for its install to create (below). The declaration gives the set's name and scope, and names the capability's own method rule set that the set inherits. The field's layout is the package-metadata reference's.
 
+**The categories its agents write** (refinement per [COR-073](COR-073-capability-grant-defaults.md))**.** A capability's name holds no dot. A capability declares in its manifest each overlay category it introduces for its agents' writes (COR-013 point 5). Each is under the capability's name and a dot, with its one owning agent and an optional query that answers its default.
+
 ### Naming convention for capability artifacts
 
 Filenames inside a capability follow the kit's existing per-type conventions:
@@ -105,6 +107,8 @@ Capabilities have an explicit install / sync / uninstall lifecycle, in contrast 
 - **The project's from then on.** The file is project-owned (COR-001's extension), as any set the project wrote. While the capability stays installed, nothing creates it again. The project may edit or remove it.
 - **Earlier installs.** A migration of the capability may create the set, on the same conditions, for a project that installed the capability before it declared one. Choosing the upgrade's target is the consent (COR-059 point 4).
 - **No seed path.** Install writes the set by the seed operation (COR-004), but the set is no declared seed path. So no transition creates it where it is missing (COR-059 point 8).
+
+**The defaults of its agents' categories** (refinement per [COR-073](COR-073-capability-grant-defaults.md))**.** Before it deploys, install writes into the agents overlay the answer of each default the capability declares, where the category is undefined. Running install is the consent, except over a path that already holds content, where install asks. COR-073 says what every such write keeps.
 
 **Sync** (`pkit sync`) auto-upgrades installed capabilities along with the rest of kit content. When the kit no longer ships a capability the adopter has installed, sync warns but does not auto-uninstall (adopter must explicitly remove). When sync would introduce a new collision (e.g., the upgraded capability now ships a skill that matches one the adopter authored project-side after install), sync refuses to upgrade that specific capability and instructs the adopter to run `pkit capabilities upgrade X --interactive` to resolve.
 

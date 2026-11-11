@@ -1,0 +1,21 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# project-kit's presentation of itself, the showcase of how it uses the capability
+# (PRJ-012). It holds the pages of the Friday talk the capability draws so far.
+top: foundations/deck
+brand: neutral
+notations: [pkit]
+languages: [en, cs]
+audience: Developers who have not used pkit.
+shown: In project-kit's talks, projected, handed out as a PDF, and opened as a web page.
+explains: true
+exports: [pdf, html]
+state: draft
+modes:
+  colour-scheme: [light, dark]
+lock:
+  foundations: 1.0.0
+  neutral: 1.0.0
+  pkit: 1.0.0
+  starter: 1.0.0

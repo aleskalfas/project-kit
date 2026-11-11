@@ -105,12 +105,16 @@ def _backbone(tip: str | None = TIP, problem: str | None = None) -> Any:
     return run
 
 
-def _git(seats: list[dict] | None = SEATS, members: tuple[str, ...] = ("me", "you")) -> Any:
+def _git(
+    seats: list[dict] | None = SEATS,
+    members: tuple[str, ...] = ("me", "you"),
+    extra: dict[str, Any] | None = None,
+) -> Any:
     """A git whose default branch holds a topology of ``seats`` (None: no
-    topology), and ``members``."""
+    topology), with the top-level keys ``extra`` adds, and ``members``."""
     files = {MEMBERS_REL: json.dumps({"members": [{"github_login": m} for m in members]})}
     if seats is not None:
-        files[TOPOLOGY_REL] = json.dumps({"schema_version": 1, "seats": seats})
+        files[TOPOLOGY_REL] = json.dumps({"schema_version": 1, "seats": seats, **(extra or {})})
 
     def run(args: list[str]) -> subprocess.CompletedProcess[str]:
         if args[0] == "ls-tree":
@@ -613,3 +617,212 @@ def test_text_from_a_task_cannot_forge_a_line_of_the_listing(
     assert "\n[ok] forged" not in out and "\x1b" not in out
     assert "  seat worker-1, clone k\\n[ok] forged of @you:" in out
     assert "    #50 x\\n[ok] forged line\\x1b[2J: no open pull request from its branch" in out
+
+
+# ---- what this code cannot read (DEC-061 point 9, ADR-072 point 5) ---------------------
+
+UNREAD = {"lanes": ["x"]}
+
+
+def test_take_seat_refuses_a_topology_it_cannot_read_in_full(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    assert _take(root, repo, "worker-1", git=_git(extra=UNREAD)) == 2
+    assert repo.writes() == []
+    err = capsys.readouterr().err
+    assert "[refused] take-seat: this code cannot read the topology" in err
+    assert "keys no topology has: lanes" in err
+
+
+def test_a_release_by_force_refuses_where_its_own_release_goes_on(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo(worker_1=("you", "k7"), worker_2=("me", _key(root)))
+    assert _force(root, repo, "worker-1", yes=True, git=_git(extra=UNREAD)) == 2
+    assert repo.writes() == []
+    assert "[refused] release-seat: this code cannot read the topology" in capsys.readouterr().err
+    assert _release(root, repo, "worker-2", git=_git(extra=UNREAD)) == 0
+    assert _holder(repo, 13, "worker-2") is None
+
+
+def test_the_listing_warns_of_what_it_cannot_read_and_lists_the_rest(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert _list(root, _repo(), git=_git(extra=UNREAD)) == 0
+    captured = capsys.readouterr()
+    assert "  2. worker-1 (worker, agent project-manager), #12: free" in captured.out
+    assert "this code cannot read the topology in full" in captured.err
+
+
+# ---- pools of workers (DEC-061 point 10) ---------------------------------------------
+
+POOLED = [
+    SEATS[0],
+    {**SEATS[1], "pools": ["alpha"]},
+    {**SEATS[2], "pools": ["alpha"]},
+    SEATS[3],
+    SEATS[4],
+]
+POOLS = {"pools": ["alpha", "bravo"]}
+MILESTONES = [
+    {"number": 3, "title": "Sprint 3: auth", "description": "Close trigger: either\nPool: alpha"},
+    {"number": 6, "title": "Sprint 6: odd", "description": "Pool: charlie"},
+]
+
+
+@pytest.fixture
+def schemas(root: Path) -> Path:
+    """The capability's schemas, which the listing reads a Task's type through."""
+    import shutil
+
+    shutil.copytree(CAPABILITY / "schemas", root / "schemas")
+    return root
+
+
+def _stranded(err: str) -> None:
+    assert "the pool bravo is served by no seat" in err
+    assert "the pool bravo has no open milestone" in err
+    assert "the seat tester, a worker, names no pool" in err
+    assert "milestone #6 names the pool 'charlie'" in err
+
+
+def test_take_seat_shows_each_pools_open_milestones_and_warns_of_stranded_work(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    repo.milestones = MILESTONES
+    assert _take(root, repo, "worker-1", git=_git(POOLED, extra=POOLS)) == 0
+    captured = capsys.readouterr()
+    assert "  alpha: #3 Sprint 3: auth" in captured.out
+    assert "  bravo: no open milestone" in captured.out
+    _stranded(captured.err)
+
+
+def test_take_seat_takes_the_seat_where_the_milestones_cannot_be_read(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    repo.failing.add("milestones")
+    assert _take(root, repo, "worker-1", git=_git(POOLED, extra=POOLS)) == 0
+    assert _holder(repo, 12, "worker-1") is not None
+    assert "the open milestones could not be read" in capsys.readouterr().err
+
+
+def test_the_listing_shows_the_pools_and_counts_the_tasks_they_hold_back(
+    schemas: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo(tester=("you", "k4"))
+    repo.milestones = MILESTONES
+    repo.add(40, "## What\n\nx\n", title="[Task] in no pool", labels=("state:backlog",))
+    _task(repo, 41, "[Task] owned outside", state="backlog", claims=(("tester", "k4"),))
+    repo.issues[41].milestone = 3
+    repo.add(42, "## What\n\nx\n", title="[Task] in alpha", labels=("state:backlog",), milestone=3)
+    assert _list(schemas, repo, git=_git(POOLED, extra=POOLS)) == 0
+    captured = capsys.readouterr()
+    assert "  2. worker-1 (worker, agent project-manager, pools: alpha), #12: free" in captured.out
+    assert "  alpha: #3 Sprint 3: auth" in captured.out
+    _stranded(captured.err)
+    assert "warn: 1 Task(s) in Backlog are in no pool" in captured.err
+    assert "warn: the seat tester owns 1 Task(s) in Backlog outside the pools it serves" in (
+        captured.err
+    )
+    logs_read = {argv[2].split("/")[4] for argv in repo.calls if "/comments?per_page=" in argv[2]}
+    assert logs_read & {"40", "41", "42"} == {"41"}
+
+
+def test_the_listing_exits_3_where_the_milestones_cannot_be_read(
+    schemas: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    repo.failing.add("milestones")
+    assert _list(schemas, repo, git=_git(POOLED, extra=POOLS)) == 3
+    captured = capsys.readouterr()
+    assert "  2. worker-1 (worker, agent project-manager, pools: alpha), #12: free" in captured.out
+    assert "the open milestones could not be read" in captured.err
+    assert "the pool bravo is served by no seat" in captured.err
+
+
+def test_without_pools_the_listing_reads_no_milestone(root: Path) -> None:
+    repo = _repo()
+    assert _list(root, repo) == 0
+    assert not any("milestones" in " ".join(argv) for argv in repo.calls)
+
+
+# ---- where the board carries the state (DEC-051 point 6, DEC-062 point 5) -------
+
+
+def _state_on_board(root: Path, monkeypatch: pytest.MonkeyPatch, statuses) -> list[list[str]]:
+    """Bind the state to the board in the project's map, and stand in for the one
+    listing read of the listed issues' cards: `statuses` maps an issue to its
+    card's Status, None standing for a board that cannot be read. Returns the
+    node ids each read was asked for."""
+    from ruamel.yaml import YAML
+
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  type:\n    kit-label: true\n  state:\n    board: true\n",
+        encoding="utf-8",
+    )
+    workflow = YAML(typ="safe").load(
+        (SCRIPTS.parent / "schemas" / "workflow.yaml").read_text(encoding="utf-8")
+    )
+    reads: list[list[str]] = []
+
+    def read(_config, _workflow, issue_node_ids, **_kw):
+        asked = list(issue_node_ids)
+        reads.append(asked)
+        if statuses is None:
+            return None, "missing required scopes [read:project]"
+        options = {f"I_{number}": status for number, status in statuses.items()}
+        options = {node_id: options[node_id] for node_id in asked if node_id in options}
+        listed = LIST.board_status.ListedStatuses("board #4", workflow, options, frozenset(asked))
+        return listed, ""
+
+    monkeypatch.setattr(LIST.board_status, "read_listed", read)
+    return reads
+
+
+def test_a_task_in_review_is_read_from_its_cards_status(
+    root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The labels are not read: the card of #50 says Review, so it is a Task in
+    Review a released seat left, and #51's card says Backlog, so it is not. #52
+    has no card, and is said to be in no state the listing reads."""
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", state="backlog", claims=(("worker-1", "k7"),))
+    _task(repo, 51, "Not yet", state="review", claims=(("worker-1", "k7"),))
+    _task(repo, 52, "No card", state="review", claims=(("worker-1", "k7"),))
+    repo.prs = {60: "feat/50-add-the-dispatcher"}
+    assert _force(root, repo, "worker-1", yes=True) == 0
+    reads = _state_on_board(root, monkeypatch, {50: "Review", 51: "Backlog"})
+    capsys.readouterr()
+
+    assert _list(root, repo) == 0
+
+    captured = capsys.readouterr()
+    left = captured.out[captured.out.index(LEFT_HEADING) :].splitlines()
+    assert left == [
+        LEFT_HEADING,
+        "  seat worker-1, clone k7 of @you:",
+        "    #50 Add the dispatcher: pull request #60",
+    ]
+    assert "warn: #52 is in no state this listing reads: #52 has no card on board #4" in (
+        captured.err
+    )
+    assert len(reads) == 1 and {"I_50", "I_51", "I_52"} <= set(reads[0])
+
+
+def test_a_board_that_cannot_be_read_names_no_task_by_its_state(
+    root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", claims=(("worker-1", "k7"),))
+    assert _force(root, repo, "worker-1", yes=True) == 0
+    _state_on_board(root, monkeypatch, None)
+    capsys.readouterr()
+
+    assert _list(root, repo) == 3
+
+    captured = capsys.readouterr()
+    assert LEFT_HEADING not in captured.out
+    assert "the board's Status could not be read (missing required scopes" in captured.err

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "ld-new-refusal-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/stamp.py",
+    "find": "would bring validation errors the project did not have",
+    "replace": "would bring new validation errors"
+  },
+  {
+    "id": "ld-new-link-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/stamp.py",
+    "find": "{location} is reached through the link",
+    "replace": "{location} is reached by the link"
+  },
+  {
+    "id": "ld-new-dry-run-file-unnamed",
+    "file": ".pkit/capabilities/living-docs/scripts/new.py",
+    "find": "print(f\"would write {file.path}:\")",
+    "replace": "print(f\"would write {file.path}\")"
+  },
+  {
+    "id": "ld-new-rerun-misnamed",
+    "file": ".pkit/capabilities/living-docs/scripts/new.py",
+    "find": "[\"pkit\", \"living-docs\", \"new\", *map(shlex.quote, sys.argv[1:])]",
+    "replace": "[\"pkit\", \"new\", *map(shlex.quote, sys.argv[1:])]"
+  },
+  {
+    "id": "ld-new-terminal-answer-ignored",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/stamp.py",
+    "find": "    if proc.returncode != 0:\n        raise Refused(\n            f\"the internal root was not set apart",
+    "replace": "    if proc.returncode > 1:\n        raise Refused(\n            f\"the internal root was not set apart"
+  },
+  {
+    "id": "ld-source-name-limit-off-by-one",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/source_layout.py",
+    "find": "return len(value) <= NAME_LIMIT and",
+    "replace": "return len(value) <= NAME_LIMIT + 1 and"
+  },
+  {
+    "id": "ld-source-link-captures",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/source_layout.py",
+    "find": "if found is None or not found.is_file(follow_symlinks=False):",
+    "replace": "if found is None or not found.is_file():"
+  },
+  {
+    "id": "ld-source-unlisted-folder-answers",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/source_layout.py",
+    "find": "    except (FileNotFoundError, NotADirectoryError):\n        return []\n    except OSError as exc:\n        raise _unreadable(root, exc) from exc\n\n\ndef entries(",
+    "replace": "    except OSError:\n        return []\n\n\ndef entries("
+  },
+  {
+    "id": "ld-resolver-human-view-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/resolve-source.py",
+    "find": "no source named {args.value!r}",
+    "replace": "no source called {args.value!r}"
+  },
+  {
+    "id": "ld-idle-mark-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/mentions.py",
+    "find": "_FOLLOWS_NOTHING = \"it follows no mention on its line\"",
+    "replace": "_FOLLOWS_NOTHING = \"it follows no mention\""
+  },
+  {
+    "id": "ld-marked-passages-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "passage(s) marked unanchored on purpose{beyond}.",
+    "replace": "passage(s) marked on purpose{beyond}."
+  },
+  {
+    "id": "ld-filler-reads-one-at-a-time",
+    "file": ".pkit/capabilities/living-docs/scripts/fill-doc-check.py",
+    "find": "ThreadPoolExecutor(max_workers=3)",
+    "replace": "ThreadPoolExecutor(max_workers=1)"
+  },
+  {
+    "id": "ld-filler-reads-the-check-before-head",
+    "file": ".pkit/capabilities/living-docs/scripts/fill-doc-check.py",
+    "find": "        if not head.result():\n            return None\n        report = friction.result()\n",
+    "replace": "        report = friction.result()\n        if not head.result():\n            return None\n"
+  },
+  {
+    "id": "ld-readers-exit-code-unsaid",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/readers.py",
+    "find": "exited {proc.returncode} without its document",
+    "replace": "exited without its document"
+  },
+  {
+    "id": "ld-unresolved-reader-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "which does not resolve: the readers point ",
+    "replace": "which is unknown: the readers point "
+  },
+  {
+    "id": "pm-fixer-owns-said-otherwise",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/fixers.py",
+    "find": "claims paths ({', '.join(definition.owns)})",
+    "replace": "claims ({', '.join(definition.owns)})"
+  }
+]

@@ -5,6 +5,7 @@ status: active
 statement: No change the `security-reviewer` approves puts a secret, such as a token, a password or an API key, on another process's command line.
 measure: "Each change the `security-reviewer` approved passes no secret to a process on its command line. That holds for an argument list, a shell command's string and a flag's value."
 applies-to: "Every change whose code starts another process, in a project that runs the `security-reviewer` of the code-review panel."
+obligation: v1:sha256:ef77d551a82302b39067d3188b4ffba91398b18fb7902cf6145f3a1bc5ca7231
 actors: []
 refines: []
 pkit:
@@ -14,6 +15,7 @@ pkit:
         - .pkit/capabilities/software-engineering/agents/security-reviewer.md
         - .pkit/capabilities/software-engineering/review-contributions.yaml
       record:
+        - software-engineering:DEC-002
         - software-engineering:DEC-002#1
         - software-engineering:DEC-002#3
         - project-management:DEC-032#D1

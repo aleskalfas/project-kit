@@ -44,6 +44,7 @@ class _RecordingRun:
     def __init__(self, real_run) -> None:
         self._real_run = real_run
         self.calls: list[list[str]] = []
+        self.environments: list[dict[str, str] | None] = []
         self.ls_remote_stdout = ""
         self.ls_remote_returncode = 1  # default: lookup fails → degrade path
         self.raise_exc: Exception | None = None
@@ -54,6 +55,7 @@ class _RecordingRun:
 
     def __call__(self, argv, *args, **kwargs):
         self.calls.append(list(argv))
+        self.environments.append(kwargs.get("env"))
         if list(argv[:3]) == ["uv", "tool", "dir"]:
             if self.tool_dir_exc is not None:
                 raise self.tool_dir_exc
@@ -77,6 +79,15 @@ class _RecordingRun:
     @property
     def install_calls(self) -> list[list[str]]:
         return [c for c in self.calls if c[:3] == ["uv", "tool", "install"]]
+
+    def environments_of(self, prefix: list[str]) -> list[dict[str, str] | None]:
+        """The environment each call starting with *prefix* was given, None for
+        one that was given none and so inherits this process's."""
+        return [
+            env
+            for call, env in zip(self.calls, self.environments, strict=True)
+            if call[: len(prefix)] == prefix
+        ]
 
 
 @pytest.fixture(autouse=True)
@@ -199,6 +210,8 @@ def test_compat_refuses_when_source_component_incompatible(
     target backbone — still refuses, before any state change."""
     src = _fake_source(tmp_path, version="2.0.0", adapter_requires=">=0.1.0,<1.5.0")
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
+    # A project behind the source, whatever version the repository carries (#2377).
+    _record_finished_at(installed_target, "1.0.0")
     with pytest.raises(click.ClickException, match="compatibility check failed"):
         upgrade.run_upgrade(installed_target)
 
@@ -212,6 +225,8 @@ def test_compat_falls_back_to_installed_when_source_lacks_component(
         tmp_path, version="2.0.0", adapter_requires=None
     )  # source dropped the adapter
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
+    # A project behind the source, whatever version the repository carries (#2377).
+    _record_finished_at(installed_target, "1.0.0")
     pkg = installed_target / ".pkit" / "adapters" / "claude-code" / "package.yaml"
     pkg.write_text(
         _adapter_pkg("0.1.0", ">=0.1.0,<1.5.0"), encoding="utf-8"
@@ -248,6 +263,8 @@ def test_compat_reads_the_range_as_the_resolver_does(
     )
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: src)
     monkeypatch.setattr(upgrade, "propagate", lambda *args, **kwargs: None)
+    # A project behind the source, whatever version the repository carries (#2377).
+    _record_finished_at(installed_target, "1.0.0")
     if refused:
         with pytest.raises(click.ClickException, match=r"requires backbone >=0\.1\.0,<1\.5\.0"):
             upgrade.run_upgrade(installed_target, dry_run=True)
@@ -885,7 +902,7 @@ def _real_source_copy(tmp_path: Path) -> Path:
     """
     real_source = install.find_source_kit()
     dest = tmp_path / "source-copy" / ".pkit"
-    shutil.copytree(real_source, dest)
+    shutil.copytree(real_source, dest, ignore=shutil.ignore_patterns("__pycache__"))
     return dest
 
 
@@ -1460,6 +1477,47 @@ def test_tool_staleness_instructs_when_behind(
     assert "Already at backbone v" in out
 
 
+def test_the_release_lookup_asks_the_https_url_with_the_terminal_prompt_off(
+    stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The lookup asks the compiled URL in git's spelling, the repository's public
+    HTTPS URL, and runs with git's terminal prompt off, so a server that asks
+    for a credential fails it at once (ADR-090 points 1 and 2)."""
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output("2.5.0")
+
+    assert upgrade._latest_released_version() == Version("2.5.0")
+
+    assert stub_ls_remote.ls_remote_calls == [
+        ["git", "ls-remote", "--tags", "https://github.com/aleskalfas/project-kit.git"]
+    ]
+    [env] = stub_ls_remote.environments_of(["git", "ls-remote"])
+    assert env is not None and env["GIT_TERMINAL_PROMPT"] == "0"
+
+
+def test_the_tool_install_runs_with_the_terminal_prompt_off(
+    stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The upgrade's install of the tool fetches from the HTTPS URL with git's
+    terminal prompt off (ADR-090 point 2)."""
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
+
+    assert upgrade._self_update_tool(Version("2.5.0"))
+
+    assert stub_ls_remote.install_calls == [
+        [
+            "uv",
+            "tool",
+            "install",
+            "--force",
+            "git+https://github.com/aleskalfas/project-kit.git@v2.5.0",
+        ]
+    ]
+    [env] = stub_ls_remote.environments_of(["uv", "tool", "install"])
+    assert env is not None and env["GIT_TERMINAL_PROMPT"] == "0"
+
+
 def test_tool_staleness_reports_current_when_up_to_date(
     installed_target: Path,
     stub_ls_remote: _RecordingRun,
@@ -1996,7 +2054,8 @@ def test_upgrade_under_the_routers_fallback_refuses_before_it_writes(
     ) in message
     assert "Reconnect and run `pkit upgrade` again" in message
     assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{pin} project-kit upgrade`" in message
-    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{pin}`" in message
+    assert "uv tool install" not in message
+    assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
     assert stub_ls_remote.ls_remote_calls == []
     assert _tree_bytes(installed_target) == before
@@ -2324,7 +2383,9 @@ def test_upgrade_across_a_backbone_migration_directory_runs_it_and_records_the_v
         package_yaml.write_text(admitted, encoding="utf-8")
     monkeypatch.setattr(upgrade, "find_source_kit", lambda: source)
     monkeypatch.setattr(install, "find_source_kit", lambda: source)
-    _record_content_version(installed_target, "1.149.0")
+    # Both states at 1.149.0, so the project is behind this pkit whatever version
+    # the repository carries (#2377).
+    _record_finished_at(installed_target, "1.149.0")
     # A journal the project kept, so `keep-process-journal-logging` keeps logging on.
     process_dir = installed_target / ".pkit" / "capabilities" / "kept" / "project" / "process"
     process_dir.mkdir(parents=True)
@@ -3072,6 +3133,20 @@ def _bump_bundled_adapter(source_kit: Path, version: str) -> Path:
     return adapter
 
 
+def _adapter_move(project: Path) -> tuple[str, str]:
+    """The claude-code adapter's version *project* records, and the next minor above it.
+
+    A release moves the version the bundle carries, so a test that stages an adapter
+    migration bumps from the version the project records, not from a number the
+    repository holds today (#2377).
+    """
+    record = project / ".pkit" / "adapters" / "claude-code" / "project" / "manifest.yaml"
+    recorded = manifest.read_component_manifest(record)
+    assert recorded is not None
+    current = Version(recorded.version)
+    return recorded.version, f"{current.major}.{current.minor + 1}.0"
+
+
 def _stage_script(component: Path, version: str, body: str, name: str = "001-trace.sh") -> Path:
     """A migration script under *component*'s `migrations/<version>/`."""
     script = component / "migrations" / version / name
@@ -3103,7 +3178,8 @@ def test_an_upgrade_runs_every_step_in_cor_010s_order(
     _use_source(monkeypatch, source)
     trace = tmp_path / "trace.txt"
     _stage_backbone_migration(source, "0.2.0", "001-trace.sh", _tracing(trace, "backbone"))
-    _stage_script(_bump_bundled_adapter(source, "0.7.0"), "0.7.0", _tracing(trace, "adapter"))
+    _, bumped = _adapter_move(installed_target)
+    _stage_script(_bump_bundled_adapter(source, bumped), bumped, _tracing(trace, "adapter"))
     _stage_script(_stage_trial(source, "0.2.0"), "0.2.0", _tracing(trace, "capability"))
     _record_finished_at(installed_target, "0.1.0")
 
@@ -3158,26 +3234,28 @@ def test_an_adapter_migration_in_the_window_runs_from_the_bundle(
     source = _real_source_copy(tmp_path)
     _use_source(monkeypatch, source)
     trace = tmp_path / "trace.txt"
-    adapter = _bump_bundled_adapter(source, "0.7.0")
-    _stage_script(adapter, "0.7.0", _tracing(trace, "0.7.0"))
+    shipped = manifest.read_component_manifest(source / "adapters" / "claude-code" / "package.yaml")
+    at, bumped = _adapter_move(installed_target)
+    # The project records the version the bundle ships, before the bundle moves.
+    assert shipped is not None and at == shipped.version
+    adapter = _bump_bundled_adapter(source, bumped)
+    _stage_script(adapter, bumped, _tracing(trace, bumped))
     project_adapter = installed_target / ".pkit" / "adapters" / "claude-code"
     record = project_adapter / "project" / "manifest.yaml"
-    recorded = manifest.read_component_manifest(record)
-    assert recorded is not None and recorded.version == "0.6.0"
 
     upgrade.run_upgrade(installed_target, dry_run=True)
 
     out = capsys.readouterr().out
-    assert "adapter 'claude-code': 0.6.0 -> 0.7.0" in out
-    assert "would run 1 migration(s) for adapter 'claude-code' (0.6.0 -> v0.7.0)" in out
+    assert f"adapter 'claude-code': {at} -> {bumped}" in out
+    assert f"would run 1 migration(s) for adapter 'claude-code' ({at} -> v{bumped})" in out
     assert not trace.exists()
 
     upgrade.run_upgrade(installed_target, pin=False)
 
     assert "running 1 migration(s) for adapter 'claude-code'" in capsys.readouterr().out
-    assert _lines(trace) == ["0.7.0"]
+    assert _lines(trace) == [bumped]
     recorded = manifest.read_component_manifest(record)
-    assert recorded is not None and recorded.version == "0.7.0"
+    assert recorded is not None and recorded.version == bumped
     assert not (project_adapter / "migrations").exists()
 
 
@@ -3397,7 +3475,8 @@ def test_the_dry_run_lists_each_components_migrations_and_each_collision(
     cap = _a_new_collision(installed_target, tmp_path, monkeypatch)
     source = cap.parent.parent
     _stage_script(cap, "0.2.0", "#!/usr/bin/env bash\nexit 0\n")
-    _stage_script(_bump_bundled_adapter(source, "0.7.0"), "0.7.0", "#!/usr/bin/env bash\n")
+    at, bumped = _adapter_move(installed_target)
+    _stage_script(_bump_bundled_adapter(source, bumped), bumped, "#!/usr/bin/env bash\n")
     _stage_backbone_migration(source, "0.2.0", "001-old.sh", "#!/usr/bin/env bash\n")
     _record_finished_at(installed_target, "0.1.0")
     monkeypatch.setattr(upgrade, "at_a_terminal", lambda: False)
@@ -3406,12 +3485,12 @@ def test_the_dry_run_lists_each_components_migrations_and_each_collision(
     upgrade.run_upgrade(installed_target, dry_run=True)
 
     out = " ".join(capsys.readouterr().out.split())
-    assert "Components adapter 'claude-code': 0.6.0 -> 0.7.0" in out
+    assert f"Components adapter 'claude-code': {at} -> {bumped}" in out
     assert "capability 'trial': 0.1.0 -> 0.2.0" in out
     assert "capability 'trial': skill 'clash' collides with .pkit/skills/project/clash.md" in out
     assert "The upgrade asks about each one where a person can answer" in out
     assert "migration(s) for backbone" in out and "0.2.0/001-old.sh" in out
-    assert "would run 1 migration(s) for adapter 'claude-code' (0.6.0 -> v0.7.0)" in out
+    assert f"would run 1 migration(s) for adapter 'claude-code' ({at} -> v{bumped})" in out
     assert "would run 1 migration(s) for capability 'trial' (0.1.0 -> v0.2.0)" in out
     assert _tree_bytes(installed_target) == before
 

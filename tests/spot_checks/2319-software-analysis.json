@@ -1,0 +1,56 @@
+[
+  {
+    "id": "sa-validator-takes-a-base",
+    "file": ".pkit/capabilities/software-analysis/scripts/validate.py",
+    "find": "    args = parser.parse_args()\n",
+    "replace": "    args, _ = parser.parse_known_args()\n"
+  },
+  {
+    "id": "sa-missing-anchors-read-as-none",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/model.py",
+    "find": "        if ANCHORS not in entry:\n",
+    "replace": "        if ANCHORS not in entry and False:\n"
+  },
+  {
+    "id": "sa-missing-unplaced-read-as-none-found",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/model.py",
+    "find": "    if not isinstance(unplaced, Mapping):\n        return None\n    own = unplaced.get(CAPABILITY)\n",
+    "replace": "    if not isinstance(unplaced, Mapping):\n        return ()\n    own = unplaced.get(CAPABILITY)\n"
+  },
+  {
+    "id": "sa-withdrawn-in-force",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/model.py",
+    "find": "        if in_force and found.withdrawn:\n            return f\"{NOUN[kind]}",
+    "replace": "        if in_force and found.withdrawn and False:\n            return f\"{NOUN[kind]}"
+  },
+  {
+    "id": "sa-stamp-own-actor-accepted",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/stamp.py",
+    "find": "            if other == request.actor:\n",
+    "replace": "            if other == request.actor and False:\n"
+  },
+  {
+    "id": "sa-stamp-relied-step-accepted",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/stamp.py",
+    "find": "            if outside in request.steps:\n",
+    "replace": "            if outside in request.steps and False:\n"
+  },
+  {
+    "id": "sa-stamp-refusal-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/new.py",
+    "find": "        print(f\"refused: {exc}\", file=sys.stderr)\n        return 1\n",
+    "replace": "        print(f\"refused: {exc}\", file=sys.stderr)\n        return 0\n"
+  },
+  {
+    "id": "sa-link-writes-nothing",
+    "file": ".pkit/capabilities/software-analysis/scripts/link.py",
+    "find": "        if linked.linked == linked.text:\n            continue\n",
+    "replace": "        if True:\n            continue\n"
+  },
+  {
+    "id": "sa-overview-writes-nothing",
+    "file": ".pkit/capabilities/software-analysis/scripts/overview.py",
+    "find": "        if not any(a.folder == folder for a in analysis.artefacts):\n",
+    "replace": "        if True:\n"
+  }
+]

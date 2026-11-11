@@ -59,11 +59,13 @@ def test_shipped_config_schema_is_draft_2020_12_without_a_version_key() -> None:
     assert schema["additionalProperties"] is False
     assert set(schema["properties"]) == {
         "name",
+        "decisions",
         "docs",
         "friction",
         "connections",
         "process",
         "repository",
+        "rule-sets",
         "project",
     }
 
@@ -123,6 +125,8 @@ def test_valid_file_with_every_key_is_clean(make_adopter_repo: MakeAdopterRepo) 
         repo,
         """
 name: example
+decisions:
+  refuse-proposals: true
 docs:
   user: docs/
   internal: docs
@@ -154,6 +158,24 @@ def test_name_only_file_is_clean(make_adopter_repo: MakeAdopterRepo) -> None:
 
 
 # --- shape -------------------------------------------------------------------
+
+
+def test_refuse_proposals_takes_only_a_boolean(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "decisions:\n  refuse-proposals: sometimes\n")
+
+    report = _run(repo)
+
+    assert _paths(report, cv.Severity.ERROR) == ["/decisions/refuse-proposals"]
+
+
+def test_a_misspelt_refuse_proposals_fails_validation(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "decisions:\n  refuse-proposal: true\n")
+
+    report = _run(repo)
+
+    assert any("refuse-proposals" in message for message in _messages(report, cv.Severity.ERROR))
 
 
 def test_unknown_top_level_key_names_the_nearest_known_key(

@@ -25,6 +25,9 @@ built: no seat is freed for its clone's silence.
 - **What a release frees.** A claim on an issue counts only while the clone that
   made it holds the claim's seat (DEC-059 point 9). So a release frees every
   claim of the seat's clone, with no write to those issues.
+- **Code that cannot read the topology in full** releases no seat by force,
+  and exits 2 saying what it did not understand. A clone's release of its own
+  seat goes on, since it takes nothing (DEC-061 point 9).
 
 Who may write on a seat's state issue comes from the members the default branch
 holds (ADR-071 point 3). The membership gate (DEC-021), the bootstrap gate and
@@ -39,7 +42,8 @@ Exit codes:
   1  refused: membership, no topology, the default branch, a seat this clone does
      not hold, or a release by force with no reason or no authorisation
   2  usage error: the capability is not found or not bootstrapped, or --force
-     names no seat
+     names no seat / a release by force from code that cannot read the
+     topology in full
   3  GitHub failed
 """
 
@@ -266,6 +270,12 @@ def release_by_force(
     snap, code = _snapshot(capability_root, login, gh, run, git, versions)
     if snap is None:
         return code if code is not None else 0
+    # A release by force uses the authority the topology grants, so code that
+    # cannot read the topology in full releases nothing (DEC-061 point 9).
+    refusal = topology.not_understood_refusal(snap.topology)
+    if refusal is not None:
+        print(f"[refused] {VERB}: {refusal} Nothing was released.", file=sys.stderr)
+        return 2
     target = snap.topology.seat(name)
     if target is None:
         return _refuse(f"the topology holds no seat named {name}.")

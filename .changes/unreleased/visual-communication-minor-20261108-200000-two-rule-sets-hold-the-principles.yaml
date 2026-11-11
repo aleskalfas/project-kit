@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Two rule sets hold the principles of visual communication (#2884), with the
+  record that gives each rule its sources and its reason (DEC-028): `COMM`, on
+  whether a piece says the right thing, and `GRAPHIC`, on whether it looks
+  right. They ship as method rule sets, with no scope, so a project's own set
+  may inherit them, as in `inherits: [visual-communication:COMM@1]`. They bind
+  on no piece yet, since a piece's content is not yet something rules bind on.
+  No command, file format or check changes. A rule set's name is unique in a
+  project, so a project whose own set is named `COMM` or `GRAPHIC` renames it
+  before it takes this release.

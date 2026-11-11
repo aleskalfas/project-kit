@@ -50,10 +50,10 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a claim comes to be grounded
-  accDescr: The words of the source of an outside fact are fetched into an evidence record of a scope, which no citation names yet. A claim is written with a citation of that record. A check of the scope reads each citation. A citation that names a record of its scope is resolved, and one that names none fails the check.
+  accDescr: The words of the source of an outside fact are fetched into an evidence record of an evidence scope, which no citation names yet. A claim is written with a citation of that record. A check of the scope reads each citation. A citation that names a record of its scope is resolved, and one that names none fails the check.
   F[Outside fact] -->|its source's words fetched| R[Evidence record, named by no citation yet]
   R -->|a claim is written with| C[Citation]
-  C -->|a check of the scope reads it| K{Its scope holds the record it names?}
+  C -->|a check of the evidence scope reads it| K{Its evidence scope holds the record it names?}
   K -->|yes| OK[Citation resolved]
   K -->|no| X[The check fails]
 ```
@@ -89,10 +89,10 @@ An evidence record is one entry of an `evidence.yaml`. It keeps the words of a s
 
 - its `id`, the slug by which a [citation](../glossary.md#term-citation--citation) names it (DEC-001, [DEC-002](../../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md))
 - its `source_url`, where the source lies, a URL or another pointer such as a path (DEC-002)
-- its `fetched_at`, the date or the time its excerpt was fetched, never when the fact was true (DEC-002)
+- its `fetched_at`, the date or the time its excerpt was fetched, never when the outside fact was true (DEC-002)
 - its `excerpt`, the source's words, verbatim, often over several lines (DEC-002)
 - where it helps, a `title` (DEC-002)
-- where it helps, a `note` on what the fact is about (DEC-002)
+- where it helps, a `note` on what the outside fact is about (DEC-002)
 - where it helps, a `snapshot`, where a durable copy of the source lies (DEC-002)
 
 **Relations:**
@@ -113,7 +113,7 @@ An evidence record is one entry of an `evidence.yaml`. It keeps the words of a s
 
 Defined in [TERM-evidence-scope](../glossary.md#term-evidence-scope--evidence-scope).
 
-**Why:** Facts about one part of a [project](../../core/glossary.md#term-project--project) should not crowd the names of another part's facts. A file in each directory keeps each part's [evidence records](../glossary.md#term-evidence-record--evidence-record) apart, and its place shows which part a fact belongs to ([DEC-002](../../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md)).
+**Why:** [Outside facts](../glossary.md#term-outside-fact--outside-fact) about one part of a [project](../../core/glossary.md#term-project--project) should not crowd the names of another part's facts. A file in each directory keeps each part's [evidence records](../glossary.md#term-evidence-record--evidence-record) apart, and its place shows which part a fact belongs to ([DEC-002](../../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md)).
 
 An evidence scope is a directory that holds an `evidence.yaml`, with everything below it. The file's place declares the scope, and no registry lists the scopes. A directory below it with an `evidence.yaml` of its own starts an evidence scope of its own, which shadows the outer one there (DEC-002).
 
@@ -135,24 +135,24 @@ An evidence scope is a directory that holds an `evidence.yaml`, with everything 
 
 Defined in [TERM-citation](../glossary.md#term-citation--citation).
 
-**Why:** A claim about an [outside fact](../glossary.md#term-outside-fact--outside-fact) must point at the words that bear it out. Otherwise the text gives no sign of where to check it. A short token right after the claim costs almost nothing to write, low enough that citing happens ([DEC-001](../../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md)).
+**Why:** A claim about an [outside fact](../glossary.md#term-outside-fact--outside-fact) must point at the words that bear it out. Otherwise the text gives no sign of where to check it. A short citation right after the claim costs almost nothing to write, low enough that citing happens ([DEC-001](../../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md)).
 
-A citation is the text `[ev:<slug>]`, right after the claim it backs. Its slug is the `id` of the [evidence record](../glossary.md#term-evidence-record--evidence-record) that backs the claim, in the claim's [evidence scope](../glossary.md#term-evidence-scope--evidence-scope). Two claims in one sentence take two citations, side by side (DEC-001).
+A citation is the text `[ev:<slug>]`, which a writer puts right after the claim it backs. Its slug gives the `id` of the [evidence record](../glossary.md#term-evidence-record--evidence-record) that backs the claim, in the claim's [evidence scope](../glossary.md#term-evidence-scope--evidence-scope). Two claims in one sentence take two citations, side by side (DEC-001).
 
 **Attributes:** the slug it names (DEC-001).
 
 **Relations:**
 
-- It names at most one evidence record, by that record's `id`. It names none where its scope holds no record of that `id` (DEC-001, [DEC-003](../../../../.pkit/capabilities/evidence/decisions/DEC-003-validation-model.md)).
-- It lies in a Markdown or a YAML file below its evidence scope. In YAML, it stands in a comment or in a field of prose, never in a value a tool reads (DEC-001).
+- It names at most one evidence record, by that record's `id`. It names none where its evidence scope holds no record of that `id` (DEC-001, [DEC-003](../../../../.pkit/capabilities/evidence/decisions/DEC-003-validation-model.md)).
+- It lies in a Markdown or a YAML file below its evidence scope. In YAML, a writer puts it in a comment or in a field of prose, never in a value a tool reads (DEC-001).
 
-**States:** A citation is resolved where its evidence scope holds the record it names, and unresolved where it does not. An unresolved citation fails the check of its scope (DEC-003).
+**States:** A citation is resolved where it names an evidence record, and unresolved where it names none. An unresolved citation fails the check of its evidence scope (DEC-003).
 
 **Always true:**
 
-- A citation names an evidence record, never a URL (DEC-001).
-- One token names one record, so two records take two tokens, never a list (DEC-001).
-- Text of its form is no citation in a fenced code block or an HTML comment of a Markdown file. Nor is it one in its scope's `evidence.yaml` (DEC-003).
+- A citation's slug gives an evidence record's `id`, never a URL (DEC-001).
+- One citation names at most one evidence record, so two evidence records take two citations, never a list (DEC-001).
+- Text of its form is no citation in a fenced code block or an HTML comment of a Markdown file. Nor is it one in its evidence scope's `evidence.yaml` (DEC-003).
 
 ## What is built on these concepts
 
@@ -160,16 +160,16 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Outside fact:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
 
 **Evidence record:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
 
 **Evidence scope:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
 
 **Citation:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)

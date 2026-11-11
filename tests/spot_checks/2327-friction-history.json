@@ -1,0 +1,26 @@
+[
+  {
+    "id": "fs-an-answer-file-the-base-holds-lies-inside",
+    "file": "src/project_kit/friction_since.py",
+    "find": "    if path in held:\n        return \"an answer file the base holds",
+    "replace": "    if False:\n        return \"an answer file the base holds"
+  },
+  {
+    "id": "fs-a-merge-of-the-base-counts-whole",
+    "file": "src/project_kit/friction_since.py",
+    "find": "        merges_base = len(parents) == 2 and _is_ancestor(target_root, parents[1], base.tip)",
+    "replace": "        merges_base = False"
+  },
+  {
+    "id": "fp-uncommitted-answers-are-pruned",
+    "file": "src/project_kit/friction_prune.py",
+    "find": "    if not paths:\n        return\n    named",
+    "replace": "    if True:\n        return\n    named"
+  },
+  {
+    "id": "fc-a-link-triggered-by-its-first-field-alone",
+    "file": "src/project_kit/friction_check.py",
+    "find": "        changed = [f for f in link.when if own_field(artefact, f) != own_field(before, f)]",
+    "replace": "        changed = [f for f in link.when[:1] if own_field(artefact, f) != own_field(before, f)]"
+  }
+]

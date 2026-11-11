@@ -5,8 +5,8 @@ points 1, 4 and 10; ADR-068 point 3; #1873).
 the working tree that no commit holds, a new one where there is none. Its entry
 names every other answer file present that answers the artefact in `read`. An
 artefact whose block still holds an answer is refused, naming the move (#2032).
-Every test stands up a real adopter repository; the ones the checks read commit
-real history.
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`); the ones the checks read commit real history.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from project_kit import friction_write as fw
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
 from project_kit.friction_validate import validate_friction
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, friction_config, guide
 from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide, entry
 
@@ -43,10 +43,9 @@ _safe = YAML(typ="safe")
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
-    adopter.write({CONFIG: friction_config(), **SOURCE, GUIDE: bare_guide()})
-    return adopter
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    committed_adopter.write({CONFIG: friction_config(), **SOURCE, GUIDE: bare_guide()})
+    return committed_adopter
 
 
 def _answer_files(repo: AdopterRepo) -> dict[str, str]:

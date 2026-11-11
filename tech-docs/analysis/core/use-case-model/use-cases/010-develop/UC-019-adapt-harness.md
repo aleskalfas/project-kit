@@ -5,11 +5,20 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
+  - ACT-operator
 after:
   - [UC-014]
 requirements:
   - REQ-008
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: 12
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 13
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -21,30 +30,41 @@ pkit:
         - src/project_kit/package_validate.py
         - src/project_kit/harness_support.py
         - src/project_kit/schemas_validate.py
+        - src/project_kit/refs.py
+        - src/project_kit/agent_tool_access.py
+        - .pkit/agents/tool_access.py
         - .pkit/schemas/harness-requirements.yaml
         - .pkit/schemas/harness-support.schema.json
+        - .pkit/schemas/tool-access.schema.json
         - .pkit/adapters/README.md
         - .pkit/skills/core/adapter-author.md
         - .pkit/lifecycle/ownership.py
       record:
+        - COR-002
         - COR-005
         - COR-013
         - COR-028#3
         - COR-047
+        - ADR-034#1
+        - ADR-086#4
+        - ADR-086#6
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - ACT-operator
         - REQ-008
         - REQ-009
+        - REQ-012
 ---
 
 # UC-019 — Adapt the system to another harness
 
-**Goal:** Adapt the system to another harness, and say how far that harness meets the methodology's needs and what of the methodology's permissions it cannot enforce.
+**Goal:** Adapt the system to another harness, saying how far that harness meets each harness requirement and what of the permission model the harness cannot enforce.
 
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): runs the [stamp](../../../glossary.md#term-stamp--stamp) of step 1 for the author through the `adapter-author` [skill](../../../glossary.md#term-skill--skill), which pairs with it ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)). In the new [harness](../../../glossary.md#term-harness--harness), its sessions find the skills and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) the [adapter](../../../glossary.md#term-adapter--adapter) deploys.
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
@@ -60,16 +80,27 @@ pkit:
 **Main path:**
 
 1. The author runs `pkit new adapter <name>`, or has an AI agent run it through the `adapter-author` [skill](../../../glossary.md#term-skill--skill).
-2. The [system](../../../glossary.md#term-system--system) checks the name. It must be kebab-case and not `backbone`. No [capability](../../../glossary.md#term-capability--capability) may hold it, and no [adapter](../../../glossary.md#term-adapter--adapter) may have it already.
+12. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** `pkit new adapter` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+2. The system checks the name. It must be kebab-case and not `backbone`. No [capability](../../../glossary.md#term-capability--capability) may hold it, and no [adapter](../../../glossary.md#term-adapter--adapter) may have it already.
 3. The system writes the adapter's folder, `.pkit/adapters/<name>/`, with `package.yaml`, a `README.md` and `migrations/`. The [package metadata](../../../glossary.md#term-package-metadata--package-metadata) gives `version: 0.1.0`, and a [range](../../../glossary.md#term-range--range) on the [backbone](../../../glossary.md#term-backbone--backbone) from the [version](../../../glossary.md#term-version--version) the [source repository](../../../glossary.md#term-source-repository--source-repository) records.
 4. The system records the adapter in the [manifest](../../../glossary.md#term-manifest--manifest) as `kit-shipped`, and prints `Stamped: .pkit/adapters/<name>/`.
 5. The author writes the scripts that the system runs, each found by its name and each optional: `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh` and `deploy-agents.sh`. A fifth, `undeploy-capability.sh`, takes back what the adapter deployed for one capability ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
-6. The author writes the adapter's `permission-enforcement.yaml`. For each kind of permission, such as `command-deny` or `network-egress`, it says where the [harness](../../../glossary.md#term-harness--harness) enforces it. It also says whether the harness does so `native`, at `runtime` or `none` ([COR-028 point 3](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
-7. The author writes the adapter's support declaration, `harness-support.yaml`. It answers each need that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete` ([COR-047 point 2](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)). Each need's entry gives a grade, its `harness_versions` and its evidence. The adapter's README states the same entries in prose.
+6. The author writes the adapter's [enforcement declaration](../../../glossary.md#term-enforcement-declaration--enforcement-declaration), `permission-enforcement.yaml`. For each [dimension](../../../glossary.md#term-dimension--dimension) of the [permission model](../../../glossary.md#term-permission-model--permission-model), such as `command-deny` or `network-egress`, it says where the [harness](../../../glossary.md#term-harness--harness) enforces it. It also says whether the harness does so `native`, at `runtime` or `none` ([COR-028 point 3](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+7. The author writes the adapter's [support declaration](../../../glossary.md#term-support-declaration--support-declaration), `harness-support.yaml`. It grades each [harness requirement](../../../glossary.md#term-harness-requirement--harness-requirement) that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete` ([COR-047 point 2](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)). Each requirement's entry gives a grade, its `harness_versions` and its evidence. The adapter's README states the same entries in prose.
+14. Where the adapter ships `deploy-agents.sh` or registers a `run-agent` command, the author writes the adapter's `tool-access.json` ([ADR-086 point 4](../../../../../architecture/decisions/ADR-086-tool-access-reader.md#4-the-harnesss-keys-and-names-stay-in-the-adapter)). The file gives the harness's key for each of the `tools:` and `withheld:` lists, the forms a tool's name takes, and the harness's built-in tools. The file also lists the tools the harness was measured to withhold, and lists none before the harness was measured to withhold one.
 8. The author runs `pkit sync` in the source repository.
+13. At its entry, before it reads anything, [sync](../../../glossary.md#term-sync--sync) checks the repository as step 12 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit sync` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 9. The system runs the scripts of every adapter in the order of the adapters' names ([UC-014](UC-014-develop-methodology.md)). So the new adapter's scripts deploy the skills and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where the new harness reads them.
-10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range. Its `schemas` member checks the support declaration against its schema.
-11. The author runs `pkit harness report --adapter <name>`. The system reads only the declaration, never the harness ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md) points 3 to 5). So it reports a need `unsatisfied` where its entry grades it `not-achievable` for every version, and it reports the need `indeterminate` otherwise. It exits with status `1` while any need is not `satisfied`.
+10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range. Its `schemas` member checks the support declaration against its schema. The `refs` member of `pkit validate` checks each agent definition's `tools:` or `withheld:` list against the `tool-access.json` of each adapter step 14 names ([ADR-086 point 6](../../../../../architecture/decisions/ADR-086-tool-access-reader.md#6-the-validator-refuses-what-an-adapter-refuses)).
+11. The author runs `pkit harness report --adapter <name>`. The system reads only the declaration, never the harness ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md) points 3 to 5). So it reports a harness requirement `unsatisfied` where its entry grades it `not-achievable` for every version, and reports the requirement `indeterminate` otherwise. It exits with status `1` while any requirement is not `satisfied`.
 
 **Variants:**
 
@@ -81,19 +112,22 @@ pkit:
   The [system](../../../glossary.md#term-system--system) refuses with the reason, such as `adapter '<name>' already exists at .pkit/adapters/<name>.`, and writes nothing. The path rejoins at step 1.
 - **3a.** Until #1600 is done, a test fails on the new adapter, since no [release](../../../glossary.md#term-release--release) may add one yet ([REQ-008](../../../requirements/constraints/010-develop/REQ-008-areas-held.md)). The author can try the adapter in the checkout, and the path goes on at step 4. No [change](../../../glossary.md#term-change--change) that holds the adapter lands until then.
 - **5a.** The adapter has no `undeploy-capability.sh`. Where a capability is unregistered and its subtree stays, the system warns that the adapter `ships no undeploy-capability.sh`, and that the capability stays deployed in its [harness](../../../glossary.md#term-harness--harness).
-- **7a.** The declaration leaves a need out, or gives its entry an empty `harness_versions`. `pkit harness report` gives that need `indeterminate`, with no grade, so a missing entry never reads as a met one ([COR-047 point 3](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- **7a.** The [support declaration](../../../glossary.md#term-support-declaration--support-declaration) leaves a [harness requirement](../../../glossary.md#term-harness-requirement--harness-requirement) out, or gives its entry an empty `harness_versions`. `pkit harness report` gives that requirement `indeterminate`, with no grade, so a missing entry never reads as a met one ([COR-047 point 3](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
 - **9a.** A script exits with an error. The system stops with `adapter primitive <script> exited with status <n>. See the output above for details.` The author mends the script, and the path rejoins at step 8.
 - **10a.** The support declaration breaks its schema, such as an `at-cost` entry with no `cost`. [Validation](../../../glossary.md#term-validation--validation) reports it and fails, and `pkit harness report` exits with status `3`. The author mends the declaration, and the path rejoins at step 10.
+- **10b.** An adapter that step 14 names has no `tool-access.json` that validation can read. Or the adapter's `tool-access.json` lists a tool to withhold while the adapter's support declaration does not grade `session-agent-withheld-tools` as achievable for some harness version. Validation reports either fault and fails, naming the adapter. The author mends the adapter, and the path rejoins at step 10.
 
 **Postconditions:**
 
 - The [adapter](../../../glossary.md#term-adapter--adapter) is recorded in the [source repository](../../../glossary.md#term-source-repository--source-repository)'s [manifest](../../../glossary.md#term-manifest--manifest), and its [package metadata](../../../glossary.md#term-package-metadata--package-metadata) gives its [version](../../../glossary.md#term-version--version) and its [range](../../../glossary.md#term-range--range) on the [backbone](../../../glossary.md#term-backbone--backbone).
 - [Sync](../../../glossary.md#term-sync--sync) runs the adapter's scripts, which deploy the [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where the [harness](../../../glossary.md#term-harness--harness) reads them.
-- The adapter's support declaration says how far its harness meets each need the [methodology](../../../glossary.md#term-methodology--methodology) states of it, and `pkit harness report` lists what the harness leaves unmet. The adapter's `permission-enforcement.yaml` says what of the methodology's permissions the harness enforces, and what it cannot.
+- Where the author wrote `merge-settings.sh` and `merge-claude-md.sh`, sync runs the adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) into the files its harness reads, its [instruction file](../../../glossary.md#term-instruction-file--instruction-file) among them ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
+- The adapter's [support declaration](../../../glossary.md#term-support-declaration--support-declaration) says how far its harness meets each [harness requirement](../../../glossary.md#term-harness-requirement--harness-requirement), and `pkit harness report` lists what the harness leaves unmet. The adapter's [enforcement declaration](../../../glossary.md#term-enforcement-declaration--enforcement-declaration), `permission-enforcement.yaml`, says what of the [permission model](../../../glossary.md#term-permission-model--permission-model) the harness enforces, and what it cannot.
+- Where the adapter ships `deploy-agents.sh` or a `run-agent` command, the adapter's `tool-access.json` gives the harness's terms for an agent definition's `tools:` and `withheld:` lists.
 
 **Minimal guarantees:**
 
 - A refused name leaves nothing written, since the [system](../../../glossary.md#term-system--system) checks the name before it writes the folder (`scaffolds.py`).
 - An [adapter](../../../glossary.md#term-adapter--adapter) never takes a name a [capability](../../../glossary.md#term-capability--capability) holds (`capabilities.py`).
 - A script that fails stops [sync](../../../glossary.md#term-sync--sync) with its exit status, so a partial deploy never reads as a whole one (`install.py`).
-- A need the declaration leaves out never reads as met: `pkit harness report` gives it `indeterminate` and exits with status `1` (`harness_support.py`).
+- A [harness requirement](../../../glossary.md#term-harness-requirement--harness-requirement) the [support declaration](../../../glossary.md#term-support-declaration--support-declaration) leaves out never reads as met: `pkit harness report` gives it `indeterminate` and exits with status `1` (`harness_support.py`).

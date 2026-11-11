@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "code.schema.json",
+  "title": "A declaration of written code — visual-communication capability",
+  "description": "Formal shape of a declaration `code/<name>.yaml` in the location (DEC-002 point 1, DEC-005 point 7): the code writer, the version of the spelling it follows, the brand, the lock of the brand and what it builds on, and where the code goes; optionally a prefix of every name it writes, and the losses accepted. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "writer",
+    "form",
+    "brand",
+    "lock",
+    "out"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:code`.",
+      "const": "visual-communication:code"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "writer": {
+      "enum": [
+        "css",
+        "json"
+      ]
+    },
+    "form": {
+      "description": "The version of the code writer's spelling: `css` spells form 1, `json` forms 1 and 2.",
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "brand": {
+      "$ref": "defs.schema.json#/$defs/library-name"
+    },
+    "lock": {
+      "$ref": "defs.schema.json#/$defs/lock",
+      "minProperties": 1
+    },
+    "out": {
+      "description": "Where the code goes: a file of the project, outside `.pkit/` and any hidden folder.",
+      "$ref": "defs.schema.json#/$defs/repository-path"
+    },
+    "prefix": {
+      "description": "A name that opens every name the code writes. The `json` writer takes none: the capability's code refuses it, naming why.",
+      "$ref": "defs.schema.json#/$defs/name"
+    },
+    "accept-losses": {
+      "$ref": "defs.schema.json#/$defs/accept-losses"
+    }
+  }
+}

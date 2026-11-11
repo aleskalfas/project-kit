@@ -1,6 +1,0 @@
-component: backbone
-kind: none
-body: >
-  The command reference's entry for `pkit version bump` no longer says that a
-  major bump before 1.0 is refused. The command never refused it, and no record
-  decides that it should. A documentation refinement: the command is unchanged.

@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import stat
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
 
+from project_kit import dispatcher
 from project_kit.cli import main
 from project_kit.dispatcher import (
     DeclaredAlias,
@@ -610,6 +612,41 @@ def test_an_alias_entry_s_position_counts_the_malformed_entries_before_it(
     )
     table = installed_alias_table(kit_target, static_command_names())
     assert [shadow.alias.index for shadow in table.shadowed] == [1]
+
+
+# --- one walk per call -----------------------------------------------
+
+
+def test_help_reads_each_capability_s_package_once_and_the_next_call_reads_again(
+    kit_target: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit --help` lists every name and then asks for each, capabilities and
+    aliases alike; every answer comes from the one walk of the call. The next
+    call walks again, so nothing is kept between calls (COR-021)."""
+    for name, alias in (("demo", "dm"), ("other", "ot")):
+        _install_synthetic_capability(
+            kit_target,
+            name,
+            commands_yaml=(
+                f"aliases:\n  - {alias}\n"
+                "commands:\n  ping:\n    script: scripts/ping.py\n    help: Print a ping.\n"
+            ),
+        )
+    reads: list[str] = []
+    read = dispatcher._read_commands_description_and_aliases
+
+    def counted(package_yaml: Path) -> tuple[dict[str, Any] | None, str, list[tuple[int, str]]]:
+        reads.append(package_yaml.parent.name)
+        return read(package_yaml)
+
+    monkeypatch.setattr(dispatcher, "_read_commands_description_and_aliases", counted)
+    result = CliRunner().invoke(main, ["--help"])
+    assert result.exit_code == 0
+    assert {"demo", "dm", "other", "ot"} <= set(result.output.split())
+    assert sorted(reads) == ["demo", "other"]
+
+    assert CliRunner().invoke(main, ["dm", "--help"]).exit_code == 0
+    assert sorted(reads) == ["demo", "demo", "other", "other"]
 
 
 # --- uninstall round-trip --------------------------------------------

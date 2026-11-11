@@ -5,9 +5,10 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — next-task (DEC-059 point 7).
+"""Project-management capability — next-task (DEC-059 point 7, DEC-061 point 5).
 
-A worker takes its next task from one pool that every seat shares:
+A worker takes its next task from one pool that every seat shares, or, where
+the topology declares pools of workers, from the pools its seat serves:
 
     next-task [--dry-run] [--yes] [--limit N]
 
@@ -30,8 +31,21 @@ Steps:
     the `start-work` this command runs does not name it again (DEC-059 point 1).
     A clone that holds no seat, holds a planner's seat or whose seat cannot be
     confirmed takes nothing. Outside a topology a clone takes with no scope.
+    Code that cannot read the topology in full takes nothing (DEC-061 point 9).
+  - The pools (DEC-061 point 5, ADR-072 point 2): where the topology declares
+    pools, the open milestones are read once and mapped to their pools by
+    their `Pool:` lines (`_lib/pools`), and the reckoning keeps only a Task
+    whose native milestone is an open milestone of a pool the seat serves.
+    A seat that names no pool takes nothing. Where no pool is declared, no
+    milestone is read, and every seat takes from the one shared pool.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
     state issues out. The ready Tasks are ranked from it.
+  - Where the substrate map binds the state to the board, each Task's state is
+    its card's Status (DEC-062 point 5), read for every card at once and joined
+    to the listing by the issue's node id (`_lib/board_status`). A Task whose
+    card's Status does not place it — no card, no Status, or a Status naming no
+    open state — is skipped with a warning. A board that cannot be read takes
+    nothing (DEC-051 point 6).
   - Where the clone takes part in instance ownership, the owner of each Task in
     Backlog assigned to its account is read first and folded
     (`_lib/instance_claims.read_owner`). The Tasks this clone owns come first,
@@ -46,10 +60,13 @@ Exit codes:
   1  membership refusal / foreign-repo refusal
   2  usage error / a clone that holds no seat, or a planner's seat / this
      clone's seat could not be confirmed / the listing reached its limit, so
-     an open dependency could be missed
-  3  the open issues could not be read, or a ready Task's owner could not be
-     read and no other Task was free
-  5  no Task is ready for this clone, so nothing was started
+     an open dependency could be missed / this code cannot read the topology
+     in full (DEC-061 point 9)
+  3  the open issues, or where pools are declared the open milestones, could
+     not be read, or where the board carries the state the board's Status, or
+     a ready Task's owner could not be read and no other Task was free
+  5  no Task is ready for this clone, so nothing was started; where pools are
+     declared, the line says why in terms of the seat's pools
   *  a failed `start-work` passes its exit code through
 """
 
@@ -65,11 +82,14 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    axis_carriage,
     axis_labels,
+    board_status,
     bootstrap_gate,
     instance_claims,
     instance_ownership,
     issue_list,
+    pools,
     session_guard,
     task_pool,
 )
@@ -91,9 +111,10 @@ DEFAULT_LIMIT = 1000
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Take the next ready Task from the shared pool, the highest in priority "
-            "first, within this clone's seat's scope, and start it, claimed, through "
-            "start-work (DEC-059 point 7)."
+            "Take the next ready Task from the shared pool, or from the pools this "
+            "clone's seat serves where the topology declares them, the highest in "
+            "priority first, within the seat's scope, and start it, claimed, through "
+            "start-work (DEC-059 point 7, DEC-061 point 5)."
         ),
     )
     parser.add_argument(
@@ -151,6 +172,24 @@ def main() -> int:
         print(f"[refused] next-task: {taker.refusal}", file=sys.stderr)
         return 2
 
+    # Where the topology declares pools, the open milestones are read once, and
+    # the seat takes only from its pools' (DEC-061 point 5, ADR-072 point 2).
+    pool_map: pools.PoolMap | None = None
+    milestones: frozenset[int] | None = None
+    if taker.declared is not None:
+        pool_map = pools.read_map(taker.declared, config=config)
+        if pool_map is None:
+            print(
+                "[failed] next-task: the open milestones could not be read, so which Tasks "
+                "this seat's pools hold cannot be told, and nothing was started "
+                "(DEC-061 point 8).",
+                file=sys.stderr,
+            )
+            return 3
+        for warning in pool_map.warnings():
+            print(f"[warn] next-task: {warning}", file=sys.stderr)
+        milestones = pool_map.numbers(taker.pools)
+
     listing = _list_open(config, args.limit)
     if listing is None:
         return 3
@@ -161,10 +200,31 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    # Where the map binds the state to the board, each Task's state is its card's
+    # Status: the cards of the open issues listed, and no others, are read at
+    # once and joined to the listing by the issue's node id. A board that cannot
+    # be read takes nothing, as Milestones that cannot be read do (DEC-051 point
+    # 6, DEC-061 point 8).
+    statuses = None
+    if axis_carriage.is_board_carried("state", config, substrate_map):
+        workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
+        statuses, failure = board_status.read_listed(
+            config, workflow, task_pool.node_ids(listing.rows or ())
+        )
+        if statuses is None:
+            print(
+                f"[failed] next-task: the board's Status could not be read ({failure}), so "
+                "where each Task stands cannot be told, and nothing was started "
+                "(DEC-051 point 6).",
+                file=sys.stderr,
+            )
+            return 3
     readers = task_pool.Readers(
         issue_types=_read_schema(capability_root, "issue-types.yaml", yaml_loader),
         classification=_read_schema(capability_root, "classification.yaml", yaml_loader),
-        substrate_map=axis_labels.load_substrate_map(capability_root),
+        substrate_map=substrate_map,
+        statuses=statuses,
     )
     ready = task_pool.candidates(
         listing.rows or (),
@@ -173,7 +233,16 @@ def main() -> int:
         scope=taker.scope,
         takes_over=taker.takes_over,
         readers=readers,
+        milestones=milestones,
     )
+    for number, why in task_pool.unplaced(
+        listing.rows or (),
+        login=invoker.github_login,
+        scope=taker.scope,
+        readers=readers,
+        milestones=milestones,
+    ):
+        print(f"[warn] next-task: #{number} skipped: {why}.", file=sys.stderr)
     print(f"next-task: {_pool_line(len(ready), taker)}")
 
     clone = taker.clone
@@ -246,6 +315,12 @@ def main() -> int:
             file=sys.stderr,
         )
         return 3
+    if pool_map is not None:
+        print(
+            "[ok] next-task: no Task is ready for this clone, so nothing was started: "
+            f"{pools.why_none_ready(taker.pools, pool_map)}."
+        )
+        return EXIT_NONE_READY
     print("[ok] next-task: no Task is ready for this clone, so nothing was started.")
     return EXIT_NONE_READY
 
@@ -298,6 +373,9 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
         if scope.types:
             parts.append("types " + ", ".join(scope.types))
         within = "within the scope of " + " and ".join(parts)
+    if taker.declared is not None:
+        served = ", ".join(taker.pools) or "none"
+        within = f"from its pools ({served}), {within}"
     noun = "Task is" if count == 1 else "Tasks are"
     order = (
         "the highest in priority first"

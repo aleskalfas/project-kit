@@ -1,0 +1,33 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: families
+    layout: slide
+    title: Ein Etikett nimmt seine Farbe von seiner Familie
+    visual:
+      use: starter/list
+      widths: own
+      item: {use: starter/tag}
+      items:
+        - {id: neutral, label: neutral}
+        - {id: service, concept: test-notation/service, label: ein Dienst}
+        - {id: store, concept: test-notation/store, label: ein Datenspeicher}
+        - {id: person, concept: test-notation/person, label: eine Benutzerin}
+
+  - id: in-cards
+    layout: slide
+    title: Eine Karte zeigt ein Etikett unter ihrer Überschrift
+    visual:
+      use: starter/list
+      items:
+        - id: plain
+          head: living-docs
+          tag: Dokumentation
+          text: Die Dokumentation für jede Leserschaft.
+        - id: tint
+          fill: tint
+          concept: test-notation/service
+          head: software-analysis
+          tag: Anforderungsanalyse
+          text: Was die Software leisten muss.

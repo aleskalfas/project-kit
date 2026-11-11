@@ -14,8 +14,12 @@ record says what happens when the board will not answer: **the gate raises.** A
 board that refuses to answer is a broken tool, not an issue that is missing a
 value — and reporting it as a missing value would mean a check passing judgement
 on something it never read. The raise is **narrowly scoped**: it can only happen
-for an axis the map (or the flag) actually places on the board, so a project with
-no board never performs the read and never acquires the failure.
+for an axis the map actually places on the board (refinement per
+[ADR-074](ADR-074-board-carried-state-read.md)), so a project with no board never
+performs the read and never acquires the failure. Every command that reads a
+board-carried state holds to the same ruling, gate or not: it reports a board
+that will not answer as a broken tool, never as a finding about the issue
+(refinement per [ADR-074](ADR-074-board-carried-state-read.md)).
 
 The rest of the record is the layering that makes that ruling implementable.
 Three things stay separate: **where an axis lives** (a pure question, answered
@@ -32,13 +36,15 @@ read did not succeed — and only where carriage said `board`.
 
 ## Context
 
-The rule that decides which substrate carries an axis is settled: where the
-adopter's map binds an axis, that binding governs, and the board flag governs
-only where the map is silent
-([project-management:DEC-051-axis-carriage-activation]). That record deliberately
-does **not** settle the read path's failure semantics — it names them as a
-read-path contract belonging architecture-side rather than a precedence rule.
-This is that record.
+The rule that decides which substrate carries an axis is settled: the adopter's
+substrate map decides, and a binding governs the axis it names
+([project-management:DEC-051-axis-carriage-activation] point 1). The board flag
+carries no axis (refinement per [ADR-074](ADR-074-board-carried-state-read.md)):
+it says only that a board exists
+([project-management:DEC-062-axes-chosen-in-the-map] point 1). DEC-051
+deliberately does **not** settle the read path's failure semantics — it names
+them as a read-path contract belonging architecture-side rather than a precedence
+rule. This is that record.
 
 **The surfaces this contract governs, as they stand.**
 
@@ -57,9 +63,11 @@ This is that record.
    gate is the first and the forcing case.
 
 **What exists on the board arm.** The map's `board:` arm is parameterless
-(`board: true`), admissible on `priority` and `workstream` only, with the field's
-identity staying a write parameter on the `after_create_issue` hook
-([project-management:DEC-051-axis-carriage-activation], decision point 2). The
+(`board: true`), admissible on `priority`, `workstream` and `state`
+([project-management:DEC-051-axis-carriage-activation], decision point 2)
+(refinement per [ADR-074](ADR-074-board-carried-state-read.md)). For priority and
+workstream, the field's identity stays a write parameter on the
+`after_create_issue` hook. State reads the board's Status field (point 6). The
 label seam already answers both halves: whether an axis is board-carried, and
 that a board-carried axis has nothing for a label writer to write.
 
@@ -110,14 +118,17 @@ not succeed, it **raises** (point 2).
 **Fusing layers 1 and 2 is refused.** A single "what is this axis's current
 value" call is the obvious simplification and it is wrong on three counts:
 
-- **A board outage would become a filing outage.** Rewiring the flag reads across
-  the verb family is only safe because asking *where does this live* cannot fail.
-  Every verb asks that question; only a few ever need a board value. Fusing makes
+- **A board outage would become a filing outage.** Every verb asks *where does
+  this live*, which is safe only because the question cannot fail; only a few
+  ever need a board value. Fusing makes
   the unfailing question fail, on code paths that never touch a board.
 - **It breaks the one-way layering.** The pure layer would depend on the network
-  layer, and the composition ordering [pkit:ADR-026] pins — adopter-binding
-  first, board-versus-label only underneath — would run backwards again, which is
-  the shape of the failure the carriage rule exists to end.
+  layer, and the composition ordering [pkit:ADR-026] pins would run backwards
+  again. That ordering resolves the adopter's binding first, and nothing beneath
+  it decides carriage (refinement per
+  [ADR-074](ADR-074-board-carried-state-read.md)). A fused call would read the
+  board before the map had said the axis lives there, which is the shape of the
+  failure the carriage rule exists to end.
 - **The scoping rule becomes unimplementable.** Point 3 fires the error *only*
   where a value was expected from the board. Expressing that requires answering
   "does this project expect a board value for this axis?" **without performing a
@@ -137,21 +148,30 @@ the `read:project` scope, whose remedy `gh` prints in the stderr the seam carrie
 verbatim); a missing value is repaired by classifying the issue. A gate that
 reports the first as the second sends the adopter to fix the wrong thing.
 
+**The ruling reaches every command that reads a board-carried state, gate or
+not** (refinement per [ADR-074](ADR-074-board-carried-state-read.md)). What an
+outcome means to such a command is its own to decide; a seat choosing work, for
+one, takes nothing. But it reports a board that will not answer as that, with
+what the board said, and never as a finding about the issue, nor a finding as a
+broken board. Where its exit codes tell a broken tool from a refusal, an
+unreadable board takes the broken tool's code.
+
 **This is explicitly distinct from a board that answers *unset*.** A board that
 responds and reports no value for the field is a genuine missing value — and what
 a gate should do about a missing value, where that demand is placed, and who pays
 when a predecessor omitted it, is a separate methodology question that this
 record does **not** settle.
 
-**One edge that composes rather than surprises.** Carriage keys on the board flag
-alone, not on the board id, deliberately: treating "flag set, id unset" as *no
-board* would hand the axis back to kit labels the adopter may not have. So that
-misconfiguration resolves to `board` carriage, the seam then refuses with "no
-Projects v2 board configured" and **no network call**, and the gate raises for the
-same reason it raises on a network failure — it was told to expect a value from a
-board that cannot be reached. An unsatisfiable `board: true` under a config
-declaring no board is refused upstream by validation; if one reaches a gate, it
-raises on the same footing.
+**One edge that composes rather than surprises.** Carriage keys on the map's
+binding alone, never on the board flag or the board id (refinement per
+[ADR-074](ADR-074-board-carried-state-read.md)). A map that binds an axis with
+`board: true`, under a configuration naming no board, resolves to `board`
+carriage. Treating that as *no board* would hand the axis to a substrate the map
+never named, such as kit labels the adopter may not have. So the seam refuses
+with "no Projects v2 board configured" and **no network call**, and the gate
+raises for the same reason it raises on a network failure — it was told to
+expect a value from a board that cannot be reached. Validation refuses such a
+binding upstream; if one reaches a gate, it raises on the same footing.
 
 ### 3. The error fires only where a value was genuinely expected
 
@@ -215,17 +235,24 @@ desync; the constant travels with the read rather than being copied.
 For the label arms, [pkit:ADR-026] is the read-path contract. This is the same for
 the `board:` arm.
 
-- **The arm is parameterless** (`board: true`); the field's identity remains a
-  write parameter on the `after_create_issue` hook. The read path needs no
-  parameter because the seam resolves the field **by name** against the live
-  board — by the axis's own name, matched exactly first and then case-insensitively,
-  with the option matched the same way. Nothing in the map has to name a field.
-- **Admissible on `priority` and `workstream` only.** `type` is excluded
-  permanently (PR-title alignment reads the type label, and a board field is
-  invisible from a PR); `state` is excluded for now (reading a board Status field
-  needs a detector kind that does not exist). The schema is the gate; the seam
-  does not re-check admissibility, because a second copy of the rule is a source
-  of truth that can disagree.
+- **The arm is parameterless** (`board: true`), and nothing in the map names a
+  field (refinement per [ADR-074](ADR-074-board-carried-state-read.md)). The read
+  path needs no parameter because the seam resolves the field **by name** against
+  the live board, matched exactly first and then case-insensitively, with the
+  option matched the same way. Priority and workstream find their field by the
+  axis's own name, and its identity remains a write parameter on the
+  `after_create_issue` hook. State reads the board's built-in **Status** field,
+  which the commands that move an issue write, so it is no write parameter on a
+  hook; a Status option maps to a state by the state's display name in the
+  lifecycle's workflow definition. A board with no single-select field named
+  Status counts as a board that cannot be read.
+- **Admissible on `priority`, `workstream` and `state`** (refinement per
+  [ADR-074](ADR-074-board-carried-state-read.md)). `type` is excluded permanently
+  (PR-title alignment reads the type label, and a board field is invisible from a
+  PR). Reading the Status needs no detector kind of its own: the lifecycle's
+  classifier passes the Status read to the state inference as one more input. The
+  schema is the gate; the seam does not re-check admissibility, because a second
+  copy of the rule is a source of truth that can disagree.
 - **A board-carried axis is SERVED, not degraded.** Write resolution reports
   nothing to write for it — correctly, since there is no label to write — so a consumer
   that keys only on the resolver reports "unsupported under your substrate-map"
@@ -236,8 +263,12 @@ the `board:` arm.
 
 ### Boundaries — what this contract is NOT
 
-- **Not the missing-value question.** A board that answers *unset* is a value
-  question, deliberately open (point 2).
+- **Not the missing-value question for priority and workstream** (refinement per
+  [ADR-074](ADR-074-board-carried-state-read.md)). A board that answers *unset*
+  for either is a value question, deliberately open (point 2). For state it is
+  settled: an issue with no card, a card with no Status, or a Status naming no
+  open state leaves the issue's position undetermined, a finding, and no command
+  guesses it ([project-management:DEC-051-axis-carriage-activation] point 6).
 - **Not gate placement.** When an axis's presence is demanded, and who pays when a
   predecessor omitted it, is open and tracked separately.
 - **Not the board-membership check.** Membership stays with the flag and must not

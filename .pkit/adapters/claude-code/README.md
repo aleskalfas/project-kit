@@ -11,15 +11,17 @@ pkit:
         - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
+        - .pkit/adapters/claude-code/tool-access.json
         - src/project_kit/visibility.py
         - .pkit/permissions/decide.py
         - src/project_kit/permissions.py
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
-      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+        - .pkit/agents/tool_access.py
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
-        - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
-      source: [claude-code-hooks]
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
+      source: [claude-code-hooks, working-run-probe]
 ---
 
 # Claude Code adapter
@@ -35,13 +37,14 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 │   ├── core/settings.json             # kit baseline — universal allows + denies, and the start hook's registration
 │   └── project/settings.json          # adopter's project-specific additions
 ├── merge-settings.sh                  # merges the settings baseline + project additions into .claude/settings.json
-├── merge-claude-md.sh                 # ensures root CLAUDE.md loads the kit rules via @-includes
+├── merge-claude-md.sh                 # ensures root CLAUDE.md loads every layer's rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
 ├── undeploy-capability.sh             # removes one capability's deployed skills and agents from .claude/
-├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths, the workspace sentence
+├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, tool access, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
+├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 ├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
@@ -65,15 +68,34 @@ Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/set
 
 ### `merge-claude-md.sh`
 
-Ensures the adopter's root `CLAUDE.md` loads the kit-shipped rules (`@.pkit/rules/core.md`) and project rules (`@.pkit/rules/project.md`) via Claude Code's `@<path>` include mechanism. Per the COR-002 merge contract (insert-if-absent / create-if-none posture):
+Ensures the adopter's root `CLAUDE.md` loads every layer's rules via Claude Code's `@<path>` include mechanism, in the order of their layers: core's (`@.pkit/rules/core.md`), the capabilities' rules index (`@.pkit/rules/capabilities.md`), which imports each installed capability's `rules.md`, and the project's (`@.pkit/rules/project.md`). Per the COR-002 merge contract (insert-if-absent / create-if-none posture), core's include and the index's line are kept present, each inserted wherever it is absent, and the project's include is inserted only together with core's ([ADR-076](../../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 3):
 
-- **No CLAUDE.md:** creates a minimal one with an H1 and the `@`-includes.
-- **CLAUDE.md without the include:** inserts the `@`-include block after the first H1 (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
-- **CLAUDE.md already has the include:** no-op (idempotent).
+- **No CLAUDE.md:** creates a minimal one with an H1 and the three `@`-includes.
+- **CLAUDE.md without core's include:** inserts only the lines the file does not hold, keeping the three in their order, so none stands twice. Where the file holds the index's line, core's include goes directly before it, and the project's include, if absent, directly after it. Where it holds the project's include alone, core's include and the index's line go directly before it. Where it holds none of the three, inserts them after the first H1 outside fenced code (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
+- **CLAUDE.md with core's include but not the index's line:** inserts `@.pkit/rules/capabilities.md` directly after core's include. A project that removed its `project.md` include does not find it back.
+- **Core's include only in fenced code or a code span,** where Claude Code imports nothing: inserts nothing and reports it (`refused`), naming the file. Move the include out of the code, and the next sync inserts the index's line after it.
+- **CLAUDE.md with both:** no-op (idempotent).
 
-Adopter content is never clobbered. Both `@.pkit/rules/core.md` (kit-owned, refreshed on sync) and `@.pkit/rules/project.md` (adopter-owned, never overwritten) are wired together so their rules compose in the agent's context.
+A file holds a line when one of its lines is exactly the line once the spaces and tabs around it are trimmed and a CRLF ending is read as `\n`, outside fenced code. A mention in a code span, in a fence, or inside a longer token does not hold it. `pkit validate` reads the line by the same definition.
+
+Every write goes through the file: the new content is written into the existing `CLAUDE.md`, never moved over it. A `CLAUDE.md` that is a link keeps its link, and the lines reach the file it links to. Its mode stays, and a file whose lines end in CRLF gets its new lines in CRLF too. Adopter content is never clobbered.
+
+The primitive reads `CLAUDE.md` alone. A project that moved core's include into a file `CLAUDE.md` imports, such as `AGENTS.md`, finds core's include and the index's line added to `CLAUDE.md` as well. In a repository holding only `AGENTS.md`, the primitive creates a `CLAUDE.md`, which Claude Code reads in place of `AGENTS.md`. That is left for a follow-up.
 
 `merge-claude-md.sh` is an adapter primitive: `pkit init` and `pkit sync` invoke it (alongside `merge-settings.sh`, `deploy-skills.sh`, `deploy-agents.sh`) so the wiring is maintained automatically. Running it by hand is always safe.
+
+### How the capabilities' rules reach a session (`loaded_rules:`)
+
+The adapter's `package.yaml` declares how Claude Code reaches each installed capability's loaded file (ADR-076 point 4):
+
+```yaml
+loaded_rules:
+  entry: "@{file}"      # the index's line for one capability's rules.md, read from the index's folder
+  host: CLAUDE.md       # the file that reaches the index
+  line: "@{index}"      # the line it keeps, read from the host's folder
+```
+
+The backbone renders `.pkit/rules/capabilities.md` from it, one `@../capabilities/<name>/rules.md` per registered capability that ships a loaded set, and `pkit validate` checks the index, the line and core's include, `@.pkit/rules/core.md`, against it. A capability's rules then reach a session by the route core's do, two imports from `CLAUDE.md`, so they load in exactly the sessions core's load. The index's syntax enters the backbone only as this data: `@` is the token a loaded set may not write outside code.
 
 ### `deploy-skills.sh`
 
@@ -93,9 +115,22 @@ Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.m
 
 **Model and effort** (#1047). Claude Code reads a `model:` and an `effort:` key from an agent definition's front matter (verified against Claude Code 2.1.283: `effort` takes `low`, `medium`, `high`, `xhigh`, `max`, or an integer; `model` takes `inherit`, an alias or a full model name). The resolver writes both under those names, taking each from the overlay's `overrides.<agent>.model` / `.effort` when set, else from the agent's front matter. It writes **nothing** for an absent or `inherit` value — so a shipped agent that sets neither deploys exactly as before, and the harness default applies: a dispatched agent inherits its caller's model and effort. A value outside the accepted set (the named effort levels only; the integer form is not part of the methodology's vocabulary) is not written: the agent still deploys, inherits, and the run prints a `warning` line naming the value. The accepted values, the precedence and the `pkit agents` report are specified in the agents README, "Model and effort".
 
+**Tool access** ([ADR-085](../../../tech-docs/architecture/decisions/ADR-085-agent-tool-access.md), [ADR-086](../../../tech-docs/architecture/decisions/ADR-086-tool-access-reader.md)). The resolver reads the agent's tool access through the agents area's reader, `.pkit/agents/tool_access.py`, and writes its answer in Claude Code's keys: a grant as `tools`, a withheld list as `disallowedTools`, and no key for an agent that names neither. Each is written as a list of whole entries with their arguments, never as the author wrote it, and an empty grant as an empty list, which gives no tools.
+
+**Its declaration of tool access,** `tool-access.json`, holds Claude Code's terms as data ([the adapters README, "What an adapter declares as data"](../README.md#what-an-adapter-declares-as-data)). Its `keys` map the methodology's keys to Claude Code's, and the resolver and the runner both read them. Beside what the reader refuses (the agents README, "Tool access"), the reader refuses by this declaration what Claude Code cannot enforce or translate, for the resolver, the runner and `pkit refs validate` alike:
+
+- **A withheld name it does not know** as one of Claude Code's built-in tools, since a misspelt name would withhold nothing. The names it knows are the declaration's `known_tools`: the tools Claude Code 2.1.319 offered an agent in the runs measured for [project-management:DEC-068-session-agent-tools], and the names an earlier release or a session with nobody attending gives some of them. They are written by hand until [project-kit#2949](https://github.com/aleskalfas/project-kit/issues/2949) decides whether its table writes them. Until then, a definition that must lose a tool the list lacks grants its tools instead.
+- **A withheld entry Claude Code was not measured to withhold:** one with an argument, or an MCP server's tool. Only a whole built-in tool, named without an argument, was measured to leave an agent's view ("Harness support" below), and the declaration's `withheld_admits` admits only that.
+- **A tool's name in a form Claude Code does not take,** by the declaration's `name_forms`. A built-in tool's name starts with a capital letter and holds only letters and digits, such as `Read`. An MCP server's is `mcp__<server>`, and one of its tools' `mcp__<server>__<tool>`, with no argument after it.
+- **`disallowedTools` beside `withheld`.** The definition names the tools it is withheld in `withheld` alone.
+
+A refused agent is not deployed. The deploy prints it `skipped`, with the cause. Where the copy an earlier deploy wrote carries the mark, it removes that copy, prints it `removed`, and says to mend the definition and run the deploy again, since the copy may give tools the definition no longer gives (COR-013 point 7). The run ends with the count refused. A file at the copy's path without the mark is the project's, and is left as it is. Where the tree holds no reader, or the adapter no declaration of tool access the reader reads, the deploy skips the agent, keeps its earlier copy, and says to run `pkit sync`.
+
+**A tool's name alone, denied in a project's settings,** such as `"deny": ["WebFetch"]` in `.claude/settings.json`, removes that tool from every session, and so from every agent, whatever its tool access. A per-agent difference is made in the agent's tool access, never in the project's denies ([ADR-004](../../../tech-docs/architecture/decisions/ADR-004-autonomy-intent-confinement.md) point 1).
+
 **Precedence with `review-pr --effort`.** A run-time effort resolved by `review-pr` (the project-management capability's `--effort` flag, `PKIT_REVIEW_AGENT_EFFORT`, or `review.agents.effort`) wins over the agent's deployed `effort:` — a run-time knob over a declaration. `review-pr` passes the value to the reviewer's run, and the agent runner (`run-agent.py`, below) passes it as the reviewer session's `--effort`, the harness's session-level setting (the same shape by which a `--model` flag wins over an `--agent`'s `model:`). When `review-pr` resolves none it passes nothing, and the deployed value applies.
 
-**Storyboard references** (#1101). An agent that drives scripted scenarios declares its storyboards (COR-016) in `storyboards:` and cites them in its body. The source names a storyboard by its bare sibling filename (`storyboard.md`), which stays right wherever the agent's folder lives — core, project or a capability. The deployed copy lives in `.claude/agents/`, where that name resolves to nothing, so the resolver rewrites each entry naming a file beside the source to the storyboard's project-root-relative source path, in the list and wherever the body cites the entry as a whole path; the runtime reads the storyboard from there with its `Read` tool. An entry already written as a source path deploys unchanged. The convention is stated in the agents README, "Frontmatter declaration" under "Storyboards".
+**Storyboard references** (#1101). An agent that drives scripted scenarios declares its storyboards (COR-016) in `storyboards:` and cites them in its body. The source names a storyboard by its bare sibling filename (`storyboard.md`), which stays right wherever the agent's folder lives — core, project or a capability. The deployed copy lives in `.claude/agents/`, where that name resolves to nothing, so the resolver rewrites each entry naming a file beside the source to the storyboard's project-root-relative source path, in the list and wherever the body cites the entry as a whole path; the runtime reads the storyboard from there with its `Read` tool. An entry already written as a source path deploys unchanged. The convention is stated in the agents reference's `storyboards.md`, "Frontmatter declaration".
 
 ### `undeploy-capability.sh`
 
@@ -181,8 +216,9 @@ Claude Code matches the path of a tool that reads only against `Read(...)` rules
 - **The file the deploy picks.** The runner looks in the working copy as `deploy-agents.sh` does: the project's agent, then an installed capability's (the first by name), then core's, each flat form before folder form. A file that leads outside the working copy is refused.
 - **As the deploy resolves it.** The resolver beside the runner, `_resolve_agent.py`, resolves the file against the working copy's overlay. It applies the overlay, carries the model and the effort, and names each storyboard by its path from the clone's root.
 - **Refused where the deploy would not carry it.** The run is refused where the resolver fails, and where it warns that it drops the model or the effort. Any other warning refuses too, except the one for an optional read set with no value: nobody watches the run to read it.
-- **Only the methodology's shape.** Every front-matter field must be `name`, `description`, `tools`, `model`, `effort`, or a field of the reference graph: `reads`, `owns`, `needs`, `answers`, `gates`, `storyboards` and `composes`. A field outside that shape, such as `hooks`, `mcpServers`, `permissionMode`, `memory`, `skills` or `isolation`, refuses the run rather than being trimmed. A test holds the set to the backbone's own (`refs.Declared`).
-- **Passed:** the description, the body as the prompt, the tools, the model and the effort. The caller's effort, where it sets one, wins over the definition's. The other fields are read and never passed.
+- **Only the methodology's shape.** Every front-matter field must be `name`, `description`, `tools`, `withheld`, `model`, `effort`, or a field of the reference graph: `reads`, `owns`, `needs`, `answers`, `gates`, `storyboards` and `composes`. A field outside that shape, such as `hooks`, `mcpServers`, `permissionMode`, `memory`, `skills`, `isolation` or Claude Code's own `disallowedTools`, refuses the run rather than being trimmed. A test holds the set to the backbone's own (`refs.DEFINITION_FIELDS`).
+- **Its tool access, as the reader answers it.** The runner loads the working copy's reader, `.pkit/agents/tool_access.py`, and has it read `tool-access.json` beside the runner. It refuses the run where the reader refuses the definition, itself or by that declaration ("Tool access" under `deploy-agents.sh` above), and where the working copy holds no reader or the adapter no declaration the reader reads. The resolver gives it the definition in the methodology's keys, and the runner writes the reader's answer in Claude Code's, by the declaration's `keys`.
+- **Passed:** the description, the body as the prompt, the tool access, as `tools` or `disallowedTools`, the model and the effort. The caller's effort, where it sets one, wins over the definition's. The other fields are read and never passed.
 - **The name is replaced** by `pkit-run-` and sixteen hex digits, unique to the run. So no other agent answers to it.
 - **Read with the standard library.** The runner reads the resolved front matter with a narrow reader of its own. A form it does not read, such as an anchor, a tag or a nested list, refuses the run.
 
@@ -284,7 +320,7 @@ Only when every line passes does the adapter's author widen `TESTED_RANGE` to th
 **What rests on the documentation until the probe runs.** These come from Claude Code's documentation and its 2.1.302 release:
 
 - the settings' names and types in `SETTINGS_SCHEMA`, and the form of a permission rule the runner checks
-- that `--setting-sources ""` loads no settings file, and that `--agents` takes `description`, `prompt`, `tools`, `model` and `effort`
+- that `--setting-sources ""` loads no settings file, and that `--agents` takes `description`, `prompt`, `tools`, `model` and `effort`. That it takes `disallowedTools`, and keeps every other tool, was measured with 2.1.319 ("Harness support" below)
 - that `TMPDIR` and `CLAUDE_CODE_TMPDIR` place the shell's temp folder in the workspace
 - that the harness matches a reading tool's path against `Read(...)` rules and a writing tool's against `Edit(...)` rules, and that a bare `Edit` deny would take `Write` away
 - that the run's `Read` rule opens the clone while `blockReadsOutsideWorkingDirectories` is on. The schema says the block holds "in every permission mode", and does not say a rule reopens it
@@ -309,17 +345,55 @@ The confined form holds what the harness can hold. This is what it cannot, state
 - **What an allowed command's options do.** A rule allows a command with any arguments after its words. No allowed form has an option that runs another program, as `git grep --open-files-in-pager` does, which is why the rules leave it out. An option that writes a file, such as `--output`, is held by the sandbox, which writes only the workspace.
 - **The review command's runs** take the unconfined form, and nothing checks them.
 
+#### The probe of a working run (ADR-073 point 11)
+
+The runner's working form, for the build command, is not built yet (#2290). Before it is, a probe checked the facts [ADR-073](../../../tech-docs/architecture/decisions/ADR-073-builder-runs.md) rests on, on 29 October. It ran Claude Code 2.1.303 by hand on Linux, with bubblewrap 0.12.0. Each run was `claude -p` with `--setting-sources ""`, the run's settings inline, `dontAsk`, `--permission-prompts none` and the sandbox on, failing closed. Its results are on #2289, and this section states only what they record.
+
+**Platforms.** A working run is supported on Linux with bubblewrap. macOS is not probed yet, so a working run there is unsupported: the working form is to refuse it (exit 7) until a probe on macOS widens that.
+
+**Confirmed on Linux:**
+
+| Fact | How |
+|---|---|
+| The hook's code and model read from outside the clone are the ones that judge | the hook, registered by a path outside the clone, refused `rm -v -r` as `destructive-fs`. A hook and a `decide.py` planted in the clone never ran |
+| The `Read` deny on the caller's clone reaches a program the builder runs | a program read the seat's clone and `~/.ssh` as absent |
+| No signing agent's socket is reachable, and a program the builder runs cannot sign | `SSH_AUTH_SOCK` was absent. A connect to a live agent's socket failed (`EPERM`), with or without a deny on its path. `ssh-keygen -Y sign` failed |
+| A host off the list is unreachable | listed hosts were reached through the sandbox's proxy; the rest, and a direct connection, were not |
+| The harness's memory is off | a planted `MEMORY.md` loaded with `autoMemoryEnabled: true`, and not with `false` |
+| Each event reaches the runner with its time, and the idle limit ends a run that sends none | events arrive line by line as they happen. Only `assistant` and `user` events carry a timestamp of their own, so the runner times each on arrival. A quiet 20-second tool call sent none, and the idle limit ended its run |
+| A detached run outlives the shell call that started it, and the limits still end it | it outlived the call and the session that started it, and the idle limit ended it |
+| Every process of a run's sandbox ends, and none is left | each sandboxed command runs in a process namespace of its own, and a daemon it started died with it. Once the limit ended the run, no process of it was left |
+| A resumed session takes the settings built again, and keeps the run's denies | a new allow and a new deny applied, and the first run's deny still held |
+| A sandbox that cannot start stops the harness at start | without `bwrap`, the harness refused to start, before any model call |
+
+Two facts are the runner's own logic, with nothing of the harness beneath them, so no probe can confirm them before the runner exists: the refusal of a host list where the adapter declares no host set, and `--hand-back`'s second check of the clone.
+
+**Not probed yet,** as #2289's results name them: the producer agent's build, wildcards in a host list, the ending of a check's processes, and the checks' sandbox with no harness. Nothing here confirms them.
+
+**Disproved, or narrower than recorded:**
+
+- **The credential scrub.** With `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which the runner sets for a confined run, Claude Code forces the mode to `default`, on Linux and on macOS. On Linux it also replaces the sandbox's writes with an isolation of its own. That leaves most of the machine writable, and writes empty stub files into the folder and its `.git/info/exclude`. Without the scrub the facts above hold, and a sign-in variable reaches every command the run starts. #2311 settles which runs set it.
+- **A sandbox that starts and cannot run.** Where `bwrap` is present but cannot mount, the harness starts, and every shell command fails. The probe met it running as root in a home folder another account owns.
+- **A detached run from a sandboxed shell** dies with the shell call, in that sandbox's process namespace. It outlives the call only from a shell outside the sandbox.
+
+**For the working form (#2290):**
+
+- The hook takes both its model's root and its anchor from `CLAUDE_PROJECT_DIR`. A working run needs the two apart: the model from outside the clone, the anchor the clone.
+- The hook judges `agent:<name>`, by the name the run passes to `--agent`.
+
 ### Live permission enforcement (`permission-hook.py`)
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../tech-docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.
 
 `permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`, or `ask` in the cases "When the hook asks" names) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI reach the same verdict (ADR-002's same-code invariant), and the hook then answers an abstain with `ask` in those cases.
 
-**When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a form of a guardrail, which the core's `hook_hidden_guardrails()` names. The core's abstain on such a doubt is a prompt (ADR-025 point 2), and how this hook carries out an abstain is the adapter's to say (ADR-002, Implications).
+**When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a guardrail, which the core's `hook_hidden_guardrails()` names (ADR-025 point 7). Such a call may hold a form of a guardrail's command, or git configuration the call sets or writes, as `git -c alias.p='push --force' p` does. It may run a command through a runner whose command the core cannot read, as `find . -exec sh -c 'rm "$1"' _ {} \;` does, which `Bash(find:*)` would run.
+
+A guardrail behind a runner the core reads is denied in every mode, as `find . -exec rm -rf {} +` and `xargs rm -rf` are.
 
 Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository, in every permission mode (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
 
-**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail's form.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
+**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
 
 The core never reads the mode, so its allow and deny, a strict posture's deny included, are the same in every mode. The hook reads the mode from the payload's `permission_mode` field. The hooks reference's "Common input fields" gives `auto` for auto mode and `bypassPermissions` for bypass mode. A missing field, or a value the hook does not know, keeps the ask.
 
@@ -394,7 +468,11 @@ The harness-neutral contract is the permissions README's (*The agent workspace*:
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
 
 - **A delegated helper's full result reaches the agent that delegated to it** (`delegated-result-complete`): `at-cost`, for every version. It holds while Claude Code's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper becomes a teammate, and its result arrives cut at 4064 characters. The methodology dispatches its helpers without a name (project-management DEC-029).
+- **Every session holds every layer's loaded rules from its start to its end** (`session-loads-rules`): `at-cost`, for no version yet. Core's loaded file and every capability's reach a session by one route, `CLAUDE.md` and its imports, so they load in a session a person starts at the project's root, in a subagent dispatched from one with a definition of the project's, and again after compaction. By the harness's own behaviour no layer's rules load, core's included, in the built-in Explore and Plan agents or a definition that sets `omitClaudeMd`, in a run with `--bare` or `--safe-mode`, for a file `claudeMdExcludes` or `managed-only` drops, or in a session started below the project's root whose person declined the external imports. Whether a session in a worktree under `.claude/worktrees/` also loads the main checkout's files is unobserved. So keep `CLAUDE.md` and the index out of `claudeMdExcludes`, dispatch the methodology's work to definitions that do not set `omitClaudeMd`, and approve the external imports where sessions start below the root. The range stays empty until a session is observed holding an imported capability file. Apart from that cost, the runner's own gap: a confined run passes `--setting-sources ""`, and a builder's working run loads no settings file either, so neither holds any layer's rules, core's included; #2352 takes it up <!-- unanchored: names the issue that takes the runner's gap up, a pointer and no statement of the system -->.
 - **A process can start an agent unattended, confined for that one run** (`unattended-confined-run`): `at-cost`, for no version yet. The runner's confined form needs the platform's sandbox, which Claude Code runs on macOS, and on Linux with bubblewrap. On macOS an allowed command that starts `uv` runs outside it ("What stays open" above). The bound is the runner's tested range, `TESTED_RANGE`, empty until the probe passes ("The probe" above). Whoever widens the range widens the bound with it.
+- **A process can start an agent unattended that edits and builds in a folder the process names** (`unattended-working-run`): `at-cost`, for 2.1.303, the version the probe ran on. It holds on Linux with bubblewrap, and only where the run leaves the scrub of sign-in variables off, so a sign-in variable reaches every command the run starts. macOS is not probed ("The probe of a working run" above).
+- **A session's agent withheld named tools has none of them, and keeps every other tool its session holds** (`session-agent-withheld-tools`): `at-cost`, for 2.1.319, the version measured on macOS. An agent named only `disallowedTools`, given on the command line, named by the `agent` setting, and with agent teams on, kept every other tool, a connected MCP server's included, and lacked the withheld ones, in the report a session gives at its start (ADR-085). Only a whole built-in tool, named without an argument, was measured, so the adapter refuses any other withheld entry ("Tool access" under `deploy-agents.sh` above).
+- **A helper withheld named tools has none of them** (`helper-withheld-tools`): unanswered, so it reports `indeterminate`. A helper's tools are visible only inside a session, and nobody has measured them yet.
 
 ### `permission-enforcement.yaml`
 
@@ -405,7 +483,7 @@ The per-adapter enforcement-capability declaration (per COR-028): which dimensio
 The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primitives, invoking them in order. When running manually, the steps are:
 
 1. **Permissions.** Hand-merge `settings/core/settings.json` + `settings/project/settings.json` into your project's `.claude/settings.json`. Per COR-002's merge contract: append-only for adopter content, baseline-enforce for safety denies, idempotent. Or just run `merge-settings.sh`. The merge also registers the start hook (*The agent workspace* above).
-2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md` so the kit-shipped hard rules and tool-hygiene conventions load into the agent. Idempotent; never clobbers adopter content.
+2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md`, then `@.pkit/rules/capabilities.md`, so the kit-shipped hard rules and tool-hygiene conventions, and each installed capability's rules, load into the agent. Idempotent; never clobbers adopter content.
 3. **Skills.** Run `.pkit/adapters/claude-code/deploy-skills.sh`. Creates the `.claude/skills/` symlinks (tracked in git per the project's `.gitignore`, so a fresh clone has the same environment).
 4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
 5. **Undeploy one capability.** Not a setup step: `pkit capabilities uninstall` runs `.pkit/adapters/claude-code/undeploy-capability.sh <name>` where the capability's files stay. Running it by hand is safe, but a capability still registered is deployed again by the next sync.

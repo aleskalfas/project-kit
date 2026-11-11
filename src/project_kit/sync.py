@@ -47,7 +47,6 @@ from project_kit.manifest import (
 )
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
-    DISTRIBUTION_HTTPS_URL,
     fell_back_from_pin,
     is_source_checkout,
     read_version_pin,
@@ -80,6 +79,11 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
 
     # The guard first (ADR-065 point 7). It lets the methodology's source pass.
     refuse_version_mismatch(target_root, source_kit, command="sync")
+    # A file at the index's path that is no index stops sync before it writes
+    # (ADR-076 point 2), in the methodology's source too, where the index is rendered.
+    from project_kit import loaded_rules
+
+    loaded_rules.refuse_index_clash(target_root, command="sync")
 
     # Self-host (project-kit): its own .pkit/ IS the source, so propagation
     # would copy files onto themselves. This is sync's test for the
@@ -110,8 +114,15 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     from project_kit import capabilities as caps
 
     plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
-    propagate(ctx, [plan for plan in plans if plan.disposition == COPY])
+    copied = [plan for plan in plans if plan.disposition == COPY]
+    # Each loaded set is read before the step copies its new version, and what it newly
+    # binds is said after (ADR-076 point 6).
+    before = loaded_rules.read_delivered(target_root)
+    propagate(ctx, copied)
     _report_sync_capabilities(plans, dry_run=dry_run)
+    loaded_rules.echo_bound(
+        target_root, loaded_rules.bound_by(before, delivered_by_copy(source_kit, copied))
+    )
 
     regenerate_derivable_state(ctx)
 
@@ -149,17 +160,39 @@ def regenerate_derivable_state(ctx: install.InstallContext) -> None:
     None of it is recorded in a manifest (COR-010), so sync, a transition and
     the self-host branch each regenerate all of it:
 
+    - the capabilities' rules index, `.pkit/rules/capabilities.md`, rendered at the
+      core tier from the registered capabilities' loaded sets and the adapters'
+      `loaded_rules:` (ADR-076 point 2), before the merge keeps its line
     - each installed adapter's primitives: merge delivery in its auto-add tier
       (`.claude/settings.json`, `CLAUDE.md`), then deploy of skills and agents
     - `.pkit/.gitignore`, rendered at the core tier from the runtime-ignore
       declarations of the backbone and every installed component (ADR-009 rule 7)
+    - pkit's region of the local exclude file, from the footprint, where the project
+      is private (ADR-009 point 3)
     - the agent workspace and its line in the local exclude file (#1043)
     - each registered query command's environment, resolved once, online (#1092)
     """
+    install.render_rules_index(ctx)
     install.run_installed_adapter_primitives(ctx)
     install._render_runtime_ignore(ctx)
+    install.refresh_private_region(ctx)
     install.ensure_agent_workspace(ctx)
     install.provision_query_commands(ctx)
+
+
+def delivered_by_copy(
+    source_kit: Path, capabilities: Sequence[CapabilityPlan]
+) -> list[tuple[str, Path]]:
+    """The components the propagation step copies, with where it copies each from: the
+    backbone's trees from the running pkit's, and each capability it copies from its
+    bundled source. What a step newly binds is read from these (ADR-076 point 6)."""
+    delivered = [("backbone", source_kit)]
+    delivered.extend(
+        (plan.name, plan.source.path)
+        for plan in capabilities
+        if plan.source is not None and plan.disposition in COPIES
+    )
+    return delivered
 
 
 # --- The propagation step (ADR-065 point 1) ------------------------------------
@@ -661,11 +694,12 @@ def fallback_remedies(command: str, pin: str) -> list[str]:
     does `pkit upgrade`'s refusal under the fallback (point 9).
 
     The router runs the pin whenever it can fetch it, so the remedies are
-    reconnecting, the pin run through `uvx`, or the pin's version installed
-    from the HTTPS URL where SSH keys fail. Moving on purpose is `pkit unpin`,
-    then `pkit upgrade`, never a bare `pkit upgrade`. A pin that is no version
-    names no release the router can ever fetch, so it gets no command built
-    from it: it is replaced with `pkit pin`, or the project moves on purpose.
+    reconnecting, or the pin run through `uvx`. An install of the pin's version
+    by hand fetches from the URL the router fetches from (ADR-090 point 1), so it
+    is no remedy of its own. Moving on purpose is `pkit unpin`, then `pkit
+    upgrade`, never a bare `pkit upgrade`. A pin that is no version names no
+    release the router can ever fetch, so it gets no command built from it: it
+    is replaced with `pkit pin`, or the project moves on purpose.
     """
     if _parse_version(pin) is None:
         return [
@@ -677,9 +711,6 @@ def fallback_remedies(command: str, pin: str) -> list[str]:
         f"Reconnect and run `pkit {command}` again: the router runs the pin whenever it can "
         f"fetch it. Or run the pin through uvx: `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} "
         f"project-kit {command}`.",
-        "Where SSH keys are what fail, install the pin's version from the repository's "
-        f"HTTPS URL: `uv tool install --force {DISTRIBUTION_HTTPS_URL}@v{pin}`. The router "
-        "then runs it with no fetch.",
         "To move the project on purpose: `pkit unpin`, then `pkit upgrade`.",
     ]
 

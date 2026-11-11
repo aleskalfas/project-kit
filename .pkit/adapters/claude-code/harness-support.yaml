@@ -47,3 +47,78 @@ requirements:
       (ADR-066 points 2 to 6). Those facts rest on Claude Code's documentation
       and its 2.1.302 release. The probe, `probe-confined-run.py`, has passed on
       no version yet, so the runner refuses every confined run.
+  unattended-working-run:
+    grade: at-cost
+    cost: >-
+      Holds on Linux with bubblewrap, and only where the run leaves Claude
+      Code's scrub of sign-in variables off. So a sign-in variable reaches
+      every command the run starts. With the scrub on, the harness forces its
+      own permission mode and widens the sandbox's writes. macOS is not
+      probed, so it has no grade here. The producer agent's build in such a
+      run, and a check's sandbox with no harness, are not confirmed yet, so
+      the grade covers only what the probe ran.
+    # The versions the probe of ADR-073 point 11 ran on. The runner's working
+    # form is not built yet; once it is, this bound is its tested range, as
+    # the confined run's is.
+    harness_versions: ["2.1.303", "2.1.303"]
+    evidence: >-
+      The probe of ADR-073 point 11, on 29 October, on Linux with bubblewrap
+      0.12.0: runs of `claude -p` with no settings sources, inline settings,
+      `dontAsk` and the sandbox on. Without the scrub, writes went to the
+      run's folder only. Its results, on #2289, do not yet cover the producer
+      agent's build or the checks' sandbox with no harness. The adapter's
+      README, "The probe of a working run", lists each fact they confirm and
+      how it was checked.
+  session-loads-rules:
+    grade: at-cost
+    cost: >-
+      Core's loaded file and every capability's reach a session by one route,
+      CLAUDE.md and the files it imports (the capabilities' rules index among
+      them), so they load in the same sessions and miss the same ones. They
+      load in a session a person starts at the project's root, in a subagent
+      dispatched from one with a definition of the project's, and again after
+      compaction. By the harness's own behaviour no layer's rules load, core's
+      included, in the built-in Explore and Plan agents or a definition that
+      sets `omitClaudeMd`; in a run with `--bare` or `--safe-mode`; for a file
+      that `claudeMdExcludes` or `managed-only` drops; or in a session started
+      below the project's root whose person declined the external imports.
+      Unobserved: whether a session in a worktree under `.claude/worktrees/`
+      also loads the main checkout's files beside its own. The adopter keeps
+      CLAUDE.md and the index out of `claudeMdExcludes`, dispatches the
+      methodology's work to definitions that do not set `omitClaudeMd`, and
+      approves the external imports where sessions start below the root.
+    # Empty until a session is observed holding an imported capability file:
+    # only whoever observes it widens the range (COR-047 point 2).
+    harness_versions: []
+    evidence: >-
+      Claude Code's documentation of memory files, subagents, settings and the
+      Agent SDK, read on 29 October 2026. No session has been observed holding
+      an imported capability file yet, so the answer vouches for no version.
+      Apart from the cost, a known gap of the adapter's own runner: it passes
+      `--setting-sources ""`, so a confined run holds no layer's rules, core's
+      included, and neither does a builder's working run, which loads no
+      settings file either. The gap comes from how the adapter starts a run,
+      not from the harness, so nothing an adopter keeps closes it; #2352 takes
+      it up.
+  session-agent-withheld-tools:
+    grade: at-cost
+    cost: >-
+      Measured only for a whole built-in tool, named without an argument, so
+      a definition withholds only such tools: the adapter refuses to deploy
+      or run one that withholds a tool it does not know as built in, a tool
+      narrowed by an argument, or an MCP server's tool (its declaration of
+      tool access, `tool-access.json`).
+    harness_versions: ["2.1.319", "2.1.319"]
+    evidence: >-
+      Measured with Claude Code 2.1.319 on macOS, from the init message a
+      session reports at its start, for an agent whose definition names only
+      `disallowedTools`, which the adapter writes for `withheld` (ADR-085
+      point 1). The agent kept every other tool, a connected MCP server's
+      included, and the withheld tools were absent. That held for an agent
+      given on the command line, as the agent runner gives one, for one named
+      by the `agent` setting, as a project's default agent is, and with agent
+      teams on.
+  # helper-withheld-tools is left unanswered, so it reads as indeterminate
+  # (COR-047 point 3): a helper's tools are visible only inside a session, and
+  # nobody has measured a helper withheld a tool yet (ADR-085 point 3). Only
+  # whoever measures it answers it.

@@ -14,13 +14,14 @@ reads:
     - COR-002
   paths:
     - .pkit/cli/README.md
-    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/manifest.md
     - .pkit/adapters/README.md
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-005-bundle-pattern.md
     - .pkit/adapters/claude-code/README.md
     - .pkit/schemas/harness-requirements.yaml
     - .pkit/schemas/harness-support.schema.json
+    - .pkit/schemas/tool-access.yaml
 ---
 
 # Authoring an adapter
@@ -53,7 +54,7 @@ Use the harness's canonical kebab-case name: `claude-code`, `codex`, `cursor`, e
 
 Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure", "Universal elements" and "Authoring surface"). Every adapter must ship:
 
-- `package.yaml` — component metadata per COR-010 (`schema_version`, `kind: adapter`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
+- `package.yaml` — component metadata per COR-010 (`schema_version`, `kind: adapter`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/manifest.md`, "Package metadata (`package.yaml`)").
 - `README.md` — what the adapter handles, what content it ships, how to deploy it.
 - `migrations/` — the adapter's version migrations per COR-010, empty until its first one.
 
@@ -99,6 +100,7 @@ Add the artifacts the harness needs. The lifecycle finds an adapter's scripts **
   - `deploy-skills.sh` and `deploy-agents.sh` put the skills and agents where the harness looks for them, and drop what they deployed from a source that is gone.
 - **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, removing what the deploy scripts put in the harness for that one capability, recognised by their deploy mark. The lifecycle runs it when it unregisters a capability whose files stay. Unlike the deploy primitives, its absence is reported: the lifecycle names an adapter that ships none in a `warning` line, since its harness keeps the capability active. An adapter that deploys nothing per capability ships one that does nothing.
 - **What every script owes** — it is executable, with an interpreter line, since the lifecycle starts it from the project root; it is idempotent; and it exits non-zero only when it fails, which stops the lifecycle command with an error naming it.
+- **Its declaration of tool access** — where the adapter deploys agents, by `deploy-agents.sh` or an agent runner, write `tool-access.json`: the harness's keys for a grant and a withheld list, the forms a tool's name takes, its built-in tools, and the withheld entries it was measured to withhold. Start from `.pkit/schemas/tool-access.yaml`, which admits none, and admit an entry only once the harness was measured to withhold it and step 6 answers `session-agent-withheld-tools`. The deploy and the runner have the agents area's reader refuse by it, and `pkit validate` fails until it is there (the adapters README, "What an adapter declares as data").
 - **Hook configuration** — if the harness supports hooks.
 
 Skills, agents, and decisions live in their own harness-agnostic areas (per COR-006); the adapter only translates them at deploy time.
@@ -117,6 +119,7 @@ Walk the adapter against the COR-005 universal-element checklist:
 - *Does the adapter ship `undeploy-capability.sh`? Without it, a capability uninstalled with its files kept stays active in the harness, and the lifecycle warns.*
 - *Does the adapter respect COR-006's harness-agnostic discipline — core content lives at canonical paths, and the adapter only translates at deploy time?*
 - *Does every answer in `harness-support.yaml` rest on evidence, with its versions bounded to what was tested?*
+- *Where the adapter deploys agents, does `tool-access.json` declare its harness's terms, and admit only withheld entries the harness was measured to withhold?*
 
 If any check fails, revise.
 

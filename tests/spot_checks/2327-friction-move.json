@@ -1,0 +1,14 @@
+[
+  {
+    "id": "mig-an-answer-file-already-written-blocks-the-move",
+    "file": ".pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh",
+    "find": "                if there == data.encode(\"utf-8\"):\n                    continue",
+    "replace": "                if there == data.encode(\"utf-8\"):\n                    pass"
+  },
+  {
+    "id": "mig-an-answer-file-written-over",
+    "file": ".pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh",
+    "find": "        if apath.is_symlink() or apath.exists():",
+    "replace": "        if apath.is_symlink():"
+  }
+]

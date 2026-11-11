@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "brief.schema.json",
+  "title": "A piece's brief — visual-communication capability",
+  "description": "Formal shape of a piece's `brief.yaml` (DEC-029 points 2 and 3): what the piece must show and why it is designed so, for whoever makes or reviews it. A part for the whole piece, and a part for each page it speaks of, keyed by the page's id. Each part holds relations, goals, a takeaway and reasons, and names the content by key paths. It holds no content, no value and no layout, and has no language. A person writes it; no command changes what it says, and no renderer reads it. The check reads what it names (DEC-029 point 5). Its top and each mapping in it keep the methodology's container `pkit` free. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:brief`.",
+      "const": "visual-communication:brief"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "pkit": {
+      "$ref": "#/$defs/container"
+    },
+    "piece": {
+      "description": "The part for the whole piece: what concerns the piece, or more than one of its pages, and the intent of a page not yet in the content. A piece of one page keeps all of it here, its takeaway included. Its key paths start at the content's top.",
+      "$ref": "#/$defs/part"
+    },
+    "pages": {
+      "description": "A part for each page the brief speaks of, keyed by the id the page carries in the content. Its key paths start at the page.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/id"
+      },
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/part"
+      }
+    }
+  },
+  "$defs": {
+    "container": {
+      "description": "The methodology's container (COR-053 point 10), which the capability never reads.",
+      "type": "object"
+    },
+    "part": {
+      "description": "A part of the brief, for the whole piece or for one page (DEC-029 points 2 and 3).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "relations": {
+          "description": "What a picture must make visible between the parts it shows, such as levels that each rest on the one below.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relation"
+          },
+          "minItems": 1
+        },
+        "goals": {
+          "description": "What the piece, or the page, must achieve with its audience, such as what the audience can do after it.",
+          "type": "array",
+          "items": {
+            "$ref": "defs.schema.json#/$defs/text"
+          },
+          "minItems": 1
+        },
+        "takeaway": {
+          "description": "The one point a reader should leave the page with, written only where the page's content has no lead that states it.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "reasons": {
+          "description": "Why each choice of the design was made, in the order of the aspects: structure, form, hierarchy, type, colour, space.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reason"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "relation": {
+      "description": "A relation, in words, and the parts of the content it relates, by their key paths. A part a key path cannot reach, inside a local component or in shared content, is named in the words alone.",
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "text": {
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "relates": {
+          "description": "The parts of the content the relation is between, each by its key path.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key-path"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "reason": {
+      "description": "Why one choice of the design was made, and the principle it rests on (DEC-029 point 2).",
+      "type": "object",
+      "required": [
+        "aspect",
+        "text",
+        "principle"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "aspect": {
+          "description": "What the choice is about: `structure`, what the content's structure is; `form`, the form chosen for it and the visual variables that carry the structure; `hierarchy`, what is seen first and what is ranked below it; `type`, `colour` and `space`, the brand's roles of each that the page takes, and what each colour marks.",
+          "enum": [
+            "structure",
+            "form",
+            "hierarchy",
+            "type",
+            "colour",
+            "space"
+          ]
+        },
+        "about": {
+          "description": "The part of the page, or of the piece, the reason is about, by its key path. Without it, the reason is about the whole page, or the whole piece.",
+          "$ref": "#/$defs/key-path"
+        },
+        "text": {
+          "description": "Why the choice was made, in words.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "principle": {
+          "description": "The principle the choice rests on, by its name and its source.",
+          "type": "object",
+          "required": [
+            "name",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "pkit": {
+              "$ref": "#/$defs/container"
+            },
+            "name": {
+              "$ref": "defs.schema.json#/$defs/text"
+            },
+            "source": {
+              "description": "Where the principle is set out, such as an author and a work.",
+              "$ref": "defs.schema.json#/$defs/text"
+            }
+          }
+        }
+      }
+    },
+    "key-path": {
+      "description": "A part of the content by the keys and ids that lead to it, never its place in a list (DEC-011 point 3): each key joined by `.`, and in each list the item by its id, as `[<id>]`.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*(\\[[A-Za-z][A-Za-z0-9_-]*\\])?(\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\[[A-Za-z][A-Za-z0-9_-]*\\])?)*$"
+    }
+  }
+}

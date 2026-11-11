@@ -12,7 +12,7 @@ requirements:
 after:
   - [UC-014]
   - [UC-037]
-  - [UC-027]
+  - [UC-014, UC-027, UC-050]
 pkit:
   friction:
     anchors:
@@ -48,8 +48,8 @@ pkit:
 **Preconditions:**
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md):** The maintainer develops the [methodology](../../../glossary.md#term-methodology--methodology) in its [source repository](../../../glossary.md#term-source-repository--source-repository).
-- **From [UC-037](UC-037-record-decision.md):** The maintainer's [change](../../../glossary.md#term-change--change) adds a core record, stamped with the namespace `core`, or refines an accepted one in place.
-- **From [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md):** The `methodology-reviewer`'s [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it.
+- **From [UC-037](UC-037-record-decision.md):** The maintainer's [change](../../../glossary.md#term-change--change) adds a core record, stamped with the [namespace](../../../glossary.md#term-namespace--namespace) `core`, or refines an accepted one in place.
+- **From UC-014, [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md) or [UC-050](../050-adopt/UC-050-ready-fresh-clone.md):** The `methodology-reviewer`'s [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it.
 
 **Assumptions:**
 
@@ -70,7 +70,7 @@ pkit:
    - its title and its opening, which state the decision before the detail
    - the present, stated with no amendment log or dated correction
 3. The reviewer reports each violation with its discipline, and changes nothing in the record ([REQ-021](../../../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)). Its working files lie in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace).
-4. The maintainer revises the record. Content that fits only one project moves to that project's own namespace, such as a PRJ record of the [source repository](../../../glossary.md#term-source-repository--source-repository) (COR-014).
+4. The maintainer revises the record. Content that fits only one project moves to that project's own [namespace](../../../glossary.md#term-namespace--namespace), such as a PRJ record of the [source repository](../../../glossary.md#term-source-repository--source-repository) (COR-014).
 5. The maintainer runs `pkit decisions validate`. In the source repository a core record is no [synced copy](../../../glossary.md#term-synced-copy--synced-copy), so [validation](../../../glossary.md#term-validation--validation) checks its id, its points and its narration ([COR-055 point 1](../../../../../../.pkit/decisions/core/COR-055-validation.md#1-what-validation-owns)).
 6. The merge authoriser accepts the record ([UC-040](UC-040-accept-through-review.md)), and the change lands ([UC-034](UC-034-land-change.md)).
 

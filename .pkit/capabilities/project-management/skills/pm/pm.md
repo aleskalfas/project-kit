@@ -19,6 +19,7 @@ reads:
     - COR-016
     - COR-021
     - COR-064
+    - COR-066
   paths:
     - .pkit/capabilities/project-management/README.md
     - .pkit/capabilities/project-management/schemas/issue-types.yaml
@@ -139,6 +140,13 @@ Some axes carry project-specific values. The project-manager expects the followi
 - Optional: pre-close triage lead-time in days (defaults to 3).
 
 When this config is missing on first interaction, the agent prompts the user to fill it in rather than guessing.
+
+### A comment that reports the person's decision
+
+Every clone posts under the same account, so a comment's author does not show which session wrote it. `comment-issue` and `comment-pr` end each comment with a line that names the clone's seat and instance, or says that the clone holds no seat. That line names only the session that posts, and the person may have given the decision in another. So where a comment reports a decision of the person's, name where the person gave it:
+
+- **In a seat's session:** name the seat, such as "the person decided this in the session of seat `planner`". Name it even where the comment's own line names that seat
+- **In a session that holds no seat:** say so, and name what tells the session apart, such as its clone's folder
 
 ### Citation form in error messages
 

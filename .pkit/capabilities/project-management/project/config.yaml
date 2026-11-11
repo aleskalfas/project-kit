@@ -1,7 +1,7 @@
 # Project-side adopter config for the project-management capability.
 # Dogfooded in project-kit itself — single-repo, label-fallback mode.
 
-schema_version: 1
+schema_version: 2
 
 # Self-describing binding tag (COR-023) — resolves this file to its schema for
 # `pkit data validate`. The `binds_to` glob on schemas/config.yaml also resolves
@@ -21,9 +21,9 @@ pkit_schema: project-management:config
 gh:
   host: github.com
 
-# project-kit doesn't use a Projects v2 board today — Priority and
-# Workstream fall back to `priority:*` / `workstream:*` labels per
-# [project-management:DEC-012-classification-axes].
+# project-kit doesn't use a Projects v2 board today, and has no substrate map:
+# every axis reads the kit's own labels. The flag says only whether a board
+# exists ([project-management:DEC-062-axes-chosen-in-the-map] point 1).
 has_projects_v2_board: false
 
 # Pre-close triage lead-time in days (per
@@ -119,6 +119,11 @@ review:
     # need the operator's interactive effort, and four reviewers re-run
     # after every push. Override once with `review-pr --effort <level>`.
     effort: medium
+    # The reviewers start once the quick checks have passed, with the suite's two
+    # slices still running (ADR-078), so a round costs the longer of CI and the
+    # quick checks plus the review. `land-work` merges only with every check passed.
+    start_after_checks:
+      - the quick checks
     local_registered:
       - name: pm-reviewer
 

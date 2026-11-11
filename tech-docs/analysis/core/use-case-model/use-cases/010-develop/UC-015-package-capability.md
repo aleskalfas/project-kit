@@ -5,10 +5,19 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
+  - ACT-operator
 after:
   - [UC-014, UC-049]
 requirements:
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: 8
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 9
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -22,10 +31,13 @@ pkit:
         - COR-018
         - COR-007
         - COR-005
+        - ADR-034#1
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - ACT-operator
         - REQ-009
+        - REQ-012
 ---
 
 # UC-015 — Package a recurring discipline as a capability
@@ -35,6 +47,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): runs the [stamp](../../../glossary.md#term-stamp--stamp) of step 1 for the author through the `capability-author` [skill](../../../glossary.md#term-skill--skill), which pairs with it ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)). It writes the [capability](../../../glossary.md#term-capability--capability)'s files as the author directs.
+- **Operator** (`ACT-operator`): is asked before a stamp of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
@@ -47,11 +60,21 @@ pkit:
 **Main path:**
 
 1. The author runs `pkit new capability <name>`, or has an AI agent run it through the `capability-author` [skill](../../../glossary.md#term-skill--skill).
-2. The [system](../../../glossary.md#term-system--system) checks the name. It must be kebab-case, and neither a reserved word, such as `core` or `backbone`, nor a [backbone](../../../glossary.md#term-backbone--backbone) command's name. No [adapter](../../../glossary.md#term-adapter--adapter) may hold it, and no [capability](../../../glossary.md#term-capability--capability) folder of the [project](../../../glossary.md#term-project--project) may have it.
+8. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** `pkit new capability` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+2. The system checks the name. It must be kebab-case, and neither a reserved word, such as `core` or `backbone`, nor a [backbone](../../../glossary.md#term-backbone--backbone) command's name. No [adapter](../../../glossary.md#term-adapter--adapter) may hold it, and no [capability](../../../glossary.md#term-capability--capability) folder of the [project](../../../glossary.md#term-project--project) may have it.
 3. The system writes the capability's subtree, `.pkit/capabilities/<name>/`. It holds `package.yaml`, a `README.md`, and the empty folders `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/` and `migrations/` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 4. The [package metadata](../../../glossary.md#term-package-metadata--package-metadata) gives `version: 0.1.0`, and a [range](../../../glossary.md#term-range--range) on the backbone from the [version](../../../glossary.md#term-version--version) the project records, such as `requires_backbone: ">=1.149.0,<2.0.0"`.
 5. The system prints `Stamped: .pkit/capabilities/<name>/`, and registers nothing.
 6. The author writes the discipline into the subtree, from the [methodology](../../../glossary.md#term-methodology--methodology)'s primitives. Its [decision records](../../../glossary.md#term-decision-record--decision-record) come from `pkit new decision <name> <slug>`, and its [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) come from `pkit new agent <name> <agent>`. Its skills, its schemas and its scripts sit in their folders (COR-017 and [COR-018](../../../../../../.pkit/decisions/core/COR-018-capability-schemas.md)).
+9. At its entry, each [stamp](../../../glossary.md#term-stamp--stamp) of step 6 checks the repository as step 8 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit new decision` and `pkit new agent` run no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 7. The author writes the capability's description in `package.yaml` and in its README, and edits no file outside the subtree.
 
 **Variants:**

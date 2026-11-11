@@ -6,7 +6,8 @@ capability's ``project/instance/`` directory (declared in ``runtime_ignore:`` pe
 [pkit:ADR-009] rule 7, so it is never committed). A clone with no id set
 reads ``None``, and every ownership behaviour — marking, the clash guard, signed
 listings — no-ops. The presence of the id is the **sole activation gate**
-(DEC-035 point 1): a non-participating clone is byte-for-byte unchanged.
+(DEC-035 point 1). The one exception: such a clone cannot release an owner, so a
+move back from In Progress on an owned issue refuses (DEC-035 point 4).
 
 This is deliberately NOT the ownership marker. The marker is *per issue*, lives on
 GitHub, and is substrate-selectable (``_lib/instance_ownership`` / DEC-043). This
