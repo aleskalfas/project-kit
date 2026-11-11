@@ -44,6 +44,7 @@ class _RecordingRun:
     def __init__(self, real_run) -> None:
         self._real_run = real_run
         self.calls: list[list[str]] = []
+        self.environments: list[dict[str, str] | None] = []
         self.ls_remote_stdout = ""
         self.ls_remote_returncode = 1  # default: lookup fails → degrade path
         self.raise_exc: Exception | None = None
@@ -54,6 +55,7 @@ class _RecordingRun:
 
     def __call__(self, argv, *args, **kwargs):
         self.calls.append(list(argv))
+        self.environments.append(kwargs.get("env"))
         if list(argv[:3]) == ["uv", "tool", "dir"]:
             if self.tool_dir_exc is not None:
                 raise self.tool_dir_exc
@@ -77,6 +79,15 @@ class _RecordingRun:
     @property
     def install_calls(self) -> list[list[str]]:
         return [c for c in self.calls if c[:3] == ["uv", "tool", "install"]]
+
+    def environments_of(self, prefix: list[str]) -> list[dict[str, str] | None]:
+        """The environment each call starting with *prefix* was given, None for
+        one that was given none and so inherits this process's."""
+        return [
+            env
+            for call, env in zip(self.calls, self.environments, strict=True)
+            if call[: len(prefix)] == prefix
+        ]
 
 
 @pytest.fixture(autouse=True)
@@ -1466,6 +1477,47 @@ def test_tool_staleness_instructs_when_behind(
     assert "Already at backbone v" in out
 
 
+def test_the_release_lookup_asks_the_https_url_with_the_terminal_prompt_off(
+    stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The lookup asks the compiled URL in git's spelling, the repository's public
+    HTTPS URL, and runs with git's terminal prompt off, so a server that asks
+    for a credential fails it at once (ADR-090 points 1 and 2)."""
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output("2.5.0")
+
+    assert upgrade._latest_released_version() == Version("2.5.0")
+
+    assert stub_ls_remote.ls_remote_calls == [
+        ["git", "ls-remote", "--tags", "https://github.com/aleskalfas/project-kit.git"]
+    ]
+    [env] = stub_ls_remote.environments_of(["git", "ls-remote"])
+    assert env is not None and env["GIT_TERMINAL_PROMPT"] == "0"
+
+
+def test_the_tool_install_runs_with_the_terminal_prompt_off(
+    stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The upgrade's install of the tool fetches from the HTTPS URL with git's
+    terminal prompt off (ADR-090 point 2)."""
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
+
+    assert upgrade._self_update_tool(Version("2.5.0"))
+
+    assert stub_ls_remote.install_calls == [
+        [
+            "uv",
+            "tool",
+            "install",
+            "--force",
+            "git+https://github.com/aleskalfas/project-kit.git@v2.5.0",
+        ]
+    ]
+    [env] = stub_ls_remote.environments_of(["uv", "tool", "install"])
+    assert env is not None and env["GIT_TERMINAL_PROMPT"] == "0"
+
+
 def test_tool_staleness_reports_current_when_up_to_date(
     installed_target: Path,
     stub_ls_remote: _RecordingRun,
@@ -2002,7 +2054,8 @@ def test_upgrade_under_the_routers_fallback_refuses_before_it_writes(
     ) in message
     assert "Reconnect and run `pkit upgrade` again" in message
     assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{pin} project-kit upgrade`" in message
-    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{pin}`" in message
+    assert "uv tool install" not in message
+    assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
     assert stub_ls_remote.ls_remote_calls == []
     assert _tree_bytes(installed_target) == before
