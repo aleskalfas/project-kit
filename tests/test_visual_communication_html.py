@@ -1,20 +1,21 @@
 """The HTML renderer (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to
-4, DEC-005 points 4, 5, 9 and 10): what it declares, what its page file holds, the modes it
-holds and how a reader's signals meet them, how it shows fixed pages, and what it reports it
-lost.
+4, DEC-026 points 1 to 7, DEC-005 points 4, 5, 9 and 10): what it declares, what its page file
+holds, the modes it holds and how a reader's signals meet them, how it shows fixed pages, how
+it prints, and what it reports it lost.
 
 These tests read the file, as DEC-020 point 5 gives them, and start no browser. The file is
 well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elements
 (`html_elements`). What a browser makes of the file is the viewing step's to see. Which mode a
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them, and
-so is what a reader gets around a fixed page (`around`).
+so is what a reader gets around a fixed page (`around`), on screen and in print.
 
-The reference output below is pinned to the renderer's version, 1.3.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.4.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
 Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
 or a JPEG, by the image's trace id (DEC-025 point 7). Version 1.3.0 came with fixed pages,
-each inside a keyline on a backdrop (DEC-031).
+each inside a keyline on a backdrop (DEC-031). Version 1.4.0 came with the rules of print
+(DEC-026).
 """
 
 from __future__ import annotations
@@ -144,8 +145,8 @@ def sheet(root: ElementTree.Element) -> str:
 
 
 def rule(root: ElementTree.Element, what: str) -> str:
-    """What the file's sheet says of the mark of `what`."""
-    [found] = re.findall(rf"(?<!\+)\[{MARKS[what]}\]\{{([^}}]*)\}}", sheet(root))
+    """What the file's sheet says of the mark of `what`, outside any `@media` rule."""
+    [found] = re.findall(rf"(?<!\+)\[{MARKS[what]}\]\{{([^}}]*)\}}", plain_sheet(root))
     return found
 
 
@@ -154,10 +155,14 @@ def shown(text: str) -> str:
     return re.sub(r"base64,[A-Za-z0-9+/=]+", "base64,…", text)
 
 
+def plain_sheet(root: ElementTree.Element) -> str:
+    """The file's sheet with no `@media` rule."""
+    return re.sub(r"@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}", "", sheet(root))
+
+
 def properties(root: ElementTree.Element, selector: str) -> list[tuple[str, str]]:
     """Each declaration of the file's plain rule of `selector`, outside any `@media` rule."""
-    plain = re.sub(r"@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}", "", sheet(root))
-    found = re.findall(rf"(?:^|\}}){re.escape(selector)}\{{([^}}]*)\}}", plain)
+    found = re.findall(rf"(?:^|\}}){re.escape(selector)}\{{([^}}]*)\}}", plain_sheet(root))
     return [
         (name, value)
         for held in found
@@ -257,7 +262,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.3.0"
+    assert html.VERSION == "1.4.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -277,6 +282,14 @@ def test_it_declares_each_choice_the_scene_leaves_open() -> None:
             "keyline": {"width": 1, "share": 48},
             "backdrop": {"share": 7},
             "gutter": {"width": 32, "window-share": 4},
+        },
+        "print": {
+            "lie": "one after another down the sheets, each kept whole on one sheet where it fits",
+            "scale": "shrinks with the sheet's area and never grows",
+            "fixed": "inside its keyline, a border, in the sheet's area less the keyline",
+            "colours": "each page on the browser's ground, in its own colours exactly",
+            "sheet": "the reader's",
+            "breaks": "the browser's",
         },
     }
 
@@ -680,7 +693,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.3.0"
+    assert root.get("data-renderer") == "html 1.4.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -694,9 +707,13 @@ def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_g
 
 
 def test_the_file_sets_no_colour_around_its_pages() -> None:
+    """In print, each page lies on the browser's own ground, which is no colour value
+    (DEC-026 point 5), and nothing lies around it."""
     root = read(scene(box("figure/back"), TITLE))
     rules = re.sub(r"@font-face\{[^}]*\}", "", sheet(root))
-    assert "background" not in rules
+    assert re.findall(r"background[^:]*:[^;}]*", rules) == [f"background:{html.GROUND_COLOUR}"]
+    assert "background" not in kept(root)[PAGE]
+    assert kept(root, PRINT)[PAGE]["background"] == html.GROUND_COLOUR
     held = re.findall(r"(?:^|\})([^{}@]+)\{([^{}]*)\}", re.sub(r"@media[^{]*\{", "}", rules))
     painting = {selector for selector, said in held if re.search(r"(?<!-)color:|fill:", said)}
     assert painting <= {":root", f'[{MARKS["layer"]}] [fill="var(--accent)"]'}
@@ -1143,7 +1160,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.3.0">\n'
+    '1.4.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
@@ -1160,7 +1177,9 @@ PINNED = (
     "left:0;top:0;width:100%;height:100%;pointer-events:none}"
     "[data-text]{position:absolute}[data-line]{position:absolute;left:0;width:100%;"
     "font-size:0;line-height:0;white-space:pre}[data-strut]{display:inline-block;"
-    "width:0}@media (forced-colors:active){[data-layer] [stroke]{stroke:CanvasText}"
+    "width:0}@media print{[data-page]{break-inside:avoid;background:Canvas;"
+    "-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
+    "@media (forced-colors:active){[data-layer] [stroke]{stroke:CanvasText}"
     'marker path{fill:CanvasText}[data-layer] [fill="var(--surface)"]{fill:Canvas}'
     '[data-layer] [fill="var(--surface)"]:not([stroke]){stroke:CanvasText;'
     "stroke-width:1px}}</style>\n"
@@ -1206,13 +1225,17 @@ PINNED_FIXED_SHEET = (
     "@media screen and (prefers-contrast:more){[data-page]{outline-color:CanvasText}}"
     "@media screen and (forced-colors:active){html,[data-page]{background:Canvas}"
     "[data-page]{outline-color:CanvasText}}"
+    "@media print{[data-page]{border:1px solid CanvasText;"
+    "border-color:color-mix(in srgb,CanvasText 48%,Canvas);max-width:calc(100% - 2px)}}"
+    "@media print and (prefers-contrast:more){[data-page]{border-color:CanvasText}}"
+    "@media print and (forced-colors:active){[data-page]{border-color:CanvasText}}"
 )
 
-#: The rules every file holds, which the fixed pages' rules follow.
-EVERY_FILES_RULES_END = "[data-strut]{display:inline-block;width:0}"
+#: The rules every file holds, which the fixed pages' rules follow: the last is print's.
+EVERY_FILES_RULES_END = "print-color-adjust:exact}}"
 
 
-def test_the_reference_scene_is_drawn_as_pinned_for_version_1_3_0(
+def test_the_reference_scene_is_drawn_as_pinned_for_version_1_4_0(
     tmp_path: Path,
 ) -> None:
     pictures = {"first/picture": seam.Shown(reference_picture(tmp_path), seam.PNG)}
@@ -1231,7 +1254,7 @@ def test_the_reference_scene_is_drawn_as_pinned_for_version_1_3_0(
     assert base64.b64decode(data[1]) == pictures["first/picture"].file.read_bytes()
 
 
-def test_the_reference_scene_of_fixed_pages_is_drawn_as_pinned_for_version_1_3_0(
+def test_the_reference_scene_of_fixed_pages_is_drawn_as_pinned_for_version_1_4_0(
     tmp_path: Path,
 ) -> None:
     """The same file, its sheet holding the fixed pages' rules after every file's: no element
@@ -1530,6 +1553,7 @@ def test_the_file_holds_no_rule_on_a_windows_width() -> None:
         "@media (prefers-color-scheme:dark)",
         "@media (prefers-contrast:more)",
         "@media (prefers-color-scheme:dark) and (prefers-contrast:more)",
+        "@media print",
         "@media (forced-colors:active)",
     ]
     assert not re.search(r"@container|@supports|@import", held)
@@ -1913,6 +1937,9 @@ SCREEN = {
     "forced-colors": "none",
 }
 
+#: The same reader, printing.
+PRINT = {**SCREEN, "type": "print"}
+
 
 def sheet_rules(root: ElementTree.Element) -> list[tuple[str, str, list[tuple[str, str]]]]:
     """Each rule of the file's sheet but a face, in order: the media query it lies under, ''
@@ -1947,18 +1974,18 @@ def around(
     root: ElementTree.Element, reader: Mapping[str, str] = SCREEN
 ) -> dict[str, dict[str, list[str]]]:
     """What `reader` gets of the rules on each of `AROUND`: each property with every value the
-    rules they meet declare for it, in the cascade's order. An outline's shorthand declares its
-    width, its style and its colour, each in its place."""
+    rules they meet declare for it, in the cascade's order. An outline's shorthand, and a
+    border's, declares its width, its style and its colour, each in its place."""
     found: dict[str, dict[str, list[str]]] = {selector: {} for selector in AROUND}
     for media, selectors, declared in sheet_rules(root):
         if not meets(media, reader):
             continue
         for selector in (each for each in selectors.split(",") if each in found):
             for name, value in declared:
-                if name == "outline":
+                if name in ("outline", "border"):
                     width, style, colour = value.split(" ")
-                    longhands = {"outline-width": width, "outline-style": style}
-                    pairs = [*longhands.items(), ("outline-color", colour)]
+                    longhands = {f"{name}-width": width, f"{name}-style": style}
+                    pairs = [*longhands.items(), (f"{name}-color", colour)]
                 else:
                     pairs = [(name, value)]
                 for each, held in pairs:
@@ -2044,12 +2071,13 @@ def test_a_file_of_fixed_pages_shows_each_inside_a_keyline_on_a_backdrop() -> No
 )
 def test_a_file_of_other_pages_holds_no_keyline_and_no_backdrop(drawn: dict[str, Any]) -> None:
     """Point 2: the scene's root says it, and a file of pages that are none holds no rule of
-    fixed pages."""
+    fixed pages, on screen or in print (DEC-026 point 3)."""
     root = read(drawn)
-    assert not re.search(r"outline|color-mix|padding|background|@media screen", sheet(root))
-    got = kept(root)
-    assert (got["html"], got["body"]) == ({}, {"margin": "0"})
-    assert not {"background", "outline-color"} & set(got[PAGE])
+    assert not re.search(r"outline|border|color-mix|padding|max-width|@media screen", sheet(root))
+    for reader in (SCREEN, PRINT):
+        got = kept(root, reader)
+        assert (got["html"], got["body"]) == ({}, {"margin": "0"})
+    assert not {"background", "outline-color"} & set(kept(root)[PAGE])
 
 
 def test_the_keyline_and_the_backdrop_mix_the_browsers_colours_at_the_declared_shares() -> None:
@@ -2161,9 +2189,12 @@ def test_the_backdrop_shows_at_the_gutter_on_every_side_and_narrows_with_the_win
 
     assert kept(root)["body"]["padding"] == f"min({gutter['width']}px,{gutter['window-share']}vw)"
     assert list(dict.fromkeys(media for media, _, _ in sheet_rules(root) if media)) == [
+        "print",
         "screen",
         "screen and (prefers-contrast:more)",
         "screen and (forced-colors:active)",
+        "print and (prefers-contrast:more)",
+        "print and (forced-colors:active)",
         "(forced-colors:active)",
     ]
     assert not re.search(
@@ -2202,12 +2233,15 @@ def test_a_fixed_page_shrinks_with_the_room_its_gutter_leaves_and_nothing_scroll
     assert drawn_in(500) == (20, 460)
 
 
-def test_each_rule_of_fixed_pages_is_for_a_screen_alone() -> None:
-    """Point 4: a print holds neither the keyline nor the backdrop, until the record of how a
-    page prints decides what of them it keeps."""
-    printed = kept(read(SLIDES), {**SCREEN, "type": "print"})
-    assert printed == kept(read({**SLIDES, "fixed-pages": False}), {**SCREEN, "type": "print"})
+def test_the_backdrop_the_gutter_and_the_outline_are_a_screens_alone() -> None:
+    """Point 4: a print holds neither the backdrop nor the gutter, and its keyline is no
+    outline. The screen holds none of print's rules (DEC-026 point 7)."""
+    printed, on_screen = kept(read(SLIDES), PRINT), kept(read(SLIDES))
+
     assert printed["html"] == {} and printed["body"] == {"margin": "0"}
+    assert not {"outline-width", "outline-style", "outline-color"} & set(printed[PAGE])
+    assert not {"border-width", "border-color", "max-width", "break-inside"} & set(on_screen[PAGE])
+    assert not [name for name in on_screen[PAGE] if name.endswith("print-color-adjust")]
 
 
 def test_a_decks_page_file_shows_its_slides_as_fixed_pages_and_a_figures_does_not(
@@ -2226,3 +2260,186 @@ def test_a_decks_page_file_shows_its_slides_as_fixed_pages_and_a_figures_does_no
         assert [result.scene.to_dict()["fixed-pages"] for _, result in results] == [fixed_pages]
         [(_, _, file)] = pl.drawn(project, results, "html")
         assert (PINNED_FIXED_SHEET in file.document.decode()) is fixed_pages
+
+
+# --- print (DEC-026 points 1 to 6) --------------------------------------------------------------
+
+#: A file of each kind of page the renderer prints: a page alone, pages that are no fixed
+#: pages, and a deck's slides.
+PRINTED = {
+    "a page alone": scene(TITLE),
+    "pages that are none": {**SLIDES, "fixed-pages": False},
+    "fixed pages": SLIDES,
+}
+
+#: The white of a sheet of paper, against which a fixed page's keyline reads.
+SHEET_WHITE = WHITE
+
+
+@pytest.mark.parametrize("drawn", PRINTED.values(), ids=PRINTED)
+def test_in_print_each_page_is_kept_on_one_sheet_and_no_rule_forces_or_places_a_break(
+    drawn: dict[str, Any],
+) -> None:
+    """Point 1: the file asks the browser to keep each page on one sheet, so a page that does
+    not fit the rest of a sheet moves whole to the next, and one taller than a sheet runs on.
+    No rule forces a break, and none says where a page that runs on breaks. That a browser
+    does so is a real browser's test to hold."""
+    root = read(drawn)
+
+    assert kept(root, PRINT)[PAGE]["break-inside"] == "avoid"
+    assert re.findall(r"(?:page-)?break-[a-z]+", sheet(root)) == ["break-inside"]
+    assert "break-inside" not in kept(root)[PAGE]
+
+
+def test_in_print_the_pages_follow_one_another_in_the_middle_after_the_declared_gap() -> None:
+    """Point 1: the rules that lay the pages down the document lie under no media type, so
+    they lay them down the sheets too."""
+    root = read(SLIDES)
+    gap = html_declaration.DECLARATION["pages"]["gap"]
+
+    assert ("margin", "0 auto") in properties(root, PAGE)
+    assert properties(root, f"{PAGE}+{PAGE}") == [("margin-top", f"{gap}px")]
+    assert kept(root, PRINT)[PAGE]["margin"] == "0 auto"
+
+
+@pytest.mark.parametrize("drawn", PRINTED.values(), ids=PRINTED)
+def test_in_print_the_sheets_area_is_the_window_with_no_gutter_and_no_bound_on_height(
+    drawn: dict[str, Any],
+) -> None:
+    """Point 2: each page keeps its own width rule, as wide as its frame or as the area where
+    that is less, in the frame's proportions. Nothing bounds its height, no gutter lies
+    around it, and the file holds no page rule, so the reader's dialog sets the sheet (point
+    4)."""
+    root = read(drawn)
+
+    for page in marked(root, "page"):
+        assert re.fullmatch(r"min\(100%,[0-9.]+px\)", styled(page)["width"])
+        assert "aspect-ratio" in styled(page)
+    assert "padding" not in kept(root, PRINT)["body"]
+    assert not re.search(r"@page|max-height|\bvh\b|vmin|vmax", sheet(root))
+
+
+def test_pages_of_one_width_print_at_one_scale_the_area_over_their_width_at_most_one() -> None:
+    """Point 2, at every area up to twice the page's width: a page prints at the area's width
+    over its own, at most 1, and a fixed page at the area less its keyline on each side. Its
+    keyline then lies inside the area. On A4 upright, at margins of 0.4 in, a slide 1,280 px
+    wide prints at about 0.56 of its size."""
+    keyline = kept(read(SLIDES), PRINT)[PAGE]
+    room = re.fullmatch(r"calc\(100% - ([0-9.]+)px\)", keyline["max-width"])
+    assert room is not None
+    border = float(keyline["border-width"].removesuffix("px"))
+    assert float(room[1]) == 2 * border
+    [page, other] = marked(read(SLIDES), "page")
+    assert styled(page)["width"] == styled(other)["width"]
+    own = re.fullmatch(r"min\(100%,([0-9.]+)px\)", styled(page)["width"])
+    assert own is not None
+    size = float(own[1])
+
+    def drawn_in(area: float, *, fixed_page: bool) -> float:
+        """The width of a page's drawing in an area `area` px wide, by the rules read above."""
+        return min(area, size, area - float(room[1]) if fixed_page else area)
+
+    for area in range(3, int(2 * size) + 1):
+        assert drawn_in(area, fixed_page=False) / size == min(area / size, 1)
+        assert drawn_in(area, fixed_page=True) + 2 * border <= area
+        assert drawn_in(area, fixed_page=True) == min(area - 2 * border, size)
+    a4_upright = (8.27 - 2 * 0.4) * 96
+    assert round(drawn_in(a4_upright, fixed_page=True) / size, 2) == 0.56
+
+
+def test_in_print_a_fixed_page_lies_inside_its_keyline_a_border_with_no_backdrop() -> None:
+    """Point 3: the keyline is the page's own border, of the width and the colour the screen's
+    outline takes, as the declaration names them: print has no value of its own (point 6).
+    No backdrop prints, and no outline."""
+    root = read(SLIDES)
+    printed, on_screen = kept(root, PRINT), kept(root)
+    width = html_declaration.DECLARATION["pages"]["fixed"]["keyline"]["width"]
+
+    assert (printed[PAGE]["border-width"], printed[PAGE]["border-style"]) == (f"{width}px", "solid")
+    assert printed[PAGE]["border-width"] == on_screen[PAGE]["outline-width"]
+    assert printed[PAGE]["border-color"] == on_screen[PAGE]["outline-color"]
+    assert printed["html"] == {}
+
+
+@pytest.mark.parametrize("browser", BROWSERS)
+def test_in_print_the_keyline_contrasts_three_to_one_against_a_white_sheet(browser: str) -> None:
+    """Point 3: in light and dark, on each browser ground DEC-023's test measured, from the
+    share the file writes. Inside it the page prints on the browser's ground."""
+    ground, text = BROWSERS[browser]
+    got = kept(read(SLIDES), PRINT)
+
+    keyline = painted(got[PAGE]["border-color"], ground, text)
+
+    assert contrast(keyline, SHEET_WHITE) >= 3
+    assert painted(got[PAGE]["background"], ground, text) == ground
+
+
+@pytest.mark.parametrize("browser", BROWSERS)
+def test_in_print_under_more_contrast_the_keyline_takes_the_text_colour_or_the_ground_marks_it(
+    browser: str,
+) -> None:
+    """Point 3: under more contrast the keyline is the browser's text colour, which reads
+    against a white sheet in light. In dark it is white on the white sheet, and the page's own
+    ground marks its edge there."""
+    ground, text = BROWSERS[browser]
+    got = kept(read(SLIDES), {**PRINT, "prefers-contrast": "more"})
+
+    keyline = painted(got[PAGE]["border-color"], ground, text)
+    page = painted(got[PAGE]["background"], ground, text)
+
+    assert got[PAGE]["border-color"] == html.TEXT_COLOUR
+    assert max(contrast(keyline, SHEET_WHITE), contrast(page, SHEET_WHITE)) >= 3
+
+
+def test_in_print_under_forced_colours_the_keyline_takes_the_text_and_the_page_the_ground() -> None:
+    """Point 3: as on screen, the reader's text colour and their background colour. A border is
+    of a kind a browser keeps under forced colours."""
+    got = kept(read(SLIDES), {**PRINT, "forced-colors": "active"})
+
+    assert got[PAGE]["border-color"] == html.TEXT_COLOUR
+    assert got[PAGE]["background"] == html.GROUND_COLOUR
+
+
+def test_in_print_a_browser_that_cannot_mix_colours_draws_the_keyline_in_its_text_colour() -> None:
+    """Point 3: the border falls back as the outline does."""
+    assert kept(read(SLIDES), PRINT, mixes=False)[PAGE]["border-color"] == html.TEXT_COLOUR
+
+
+@pytest.mark.parametrize("drawn", PRINTED.values(), ids=PRINTED)
+def test_in_print_each_page_lies_on_the_browsers_ground_in_its_own_colours_and_nothing_around(
+    drawn: dict[str, Any],
+) -> None:
+    """Point 5: each page on the browser's ground, the file asking the browser to print it, and
+    what it holds, in their own colours, by the property and by its prefixed form. The
+    document and its body take neither, so the sheet around the pages is the reader's."""
+    printed = kept(read(drawn), PRINT)
+
+    assert printed[PAGE]["background"] == html.GROUND_COLOUR
+    assert printed[PAGE]["print-color-adjust"] == "exact"
+    assert printed[PAGE]["-webkit-print-color-adjust"] == "exact"
+    assert not [
+        name
+        for selector in ("html", "body")
+        for name in printed[selector]
+        if name == "background" or name.endswith("print-color-adjust")
+    ]
+
+
+def test_no_mode_is_picked_for_print_and_the_modes_stay_under_the_readers_signals() -> None:
+    """Point 5: the rules of the modes lie under no media type, so a print meets the key of
+    the reader's signals, as the browser sets them when it prints. No rule pairs print with a
+    signal of a mode, and a file of one mode prints that mode."""
+    root = every_key()
+    rules = sheet_rules(root)
+
+    assert [media for media, selector, _ in rules if selector == ":root" and "print" in media] == []
+    assert not [media for media, _, _ in rules if "print" in media and "prefers-color" in media]
+    assert all("screen" not in media for media, selector, _ in rules if selector == ":root")
+
+
+def test_it_declares_how_a_file_prints_beside_how_its_pages_lie_on_screen() -> None:
+    """Point 6: under `pages.print`, each rule the file holds, and no value of its own."""
+    printed = html_declaration.DECLARATION["pages"]["print"]
+
+    assert set(printed) == {"lie", "scale", "fixed", "colours", "sheet", "breaks"}
+    assert all(isinstance(value, str) for value in printed.values())
