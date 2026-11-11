@@ -12,9 +12,6 @@ shortfalls:
   - at: "2a"
     issue: "#3019"
     record: visual-communication:DEC-004#6
-  - at: "2a"
-    issue: "#3020"
-    record: visual-communication:DEC-004#6
 pkit:
   friction:
     anchors:
@@ -61,9 +58,6 @@ pkit:
 
 > [!WARNING]
 > **Not built yet:** a brand built on another draws by its own drawings alone, never by its base's. So under the new brand each layout the brand it builds on draws is drawn by its top's own drawing, and the new brand's own drawing of such a layout draws where that brand's should. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another keeps its base's layouts and adds only those of a kind of piece its base does not serve, and #3019 tracks it.
-
-> [!WARNING]
-> **Not built yet:** a release does not compare the parts a brand holds between its versions, so it finds no break in the new brand's own parts. DEC-004 point 6 decides that a brand built on another may add parts of its own, and #3020 tracks it.
 
 - **2b.** The look needs an axis or a mode that the brand it builds on lacks, such as a high contrast. The new brand adds none, so the developer asks that brand's library owner to add it.
 - **3a.** The new brand gives a value that the brand it builds on does not list. The developer removes the value, or asks that brand's library owner to list it, and the path rejoins at step 3.

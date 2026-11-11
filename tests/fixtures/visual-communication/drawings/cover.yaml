@@ -5,8 +5,7 @@ schema_version: 1
 # tests copy into the test brand's version folder as `components/cover.yaml`. It declares
 # nothing the content gives: it takes the cover's slots from the deck. Each part that shows
 # a slot is named after it (point 5), and it writes no width, since a page gets the deck's
-# (point 2).
-status: experimental
+# (point 2). It carries no status, since nothing names it (point 8).
 about: >-
   The test brand's cover: the title at the top, under a band of the accent, and the
   subtitle, the author and the link below it.
