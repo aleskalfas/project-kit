@@ -12,7 +12,8 @@ about: >-
 # Content writes each name of the site's fields, its layout and its slot, so none is renamed
 # after a release (DEC-010 point 7). `header`, `main` and `footer` are the names HTML gives
 # those parts of a page. `pages` holds a site's pages, as `slides` holds a deck's. `standard`
-# names the plain form of a page, and gives `page` no fourth meaning.
+# names the plain form of a page, and gives `page`, which names a page of any piece, a page
+# alone and a command, no fourth meaning.
 fields:
   type: object
   required: [pages]

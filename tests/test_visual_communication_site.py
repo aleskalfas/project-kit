@@ -111,9 +111,9 @@ SHARED = {"header": {"use": "lab/band"}, "footer": {"use": "lab/band"}}
 
 def test_the_site_holds_its_pages_a_header_a_footer_and_the_layout_standard() -> None:
     """Its field `pages` holds its pages, and `header` and `footer` are optional. Its one
-    layout, `standard`, has one slot, `main`. It asks for its width alone (DEC-022 points 1
-    to 3). The foundations being built pass the check alone with it, which the shipped
-    libraries' tests read."""
+    layout, `standard`, has one slot, `main` (`files.md`, *The foundations*). It asks for
+    its width alone (DEC-022 points 1 and 3). The foundations being built pass the check
+    alone with it, which the shipped libraries' tests read."""
     fields = SITE["fields"]
     assert fields["required"] == ["pages"]
     assert fields["properties"]["pages"]["x-pkit-pages"] is True
