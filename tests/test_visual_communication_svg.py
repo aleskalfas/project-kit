@@ -548,7 +548,7 @@ def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
 
 
 #: Each plugin the capability ships, with its own version.
-SHIPPED = {"svg": "1.1.0", "pdf": "1.2.0", "html": "1.3.0", "css": "1.0.0", "json": "1.0.0"}
+SHIPPED = {"svg": "1.1.0", "pdf": "1.3.0", "html": "1.3.0", "css": "1.0.0", "json": "1.0.0"}
 
 
 def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:

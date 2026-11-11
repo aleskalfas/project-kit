@@ -31,6 +31,9 @@ calls no outside program and reaches no service. Writing a page file takes no br
   of backdrop at each side of a page: `width` px, or `window-share` percent of the window's
   width where that is less. The viewing step widens its window by the gutter's `width` on
   each side, for every file (DEC-031 point 5). No project setting changes these values.
+- `physical-size`: its format has no physical page of its own. A page file is read in a
+  window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026
+  point 4), so it loses nothing of a top's physical size (DEC-034 point 3).
 - `not-carried`: what the file does not carry yet. What a reader who does not see the page
   gets (DEC-005 point 5) comes with a later version.
 - `marks`: the attribute that marks each thing the file holds (`MARKS`), so the viewing
@@ -108,6 +111,7 @@ DECLARATION = {
             "gutter": {"width": 32, "window-share": 4},
         },
     },
+    "physical-size": {"page": False, "maps": False},
     "not-carried": ["alternative text", "reading order", "structure"],
     "marks": MARKS,
     "draws": {

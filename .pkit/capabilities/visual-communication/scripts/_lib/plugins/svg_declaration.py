@@ -18,6 +18,9 @@ combinations that share one, which a page shows as any image (DEC-018 point 1).
   Each mode of the axis has its pair, the default's first, so a rule can name any of them.
   What hands the renderer its keys groups them by these pairs, and the check and an export
   read them to refuse a piece whose combinations differ in a value axis's mode of no pair.
+- `physical-size`: its format has no physical page. An SVG file is a picture, drawn at the
+  size whatever shows it gives, so it loses nothing of a top's physical size (DEC-034
+  point 3).
 
 Standard library only: the check reads it without importing the renderer.
 """
@@ -62,6 +65,7 @@ DECLARATION = {
     "programs": [],
     "services": [],
     "holds-modes": HOLDS_MODES,
+    "physical-size": {"page": False, "maps": False},
     "draws": {
         "group": dict.fromkeys(
             (*_FRAME, "component", "version", "options", "page"),
