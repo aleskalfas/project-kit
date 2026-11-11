@@ -1,6 +1,10 @@
 component: visual-communication
 kind: none
 body: >
-  DEC-036 proposes how a concept shows a sign beside its colour (#2984). It
-  is a design-ahead record: the Tasks under #2576 that build icons, shapes,
-  a run's sign and a legend ship the surface. No surface moves here.
+  Design-ahead: DEC-036, accepted, decides how a concept shows a sign beside
+  its colour (#2984): an icon its notation holds or a shape the foundations
+  declare, each an outline, drawn by an item's sign part and before a run on
+  a ground a text part chooses. DEC-001, DEC-004, DEC-005, DEC-012 and DEC-025
+  state what it decides of them. Nothing is built yet, so no command, file or
+  check moves; the Tasks under #2576 that build icons, shapes, a run's sign
+  and a legend ship the surface.
