@@ -26,6 +26,7 @@ pkit:
         - UC-027
         - UC-029
         - UC-030
+        - RS-OPS-008
         - .pkit/adapters/README.md#layout
         - .pkit/adapters/README.md#currently-shipped
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
@@ -109,7 +110,13 @@ What the output proves, claim by claim:
 
 ### Compared with setting up each project by hand
 
-Without an adapter, you set up the harness in each project yourself. You point its instruction file at the rules, copy the skills and agent definitions where it reads them, and write its settings. That takes no release, and works in your own project today. **An adapter's scripts run at every sync of every project, and its declarations record what the harness falls short of, as [the commands above](#what-adapters-do-instead) prove:**
+Without an adapter, you set up the harness in each project yourself:
+
+- You point the harness's instruction file at the rules.
+- You copy the skills and agent definitions where the harness reads them.
+- You write the harness's settings.
+
+Setting up the harness by hand takes no release, and works in your own project today. **An adapter's scripts run at every sync of every project, and its declarations record what the harness falls short of.** [The commands above](#what-adapters-do-instead) prove the first half, and [the task's commands](#adapt-the-system-to-another-harness) prove the second. Each project set up by hand, against an adapter:
 
 | What you need | Each project set up by hand | An adapter |
 | --- | --- | --- |
@@ -163,7 +170,7 @@ flowchart TD
 Write the adapter in the methodology's source repository, through the `adapter-author` skill. Then check it with validation and the harness report. Before you start:
 
 - **Have a clone of the methodology's source repository.** In a project, `.pkit/adapters/` is the methodology's, and sync manages it ([the reference, "Layout"](../../.pkit/adapters/README.md#layout)). A release that ships an adapter of your adapter's name copies over it there.
-- **Have the harness installed where you try the adapter,** so that you can watch what it does. Your answers on what it meets rest on that ([COR-047](../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)).
+- **Have the harness installed where you try the adapter,** so that you can watch what the harness does. Your answers on what the harness meets rest on that ([COR-047](../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)).
 
 > [!WARNING]
 > A change that adds an adapter cannot pass the methodology's tests yet. A test holds the list of adapters a release ships. The hold lasts until a release can tell a project's own adapter from a shipped one of the same name. Until then, build and try your adapter in your clone.
@@ -171,12 +178,12 @@ Write the adapter in the methodology's source repository, through the `adapter-a
 The steps:
 
 1. **Stamp it.** Have your agent run the `adapter-author` skill, which runs `pkit new adapter <name>`. The stamp writes `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It writes no script and no settings, since those depend on the harness ([the CLI reference, `new adapter`](../../.pkit/cli/README.md#new-adapter-name)).
-2. **Write the scripts your harness needs.** The lifecycle runs those present, and skips the others. The Claude Code adapter's scripts are the worked example ([its reference, "What this adapter ships"](../../.pkit/adapters/claude-code/README.md#what-this-adapter-ships)). What the lifecycle relies on, for each script ([the reference, "Primitives the lifecycle calls"](../../.pkit/adapters/README.md#primitives-the-lifecycle-calls)):
+2. **Write the scripts your harness needs,** with the Claude Code adapter's as the worked example ([its reference, "What this adapter ships"](../../.pkit/adapters/claude-code/README.md#what-this-adapter-ships)). The lifecycle skips each of the four deploy scripts your adapter does not hold. Where your adapter deploys anything for a capability, write `undeploy-capability.sh` too, or a capability's uninstall warns that the capability stays deployed in your harness. What the lifecycle relies on, for each script ([the reference, "Primitives the lifecycle calls"](../../.pkit/adapters/README.md#primitives-the-lifecycle-calls)):
    - It runs as a program.
    - It changes nothing when run a second time.
    - It exits with a status other than 0 when it fails.
-3. **Deliver the rules.** Declare `loaded_rules:` in `package.yaml`, and have your merge script keep its line and core's include in the instruction file. Without the key, validation warns that your harness's sessions load no capability's rules ([the reference, "How a capability's rules reach a session"](../../.pkit/adapters/README.md#how-a-capabilitys-rules-reach-a-session)).
-4. **Declare your harness's terms for tool access,** where your adapter deploys agents. Start from the emptiest declaration, in `.pkit/schemas/tool-access.yaml`, and add the forms a tool's name takes. Admit a withheld entry only once you have measured that the harness withholds it ([the reference, "The declaration of tool access"](../../.pkit/adapters/README.md#the-declaration-of-tool-access)).
+3. **Deliver the rules.** Declare `loaded_rules:` in `package.yaml`, and have your merge script keep the key's `line` and core's include in the instruction file. Without the key, validation warns that your harness's sessions load no capability's rules ([the reference, "How a capability's rules reach a session"](../../.pkit/adapters/README.md#how-a-capabilitys-rules-reach-a-session)).
+4. **Declare your harness's terms for tool access,** where your adapter ships `deploy-agents.sh` or registers a runner (step 6). Start from the emptiest declaration, in `.pkit/schemas/tool-access.yaml`, and add the forms a tool's name takes. Admit a withheld entry only once you have measured that the harness withholds it. Validation fails the admission until step 5 answers `session-agent-withheld-tools` as `supported` or `at-cost` for some version ([the reference, "The declaration of tool access"](../../.pkit/adapters/README.md#the-declaration-of-tool-access)).
 5. **Declare what the harness does.** In `harness-support.yaml`, answer each requirement you can, with your evidence and the versions you tested. Leave out one you cannot answer yet. In `permission-enforcement.yaml`, say where the harness enforces each dimension of the permission model ([the reference, "What an adapter declares as data"](../../.pkit/adapters/README.md#what-an-adapter-declares-as-data)).
 6. **Register a runner,** where the harness can run an agent with nobody watching. Register it under `run-agent` in `package.yaml`'s `commands:`. Commands that start such an agent then reach your harness ([the reference, "The agent runner"](../../.pkit/adapters/README.md#the-agent-runner)).
 7. **Check it** with `pkit sync`, `pkit validate` and `pkit harness report --adapter <name>`, as below.

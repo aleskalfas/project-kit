@@ -235,14 +235,22 @@ A run is `refused` for one of these reasons. The first four refuse it before it 
 - the harness cannot confine a confined run
 - the harness's start report did not match the run's settings
 
-Anything else the runner prints, or an exit other than 0, is a run with no answer.
+What the answer's three texts hold, in either form of request unless an item names one:
+
+- `output`: for a `finished` run, the agent's text.
+  - In the unconfined form, what the harness printed on its standard output.
+  - In the confined form, the agent's final message, never a tool's result.
+- `diagnostics`: what the harness wrote on its standard error, which may be empty.
+- `reason`: for each ending but `finished`, why the run ended so, naming the cause the table or the list above gives. A `finished` run's `reason` is empty.
+
+Each of the three is a string, and the backbone reads one the answer leaves out as empty. Anything else the runner prints, or an exit other than 0, is a run with no answer.
 
 A confined run's answer adds two keys:
 
 - `refused_calls`: each call the harness refused, as `{"tool", "input"}`, or `[]` where the harness reports none.
 - `start_report`: what the harness reported at its start, or `null`.
 
-A confined run's `output` is the agent's final message, never a tool's result. A start report that does not match the run's settings ends the run at once, as `refused`, with the mismatch as its reason.
+A start report that does not match the run's settings ends the run at once, as `refused`, with the mismatch as its reason.
 
 **What a runner owes:**
 
@@ -267,7 +275,10 @@ What the backbone does around a confined run, and the command itself, are [the C
 The methodology depends on properties of the harness that hosts it, which it cannot set, only require. The core declares those requirements once, as data, in `.pkit/schemas/harness-requirements.yaml`, beside its companion `harness-requirements.schema.json` ([COR-047](../decisions/core/COR-047-harness-requirement-declaration.md)). Each entry gives these:
 
 - **The requirement,** as behaviour any harness could show, never as one harness's key, flag or tool.
-- **Its observation point,** where its truth is visible: `out-of-session`, `interposed-runtime` at the harness's own hook points, or `in-session`, only to an agent inside a session.
+- **Its observation point,** where its truth is visible:
+  - `out-of-session`: outside a session
+  - `interposed-runtime`: at the harness's own hook points
+  - `in-session`: only to an agent inside a session
 - **Its evidence,** which admitted it. An entry needs a defect shown, or a design that depends on it. A transient entry names when it retires.
 
 **What an adapter owes: its support declaration.** Each adapter answers the requirements for its own harness in `harness-support.yaml`, in its folder, shaped by `.pkit/schemas/harness-support.schema.json` (COR-047 point 2). It holds one answer per requirement, keyed by the requirement's id. Each answer has four fields:
@@ -283,7 +294,7 @@ The methodology depends on properties of the harness that hosts it, which it can
 
 **Silence is indeterminate.** A requirement an adapter leaves out resolves `indeterminate`, never `satisfied`, so an incomplete declaration never reads as a passing one (COR-047 point 3). An adapter's README states its answers in prose. The Claude Code adapter's are in [its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml).
 
-**The grades.** COR-047 point 2 gives every adapter one vocabulary, so answers stay comparable across harnesses. It keeps "not achievable on this harness" apart from "achievable at a cost":
+**The grades.** COR-047 point 2 gives every adapter one vocabulary, so answers stay comparable across harnesses. The grades keep "not achievable on this harness" apart from "achievable at a cost":
 
 | Grade | Meaning |
 |---|---|
@@ -302,7 +313,9 @@ The methodology depends on properties of the harness that hosts it, which it can
 - **No `satisfied` yet:** the report gives none until a pass can read what the harness does. That needs an adapter to give the pass a way to observe it, which none does yet.
 - **Its exit and its JSON** are [the CLI reference's, "`harness report`"](../cli/README.md#harness-report---adapter-name---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 
-**What the layer does not do.** It detects, and never alters the harness's configuration or copies a value the harness owns into the methodology's state. It runs when asked, never on each operation. `pkit validate` checks each declaration against its schema. It warns of an answer to a requirement the core does not declare, one retired or newer than the backbone.
+**What the layer does not do.** It detects, and never alters the harness's configuration or copies a value the harness owns into the methodology's state. It runs when asked, never on each operation.
+
+**What validation checks.** `pkit validate` checks each declaration against its schema. Validation also warns of an answer to a requirement the core does not declare: one retired, or one newer than the backbone.
 
 **The permission dimensions stay apart.** Where an adapter's harness enforces each dimension of the permission model is its enforcement declaration's, the permission domain's case of COR-047's rule (COR-028 point 3). The support declaration does not repeat it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)).
 
@@ -315,4 +328,4 @@ The methodology depends on properties of the harness that hosts it, which it can
 - `session-agent-withheld-tools`: a whole session's agent withheld named tools has none of them, and keeps every other tool its session holds. It is observed from outside a session.
 - `helper-withheld-tools`: a helper withheld named tools has none of them. It is observed only inside a session.
 
-The Claude Code adapter answers the first five. It leaves `helper-withheld-tools` unanswered until it is measured, so that requirement reports `indeterminate`. The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8), and runs only when asked.
+The Claude Code adapter answers the first five. It leaves `helper-withheld-tools` unanswered until Claude Code is measured against that requirement, so the report resolves the requirement `indeterminate`. The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8), and runs only when asked.
