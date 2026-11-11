@@ -46,10 +46,18 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
 - **The root** holds the piece, its lock, the language, the key over its size axes, the
   seam's version, the trace ids of its pages in order, and whether they are fixed pages
   (DEC-031 point 2): the pages of a top whose layouts are its pages' forms, where that top
-  asks for a height, so each page gets it, as a deck's slides do. A site's pages, a page
-  alone and the pages a top's slot declares are none, so a scene's pages are all fixed
-  pages or none is. The top's name decides nothing. A renderer that does not read the fact
-  draws every page as before, so the seam's version stands.
+  asks for a height, by a formula or through its physical size, so each page gets it, as a
+  deck's slides do. A site's pages, a page alone and the pages a top's slot declares are
+  none, so a scene's pages are all fixed pages or none is. The top's name decides nothing.
+  A renderer that does not read the fact draws every page as before. The root also holds
+  the physical size of the piece's top, `{width, height}` in millimetres as the top declares
+  it, or null where it declares none (DEC-034 point 3). Every page of the scene takes it. A
+  renderer that did not read it would draw a printed page at a wrong size with no error, so
+  the seam's version rose with it.
+- **Heights a physical size sets.** A top with a physical size asks for its height through
+  it, wherever it lies, so the height it asks for names the engine as its source, as does
+  each page of its forms that gets it, and the height of a part that places it and gives
+  none.
 
 Computed, never committed: `Scene.to_dict()` gives one ordered value, so under one
 release the same files and facts give the same scene on every machine, and two such
@@ -66,11 +74,14 @@ from typing import Any
 from _lib import formula as fm
 from _lib import names
 from _lib.env import Env
-from _lib.findings import ATTENTION, Finding
+from _lib.findings import ATTENTION, FACT, Finding
 from _lib.layout import (
+    DRAWING_MISFIT,
     ENDS,
     ENDS_OF_LINE,
     TOLERANCE,
+    Choice,
+    Component,
     Context,
     Facts,
     Instance,
@@ -135,8 +146,12 @@ class Scene:
     children: list[Element]
     #: Whether the scene's pages are fixed pages (DEC-031 point 2).
     fixed_pages: bool = False
+    #: The physical size of the piece's top, in millimetres, which each page takes; None
+    #: where the top declares none (DEC-034 point 3).
+    physical_size: tuple[float, float] | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        physical = self.physical_size
         return {
             "piece": self.piece,
             "lock": dict(sorted(self.lock.items())),
@@ -145,6 +160,9 @@ class Scene:
             "seam": self.seam_version,
             "pages": list(self.pages),
             "fixed-pages": self.fixed_pages,
+            "physical-size": (
+                None if physical is None else {"width": physical[0], "height": physical[1]}
+            ),
             "children": [child.to_dict() for child in self.children],
         }
 
@@ -188,13 +206,23 @@ def compute_scene(
     env: Env,
     facts: Facts,
     sizes: Sizes | None = None,
+    choice: Choice | None = None,
 ) -> SceneResult:
     """The scene of a piece in one language and size combination, with what computing it
     found. `facts` fills the facts of its export, and no caller takes one by default (DEC-016
     point 5). `sizes` gives the size axes a piece can name, each at its mode at `size_key`
-    (DEC-021 point 3); none where it is not given. Raises `MissingFont`, or `MissingGlyph`,
-    before anything is laid out."""
-    ctx = Context(env, language, facts, sizes)
+    (DEC-021 point 3); none where it is not given. `choice` says which drawing draws each
+    instance of a layout, the piece's for every scene, and the scene states, at the piece,
+    each instance it leaves to its top's own drawing (DEC-034 point 6); with none, every
+    top draws its own layouts. Raises `MissingFont`, or `MissingGlyph`, before anything is
+    laid out."""
+    ctx = Context(env, language, facts, sizes, choice)
+    for trace, why in sorted(ctx.choice.refused.items()):
+        message = (
+            f"{trace} is drawn by its top's own drawing, in every language and at every size: "
+            f"the brand's drawing {why}"
+        )
+        ctx.add(Finding(DRAWING_MISFIT, FACT, message, where=trace, extra={"piece": True}))
     root = place_top(ctx, top, content)
     pages: list[str] = []
     children = []
@@ -205,7 +233,10 @@ def compute_scene(
                 run.style.check(run.text, trace)
         children.append(emitter.root(root))
     fixed = root is not None and fixed_pages(root)
-    scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children, fixed)
+    physical = root.component.physical_size if root is not None else None
+    scene = Scene(
+        piece, dict(lock), language, size_key, seam_version, pages, children, fixed, physical
+    )
     shared = {page.trace: page.from_the_top() for page in (root.pages if root else [])}
     return SceneResult(
         scene, list(ctx.findings), emitter.facts, unvalued=emitter.unvalued, shared=shared
@@ -214,10 +245,17 @@ def compute_scene(
 
 def fixed_pages(top: Instance) -> bool:
     """Whether the pages of the top `top` are fixed pages (DEC-031 point 2): its layouts are
-    its pages' forms, and it asks for a height, which each page then gets (DEC-022 point 3).
-    A top that asks for none, as a site does, lets each page take its own. A top that is a
-    page alone, or whose slot declares its pages, has no pages' forms."""
-    return top.component.forms and "height" in top.component.preferred
+    its pages' forms, and it asks for a height, by a formula or through its physical size,
+    which each page then gets (DEC-022 point 3, DEC-034 point 3). A top that asks for none,
+    as a site does, lets each page take its own. A top that is a page alone, or whose slot
+    declares its pages, has no pages' forms."""
+    return top.component.forms and top.component.asks_for("height")
+
+
+def _proportioned(component: Component, size: str) -> bool:
+    """Whether the engine sets the `size` the component asks for: its height, from the width
+    it asks for in its physical size's proportion (DEC-034 point 3)."""
+    return size == "height" and component.physical_size is not None
 
 
 class _Emitter:
@@ -232,12 +270,13 @@ class _Emitter:
 
     def root(self, top: Instance) -> Element:
         """The top's group. A top whose layouts are its pages' forms and asks for no height
-        is as tall as its tallest page, which the engine sets (DEC-022 point 3)."""
-        preferred = top.component.preferred
+        is as tall as its tallest page, which the engine sets (DEC-022 point 3), as it sets
+        the height of a top with a physical size (DEC-034 point 3)."""
+        component = top.component
         sizes = tuple(
-            top.source(f"preferred.{s}", preferred.get(s))
-            if s in preferred or not top.component.forms
-            else ENGINE
+            ENGINE
+            if _proportioned(component, s) or (component.forms and s not in component.preferred)
+            else top.source(f"preferred.{s}", component.preferred.get(s))
             for s in ("width", "height")
         )
         return self.group(top, (0.0, 0.0), (ENGINE, ENGINE), sizes)
@@ -300,9 +339,12 @@ class _Emitter:
         if key in spec and not (node.part.kind == "text" and key == "height"):
             return instance.source(f"parts.{node.part.name}.{key}", spec[key])
         if node.child is not None and key in ("width", "height"):
-            # A stretch its instance passes on sets the size, beside what the child asks.
+            # A stretch its instance passes on sets the size, beside what the child asks, and
+            # the engine sets the height a child asks for through its physical size.
             passed = self.ctx.attempt(lambda: instance.passed_on(node.part.name, key), 0.0)
-            return ENGINE if passed > TOLERANCE else f"default:{node.child.component.use}"
+            if passed > TOLERANCE or _proportioned(node.child.component, key):
+                return ENGINE
+            return f"default:{node.child.component.use}"
         return ENGINE
 
     def _frame(self, element: Element, instance: Instance, node: Node) -> None:

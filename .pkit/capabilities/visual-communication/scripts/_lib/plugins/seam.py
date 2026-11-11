@@ -33,8 +33,10 @@ from typing import Any
 #: (visual-communication DEC-023 point 2). 5 since an image shows a produced output, a
 #: picture file or a picture role, and a renderer is handed the picture each image shows
 #: in each combination, a PNG or a JPEG, by the image's trace id (`Shown`,
-#: visual-communication DEC-025 point 7).
-SEAM_VERSION = 5
+#: visual-communication DEC-025 point 7). 6 since the scene's root holds the physical size of
+#: the piece's top, which a renderer whose format has a physical page maps each page onto
+#: (visual-communication DEC-034 point 3).
+SEAM_VERSION = 6
 
 RENDERER = "renderer"
 PRODUCER = "producer"

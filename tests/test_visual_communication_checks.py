@@ -79,6 +79,7 @@ from tests.visual_communication_project import (
     findings_,
     svg_declaration,
     pdf_declaration,
+    html_declaration,
     fingerprint,
     copies,
     reading,
@@ -91,6 +92,7 @@ from tests.visual_communication_project import (
     "findings",
     "plugins.svg_declaration",
     "plugins.pdf_declaration",
+    "plugins.html_declaration",
     "fingerprint",
     "copies",
     "reading",
@@ -1290,6 +1292,48 @@ def test_a_renderers_losses_are_known_from_its_declaration_before_it_runs() -> N
     ]
 
 
+#: A poster's trim size, in millimetres (DEC-034 point 3).
+A1 = {"width": 594, "height": 841}
+
+
+def test_a_renderer_whose_format_has_a_page_and_maps_no_physical_size_approximates_it() -> None:
+    """It draws each page at its own unit, an approximation named at the top (DEC-034 point
+    3). Without a physical size on the root, it loses nothing."""
+    declaration = {
+        "name": "sheet",
+        "draws": {"group": dict.fromkeys(("x", "y", "width", "height"), "draws")},
+        "physical-size": {"page": True, "maps": False},
+    }
+    scene = {**page(), "physical-size": A1}
+    assert [loss.as_dict() for loss in checks.losses(scene, declaration)] == [
+        {
+            "plugin": "sheet",
+            "what": "figure",
+            "did": "approximated",
+            "why": "the sheet renderer draws each page at its own unit, not at the top's "
+            "physical size of 594 by 841 mm",
+        }
+    ]
+    assert checks.losses(page(), declaration) == []
+
+
+def test_no_shipped_renderer_loses_a_physical_size() -> None:
+    """The PDF renderer maps it onto its page; an SVG file and a page file have no physical
+    page of their own, so they lose nothing (DEC-034 point 3)."""
+    scene = {**page(), "physical-size": A1}
+    declared = {
+        each.DECLARATION["name"]: each.DECLARATION
+        for each in (svg_declaration, pdf_declaration, html_declaration)
+    }
+    assert {name: d["physical-size"] for name, d in declared.items()} == {
+        "svg": {"page": False, "maps": False},
+        "pdf": {"page": True, "maps": True},
+        "html": {"page": False, "maps": False},
+    }
+    for declaration in declared.values():
+        assert checks.losses(scene, declaration) == []
+
+
 def test_the_svg_renderer_loses_nothing_of_the_skeleton_piece(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
     write_picture(root, framing)
@@ -1822,6 +1866,22 @@ def test_a_librarys_own_roles_are_checked_alone_their_findings_in_its_version(
     assert level == "fact"
     assert checks.place(finding) == f"{PARTS_FOLDER}/1.0.0/roles.yaml#roles.test-parts.warning"
     assert finding.library == "test-parts@1.0.0"
+
+
+def test_the_foundations_components_tokens_are_checked_alone_their_findings_in_its_version(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    figure = root / "visual/libraries/foundations/1.0.0/components/figure.yaml"
+    text = figure.read_text(encoding="utf-8")
+    assert "\nparts:\n" in text
+    edge = "tokens:\n  edge: {type: color, default: '{space.2}'}\n\nparts:\n"
+    figure.write_text(text.replace("\nparts:\n", f"\n{edge}"), encoding="utf-8")
+    report = checks.check(root)
+    place = "visual/libraries/foundations/1.0.0/components/figure.yaml#tokens.edge"
+    for code in ("role-default", "component-token-unread"):
+        [(finding, _)] = judged(report, code)
+        assert (checks.place(finding), finding.library) == (place, "foundations@1.0.0")
 
 
 def test_a_brands_finding_against_a_library_it_names_lies_in_its_version_once(

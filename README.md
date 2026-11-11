@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/core/convention-compliance-reviewer.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
-      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, PRJ-015, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
         - ACT-adopter
         - ACT-ai-agent
@@ -60,6 +60,7 @@ pkit:
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#init
+        - .pkit/cli/README.md#installing-pkit-on-path
         - .pkit/cli/README.md#upgrade
         - .pkit/cli/README.md#status
         - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
@@ -289,17 +290,17 @@ Install `pkit` once, globally, and it serves every project on your machine.
 
 **Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` from the git URL at the tag `latest`, which marks the highest release. The install fetches over SSH with your key, so the fence below shows no output:
+Then install `pkit` from the git URL at the tag `latest`, which marks the highest release. The repository is public, so the install needs no key and no token. It fetches over the network, so the fence below shows no output:
 
 ```sh
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+uv tool install git+https://github.com/aleskalfas/project-kit.git@latest
 ```
 
 To install a given release instead, name its tag, `@v<version>`, from the [releases page](https://github.com/aleskalfas/project-kit/releases). Either tag ties the version your project records to the content that tag holds.
 
 uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
 
-*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`.)*
+On a machine with nobody at the keyboard, such as a pipeline's runner, install `pkit` in a fresh clone with the project's script, `.pkit/cli/install-pkit.sh`, instead. It installs the version the project pins or records, and the [CLI reference](.pkit/cli/README.md#installing-pkit-on-path) says how to run it and what it checks.
 
 Check that your shell finds it:
 
