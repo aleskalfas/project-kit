@@ -1016,7 +1016,9 @@ def tags_project(root: Path) -> Any:
 
 def test_a_project_reads_the_own_roles_of_each_library_it_locks(tmp_path: Path) -> None:
     project = tags_project(parts_project(tmp_path))
-    assert set(project.scope.libraries) == {"test-parts"}
+    # The foundations lie among them for their components' tokens (DEC-035 point 1).
+    assert set(project.scope.libraries) == {"foundations", "test-parts"}
+    assert project.scope.libraries["foundations"].roles == {}
     assert project.foundations is project.scope.foundations
     assert project.brand.scope is project.scope
     assert [finding.code for finding in project.scope.findings] == ["role-brand-only"]
