@@ -161,7 +161,7 @@ Defined in [TERM-fixer](../glossary.md#term-fixer--fixer).
 
 **Why:** A merge may leave [artefacts](../../core/glossary.md#term-artefact--artefact) of the [default branch](../../core/glossary.md#term-default-branch--default-branch) out of date, and a person must [answer](../../core/glossary.md#term-answer--answer) each one. An agent that owns the [artefact type](../../core/glossary.md#term-artefact-type--artefact-type) of an out-of-date artefact can propose that artefact's answer, but only where the person chose to let it. So each fixer starts only where the [project](../../core/glossary.md#term-project--project) granted it, and it only proposes ([DEC-056](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md)).
 
-A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for artefact types. After a merge, a command a person runs at a terminal starts each fixer the project granted on the default branch's out-of-date artefacts of its artefact types. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
+A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for artefact types. After a merge, a command a person runs at a terminal starts each granted fixer on the default branch's out-of-date artefacts of its types. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
 
 **Attributes:**
 

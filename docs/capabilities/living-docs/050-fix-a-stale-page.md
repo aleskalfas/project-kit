@@ -134,8 +134,8 @@ The other two answers take the commands `pkit friction explain` printed under "F
 
 ## Have every stale page fixed in one run
 
-With project-management installed, run its command `pkit pm fix-drift` yourself, at a terminal, and it starts the agent on every page the default branch left stale ([project-management's README, "Starting the fixers"](../../../.pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift)). The agent then proposes each fix as above. It holds a page whose fix needs what only you know, such as what changed in a source, with one question.
+With project-management installed, run its command `pkit pm fix-drift` yourself, at a terminal. It starts the agent on every page the default branch left stale ([project-management's README, "Starting the fixers"](../../../.pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift)). The agent then proposes each fix as above. It holds a page whose fix needs what only you know, such as what changed in a source, with one question.
 
-- **At a terminal only.** You see the run start and end, and Ctrl-C stops it. Run where nobody is at a terminal, as by an agent, the command starts no agent: it lists the stale pages, with the command to run.
+- **At a terminal only.** You see the run start and end, and Ctrl-C stops it. Where nobody is at a terminal, as when an agent runs it, the command starts no agent. It lists the stale pages, with the command to run.
 - **The grant.** The command starts the agent only once your project grants it, which the install may have asked you about ([project-management's README, "Grant the fixers"](../../../.pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)).
 - **Nothing applied.** Nothing the run proposes lands until you accept it.
