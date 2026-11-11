@@ -1,5 +1,5 @@
 ---
-id: ADR-072
+id: ADR-089
 title: A release candidate lives only in its tag, and reaches only a project that asks for it
 status: proposed
 date: 2026-10-27

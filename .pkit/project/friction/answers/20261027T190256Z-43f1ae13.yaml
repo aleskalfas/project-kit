@@ -91,7 +91,7 @@ answers:
         - anchor:
             kind: record
             value: ADR-065
-          reason: "ADR-065 reads the migration window's lower bound in PEP 440 order, and gains pkit upgrade --pre with its remedy for a move to a candidate cut short, none built yet. The README gains them, with ADR-072's rules for migrations a pre-release shipped, in the build for #2211."
+          reason: "ADR-065 reads the migration window's lower bound in PEP 440 order, and gains pkit upgrade --pre with its remedy for a move to a candidate cut short, none built yet. The README gains them, with ADR-089's rules for migrations a pre-release shipped, in the build for #2211."
   - artefact: .pkit/release/README.md
     read:
       - 20261025T171020Z-c09fc17f.yaml
