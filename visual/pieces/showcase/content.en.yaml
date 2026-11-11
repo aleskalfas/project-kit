@@ -52,7 +52,7 @@ slides:
               text: [
                 {text: "# once, on your machine\n", style: comment},
                 {text: "$ ", style: prompt}, {text: "uv tool install \\\n", style: command},
-                {text: "    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n", style: command},
+                {text: "    git+https://github.com/aleskalfas/project-kit.git@latest\n", style: command},
                 {text: "$ ", style: prompt}, {text: "pkit --version\n", style: command},
                 {text: "# in each project\n", style: comment},
                 {text: "$ ", style: prompt}, {text: "cd your-project\n", style: command},

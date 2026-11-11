@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:7ab59ed72944b435887b33ef4a58bcad0a1263954c2c0f9db4f9db8a990fed83 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:aabb349e22865f0b0a632dd23a2d1dfb6fb7508a2d133a477840a7a14bf255b0 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -256,8 +256,8 @@ Work within the system's limits, the permission model and the agent workspace, s
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
 | [ACT-adopter — Adopter](../use-case-model/actors/ACT-adopter.md) | The person who adopts the methodology for a project and keeps its setup. | [020-set-up](#020-set-up), [050-adopt](#050-adopt), [060-report](#060-report) |
-| [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md) | An AI agent working under the methodology, acting on the system from outside. | [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [060-report](#060-report), [070-work-within-limits](#070-work-within-limits) |
-| [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md) | A project's continuous integration, acting on the system from outside. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release) |
+| [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md) | An AI agent working under the methodology, acting on the system from outside. | [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt), [060-report](#060-report), [070-work-within-limits](#070-work-within-limits) |
+| [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md) | A project's continuous integration, acting on the system from outside. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
 | [ACT-component-author — Component author](../use-case-model/actors/ACT-component-author.md) | Someone who extends the system with a component (a capability or an adapter) rather than only using it. | [010-develop](#010-develop), [040-release](#040-release) |
 | [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, scratchpad notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |

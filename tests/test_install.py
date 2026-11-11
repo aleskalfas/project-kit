@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -774,14 +775,45 @@ def test_the_readme_recommends_the_install_the_cli_reference_recommends() -> Non
     assert _install_the_readme_recommends() == _install_the_cli_reference_recommends()
 
 
-def test_the_dispatchers_install_advice_names_the_latest_tag() -> None:
-    """`.pkit/cli/pkit` advises installing pkit in two errors. Each gives the
-    install `init` prints, of the tag `latest`."""
-    dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
-    advised = re.findall(r"^\s*(uv tool install \S+)$", dispatcher, re.MULTILINE)
+@pytest.mark.parametrize("uv_on_path", [False, True])
+def test_the_dispatcher_in_a_projects_clone_names_the_install_script(
+    tmp_path: Path, uv_on_path: bool
+) -> None:
+    """In a project's clone, `.pkit/cli/pkit` runs nothing, and where it names how
+    to install pkit, it names the install script beside it, never an install of
+    `latest` (ADR-090 point 8): with `uv` missing, and with `uv` present."""
+    cli = tmp_path / "clone" / ".pkit" / "cli"
+    cli.mkdir(parents=True)
+    dispatcher = cli / "pkit"
+    shutil.copy2(install.find_source_kit() / "cli" / "pkit", dispatcher)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    if uv_on_path:
+        uv = tools / "uv"
+        uv.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        uv.chmod(0o755)
 
-    assert len(advised) == 2
-    assert all(command == install.recommended_install_command() for command in advised)
+    completed = subprocess.run(
+        ["bash", str(dispatcher), "status"],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        env={"PATH": f"{tools}:/usr/bin:/bin", "HOME": str(tmp_path)},
+        check=False,
+    )
+
+    assert completed.returncode == 1
+    assert re.search(r'sh "/\S*/clone/\.pkit/cli/install-pkit\.sh"', completed.stderr)
+    assert "@latest" not in completed.stderr
+
+
+def test_the_dispatcher_gives_no_install_of_latest() -> None:
+    """`.pkit/cli/pkit` gives no `uv tool install` line: a project's clone is sent
+    to the install script, which installs the project's version (ADR-090 point
+    8)."""
+    dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
+
+    assert re.findall(r"^\s*(uv tool install \S+)$", dispatcher, re.MULTILINE) == []
 
 
 def test_the_cli_reference_names_the_install_from_main_the_development_install() -> None:
