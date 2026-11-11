@@ -221,7 +221,8 @@ def _report_workspace(target_root: Path) -> None:
 def _report_claude_adapter(target_root: Path) -> None:
     """Settings, then the skills and agents under `.claude/`, each listed under
     where pkit deployed it from, or as the project's own (#2085). Settings not
-    present, and no skill or agent deployed, name `pkit sync` (#2463)."""
+    present, and no skill or agent deployed, name `pkit sync` (#2463). Beside the
+    skills, a warning of each deployed skill a personal skill hides (#3033)."""
     from project_kit import agent_definitions
 
     click.echo()
@@ -238,7 +239,11 @@ def _report_claude_adapter(target_root: Path) -> None:
         value = f"not present (run '{_ADAPTER_REMEDY}')"
     click.echo(f"    {'settings.json':<18} {value}")
 
-    for line in _deployed_lines("skills", _deployed_skills(target_root), remedy=_ADAPTER_REMEDY):
+    skills = _deployed_skills(target_root)
+    for line in (
+        *_deployed_lines("skills", skills, remedy=_ADAPTER_REMEDY),
+        *_hidden_skill_lines(target_root, skills.names, _personal_skills_folder()),
+    ):
         click.echo(line)
     try:
         picked = agent_definitions.answer(target_root)
@@ -292,7 +297,8 @@ class _Deployed:
 
     `by_owner` holds what pkit deployed, by where it was deployed from: `core`,
     `project` (the project namespace) or a capability's name — `core` and
-    `project` are reserved capability names, so the three never meet. `own` is
+    `project` are reserved capability names, so the three never meet. `names`
+    holds the name of each of those, in the order they were found. `own` is
     what the project added itself, which pkit does not deploy. `stale` is a
     deployed copy nothing ships any longer, which the next deploy removes.
     `untold` is a deployed agent whose name the picker cannot tell, which the
@@ -300,12 +306,15 @@ class _Deployed:
     """
 
     by_owner: dict[str, list[str]] = field(default_factory=dict[str, list[str]])
+    names: list[str] = field(default_factory=list[str])
     own: list[str] = field(default_factory=list[str])
     stale: list[str] = field(default_factory=list[str])
     untold: list[str] = field(default_factory=list[str])
 
-    def add(self, owner: str, line: str) -> None:
-        self.by_owner.setdefault(owner, []).append(line)
+    def add(self, owner: str, name: str, shown: str | None = None) -> None:
+        """`name` deployed from `owner`, listed as `shown`, or as its name."""
+        self.by_owner.setdefault(owner, []).append(name if shown is None else shown)
+        self.names.append(name)
 
 
 def _deployed_skills(target_root: Path) -> _Deployed:
@@ -320,7 +329,7 @@ def _deployed_skills(target_root: Path) -> _Deployed:
         if owner is None:
             found.own.append(entry.name)
         else:
-            found.add(owner, f"{entry.name} -> {link}")
+            found.add(owner, entry.name, f"{entry.name} -> {link}")
     return found
 
 
@@ -426,6 +435,47 @@ def _skill_owner(link: str) -> str | None:
             return owner
         return None
     return None
+
+
+def _personal_skills_folder() -> Path | None:
+    """Claude Code's personal skills folder, `~/.claude/skills/`, whose skill runs
+    in place of the project's of the same name; None where no home folder is found."""
+    try:
+        return Path.home() / ".claude" / "skills"
+    except RuntimeError:
+        return None
+
+
+def _hidden_skill_lines(target_root: Path, deployed: list[str], personal: Path | None) -> list[str]:
+    """A warning of each deployed skill that a personal skill of the same name hides:
+    a folder of that name in `personal`, which Claude Code runs instead.
+
+    Reads names only, asking whether each deployed name is a folder there, and follows
+    a link in place of that folder or of `personal` itself. A folder that is the
+    deployed skill's own, as where the project's root is the home folder, hides
+    nothing. Says nothing where `personal` is missing or hides no deployed skill.
+    """
+    if personal is None:
+        return []
+    project = target_root / ".claude" / "skills"
+    hidden: list[Path] = []
+    for name in deployed:
+        entry = personal / name
+        try:
+            if entry.is_dir() and entry.resolve() != (project / name).resolve():
+                hidden.append(entry)
+        except (OSError, RuntimeError):  # unreadable, or a link loop before Python 3.13
+            continue
+    if not hidden:
+        return []
+    head = (
+        f"⚠ {len(hidden)} hidden by a personal skill of the same name, "
+        "which Claude Code runs instead:"
+    )
+    return [
+        f"    {'hidden skills':<18} {cli_render.style('warn', head)}",
+        *(f"{_LIST_INDENT}{entry.name}, by {entry}" for entry in hidden),
+    ]
 
 
 def _report_capabilities(target_root: Path, source_kit: Path) -> None:

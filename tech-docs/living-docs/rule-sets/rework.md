@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.10.0
+version: 3.11.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -48,6 +48,7 @@ scope:
     - .pkit/lifecycle/component-registry.md
     - .pkit/lifecycle/migrations.md
     - .pkit/lifecycle/upgrade-flow.md
+    - docs/010-nobody-at-the-terminal.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:
