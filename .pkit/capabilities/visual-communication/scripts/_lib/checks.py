@@ -29,9 +29,10 @@ and 5, DEC-019 point 8).
   list's default component also declares, and each token a component declares and its
   file reads nowhere (`unread_tokens`, DEC-035 point 9), the components read through an
   environment of the engine that no piece or brand stands behind (`pipeline.LibraryEnv`,
-  DEC-010 point 9); the foundations' declarations are read. What it shows lies in the version; a
-  version that names majors no versions fit, or one the project holds no version of,
-  cannot be checked alone, which is a finding. A check of one piece runs no such pass;
+  DEC-010 point 9); the foundations' declarations are read, and their components' tokens
+  judged as a library's. What it shows lies in the version; a version that names majors
+  no versions fit, or one the project holds no version of, cannot be checked alone, which
+  is a finding. A check of one piece runs no such pass;
 - the libraries each piece locks, read under its lock: the own roles of each component
   library, and the brand, with its open roles, fonts and declared pairs. A fault the
   version shows alone too lies in the version, reported once; one only the lock's
@@ -670,8 +671,12 @@ class _Run:
         folders = {other.name: other.folder for other in chosen.values()}
         try:
             if name == FOUNDATIONS:
-                tokens.read_scope(folders, root=self.root)
-                found: Sequence[Finding] = []
+                scope = tokens.read_scope(folders, root=self.root)
+                env = pl.LibraryEnv(chosen, scope)
+                found: Sequence[Finding] = [
+                    *scope.findings_of(name),
+                    *unread_tokens(self.held, library, env),
+                ]
             elif library.kind == "components":
                 scope = tokens.read_scope(folders, root=self.root)
                 env = pl.LibraryEnv(chosen, scope)

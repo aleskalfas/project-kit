@@ -7,7 +7,9 @@ all. What the checks report of them is found at its place and level (DEC-035 poi
 The test library `test-parts` fills its tag's box through a token of its own, `fill`,
 which defaults to the library's paper. A test that needs a token of another shape writes
 a library of its own, `lab`, in its own folder, or holds its components in memory, since
-the repository's validation reads every bound YAML file under `tests/`.
+the repository's validation reads every bound YAML file under `tests/`. One that needs a
+token of the foundations' components gives its own copy of the foundations' figure one,
+`back`, since no shipped component declares a token.
 """
 
 from __future__ import annotations
@@ -99,6 +101,33 @@ def brand_copy(tmp_path: Path, *, names: bool, given: Mapping[str, Any] | None =
     if given:
         add_tokens(folder / BASE, given)
     return folder
+
+
+#: The token the figure of a test's copy of the foundations declares (`figure_token`).
+BACK = "component.foundations.figure.back"
+
+
+def figure_token(folder: Path) -> Path:
+    """The copy of the foundations at `folder`, its figure declaring the token `back`, which
+    defaults to the shared `background`, and filling its background with it."""
+    figure = folder / "components" / "figure.yaml"
+    replace_in(figure, "box: {fill: background}", f"box: {{fill: {BACK}}}")
+    replace_in(
+        figure,
+        "\nparts:\n",
+        "\ntokens:\n  back: {type: color, default: '{background}'}\n\nparts:\n",
+    )
+    return folder
+
+
+def shared_scope(tmp_path: Path, *, back: bool = False) -> Any:
+    """The scope of the foundations and the test library, the foundations copied into a
+    folder of their version, which a brand names by its major; with `back`, their figure
+    declares the token `back` (`figure_token`)."""
+    shared = copy_library(tmp_path, FOUNDATIONS, "foundations", "1.0.0")
+    if back:
+        figure_token(shared)
+    return tokens.read_scope({"foundations": shared, "test-parts": TEST_PARTS})
 
 
 def tag_fill(value: Any, kind: str = "color", name: str = "fill") -> dict[str, Any]:
@@ -370,6 +399,53 @@ def test_a_token_under_the_component_group_of_the_brands_own_name_stays_private(
     assert "component.test-brand.note.fill" not in brand.roles
 
 
+def test_a_token_under_the_foundations_component_group_that_names_none_of_theirs_fails(
+    tmp_path: Path,
+) -> None:
+    stray = {"$type": "color", "$value": "{palette.white}"}
+    given = {
+        "component": {"foundations": {"x": {"fill": stray}}},
+        # The foundations have no own roles, so a token under their name stays private.
+        "foundations": {"x": stray},
+    }
+    folder = brand_copy(tmp_path / "brand", names=False, given=given)
+    brand = tokens.read_brand(folder, shared_scope(tmp_path))
+    (finding,) = brand.findings
+    assert (finding.code, finding.level) == ("library-token", findings.FAILS)
+    assert (finding.where, finding.library) == ("component.foundations.x.fill", "test-brand@1.0.0")
+    assert "is none of its components' tokens" in finding.message
+
+
+@pytest.mark.parametrize(
+    ("value", "kind", "code"),
+    [
+        (None, "", None),
+        ("{palette.white}", "color", None),
+        ("{space.2}", "dimension", "library-token"),
+    ],
+    ids=["default", "value", "type"],
+)
+def test_the_foundations_components_declare_tokens_a_brand_gives_values_as_any_librarys(
+    tmp_path: Path, value: str | None, kind: str, code: str | None
+) -> None:
+    scope = shared_scope(tmp_path, back=True)
+    assert (scope.owner[BACK], scope.type_of(BACK), scope.default_of(BACK)) == (
+        "foundations",
+        "color",
+        "background",
+    )
+    assert scope.findings_of("foundations") == []
+    given = {"component": {"foundations": {"figure": {"back": {"$type": kind, "$value": value}}}}}
+    brand = tokens.read_brand(
+        brand_copy(tmp_path / "brand", names=False, given=given if value else None), scope
+    )
+    assert codes(brand.findings) == ([code] if code else [])
+    for combination in brand.combinations():
+        drawn_in = WHITE if kind == "color" else brand.resolve("background", combination)
+        assert brand.resolve(BACK, combination) == drawn_in
+    assert (BACK in brand.roles) == (kind == "color")
+
+
 def chain(tmp_path: Path, *, base_names: bool, opens: str = FILL) -> tuple[Path, Path]:
     """The test brand as a base that opens `opens`, naming `test-parts` where `base_names`,
     and the edition over it, which names `test-parts` and gives the tag's token a value."""
@@ -529,13 +605,18 @@ def test_a_token_its_component_reads_nowhere_asks_attention_or_states_a_fact(
 GAP_TOKEN = "component.test-parts.tag.gap"
 
 
-def tags_project(tmp_path: Path, brand: Path | None = None, gap: bool = False) -> Any:
+def tags_project(
+    tmp_path: Path, brand: Path | None = None, gap: bool = False, back: bool = False
+) -> Any:
     """The foundations, a brand and the test library, and the draft `tags`, a figure of the
     library's tag, under a lock of the three. `brand` is the brand's folder, else the test
     brand. With `gap`, the library has a dimension role with no default, `test-parts.far`,
-    and the tag places its label by a token `gap` that defaults to it."""
+    and the tag places its label by a token `gap` that defaults to it. With `back`, the
+    foundations' figure fills its background through its token `back` (`figure_token`)."""
     root = project(tmp_path)
-    copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
+    shared = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
+    if back:
+        figure_token(shared)
     shutil.copytree(
         brand or TEST_BRAND,
         root / "visual" / "libraries" / "test-brand" / "1.0.0",
@@ -583,6 +664,17 @@ def test_a_part_draws_in_the_value_a_brand_that_names_its_library_gives_its_toke
     assert project_.env.role(FILL) == WHITE
     assert FILL in project_.brand.roles
     assert project_.values()["tokens"][FILL]["type"] == "color"
+
+
+def test_a_part_reading_a_token_of_the_foundations_figure_draws_in_its_default(
+    tmp_path: Path,
+) -> None:
+    project_ = tags_project(tmp_path, back=True)
+    [(_, result)] = project_.scenes(facts=project_.piece.stand_ins)
+    assert result.findings == []
+    background = result.scene.find("figure/background")
+    assert background is not None and background.properties["fill"] == BACK
+    assert project_.env.role(BACK) == project_.env.role("background")
 
 
 def test_the_document_of_values_holds_a_token_the_brand_gives_no_value(tmp_path: Path) -> None:

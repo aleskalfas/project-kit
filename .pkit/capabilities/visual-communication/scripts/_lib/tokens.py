@@ -29,7 +29,8 @@ component token (DEC-035 points 1, 2 and 4). It is resolved as a library's own r
 the scope holds it among its library's roles, and tells it apart (`Scope.tokens`). A token
 that cannot be read is left out, its finding in its component's file. No pair names one
 (DEC-035 point 8). Only its component reads it, which the engine judges where it reads the
-component (`layout`).
+component (`layout`). The foundations ship components too, so theirs declare tokens at
+`component.foundations`, as any library's do, though the foundations have no own roles.
 
 **A scope** (`Scope`) is the roles one resolution reads: the foundations' and the own roles
 of each component library resolved with them, one version of each, under a lock or as a
@@ -354,10 +355,10 @@ class Declarations:
       lie under; "" for the foundations, whose roles are shared.
     - `builds_on`: the libraries it builds on, by name.
     - `tokens`: the component tokens its components declare, by token path (DEC-035
-      points 1 and 2); none in the foundations.
+      points 1 and 2), the foundations' components among them.
     - `findings`: what is wrong in a library's own roles, or in its components' tokens,
-      that leaves the rest usable. The foundations' declarations hold none: what is wrong
-      in them refuses them.
+      that leaves the rest usable. The foundations' declarations hold only their
+      components' tokens': what is wrong in their `roles.yaml` refuses them.
     """
 
     roles: dict[str, Role]
@@ -740,7 +741,9 @@ class Scope:
     - `foundations`: the foundations' declarations; `axes`, `families` and `top_groups`
       are theirs.
     - `libraries`: each component library's declarations of its own roles and of its
-      components' tokens, by its name.
+      components' tokens, by its name. The foundations' lie among them where the scope
+      holds their version, with their components' tokens and no role, since their roles
+      are shared (DEC-035 points 1 and 7).
     - `roles`: every role, by its token path, each component token among them; `owner`,
       the library whose own role or component token each is, or "" for a shared role.
     - `tokens`: each component token, by its token path (DEC-035 points 1 and 2). It is
@@ -761,6 +764,10 @@ class Scope:
     def __init__(self, foundations: Declarations, libraries: Iterable[Declarations] = ()) -> None:
         self.foundations = foundations
         self.libraries = {declared.own: declared for declared in libraries if declared.own}
+        if foundations.label:
+            self.libraries[FOUNDATIONS] = replace(
+                foundations, roles={}, axes={}, families={}, pairs=()
+            )
         self.roles: dict[str, Role] = dict(foundations.roles)
         self.owner: dict[str, str] = dict.fromkeys(foundations.roles, "")
         self.tokens: dict[str, ComponentToken] = {}
@@ -825,11 +832,11 @@ class Scope:
         return [finding for name in sorted(self._found) for finding in self._found[name]]
 
     def reach(self, name: str) -> set[str]:
-        """The roles the library `name` may alias or pair with: its own, and those of each
-        library it builds on that the scope holds, the shared roles where it builds on the
-        foundations (DEC-008 point 3)."""
+        """The roles the library `name` may alias or pair with: its own, the shared roles
+        for the foundations, and those of each library it builds on that the scope holds,
+        the shared roles where it builds on the foundations (DEC-008 point 3)."""
         declared = self.libraries[name]
-        reached = set(declared.roles)
+        reached = set(self.foundations.roles if name == FOUNDATIONS else declared.roles)
         for other in declared.builds_on:
             if other == FOUNDATIONS:
                 reached.update(self.foundations.roles)
@@ -1026,9 +1033,10 @@ class Scope:
 
 def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scope:
     """The scope of the library versions whose folders `folders` gives, by name: the
-    foundations' declarations, and of each other library of kind `components`, the own
-    roles its `roles.yaml` declares (DEC-008 point 8) and the component tokens its
-    components declare (DEC-035 point 1), where it has either. A library whose
+    foundations' declarations and the component tokens their components declare, and of
+    each other library of kind `components`, the own roles its `roles.yaml` declares
+    (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1),
+    where it has either. A library whose
     `library.yaml` cannot be read adds nothing, its own check reporting it. Where `folders`
     holds no foundations, as for a library that builds on none, the scope holds no shared
     role. Findings name files relative to `root` when given. Raises TokenError for the
@@ -1040,9 +1048,12 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
     foundations = Declarations(roles={}, axes={}, families={}, pairs=())
     if FOUNDATIONS in folders:
         roles = folders[FOUNDATIONS] / "roles.yaml"
-        foundations = read_declarations(
-            roles, library=f"{FOUNDATIONS}@{roles.parent.name}", shown=shown(roles)
+        label = f"{FOUNDATIONS}@{roles.parent.name}"
+        foundations = read_declarations(roles, library=label, shown=shown(roles))
+        tokens, problems = read_component_tokens(
+            folders[FOUNDATIONS], name=FOUNDATIONS, library=label, root=root
         )
+        foundations = replace(foundations, tokens=tokens, findings=problems)
     own = []
     for name, folder in sorted(folders.items()):
         path = folder / "roles.yaml"
@@ -2491,15 +2502,16 @@ class _BrandReader:
         `component.<library>` (DEC-008 point 4, DEC-035 point 7): where the brand names the
         library, one that is none of its roles or of its components' tokens, or is of
         another type, is a finding; where it does not, the token stays private and asks for
-        attention. A token under `component.<the brand's own name>` is private, and judged
-        here no further (#2573)."""
+        attention. The foundations are judged under `component.foundations` alone, since
+        they have no own roles. A token under `component.<the brand's own name>` is private,
+        and judged here no further (#2573)."""
         for file, tokens in sorted(self.flat.items()):
             for path, token in tokens.items():
                 library, group = self._library_of(path)
                 declared = self.scope.libraries.get(library)
-                if declared is None:
-                    continue
                 under_tokens = group != library
+                if declared is None or not (under_tokens or declared.own):
+                    continue
                 role = (declared.tokens if under_tokens else declared.roles).get(path)
                 theirs = "its components' tokens" if under_tokens else "its roles"
                 if library not in self.named:
