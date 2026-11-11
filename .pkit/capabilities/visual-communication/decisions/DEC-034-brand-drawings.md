@@ -34,7 +34,7 @@ Three more records bear on it:
 - **One layout each.** A drawing draws one layout of one top, so a brand that draws two layouts alike holds two drawings.
 - **It declares nothing the content gives.** It takes the top's: the layout's slots and the fields it declares for their lists, the top's other fields, its options with their words, its states and its colour (DEC-009 point 5). So its file holds none of the keys `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`.
 - **What it holds includes** what it is for, under `about`, as every component, its parts, its own named values, the size its instance asks for (point 2), and the parts it exposes, by the names the top exposes them by (DEC-009 point 5).
-- **No token of the top.** It reads none of the top's component tokens (DEC-035 point 3, proposed in [project-kit#2979](https://github.com/aleskalfas/project-kit/pull/2979)).
+- **No token of the top.** It reads none of the top's component tokens ([visual-communication:DEC-035-component-tokens] point 3).
 
 ### 2. What a page gets stays where the top writes it, and a drawing writes what its instance asks for
 
