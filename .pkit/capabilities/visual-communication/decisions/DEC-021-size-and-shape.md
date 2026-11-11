@@ -74,7 +74,7 @@ A component reads the size the piece is drawn at, whatever room its placer gives
 - **The search for a lock** places a piece at each key it names, in each language. An end lost at one key holds its versions back, and what the render states names the key (DEC-011 point 4).
 - **A library checked alone** places nothing, at any size or under any option, so a size adds no new blind spot. A fault shows in a piece, and a component's reference renders draw each mode it names (DEC-007 point 3).
 - **Fails validation,** as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7):
-  - a `when` or a switch by a marked name that reads no size axis a piece can name, other than `:as` in a drawing of a layout, or names a mode the foundations lack (refinement per [visual-communication:DEC-034-brand-drawings] point 7)
+  - a `when` or a switch by a marked name that reads no size axis a piece can name, or names a mode the foundations lack, other than one by `:as` in a drawing of a layout (refinement per [visual-communication:DEC-034-brand-drawings] point 7)
   - such a `when` or switch that leaves out the default
   - two parts over one list whose `when`s by a size say yes or no, where not exactly one says yes at each mode
   - at the lock, a component that reads an axis the locked foundations lack
