@@ -108,6 +108,7 @@ pkit:
         - visual-communication:DEC-008#5
         - visual-communication:DEC-008#6
         - visual-communication:DEC-008#7
+        - visual-communication:DEC-009#3
         - visual-communication:DEC-009#7
         - visual-communication:DEC-010#1
         - visual-communication:DEC-010#2
@@ -162,6 +163,7 @@ pkit:
         - visual-communication:DEC-025#10
         - visual-communication:DEC-029
         - visual-communication:DEC-030#6
+        - visual-communication:DEC-034#1
         - visual-communication:DEC-034#3
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
@@ -846,6 +848,8 @@ Where either version cannot be read with its bases, or the later one cannot read
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
 
 The capability ships one brand to start from ([The neutral brand](#the-neutral-brand)). A project may write its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
+
+A brand's version may hold components, in `components/<component>.yaml`, as a component library's does. Among them are its *drawings*: each a component whose file names, under `draws`, the top and the one layout of it that it draws, such as `draws: {top: foundations/deck, layout: cover}` (DEC-034 point 1). Nothing else lists a brand's drawings, and content never names one. A drawing draws only for a top whose library the brand names among those it builds on (DEC-009 point 3). The brand checked alone reads each component it holds, as a component library's are read, and each drawing against the top it names ([A brand's drawing](components.md#a-brands-drawing)).
 
 ### Token files
 

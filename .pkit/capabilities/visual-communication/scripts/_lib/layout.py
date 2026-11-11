@@ -70,6 +70,21 @@ DEC-012).
   its own. It gets the top's width, and the top's height where the top asks for one, else
   the height it asks for: its layout's, or its component's. A top that asks for no height
   is as tall as its tallest page.
+- `draws: {top: <library>/<component>, layout: <layout>}`, on a brand's component: it is a
+  *drawing* of that layout of that top (DEC-009 point 2, DEC-034 point 1). It declares
+  nothing the content gives, none of `GIVEN_BY_TOP`, and takes the top's: its fields,
+  options, states and colour, and the layout's slots and lists. It holds its parts, its
+  values, its exposed parts, its component tokens and the size its instance asks for: of a
+  layout that is a page's form, its page's height alone, which it says where the top asks
+  for none, by a formula or through its physical size; of a top whose one layout is the
+  whole top, its `preferred` whole, but for a height the top's physical size sets (DEC-034
+  points 2 and 3). It reads none of its top's component tokens. A brand's drawings reach the
+  engine as a `Choice`: where one is chosen, it draws each instance of its layout in place
+  of the top's own drawing, and keeps the instance's trace. One that does not fit an
+  instance in every language and at every key over the size axes leaves that instance to
+  the top's own drawing in all of them (DEC-034 point 6), which the caller works out from
+  each scene's `Context.misfits`. Content, or a component, that places a drawing by `use`
+  is `drawing-placed` (DEC-009 point 5).
 
 **A part** is one of:
 
@@ -275,7 +290,7 @@ STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
     "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens",
-    "physical-size", "layouts",
+    "physical-size", "layouts", "draws",
 )  # fmt: skip
 
 #: The key under which a top whose pages print at one size declares it, its trim width and
@@ -284,6 +299,27 @@ PHYSICAL_SIZE = "physical-size"
 
 #: The key under which a component declares its component tokens (DEC-035 point 1).
 TOKENS = "tokens"
+
+#: The key by which a brand's component names the top and the layout it draws, which makes
+#: it a drawing (DEC-034 point 1); the keys of what the content gives, which a drawing
+#: takes from its top and never declares; and the keys a drawing holds of its own.
+DRAWS = "draws"
+GIVEN_BY_TOP = ("fields", "options", "states", "colour", "lists", "layouts", "ends")
+DRAWING_KEYS = ("parts", "values", "preferred", "exposes", TOKENS)
+
+#: The findings on a drawing (DEC-034 points 1, 2 and 5, DEC-009 point 5): one that is no
+#: brand's component, holds what the content gives, or draws no layout a top declares; one
+#: that writes a size its top writes, or none its page needs; a field it shows by no part
+#: named after it, or a part named after a field that shows another thing; and content or a
+#: component that places one by `use`.
+DRAWING_SHAPE = "drawing-shape"
+DRAWING_SIZE = "drawing-size"
+FIELD_PART = "drawing-field-part"
+DRAWING_PLACED = "drawing-placed"
+
+#: The fact a piece states for each instance its top's own drawing draws, since the brand's
+#: drawing does not fit it (DEC-034 point 6, DEC-009 point 9).
+DRAWING_MISFIT = "drawing-misfit"
 
 #: The findings on a component's reading of component tokens (DEC-035 points 3, 5 and 9): a
 #: token it reads and does not declare, a token in a piece's own component, and a token
@@ -721,6 +757,19 @@ class Sizes:
         return self.modes.get(axis, self.axes[axis].default)
 
 
+@dataclass(frozen=True)
+class Choice:
+    """Which drawing draws each instance of a layout in one piece (DEC-009 points 2 and 6,
+    DEC-034 point 6): the brand's drawings, each by its use under the top and the layout it
+    draws, and each instance left to its top's own drawing, by its trace, with why. One
+    choice serves every scene of the piece, so an instance is drawn by one drawing in every
+    language and at every key. A context given none draws every layout by its top's own
+    drawing, as before."""
+
+    drawings: Mapping[tuple[str, str], str] = field(default_factory=dict)
+    refused: Mapping[str, str] = field(default_factory=dict)
+
+
 # --- components ---------------------------------------------------------------------------
 
 
@@ -755,6 +804,29 @@ class Part:
         return value if isinstance(value, Mapping) else {}
 
     @property
+    def shows(self) -> str | None:
+        """The field the part shows (DEC-034 point 5): the one a slot places, a repeat
+        repeats over, a text draws, or an image names the picture of; None where it shows
+        none."""
+        spec, props = self.spec, self.props
+        shown = {
+            "slot": spec.get("slot"),
+            "repeat": spec.get("repeat"),
+            "text": props.get("content"),
+            "image": props.get("produced", props.get("content")),
+        }.get(self.kind)
+        return shown if isinstance(shown, str) else None
+
+    @property
+    def passes(self) -> set[str]:
+        """The fields a `use` part passes on to the component it places, which it shows one
+        level down (DEC-034 point 5)."""
+        fields = self.spec.get("fields") if self.kind == "use" else None
+        if not isinstance(fields, Mapping):
+            return set()
+        return {ours for ours in fields.values() if isinstance(ours, str)}
+
+    @property
     def main(self) -> str:
         """The size along the line a list's items lie on."""
         return "width" if self.operator == "row" else "height"
@@ -766,9 +838,24 @@ class Component:
     wrong, as `(code, key path, message)`."""
 
     def __init__(
-        self, use: str, data: Mapping[str, Any], ctx: Context, *, layout: str | None = None
+        self,
+        use: str,
+        data: Mapping[str, Any],
+        ctx: Context,
+        *,
+        layout: str | None = None,
+        draws: tuple[str, str] | None = None,
     ) -> None:
         self.use = use
+        self.data = data
+        # The top and the layout it draws, where it is a brand's drawing, and the parts its
+        # top exposes, which it exposes by the same names (DEC-034 point 1).
+        self.draws = draws
+        self.top_exposes: tuple[str, ...] = ()
+        # Each option a switch or a `when` of it reads, with the words it reads.
+        self.option_reads: dict[str, set[str]] = {}
+        # The one layout of a top whose one layout is the whole top.
+        self._whole: str | None = None
         self.issues: list[tuple[str, str, str]] = []
         self.options: dict[str, Option] = {}
         self.states: dict[str, str | None] = {}
@@ -814,6 +901,146 @@ class Component:
         self.token_reads: set[str] = set()
         self._read(data)
         self._read_runs(data)
+
+    @property
+    def drawn(self) -> tuple[str, str] | None:
+        """The top and the layout this component draws as that top's own drawing (DEC-009
+        point 1): a drawing of a layout that is a page's form, or a top whose one layout is
+        the whole top. None for a brand's drawing, and for a component that draws no
+        layout, a top whose layouts are its pages' forms among them."""
+        if self.draws is not None:
+            return None
+        if self.layout is not None:
+            return (self.use, self.layout)
+        return (self.use, self._whole) if self._whole is not None else None
+
+    @property
+    def shown(self) -> set[str]:
+        """The fields a part of it shows, or passes on to a component it places: the fields
+        it takes (DEC-009 point 6)."""
+        found: set[str] = set()
+        for part in self.parts.values():
+            found |= part.passes | ({part.shows} if part.shows else set())
+        return found
+
+    def field_breaks(self) -> list[tuple[str, str]]:
+        """Where this drawing of a layout breaks the rule that names what shows a field
+        after the field (DEC-034 point 5), each as a key path and why: a part named after a
+        field that does not show it, and a field it shows, or passes on, that no part named
+        after it shows. A field is a slot of the layout, or another field of the top."""
+        found = []
+        for name, part in self.parts.items():
+            if name in self.fields and part.shows != name:
+                found.append(
+                    (
+                        f"parts.{name}",
+                        f"the part `{name}` is named after the field `{name}`, and does not "
+                        "show it: a part named after a field shows that field",
+                    )
+                )
+        directly = {part.shows for part in self.parts.values() if part.shows}
+        for name in sorted((self.shown & set(self.fields)) - set(self.parts)):
+            how = (
+                "shows `{0}` by no part named after it"
+                if name in directly
+                else "passes `{0}` on to a component it places, and shows it no other way"
+            ).format(name)
+            found.append(
+                (
+                    "parts",
+                    f"{how}: a part at its top level named `{name}` shows it, so it keeps one "
+                    "trace id under every drawing",
+                )
+            )
+        return found
+
+    def drawn_data(
+        self, layout: str, own: Mapping[str, Any]
+    ) -> tuple[dict[str, Any], list[tuple[str, str, str]]] | None:
+        """What a brand's drawing of this top's layout `layout` is read as, given what its
+        file holds of its own, `own` (`DRAWING_KEYS`), with each finding on a size it writes
+        (DEC-034 points 1 and 2); None where this top declares no such layout.
+
+        It takes the top's fields, options, states and colour, and the layout's slots and
+        lists, as the top's own drawing does, and holds its own parts, values, exposed
+        parts and tokens. Of a layout that is a page's form, it says its page's height
+        alone, and says it where the top asks for none, by a formula or through its physical
+        size. Of a top whose one layout is the whole top, its `preferred` is its own, whole,
+        but for a height the top's physical size sets (DEC-034 point 3): such a height is a
+        finding, and is not read."""
+        if self.forms:
+            page = self._page_data(layout)
+            if page is None:
+                return None
+            sizes: list[tuple[str, str, str]] = []
+            preferred = own.get("preferred")
+            if isinstance(preferred, Mapping) and "width" in preferred:
+                sizes.append(
+                    (
+                        DRAWING_SIZE,
+                        "preferred.width",
+                        f"draws `{layout}`, a page's form, and writes a width: a page gets its "
+                        "top's width, so a drawing writes its page's height alone",
+                    )
+                )
+            says = isinstance(preferred, Mapping) and "height" in preferred
+            if not self.asks_for("height") and not says:
+                sizes.append(
+                    (
+                        DRAWING_SIZE,
+                        "preferred",
+                        f"the top asks for no height, so a drawing of `{layout}` writes its "
+                        "page's height under `preferred`, by a formula on its parts",
+                    )
+                )
+            data = {
+                **{
+                    key: self.data[key]
+                    for key in ("options", "states", "colour")
+                    if key in self.data
+                },
+                **page,
+                **{key: value for key, value in own.items() if key != "preferred"},
+            }
+            if isinstance(preferred, Mapping):
+                data["preferred"] = {s: f for s, f in preferred.items() if s != "width"}
+            return data, sizes
+        if layout != self._whole:
+            return None
+        kept = {key: value for key, value in self.data.items() if key not in DRAWING_KEYS}
+        preferred = own.get("preferred")
+        writes_height = isinstance(preferred, Mapping) and "height" in preferred
+        if self.physical_size is None or not writes_height:
+            return {**kept, **own}, []
+        height = (
+            DRAWING_SIZE,
+            "preferred.height",
+            f"draws `{layout}`, and writes a height, which its top's physical size sets: the "
+            "engine sets it from the width the drawing asks for, in the size's proportion",
+        )
+        unread = {s: f for s, f in preferred.items() if s != "height"}
+        return {**kept, **own, "preferred": unread}, [height]
+
+    def _page_data(self, layout: str) -> dict[str, Any] | None:
+        """What a drawing of the layout `layout`, a page's form, takes of what its top
+        declares: as its fields, the layout's slots and the top's other fields; and the
+        fields of each list among its slots that it repeats over (DEC-009 point 5, DEC-011
+        point 5). None where the top declares no such layout."""
+        forms = page_forms(self.data)
+        if forms is None or layout not in forms.layouts:
+            return None
+        slots, _ = forms.layouts[layout]
+        others = {name: s for name, s in self.fields.items() if name not in forms.fields}
+        fields = {
+            **others,
+            **{
+                slot: {k: v for k, v in s.items() if k != PAGES} if isinstance(s, Mapping) else s
+                for slot, s in slots.items()
+            },
+        }
+        decl = self.data["layouts"][layout]
+        lists = {"lists": decl["lists"]} if isinstance(decl, Mapping) and "lists" in decl else {}
+        return {"fields": {"type": "object", "properties": fields}, **lists}
 
     def _declared_tokens(self, data: Mapping[str, Any]) -> frozenset[str]:
         """The path of each component token the component declares, by the names `tokens`
@@ -877,7 +1104,19 @@ class Component:
         if not isinstance(path, str) or path.split(".")[0] != names.COMPONENT:
             return
         self.token_reads.add(path)
-        if path not in self.tokens:
+        top = self.draws[0].replace("/", ".") if self.draws is not None else None
+        if (
+            path not in self.tokens
+            and top is not None
+            and path.startswith(f"{names.COMPONENT}.{top}.")
+        ):
+            self._issue(
+                TOKEN_UNDECLARED,
+                where,
+                f"reads `{path}`, a component token of the top it draws: a drawing reads none "
+                "of its top's tokens, and gives what it draws its own",
+            )
+        elif path not in self.tokens:
             self._issue(
                 TOKEN_UNDECLARED,
                 where,
@@ -969,9 +1208,10 @@ class Component:
         """Whether the component may declare its physical size (DEC-034 point 3): a page
         alone, or a top whose layouts are its pages' forms, may. A top whose slot holds pages
         gives each page its size by the parts that place it, and no other component prints
-        at one, a brand's drawing among them, so their physical size is a finding, and the
-        engine reads none. A top that declares one asks for its height through it, so a
-        height under its `preferred` is a finding too."""
+        at one, so their physical size is a finding, and the engine reads none. A brand's
+        drawing declares none either (`Context._drawing`): one of a page alone is read with
+        its top's, and prints at it. A top that declares one asks for its height through it,
+        so a height under its `preferred` is a finding too."""
         if PHYSICAL_SIZE not in data:
             return
         if not self.top or self.pages:
@@ -1330,6 +1570,8 @@ class Component:
                 self._shape(where, f"`when` names no option of words `{name}`")
             elif not all(word in option.words for word in listed):
                 self._shape(where, f"`when` names a word the option `{name}` lacks")
+            else:
+                self.option_reads.setdefault(name, set()).update(listed)
             return
         if branch:
             self._shape(
@@ -1389,6 +1631,7 @@ class Component:
                 "forms, each with its own drawing",
             )
             return
+        self._whole = str(next(iter(layouts)))
         pages = set()
         for layout, decl in layouts.items():
             slots = decl.get("slots") if isinstance(decl, Mapping) else None
@@ -1476,25 +1719,12 @@ class Component:
                 )
                 continue
             preferred = self._page_height(where, layout, decl)
-            fields = {
-                **others,
-                **{
-                    slot: {k: v for k, v in s.items() if k != PAGES}
-                    if isinstance(s, Mapping)
-                    else s
-                    for slot, s in slots.items()
-                },
-            }
-            # The fields of each list among its slots that the drawing repeats over, as a
-            # pattern declares them (DEC-011 point 5).
-            lists = {"lists": decl["lists"]} if "lists" in decl else {}
             drawing = Component(
                 self.use,
                 {
                     **{key: data[key] for key in shared if key in data},
-                    "fields": {"type": "object", "properties": fields},
+                    **(self._page_data(layout) or {}),
                     "parts": parts,
-                    **lists,
                     **preferred,
                 },
                 self._ctx,
@@ -1559,8 +1789,8 @@ class Component:
         marked schema. A marked field takes text alone, and declares its words, each a
         name, once. A field of more than one word is one that some text part of the
         component, a top's own drawing included, chooses its role or paint by. A top's own
-        drawing of a layout leaves all of this to the top that declares it."""
-        if self.layout is not None:
+        drawing of a layout, and a brand's, leave all of this to the top that declares it."""
+        if self.layout is not None or self.draws is not None:
             return
         fields = data.get("fields")
         if isinstance(fields, Mapping) and RUNS in fields:
@@ -1661,6 +1891,7 @@ class Component:
                 self._shape(where, f"switches on `{by}`, which is no option of words")
                 return
             words, named = option.words, f"`{option.name}`"
+            self.option_reads.setdefault(option.name, set()).update(words)
         branches = {key for key in value if key != SWITCH}
         if branches != set(words):
             self._shape(
@@ -1907,6 +2138,45 @@ def unread_token_findings(component: Component, *, file: str, library: str) -> l
     return found
 
 
+def held_drawing_finding(use: str, *, file: str, library: str) -> Finding:
+    """The finding on a component of a library that is no brand that declares `draws`, in
+    its file `file` of the version `library` (DEC-034 point 1): only a brand's component
+    draws a layout."""
+    return Finding(
+        DRAWING_SHAPE,
+        FAILS,
+        f"{use}: declares `draws`, and only a brand's component draws a layout",
+        file=file,
+        where=DRAWS,
+        fix="take `draws` out, or move the drawing into a brand, in a version of its own",
+        library=library,
+    )
+
+
+def own_drawing_findings(component: Component, *, file: str, library: str) -> list[Finding]:
+    """A call for attention for each break, in a top's own drawing of a layout, of the rule
+    that names what shows a field after the field (`Component.field_breaks`, DEC-034 point
+    5), in its file `file` of the version `library`: what the field shows would take
+    another trace id under a brand's drawing. It names the top's owner, and never fails,
+    since the drawing was accepted before the rule."""
+    drawings = [("", component)] if component.drawn is not None else []
+    drawings += [(f"layouts.{name}.", each) for name, each in sorted(component.drawings.items())]
+    return [
+        Finding(
+            FIELD_PART,
+            ATTENTION,
+            f"{component.use}: {why}",
+            file=file,
+            where=f"{at}{where}",
+            fix="name the part that shows each field after the field, in a version of its own",
+            who="the top's owner",
+            library=library,
+        )
+        for at, drawing in drawings
+        for where, why in drawing.field_breaks()
+    ]
+
+
 # --- one scene's context ------------------------------------------------------------------
 
 
@@ -1932,15 +2202,24 @@ class Context:
     of its export, the size axes a piece can name with the mode of each at the scene's key
     (`Sizes`), the faces, the components read, the findings, and the cells being computed.
     A context that computes no scene takes the stand-ins and no state: what it judges reads
-    no text. One given no sizes knows no size axis."""
+    no text. One given no sizes knows no size axis. Its `choice` says which drawing draws
+    each instance of a layout, and `misfits` keeps, by its trace, what each instance a
+    brand's drawing drew gives that the drawing does not take (`Instance.misfit`)."""
 
     def __init__(
-        self, env: Env, language: str, facts: Facts | None = None, sizes: Sizes | None = None
+        self,
+        env: Env,
+        language: str,
+        facts: Facts | None = None,
+        sizes: Sizes | None = None,
+        choice: Choice | None = None,
     ) -> None:
         self.env = env
         self.language = language
         self.facts = facts if facts is not None else stand_ins("")
         self.sizes = sizes if sizes is not None else Sizes()
+        self.choice = choice if choice is not None else Choice()
+        self.misfits: dict[str, str] = {}
         self.faces = Faces(env.font_file)
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
@@ -2033,11 +2312,88 @@ class Context:
                 data = None
             except KeyError:
                 data = None
-            component = Component(use, data, self) if isinstance(data, Mapping) else None
+            # Not found while it is read, so a drawing whose top names it reads no loop.
+            self._components[use] = None
+            component = None
+            if isinstance(data, Mapping):
+                component = (
+                    self._drawing(use, data) if DRAWS in data else Component(use, data, self)
+                )
             self._components[use] = component
             for code, where, message in component.issues if component else ():
                 self.report(code, message, where=where, use=use)
         return self._components[use]
+
+    def _drawing(self, use: str, data: Mapping[str, Any]) -> Component:
+        """A component that declares `draws`, read as a drawing of the layout of the top it
+        names (DEC-034 point 1): what it holds of its own read with what it takes of the top
+        (`Component.drawn_data`). Its findings lie in its own file: a piece's own component
+        that declares `draws`, a key of what the content gives, a physical size, which its
+        top alone declares (DEC-034 point 3), a top or a layout there is none of, a size it
+        may not write, and a field it shows by no part named after it.
+        What the top declares is the top's to answer for, so no finding on it is repeated
+        here. One that draws no layout a top declares draws nothing."""
+        issues: list[tuple[str, str, str]] = []
+        if use.partition("/")[0] == names.PIECE:
+            issues.append(
+                (DRAWING_SHAPE, DRAWS, "declares `draws`: a piece's own component draws no layout, "
+                 "only a brand's does")
+            )  # fmt: skip
+        held = [key for key in GIVEN_BY_TOP if key in data]
+        if held:
+            listed = ", ".join(f"`{key}`" for key in held)
+            issues.append(
+                (DRAWING_SHAPE, held[0], f"is a drawing, and holds {listed}: a drawing declares "
+                 "nothing the content gives, and takes its top's")
+            )  # fmt: skip
+        if PHYSICAL_SIZE in data:
+            issues.append(
+                (PHYSICAL_SIZE, PHYSICAL_SIZE, "declares a physical size, and is a drawing: its "
+                 "top alone declares the size its pages print at")
+            )  # fmt: skip
+        draws = data.get(DRAWS)
+        top_use = draws.get("top") if isinstance(draws, Mapping) else None
+        layout = draws.get("layout") if isinstance(draws, Mapping) else None
+        key = (str(top_use), str(layout))
+        top = self.component(top_use) if isinstance(top_use, str) and top_use != use else None
+        own = {name: data[name] for name in DRAWING_KEYS if name in data}
+        drawn = None
+        if top is not None and top.draws is None and isinstance(layout, str):
+            drawn = top.drawn_data(layout, own)
+        if top is None or drawn is None:
+            issues.append(
+                (DRAWING_SHAPE, DRAWS, f"draws `{layout}` of `{top_use}`, which is no layout of "
+                 "a top: it draws nothing")
+            )  # fmt: skip
+            component = Component(use, {}, self, draws=key)
+        else:
+            combined, sizes = drawn
+            component = Component(
+                use, combined, self, layout=layout if top.forms else None, draws=key
+            )
+            component.top_exposes = top.exposes
+            component.issues = [
+                *(i for i in component.issues if i[1].partition(".")[0] in DRAWING_KEYS),
+                *sizes,
+                *((FIELD_PART, where, why) for where, why in component.field_breaks()),
+            ]
+        component.issues = [
+            (code, where, message if message.startswith(f"{use}: ") else f"{use}: {message}")
+            for code, where, message in [*issues, *component.issues]
+        ]
+        return component
+
+    def drawn_by(self, component: Component, trace: str) -> Component:
+        """What draws the instance at `trace` that `component` would draw as its top's own
+        drawing of a layout: the brand's drawing of that layout the choice holds, unless the
+        choice leaves the instance to the top's own; else `component` (DEC-009 points 2 and
+        6). A drawing whose top or layout is another draws nothing."""
+        key = component.drawn
+        use = self.choice.drawings.get(key) if key is not None else None
+        if use is None or trace in self.choice.refused:
+            return component
+        drawing = self.component(use)
+        return drawing if drawing is not None and drawing.draws == key else component
 
     def unreadable(self, use: Any) -> bool:
         """Whether `use` names a component whose file is present and cannot be read. What
@@ -2296,6 +2652,8 @@ class Instance:
         tie: ListFields | None = None,
     ) -> None:
         self.ctx = ctx
+        # A brand's drawing draws it in place of its top's own, where the choice says so.
+        component = ctx.drawn_by(component, trace)
         self.component = component
         self.given = given
         self.trace = trace
@@ -2880,13 +3238,17 @@ class Instance:
         instance's component. A component whose file cannot be read is a finding in that
         file alone (`Context.component`)."""
         component = self.ctx.component(use) if isinstance(use, str) else None
+        named_in = "" if by_content else self.component.use
         if component is None:
             if not self.ctx.unreadable(use):
-                named_in = "" if by_content else self.component.use
                 self.ctx.report(
                     "unknown-component", f"{trace}: no component `{use}`", where=trace, use=named_in
                 )
             node.present = False
+        elif component.draws is not None:
+            placed(self.ctx, component, where=trace, use=named_in)
+            node.present = False
+            return None
         return component
 
     def _build_use(self, node: Node, trace: str) -> None:
@@ -3110,6 +3472,9 @@ class Instance:
                 component = self.ctx.component(use) if isinstance(use, str) else None
                 if component is None and not self.ctx.unreadable(use):
                     self.ctx.report("unknown-component", f"{at}: no component `{use}`", where=at)
+                elif component is not None and component.draws is not None:
+                    placed(self.ctx, component, where=at, use="")
+                    component = None
             else:
                 component = self.component.drawings.get(page.get(LAYOUT))
             if component is None:
@@ -3160,6 +3525,65 @@ class Instance:
             if node.present and handed & {each for each in read if isinstance(each, str)}:
                 found.append(f"{self.trace}/{name}")
         return found
+
+    def misfit(self) -> str | None:
+        """What this instance gives that the brand's drawing that draws it does not take,
+        in words; None where it takes all of it, or no brand's drawing draws it (DEC-009
+        point 6). The drawing takes:
+
+        - a field that a part of it shows, or passes on to a component it places;
+        - the word the content chose of an option, where a switch or a `when` of it reads
+          that word;
+        - a part the content's `override` points at another role, where it paints that part;
+        - each part its top exposes, where another component places the top, and so may
+          read it;
+        - a run's word of a field of runs, where a text part that shows the field chooses
+          by its words, and the first word alone where none does; and the runs of none,
+          where it passes the field on alone (DEC-012 point 2);
+        - each end of the ties it draws, found under it (DEC-011 point 5).
+
+        A state gives the instance its colour by the top's own states, so every drawing
+        takes every state."""
+        component = self.component
+        if component.draws is None:
+            return None
+        # A part a `when` leaves out here, such as one a size hides, takes nothing here.
+        shown: set[str] = set()
+        for part in component.parts.values():
+            if self._when(part):
+                shown |= part.passes | ({part.shows} if part.shows else set())
+        for name in component.fields:
+            given = self.given.get(name)
+            if _filled(given, runs=name in component.runs) and name not in shown:
+                return f"the field `{name}`"
+        for name, source in sorted(self.option_sources.items()):
+            word = self.options.get(name)
+            taken = component.option_reads.get(name, set())
+            if source.startswith(CONTENT) and isinstance(word, str) and word not in taken:
+                return f"the word `{word}` of the option `{name}`"
+        override = self.given.get("override")
+        for name in override if isinstance(override, Mapping) else {}:
+            part = component.parts.get(str(name))
+            if part is None or part.kind not in OVERRIDDEN:
+                return f"the part `{name}`, which `override` points at another role"
+        if self.parent is not None and not self._is_forms_page:
+            for name in component.top_exposes:
+                if name not in component.exposes:
+                    return f"the exposed part `{name}`"
+        texts = {part.shows for part in component.parts.values() if part.kind == "text"}
+        for name, words in component.runs.items():
+            runs = self.given.get(name)
+            if not isinstance(runs, list) or not runs:
+                continue
+            if name not in texts:
+                return f"the runs of `{name}`, which it passes on and shows as text alone"
+            for run in runs:
+                word = run.get("style") if isinstance(run, Mapping) else None
+                if word in words[1:] and name not in component.chosen_by:
+                    return f"the word `{word}` of the runs of `{name}`"
+        if self.left_out:
+            return f"an end of the tie `{self.left_out[0].trace}`"
+        return None
 
     def texts(self) -> list[tuple[str, Node]]:
         """Every text this instance and those below it draw, its pages' included, with its
@@ -4086,8 +4510,10 @@ def _side(
 def place_top(ctx: Context, top: str, content: Mapping[str, Any]) -> Instance | None:
     """The piece's top component placed with its content, every part below it built;
     `None`, with a finding, where the top names no component, or one whose file cannot be
-    read (`Context.component`). The piece itself names its top, so the finding on a top
-    that names no component lies there, at `top`, and says so as `piece`."""
+    read (`Context.component`), or a drawing. The piece itself names its top, so the finding
+    on a top that names no component, or a drawing, lies there, at `top`, and says so as
+    `piece`. Once every tie's ends are found, what each instance a brand's drawing drew
+    gives that the drawing does not take is kept in the context (`Instance.misfit`)."""
     trace = top.split("/")[-1]
     component = ctx.component(top)
     if component is None:
@@ -4097,8 +4523,31 @@ def place_top(ctx: Context, top: str, content: Mapping[str, Any]) -> Instance | 
                 Finding("unknown-component", FAILS, message, where="top", extra={"piece": True})
             )
         return None
+    if component.draws is not None:
+        placed(ctx, component, where="top", use="", piece=True)
+        return None
     if not component.top:
         ctx.report("not-top", f"the piece's top `{top}` declares no layouts", where=trace, use=top)
     instance = Instance(ctx, component, content, trace=trace, content_path="")
     instance.find_ends()
+    for each in (instance, *instance.below()):
+        what = each.misfit()
+        if what is not None:
+            ctx.misfits.setdefault(each.trace, f"`{each.component.use}` does not take {what}")
     return instance
+
+
+def placed(ctx: Context, drawing: Component, *, where: str, use: str, piece: bool = False) -> None:
+    """Reports content, or the component `use`, that places a brand's drawing by `use`
+    (DEC-009 points 5 and 9): a drawing draws only in place of its top's own drawing. It
+    lies where the drawing is named: in the component `use`, else in the content, or, as
+    the piece's top, in the piece."""
+    top, layout = drawing.draws or ("", "")
+    message = (
+        f"{where}: places `{drawing.use}`, a drawing of the layout `{layout}` of `{top}`, which "
+        f"draws only in place of the top's own drawing: place `{top}`, or name the layout"
+    )
+    if piece:
+        ctx.add(Finding(DRAWING_PLACED, FAILS, message, where=where, extra={"piece": True}))
+    else:
+        ctx.report(DRAWING_PLACED, message, where=where, use=use)
