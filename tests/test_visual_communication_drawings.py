@@ -1,4 +1,4 @@
-"""A brand's drawing of a layout (visual-communication DEC-034 points 1, 2, 5 and 6, DEC-009
+"""A brand's drawing of a layout (visual-communication DEC-034 points 1, 2, 3, 5 and 6, DEC-009
 points 2, 5 and 6): a component of the brand whose file names, under `draws`, the top and
 the layout it draws.
 
@@ -6,8 +6,9 @@ the layout it draws.
   component tokens, and only a brand's component declares one (point 1). Content, or a
   component, that places one by `use` fails (DEC-009 point 5).
 - **Sizes.** A drawing of a page's form writes its page's height alone, and writes it where
-  the top asks for none; a drawing of a top whose one layout is the whole top writes its
-  own `preferred` (point 2).
+  the top asks for none, by a formula or through its physical size; a drawing of a top
+  whose one layout is the whole top writes its own `preferred`, but for a height its top's
+  physical size sets; and a drawing declares no physical size (points 2 and 3).
 - **Trace ids.** The instance keeps its id, and what a field shows keeps the same trace id,
   under every drawing; the instance's group names the drawing and its brand's version. A
   brand's drawing that shows a field by no part named after it fails; a top's own asks
@@ -42,7 +43,7 @@ from tests.visual_communication_project import (
     write_piece,
     yaml_text,
 )
-from tests.visual_engine import COMPONENTS, FakeEnv, block, draw, layout, top
+from tests.visual_engine import COMPONENTS, FakeEnv, block, codes, draw, layout, top
 
 pl, checks, reading, findings, files = load(
     "visual-communication", "pipeline", "checks", "reading", "findings", "files"
@@ -458,6 +459,81 @@ def test_a_drawing_of_a_whole_top_writes_its_own_size() -> None:
     root = result.scene.children[0].properties
     assert (root["component"], root["width"], root["height"]) == ("brand/look", 320.0, 32.0)
     assert result.scene.find("top/caption") is not None
+
+
+# --- the engine: a drawing of a top with a physical size ---------------------------------------
+
+#: A poster's trim size, A1 upright, in millimetres (DEC-034 point 3), and the height it
+#: gives the width `look` asks for, 320 px.
+A1 = {"width": 594, "height": 841}
+A1_HEIGHT = round(320 * 841 / 594, 2)
+
+
+def poster() -> dict[str, Any]:
+    """`lab/top` as a page alone printed at A1, which asks for its width alone."""
+    return lab_top(preferred={"width": "=@size.figure"}, **{"physical-size": A1})
+
+
+def test_a_drawing_of_a_page_alone_takes_the_height_its_tops_physical_size_sets() -> None:
+    """The drawing writes its own width, and the engine sets the height from it in the
+    size's proportion (DEC-034 points 2 and 3); the root holds the top's physical size."""
+    drawing = look({"caption": CAPTION}, preferred={"width": "=@space.4 * 10"})
+    result = draw(
+        {"caption": "A caption."},
+        components={"lab/top": poster(), "brand/look": drawing},
+        choice=CHOICE,
+    )
+    assert codes(result) == []
+    element = result.scene.find("top")
+    assert element is not None
+    root = element.properties
+    assert (root["component"], root["width"], root["height"]) == ("brand/look", 320.0, A1_HEIGHT)
+    assert element.sources["height"] == "engine"
+    assert result.scene.to_dict()["physical-size"] == A1
+
+
+def test_a_drawing_of_a_page_alone_that_writes_a_height_beside_a_physical_size_fails() -> None:
+    """A height by a formula beside its top's physical size is refused, and not read: the
+    size's proportion sets it (DEC-034 point 2, "but for a height a physical size sets")."""
+    components = {"lab/top": poster(), "brand/look": look({"caption": CAPTION})}
+    component = layout.Context(FakeEnv(components=components), "en").component("brand/look")
+    assert component is not None
+    assert [(c, w) for c, w, _ in component.issues] == [(layout.DRAWING_SIZE, "preferred.height")]
+    result = draw({"caption": "A caption."}, components=components, choice=CHOICE)
+    root = result.scene.children[0].properties
+    assert (root["component"], root["width"], root["height"]) == ("brand/look", 320.0, A1_HEIGHT)
+
+
+def test_a_drawing_of_a_page_needs_no_height_where_its_top_has_a_physical_size() -> None:
+    """A top with a physical size asks for its pages' height through it, so a drawing of a
+    page's form may leave its height unwritten, and its page gets that height (DEC-034
+    points 2 and 3)."""
+    deck_data = copy.deepcopy(COMPONENTS["foundations/deck"])
+    del deck_data["preferred"]["height"]
+    deck_data["physical-size"] = A1
+    components = {"foundations/deck": deck_data, "brand/look": page_look(None)}
+    component = layout.Context(FakeEnv(components=components), "en").component("brand/look")
+    assert component is not None and component.issues == []
+    result = draw(
+        {"slides": [{"id": "opening", "layout": "cover", "title": "The flow"}]},
+        use="foundations/deck",
+        components=components,
+        choice=layout.Choice({("foundations/deck", "cover"): "brand/look"}),
+    )
+    deck_group = result.scene.children[0].properties
+    page = result.scene.find("deck/slides[opening]")
+    assert page is not None
+    assert page.properties["component"] == "brand/look"
+    assert (page.properties["width"], page.properties["height"]) == (
+        deck_group["width"],
+        round(deck_group["width"] * 841 / 594, 2),
+    )
+
+
+def test_a_drawing_declares_no_physical_size() -> None:
+    """Only its top declares the size its pages print at (DEC-034 point 3)."""
+    found = issues(look({"caption": CAPTION}, **{"physical-size": A1}))
+    assert (layout.PHYSICAL_SIZE, layout.PHYSICAL_SIZE) in found
 
 
 # --- the engine: fields named after the field --------------------------------------------------

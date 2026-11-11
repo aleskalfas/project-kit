@@ -365,6 +365,18 @@ def asking_no_height(spec: Any) -> None:
     slides["layouts"]["points"]["preferred"] = {"height": "=points.bottom"}
 
 
+def printed_at(width: float, height: float) -> Callable[[Any], None]:
+    """The slides, printed at `width` by `height` mm, so they ask for their height through
+    that size alone (DEC-034 point 3)."""
+
+    def change(spec: Any) -> None:
+        slides = spec["components"]["slides"]
+        slides["preferred"].pop("height", None)
+        slides["physical-size"] = {"width": width, "height": height}
+
+    return change
+
+
 def new_list_of_ties(spec: Any) -> None:
     diagram = spec["components"]["diagram"]
     diagram["fields"]["properties"]["routes"] = {"type": "array", "items": {"type": "object"}}
@@ -657,6 +669,12 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         ["`parts/slides`: ceases to ask for a height (DEC-022 point 8)"],
         None,
     ),
+    # DEC-034 point 3: a top's physical size.
+    "a top that comes to declare a physical size": (
+        printed_at(297, 210),
+        ["`parts/slides`: comes to declare a physical size (DEC-034 point 3)"],
+        None,
+    ),
     "a layout's height said under a top that asks for one": (
         lambda s: put(s["components"]["slides"]["layouts"]["cover"], "preferred", {"height": 300}),
         [],
@@ -875,6 +893,72 @@ def test_a_top_that_comes_to_ask_for_a_height_breaks_and_a_layouts_height_does_n
     ]
     for pair in (("1.2.0", "1.3.0"), ("1.3.0", "1.4.0")):
         assert said(compared(root, "parts", *pair).breaks) == [], pair
+
+
+def test_a_physical_size_breaks_where_it_comes_goes_or_changes_its_proportion(
+    tmp_path: Path,
+) -> None:
+    """A size changed in the same proportion breaks nothing: each page draws as before, only
+    larger in print. One that ceases is named once, though the top then asks for its height
+    by a formula (DEC-034 point 3)."""
+    root = project(tmp_path)
+    foundations(root)
+    for version, change in (
+        ("1.0.0", printed_at(297, 210)),
+        ("1.1.0", printed_at(594, 420)),
+        ("1.2.0", printed_at(300, 200)),
+        ("1.3.0", None),
+    ):
+        spec = copy.deepcopy(PARTS)
+        if change is not None:
+            change(spec)
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == []
+    assert said(compared(root, "parts", "1.1.0", "1.2.0").breaks) == [
+        "`parts/slides`: changes its physical size's proportion, from 594 by 420 mm to 300 by "
+        "200 mm (DEC-034 point 3)"
+    ]
+    assert said(compared(root, "parts", "1.2.0", "1.3.0").breaks) == [
+        "`parts/slides`: ceases to declare a physical size (DEC-034 point 3)"
+    ]
+
+
+#: Pairs of papers, earlier and later, in millimetres, each with the breaks of the move.
+PAPERS: dict[str, tuple[tuple[float, float], tuple[float, float], list[str]]] = {
+    "A2 after A1": ((594, 841), (420, 594), []),
+    "A3 after A4": ((210, 297), (297, 420), []),
+    "A5 after A2": ((420, 594), (148, 210), []),
+    "US Letter after A4": (
+        (210, 297),
+        (215.9, 279.4),
+        [
+            "`parts/slides`: changes its physical size's proportion, from 210 by 297 mm to "
+            "215.9 by 279.4 mm (DEC-034 point 3)"
+        ],
+    ),
+}
+
+
+@pytest.mark.parametrize("earlier,later,breaks", PAPERS.values(), ids=PAPERS.keys())
+def test_a_physical_size_keeps_its_proportion_within_the_rounding_of_whole_millimetres(
+    tmp_path: Path,
+    earlier: tuple[float, float],
+    later: tuple[float, float],
+    breaks: list[str],
+) -> None:
+    """Each A size rounds its sides to whole millimetres, so A1 and A2, or A4 and A3, have
+    one proportion though the width of each times the height of the other differs. A move
+    between them changes how the pages look, and breaks nothing. US Letter after A4 changes
+    the proportion (DEC-034 point 3)."""
+    root = project(tmp_path)
+    foundations(root)
+    for version, size in (("1.0.0", earlier), ("1.1.0", later)):
+        spec = copy.deepcopy(PARTS)
+        printed_at(*size)(spec)
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == breaks
 
 
 def test_a_version_that_changes_nothing_needs_a_patch(tmp_path: Path) -> None:
