@@ -1,0 +1,551 @@
+answers:
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T191337Z-5f15e2a0.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T08:43:07Z
+      outcome: unchanged
+      unchanged-because: Main's answers since updated the view and judged COR-017's overlay categories for a capability's agents, none of which moves a floor. This change's PRJ-002 D4 adds that a release candidate raises no floor and writes its bounds as the final release would. Judged together, the view's floor still rises only where a declaration asks for it, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-surface-change
+    read:
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+    revalidated:
+      at: 2026-11-11T08:43:09Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged pkit release publish-notes' notes past GitHub's limit, which the term does not describe. This change adds release candidates in PRJ-002's preamble and a new D5, and refines D3 and D4, while D1 and D2 stand as written. Judged together, the term says what a surface change is and who judges it, which holds for a candidate as for a final release.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version
+    read:
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - moved-318ae20df6a7.yaml
+    revalidated:
+      at: 2026-11-11T08:43:11Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged a path anchor on versioning.py, which bumps the number the definition names. This change adds release candidates, whose versions take the suffix rcN, PEP 440's spelling of semantic versioning's pre-release of a major.minor.patch, while D2 stands as written. Judged together, the definition and its example of a release step moving the backbone by a changeset's kind hold.
+  - artefact: tech-docs/analysis/core/domain-model/020-parts-of-the-system.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T08:43:13Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged COR-014's loaded sets, COR-013's tool access and a capability's declared write categories, and updated the view, none of which touches a version. This change adds release candidates to PRJ-002 and refines D3 and D4, while D2 stands as written. Judged together, the view's account of a version and the kind a person judges for it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T08:43:15Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged the acceptance gate's records (COR-051 point 4, COR-066 points 1, 2 and 5), a storyboard's Read access and updates to the actor's needs, none of which touches a changeset. This change adds release candidates in PRJ-002's preamble and a new D5, and refines D3 and D4, while D1 and D2 stand as written. Judged together, the developer still declares each change in a changeset, which a candidate leaves pending, so the actor holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T08:43:17Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged cli.py's new commands, flags and warnings, the actors' reworded needs, the requirements' fingerprints, and steps 7 and 7a's guard moving to CI's quick checks with --base and PKIT_CHANGESET_SKIP, none of which changes how a change declares a changeset. This change adds release candidates, which consume no changeset and raise no floor, while D1 and D2 stand and a floor still rises only where a changeset declares it (PRJ-002 D4). Judged together, a change still declares its kind and its floors in a changeset, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T191337Z-5f15e2a0.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T08:43:19Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged new anchors on install.py, upgrade.py and latest_tag.py, an opt-in key install writes, a hook-need warning and the agent deploy's file name, none of which changes how the CLI is installed. This change adds the candidate tag, which latest never names, and has the tool step install no candidate (ADR-063). Judged together, the constraint's install with uv from the distribution's URL at latest, and the pin's run through uvx at its tag, hold.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+    revalidated:
+      at: 2026-11-11T08:43:21Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged the rules index's marker test in step 1, the collision check of a capability's install, ACT-adopter's reworded need and test edits, under which compatibility is still resolved before any write. This change adds two of upgrade's own checks, the hand-over of pkit upgrade --pre to a newer release candidate and the refusal of a candidate nobody asked for, both before anything is written (ADR-065 point 4). Judged together, a transition still resolves compatibility in its first step before any write, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T191337Z-5f15e2a0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T08:43:23Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged the rules index in steps 1 and 8, status's remedies, the hook-need warning, install's opt-in key and uninstall's reference scan, under which a transition still records its target first and its completion last. This change reads the backbone's lower bound in PEP 440 order, and has an init run by a release candidate pin the project (ADR-065 point 4). Judged together, an interrupted transition never reads as finished and the next one finishes it, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-methodology-maintainer.md
+    read:
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T214520Z-1bee3213.yaml
+    revalidated:
+      at: 2026-11-11T08:43:25Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged anchors on PRJ-008, ADR-047 point 3 and COR-010, and CONTRIBUTING's step that a new core record's named edits follow its acceptance, none of which the actor's release policy rests on. This change has the maintainer cut release candidates on request, and the final release that ends a line from the last candidate's source commit (PRJ-002 D5). Judged together, the actor's occasions, every change and every backbone release, and its release policy hold.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T013642Z-7e813ee3.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+    revalidated:
+      at: 2026-11-11T08:43:27Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged CONTRIBUTING's Running checks, its fast gates, its kinds that hold no tracking issue open and its link on sync's guard, and new anchors on PRJ-006, ADR-032 and ADR-039 D2, under which whoever holds the repository's settings is still the operator. This change adds the candidate tag, which latest never names, and has the tool step install no candidate, even under pkit upgrade --pre (PRJ-004, ADR-063). Judged together, the operator still puts the CLI on the machine at a release and runs each project at the version it pins, so the actor holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T08:43:29Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged cli.py's new commands, flags and warnings, the actors' reworded needs, the requirements' fingerprints, publish-notes' notes past GitHub's limit, and release-pr.yml naming its branch and writing the PR body through scripts/release_pr.py, none of which changes a component's own release. This change adds release candidates, which a cut makes only with a backbone version under a candidate tag. Judged together, a final release of components alone cuts no candidate and gets no tag, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T08:43:31Z
+      outcome: unchanged
+      unchanged-because: "Main's answers since judged the use case's move into 040-release, the actors' reworded needs, the migration check's place in CI's quick checks and its timing, and cli.py's new commands, flags and warnings, none of which changes a step. This change keeps the release step the only writer of versions, and has a running line's final release refuse a migration merged into a folder it ships, a refusal UC-008 gains with the build for #2211. Judged together, the release that ships a backbone change still ships its migration in the folder of the version it computes, so every step and variant holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-011-migrate-component-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T08:43:33Z
+      outcome: unchanged
+      unchanged-because: "Main's answers since judged the use case's move into 040-release, the component author's reworded need, the migration check's wiring in CI's quick checks and its timing, and cli.py's new commands, flags and warnings, none of which changes a step. This change keeps the release step the only writer of versions, and has a running line's final release refuse a migration merged into a folder it ships, a refusal UC-008 gains with the build for #2211. Judged together, a component's migration still ships with the version the release step writes for it, so every step and variant holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T08:43:35Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged cli.py's new commands, flags and warnings, the requirements' fingerprints, the rules index's marker test in upgrade's step 1, and REQ-031's measure naming the release tag an upgrade names, none of which changes how the CLI reaches a machine. This change adds the candidate tag, which latest never names, and has the tool step install no candidate, even under pkit upgrade --pre (ADR-063). Judged together, the CLI's install at latest and its update to the latest release hold.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T08:43:37Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged the rules index and private region that install and sync render, the change check's faster path index, UC-049's and UC-023's loaded files and .pkit/.gitignore render, install's opt-in key, a hook-need warning and a capability's declared write categories, none of which changes the journey's steps. This change adds the candidate tag, which ADR-065 point 12 counts a tagged install and latest never names. Judged together, the journey adopts the system at a release, from latest or the release's tag, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T08:43:39Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged core rules 2, 9 and 16, a new record's edits accepted in its change (COR-066), the whole-repository check's over-broad warning, the friction check's own-head flag, refs' checks and warnings, same-tier hook collisions and COR-008's issue naming, under which each stage holds. This change adds release candidates, which consume no changeset, and a final release whose release PR leaves the changesets merged after its source commit pending. Judged together, a change still waits for the next release step, so the journey holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T08:43:41Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged the rules index's marker test and status lines, UC-008's notes past GitHub's limit and its variants for a failed run's branch and a changelog too long for the release PR's body, UC-049's and UC-023's loaded files and renders, and the actors' rewording, none of which changes the journey's steps. This change adds the candidate tag, which ADR-065 point 12 counts a tagged install, and pkit upgrade --pre, which only a project that asks takes. Judged together, the journey upgrades a project to a release, from latest or the release's tag, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T08:43:43Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged cli.py's new commands and warnings, the rules index a capability's upgrade renders, its .pkit/.gitignore render in the shared tail, REQ-010's and REQ-026's wording, the collision check and uninstall's reference scan, none of which changes a step. This change reads a component's lower bound in PEP 440 order, which gives what it gave for every release version, and counts a candidate's tag as tagged (ADR-065 points 4 and 12). Judged together, the capability's upgrade holds.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261027T191803Z-5aae943e.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T08:43:45Z
+      outcome: unchanged
+      unchanged-because: Main's answers since judged setup's auto-allow, the dev dependencies, the living-docs and software-engineering references, the acceptance gate's edits, the friction check's examples, status's remedies, the include merge, the agent deploy, refs' warnings, a capability's loaded rules and its declared write categories, and updated its hook and link text, none of which touches its install or upgrade lines. This change adds release candidates a person asks for, with pkit upgrade --pre or a pin, which latest never names and a move to which always pins. Judged together, the README's install from latest or a release's tag, and its upgrade to a release, hold.

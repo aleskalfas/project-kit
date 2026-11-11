@@ -95,6 +95,21 @@ def content_file(language: str) -> str:
     return f"content.{language}.yaml"
 
 
+def new_piece_folder(root: Path, location: str, name: str) -> Path:
+    """The folder of a new piece `name` in `location`. Raises Refused where `name` is not a
+    piece's name, or anything lies there already, so a new piece never writes over a file."""
+    if not is_name(name):
+        raise Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
+    rel = f"{location}/{PIECES}/{name}"
+    target = root / rel
+    if target.exists() or target.is_symlink():
+        raise Refused(
+            f"{rel} lies in the location already, so the name `{name}` is taken: name the new "
+            f"piece another"
+        )
+    return target
+
+
 def produce_command(piece: str, output: str) -> str:
     return f"`pkit visual produce {piece} {output}`"
 
@@ -435,6 +450,8 @@ class Project:
         self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
         self._values: dict[str, Any] | None = None
         self.env = ProjectEnv(self)
+        self.drawings = brand_drawings(self.brand)
+        self._choice: layout.Choice | None = None
 
     def label(self, library: str) -> str:
         """`<library>@<version>` of a locked library."""
@@ -469,6 +486,36 @@ class Project:
         the scene that serves it. Raises KeyError for a key the piece does not name."""
         return self._size_keys[key]
 
+    def choice(self) -> layout.Choice:
+        """Which drawing draws each instance of a layout in every scene of the piece,
+        worked out once (DEC-034 point 6). A brand's drawing draws an instance only where it
+        fits it in each language the piece holds and at every key over the size axes it
+        names, so the piece is placed in each, as the search for a lock places it. Each
+        instance a drawing does not fit somewhere is left to its top's own drawing in all
+        of them, naming the first language and key where it did not fit, and the piece is
+        placed again until no other instance is left so. A brand that draws no layout
+        leaves every top to its own drawing, and places nothing more. Raises `MissingFont`
+        as a scene does."""
+        if self._choice is not None:
+            return self._choice
+        refused: dict[str, str] = {}
+        choice = layout.Choice()
+        while self.drawings:
+            choice = layout.Choice(self.drawings, dict(refused))
+            for language in self.piece.languages:
+                for size in self.size_keys:
+                    sizes = sizes_at(self.scope.axes, size)
+                    ctx = layout.Context(
+                        self.env.at(size), language, self.piece.stand_ins, sizes, choice
+                    )
+                    layout.place_top(ctx, self.piece.top, self.piece.contents[language])
+                    for trace, why in ctx.misfits.items():
+                        refused.setdefault(trace, f"{why}, in `{language}` at `{size}`")
+            if len(refused) == len(choice.refused):
+                break
+        self._choice = choice
+        return choice
+
     def scenes(
         self,
         languages: Sequence[str] | None = None,
@@ -487,6 +534,7 @@ class Project:
         Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
         served = None if keys is None else {self.size_key(key) for key in keys}
         sizes = [size for size in self.size_keys if served is None or size in served]
+        choice = self.choice()
         return [
             (
                 language,
@@ -501,12 +549,30 @@ class Project:
                     env=self.env.at(size),
                     facts=facts,
                     sizes=sizes_at(self.scope.axes, size),
+                    choice=choice,
                 ),
             )
             for language in self.piece.languages
             if languages is None or language in languages
             for size in sizes
         ]
+
+
+def brand_drawings(brand: tokens.Brand) -> dict[tuple[str, str], str]:
+    """The brand's drawings, each by its use under the top and the layout its `draws` names
+    (DEC-009 point 2, DEC-034 point 1): each component of the brand's version that declares
+    `draws`, of a top whose library the brand names (DEC-009 point 3). Where the brand holds
+    two drawings of one layout, neither draws, and the top's own drawing does. A file that
+    cannot be read draws nothing, and the check of the brand reports it."""
+    found: dict[tuple[str, str], list[str]] = {}
+    for path in sorted((brand.folder / COMPONENTS).glob("*.yaml")):
+        data, _ = read_component(path)
+        draws = data.get(layout.DRAWS) if data is not None else None
+        top = draws.get("top") if isinstance(draws, Mapping) else None
+        drawn = draws.get("layout") if isinstance(draws, Mapping) else None
+        if isinstance(top, str) and isinstance(drawn, str) and brand.names(top.split("/")[0]):
+            found.setdefault((top, drawn), []).append(f"{brand.name}/{path.stem}")
+    return {key: uses[0] for key, uses in found.items() if len(uses) == 1}
 
 
 def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis]) -> str:
