@@ -1,0 +1,6 @@
+component: visual-communication
+kind: none
+body: >
+  Sentences that DEC-033, DEC-034 and DEC-035 left stale in DEC-004, DEC-008,
+  DEC-009, DEC-012 and DEC-035 say what those refinements decided, with no
+  rule changed (#3028). No surface moves.
