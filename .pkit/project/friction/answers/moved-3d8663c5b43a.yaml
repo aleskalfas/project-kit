@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-017-backbone-migration-safe.md
-    revalidated:
-      at: 2026-10-25T00:33:48Z
-      outcome: unchanged
-      unchanged-because: Only core rule 20 changes, on answers. Rule 5, which this requirement rests on, says what it said.

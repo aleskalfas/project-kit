@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-decision-record
-    revalidated:
-      at: 2026-10-24T04:34:14Z
-      outcome: unchanged
-      unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. A record is still numbered in its namespace and binds once accepted, so the definition holds.

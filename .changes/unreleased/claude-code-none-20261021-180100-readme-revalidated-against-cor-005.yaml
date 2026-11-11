@@ -1,6 +1,0 @@
-component: claude-code
-kind: none
-body: >
-  The adapter README is revalidated, unchanged, against COR-005's account of
-  what `pkit new adapter` writes: only its friction block moves. Inert in an
-  adopting project: a synced tree is never a place (ADR-055).

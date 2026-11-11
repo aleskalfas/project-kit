@@ -1,65 +1,119 @@
 ---
 variant: specialized
-reader: user
+reader: act-ai-agent
 kind: reference
 pkit:
   friction:
     anchors:
       path:
-        - .pkit/lifecycle/**
+        - .pkit/lifecycle/ownership.py
+        - .pkit/agents/tool_access.py
+        - .pkit/lifecycle/templates/README.md
         - src/project_kit/__init__.py
+        - src/project_kit/lifecycle_ownership.py
+        - src/project_kit/manifest.py
         - src/project_kit/validators.py
-        - src/project_kit/default_branch.py
-        - src/project_kit/decisions.py
+        - src/project_kit/sync.py
+        - src/project_kit/install.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/capabilities.py
+        - src/project_kit/visibility.py
+        - src/project_kit/loaded_rules.py
+        - src/project_kit/provisioning.py
+        - src/project_kit/scaffolds.py
         - src/project_kit/agents.py
+        - src/project_kit/agents_overlay.py
+        - src/project_kit/decisions.py
         - src/project_kit/storyboards.py
         - src/project_kit/schemas_authoring.py
         - src/project_kit/process_authoring.py
         - src/project_kit/permissions.py
-        - src/project_kit/manifest.py
-        - src/project_kit/capabilities.py
-        - src/project_kit/declared_rule_sets.py
-        - src/project_kit/capability_plans.py
-        - src/project_kit/connections.py
-        - src/project_kit/data_points.py
-        - src/project_kit/point_questions.py
-        - src/project_kit/dispatcher.py
-        - src/project_kit/run_cache.py
-        - src/project_kit/command_runner.py
-        - src/project_kit/agent_runs.py
-        - src/project_kit/provisioning.py
-        - src/project_kit/package_validate.py
-        - src/project_kit/friction_discovery.py
-        - src/project_kit/process_dependencies.py
-        - src/project_kit/migrations.py
-        - src/project_kit/scaffolds.py
-        - src/project_kit/install.py
-        - src/project_kit/sync.py
-        - src/project_kit/upgrade.py
         - src/project_kit/treecopy.py
-        - src/project_kit/lifecycle_ownership.py
-        - .pkit/schemas/backbone/package.schema.json
-        - .pkit/schemas/backbone/filler.schema.json
-        - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
+        - src/project_kit/friction_discovery.py
+        - src/project_kit/package_validate.py
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", "COR-062#9", "COR-062#11", "ADR-049#3", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
+        - .pkit/capabilities/project-management/scripts/_lib/merge_queue.py
+        - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
+        - .pkit/schemas/backbone/package.schema.json
+        - .pkit/schemas/backbone/config.schema.json
+        - .pkit/schemas/backbone/filler.schema.json
+        - .pkit/schemas/backbone/rule-set.schema.json
+      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1"]
+      artefact:
+        - .pkit/lifecycle/manifest.md
+        - .pkit/lifecycle/component-registry.md
+        - .pkit/lifecycle/migrations.md
+        - .pkit/lifecycle/upgrade-flow.md
+        - .pkit/lifecycle/manifest.md#capability-origin-cor-031
+        - .pkit/lifecycle/manifest.md#field-layout-and-casing
+        - .pkit/lifecycle/manifest.md#how-a-data-point-resolves
+        - .pkit/lifecycle/manifest.md#how-a-registered-anchor-kind-is-resolved
+        - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
+        - .pkit/lifecycle/manifest.md#strict-on-unknown-keys
+        - .pkit/lifecycle/manifest.md#validation-the-package-schema
+        - .pkit/lifecycle/manifest.md#where-a-capabilitys-manifest-lives
+        - .pkit/lifecycle/manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping
+        - .pkit/lifecycle/migrations.md#naming
+        - .pkit/lifecycle/migrations.md#script-contract
+        - .pkit/lifecycle/migrations.md#three-scopes-per-tier
+        - .pkit/lifecycle/migrations.md#which-version-a-migration-targets
+        - .pkit/lifecycle/upgrade-flow.md#mandatory-process-connections-cor-053-point-6
+        - .pkit/lifecycle/upgrade-flow.md#per-component-upgrade
+        - .pkit/lifecycle/upgrade-flow.md#rolling-back-an-upgrade
+        - .pkit/lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over
+        - .pkit/lifecycle/upgrade-flow.md#the-dependency-gates
+        - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
+        - .pkit/lifecycle/upgrade-flow.md#the-steps-of-a-transition
+        - .pkit/lifecycle/upgrade-flow.md#upgrading-an-incubated-capability-cor-031-d1d4
+        - .pkit/lifecycle/upgrade-flow.md#the-capabilities-rules-index
+        - .pkit/lifecycle/upgrade-flow.md#what-a-step-newly-binds
+        - .pkit/lifecycle/manifest.md#the-methodologys-literals
+        - .pkit/lifecycle/manifest.md#package-metadata-packageyaml
+        - .pkit/lifecycle/migrations.md#directory-layout
+        - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
+        - .pkit/lifecycle/manifest.md#per-component-manifest-one-per-installed-component
+        - .pkit/lifecycle/manifest.md#an-adapters-manifest
+        - .pkit/lifecycle/manifest.md#worked-example
+        - .pkit/lifecycle/component-registry.md#install-pre-flight-checks
+        - .pkit/lifecycle/component-registry.md#register-pre-flight-checks-incubated-cor-031
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/lifecycle/migrations.md#what-ships-a-migration
+        - .pkit/lifecycle/migrations.md#tier-independence
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#a-new-collision
+        - .pkit/lifecycle/upgrade-flow.md#a-clash-of-area-names
+        - .pkit/lifecycle/upgrade-flow.md#what-the-settings-merge-widens
+        - .pkit/lifecycle/upgrade-flow.md#two-recorded-states-and-an-interrupted-upgrade
 ---
 
 # Lifecycle
 
-How project-kit installs, updates, and removes resources — and how versions evolve across the backbone and its components.
+How project-kit installs, upgrades and removes the backbone and its components, and how their versions move ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)). This page holds the layout, the two tiers and how derivable state is reconciled. Four pages beside it hold the rest of the contract ("The pages beside this one" below).
 
-The architecture lives here. The rules and rationale (why two tiers, why per-component manifests, why migrations split by scope and tier) live in `.pkit/decisions/core/COR-010-resource-lifecycle.md`. This document is the spec: manifest schema, upgrade procedure, migration layout, register/unregister mechanics, version-resolution semantics, and worked examples.
+## Contents
 
-Paths and exact YAML shapes are illustrative — the install/sync runtime (per the build roadmap + COR-004) settles them. The shapes here are what every other area of the kit can rely on once the runtime ships.
-
-Developers don't stamp these layouts by hand. The kit ships authoring commands (`pkit new adapter <name>`, `pkit new capability <name>`, `pkit new migration [...]` — specified in `.pkit/cli/README.md` and grounded in COR-005 + COR-017) that scaffold the contract this document defines. The scaffolds are stamped by the CLI's own code, which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
+<!-- pkit:contents -->
+- [Layout](#layout)
+- [The two tiers](#the-two-tiers)
+- [Manifest schema](#manifest-schema)
+- [The component registry](#the-component-registry)
+- [Migration framework](#migration-framework)
+- [The upgrade flow](#the-upgrade-flow)
+- [Reconciling derivable state](#reconciling-derivable-state)
+- [Worked example](#worked-example)
+- [The pages beside this one](#the-pages-beside-this-one)
+- [Why, and what an adopter does](#why-and-what-an-adopter-does)
+<!-- /pkit:contents -->
 
 ## Layout
+
+The lifecycle keeps a project's state in these places under `.pkit/`:
 
 ```
 .pkit/
 ├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
+├── agents/
+│   └── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
 ├── lifecycle/
 │   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
 ├── migrations/
@@ -79,967 +133,207 @@ Developers don't stamp these layouts by hand. The kit ships authoring commands (
         └── manifest.yaml                            ← per-component manifest
 ```
 
+Where a tier's migrations lie, and how each script is named, is [`migrations.md`, "Directory layout"](migrations.md#directory-layout).
+
+**Authoring.** Nobody stamps these layouts by hand. `pkit new adapter <name>`, `pkit new capability <name>` and `pkit new migration` stamp the contract these pages define, and the CLI reference specifies them. The stamps are the CLI's own code, which ships with it. So an upgrade that changes a contract also changes what they stamp.
+
 ## The two tiers
 
-**Backbone** — the cohesive core that ships together: decisions (CORs and the spec), rules, the CLI / runtime. One coordinated release, one version number.
+The backbone and its components each carry a version of their own, in semantic versioning, `major.minor.patch` (COR-010).
 
-**Components** — installable, independently-versioned pieces that depend on a backbone version range. Capabilities (`project-management`, `evidence`, `software-engineering`, `demo-recording`, `software-analysis` and `living-docs` today; per COR-017) and adapters (`claude-code` today; future `codex` / `cursor` / etc.) are components. Each component declares a semver range of compatible backbone versions in its `package.yaml`. (Per COR-027, the bundle pattern was retired — alternative implementations within a capability live as capability-internal data, not as filesystem-level bundles.)
-
-Both tiers use semantic versioning (`major.minor.patch`). Components express compatibility via `requires_backbone: ">=X.Y.Z, <W.0.0"`. Patch-level releases are backward-compatible bug fixes and have no migrations — migration directories are named with the full three-segment target version, with patch always `0` (e.g., `2.1.0/`), and cover all patches within that minor line.
-
-See COR-010 for the rationale.
+- **Backbone:** the core that ships together, as one release with one version number. It holds the core decisions and the specification, the rules, and the CLI with its runtime.
+- **Components:** installable pieces, each versioned on its own, that depend on a range of backbone versions. Capabilities (COR-017) and adapters are components.
+  - **No bundles:** alternative implementations within a capability live as the capability's own data, not as bundles in the file system (COR-027).
+- **A component's range:** each component declares the backbone versions it works with in its `package.yaml`, as `requires_backbone: ">=X.Y.Z, <W.0.0"` ([`manifest.md`, "Package metadata"](manifest.md#package-metadata-packageyaml)).
+- **Patch releases:** a patch release is a backward-compatible fix, and carries no migration. A migration folder is named for its full target version, with the patch always `0`, such as `2.1.0/`. It covers every patch of that minor line.
 
 ## Manifest schema
 
+The manifests and the package metadata are on [`manifest.md`](manifest.md). Each heading below leads to its section there.
+
 ### Backbone manifest (`<project>/.pkit/manifest.yaml`)
 
-```yaml
-schema_version: 1
-backbone_version: 2.1.0
-completed_version: 2.1.0
-
-# Component registry — paths to per-component manifests.
-components:
-  - kind: capability
-    name: project-management
-    manifest: .pkit/capabilities/project-management/project/manifest.yaml
-  - kind: capability
-    name: homegrown
-    origin: incubated-in-repo                         ← in-repo (incubated) capability (COR-031)
-    manifest: .pkit/capabilities/homegrown/project/manifest.yaml
-  - kind: adapter
-    name: claude-code
-    manifest: .pkit/adapters/claude-code/project/manifest.yaml
-```
-
-Small by design. No component data is duplicated here — that lives in each component's manifest. The backbone manifest carries:
-
-- **`schema_version`** — version of *this* manifest's own schema, independent of any component's. Bumping it triggers a backbone manifest-schema migration.
-- **`backbone_version`** — the release whose content the project holds. While a transition is incomplete, it names the transition's target instead: a transition writes it first, before anything else ("The upgrade flow", below).
-- **`completed_version`** — the last release a transition of the backbone completed, written last ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 3). A project is at a version only when both keys name it. The key is optional:
-  - **Missing:** the transition reads as incomplete with no lower bound. The project's backbone migration history is unknown, so its next upgrade runs every backbone migration once (the replay, below). No manifest written before the release that added the key has it.
-  - **Behind `backbone_version`:** an interrupted transition, which the next upgrade finishes.
-  - **Ahead of `backbone_version`:** an older pkit's sync over a finished transition. It reads as incomplete too.
-  - **How it is written:** each of the two keys by an edit of its own line, so neither write re-serialises the manifest. Both stay top-level scalars in every `schema_version`, and no manifest-schema migration moves them, so a pkit that reads only `backbone_version` still finds the target. The key needs no schema bump: the manifest's writer has kept a key it does not know since the first published release.
-  - **Who writes it:** first install, last, and a transition of the backbone, last. In the methodology's own source repository, where no transition runs, its release step writes it beside `backbone_version`.
-- **`components`** — the registry. Each entry is a `{kind, name, manifest}` triple pointing at a per-component manifest file, optionally carrying an **`origin`** marker (below). A capability's entry names `.pkit/capabilities/<name>/project/manifest.yaml`, whatever its origin. An entry an older release wrote may name the capability's root instead ("Where a capability's manifest lives", below).
+See [`manifest.md`, "Backbone manifest (`<project>/.pkit/manifest.yaml`)"](manifest.md#backbone-manifest-projectpkitmanifestyaml).
 
 #### Capability origin (COR-031)
 
-A capability-kind registry entry may carry an **`origin`** field recording where the capability came from — the property the lifecycle keys off to decide what `sync` / `upgrade` may do to it:
-
-- **`kit-shipped`** (the default) — the capability ships in the kit source and was copied into the adopter on `capabilities install`. This is the status quo COR-017 describes. **The field is omitted when it holds this default**: an absent `origin` reads as `kit-shipped`, so every registration written before this field existed keeps its behaviour with no re-tagging (the change is purely additive — no migration; COR-031 D2).
-- **`incubated-in-repo`** — the capability was authored in the adopter's *own* repo and registered in place via `capabilities register` (no copy). Its subtree is adopter-owned content, not a copy of anything the kit ships.
-
-Origin lives **here, in lifecycle-owned install-state — never inside the capability's own subtree.** An incubated capability's subtree (including its authored `package.yaml`) is entirely adopter-owned; writing lifecycle state into it would re-create the ownership blur the origin distinction exists to prevent (COR-031 D2). For an incubated capability, no kit-written per-component `manifest.yaml` is stamped at all — its version of record is its authored `package.yaml`, and dependency gating reads from there.
+See [`manifest.md`, "Capability origin (COR-031)"](manifest.md#capability-origin-cor-031).
 
 ### Per-component manifest (one per installed component)
 
-```yaml
-schema_version: 1
-component:
-  kind: capability          # or 'adapter'
-  name: project-management
-  version: 0.12.0
-  installed_at: 2026-04-15T12:00:00Z
-
-requires_backbone: ">=1.0.0,<2.0.0"
-
-backend_state:
-  project_board:
-    uuid: PVT_kwDOAA12345
-    name: adopter-kit
-```
-
-Sections:
-
-- **`schema_version`** — version of *this* component-manifest schema. Bumping it triggers a component manifest-schema migration.
-- **`component`** — kind, name, recorded version, install timestamp.
-- **`requires_backbone`** — semver range pinned to this version of the component. Recorded into the manifest at install/upgrade so the next upgrade run can verify compatibility.
-- **`backend_state`** — opaque backend identifiers the kit cannot rederive (board UUIDs, webhook IDs, etc.). Empty `{}` for components that have none.
-  - **`backend_state.skipped`**, in a capability's manifest: the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here and leaves those artefacts out of its copy. A skip chosen in a transition is recorded here before the copy, so a transition a migration stops does not ask again, and a name recorded here is never a new collision ("A new collision", below).
-  - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state` (ADR-065 point 2). It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one, and the refresh says so.
-
-Notably absent: enumerations of files, labels, symlinks, settings entries, templates. These are *derivable* state — the kit-side spec at the component's recorded version + the adopter's config tells you what should exist; the validate/upgrade reconciliation tells you whether reality matches.
+See [`manifest.md`, "Per-component manifest (one per installed component)"](manifest.md#per-component-manifest-one-per-installed-component).
 
 #### An adapter's manifest
 
-An adapter's manifest sits at `.pkit/adapters/<name>/project/manifest.yaml`, and its registry entry names that path ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 2). The adapter's files move with the backbone, so its manifest only keys the window of its migrations.
-
-- **Who writes it:** first install, for each adapter it copies, which it registers at the same time. A transition of the backbone writes it too:
-  - an adapter with no manifest is recorded at the version the target ships, and runs none of its migrations
-  - an adapter with a manifest is recorded at that version once the migrations in its window have run. Their scripts are read from the running pkit's bundle, since a project's copy of an adapter carries no `migrations/`. A manifest that records a newer version than the target ships refuses the transition before it writes anything: a transition never moves a recorded version down.
-  - an adapter the target adds is registered after the copy, and recorded at the version it ships
-- **What a project's copy holds:** each file at the adapter's top level, its declaration of the permission dimensions its harness enforces among them, and its core settings. A transition removes a top-level file the bundle no longer ships. The adapter's `project/` and `settings/project/` are the project's, and no copy touches them.
-- **A registered adapter with no manifest** reads as at the backbone. Every project's adapter is in that state until its first transition under the release that writes the manifest.
+See [`manifest.md`, "An adapter's manifest"](manifest.md#an-adapters-manifest).
 
 #### Where a capability's manifest lives
 
-A capability's manifest sits at `.pkit/capabilities/<name>/project/manifest.yaml` ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 2).
-
-- **Why there:** every ownership predicate treats a capability's `project/` as the project's ("The ownership predicates" below). So no copy of the capability's tree deletes or overwrites the manifest, and the bundle ships none.
-- **Who writes it:** a capability's install, and the restamp after a capability's migrations, in `pkit upgrade` and in `pkit capabilities upgrade`. Each of the two upgrades also records there, before its copy, each skip a person chose on a new collision. Each points the capability's registry entry at that path. Sync writes none. An incubated capability is registered with the same path, and nothing writes a manifest there (COR-031 D2). Nor does install in the methodology's source repository ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), so a capability's registry entry there names a path that holds no file.
-- **A manifest at the capability's root,** `.pkit/capabilities/<name>/manifest.yaml`, is where older releases wrote it. There every copy deleted it or overwrote it. The code that writes the record moves it under `project/`:
-  - `pkit upgrade` moves it right after recording its target, before its copy. `pkit capabilities upgrade` moves it after its checks, before its copy. A root manifest the restamp still finds came with the copy from the source, so the restamp removes it.
-  - The move rewrites the registry entry's path, then removes the root file. So an interrupted move leaves two equal copies, and the next move finishes it.
-  - The root manifest replaces one already under `project/`.
-- **Which one is read:** every reader of a capability's recorded version, and of its skips, reads the root manifest where one exists, then the one under `project/`, then the capability's installed `package.yaml`. The capability downgrade check, the dependency gates and the wiring resolver are among those readers. `pkit validate`'s check of the manifests reads the one the registry entry names. Both manifests exist only after an interrupted move, or after a write that does not know the move, such as an older pkit's restamp or a rollback of `.pkit/`. Either way the root one names the content the project holds, so it wins.
-- **Read before propagation:** `pkit sync` and `pkit upgrade` read every capability's record before they copy anything, since a capability's copy replaces its installed `package.yaml`.
-- **Sync moves none:** sync never copies a capability whose manifest is still at the root, since the copy would prune the manifest there (ADR-065 point 2). One the running pkit ships at or above its recorded version is reported pending `pkit upgrade`, and the next `pkit upgrade` moves every root manifest, that of a capability it no longer ships included. `pkit capabilities upgrade` moves its own after its checks.
+See [`manifest.md`, "Where a capability's manifest lives"](manifest.md#where-a-capabilitys-manifest-lives).
 
 ### Package metadata (`package.yaml`)
 
-Every component — a capability or an adapter — ships a source-side `package.yaml`: the metadata the lifecycle reads at install and upgrade time, the dispatcher reads for commands, and `pkit validate` checks. This section is the **package-metadata reference** the core records leave field layout and casing to (COR-053 point 3). It also records this distribution's literals and where a project's filler files live, which the records leave to the same reference.
-
-```yaml
-schema_version: 1                 # 1 or 2 — see "Field layout and casing"
-component:
-  kind: capability
-  name: evidence
-  version: 0.5.1
-description: "Citation discipline — ..."
-requires_backbone: ">=1.26.0,<2.0.0"
-
-# Optional: declared dependencies on other capabilities (COR-030).
-# Each entry is a capability name + semver range for the installed version.
-# `optional: true` marks a dependency that need not be installed.
-# Absence of this field (or an empty list) means no dependencies.
-requires_capabilities:
-  - name: project-management
-    version: ">=0.20.0,<1.0.0"
-  - name: living-docs
-    version: ">=0.3.0,<1.0.0"
-    optional: true
-
-# Optional: this component's git-footprint paths outside `.pkit/` (ADR-009).
-# `pkit visibility private` routes these into `.git/info/exclude`.
-footprint:
-  - .claude/skills
-
-# Optional: this component's runtime-local files to git-ignore
-# (ADR-009 rule 7). Aggregated into the pkit-owned `.pkit/.gitignore`.
-runtime_ignore:
-  - .pkit/capabilities/<name>/project/some-runtime.log
-```
+See [`manifest.md`, "Package metadata (`package.yaml`)"](manifest.md#package-metadata-packageyaml).
 
 #### Field layout and casing
 
-The table lists every key `.pkit/schemas/backbone/package.schema.json` knows, with its shape and the record that owns it. **The schema is the authority**: where the table and the schema disagree, the table is the defect. A key the schema does not know is an error, at any level ("Strict on unknown keys", below).
-
-**Required.** The schema requires of every component, capability and adapter alike, the fields COR-017 lists: `schema_version`, `component` with `kind`, `name` and `version` inside it, `description` and `requires_backbone`. Every other top-level key is optional.
-
-| Key | Shape and meaning | Owning record |
-|---|---|---|
-| `schema_version` | Required: the package file's own version, the integer `1` or `2`, both accepted. See "Validation" below for what each marks. | COR-017; COR-021 (the `2`) |
-| `component` | `kind` — `capability` or `adapter`; `name` — a component name (lowercase letters, digits and hyphens, starting with a letter and not ending with a hyphen) equal to the component's directory; `version` — the component's own semver, which gates dependency edges. | COR-010, COR-017 |
-| `description` | Required: a non-empty line, the summary `pkit capabilities list` shows, which the dispatcher also uses as the command group's help. | COR-017; COR-021 |
-| `requires_backbone` | Required: a version range of compatible backbone versions; must parse. Evaluated at install and upgrade, and checked by `pkit validate` against the installed backbone ("How the wiring is resolved", below). | COR-010, COR-017 |
-| `requires_capabilities` | A list of `{name, version}`, both required: a component name and a version range, which must parse. An entry may add `optional: true`: the dependency need not be installed, but an installed one must satisfy its range, and it never blocks uninstalling the capability it names. An entry without it is a required dependency. Gated at install, upgrade and uninstall, and checked by `pkit validate` against the installed versions; absence means no dependencies. | COR-030 |
-| `commands` | The command tree registered under `pkit <capability>`. A key is a token. A value carrying `script` is a leaf and also needs `help` (one line); `script` is a path relative to the component root and must exist. A leaf may declare `query-contract: true` — the one constant declaration that the command is a query (bounded, deterministic, read-only, needing no network; COR-050 point 2, ADR-057 point 3), required on the command a validator names, on a command filler and on an anchor kind's resolver. A command filler's leaf may also declare `reads`, a non-empty list of distinct values among `history` and `settled`: what it reads beyond the working tree — absent, the working tree only ("How a data point resolves"); `reads` on a leaf without `query-contract: true` is the `packages` member's error. Any other value is a group of further tokens. | COR-021; ADR-057 and ADR-058 (the declaration); COR-052 point 6 (`reads`) |
-| `aliases` | A list of unique component names: other namespaces for the same command tree (`pm` for `project-management`). The dispatcher binds them in one precedence walk: a backbone command wins, then a capability's own name, then the first capability in manifest order to declare the alias. An alias that loses reaches nothing, and `pkit validate`'s `packages` member warns at the entry, naming what holds the name — the backbone command, or the capability whose name or earlier alias it is ("Validation: the package schema"). A warning, since the alias is a shorthand: `pkit <capability> …` still reaches the capability. | none — the dispatcher's, beside COR-021 |
-| `validators` | A mapping from a validator name (a word) to its entry: `command`, required — a command reference (below) naming a leaf of this component's `commands:` tree, which must exist and declare `query-contract: true`; the leaf's `help` is the validator's — plus optional `order` (an integer; the backbone's members take the orders below 1000, and 1000 is the default). `pkit validate` runs each as a member addressed `<component>:<name>`: the leaf's script from the project root with the one argument `--json`, the offline marker set ("The methodology's literals" below), under the query policy of the one command runner ("How a registered command is run" below) — in its own process group, bounded by the backbone's thirty seconds and killed as a group when it overruns — answering on stdout with one JSON document and nothing else — `{"summary": [...], "findings": [{"severity", "location", "message"}]}`, severity one of `error`, `warning`, `info`, `report`, a finding optionally carrying a `label`; diagnostics go to stderr; only `error` fails. No answer — a leaf without the declaration, an abnormal exit, a timeout, not exactly that document — is an error finding. The living-docs capability registers the first, `living-docs:spaces`. | COR-055 (a component joins validation by naming a command it registers, point 3; one severity fails, point 5; no answer fails, point 6); ADR-058 (the block's keys, the run and the findings document) |
-| `provides` | A mapping from hook name to an implementation string. Reserved; no shipped file uses it. | COR-013 |
-| `footprint` | A list of unique relative paths or globs: what the component deploys outside `.pkit/`, aggregated across components and routed into `.git/info/exclude` by `pkit visibility private`. | ADR-009 rule 1 |
-| `runtime_ignore` | A list of unique relative paths or globs: runtime-local files to git-ignore, aggregated into the pkit-owned `.pkit/.gitignore`. The tier that writes a runtime file declares its pattern, whoever owns the directory it lands in; the backbone, which has no `package.yaml`, declares its own through a core-level seam — the process journals among them, which its engine writes and it ignores unless the project commits them. While they are committed, the render leaves out a component entry declaring them and names it in a comment line, and the entry is warned ("Validation: the package schema"). | ADR-009 rule 7; COR-033 point 7 |
-| `connections.roles` | A list of unique qualified role names, `<publisher>::<role>`: the roles this component provides. Every point it defines sits under one of them. | COR-053 points 1 and 3 |
-| `connections.extension-points.accepts` | A mapping from point address, `<publisher>::<role>:<point>`, to a data point this component defines: `schema_version`, `schema` (its companion JSON Schema, relative to the component's `schemas/`; must exist) and `description`, all required, plus optional `combination` (`single`, `union` or `additive`; `single` when absent), `default` (`{value, participation}`, both required: the definer's own value, and `always` or `alone` — see "How a data point resolves"), `inert` (`fallback` or `fail`; `fallback` when absent), `mandatory` and `question`: a command reference naming the leaf of this component's `commands:` tree that asks the person about the point and records the answer, which must not declare `query-contract: true`, since it writes ("A data point's question", below). | COR-053 point 2; COR-052 points 1 to 3, 5 and 6; COR-061 (`question`) |
-| `connections.extension-points.offers` | A mapping from point address to a process or event this component offers: `kind` (`process` or `event`), `schema_version` and `description`, all required. `kind: process` also requires `process`, the offered definition's id; `kind: event` also requires `command` (the emitting command), `schema` (the payload's companion under `schemas/`; must exist) and `subject` (the payload field naming the subject). | COR-053 point 2; COR-036 |
-| `connections.extensions.contributes` | A list of contributions to another role's data point: `point` (an address) and `schema_version`, required, plus the data, as `value` (written here) or `command` (a command filler, whose `commands:` leaf must declare `query-contract: true`) — one of the two, not both — and optional `description` and `mandatory`. | COR-053 point 3; COR-052 points 2 and 6 |
-| `connections.extensions.subscribes` | A list of subscriptions to another role's event: `point`, `schema_version` and `command` (the subscriber), all required, plus optional `description` and `mandatory`. | COR-053 points 2, 3 and 9 |
-| `connections.extensions.depends-on` | **Generated, never hand-written**: `generated: true`, required, and `entries`, a list of `{process}` plus optional `schema_version` and `mandatory`; `process` is in the implementation form `<capability>:<process-id>` or the role form `<publisher>::<role>:<point>`. Written by `pkit capabilities refresh <name>` from the process definitions' `depends_on` — one entry per distinct upstream and targeted interface version, sorted; `schema_version` is the definition entry's `version`, `mandatory` its mark. A copy that differs is a validation error. | COR-053 point 4; COR-038 |
-| `mandatory` — on a data point, a contribution, a subscription or a `depends-on` entry | `{reason}`, a non-empty reason required: the mark without one is refused. An offered point takes no mark. | COR-053 point 6 |
-| `docs.locations` | A mapping from a location name (`[a-z][a-z0-9-]*`) to `{path}` plus optional `root` (`internal`, the default, or `user`) and `description`; `path` is a sub-path of that documentation root. A location recorded for the name in `.pkit/capabilities/<name>/project/docs-locations.yaml` wins over the declared one; every reader of a capability's locations — the documentation-roots readers and friction discovery — reads them this one way (`project_kit.docs_roots.read_capability_locations`). An entry in another shape places nothing, and a place naming it is a validation finding. | COR-049 points 4 and 5 |
-| `friction.places` | A list of `{path}` plus optional `location` (a name declared in `docs.locations`, inside which `path` applies; without one, `path` is repository-relative), `type` (a name this component's `friction.types` declares: the type the artefacts in the place take), `revisits` and `description`. A `type` the registry does not declare gives no type, and the `packages` check reports it without failing. `revisits` is a non-empty list of links whose source's change asks for a revisit of their targets, each `{targets, when}` or `{all-but, when}` plus optional `description`: `targets` names the source's own field that lists the targets by their anchors' values, `all-but` the own fields that list the anchors that stay out, every other anchor then a target, a non-empty list of unique own fields, and `when` the trigger fields, a non-empty list of unique own fields. A link names exactly one of `targets` and `all-but`. A field is a word, never `pkit`. A link that names both or neither, whose `targets` is not one own field, whose `all-but` or `when` is not a non-empty list of own fields, declares nothing, and the `packages` check refuses every link the schema refuses. What a link means: the schemas README, "A place may declare links". What the change check asks of a triggered link: the CLI reference, "Friction checks". `derived-links` is a non-empty list of forms of the links the component's command writes in the place's files. Each is `{target}` plus optional `description`. `target` is a regular expression an inline link's target matches whole, and the `packages` check fails one that does not compile. What friction does with them: the schemas README, "A place may declare derived links". | COR-050 points 1, 5 and 16; COR-056 point 2 |
-| `friction.types` | The component's **type registry**: a mapping from a type's name (a word of lower-case letters and digits joined by single hyphens, so no `:` and no `/`) to its entry. `description`, required. `kind-field`, optional: the artefact's own field in which an artefact of the type declares its kind, never `pkit`. Where the winning place gives such a type, an artefact takes it only when that field is present and not empty. `project-places`, optional, default `false`: whether a project may give the type on its own places. The type's full name is `<component>:<name>`. How the backbone resolves an artefact's type from the places matching its file, and which findings it raises: the CLI reference, "Artefact types". | COR-056 points 2 to 4; ADR-057 point 2 |
-| `friction.surface` | A list of unique repository-relative paths or globs this component says ought to be described; the part no artefact anchors to is reported as uncovered. | COR-050 point 8 |
-| `friction.held` | A list of `{location, path}` plus optional `description`: `path` is a folder inside the declared location `location` names, or a glob of folders at one depth there, such as `*/revalidations`. A glob may stand only before the folder's own name: its last segment is plain, and it holds no `**`. A glob holds every file beneath each folder it names. Its files are the component's held documents, which no place reads as artefacts, its own component's places included. | COR-050 point 1 |
-| `friction.kinds` | A mapping from an anchor kind (a word, as an anchor block and a rule's cited source write it) to its entry: `command`, required — a command reference naming the leaf of this component's `commands:` tree that resolves an anchor of the kind; the leaf must exist and declare `query-contract: true`. Read for installed capabilities only: an adapter's entry registers nothing, and the packages check refuses it at the entry. How the backbone runs the resolver and reads its answer: "How a registered anchor kind is resolved" below. | COR-050 point 2; ADR-057 point 3 |
-| `project_rule_set` | The one project rule set a capability declares, which its install creates ("The declared project rule set", below): `name`, the set's name; `inherits`, the name of one of the capability's own method sets, written bare; `scope`, with `types` alone, each a type the capability's own `friction.types` declares, written `<capability>:<type>`, since a capability cannot know a project's paths; and `title`, one line for the created file's heading. All four are required. The packages check refuses an `inherits` that names no method set the capability ships under `rule-sets/`, or one whose version does not read, a `name` one of the capability's own sets takes, a type the capability does not declare, and the key on an adapter. | COR-017 |
-
-What holds across the table:
-
-- **Two kinds of `schema_version`.** At the top level it versions the package file. Everywhere else — a data point, an offered point, a contribution, a subscription, a `depends-on` entry — it is the *point's* version, an integer from 1, and two versions are compatible when they are equal (COR-053 point 5).
-- **Command references** — `command` on an offered event, a contribution, a subscription, a validator entry or an anchor kind's entry, and a data point's `question` — are a path through the `commands:` tree, tokens separated by single spaces (`create page`), landing on a leaf that exists.
-- **Paths** — every `script`, `schema`, `docs.locations` path, `friction` place, held folder and surface entry, `footprint` and `runtime_ignore` entry — are relative, with no `..` segment; the repository check names the offending segment.
-- **Role names and addresses are words.** Every part of a qualified role `<publisher>::<role>` and of a point address `<publisher>::<role>:<point>` — in `connections.roles`, the keys of `accepts` and `offers`, a contribution's or subscription's `point`, and a generated `depends-on` entry's `process` — is a word, `[a-z][a-z0-9-]*`: the words the configuration file's selection keys admit and the filler mapping below needs. The word is defined once, as the citation grammar's (`project_kit.refs.ADDRESS_WORD_PATTERN`, COR-019), and a test holds the package and configuration schemas' patterns to it. The schema first shipped a looser pattern — each part any run of characters but whitespace and `:` — which admitted roles no selection key could name and no filler path could hold; it refuses them now.
-- **Values are the point's.** A `default.value` or a contribution's `value` is any YAML the point's companion schema admits; the package schema does not type it, and the data point's resolution judges it ("How a data point resolves").
-
-**Casing.** Two spellings meet in this file, and both stay.
-
-- The keys that predate the connection-points record are snake_case — `schema_version`, `requires_backbone`, `requires_capabilities`, `runtime_ignore` — like the backbone's other YAML (the manifests above; the schemas README, "YAML conventions").
-- The compound keys COR-053 decides by name are kebab-case — `extension-points`, `depends-on` — written as the record spells them, because a record that names the keys people write decides their spelling (COR-053 point 3 and its Rationale; COR-050 point 1 says the same of the friction block).
-- Every other key inside `connections`, `docs` and `friction` is a single word. `schema_version` keeps its snake_case there because it is the field that carries a point's version everywhere that version is written — a filler envelope, a role block's point block (COR-052 point 5, COR-053 point 10).
-- One near-collision to mind: the generated `depends-on` here is copied from the process definitions' `depends_on` (COR-038) — one fact in two files, each spelt as its own record spells it.
-
-No record decides a casing rule for the whole file, and renaming either family would be a surface change owing a migration (COR-010) for no reader's benefit. **A new key** is spelt as the record that decides it spells it. Where no record names it, it is a single word if one suffices; a compound is kebab-case inside `connections`, `docs` and `friction`, and snake_case at the top level, like the keys it sits beside.
+See [`manifest.md`, "Field layout and casing"](manifest.md#field-layout-and-casing).
 
 #### Validation: the package schema
 
-Every `package.yaml` validates against one backbone file schema, `.pkit/schemas/backbone/package.schema.json` (Draft 2020-12; the class is described in the schemas README's "Backbone file schemas" section and placed by ADR-056). It is read from the tree of the project being validated, never from a copy in the binary, so a tree recorded before it landed skips the shape checks and reports so. The validator is `project_kit.package_validate`; two callers run it on the same code: `pkit validate` (the **`packages`** member, over every capability and adapter the backbone manifest registers — ADR-058) and the register pre-flight below (for the one incubated capability about to be activated).
-
-- **Two `schema_version` values are in use, and both are accepted.** Version 1 is the scaffolded default (`claude-code`, `living-docs`, `software-analysis`, `software-engineering`); version 2 marks the files that adopted the `commands:` block when COR-021 said the version bumps with it (`demo-recording`, `evidence`, `project-management`). No reader distinguishes the two — the dispatcher reads `commands:` from either — and both require the same fields, so the schema accepts `1` and `2` as an integer enum and nothing is bumped or migrated. A third value is an error until a record introduces it.
-- **Known keys are strictly typed; unknown keys are errors.** Every object the schema declares is closed (`additionalProperties: false`), at the top level and inside every block, so a key the schema does not know fails the shape check at that key, with the nearest known key suggested (`unknown key 'foootprint'; did you mean 'footprint'?`) through the one renderer every backbone file schema shares (ADR-056 point 4). It fails `pkit validate` and refuses a register like any other error. The decision, and what to do about such a key, is "Strict on unknown keys" below.
-- **Repository checks**, all errors but the one below: `component.name` equals the directory name; `component.version`, `requires_backbone` and every dependency range parse; every command `script` exists; a declared connection point sits under a role in `connections.roles`; an accepted data point's (and an offered event's) companion `schema` exists under the capability's `schemas/`; every command a point or extension names exists in `commands:`, and every command a validator names, every command filler a contribution names, and every resolver an anchor kind names, exists there and declares the query contract; a data point's question does not declare it; a kind the backbone resolves itself (`path`, `record`, `artefact`) is refused at its `friction.kinds` entry; a contribution names `command` or `value`, not both; `docs.locations` paths, `friction` places, held folders and surface entries, `footprint` and `runtime_ignore` entries are relative sub-paths (no absolute path, no `..`), and every command `script` path is relative; a place's or held folder's `location` is a declared one, and a held folder names one, holds no `**` and ends in no glob (a tree without the package schema gets these from this check); an offered process point names a definition of the component (by its `id`), and its `schema_version` equals that definition's `interface.version` where the definition declares one — a difference is located at the point's `schema_version` and names both values and both files (COR-053 point 5); and the generated `depends-on` list says exactly what the component's process definitions generate, marked `generated: true` — a stale copy is located at the list (or its nearest present parent), says what is missing and what no definition declares, and names `pkit capabilities refresh <name>` as the fix (`process_dependencies.staleness`). Those last two are the repository checks that read process definitions, through one walk of the component's `schemas/` (`process_dependencies`).
-- **One repository check warns**: a `runtime_ignore` entry that declares the process journals — the entry, read as a path, matches the backbone's journal pattern (`process_journal.JOURNAL_GLOB`, the one definition) — in a project that commits its journals (`process.journal.committed: true` with `enabled: true`, COR-033 point 7). The backbone owns that ignore line and drops it then, and its choice takes precedence: the render drops the component's entry too and names it in a comment line of `.pkit/.gitignore` (`JournalSettings.drops_claim`, the one rule for the render and the warning). It is the mark of a component older than the backbone it runs on, and a warning, since the render has already neutralised it; while the journals stay ignored the entry is redundant and not warned. The fix it names follows where the package comes from — its registry `origin` and the ownership module's `is_synced_copy` ("The ownership predicates" below): a `kit-shipped` package in an adopter is a synced copy the next sync overwrites, so upgrade the component together with the backbone; an `externally-sourced` one is restored to its pin (COR-041), so move the pin to an author release that drops the entry; the project's own file — an `incubated-in-repo` capability, or any other package in the methodology's source — drops the entry.
-- **One check across packages warns**, over the installed capabilities only: an `aliases` entry another name shadows. The dispatcher gives a top-level name to a backbone command first, then to a capability's own name, then to the first capability in manifest order that declares it as an alias; the check reads the table that walk builds (`dispatcher.installed_alias_table`, the one the dispatcher binds), so it reports exactly the aliases `pkit <alias>` does not reach. The warning is located at the entry and names the alias, its capability and what holds the name — the backbone command `pkit <alias>`, another capability's name, or the same alias of the capability that registered it first — so a generic alias (`analysis`) is never lost, or taken by a later capability, without a word. A warning, not an error: the alias is a shorthand, and the message points at the canonical `pkit <capability> …`, which still works. An alias that already reaches its own capability — its own name, or its own alias repeated — loses nothing and is not reported.
-- **One check across packages fails**, over the installed capabilities only: a capability that surfaces a namespace under a name a backbone command holds. The dispatcher gives the top-level name to the backbone command, so `pkit <capability> …` runs that command and never reaches the capability. The check reads the capabilities the dispatcher builds groups for — those whose package declares a `commands:` block — against the backbone's commands as the dispatcher has them when the check runs (`dispatcher.shadowed_capability_names`), never a list kept by hand. An error, not a warning: unlike an alias, the name is the capability's canonical form. It is located at `component.name` and names the rename that lasts for where the package comes from, as for a reserved name below. The backbone gains commands with its releases, so an upgrade can take a name that was free when the capability shipped; that is why `pkit new capability` refuses such a name and `capabilities install` and `register` do not — refusing at install would make an upgrade break the installation of something that worked, where this check names the problem. A capability with no `commands:` block surfaces no namespace and is not reported.
-- **One check of the registry fails**: a component registered under a name the lifecycle reserves for its kind. For a capability, `capabilities.RESERVED_CAPABILITY_NAMES` — `core`, `project`, `adr` and `backbone`, the names `pkit new capability`, `capabilities install` and `capabilities register` refuse. For an adapter, `scaffolds.RESERVED_ADAPTER_NAMES` — `backbone`, which `pkit new adapter` refuses, as `pkit init` refuses a source that ships an adapter under it: its changesets and validators would be read as the backbone's, the two places the backbone's name is read beside an adapter's. The capability-only names collide where only a capability's name is read, so an adapter may take them. One registered before its name was reserved stays registered — nothing unregisters it — so this check is where it surfaces. The error is located at `component.name`, gives the reason the refusal gives, and names the rename that lasts. For a capability it follows where the package comes from: the project's own capability is unregistered with `pkit capabilities uninstall <name>`, which keeps an authored capability's files, renamed (its directory and `component.name`) and registered again under the new name; a package a sync restores is its author's to rename, and is uninstalled until it ships under another name. An adapter, which no verb unregisters, is renamed where it is authored — its directory, its `component.name` and its entry in the backbone manifest's `components`; one a sync restores is the methodology source's to rename.
-- **Another check of the registry fails**: an adapter and a capability registered under one name. The backbone reads a component by its name alone where it reads both kinds: a changeset names its component, and the release keys every `package.yaml` under `.pkit/` by name (`changesets.discover_components`), so a release would move only one of the two; every registered component's validators are owned by its name, so the two would share one owner; and the wiring resolver reads the component registry by name, so one of the two would be read under the other's kind. So the second of the two is refused wherever a component is named into a project: `pkit new adapter` refuses a name a capability holds, and `pkit new capability`, `capabilities install` and `capabilities register` a name an adapter holds — a component holds its name when the backbone manifest registers it, or when its directory exists under `.pkit/adapters/` or `.pkit/capabilities/` — and `pkit init` refuses, before writing anything, a methodology source that ships an adapter and a capability of one name. A pair registered before the refusal stays registered — nothing unregisters either — so this check is where it surfaces. The error is located at each one's `component.name`, gives the reason the refusals give (`capabilities.SHARED_NAME_REASON`), and names that one's rename, as for a reserved name above; renaming either clears both.
-- **One check across packages fails**, over the installed capabilities only: a folder of held documents that oversteps its bounds ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 1). It oversteps them when it:
-  - equals or encloses a documentation root;
-  - equals or encloses any declaration's place, its own component's included, since that would empty the place;
-  - shares a file with another component's held folder, or with a rule-set folder;
-  - equals, encloses or lies within another of its own component's held folders.
-
-  The error is located at the `friction.held` entry and names each bound it oversteps. It is read from friction discovery's one judgment of the folder (`friction_discovery.held_folders`), which leaves such a folder holding nothing, so its files stay artefacts of the places matching them. One component holds each held file, and rules stay artefacts (COR-051 point 2). Two components' folders sharing a file are refused at both entries. The folder, or glob of folders, is judged on its declaration, never on which files exist.
-
-  Two precedences settle the files a held folder shares without overstepping a bound:
-  - **A held folder wins over the places.** A place that only shares some files with it leaves those files to it: the project's place or a root, another component's place, and its own component's place, such as a glob that reaches into the folder. No place reads such a file as an artefact.
-  - **Within one component, the first declared held folder wins.** Two of a component's held folders may share files without either lying within the other, such as `revalidations` and `*/revalidations`, which both reach `revalidations/revalidations/`. Each shared file is held for that component either way, by the folder it declares first.
-- **Three checks across packages report and do not fail**, over the installed capabilities only. Each is a type finding artefact discovery raises and names the `packages` check to report ([COR-056](../decisions/core/COR-056-artefact-types.md) point 3; ADR-057 point 2). The project cannot mend a component's package metadata, so none fails:
-  - a place naming a type its own `friction.types` does not declare, at the place's `type`. The place gives no type.
-  - a tie between places only components declare: typed places that rank equal on a file and give it different types. Reported at each tied place, and the artefact counts as each type.
-  - one capability's typed place taking precedence over another capability's own place that is not root-wide, at the typed place. Its type stands.
-- **One more check across packages fails**, over the installed capabilities only: an anchor kind two or more of them register under `friction.kinds` ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 2).
-  - The error is located at each one's entry, naming the others.
-  - No registration wins: the kind is refused for every registrant, and an anchor of it is unresolved until one registration remains.
-  - It is read from the one anchor-kind registry (`friction_discovery.registered_anchor_kinds`), so what is reported is what an anchor of the kind meets.
-
-The other checks *across* packages — roles, points, mandatory marks, cycles, fingerprints and the version relations — are the wiring resolver's ("How the wiring is resolved" below), run by `pkit validate` as its `connections` and `versions` members; `package_validate.check_wiring` is the same resolution for the pre-flight, and `resolve_active_roles` answers which roles have an active provider.
+See [`manifest.md`, "Validation: the package schema"](manifest.md#validation-the-package-schema).
 
 #### Strict on unknown keys
 
-**The rule.** Package metadata is strict: a key the package schema does not know is an **error**, wherever it is written — at the top level, inside a component, a command leaf, a validator entry, a dependency, or any part of the `connections`, `docs` and `friction` blocks. [COR-053](../decisions/core/COR-053-connection-points.md) left whether unknown keys become errors to this specification, as a surface change of its own if taken (its Implications, "Schema changes"). This is that decision.
-
-**Why now, and not from the start.** The schema shipped permissive — an unknown key only warned — while the blocks the newer records ask for were still being added one change at a time; a strict schema would have refused a package ahead of the schema knowing its block. Every block those records name is now declared: `commands` with the query-contract declaration, `validators`, `connections` (roles, extension points, and extensions with the generated `depends-on` and the mandatory mark), `docs.locations`, and `friction` places and surface. From here an unknown key is a misspelling or a key nothing reads, and every reader of the file passes over a key it does not look for — `mandatroy:` on a contribution leaves the connection optional, `foootprint:` keeps its paths out of `.git/info/exclude` — silently, which a warning beside passing checks does not prevent. Failing makes the mistake stop where it is written. It also puts the package file with the rest of the backbone's file schemas, which refuse unknown keys: the configuration file, rule sets, the filler envelope.
-
-**What an adopter sees, and does.**
-
-- *With only kit-shipped components, nothing.* Every shipped package validates, and the sync that brings the strict schema brings the packages with it.
-- *With a package of their own* — an incubated capability (COR-031) — that carries a key the schema does not know, `pkit validate` fails under `packages`, naming the file, the key and the nearest known key (`.pkit/capabilities/<name>/package.yaml:/foootprint → unknown key 'foootprint'; did you mean 'footprint'?`), and `pkit capabilities register` refuses the capability with the same message. The fix is in the adopter's own file: rename the key to the one suggested, or delete it. A note for people belongs in a YAML comment; a new key arrives through the record that decides it and a schema release, never by writing it first.
-- *A package missing a required field* — `schema_version`, `description` or `requires_backbone` — is refused the same way (`'description' is a required property`), and the fix is to add it: `schema_version: 1`, a one-line summary, a version range. The capability scaffold has always written all three.
-- *A tree not yet synced* keeps its own, permissive copy of the schema, and that copy is the one applied (ADR-056 point 1), so there an unknown key still only warns — the same sentence, until the sync.
-
-**No version bump and no migration.** The flip changes no key and no meaning: a file that carried only known keys and COR-017's fields validates as before, so the package file's own `schema_version` stays at `1` and `2` — bumping it would make every package file change for no reader's benefit. The one shipped file that had to change, the `claude-code` adapter's package (it gained its `description`), is replaced by the same sync that delivers the schema. The adopter-owned files that can now fail cannot be corrected by a script — none can know what a misspelt key meant, or write a capability's description — so the finding names the fix instead of a migration guessing it.
+See [`manifest.md`, "Strict on unknown keys"](manifest.md#strict-on-unknown-keys).
 
 #### The connection, documentation and friction blocks
 
-Three optional blocks carry what the newer core records ask a component to declare. The key names each record decides are used as written; the layout beneath them is this reference's ("Field layout and casing" lists every key). `pkit::` in the example is this distribution's publisher qualifier ("The methodology's literals", below).
-
-```yaml
-# COR-053 point 3 — roles this component provides and its connection points.
-connections:
-  roles: [pkit::documentation]                     # qualified, <publisher>::<role>
-  extension-points:                                # points this component DEFINES
-    accepts:                                       # data in (a slot, COR-052)
-      pkit::documentation:reading-evidence:        # <publisher>::<role>:<point>; the role must be provided above
-        schema_version: 1                          # the point's version (COR-053 point 5)
-        schema: reading-evidence.schema.json       # companion under this component's schemas/
-        description: What readers found on each page.   # required prose on every extension point
-        combination: union                         # optional: single (the default) | union | additive
-        default: { value: [], participation: alone }    # optional: always | alone
-        inert: fail                                # optional: fallback (the default) | fail
-        mandatory: { reason: "…" }                 # optional; the mark without a reason is refused
-        question: ask readers                      # optional: its command that asks the person (COR-061)
-    offers:                                        # processes and events out
-      pkit::documentation:page-created:
-        kind: event
-        schema_version: 1
-        description: A page was written by a writing command.
-        command: publish                           # the emitting command; must exist in commands:
-        schema: page-created.schema.json           # payload companion under schemas/
-        subject: page                              # the payload field naming the subject
-      pkit::documentation:review:
-        kind: process
-        schema_version: 1
-        description: The review process other components may depend on.
-        process: page-review                       # the offered process definition's id (COR-036)
-  extensions:                                      # where this component PLUGS INTO others
-    contributes:                                   # data it supplies to another role's point
-      - { point: pkit::analysis:glossary, schema_version: 1, command: export-glossary }   # a command filler
-      - { point: pkit::analysis:audiences, schema_version: 1, value: [maintainer] }        # or the data itself
-    subscribes:                                    # events it reacts to, with its command
-      - { point: pkit::analysis:use-case-created, schema_version: 1, command: refresh }
-    depends-on:                                    # GENERATED from process definitions' depends_on (COR-053 point 4)
-      generated: true                              # the mark; a hand-written copy without it is refused
-      entries:                                     # one per distinct upstream + targeted version, sorted
-        - { process: pkit::analysis:use-case-review, schema_version: 2 }   # role form; the targeted interface version
-        - process: project-management:issue-lifecycle                      # implementation form
-          mandatory: { reason: "…" }               # copied from the definition's mark; the lifecycle reads it
-
-# COR-049 point 4 — the sub-paths of this component's own documents, relative to a documentation root.
-docs:
-  locations:
-    pages: { path: pages, root: user }             # root: internal (default) | user; relative sub-paths only
-    spaces: { path: spaces }
-    logs: { path: logs }
-
-# COR-050 points 1, 2 and 8 — where anchored artefacts live, the documents held that are not
-# artefacts, the surface that ought to be described, and the anchor kinds it resolves.
-friction:
-  places:
-    - { location: pages, path: "**/*.md" }         # inside a declared location…
-    - { path: "notes/**/*.md" }                    # …or, without one, inside the project
-  held:                                            # a folder in a declared location; no place walks it
-    - { location: logs, path: reviews }            # e.g. a log of reviews the component carried out
-    - { location: logs, path: "*/reviews" }        # or a glob of folders, its last segment plain
-  surface: ["src/**"]                              # repository-relative globs
-  kinds:                                           # an anchor kind, and the leaf that resolves it
-    source: { command: resolve source }            # the leaf declares `query-contract: true`
-```
-
-`depends-on` is the one block a person never writes. **`pkit capabilities refresh <name>`** regenerates it from the `depends_on` the capability's process definitions declare (the process area README, "depends_on") and marks it `generated: true`, leaving the rest of the file as written; with nothing to generate it removes the list, and any `extensions` or `connections` block the removal empties. The schema fixes the shape and the mark; the packages pass compares the list with what the definitions generate and fails a stale copy, naming the refresh — the definition always wins; the wiring resolver reads the entries and never opens a definition; the capability lifecycle reads their `mandatory` marks ("Mandatory process connections", below). Refresh is authoring-time: it runs where the capability is authored — the methodology's source for a kit-shipped capability, the adopting project for an incubated one (COR-031) — and refuses a kit-shipped capability installed in an adopting project, whose package file is core-owned and overwritten by sync: a stale copy there is the capability author's defect, reported upstream.
+See [`manifest.md`, "The connection, documentation and friction blocks"](manifest.md#the-connection-documentation-and-friction-blocks).
 
 #### The methodology's literals
 
-Three names the core records need are written record-neutrally, and the literal is left to the distribution's reference ([COR-053](../decisions/core/COR-053-connection-points.md), the vocabulary paragraph of its Decision). This is that reference. In this distribution:
-
-| In the records | Here | Where it is written |
-|---|---|---|
-| The publisher qualifier the methodology reserves for the roles it defines, written `<methodology>::` (COR-053 point 1) | **`pkit::`** | Role names (`pkit::documentation`) and point addresses (`pkit::documentation:readers`): in the `connections` block above, in the configuration file's `connections.providers` and `connections.selections` keys, and as a role block's key where the qualified form is needed. |
-| The one front-matter key "owned by the methodology, named for it" (COR-053 point 10) | **`pkit:`** | An artefact's front matter, or a collection entry: the container (the schemas README, "The container"; `backbone/container.schema.json`). |
-| "a sub-path the backbone owns for slot files", under the internal documentation root ([COR-052](../decisions/core/COR-052-slots.md) point 2) | **`pkit/fillers/`** | The prefix of every project filler file (the next section). |
-
-**The qualifier names who defined a role, never who implements it** (COR-053 point 1). A third party coins its roles under its own name — `super-docs::documentation` is a different role that shares a word with `pkit::documentation` — and may also *provide* a `pkit::` role, interchangeably with the capability that first defined it, but it never coins a role under `pkit::`. Project-published roles have no qualifier yet; COR-053 leaves them to a later refinement. **The container key is not a qualifier**: an artefact has one `pkit:` key whoever published its roles, and a third party's role block sits inside it, beside the methodology's own blocks (COR-053 point 10).
-
-These strings are this distribution's choice, not a principle: another distribution of the same records could choose others. Changing one would change files adopters have written, so it would be a surface change shipping a migration (COR-010), not a record amendment.
-
-**Four more literals, for the commands the backbone runs.** [ADR-057](../../tech-docs/architecture/decisions/ADR-057-backbone-engines-and-command-limits.md) point 3 leaves the literal of the query-contract declaration and the offline marker to this reference, specified with the first query commands that run — the validators by which a component joins validation ([COR-055](../decisions/core/COR-055-validation.md) point 3; their registry is [ADR-058](../../tech-docs/architecture/decisions/ADR-058-validator-registry.md)) — the deadline of ADR-057 point 5 is named here too, and so is the declaration of what a command filler reads beyond the working tree, which [COR-052](../decisions/core/COR-052-slots.md) point 6 has its capability declare. In this distribution:
-
-| In the records | Here | Where it is written |
-|---|---|---|
-| The one constant declaration that a command honours the query contract — bounded, deterministic, read-only, needing no network (COR-050 point 2; ADR-057 point 3) | **`query-contract: true`** | On a `commands:` leaf, beside `script` and `help`. Required on the command a validator names, which validation runs as a query (COR-055 point 3), on a command filler and on an anchor kind's resolver: the `packages` member reports one without it, and the runner — the validator registry, the data points' resolution, the anchor-kind registry the friction checks and rule-set validation read — refuses it. |
-| The offline marker, "so a well-behaved command can tell" (ADR-057 point 3) | **`PKIT_OFFLINE=1`**, with **`UV_OFFLINE=1`** beside it | The environment of every query command the backbone starts — validators, command fillers and anchor-kind resolvers. `PKIT_OFFLINE` is what a command reads; `UV_OFFLINE` is honoured by `uv`, so a script with a `uv run --script` shebang resolves its dependencies from uv's cache and never fetches. |
-| The deadline every run tells its command (ADR-057 point 5) | **`PKIT_COMMAND_DEADLINE`**, seconds since the epoch, to the millisecond | The environment of every command the backbone's runner starts — queries, predicates and the report's context read alike. A command may read it to know by when anything it starts must have ended ("A run inside a run" below). **`PKIT_COMMAND_STRAYS`**, set beside it, and **`PKIT_RUN_CACHE`**, set for the length of a `pkit validate` run, are the runner's own: no command reads or sets them. |
-| Which state a command filler reads beyond the working tree — history, settled state, or both (COR-052 point 6) | **`reads:`**, a list of **`history`** and **`settled`** | On a command filler's `commands:` leaf, beside `query-contract: true`. `history` is the current history, read at HEAD; `settled` is the default branch as the backbone resolves it, never a base named for one run. Absent, the working tree only. The schema refuses any other value, an empty list and a value twice; the `packages` member, a leaf that declares it without `query-contract: true` ("How a data point resolves"). |
-
-**How dependencies are provisioned before an offline run.** A query declares that it needs no network and runs offline-marked, so a script's dependencies must already be in uv's cache when it runs. **`pkit init` and `pkit sync` put them there**, as one of their steps (self-host included), and `pkit capabilities install`, `register` and `upgrade` run the same step for the one capability they bring in: for every command a registered component — capability or adapter — declares with `query-contract: true`, whose script carries inline script metadata (a `# /// script` block), they resolve the script's environment once, online, with uv's own resolution — `uv sync --script <script>`, which resolves the metadata and installs the environment into uv's cache **without running the script**. The step prints one line per query command:
-
-| Line | When |
-|---|---|
-| `provisioned` | the script did not resolve offline, and resolved online |
-| `unchanged … already provisioned` | the script resolves offline — the condition the query meets — so nothing is fetched: the step is idempotent, and a re-run resolves nothing |
-| `skipped … nothing to provision` | the script declares no inline dependencies (or does not exist — the `packages` member reports that) |
-| `warning … not provisioned` | the script resolved neither offline nor online — no network, no `uv` on the PATH — with uv's reason. **Never a failure**: init and sync go on and keep working offline |
-
-A dry run asks uv nothing and prints `would provision` for each script with inline dependencies. Provisioning happens outside the bounded run: it sets no offline marker and is not bound by the command bound. A pipeline runs `pkit sync` on checkout, before its gate.
-
-A query whose environment is not provisioned exits with uv's report that a dependency is not in its cache and the network is disabled; the query policy recognises it on standard error and names it, rather than reporting the exit: **"environment not provisioned — run `pkit sync`"** — an error finding for a validator, the reason an inert filler gives for a command filler, and distinct from a command that answered nothing.
-
-**Two more, for recognising the methodology's source repository.** [ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md) defines the source repository as the one whose `.pkit/` is the methodology's own tree. Code that must recognise it without knowing which code runs does so by the package source beside the `.pkit/` tree at the repository root; the package's path, and the path of the dispatcher the router execs there, are this distribution's names. In this distribution:
-
-| In the records | Here | Where it is written |
-|---|---|---|
-| The marker that recognises the source repository on the tree's side (ADR-059 point 3) | **`src/project_kit/__init__.py`** beside the **`.pkit/`** tree. The in-tree dispatcher **`.pkit/cli/pkit`** is what the router's first route execs, not a marker: a checkout whose dispatcher was deleted is still the source, and the dispatcher is reported missing | Nowhere by a project. They are read at a repository root by the entry-point router's first route (`project_kit.router.is_source_checkout`) and by the ownership predicate (`is_methodology_source`, "The ownership predicates" below). Both copies cite this table, and a test holds them equal. |
-
-An adopter has the dispatcher but never the package source. Unlike the literals above, no project writes these, so changing them means changing the two copies together, not migrating an adopter's files.
+See [`manifest.md`, "The methodology's literals"](manifest.md#the-methodologys-literals), with its part "How dependencies are provisioned before an offline run".
 
 #### How a registered command is run
 
-The backbone runs the commands a component registers through one runner, `project_kit.command_runner` — one lookup and one bounded run, with a policy per kind of command ([ADR-057](../../tech-docs/architecture/decisions/ADR-057-backbone-engines-and-command-limits.md) point 5; the kinds share one command runner, [COR-053](../decisions/core/COR-053-connection-points.md) point 11).
-
-- **The lookup.** A command is a leaf of the `commands:` tree ("Field layout and casing" above), and one walk reads the tree: a command reference — a path of tokens — names a leaf through it. The dispatcher (`pkit <capability> <command>`), package validation, the validator registry, the anchor-kind registry, the process engine's predicate runner and the report builder (`pkit report`, asking the project-management capability for the workstream) all read the tree this way, so each resolves a leaf to the same script. A process predicate's `run:` names a leaf by its own name rather than its path (the process README, "The predicate runner").
-- **The run.** The leaf's script is started with an explicit argument list — never a shell string — from the project root, in its own process group (inside another run, the outermost run's: "A run inside a run" below), with standard output and standard error captured: standard output is the answer, one JSON document and nothing else unless the policy reads it as text; standard error is diagnostics. The run is **bounded by thirty seconds**, a fixed backbone constant (`COMMAND_TIMEOUT_SECONDS`), not a setting (ADR-057 point 3). The one exception is an agent run, whose bound is the run's own limit and thirty seconds more (the agent-run row below). Exceeding the bound **kills the whole process group** — a script with a `uv run --script` shebang starts its interpreter as a grandchild, which killing the script alone would leave running — and an interrupt of `pkit` itself kills the group too. A run that does not start, exits non-zero, overruns, or prints anything but the answer its policy reads is never an answer; what it is instead is the policy's. Where a policy reports such a run, it names how the run ended and may show what the command wrote on standard error — never the stream whole, only its last 10 non-blank lines and at most 1500 bytes of them, every terminal escape sequence and control character removed, so a command's words can neither flood nor rewrite the operator's terminal.
-- **A run inside a run.** A command the runner starts may start `pkit` again — a validator reads a point through `pkit connections resolve`, which starts the point's command filler, which reads the artefacts through `pkit friction artefacts` — and the tree keeps one deadline and one kill (ADR-057 point 5). Every run tells its command, in its environment, **`PKIT_COMMAND_DEADLINE`**: seconds since the epoch by which anything the command starts must have ended — the run's own end less two seconds, the time the command keeps to answer after something it started ran out ("The methodology's literals" above).
-
-  A run is **nested** when it runs inside a live run: its environment carries a deadline; its process is in the process group that leads its session, as every process the outermost run's command starts is — that command leads a session of its own — and a command started from a terminal is not; and the directory the outermost run made and named in **`PKIT_COMMAND_STRAYS`** still exists, which it does only while that run's command runs. A variable left over in a shell, or outliving its run, therefore never makes a plain `pkit` nested. A nested run is bounded by the time remaining, rounded down to a tenth of a second and never more than its own bound — with none remaining its command is not started, and the no-answer says so — and it starts its command in the outermost run's process group rather than a session of its own, so the outermost run's kill, at its deadline or on an interrupt, reaches everything the tree started. Each level's deadline comes before its caller's, so the command that overran is the one a no-answer names, with the bound it had: when that was the time its caller had left rather than its own bound, the no-answer says so — "did not answer within the 0.4 s its caller had left" — since a caller with more time might have had an answer.
-
-  **Strays.** A nested run cannot kill a group it shares with its callers, so when its command overruns it kills that command alone; what the command started is left to the outermost run. Each nested run keeps a marker in the outermost run's directory from just before it starts its command until the command ends by itself. One whose command overran or was interrupted, or whose own process was killed by anyone else — a `subprocess.run(timeout=…)` in a validator, the operating system's out-of-memory killer, a `SIGTERM` — leaves its marker behind. When the outermost run's command ends, however it ended, a marker left behind makes it end everything left in its group; it then removes the directory. With no marker left, nothing is swept: a group whose nested runs all ended by themselves is left as a run outside any other leaves it, so a process a command leaves running on purpose is not ended.
-
-  **What this does not cover.** The kill reaches only the group:
-  - A process that leaves the group escapes the kill: one that starts a session of its own (`setsid`) or a group of its own (GNU `timeout` without `--foreground`, a shell with job control). A `pkit` started under it runs outside the outermost group too — under a new session with the deadline it inherited, under a new group as a run of its own, with thirty seconds and a kill of its own. **In a script a query runs, do not wrap `pkit` in anything that makes a new session or group.**
-  - What a killed nested command started runs on until the outermost run's command ends, not only until the nested run's deadline.
-  - A marker that cannot be written — the directory cannot be written to — leaves those strays running past the outermost run's answer when it answers in time: only its own kill, at its deadline or on an interrupt, reaches them. When the outermost run cannot make its directory at all, the runs under it are not nested: each runs as a run of its own.
-  - The deadline is written on the wall clock, since a monotonic clock gives two processes no reference point they can share portably; each run's own bound is measured on the monotonic clock. A clock step — a time synchronisation, the machine sleeping — between a run and one nested under it shifts the nested bound by the step, never beyond thirty seconds, and the outermost run's kill is never late.
-- **A tool the backbone runs itself.** `gh`, which the landing module asks of the hosting service for `pkit pull-request` and `pkit release merge`, is not a registered command and has no answer policy: the module reads what it printed. It is started through the same runner's one bounded start for a tool (`run_bounded`): with an explicit argument list, from the directory the request acts in, with nothing on standard input, and **in the caller's process group** — never a session or group of its own, so whoever ends the group `pkit` runs in ends a `gh` in flight too. project-management runs `pkit pull-request` in a session of its own and ends that group at its bound; a `gh` request that went on after project-management had read the pull request to decide could act on it unseen. Each call is bounded by the module — a reading, a request (the CLI README, "Pull-request commands") — and on overrun, or an interrupt, the tool **alone** is ended: asked to stop, then killed two seconds later (`END_GRACE_SECONDS`), its pipes closed unread. The group is its caller's, so it is never signalled.
-- **Provisioning, before any run.** A query runs offline-marked and fetches nothing, so the environment its script needs is prepared beforehand, not by the run: **provisioning is a step of `pkit init` and `pkit sync`**, which resolve every registered query command's environment once, online — and of the capability verbs that bring a capability in, for that capability's commands ("How dependencies are provisioned before an offline run" above). A query whose environment is not provisioned gives the no-answer "environment not provisioned — run `pkit sync`".
-- **The policies.**
-
-  | Policy | Run by | Arguments and environment | The answer | No answer is |
-  |---|---|---|---|---|
-  | predicate | the process engine, for every predicate a process definition declares | the subject and `--json`; the environment unchanged but for the run's deadline — a predicate may reach the network | a JSON object the engine interprets (the process README, "The predicate runner") | indeterminate, fail-closed: a gate stays shut — the reason naming how the run ended, with the tail of what the predicate said beside it |
-  | query | `pkit validate`, for a component's validator, a query with no subject (COR-055 point 3; the registry is ADR-058) | `--json`; the offline marker set ("The methodology's literals" above), and the base override (`PKIT_CHECK_BASE`) and the change's own head (`PKIT_CHECK_HEAD`) removed — a validator answers about the project's state, never about a base named for one run (COR-055 point 2; ADR-058 point 7); the leaf must declare `query-contract: true`, or it is not started | the findings document (the `validators` row above) | an error finding naming how the run ended (COR-055 point 6) — for an exit, with the tail of what the command wrote on standard error, its lines joined on the finding's one line |
-  | query, for a filler | the data points' resolution (`project_kit.data_points`), for a contribution's `command` — read by `pkit validate` and `pkit status`, and by `pkit connections resolve` for its one point's fillers only | `--json` alone: a filler takes no parameter ([COR-052](../decisions/core/COR-052-slots.md) point 6); the offline marker set, and the base override and the change's own head removed, whichever command started the resolution — a filler reads state, never a base named for one run (the same point); the leaf must declare `query-contract: true`, or it is not started, and a leaf that declares it reads settled state is not started while the default branch resolves to no commit ("How a data point resolves") | the filler envelope, `{"schema_version": <the point's version>, "value": <the point's value>}` and nothing else — no `remove`, which is the project's alone — whose value fits the point's schema whole | the filler inert, never an empty or a partial value: the point follows its inert policy ("How a data point resolves"); the inert reason names a run that gave no answer as the validator's finding does |
-  | query, for a resolver | the friction checks and rule-set validation, for an anchor (or a cited source) of a kind a capability registers — once per anchor value for a run, and not again in it once it overran its bound ("How a registered anchor kind is resolved" below) | `--json`, the end-of-options marker `--`, then the anchor value — its one subject ([COR-052](../decisions/core/COR-052-slots.md) point 6), last, so that no value is read as an option; the offline marker set, and the base override and the change's own head removed; the leaf must declare `query-contract: true`, or it is not started | `{"paths": [...]}` and nothing else: the files the anchor stands on, in the state the check reads | the anchor unresolved, never resolved, and never dead: the change check fails on it and its artefact is not judged (`no-answer`), and a cited source fails rule-set validation (`unanswered-source`), the reason naming the run as the validator's finding does |
-  | context read | `pkit report`, for the workstream on a report's context line ([ADR-050](../../tech-docs/architecture/decisions/ADR-050-report-context-sourcing.md)) | none; the environment unchanged but for the run's deadline — the verb asks the tracker | the value it prints, read as text rather than parsed: the verb prints it bare, not as a JSON document; output that is not UTF-8 is no value | the workstream omitted — silently where the verb is absent or printed nothing; where it failed (did not start, exited non-zero, overran, printed output that is not UTF-8) the report names how it ended in a warning, with the tail of what it wrote on standard error, before going on without it |
-  | agent run | `pkit agents run`, for the runner an adapter registers ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1) | none, and the run's request on standard input; the environment unchanged but for the run's deadline. A confined run's runner is the one its clone registers, run from the clone's root with `PYTHONDONTWRITEBYTECODE=1`, so no import leaves a cached file in the clone that the check after the run would read as a change. Bounded by the run's limit and thirty seconds more, the time the runner keeps to end the harness and answer. On overrun, or an interrupt, the runner is asked to stop with `SIGTERM`, and is killed two seconds later (`END_GRACE_SECONDS`). Inside another command's run it is refused before anything else: that run's kill asks nothing first, so the harness would outlive it | the runner's answer, the document [the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner) specifies | a run with no answer (`no-answer`), the reason naming how the runner ended and the last line it wrote on standard error. A runner that cannot start is `not-started`, and one past its bound `timed-out` |
-
-  The report builder is bounded like every other run, not exempt: the workstream only enriches a report, so waiting on it past the bound would let a hung tracker call hold the whole report back.
-
-  A subscriber's policy arrives with the events that run subscribers ([COR-053](../decisions/core/COR-053-connection-points.md) point 9 sets its limits).
-
-- **The seams back: what a script reads from the backbone.** A component's script runs in its own environment and never imports the backbone. What it needs of what the backbone computes, it reads through the backbone's reading commands, each printing one stable JSON document — never by computing it again, which would be a second home for one computation (ADR-057 points 1 and 2):
-
-  | Reading command | What it answers |
-  |---|---|
-  | `pkit connections resolve <address> --json` | one data point as it resolves — its value and every filler considered ("Reading one point from a script" below) |
-  | `pkit friction artefacts --json` | where the artefacts are: the documentation roots, each place the project and every installed capability declares with the files it matches and the skips validation applies, every file read with its front matter's own fields, every artefact, and each folder of held documents a capability declares, with the files it holds (the CLI README, "friction artefacts") |
-  | `pkit repository base --json` | settled state: the default branch as declared and resolved — its commit, or why it has none, and whether it has none yet (`unborn`) — and a comparison's base with where HEAD left it; and the history at hand: HEAD's commit, or that it has none yet (`unborn`), or why git cannot read it (the CLI README, "repository base"). A filler reads `head` for history and `default_branch` for the default branch, never `base`: no base override reaches a query, so the base it is shown is the default branch ([COR-054](../decisions/core/COR-054-default-branch.md) point 3), and the problem `default_branch` carries names no base as a fix |
-  | `pkit rule-sets reach --json` | which accepted rules bind on each artefact, at the working tree or at a commit named with `--at`: each rule with the sets it binds through, the extension points it fills, the parts of it that checks enforce with whether each check is there, and its text, any conflict between routes, and the rules a pin behind its set holds back; with `--preview`, where rules would bind if every proposed rule were accepted, each answer that holds only under the preview marked ([COR-051](../decisions/core/COR-051-rule-sets.md) point 7; the CLI README, "Rule-set commands") |
-  | `pkit rule-sets altered --json` | which artefacts a change altered between a base and a head, paired as the change check pairs them, and which it brought under a rule without altering them, with the rules that bind on each at the base and at the head and the rules the change brought it under (the CLI README, "Rule-set commands") |
-  | `pkit capabilities project-rule-set <name> --json` | the project rule set an installed capability declares: the project's own sets that inherit its method set, directly or not, and whether its install creates the set here, with the file and the text, or why it creates none. A capability's migration reads it for an earlier install ("The declared project rule set", above; the CLI README, "The project rule set a capability declares") |
-
-  Each is read-only and needs no network, so a query may call it. The script applies the answer itself — the living-docs validator decides which of two places matching a file wins, and which space it serves — but never re-reads the declarations, lists the working tree or matches a path against a place, nor resolves a reference or computes a merge-base, nor walks a route to a rule set or judges a pin. The artefacts, rule-set and settled-state readings resolve no data point, so a filler may call them while a point it contributes to resolves; a filler never asks for a point. A query that calls one keeps the reading inside its own bound — a filler the reading starts inherits the query's deadline and the outermost run's process group ("A run inside a run" above) — and inside `pkit validate` a point the run has already resolved is read from its run cache ("Reading one point from a script" below).
-
-The dispatcher's proxy is not a run in this sense: `pkit <capability> <command>` is a person's focused surface, so it takes the lookup, inherits the terminal's streams, and is neither bounded nor captured. A data point's question runs through the same proxy run (`dispatcher.run_as_typed`), since a person answers it ("A data point's question", below).
+See [`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run), with its parts "A run inside a run" and "The seams back".
 
 #### How a registered anchor kind is resolved
 
-A capability registers an anchor kind under `friction.kinds` ("Field layout and casing" above), and the backbone runs the leaf as a query ("query, for a resolver" in the policies above). [COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 2 sets the contract — the time bound, the obligations the capability declares, failing closed; [ADR-057](../../tech-docs/architecture/decisions/ADR-057-backbone-engines-and-command-limits.md) point 3 leaves the answer's shape to this reference. The code is `project_kit.friction_discovery` (`registered_anchor_kinds`, `run_resolver`, `AnchorKinds`).
-
-**The answer** is `{"paths": [...]}` and nothing else:
-
-- each entry is a repository-relative POSIX path naming a file of the state the check reads — the working tree's one listing for the change check and for validation, the named commit's files for the change check with `--head <rev>`, HEAD's files for the whole-repository check and the commands that read HEAD;
-- a path named twice counts once, and order does not matter;
-- an empty list is an answer: the value denotes nothing, and the anchor is dead.
-- an answer file it names is left out, since no anchor stands on one (COR-062 point 2), so an answer that names only answer files leaves the anchor dead, reported as `its resolver names only answer files (<n>), on which no anchor stands`.
-
-**Why this shape.** The engine must tell whether what an anchor denotes changed between two points — the revalidation point and now, or the change check's base and head. A resolver reads the files on disk alone: it takes one subject and cannot read the project at an older commit. So it answers where the anchored thing lives, and the engine does what it does for a path anchor: it reads those files' history from git. Nothing is stored — the friction block keeps no fingerprint and gains no field — and the resolver needs no history, no points and no knowledge of the engine.
-
-**What the answer must name.** Every file whose content decides what the value denotes: the file or files the thing is kept in, and any file that maps the value to them — an index, a registry, a table of contents. The engine sees a change only as a change to the content of a file the answer names, so a file left out is a change nobody is asked about. A thing kept outside the repository — a standard a page quotes, say — has no file of its own, so its kind answers the file that stands for it in the repository, and its capability keeps in that file only what should count as the thing's change: the engine reads the file's history, never the thing (living-docs' `source` kind is one). A file a place holds is read by its content, as an artefact is ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 5), so nothing in its `pkit` container decides what a value denotes. A kind is one word for the whole project, and a second registration refuses it for both, so name a kind for what its resolver finds.
-
-**What the engine cannot see**, whatever the answer names:
-
-- a file that leaves the answer — one of several removed, or a mapping repointed to a file that did not change — unless a file the answer still names changed in the same commit, as a named mapping file does;
-- a resolver that answers differently because its own code changed;
-- in the change check, what the anchor stood on at the base.
-
-It is also coarser than the thing itself: any change to a named file's content or mode counts, as for a path anchor, and a shared mapping file, once named, asks every anchor that maps through it whenever it changes. A capability keeps all of this small by its layout: one value, one file, found from the value itself (`sources/<value>.md`). Then a change to the thing is a change to that file, removing it leaves the anchor dead, and no shared file stands between a value and its file.
-
-**How it is asked.** The leaf's script is started with `--json`, `--` and then the value, so a value that begins with a dash is read as the value and never as an option. A value the system cannot pass as an argument — one holding a NUL byte — is not started, which is no answer. The resolver reads the files on disk whichever check asks; the whole-repository check and the commands that read HEAD then read its answer against HEAD's files, so a path only uncommitted work holds is no answer there, and the report's uncommitted-paths line says how much HEAD does not hold. The change check with `--head <rev>` reads a commit that need not be on disk, so it runs a resolver only where the working tree is that commit — HEAD at it, nothing uncommitted — and reads its answer against the commit's files; anywhere else it refuses, naming the anchor and the checkout to run from, rather than read the disk as the commit (the CLI README, "friction check").
-
-**What the checks do with it.**
-
-- The change check asks an artefact when the diff changed the content or mode of a file the answer names — a pure rename keeps the content, and a write to the `pkit` container alone of a file a place holds changes nothing — its own file left out.
-- The whole-repository check finds the anchor stale where such a file's content or mode differs — renames followed — between HEAD and the revalidation point, dated from the oldest change to it no commit put back since; an edit put back is no change.
-- The files count as anchored for the uncovered-surface measure.
-- `friction.exclude` does not apply to the files an answer names: an anchor of a registered kind names what it stands on by its value, as a record anchor does, and exclusions cover paths ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 7).
-- Each anchor value is resolved once per check, however many artefacts carry it. A resolver that overruns its bound is not started again in that check: the values it had left have no answer, so a resolver that hangs costs one bound, not one per value.
-
-**Failing closed.** A resolver gives *no answer* when it exits abnormally, overruns its bound, runs in an environment not provisioned, cannot be started, prints anything that is not exactly the answer, or names a path the state the check reads does not hold. No answer is never an answer naming nothing: the anchor is reported as having no answer (`no-answer`), not as dead, and whether what it denotes changed cannot be told.
-
-- **A kind nothing may resolve is refused before any run:** one no installed capability registers, one two register, and one whose command names no leaf of its `commands:` tree or lacks the declaration. Its anchors are `unresolved-kind`.
-- **The change check fails what it can lay at the pull request** ([COR-050](../decisions/core/COR-050-anchors-and-friction.md) point 12). A resolver is asked about the head alone, so the check knows whether the diff added an anchor and whether the base could resolve its kind — the base's registrations are read from the base commit — and nothing else about the base.
-
-  | At head | The diff | Finding | Fails in enforcing mode |
-  |---|---|---|---|
-  | the kind cannot be resolved | added the anchor | `unresolved-kind` | yes |
-  | the kind cannot be resolved | kept the anchor, and the base could resolve the kind: the diff uninstalled the capability, added a second registrant, or dropped the declaration or the command | `unresolved-kind`, "this diff took its resolver away" | yes |
-  | the kind cannot be resolved | kept the anchor, and the base could not resolve the kind either | none: the whole-repository check reports it | no |
-  | the resolver names no file | added the anchor | `dead-anchor` | yes |
-  | the resolver names no file | kept the anchor | `dead-unattributed`: whether the diff removed what it denoted cannot be told, and the whole-repository check reports it as dead | no |
-  | the resolver gave no answer | added or kept the anchor | `no-answer`: the check could not tell whether the diff changed what the anchor denotes; a second run may clear it — if it does not, run `pkit sync`, or the resolver needs mending | yes |
-
-  So a pull request that deletes what a kept anchor denotes passes the change check, and the whole-repository check reports the anchor dead after the merge: the third limit above, stated rather than guessed at. A missing answer is different in kind — the check did not do its work — so it fails, and a failure of that kind costs a second run.
-- **An artefact with an anchor that cannot be resolved is not judged.** In the whole-repository check, `friction explain` and `friction debt`, an anchor whose kind nothing may resolve is `unresolved-kind`, one whose resolver gave no answer is `no-answer`, and either leaves the artefact's state `unresolved` — never `current`, and ahead of `stale`, though what its other anchors owe is still listed. `friction record-status` refuses it, as it refuses an artefact whose points lie beyond a shallow clone, and a reader of the machine-readable documents treats `unresolved`, and any state it does not know, as not judged — never current — reading the anchor's finding where its rule differs by cause: a missing answer is a check that did not do its work; an unresolved kind is a declaration to mend, failed only by the change check and at the registration (ADR-057 point 3; the CLI README, "Friction checks"). An anchor whose resolver names no file is dead, and its artefact is judged on its other anchors, as for a dead anchor of any kind.
-- **An anchor of a registered kind can be over-broad** as a path anchor can: one whose resolver names more than half of the tracked files is warned about by the whole-repository check.
-
-**Rule-set sources.** Rule-set validation resolves a cited source the same way (the schemas README, "Rule-set files"): a source whose resolver names no file is an error, `missing-source` ([COR-051](../decisions/core/COR-051-rule-sets.md) point 5), and so is one whose resolver gives no answer, `unanswered-source` — a resolver that ran and gave no answer has not resolved the source, and a pass nobody earned costs more than the second run a failure costs. Only a source kind with no resolver that may run is reported rather than failed.
-
-**Provisioning.** A resolver's leaf declares the query contract, so `pkit init` and `pkit sync` provision its script as they provision a validator's ("How dependencies are provisioned before an offline run" above).
+See [`manifest.md`, "How a registered anchor kind is resolved"](manifest.md#how-a-registered-anchor-kind-is-resolved).
 
 #### Where a project filler file lives: the address-to-path mapping
 
-A project answers a data point with a file of its own (COR-052 point 2). The file's location is **derived from the point's address, never declared**, and the location rule binds the file to the backbone's filler schema by that path ([ADR-056](../../tech-docs/architecture/decisions/ADR-056-backbone-file-schemas-home.md) point 2). The mapping must be **path-safe**, because an address contains `::` and `:` (COR-053 Implications), and **injective on valid addresses**, so that no two points share a file and no path binds the wrong schema (ADR-056 point 2). This section defines it and its inverse.
-
-**Valid addresses.** A *word* matches `[a-z][a-z0-9-]*`: a lowercase letter, then lowercase letters, digits and hyphens. A valid address is `<publisher>::<role>:<point>` with each part a word — the grammar `config.schema.json` applies to the keys of `connections.providers` and `connections.selections`. Because `:` is not a word character, a valid address splits into its three parts in exactly one way. The package schema applies the same grammar to every address a package declares ("Field layout and casing"), so every declared point has a filler path.
-
-**The mapping.** One directory per address part, the point as the file name:
-
-```
-<publisher>::<role>:<point>   ↦   <internal-root>/pkit/fillers/<publisher>/<role>/<point>.yaml
-```
-
-`<internal-root>` is the internal documentation root: `docs.internal` in the configuration file, default `docs/`. The prefix `<internal-root>/pkit/fillers/` is a documentation location derived like any other, so COR-049's rules apply to it: a location is recorded when a command first places a document there, so that a root changed later moves nothing already placed ([COR-049](../decisions/core/COR-049-documentation-roots.md) points 4 to 6). No command places a filler yet — a project writes its filler files itself — so nothing records the prefix, and it is derived from the current root on every read (`connections.fillers_prefix`): after changing `docs.internal`, move the filler files with it. The command that writes a filler, when one ships, records the prefix on first use. The mapping fixes only what follows the prefix. `pkit/fillers/` is the backbone's sub-path, the third literal above. Its `pkit/` segment marks the folder as the methodology's among the project's own documents, as the `pkit:` key does in front matter. Because the backbone owns the sub-path, no component places documents in it (COR-052 point 2).
-
-| Address | Path, with the default internal root |
-|---|---|
-| `pkit::documentation:readers` | `docs/pkit/fillers/pkit/documentation/readers.yaml` |
-| `pkit::analysis:revalidation-evidence` | `docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml` |
-| `super-docs::documentation:readers` | `docs/pkit/fillers/super-docs/documentation/readers.yaml` |
-
-The first `pkit` in each path is the fixed sub-path; the second is the role's publisher, and varies.
-
-**Why it is injective.** Let two valid addresses map to the same path. Both paths carry the same prefix and the suffix `.yaml`; removing them leaves equal strings, `p/r/q` and `p'/r'/q'`. No word contains `/`, so each string has exactly two slashes, and splitting at them gives `p = p'`, `r = r'` and `q = q'`: the same address. The argument uses a single fact, **`/` is not a word character**. As strings, then, the mapping stays injective under any word grammar that keeps `/` out, and a word containing `/` could not name a directory anyway. On disk it needs one more fact, the lower case below.
-
-**Why it is path-safe.** Each address part becomes exactly one path segment, and the word alphabet keeps every segment ordinary:
-
-- no `:` reaches the path — the address's separators become `/`;
-- no `.`, so no segment is `.` or `..`, and the suffix's is the only dot;
-- a letter first, so no segment is empty or starts with `-`;
-- no upper case, so a case-insensitive filesystem cannot fold two distinct paths into one — the mapping stays injective on disk, not only as strings;
-- no whitespace, quote or glob character, so a path needs no quoting in a shell or a glob.
-
-Two limits the grammar does not rule out: a word longer than a filesystem allows for one name (commonly 255 bytes, `.yaml` included for the point), and device names Windows reserves (`con`, `nul`, `aux`, …). Neither breaks injectivity — each only makes a file impossible to create there — so a capability author avoids such words.
-
-**The inverse.** Given a file under `<internal-root>/pkit/fillers/`: remove that prefix, require and remove the `.yaml` suffix, and split the rest on `/`. Exactly three parts, each a word, give the address `<first>::<second>:<third>`, which the mapping sends back to the same path — so the two are inverse to each other on valid addresses. Any other file under the prefix — two parts or four, a part that is not a word, `.yml` or no suffix — is not a filler: it binds to no point, and is reported rather than skipped in silence. This is the walk the location rule performs ("Filler path", ADR-056 point 2).
-
-**Why directories rather than one file name.** Folding the address into a single name needs a separator no word contains. `<publisher>__<role>__<point>.yaml` works today, since `_` is not a word character — but its correctness then rests on a character the grammar merely happens to exclude, and a grammar that later admitted `_` would break the inverse without a trace. Folding on `-`, as `<publisher>--<role>-<point>.yaml`, is not injective at all, because `-` is a word character: `a--b-c-d` is both `a::b:c-d` and `a::b-c:d`. The directory form rests on the one separator no path segment can contain, lists fillers by publisher and by role in any file browser, and inverts by splitting, not parsing.
-
-**What the file holds: the envelope.** The envelope is the backbone's (COR-052 point 2); its schema is `.pkit/schemas/backbone/filler.schema.json`, which is the authority (the schemas README, "Backbone file schemas"). The value inside it is the point's, judged by the companion schema of the point's active provider:
-
-```yaml
-schema_version: 1       # required: the version of the point this file targets (COR-052 point 5)
-value:                  # required: the point's value, in the point's own shape (its companion schema)
-  - operator            # union / additive: a list of entries — a string is its own id …
-  - id: developer       # … a mapping carries a string `id`
-    role: maintainer
-remove:                 # optional, union / additive: removal overrides, each with its reason
-  - { id: guest, reason: "No anonymous readers on this project." }
-```
-
-- **Strict.** `schema_version` and `value` are required, and any other key than the three is an error carrying the nearest known key.
-- **One key for both overrides.** COR-052 names a `union` point's *suppression* and an `additive` point's *removal override*; both are the same act — drop an id, with a reason — so both are an entry of `remove`. It drops that id from every other filler, the capabilities' and the default's, before they merge; the project's own entries are its to write or leave out. A `single` point has one answer and takes no removal. A removal that matches no entry is reported as information.
-- **Entries have ids.** A `union` or `additive` point's value is a list of entries, each a string — its own id — or a mapping carrying a string `id`; no id twice in one filler. The point's companion schema describes the whole list; the ids are the backbone's requirement on top of it, since merging is by id.
-- **Errors the project can fix.** A file that does not parse, a malformed envelope, one targeting another version of the point, a value the point's schema refuses, a `remove` on a `single` point: each is a validation error whatever the point's inert policy (COR-052 point 2), and such a file answers nothing.
-- **Inert, not wrong.** A filler whose point no active provider defines has its envelope checked and its value left alone, and is reported as inert (ADR-056 point 2). A file under the prefix whose path names no point is warned.
-- **The same envelope from a command.** A command filler prints this envelope as one JSON document, without `remove` ("How a data point resolves").
-- **Editor support.** The authoring command that creates a filler file stamps the editor directive at the backbone schema's path (ADR-056 point 1). None ships yet; a directive written by hand is a YAML comment, not a key.
+See [`manifest.md`, "Where a project filler file lives: the address-to-path mapping"](manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping).
 
 #### How the wiring is resolved
 
-`project_kit.connections` is the **single wiring resolver** (COR-053 point 7): `pkit validate` reports it, and the graph, the status report and the install / uninstall plans (points 7 and 8) read its `Wiring` rather than computing wiring of their own — a plan resolves the installed set plus or minus a candidate through the same function. It reads only package metadata (with the companion schemas its points name), the configuration's `connections` block, the installed versions and the envelope version of each project filler file; it runs no filler command and parses no process definition. What each data point resolves to is the layer over it ("How a data point resolves", below). It is deterministic: the same repository state yields the same wiring and the same findings, in the same order.
-
-- **Provider selection.** One installed capability providing a qualified role is its active provider. Two or more need the `connections.providers` entry naming one; without it the role is in *conflict* — an error located at that key, with the entry to add and, once per provider, the command that writes it (`pkit connections providers set <role> <capability>`, the CLI reference's "Connections commands") — and no provider's points are defined. An installed provider that is not the selected one keeps its commands, but its points are not defined and its own extensions are inert; it is warned. A selection naming a capability that does not provide the role is the configuration pass's error (below).
-- **Compatibility is an equal integer.** A contribution, subscription or `depends-on` entry binds to the active provider's point when its `schema_version` equals the point's; otherwise the counterpart is **inert**, warned, and delivered nothing. A counterpart naming a point its role's active provider does not define is warned with the points it does define. A `depends-on` entry may omit the version and binds on existence alone — an offered process point in the role form, or, in the implementation form `<capability>:<process-id>`, an offered point with that `process` id or a definition file at `schemas/<process-id>.yaml` (existence only; a definition kept under another file name is not found this way).
-- **Optional by default; mandatory with a reason.** A counterpart to a role nobody provides, or to an upstream whose capability is not installed, is silent unless marked mandatory. A mark on an accepted point is unmet when nothing but the default fills it; on a contribution or subscription, when no compatible target exists; on a `depends-on` entry, when the upstream is missing or at another version. An unmet mark is an error on the side carrying it, with the fix named (meet it, or drop the mark); the capability it targets, when there is one, is warned with the carrier named — COR-030's direction split, as COR-053 point 6 applies it. Unmet marks are reported with the connections, whatever their cause.
-- **Cycles.** Mandatory marks that face each other — every strongly connected group of capabilities joined by mandatory connections — are rejected, an error on each mark in the cycle: no member could be installed first. An edge is drawn only to a role's *active* provider, since which provider is selected decides whether a cycle exists; an unselected provider's marks bind nothing.
-- **Fingerprints.** Two installed providers of one qualified point and version must define the same companion schema. The fingerprint is the sha256 of the schema's canonical JSON — key order and layout never count, any other difference does — compared and kept nowhere; a disagreement is an error on each provider.
-- **The contributor selection.** A `single` data point — a point that declares no `combination` is one — with contributions from more than one capability needs the `connections.selections` entry naming one; without it, an error at that key.
-
-**Version relations.** Each relation is checked deterministically and reported by functionality: the resolver's under a `versions` heading, which counts how many of each were checked and labels each finding with its relation.
-
-| Relation | Checked | Finding |
-|---|---|---|
-| Backbone range | each component's `requires_backbone` admits the installed backbone version | error on the component — `[backbone range]` |
-| Capability dependency ranges | each `requires_capabilities` entry names an installed capability whose version of record (its component manifest, else its package) the range admits — the order the install gate reads. An optional entry whose capability is not installed passes | error on the dependent, warning on the dependency naming each dependent — `[capability dependency range]` (COR-030) |
-| Contributions and subscriptions against point versions | the counterpart's `schema_version` equals the point's | warning: the counterpart is inert — `[point version]` |
-| Process connections against interface versions | a `depends-on` entry's `schema_version`, where it declares one, equals the offered process point's | warning: the entry is inert — `[process interface version]` |
-| Project filler files against schema versions | the filler envelope's `schema_version` equals the point's | error at the filler — `[project filler version]`. The file sits at the path "Where a project filler file lives" gives (`connections.project_filler`); one whose envelope carries no integer `schema_version` fills nothing, and its envelope error is reported under `connections` |
-| Rule-set inheritance pins | each `inherits` pin of a rule-set file against the major of the set it names (COR-051 point 7); the pins are read from the rule-set files by `rule_sets.pin_checks` (the schemas README, "Rule-set files") | error on the inheriting rule set, naming the new major — `[rule-set pin]`. A pin naming no set, or one it may not inherit, is the `rule-sets` pass's finding |
-| Configuration shape against the installed backbone | the configuration file carries no version key; the configuration pass validates it against the `config.schema.json` the installed backbone ships in the tree (ADR-056 point 1) | reported under `configuration` |
-
-A mandatory counterpart at another version is reported with the connections, as an unmet mark (above). The configuration pass checks the two selection keys against the same declarations (`connections.load_declarations`): a provider entry names a capability that provides the role; a contributor entry names a `single` data point some installed provider defines and a capability that contributes to it.
-
-**The graph and the status report read the same wiring.** `pkit connections graph` draws it together with the process definitions' edges — `pkit process graph` is that graph's process view — and `pkit status` shows it per role and per point, the unmet marks being the ones this resolver judges (`Wiring.mark_unmet`); `pkit connections providers set` writes the provider selection after the same check the configuration pass applies. The CLI reference's "Connections commands" and "status" specify them.
+See [`manifest.md`, "How the wiring is resolved"](manifest.md#how-the-wiring-is-resolved), with its part "Version relations".
 
 #### How a data point resolves
 
-The data kind of connection point resolves to a **value** ([COR-052](../decisions/core/COR-052-slots.md), COR-053 point 2): what the status report shows, what a project filler overrides, what contributions merge into. `project_kit.data_points` computes it as the second layer over the wiring — it reads the run's one `Wiring` and the filler files the wiring read, never resolving either again — once per run of `pkit validate`, whose `connections` member reports it; `pkit status` shows the same resolution. For each data point an active provider defines:
-
-**The fillers, in precedence order** (COR-052 points 2 and 4):
-
-1. **the project filler** — the file at the path the point's address maps to ("Where a project filler file lives");
-2. **each contribution** of an installed capability (`extensions.contributes`), in capability-name order: its `value`, or what its command filler prints. A contribution at another version than the point's is inert (the wiring warns it); one whose capability provides a role for which it is not the selected provider is not delivered (COR-053 point 1);
-3. **the definer's default** (`default.value`), as the point declares it takes part: `always` — like any other filler, at the lowest precedence — or `alone` — only when no other filler is declared: no project filler file, and no contribution to the point, in step or not, other than an unselected provider's. An `alone` default is **never promoted because a declared filler broke**.
-
-**The policy** (`combination`, COR-052 point 3):
-
-| Policy | The value | Collisions and overrides |
-|---|---|---|
-| `single` (also when none is declared) | the answer of the first filler in precedence order that answers; the others are not asked, and a command filler not asked is not run | among several contributions, the contributor selection (`connections.selections`) picks one; several with none selected leave the point unresolved — the wiring's error at the selection key — unless the project filler answers, since it precedes them all; the default never stands in for a choice nobody made |
-| `union` | a set: every answering filler's entries merged by id, listed by id | a project entry replaces a capability's or the default's entry with that id **whole**, never field by field; a capability's replaces the default's; two capabilities supplying one id is an error until the project settles it — an entry of its own with that id replaces both, or `remove` drops it |
-| `additive` | a list: every answering filler's entries, in precedence order — the project's, each capability's, the default's | any id supplied twice is an error, the project's included: nothing overrides; an entry leaves only through a removal override, and the project may then supply its own under that id |
-
-**Choosing entry ids.** A point's definer chooses an id that identifies what one filler alone can say. Where several fillers can each report on one subject, the id carries a part the filler names, opening with the filler's own name, so their entries stand side by side and only a real double claim collides. One filler never supplies an id twice, so that part is as fine as one entry.
-
-`remove`, the project filler's removal overrides, drops each id from every other filler before they merge, and each carries its reason ("Where a project filler file lives"). A collision leaves the point unresolved: a gate never reads one of two entries picked by accident.
-
-**Command fillers, and the parameter rule.** A contribution's `command` is a query (COR-052 point 6; ADR-057 point 3). It **takes no parameter**: a data point is a value, so a question that needs an input — which documentation one change owes, say — is not a data point but a process point, whose predicates take the one subject; the need is met by a parameterless point listing the obligations, which the gate applies to the change, or by a process point whose subject is the change. The command runs under the query policy of the one runner ("How a registered command is run"): its `commands:` leaf must declare `query-contract: true` — the `packages` member reports one without it, and it is never started — then it is run from the project root with `--json` alone, the offline marker set, and the base override (`PKIT_CHECK_BASE`) and the change's own head (`PKIT_CHECK_HEAD`) removed, whichever command started the resolution, in its own process group, bounded by thirty seconds — or, when the point is read inside another run, by what remains of that run's bound, in the outermost run's process group ("A run inside a run") — and prints one filler envelope, `{"schema_version": <the point's version>, "value": <the point's value>}`. An abnormal exit, a timeout, output that is not exactly that envelope, an answer at another version or carrying `remove`, or a value that does not fit the point's schema whole is **no answer** — never an empty and never a partial one: the filler is inert. Needing no network is declared and trusted, not enforced (COR-050 point 2; ADR-057 point 4); the status report shows, for each command filler, whether its command declares it.
-
-**What a command filler reads** (COR-052 point 6). A filler reads state, and never a base named for one run: the working tree, the current history, and — of settled state — only the default branch, as the backbone resolves it ([COR-054](../decisions/core/COR-054-default-branch.md) point 2), whatever branch a change targets. A base named for one run belongs to a comparison: a value that followed it would be answered per run, a parameter by another route. Nor does a filler compare the branch at hand with settled state — that answers about a change, a process point's question or the consumer's work.
-
-- **The declaration.** Beyond the working tree, a filler's `commands:` leaf declares what it reads: `reads: [history]`, `[settled]` or both ("The methodology's literals"); absent, the working tree only. It is declared and trusted, as the query contract is: the filler reads history and settled state through the backbone's reading commands — `pkit repository base --json`, its `head` for whether there is history (HEAD's commit, none yet, or why git cannot read it) and its `default_branch` for the default branch, never its `base` — resolves no reference itself and does not compare the branch at hand with settled state. A `reads` this reading does not understand is the `packages` member's error, and the filler is not started.
-- **What the backbone enforces.** No base override and no change's own head reach a filler, whichever command resolves the point — `pkit validate`, `pkit status` or `pkit connections resolve`. HEAD, whether the clone is shallow, and the default branch are read once per resolution, when a filler first declares `reads`. A filler that declares `settled` is **not started** while the default branch resolves to no commit for any reason but having none yet — a remote holds it and this clone has not fetched its copy, or the declared name names no branch here: it is inert, with the reason naming the fetch (`git fetch origin <default-branch>`) and the declaration as the fixes, never a base, and the point's inert policy decides the rest — an error under `fail`, a warning under `fallback`.
-- **Empty is an answer; unreachable is none.** State that does not exist yet holds nothing, and the filler answers with an empty value: a repository with no commit — HEAD a branch before its first commit (`unborn` in the reading's `head`) — or a default branch nothing has been committed to — no remote, and HEAD that branch before its first commit (`unborn` in its `default_branch`) — which starts the filler. State that exists and cannot be reached from this clone gives no answer, never an empty one: a commit git cannot read here is such state, never a repository with none. Where a remote exists and this clone has no copy of its default branch, a branch never pushed looks the same as one not fetched, so the backbone treats both as unreachable and refuses — a filler that declares `settled` is inert there until the branch is first pushed or fetched. Only the filler knows how much history it needs, so a history a shallow clone cut short of it is the filler's to detect, and it exits non-zero.
-- **What the reports name.** For each command filler that declares `reads` and was asked, the state it declared and the commit it was read at, since its answer depends on what the clone has fetched (COR-052 point 7): the `connections` member of `pkit validate` adds one line per such filler taken or inert — `<address>: <capability> (command '<ref>') reads history (HEAD <sha12>[, shallow clone])`, `… reads the default branch (<ref> at <sha12>)`, joined with `and` when it reads both, and `(HEAD, no commit yet)` or `(<name>, no commit yet)` where there is none yet, `history (git cannot read HEAD here)` where HEAD names a commit git cannot read, and `the default branch (it resolves to no commit here)` for a filler not started because the default branch cannot be read — the status report appends the same to the filler's line, and `pkit connections resolve --json` carries it as each filler's `reads`.
-
-**The inert policy** (`inert`, COR-052 point 6). A filler meant to answer that cannot — its version differs, its command gave no answer, its value does not fit — is inert:
-
-- `fallback` (also when none is declared): the point resolves from the fillers that remain, with a **warning** naming the inert one; if none remains, it is unresolved with the warning;
-- `fail`: the **whole** point is unresolved, whatever its policy, with an **error** naming the inert filler, so a gate never passes on the entries that happened to survive.
-
-**Which policy a point declares** (COR-052 point 6). `fail`, when anything refuses or fails on the point's value: a gate, a check, a finding that fails validation. A point whose every use is advisory may declare `fallback`. A use is advisory when it only reports — nothing refuses on the point's value, nothing fails on it, and no finding is drawn from an entry's absence unless the point resolved with no filler inert, since what an inert filler would have supplied is unknown, not absent. The point's definer chooses, because the backbone cannot tell how a value is read; where one point serves both kinds of reader, the stricter use decides, and decides again when an advisory reader comes to refuse or to fail anything.
-
-A defect of the project's own filler is an error whatever the policy (above), and that filler answers nothing; its error is the one finding, and the point follows its inert policy for what remains.
-
-**What `pkit validate` reports, under `connections`.** A count line — data points defined, resolved and unresolved, and project filler files — then a line per command filler that reads beyond the working tree ("What a command filler reads"), then the findings:
-
-| Severity | Finding |
-|---|---|
-| error | a project filler that does not parse, a malformed envelope, a value its point's schema refuses, a `remove` on a `single` point (the envelope at another version is the `versions` member's `[project filler version]`); two capabilities supplying one id to a `union` point, any collision in an `additive` point; an inert filler of a `fail` point |
-| warning | an inert capability filler or default of a `fallback` point (an out-of-step contribution is the `versions` member's warning, not repeated); a file under the fillers prefix that names no point; a point whose companion schema cannot be applied, which does not resolve |
-| info | a removal override that matches no entry of the other fillers |
-| report | a project filler whose point no active provider defines: inert, its envelope checked, its value not read |
-
-A filler command lacking the declaration, a `reads` on a leaf without it, or a contribution naming both `command` and `value`, is the `packages` member's error.
-
-**What `pkit status` shows** (COR-052 point 7), under "Data points": where the project's filler files live and how many there are; how many points are defined, resolved and unresolved; then per point its policy, inert policy and default participation, and whether it resolved or why not; its value — a `single` point's answer with the filler that gave it, or each entry of a `union` or `additive` point with its origin and what it replaced; each removal override with its reason and the fillers it removed from; and every filler considered — `taken`, `inert` or `passed over`, with the reason — a command filler saying whether its command declares the query contract and, once asked, what it read beyond the working tree and at which commit.
-
-**Reading one point from a script.** `pkit connections resolve <address> --json` prints the same resolution of one point as a stable document (the CLI README, "Connections commands"). It is how a component's own script reads a point it defines — a capability script runs in its own environment and does not import the backbone — before applying the value itself: the consumer, not the point, knows what the value is applied to. **A consumer dispatches on `outcome`, never on `why`.** The document says how the resolution ended as one value from a closed set — `resolved`, `unfilled`, `collision` and the rest the CLI README lists — and `why` is that ending's sentence for people, whose wording is no contract. The filler states alone cannot tell the endings apart — a point that does not resolve lists every filler that answered as `passed over`, so a collision looks like a point nothing fills — and a consumer that turns a rule off when nothing fills the point reads `unfilled`, not the absence of a taken filler. A value it does not know means it could not tell how the point ended: never `resolved`, never `unfilled`. **`resolved` does not say every filler answered**: a point that resolved with an inert filler among several is `resolved` too. So a consumer that only reports checks that no filler's `state` is `inert` before it draws a finding from an entry's absence — what an inert filler would have supplied is unknown, not absent (COR-052 point 6). **It resolves that point alone**: only its fillers are asked, so no other point's command filler starts, and reading one point costs what that point costs, however many others the project has. `pkit validate` and `pkit status` still resolve every point. Within one run each point resolves at most once, whichever reader asks first, sharing the run's one wiring and filler files. Points never read one another, so a point resolved alone is the point resolved among all. **A run of `pkit validate` spans processes** — a capability's validator reads a point through this command — so it keeps what it resolved in a **run cache**: a fresh temporary directory, named in the environment of every command the run starts (**`PKIT_RUN_CACHE`**) and removed when the run ends; when no directory can be made, the run goes without one and every reader resolves for itself. Only a process of the run uses it — the one that opened it, or one running inside a live run ("A run inside a run") — so a variable left over in a shell is ignored, and a `pkit validate` started there opens a fresh one. Each point resolved in the run is written there with the findings its resolution made and the bound it was resolved under: an entry records the resolution its first asker made, within the time that asker had. A resolution in which a command filler gave no answer for want of that time — it overran the time its caller had left, or had none left to start in — is not written: a reader with more time might get an answer, so the next reader resolves the point itself. For a point already there, `pkit connections resolve`, inside the run, prints the point from it without resolving anything — not even the wiring — and says so, `"from": "run-cache"` in its document; otherwise it resolves the point, writes it there, and says `"resolution"`. Whichever process of the run asks first resolves a point, so its command fillers run once per validate however many validators read it — again only after an asker ran short of time.
+See [`manifest.md`, "How a data point resolves"](manifest.md#how-a-data-point-resolves), with its part "Reading one point from a script".
 
 #### A data point's question
 
-A data point's definer may need an answer only the person can give about the point, such as whether to grant what a contribution offers. It names a command of its own that asks and records, `question` on the point ([COR-061](../decisions/core/COR-061-point-questions.md); "Field layout and casing" above). The backbone runs it, and the code is `project_kit.point_questions`.
-
-- **When.** At the end of three operations, once each has made its own writes:
-  - `pkit capabilities install` and `register`
-  - `pkit capabilities upgrade`, whatever the capability's origin
-  - `pkit upgrade`, after the completion and the pin ("The steps of a transition")
-
-  `pkit sync` never runs one. Nor does `pkit upgrade` when the project is already current, since no transition runs.
-- **Which.** Read from the wiring the operation leaves ("How the wiring is resolved"):
-  - for a capability's install, register or upgrade, the question of each point it defines, and of each point one of its contributions reaches, bound or not
-  - for `pkit upgrade`, every question
-  - only a point an active provider defines, each question once, in the order of the points' addresses
-- **Where a person can answer,** with standard input and standard output both terminals, each question runs in turn. The leaf's script is started from the project root, with no argument, the terminal's streams and no time bound, through the dispatcher's proxy run ("How a registered command is run"). Before each, the backbone prints `asking <address>: pkit <definer> <command>`.
-- **With nobody to answer,** none runs and nothing is recorded. The backbone prints one `not asked <address>: pkit <definer> <command>` line for each, the command to run at a terminal later. The backbone cannot tell whether anything waits for an answer, so the command may then have nothing to ask.
-- **A preview,** under `--dry-run`, prints `would ask <address>: pkit <definer> <command>` for each question of the wiring the operation would leave, with the versions it would bring, and runs none.
-- **A question that fails** prints a `warning` line naming how it ended and the command to run again, and the next question still runs. It leaves the operation's exit status as it was. A question whose command names no script is reported and not run.
-- **An interrupt** reaches the question's command, which may save what it was told before it ends. The backbone only notes it while the command runs, as a shell does, and then stops the questions: each one left gets its `not asked` line.
-- **Neither undoes the operation,** which was complete before the first question ran.
-
-**What the command does is the definer's.** It reads what it needs, such as the point's value through `pkit connections resolve`. It asks only what has no recorded answer, and asks nothing where nothing waits. It records each answer the person gives in the definer's own state, and never one the person did not give. Its words and its record are the definer's, and its own documentation says what it asks.
-
-**Readable before it runs.** `pkit capabilities show` lists a point's question beside its policy, from the package metadata alone ("Discovery: what a capability would connect to", below).
+See [`manifest.md`, "A data point's question"](manifest.md#a-data-points-question).
 
 #### Discovery: what a capability would connect to
 
-A capability's connections are readable without installing it, and what an install or an uninstall would change in the wiring is known before it happens ([COR-053](../decisions/core/COR-053-connection-points.md) point 8). `project_kit.capability_plans` computes all of it from the one resolver ("How the wiring is resolved") and resolves nothing of its own (ADR-057 points 2 and 6). The commands are in the CLI reference, "Discovery".
-
-**The local catalogue.** Where a capability not yet installed is found: the capabilities registered in the project (read from their installed tree), capability subtrees authored in the repository at `.pkit/capabilities/<name>/` and not registered (incubated, COR-031), and the capabilities that ship with the running pkit — its kit source, the tree installed with the tool. A name in more than one place is read from the first, in that order; where the repository's `.pkit/` *is* the kit source, an unregistered capability there is kit-shipped. All three are on disk: nothing is fetched to read a capability, to plan for it or to suggest it (`capabilities.local_catalogue`).
-
-**`show`.** From the package metadata alone — `connections.roles`, `extension-points`, `extensions` — as the resolver reads them (the same parser, descriptions included), and what would connect here: the live wiring's bindings to and from an installed capability; for one not installed, the bindings of the wiring the resolver computes with it added.
-
-**A plan is exact because it runs the resolver.** `connections.resolve_wiring_with` is the live resolution over the installed set plus or minus one capability; everything else — the selections, the installed backbone version, the project's filler files — is read from the tree as the live wiring reads it. A candidate is read where it is (its companion schemas, its definitions) and located where the operation will put it (`.pkit/capabilities/<name>/package.yaml`), with the version its package declares — the version install stamps and register reads — and it comes after the installed components, where install appends it to the registry. The plan is the difference between the live wiring and that one, in terms that do not depend on where anything was read: the roles whose answer changes, the points defined and no longer defined, each counterpart whose status or answering capability changes, and the findings added and resolved (located relative to the project root). The wiring the operation then leaves differs from the one before it by exactly that difference; a test runs the plan, runs the operation, and compares, for install and for uninstall.
-
-| Plan | Lists |
-|---|---|
-| Install (`install --plan`) | the connections it would make, and those it would break; each role conflict it would open, with the provider-selection command that resolves it, one per provider (`pkit connections providers set <role> <capability>`); what the capability needs — the errors the install would put on the capability's own package: an unmet mandatory mark, a mandatory cycle, a backbone or capability range the project does not meet; each type it would bring whose name a bare project type uses, with the project places giving that type, which the project renames before the install or its validation fails (COR-056 point 2); the role blocks whose meaning changes — an orphaned block the new provider adopts, a bare key a second active role would make ambiguous (COR-053 point 10, "Keys"; rewriting it is the project's, with consent) |
-| Uninstall (`uninstall --plan`) | the fillers lost — its contributions, with whether each point stays filled, is left unfilled or is no longer defined, and the project filler files answering a point it defines that no provider would define after it, kept and inert; the processes left without a provider (`depends-on` entries it answered) and every other counterpart left without one; the artefacts whose role blocks would be orphaned — preserved and reported, never an error; the selections in the configuration left naming it |
-
-Both then list the roles, points and findings that change. A plan writes nothing and runs no filler command — the resolver resolves wiring, not data (COR-053 point 7). What it does not predict, stated: the role blocks it judges are those of the artefacts in the places declared now, so a place the operation adds or removes is not walked in advance; rule-set pins are relations between rule-set files, not connections, and are left out of the difference.
-
-**Suggestions — a suggestion is never an action.** Where the live wiring has an unmet need — a data point filled by nothing but its default, a role an installed counterpart targets and no installed capability provides, an implementation-addressed upstream not installed — the status report names each capability of the local catalogue not installed whose package would answer it: a contribution at the point's version, the role among its roles, the upstream by name. Read from package metadata on disk only; never fetched. It is text: the capability, why, and `pkit capabilities show <name>` — nothing is installed, selected or written. `capability_plans.suggestions` is their one computation, which any view of the wiring reads rather than suggesting on its own.
+See [`manifest.md`, "Discovery: what a capability would connect to"](manifest.md#discovery-what-a-capability-would-connect-to).
 
 ## The component registry
 
-The backbone manifest's `components` list is the canonical install record.
-
-**Install** a component → run the pre-flight checks (see below), create its per-component manifest at the designated path, then append a `{kind, name, manifest}` entry to `components`.
-
-**Register an in-repo (incubated) capability** (COR-031) → a no-copy variant of install for a capability the adopter authored in its own repo. Run the same pre-flights *except* "exists in kit source" (the in-repo tree *is* the source) and "Rule-set names", which only install runs, then append a `{kind, name, origin: incubated-in-repo, manifest}` entry — **no subtree copy, and no kit-written per-component manifest** (the tree is adopter-owned; COR-031 D2/D3). Deploy primitives and dependency gating run identically to install (COR-031 D1) — only source-reconciliation differs (below).
-
-**Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant. For a **capability**, whether the capability's *subtree* is also deleted is origin-dependent — a kit-shipped copy is deleted, an incubated (adopter-authored) subtree is kept unless explicitly purged (COR-031 D4; see "Uninstall: origin-aware removal" below).
-
-**Status / validate / upgrade** walk the registry to find component manifests, then operate per component.
-
-**What a copy leaves out.** Every copy of a source tree into a project — the backbone's on `pkit init` and in the propagation step `pkit sync` and `pkit upgrade` run, a capability's on install, in that step and in `pkit capabilities upgrade`'s refresh — leaves out Python's caches: any `__pycache__` directory and any compiled `.pyc` or `.pyo` file the source holds, which importing its scripts in place writes there. So what a project receives does not depend on what ran in the source before the copy. One rule decides it for every copy path (`project_kit.treecopy.is_python_cache`).
+The registry, and the checks before an install, a register and an uninstall, are on [`component-registry.md`](component-registry.md). Each heading below leads to its section there.
 
 ### Install pre-flight checks
 
-**The version check comes first: sync's guard** ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 7). The install copies the capability the running pkit's bundle ships. So it runs only where that pkit is the release the project records, over a finished upgrade, and stops in each state that stops `pkit sync` ("Sync's guard" below). It stops before anything is read or written, under `--dry-run` and `--plan` too, since under another pkit both would preview another release's capability. Nothing overrides it, and its message names sync's remedies for the state it finds. The methodology's source is exempt, as for sync.
-
-Then, before placing files, `pkit capabilities install` runs six checks in order. `--plan` runs after the first — an installed capability has no install plan — and stops there, writing nothing: what the backbone, dependency and mandatory-connection checks would refuse on is among what the plan says the capability needs ("Discovery: what a capability would connect to"), and a range an installed capability declares on it is among the findings the plan adds.
-
-1. **Already installed?** Refuse with a hint to use `upgrade`.
-2. **Backbone compatibility** — the capability's `requires_backbone` range must include the current backbone version. This is the shared backbone-satisfaction gate (COR-007 pattern-extraction): the *same* check runs from both capability-entry paths — `install` (kit-source copy) and `register` (in-repo incubated) — so neither path can activate a capability the current backbone cannot support.
-3. **Capability dependencies (COR-030), in both directions.**
-   - *The ranges the capability declares.* Each required dependency in its `requires_capabilities` must be installed, and each installed dependency's recorded version must fall within the declared semver range. An optional dependency that is not installed passes. Refuse with an actionable hint naming what to install or upgrade first. Never auto-installs.
-   - *The ranges declared on it.* Its version must fall within each range an installed capability declares for it, whether that entry is required or optional. Outside one, warn, naming each such dependent and its range, and refuse unless `--force` is given. Under `--force` the warning is still printed and the install proceeds, as upgrading a dependency does ("Per-component upgrade", below). The check reuses the upgrade's (`capabilities.find_declared_dependents` and the one range comparison).
-4. **Mandatory process connections (COR-053 point 6)** — every `depends-on` entry the capability marks mandatory must find its upstream, at an equal interface version when it names one. Refuse, one line per unmet mark with its reason ("Mandatory process connections", below). Never auto-installs.
-5. **Rule-set names (COR-051 point 3)** — no rule set the capability ships may take a name a project rule set already declares. A set's name is in each of its rule ids, so the clash could not be undone once installed. Refuse, one line per clash naming the set, the capability's file and the project's.
-6. **Naming collision detection** — skills/agents from the new capability must not collide with already-installed names. Interactive resolution available.
-
-**The declared project rule set.** After the copy and the registration, install creates the one project rule set the capability declares ([COR-017](../decisions/core/COR-017-capability-pattern.md)), once for this install. Running install is the consent. The decision has one home, `declared_rule_sets.plan`, which the reading command `pkit capabilities project-rule-set` gives too ("The seams back", below):
-- **The file:** `rule-sets/<name in lower case>.md` under the internal documentation root, the project's own rule-set place, so the backbone finds it with no configuration. It holds the declared name and scope, version `1.0.0`, no rules, and `inherits: [<capability>:<SET>@<major>]`, the method set's major in the copy being installed.
-- **Where none inherits.** No set of the project's own may inherit the method set, directly or through other sets, the rule-set reader's `inheritors` judging it. Where one does, install creates none and names it.
-- **Never over the project's content.** Where a project rule-set file cannot be read, any rule set takes the name, a file lies at the path or where its folder would be, or the path runs through a link, install creates none, says why in a `warning` line, and goes on. So it does where the write itself fails.
-- **Never again.** Sync, a transition and a later install of an installed capability never create or change it. It is no seed path ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). `--dry-run` says what it would create. Register creates none.
-- **Earlier installs.** A capability's migration creates the set for a project that installed it before it declared one. It reads the plan through `pkit capabilities project-rule-set <name> --json` and writes the `text` given, where `creates` is `true` and the file is still missing. It never fails the upgrade when the answer cannot be read: it warns and names the command.
-
-**The questions its points declare.** Install ends, after the deploy, with the questions of the points the capability defines and of the points its contributions reach ([COR-061](../decisions/core/COR-061-point-questions.md)). They are asked where a person can answer, and printed otherwise ("A data point's question", above). `--dry-run` names them. Register ends with them too, where it registers the capability. A capability already registered, or adopted in place, is asked nothing.
-
-**In the methodology's source repository, run by its own code** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), the capability's subtree lies in the tree the running code installs from (`capabilities.authored_in_source`): the source is the destination. Install then places none of the capability's files: after the first five checks it registers the capability in place with origin `kit-shipped` — no copy, no per-component receipt, no `project/` stub — and deploys it. It creates the declared project rule set as anywhere, since that set is the project's file. Its collision check is register's (the capability's own artefacts are not collisions against themselves), and a collision with other content is refused, since nothing is copied that could be skipped. Beneath the verbs, a capability copy whose source and destination are one tree is refused for any caller.
+See [`component-registry.md`, "Install pre-flight checks"](component-registry.md#install-pre-flight-checks), with its part "The declared project rule set".
 
 ### Register pre-flight checks (incubated; COR-031)
 
-`pkit capabilities register` shares the install pre-flights that still apply (backbone-satisfaction, capability-dependencies in both directions with the same `--force`, mandatory process connections, collision detection against *other* installed content) and skips "exists in kit source" (the in-repo tree *is* the source). It copies nothing, so it skips sync's guard too, and runs under any pkit. Adopting an already-registered capability in place moves no version, so it skips the check of the ranges declared on it. Register adds one check the install path doesn't need:
-
-- **Self-consistency validation (COR-031 D1)** — the adopter hand-authored this capability; nothing upstream validated it. Before activation, its own `package.yaml` (run through the same package validator `pkit validate` uses — the schema and the repository checks in "Validation" above; only its errors refuse — an unknown key among them, "Strict on unknown keys" above), required layout (`README.md`), and own schema pairs (validated by the same validator `pkit schemas validate` runs) are checked against the working tree, which is its spec. Refuse with the structural problems listed. This is *self-validation*, not source-reconciliation — origin suppresses the latter (below), never the former.
+See [`component-registry.md`, "Register pre-flight checks (incubated; COR-031)"](component-registry.md#register-pre-flight-checks-incubated-cor-031).
 
 ### Uninstall: origin-aware removal (COR-031 D4)
 
-`pkit capabilities uninstall` first runs three refusal checks (all defeatable by `--force`); `--plan` runs before them and stops there, writing nothing ("Discovery: what a capability would connect to"):
-
-1. **Declared dependents (COR-030)** — if any installed capability lists this one as a required dependency in its `requires_capabilities`, refuse and name the dependents. The operator must uninstall or upgrade the dependents first. An optional dependency never blocks the uninstall: the dependent works without the capability it names, and its own runtime guard covers the absence.
-2. **Mandatory process connections (COR-053 point 6)** — if the removal would leave another capability's mandatory `depends-on` mark unmet, warn, naming each counterpart with its mark's reason, and refuse; under `--force` the warning is still printed and the removal proceeds ("Mandatory process connections", below).
-3. **References** — if any adopter-authored file cites the capability (citation token or path reference), or a project rule set's `inherits` names one of its method sets, read as data whatever the list's form (COR-017), refuse and list the references. The project rule set install created is one.
-
-Once those pass, **what gets deleted depends on origin** — origin-blind deletion would destroy adopter-authored work, the exact hazard COR-031 exists to prevent:
-
-- **`kit-shipped`** — the subtree is a disposable copy of kit source. Uninstall deletes the subtree, removes the registry entry, and re-runs deploy (deploy's stale-removal pass then drops the harness symlinks, since the source is gone). Unchanged from before.
-- **`incubated-in-repo`** — the subtree is the adopter's *only* copy of authored work. Uninstall **unregisters in place**: it removes the registry entry and drops the capability's deployed harness skills/agents, but **leaves the authored subtree on disk** (the CLI reports "unregistered in place; your authored files are kept at `<path>`"). Because the adapter's agents deploy keys stale-removal on whether the *source file* still exists — and here it does — a deploy re-run would not drop the agents (the skills deploy reads the registry and would drop the skills), so the lifecycle runs each installed adapter's **undeploy primitive**, `undeploy-capability.sh <name>`, found by name as the deploy primitives are (the adapters README, "Primitives the lifecycle calls"). The adapter removes what it deployed for that capability; the lifecycle names the capability and carries no harness path. An adapter that ships no undeploy primitive is named in a `warning` line — its harness still carries the capability — never skipped silently. The undeploy runs before the registry entry is removed, so a failing adapter leaves the capability registered and the uninstall re-runnable. Deleting an incubated capability's files is a separate explicit opt-in: `--purge` (which confirms first, honouring the pause-before-destructive-ops discipline; `--yes` skips the prompt for non-interactive use). The default never deletes incubated files.
-- **The methodology's source repository, run by its own code** ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)) — whatever the origin, the subtree is never deleted: it is unregistered in place as an incubated one is, the adapters' undeploy primitives included. A kit-shipped or incubated capability's subtree is its source there, never a copy. An externally-sourced one is a copy ("The ownership predicates", below), and uninstall keeps it too, since it reads every subtree in the source as authored (`capabilities.authored_in_source`). For a `kit-shipped` registration, whose uninstall would otherwise delete the subtree, the CLI first says which subtree it would have deleted and that it unregisters instead, and asks (`--yes` answers, `--dry-run` asks nothing). `--purge` is refused; a capability leaves the source through git. The guard sits in `capabilities.uninstall_capability`, which resolves the running code's tree itself, so no caller deletes the source. Run by other code, uninstall refuses there before anything else, as install, upgrade and register do.
+See [`component-registry.md`, "Uninstall: origin-aware removal (COR-031 D4)"](component-registry.md#uninstall-origin-aware-removal-cor-031-d4).
 
 ## Migration framework
 
+The migration framework is on [`migrations.md`](migrations.md). Each heading below leads to its section there.
+
 ### What ships a migration
 
-[COR-010](../decisions/core/COR-010-resource-lifecycle.md) decides it. A change that alters an installed project's state observably, and breaks against it, ships a migration in the same change, at the tier whose state it alters.
-
-- **Ships one:**
-  - a file or directory renamed or removed in a tree the methodology ships
-  - a `schema_version` bump in a YAML schema whose shape changes incompatibly
-  - a breaking change to a `pkit` command's signature
-  - a capability's subtree restructured
-- **Ships none:**
-  - a pure addition, such as a new skill, schema, record or component
-  - a documentation refinement, an internal refactor or a behaviour-preserving fix
-  - a section's heading renamed or removed in a document the methodology or a component ships. A project that receives the document cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change mends the anchors on the heading, as validation requires (COR-050 point 12).
-
-A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers, a change that adds a migration at a version already released ("Which version a migration targets", below), and a change that adds one with a number its folder already holds ("Naming", below). It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
+See [`migrations.md`, "What ships a migration"](migrations.md#what-ships-a-migration).
 
 ### Directory layout
 
-Backbone migrations live in a kit-wide location:
-
-```
-.pkit/migrations/backbone/<major>.<minor>.0/<NNN>-<slug>.sh
-```
-
-Component migrations live within the component:
-
-```
-.pkit/capabilities/<capability>/migrations/<major>.<minor>.0/<NNN>-<slug>.sh
-.pkit/adapters/<adapter>/migrations/<major>.<minor>.0/<NNN>-<slug>.sh
-```
+See [`migrations.md`, "Directory layout"](migrations.md#directory-layout).
 
 ### Naming
 
-`<NNN>-<slug>.sh`, where `NNN` is a zero-padded execution-order index within the directory and `<slug>` is a kebab-case description (e.g., `001-add-status-labels.sh`).
-
-Each number is used once in a folder. The runner runs a folder's scripts in the order of their names, so two scripts of one number would run in the order their slugs give, which nobody chose.
-
-- **The stamp.** `pkit new migration` numbers a script one past the highest in its folder, in the working tree or on the default branch.
-- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it, so a number another change took on the base since the branch left it counts too. The finding gives each script it names a number of its own to take, past the highest in the folder. Of two scripts the change itself adds with one number, it names the one whose name sorts later. It skips a script the project receives by sync.
-- **Renumbering.** The stamp reads no scope. So a script that must run before one already in its folder, such as a manifest-schema script beside a resource-scoped one, is renumbered by hand: it takes the lower number, and the other moves up. Renumber only in a folder no release has shipped. No check holds this, since a rename inside a migrations folder triggers nothing.
+See [`migrations.md`, "Naming"](migrations.md#naming).
 
 ### Which version a migration targets
 
-A migration's folder names the version it carries a project to, never one already released. The runner runs a folder only past the version a project records ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)). So a folder at or below a released minor never runs for a project already there, and nothing else reports it.
-
-- **The stamp.** `pkit new migration` without `--version` takes the highest of these:
-  - the next minor past the version the default branch records for the tier: `.pkit/VERSION` for the backbone, the component's `package.yaml` for an adapter or a capability
-  - the version the working tree records, where it is above that one, as on the branch of a project whose change bumps its own version
-  - the next major, where its folder already waits, so the script runs after the migrations of the change that made it
-
-  It joins no folder further ahead, since a change may target a later release on purpose. It reads the default branch from git objects, as a command that allocates from settled state does ([COR-054](../decisions/core/COR-054-default-branch.md) point 3). It refuses a `--version` at or below the default branch's version, and names the version to give.
-- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose folder is at or below the version its tier records at the base's tip. It reads the tip, not the branch point, since a release that lands after the branch was cut releases the folder too. It skips a script the project receives by sync. It also skips one the tip already holds, at its path or under another name in its folder with the same content, as a rename leaves it. A tier the tip records no version for, such as a new component, has nothing released.
-- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors.
+See [`migrations.md`, "Which version a migration targets"](migrations.md#which-version-a-migration-targets).
 
 ### Three scopes (per tier)
 
-**Manifest-schema migrations** bridge a manifest format change. They run *first* in any upgrade flow that touches them — the runtime needs to read the manifest correctly before tracking subsequent migrations. Each manifest (backbone, per-component) has its own schema; bumping either may need its schema migrated.
-
-**Structural migrations** affect the directory shape of the tier (a kit-wide rename in the backbone; a capability's internal restructure within the capability). They run *before* resource-scoped migrations of the same target version.
-
-**Resource-scoped migrations** affect a single resource type (a label is renamed, a setting key changes shape, a primitive moves).
-
-Within a single `<major>.<minor>.0/` directory, the numbers carry this order ("Naming", above): manifest-schema scripts take the lowest, structural the next, and resource-scoped the highest.
+See [`migrations.md`, "Three scopes (per tier)"](migrations.md#three-scopes-per-tier).
 
 ### Script contract
 
-Each migration script:
-
-- Is **versioned** by its directory (the `<major>.<minor>.0/` it lives in).
-- Is **idempotent** — re-running a completed migration is a no-op. Migrations should detect already-applied state and exit cleanly.
-- **Is safe over any state, if it is a backbone migration.** It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059). A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
-- Receives `ROOT` (project root) in the environment.
-- **Calls `pkit` by its bare name, and reaches the running pkit, the one that runs its transition** ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 14). The migration runner puts a `pkit` of its own first on the script's `PATH`. That `pkit` runs the running pkit's code under the same interpreter, and never enters the router. So neither the pin nor the operator's `PATH` decides which release answers. Every process that inherits the script's `PATH` finds the same `pkit`. Its version is the `backbone_version` the manifest records while the migrations run.
-  - **Where that `pkit` lies:** in a fresh folder of its own inside `.pkit/.migration-runner/`, made for each set of scripts the runner runs, the backbone's, an adapter's or a capability's. `.pkit/.gitignore` ignores `.pkit/.migration-runner/` before the first script. Each folder is removed on every exit, and `.pkit/.migration-runner/` too once it is empty. No run reuses a folder that a killed run left behind, and such a folder is safe to delete.
-  - **When that `pkit` cannot run:** before the first script, the migration runner asks its `pkit` for its version. Where the folder in the project cannot be made or written, or its `pkit` answers with another version or not at all, the runner makes its folder in the system's temporary folder and asks again. It does the same where `.pkit/.migration-runner/` is a link or a folder another user owns or can write, and where a bare `pkit` finds another `pkit` before the runner's. When that fails too, the transition stops before the set's first script, as a failing migration does. The message names both folders, and `TMPDIR`, which chooses where the temporary folder lies. A folder that forbids running files is the usual cause.
-  - **No check needed:** a `command -v pkit` check always passes inside a transition. A script may keep one for a run outside a transition, by hand or in a test.
-  - **No routing variable:** the script sets no variable that stops the router, `PKIT_NO_ROUTE` or `PKIT_ROUTED`. Commands read them too, not only the router, so one would change what a command does.
-  - **Nothing from where `pkit` lives:** the migration runner's `pkit` lies in a folder of its own beside no install, and is gone after the run.
-  - **What it reads:** what the backbone computes, through the reading commands ("The seams back: what a script reads from the backbone", above), about content alone: the release's and the project's own. It applies the answer itself.
-    - **Never a recorded version or the completion,** as `status` shows them. While the migrations run, `backbone_version` already names the target, `completed_version` does not yet, and a component's manifest names its old version until its own migrations end. An answer built on them mixes two releases.
-    - **Which components are installed** does not move while the migrations run, so a check of it is sound. `capabilities project-rule-set` makes one before it answers.
-  - **What it never runs:** a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. COR-004 makes a transition one operation, with propagation, migrations, seeding and merge as its parts. Such a command would repeat a part, or add another operation, inside it (COR-059 point 3).
-    - **Such commands:** `init`, `sync`, `upgrade`, `pin`, `unpin`, `merge`, `agents adopt`, `agents reconcile --write`, and `capabilities install`, `upgrade`, `register` and `uninstall`.
-    - **They refuse:** the migration runner sets `PKIT_MIGRATION=1` in the script's environment, and every process the script starts inherits it. Each such command checks it first, before it reads or writes anything, and under `--dry-run` too. Any value but an empty one refuses the command, and nothing overrides the refusal. So a script that runs one fails, and stops the transition. `upgrade` refuses before it looks for a project, so it updates no tool either.
-    - **The marker is the runner's:** the script never sets or unsets `PKIT_MIGRATION`. The router never reads it. It is no routing variable, since a command reads it only to refuse.
-    - **Allowed:** the reading commands, and `config set` for a key whose owning record specifies the migration that writes it (COR-048 point 5).
-- Uses `set -euo pipefail` (or the equivalent for whatever shell/language the runtime supports — settled by the build roadmap).
-- **Updates the affected resource.** For resources whose state lives in a manifest (component registry entries, opaque backend IDs), the migration updates the manifest entry. For derivable resources (files, labels, symlinks), no manifest update is needed — the transition regenerates them from the new kit-side spec at the new version.
+See [`migrations.md`, "Script contract"](migrations.md#script-contract).
 
 ### Tier independence
 
-Component migrations are tied to the component's version, not the backbone's. A capability upgrade `0.11.0 → 0.12.0` runs the capability's `0.12.0/` migrations regardless of which backbone version is current — subject to compatibility constraints checked at upgrade entry.
+See [`migrations.md`, "Tier independence"](migrations.md#tier-independence).
 
 ## The upgrade flow
 
+The upgrade flow is on [`upgrade-flow.md`](upgrade-flow.md). Each heading below leads to its section there.
+
 ### The steps of a transition
 
-The upgrade command transitions an adopter project to a target backbone version. It runs inside the backbone's two recorded states: it records its target first and its completion last (below). Every migration runs inside it, in COR-010's order ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4):
-
-1. **Compatibility and collisions.** Each check may refuse, and none writes.
-   - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. Copying it would move its recorded version down, under migrations that run forward only. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
-   - **A clash of area names:** a project's own area at `.pkit/lifecycle/` refuses the transition ("A clash of area names", below). No flag overrides it.
-   - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
-   - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
-   - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
-2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written. `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
-3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Then `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations.
-4. **Backbone migrations** run in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
-5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ("An adapter's manifest", above).
-6. **Capability migrations** run for each copied capability, dependencies first by their `requires_capabilities` (COR-030), each from the version it records. Each capability is then restamped at the version it ships. One with no readable version runs none and is recorded at that version.
-7. **Seed paths.** Each one that is missing is created, never over one that exists ("Seed paths", below). They follow the migrations, so a migration that moves a project's file to a seed path finds no fresh seed there.
-8. **Derivable state.** Each component's setup primitive re-applies the kit-side spec at its current version and the adopter's config, idempotently: merge delivery in its tier that asks nothing, deploy, `.pkit/.gitignore` rendered again, the agent workspace and provisioning. The report lists each widening the settings merge brings ("What the settings merge widens", below).
-9. **The completion is recorded.** `completed_version` becomes the target, by an edit of its own line.
-10. **The pin,** the last of the upgrade's writes, as ADR-049 and ADR-064 set.
-
-**After the transition, the questions.** Once the pin is written, the upgrade runs every question a data point declares, where a person can answer, and prints the command for each otherwise ("A data point's question", above). They are no step of the transition (COR-059 point 5). Every write of the upgrade is made before the first question starts, so a question that fails or is stopped leaves nothing of the upgrade to finish.
-
-**Already current:** upgrade returns early, before step 1, writing or raising only its pin, when `backbone_version` and `completed_version` both name the target and every registered adapter and shipped capability records the version the target ships, each capability under its `project/`. Otherwise it runs, to finish what is not, even at the same backbone version.
-
-**The report and the dry run** name the target, each component's move, and the replay where no completion is recorded. They list each component's migrations, each collision the upgrade asks about, and each question it would ask. `--dry-run` asks nothing and writes nothing.
+See [`upgrade-flow.md`, "The steps of a transition"](upgrade-flow.md#the-steps-of-a-transition).
 
 ### Seed paths
 
-One seeding step creates the paths a project is seeded with: each area's `project/` folder, the scratchpad's state folders, the agents overlay (`.pkit/agents/project/overlay.yaml`), each adapter's `settings/project/settings.json`, and each shipped capability's `project/` folder ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 11). Each seed path that is a folder holds an empty `.gitkeep`. First install and a version transition run it, and create each one that is missing, never over one that exists. Sync runs none, so a seed the project deleted on purpose does not come back on a sync, and the next transition creates it again (COR-059 point 8).
+See [`upgrade-flow.md`, "Seed paths"](upgrade-flow.md#seed-paths).
 
 ### A new collision
 
-A new collision is a skill or agent name that a shipped capability's target version ships, in either of its forms (COR-015), and that another installed artefact already uses: the project's own, or an incubated or no-longer-shipped capability's. A name the capability's installed copy holds, or its manifest records as skipped, is not new ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 6).
+See [`upgrade-flow.md`, "A new collision"](upgrade-flow.md#a-new-collision).
 
-- **The flow is COR-017's install-time flow.** Where a person can answer, with standard input and standard output both terminals, the upgrade asks for each collision:
-  - **skip:** the copy leaves the capability's artefact out. Its manifest records the skip in step 2, before the copy, so an interrupted upgrade does not ask again.
-  - **override:** the capability's artefact replaces the project's, which git keeps. The project's is removed in step 2, before the copy, so an interrupted upgrade finds the name in the capability's installed copy and does not ask again. Nothing is recorded.
-  - **inspect:** shows the diff and asks again.
-- **With nobody to answer,** the upgrade refuses before it writes anything. It names two ways on: run it again at a terminal, or rename the project's artefact.
-- **No capability is held back,** so the project stays at one release (COR-059 point 7).
-- **What the flow leaves out:**
-  - a core skill or agent a release adds, which a project artefact of the same name suspends by deploy's name precedence
-  - a clash between two artefacts one release ships, core's or a shipped capability's, which is the release's to prevent
-  - a collision with externally-sourced content, which surfaces as COR-041 sets
-  - a core area whose name a project's own area takes, which stops the upgrade instead ("A clash of area names", below)
+### The capabilities' rules index
+
+See [`upgrade-flow.md`, "The capabilities' rules index"](upgrade-flow.md#the-capabilities-rules-index).
+
+### What a step newly binds
+
+See [`upgrade-flow.md`, "What a step newly binds"](upgrade-flow.md#what-a-step-newly-binds).
 
 ### A clash of area names
 
-A project may create its own area at `.pkit/<name>/` (COR-011). A release that later ships a core area of the same name would copy over it, so the upgrade stops first ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 13).
-
-- **The one clash among published releases:** a project's own area at `.pkit/lifecycle/`, made at a release before v1.149.0, which first shipped the core `lifecycle` area.
-- **How it is told apart:** the core area holds `ownership.py`, and a project's own area does not. So anything else at `.pkit/lifecycle` is a clash: a folder without that file, a file, or a link. An empty folder is not.
-- **Where it stops:** the upgrade, in step 1, and the propagation step, before it writes the methodology's trees. So `pkit sync` stops on it too. The stop writes nothing, stops under `--dry-run` too, and takes no override, `--force` included.
-- **The message** names the path, and the running release, which ships the core area. It names the ways on:
-  - move the project's area to another name, with what refers to it, and run the command again
-  - after the upgrade's stop, to stay at the release the project records: `pkit pin` in an unpinned project. A project pinned at that release needs nothing, since its pin did not move.
-  - where the methodology's own area has lost `ownership.py`: restore it from git, or remove the folder where git holds no copy of it
-- **The copy writes `ownership.py` first** in that area. So an interrupted copy leaves the folder empty or holding the file, never a clash.
-- **What the test cannot tell apart,** and the upgrade's copy writes over until #1600:
-  - a project's own `lifecycle` area that holds a file named `ownership.py`
-  - a project's own area under a name core shipped before v1.134.0, in a project still at a release before core shipped that name
-- **No release adds a core area or a core adapter** until #1600 builds the full check. A test holds the areas a release propagates, the adapters it ships, and the core area's `ownership.py` to what they are today.
+See [`upgrade-flow.md`, "A clash of area names"](upgrade-flow.md#a-clash-of-area-names).
 
 ### The dependency gates
 
-The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6), over the set the transition would leave. That set holds every shipped capability the bundle ships at its bundled version, and every other capability at its installed version. Within one release the moving capabilities agree, so a conflict involves a capability that does not move: an incubated, externally-sourced or no-longer-shipped one.
-
-- **A moving capability** refuses, with a hint, when a dependency its new version requires is not installed, or is out of the range it declares. So does one whose new version carries a mandatory process connection the set leaves unmet. The project controls that dependency, and no flag overrides the refusal. An optional dependency that is not installed passes.
-- **A moving dependency** warns when its new version falls outside the range a capability that does not move declares for it, naming each such dependent. So does one that leaves such a capability's mandatory connection unmet. The upgrade proceeds only under `pkit upgrade --force`, so neither is a hard block.
-- **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, no collision, and no clash of area names.
-- **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection of a capability that does not move, already unmet before the upgrade.
+See [`upgrade-flow.md`, "The dependency gates"](upgrade-flow.md#the-dependency-gates).
 
 ### What the settings merge widens
 
-The merge delivery in step 8 may add to the settings file the adapter's merge writes, `.claude/settings.json` for Claude Code. The upgrade reads the file before and after the merge, and its report lists each allow entry and each top-level key the merge adds, such as `hooks`, `env` or `sandbox`. An `ask` rule for an entry, in the project's additions to the adapter's settings, brings the question back. A release's changelog names each widening too: a change that adds an allow entry or a top-level key to an adapter's baseline settings says so in its changeset.
+See [`upgrade-flow.md`, "What the settings merge widens"](upgrade-flow.md#what-the-settings-merge-widens).
 
 ### Two recorded states, and an interrupted upgrade
 
-A transition is complete when its two recorded states are equal (COR-059 point 6). The target is written first, so an interrupted transition never reads as finished. An older pkit that applies #1212's refusal reads only `backbone_version`, finds a version newer than its own, and refuses.
-
-- **An interrupted upgrade is finished by the next one.** A migration that exits non-zero stops the upgrade: the completion is not recorded, and no pin is written. The next upgrade finds the two keys apart, propagates again, and runs the backbone migrations from `completed_version`, the stopped one included. So a migration may fail loudly.
-- **A migration that fails every time** is fixed at its cause and the upgrade run again, or the upgrade is undone with git, which restores both keys (ADR-065 point 8, "Rolling back an upgrade", below).
-- **A sync between the two** stops: its guard finds them apart and names `pkit upgrade` ("Sync's guard", below). Sync moves no recorded version.
-- **First install records the same two states:** the target before it copies anything, each adapter registered and recorded after the copy, the completion last. The next upgrade finishes an interrupted install.
+See [`upgrade-flow.md`, "Two recorded states, and an interrupted upgrade"](upgrade-flow.md#two-recorded-states-and-an-interrupted-upgrade).
 
 ### Rolling back an upgrade
 
-A project goes back to an earlier release with git, by reverting the commit of each upgrade since that release, never with pkit, since pkit's migrations run forward only (COR-010). Each revert restores every file its upgrade changed, in `.pkit/` and outside it (ADR-049 point 3, ADR-065 point 8).
-
-- **What an upgrade writes outside `.pkit/`:**
-  - the derivable state and merge delivery of step 8, such as the deployed skills and agents and the settings file the adapter merges ("What sync writes", below)
-  - each file a migration edits, which may be one of the project's own artefacts. The 2.0.0 move of answers, `2.0.0/002-move-answers-to-files.sh`, rewrites the front matter of each of the project's own artefacts whose block holds an answer (COR-062 point 11).
-- **Undoing an upgrade:** commit the upgrade on its own, and roll it back by reverting that commit, `git revert <commit>`. The revert brings back every file the upgrade's commit changed, inside `.pkit/` and outside. It removes each file the commit added, such as the answer files of the 2.0.0 move in `.pkit/project/friction/answers/`. The manifest, with its two recorded versions, is among them, and so is the pin file where the upgrade wrote it.
-- **Not `.pkit/` alone:** `git checkout <ref> -- .pkit/` restores only what lies in `.pkit/`. After the 2.0.0 move, the checkout leaves the blocks of the artefacts outside `.pkit/` without their answers, so an older backbone reads none there. Nor does it remove a file the upgrade added in `.pkit/` that `<ref>` does not hold.
-- **An upgrade not yet committed,** such as one a failing migration stopped, is undone over every file `git status` lists, inside `.pkit/` and outside. Restore each file it lists as changed or deleted, with `git restore --staged --worktree <path>`, and delete each new file the upgrade added.
-- **A revert moves no installed pkit.** Where pkit then runs a release other than the project's, sync's guard stops `pkit sync` and names the remedy ("Sync's guard", below).
+See [`upgrade-flow.md`, "Rolling back an upgrade"](upgrade-flow.md#rolling-back-an-upgrade).
 
 ### The replay: a missing completion
 
-With no `completed_version`, the project's backbone migration history is unknown (COR-059 point 6). Its next upgrade runs every backbone migration up to its target, once. Each component's migrations still run from the version its manifest records.
-
-- **When:** a manifest written before the release that added the key, a missing manifest, which upgrade writes at its target as first install does, or a `backbone_version` that is no version.
-- **Why it is safe:** every backbone migration acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone ("Script contract", above).
-- **What it may restore:** a migration that adds a missing default can add one the project removed after the migration first ran. The release's notes say so.
-- **What the operator sees:** the report says that no completion is recorded, so every backbone migration runs once, and lists them. `--dry-run` says the same before anything runs, listing the scripts of the running pkit's bundle.
+See [`upgrade-flow.md`, "The replay: a missing completion"](upgrade-flow.md#the-replay-a-missing-completion).
 
 ### Sync's guard: no path down, and no migration passed over
 
-The content a sync writes, and the target of a backbone upgrade, is the running pkit's own version: a release's content is tied to its code (ADR-033). That version can be another than the project's. A pin raise leaves the installed tool where it was, an installed tool moves on its own, and when the entry-point router cannot fetch a project's pin it runs the installed tool instead (ADR-039). One guard keeps such a pkit from writing its release over the project's ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 7, COR-059 point 9). It reads the backbone manifest's two recorded states and the pin (`.pkit/version-pin`), and compares them with the running pkit's version. The comparison vouches for content only under a tagged install, the one the CLI README recommends ("Installing pkit on PATH"). The development install, from main, carries the last release's version over files that may be newer, so no version vouches for its content (ADR-065 point 12).
-
-- **`sync` calls it in both directions,** at its entry, before anything is written. It stops when the manifest is missing or its `backbone_version` is no version, when the running pkit is not `backbone_version`, when `completed_version` differs from `backbone_version` or is missing, or when the pin is newer than the running pkit. A sync at another version would copy another release's content: an older one over newer content, or a newer one without the migrations between the two. Sync runs no migration, so stopping is what keeps a migration from being passed over.
-- **`capabilities install` and `capabilities upgrade` call it in both directions too,** at their entry, before they read or write anything. Each copies the capability the running pkit's bundle ships, so each stops in sync's states, with sync's remedies, the command named as the operator would run it again. So every shipped file a project holds comes from the release its backbone records, wherever a version names one content: under a tagged install, the one the CLI README recommends ("Installing pkit on PATH", ADR-065 point 12). `capabilities register` copies nothing and does not call it.
-- **`upgrade` calls it in the older direction only,** before it writes anything: it refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. Upgrade moves the project to the running version, so a newer pkit is what it is for. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
-- **How it stops:** exit non-zero, name the state found and its remedy, and write nothing: no content, no manifest, no pin. No flag overrides it, `sync --force` and the capability commands' `--force` included, and a dry run stops too.
-
-  The CLI README's `sync` entry carries the wording, and the router's notice when it runs a pkit other than the pin.
-- **No path down:** migrations are forward-only (COR-010) and a pin is never moved down (ADR-049), so a project is rolled back with git, by reverting the commit of each upgrade since that release ("Rolling back an upgrade", above). The reverts restore kit-owned and project-owned state, both recorded versions included, together.
-- **`upgrade` refuses under the router's fallback, in both directions** ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 9). When the router cannot fetch a project's pin, it runs the installed pkit and marks the run. An installed pkit older than the pin or the content would take the project back. A newer one would move the project and its pin to its own version, not to a release the upgrade resolved. So upgrade refuses either way, before its tool step and before it writes anything, and names the fallback's remedies. A run with routing bypassed on purpose (`PKIT_NO_ROUTE`) is no fallback.
-
-Only an unambiguous order is compared: a pin that is not a version blocks nothing, and a `backbone_version` that is no version stops sync and is one `pkit upgrade` records its target over. Read-only commands are unaffected. A pinned project's `upgrade` under its pin's code checks first for a newer release, and hands over to it, since that release's upgrade finishes content left ahead of the pin by an interrupted raise. With no newer release, the check refuses such content before the run's own transition to the pin, which would take it down. The methodology's source repository is exempt: its sync runs the self-host branch, and moves no version.
+See [`upgrade-flow.md`, "Sync's guard: no path down, and no migration passed over"](upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over).
 
 ### Per-component upgrade
 
-`pkit capabilities upgrade <name>` is a transition of one capability ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 4, COR-010). It runs in the transition's order for that capability alone, at the recorded backbone, and writes neither of the backbone's two recorded versions:
-
-1. **Its checks,** each of which may refuse and none of which writes:
-   - sync's guard, first, which stops the command wherever `pkit sync` stops ("Sync's guard", above)
-   - the refusal of a capability the running pkit's bundle ships older than the project records, with no override: copying it would move its recorded version down. The message names both versions, and `pkit upgrade` run by a pkit whose bundle ships the recorded version or newer, since the running pkit ships the project's own release.
-   - its new version's `requires_backbone` against the recorded backbone
-   - the dependency check in both directions (below), and its mandatory process connections
-   - the collision flow. A new collision is asked about only under `--interactive`. Without the flag the command refuses and names it.
-2. **Its manifest,** still at the capability's root, moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed, all before the copy.
-3. **Its copy,** with its skips, then `.pkit/.gitignore` rendered, so a migration reads the new version's render. It creates no seed path.
-4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
-5. **Its derivable state:** merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again.
-
-**After it, the questions** of the points the capability defines and of the points its contributions reach, asked where a person can answer and printed otherwise ("A data point's question", above). They are no step of the transition. An incubated capability's upgrade, and one in the methodology's source, end with them too.
-
-It finishes a capability that an interrupted transition of that capability, or an untagged install, left behind. Over an interrupted transition of the backbone, sync's guard stops it and names `pkit upgrade`, which finishes that transition. It moves the capability to the version the running pkit's bundle ships. Sync's guard stops it under any pkit but the project's version, so that is the version the project's recorded release ships (COR-010), wherever a version names one content: under a tagged install, the one the CLI README recommends ("Installing pkit on PATH", ADR-065 point 12).
+See [`upgrade-flow.md`, "Per-component upgrade"](upgrade-flow.md#per-component-upgrade).
 
 #### Upgrading an incubated capability (COR-031 D1/D4)
 
-`pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against — the working tree *is* the source — so the command **must not** route through the kit-source resolution path. Doing so would mislabel the capability "no longer ships from source" and steer the adopter toward the destructive uninstall. Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree** (mirroring the sync skip-branch below): any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall. Sync's guard runs at the command's entry, before the origin is read. So this re-deploy stops under another pkit too, as `pkit sync`'s re-deploy of it does. A `kit-shipped` capability's upgrade path is the transition of one capability above.
-
-In the methodology's source repository, run by its own code ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)), a `kit-shipped` capability's kit source *is* its subtree, so its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned, with nothing copied, no receipt restamped and no migration run — migrations carry an adopter's copy forward, and there is no copy. It is sync's self-host path for one capability.
-
-For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
-
-- *Upgrading a dependent* — the new source version's `requires_capabilities` is checked against the installed dependency versions. If a required dependency is absent, or any installed one is out of range, the upgrade **refuses with an actionable hint** (the operator controls the dependent version; no deadlock). An optional dependency that is not installed passes.
-- *Upgrading a dependency* — installed capabilities that declare this capability in their `requires_capabilities`, required or optional, are checked against the new version. If the new version falls outside a dependent's declared range, the upgrade **warns loudly and requires `--force` to proceed** — it is not a hard block. A hard block would deadlock (the operator cannot advance the dependency without cascade-upgrading the dependent, which is out of scope per COR-030). Use `--force` as the by-hand analogue of cascade-upgrade, then upgrade the now-desynced dependents to restore consistency.
-
-Both entry points run the same direction split, and compare a range through one relation (`connections.range_admits`). The backbone-wide `pkit upgrade` runs it over the set it would leave, every shipped capability at its bundled version ("The dependency gates", above). The single-capability `pkit capabilities upgrade <name>` runs it over the installed set with that one capability at its new version. The warn+force direction also applies at install and register ("Install pre-flight checks", above).
+See [`upgrade-flow.md`, "Upgrading an incubated capability (COR-031 D1/D4)"](upgrade-flow.md#upgrading-an-incubated-capability-cor-031-d1d4).
 
 #### Mandatory process connections (COR-053 point 6)
 
-A capability's generated `depends-on` entries may carry a mandatory mark (the process area README, "depends_on"): the upstream process definition must exist — offered at an equal interface version when the entry names one. The lifecycle is the mark's **one reader**, and it reads the mark from package metadata only, never by parsing process definitions (validation keeps the list fresh against them). It judges through the wiring resolver ("How the wiring is resolved"), over the wiring the operation would leave — the installed set with the capability in place of any installed copy, or without it — so a mark refuses exactly when `pkit validate` would then report it unmet. The disposition is COR-030's direction split:
-
-- **The side carrying the mark is refused.** `install`, `register` and `capabilities upgrade` refuse a capability whose mandatory upstream would be missing — its capability not installed, no installed capability providing its role, or no such process offered or defined — or offered at another interface version, one line per unmet mark with the mark's reason, and the hint to install or upgrade the upstream first. There is no override: the operator chooses which version of the carrier to install, so nothing deadlocks.
-- **The side the mark targets is warned.** `capabilities upgrade` and `uninstall` of a capability name every other capability whose mandatory mark the operation would leave unmet — met, or at least not already unmet, before it — and refuse unless `--force` is passed; under `--force` the warning is still printed and the operation proceeds. A mark that was unmet before is not the operation's to report. Never a hard block: a hard block could deadlock.
-
-Two marks facing each other — each capability's mandatory connection needing the other installed first — are a cycle no install order satisfies; validation rejects it and the install plan reports it (COR-053 point 6). The backbone-wide `pkit upgrade` runs the same split over the set it would leave, with every capability it moves at its bundled version ("The dependency gates", above). It refuses a moving capability that carries a mark the set leaves unmet, and warns, proceeding only under `--force`, for a capability that does not move.
+See [`upgrade-flow.md`, "Mandatory process connections (COR-053 point 6)"](upgrade-flow.md#mandatory-process-connections-cor-053-point-6).
 
 ## Reconciling derivable state
 
@@ -1055,10 +349,10 @@ Either way, the kit-side spec at the recorded version is the source of truth for
 `pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes three kinds of thing, and no other:
 
 - **The methodology's content** at the recorded release: its trees, adapters included, and each installed capability the running pkit ships at the version the project records ("The downgrade guard on capability refresh", below). A project-owned path is never overwritten.
-- **Derivable state:** the deployed skills and agents, `.pkit/.gitignore`, the agent workspace and its line in the clone's local exclude file, and the query commands' environments.
-- **The project's own paths, through merge delivery only,** in its tier that asks nothing. For Claude Code it merges `.claude/settings.json` and `CLAUDE.md`, adding the methodology's entries and never removing one the project wrote. A tier that asks never runs in sync. Merge delivery may create its own target file where it is missing, such as `CLAUDE.md`, as merge, not as seeding.
+- **Derivable state:** the capabilities' rules index, the deployed skills and agents, `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content -->, pkit's region of the clone's local exclude file where the project is private, the agent workspace and its line in that file, and the query commands' environments.
+- **The project's own paths, through merge delivery only,** in its tier that asks nothing. For Claude Code it merges `.claude/settings.json` <!-- unanchored: names the file the step reads or writes, not its content --> and `CLAUDE.md`, adding the methodology's entries and never removing one the project wrote. A tier that asks never runs in sync. Merge delivery may create its own target file where it is missing, such as `CLAUDE.md`, as merge, not as seeding.
 
-It writes no recorded version, no manifest and no seed path, runs no migration, and asks no question a data point declares ([COR-061](../decisions/core/COR-061-point-questions.md) point 4).
+It writes no recorded version, no manifest and no seed path, runs no migration, and asks no question a data point declares ([COR-061](../decisions/core/COR-061-point-questions.md) point 4). Before it writes, it stops on a file at the index's path that is not the index ("The capabilities' rules index", above), and after its copy it says what the copy newly binds of each loaded set ("What a step newly binds", above).
 
 ### The incubated-origin skip-branch (COR-031 D1)
 
@@ -1068,9 +362,10 @@ The skip is scoped to *reconciliation against the kit source only*. Everything e
 
 One boundary case (COR-031): if a same-named capability *now* also ships from kit source — graduation arriving before graduation is specified — `sync` surfaces the collision rather than silently shadowing either tree, so the adopter can decide. The default skip applies only while no kit capability of that name exists.
 
-### The downgrade guard on capability refresh (issue #524)
+<a id="the-downgrade-guard-on-capability-refresh-issue-524"></a>
+### The downgrade guard on capability refresh
 
-A `kit-shipped` capability's copy replaces its subtree wholesale. On its own that is direction-blind: a source *older* than the installed version would overwrite newer committed state with stale content — the exact data loss reported in #524, where a mis-pinned source refreshed an installed capability back several minor versions. So before it copies a `kit-shipped` capability, `sync` compares the **source** version with the **installed version of record** (the per-component `manifest.yaml`, falling back to the installed `package.yaml` — what the copy would actually overwrite), and copies it only where the two are equal ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 1):
+A `kit-shipped` capability's copy replaces its subtree wholesale. On its own that is direction-blind: a source *older* than the installed version would overwrite newer committed state with stale content — the exact data loss reported, where a mis-pinned source refreshed an installed capability back several minor versions. So before it copies a `kit-shipped` capability, `sync` compares the **source** version with the **installed version of record** (the per-component `manifest.yaml`, falling back to the installed `package.yaml` — what the copy would actually overwrite), and copies it only where the two are equal:
 
 - **source version < installed version (a downgrade):** skip the capability, print a `skipped` line naming both versions, and leave the installed tree untouched. Nothing overrides it: a recorded version never moves down. `sync --force`, which once overrode it, is accepted for one release, ignored, and reported on stderr. A later release removes the flag. Under `--dry-run` the skip is reported as the run would report it.
 - **source version > installed version:** skip it too, reported `pending`: moving a capability is `pkit upgrade`'s, with its migrations.
@@ -1082,25 +377,113 @@ A version that cannot be read on the installed side skips the capability, so non
 
 The tier map above — which trees the kit owns, which are the project's, and how a capability's `origin` changes the answer — is also a question *other* layers need to ask. `.pkit/lifecycle/ownership.py` answers it as `is_sync_managed(target_root, path)`, and every consumer imports that one definition.
 
-It answers a **second, narrower** question beside it: `is_adopter_owned_by_tier(rel_posix)` — *does this `.pkit/`-relative path sit on the project side of the no-shared-files split, by tier alone?* The two are not interchangeable, and picking the wrong one is a real error. `is_sync_managed` additionally consults a capability's **registration** (an unregistered or `incubated-in-repo` capability is not sync-managed whatever its tier) and reads everything *outside* `.pkit/` as unmanaged — so `src/`, which legitimately ships, answers False. A caller asking "may this be distributed?" needs the tier predicate; a caller asking "is this the kit's to manage, so an agent may not claim write authority over it?" needs `is_sync_managed`. Note what that second question is **not**: `pkit sync` does not call it. Sync decides what it writes through the copy path's own ownership handling, so a wrong answer here cannot overwrite an adopter's file — it can only misplace write authority. The name invites the other reading, and #823 was filed on exactly that misreading. Pass **`is_adopter_owned_by_tier`** a file path: its depth-free `project/` case reads every part except the last, so a directory path naming the tier itself (`agents/project`) answers False — though its other cases do match on a final component, so this is a rule about that case rather than about the whole predicate. `is_sync_managed` is deliberately the other way: it matches the declared tier positions by *prefix*, so the tier directory itself answers "the adopter's" — its consumer passes overlay entries, which are usually directories. "Is this *directory* the adopter's tier?" is a different question, and the packaging hook declares its own answer rather than asking this predicate.
+It answers a **second, narrower** question beside it: `is_adopter_owned_by_tier(rel_posix)` — *does this `.pkit/`-relative path sit on the project side of the no-shared-files split, by tier alone?* The two are not interchangeable, and picking the wrong one is a real error. `is_sync_managed` additionally consults a capability's **registration** (an unregistered or `incubated-in-repo` capability is not sync-managed whatever its tier) and reads everything *outside* `.pkit/` as unmanaged — so `src/`, which legitimately ships, answers False. A caller asking "may this be distributed?" needs the tier predicate; a caller asking "is this the kit's to manage, so an agent may not claim write authority over it?" needs `is_sync_managed`. Note what that second question is **not**: `pkit sync` does not call it. Sync decides what it writes through the copy path's own ownership handling, so a wrong answer here cannot overwrite an adopter's file — it can only misplace write authority. The name invites the other reading. Pass **`is_adopter_owned_by_tier`** a file path: its depth-free `project/` case reads every part except the last, so a directory path naming the tier itself (`agents/project`) answers False — though its other cases do match on a final component, so this is a rule about that case rather than about the whole predicate. `is_sync_managed` is deliberately the other way: it matches the declared tier positions by *prefix*, so the tier directory itself answers "the adopter's" — its consumer passes overlay entries, which are usually directories. "Is this *directory* the adopter's tier?" is a different question, and the packaging hook declares its own answer rather than asking this predicate.
 
-It lives here rather than in the CLI package for the reason [ADR-003](../../tech-docs/architecture/decisions/ADR-003-permission-core-code-home.md) records for the permission decision core: an adapter's deploy primitive runs **in the adopter's tree**, where the globally-installed `pkit` runtime is not importable. Propagated in-tree code is the only home both the CLI and a propagated adapter script can reach, so the area is propagated and the module ships with it. Dependency direction is inward — the CLI imports it, each adapter imports it, and it imports neither.
+It lives here rather than in the CLI package for the reason for the permission decision core: an adapter's deploy primitive runs **in the adopter's tree**, where the globally-installed `pkit` runtime is not importable. Propagated in-tree code is the only home both the CLI and a propagated adapter script can reach, so the area is propagated and the module ships with it. Dependency direction is inward — the CLI imports it, each adapter imports it, and it imports neither.
 
-`is_sync_managed`'s first consumer is the agent-overlay write-authority check ([ADR-051](../../tech-docs/architecture/decisions/ADR-051-process-author-edit-authority.md)): a *write-carrying* overlay category may not name sync-managed content, which is the no-shared-files invariant applied at the agent surface. The module also declares that category set (`WRITE_CARRYING_CATEGORIES`), beside the predicate that guards it. Re-deriving either per adapter would fork the ownership rule and silently skip the check on the next harness, so a test fails any adapter script that carries a copy.
+`is_sync_managed`'s first consumer is the agent-overlay write-authority check: a *write-carrying* overlay category may not name sync-managed content, which is the no-shared-files invariant applied at the agent surface. The module also declares that category set (`WRITE_CARRYING_CATEGORIES`), beside the predicate that guards it. Re-deriving either per adapter would fork the ownership rule and silently skip the check on the next harness, so a test fails any adapter script that carries a copy.
 
-`is_adopter_owned_by_tier`'s consumers are the packaging build hook (`hatch_build.py`) and the test that holds it honest — plus one expression of the rule that deliberately does not call it: the sdist's `withhold` globs, a build-hook option in `pyproject.toml` that mirrors the same cases by hand. The hook could apply the predicate to the sdist as well; it does not, so that the sdist's filter stays independent of the wheel's and the test comparing the two artifacts can catch a hole in the predicate. That copy is the one to check first when the two distributions disagree. The wheel bundles the methodology tree by force-include, and hatchling's `exclude` cannot filter force-included paths — so the manifest carried its own idea of which paths were adopter-owned, **disagreed with this module, and nothing could notice**: 51 adopter-owned files shipped, including git-ignored runtime state that made the artifact depend on the build machine. Deriving the boundary from this predicate is what closes that, and it is the same lesson ADR-051 records one altitude down — a second copy of an ownership rule forks silently.
+`is_adopter_owned_by_tier`'s consumers are the packaging build hook (`hatch_build.py`) and the test that holds it honest — plus one expression of the rule that deliberately does not call it: the sdist's `withhold` globs, a build-hook option in `pyproject.toml` that mirrors the same cases by hand. The hook could apply the predicate to the sdist as well; it does not, so that the sdist's filter stays independent of the wheel's and the test comparing the two artifacts can catch a hole in the predicate. That copy is the one to check first when the two distributions disagree. The wheel bundles the methodology tree by force-include, and hatchling's `exclude` cannot filter force-included paths — so the manifest carried its own idea of which paths were adopter-owned, **disagreed with this module, and nothing could notice**: 51 adopter-owned files shipped, including git-ignored runtime state that made the artifact depend on the build machine. Deriving the boundary from this predicate is what closes that, and it is the same lesson one altitude down — a second copy of an ownership rule forks silently.
 
-`is_sync_managed` is deliberately **conservative under `.pkit/`**: anything the map does not recognise as project-owned reads as sync-managed. A false "not managed" would hand out write authority over kit content, which is the costlier direction and why the bias points this way. But the cost of a false "managed" was understated here as "a rejected overlay entry the adopter re-points": when the misjudged path is the adopter's *own* file, there is nowhere else to point, and they are simply locked out of it. That is what #823 turned out to be — the adapter settings pair, missed because the tier rule was depth-1. The bias stays; the map has to be right about the adopter's tier at every depth for the bias to be safe.
+`is_sync_managed` is deliberately **conservative under `.pkit/`**: anything the map does not recognise as project-owned reads as sync-managed. A false "not managed" would hand out write authority over kit content, which is the costlier direction and why the bias points this way. But the cost of a false "managed" was understated here as "a rejected overlay entry the adopter re-points": when the misjudged path is the adopter's *own* file, there is nowhere else to point, and they are simply locked out of it. The bias stays; the map has to be right about the adopter's tier at every depth for the bias to be safe.
 
-A **third** question builds on the first: `is_synced_copy(target_root, path)` — *does this path arrive here as a copy, written by a sync from the methodology's source or pulled whole from the external source a capability is pinned to (COR-041)?* Documentation places ask it: a synced copy is never a place, so that a sync never shows up as friction in the project's own history ([living-docs:DEC-001-living-docs-discipline] point 1). Its consumers are the friction pass, which loads this module from the tree and tests every match of every declared place with it (`synced-place`, the schemas README, "The friction block"), artefact discovery, which asks it of each rule-set file it walks, since a rule a synced copy holds owes the project no answer ([COR-062](../decisions/core/COR-062-answers-in-own-files.md) point 9), the packages pass of `pkit validate`, which asks it of a package file to name the fix that lasts (the journal warning in "Validation: the package schema"), and the `pkit new`, `pkit process new`, `pkit process couple`, `pkit process hand-off` and `pkit permissions scaffold` stamps, through `synced_copy_refusal` of `src/project_kit/lifecycle_ownership.py` (see [the CLI reference, "Folders a sync writes"](../cli/README.md#folders-a-sync-writes)). It answers true for a file of a registered `externally-sourced` capability outside its `project/` tier, in every repository. Otherwise it is `is_sync_managed` **and** the repository not being the methodology's own source (`is_methodology_source`). The source repository is the one whose `.pkit/` is the methodology's own tree. The tool recognises it by sync's self-host test, which the ownership module cannot import, so the predicate recognises it by the marker in "The methodology's literals" above — the package source beside the `.pkit/` tree, the same test the entry-point router runs (the dispatcher is not a marker). The router's first route is what keeps the predicate's answer equal to sync's, and tests hold the predicate both to the router's markers and to sync's own decision ([ADR-059](../../tech-docs/architecture/decisions/ADR-059-methodology-source-repository.md)). The difference from `is_sync_managed` is deliberate. In the source repository the kit's trees stay the kit's to manage — write authority does not move — yet none of them is a copy, because the tree is what a sync would copy from; its self-host sync re-runs the deploy primitives and propagates nothing ([ADR-055](../../tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 3). In an adopter, the backbone's trees and a `kit-shipped` capability's are copies. An `externally-sourced` capability's are copies in the source too, since it is authored in another repository. An `incubated-in-repo` capability, an unregistered one and every `project/` tier are not. The verdict keys on origin and on the repository, never on the path, so the same `.pkit/` README is a place in the source and refused in an adopter.
+A **third** question builds on the first: `is_synced_copy(target_root, path)` — *does this path arrive here as a copy, written by a sync from the methodology's source or pulled whole from the external source a capability is pinned to (COR-041)?* Documentation places ask it: a synced copy is never a place, so that a sync never shows up as friction in the project's own history ([living-docs:DEC-001-living-docs-discipline] point 1). Its consumers are the friction pass, which loads this module from the tree and tests every match of every declared place with it (`synced-place`, the schemas reference's page on backbone files, "The friction block"), artefact discovery, which asks it of each rule-set file it walks, since a rule a synced copy holds owes the project no answer ([COR-062](../decisions/core/COR-062-answers-in-own-files.md) point 9), the packages pass of `pkit validate`, which asks it of a package file to name the fix that lasts (the journal warning in "Validation: the package schema"), and the `pkit new`, `pkit process new`, `pkit process couple`, `pkit process hand-off` and `pkit permissions scaffold` stamps, through `synced_copy_refusal` of `src/project_kit/lifecycle_ownership.py` (see [the CLI reference, "Folders a sync writes"](../cli/README.md#folders-a-sync-writes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It answers true for a file of a registered `externally-sourced` capability outside its `project/` tier, in every repository. Otherwise it is `is_sync_managed` **and** the repository not being the methodology's own source (`is_methodology_source`). The source repository is the one whose `.pkit/` is the methodology's own tree. The tool recognises it by sync's self-host test, which the ownership module cannot import, so the predicate recognises it by the marker in "The methodology's literals" above — the package source beside the `.pkit/` tree, the same test the entry-point router runs (the dispatcher is not a marker). The router's first route is what keeps the predicate's answer equal to sync's, and tests hold the predicate both to the router's markers and to sync's own decision. The difference from `is_sync_managed` is deliberate. In the source repository the kit's trees stay the kit's to manage — write authority does not move — yet none of them is a copy, because the tree is what a sync would copy from; its self-host sync re-runs the deploy primitives and propagates nothing. In an adopter, the backbone's trees and a `kit-shipped` capability's are copies. An `externally-sourced` capability's are copies in the source too, since it is authored in another repository. An `incubated-in-repo` capability, an unregistered one and every `project/` tier are not. The verdict keys on origin and on the repository, never on the path, so the same `.pkit/` README is a place in the source and refused in an adopter.
 
 ## Worked example
 
-A full worked example demonstrating the upgrade flow across backbone + components is deferred for a focused rewrite. The prior example was built around the now-retired bundle pattern (per [COR-027](../decisions/core/COR-027-alternative-impls-as-capability-data.md)); rewriting it against the capability + adapter shape is queued.
+See [`manifest.md`, "Worked example"](manifest.md#worked-example).
 
-For concrete examples of the contract this document defines, see:
+## The pages beside this one
 
-- The kit's own `.pkit/manifest.yaml` for the backbone-manifest shape with adapter and capability entries.
-- `.pkit/migrations/backbone/<X.Y.0>/` for backbone migration script structure.
-- `.pkit/capabilities/project-management/migrations/0.12.0/` for a capability-tier migration that handles file-rename + adopter-state cleanup.
-- `.pkit/adapters/claude-code/migrations/` for adapter-tier migration patterns.
+Each part of the lifecycle that this page does not hold has a page of its own:
+
+- [`manifest.md`](manifest.md): the backbone manifest, each component's manifest, and package metadata. That includes the methodology's literals, how commands and anchor kinds run, filler files, the wiring, data points and discovery.
+- [`component-registry.md`](component-registry.md): the registry, the checks before an install and a register, and uninstall.
+- [`migrations.md`](migrations.md): what ships a migration, its folder, name and target version, its scope, and the script contract.
+- [`upgrade-flow.md`](upgrade-flow.md): the steps of a version transition, its guards, rolling back, and the upgrade of one capability.
+
+Each heading that left this page keeps its address here, as a heading that leads to its new home.
+
+## Why, and what an adopter does
+
+This section keeps the reasons behind the contract on the pages beside this one, and the tasks an adopter carries out by hand. Each item links the section it explains.
+
+### Behind the manifests and package metadata
+
+- **Capability origin (COR-031)** ([`manifest.md`](manifest.md#capability-origin-cor-031)): why origin lives in lifecycle-owned install-state, never inside the capability's own subtree. An incubated capability's subtree is adopter-owned. Writing lifecycle state into it would re-create the ownership blur the origin distinction exists to prevent (COR-031 D2).
+- **Where a capability's manifest lives** ([`manifest.md`](manifest.md#where-a-capabilitys-manifest-lives)): why there, under the capability's `project/`. Every ownership predicate treats a capability's `project/` as the project's (["The ownership predicates"](#the-ownership-predicates-ownershippy)). So no copy of the capability's tree deletes or overwrites the manifest, and the bundle ships none.
+- **Field layout and casing** ([`manifest.md`](manifest.md#field-layout-and-casing)): why role names and addresses are words. The schema first shipped a looser pattern, in which each part was any run of characters but whitespace and `:`. That pattern admitted roles no selection key could name and no filler path could hold. The schema refuses them now.
+- **Field layout and casing** ([`manifest.md`](manifest.md#field-layout-and-casing)): why both spellings stay.
+  - **The kebab-case keys:** a record that names the keys people write decides their spelling (COR-053 point 3 and its Rationale). COR-050 point 1 says the same of the friction block.
+  - **`schema_version` inside the blocks (COR-052 point 5, COR-053 point 10):** it keeps its snake_case there because it is the field that carries a point's version. It carries it everywhere that version is written: a filler envelope, a role block's point block.
+  - **No rename:** no record decides a casing rule for the whole file. Renaming either family would be a surface change owing a migration (COR-010) for no reader's benefit.
+- **Validation: the package schema** ([`manifest.md`](manifest.md#validation-the-package-schema)): why `pkit new capability` refuses a name a backbone command holds, and `capabilities install` and `register` do not. Refusing at install would make an upgrade break the installation of something that worked. The check across packages names the problem instead.
+- **Validation: the package schema** ([`manifest.md`](manifest.md#validation-the-package-schema)): why none of the three type checks fails. The project cannot mend a component's package metadata.
+- **Strict on unknown keys** ([`manifest.md`](manifest.md#strict-on-unknown-keys)): why the schema turned strict now, and not from the start.
+  - **Why now, and not from the start.** The schema shipped permissive: an unknown key only warned. The blocks the newer records ask for were still being added then, one change at a time. A strict schema would have refused a package ahead of the schema knowing its block.
+  - **The blocks.** Every block those records name is now declared: `commands` with the query-contract declaration, `validators`, `connections`, `docs.locations`, and `friction` places and surface. `connections` covers roles, extension points, and extensions with the generated `depends-on` and the mandatory mark.
+  - **A misspelling passes silently.** From here an unknown key is a misspelling or a key nothing reads. Every reader of the file passes over a key it does not look for, silently, and a warning beside passing checks does not prevent that. `mandatroy:` on a contribution leaves the connection optional, and `foootprint:` keeps its paths out of `.git/info/exclude`.
+  - **Failing stops it.** Failing makes the mistake stop where it is written. It also puts the package file with the rest of the backbone's file schemas, which refuse unknown keys. Those cover the configuration file, rule sets and the filler envelope.
+- **Strict on unknown keys** ([`manifest.md`](manifest.md#strict-on-unknown-keys)), what an adopter sees, and does: a note for people belongs in a YAML comment. A new key arrives through the record that decides it and a schema release, never by writing it first.
+- **Strict on unknown keys** ([`manifest.md`](manifest.md#strict-on-unknown-keys)), no version bump and no migration: why.
+  - Bumping the package file's `schema_version` would make every package file change for no reader's benefit.
+  - No script can correct the adopter-owned files that can now fail. None can know what a misspelt key meant, or write a capability's description.
+- **The run** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why a report of a run shows only a trimmed tail of standard error. Only the last lines and bytes are shown, with every terminal escape sequence and control character removed. So a command's words can neither flood nor rewrite the operator's terminal.
+- **A run inside a run** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why the deadline is written on the wall clock. A monotonic clock gives two processes no reference point they can share portably.
+- **A tool the backbone runs itself** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why `gh` runs in the caller's process group. project-management runs `pkit pull-request` in a session of its own, and ends that group at its bound. A `gh` request that went on after project-management had read the pull request to decide could act on it unseen.
+- **The policies** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why the report builder is bounded like every other run. The workstream only enriches a report. So waiting on it past the bound would let a hung tracker call hold the whole report back.
+- **The seams back** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why a script never computes again what the backbone computes. Computing it again would be a second home for one computation.
+- **How a registered anchor kind is resolved** ([`manifest.md`](manifest.md#how-a-registered-anchor-kind-is-resolved)):
+  - **Why this shape.** The engine must tell whether what an anchor denotes changed between two points: the revalidation point and now, or the change check's base and head.
+  - A resolver reads the files on disk alone: it takes one subject and cannot read the project at an older commit. So it answers where the anchored thing lives.
+  - The engine does what it does for a path anchor: it reads those files' history from git.
+  - Nothing is stored: the friction block keeps no fingerprint and gains no field. The resolver needs no history, no points and no knowledge of the engine.
+- **Rule-set sources** ([`manifest.md`, "How a registered anchor kind is resolved"](manifest.md#how-a-registered-anchor-kind-is-resolved)): why a source whose resolver gives no answer fails rule-set validation. A pass nobody earned costs more than the second run a failure costs.
+- **Where a project filler file lives: the address-to-path mapping** ([`manifest.md`](manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping)): why the mapping is path-safe and injective, and why it uses directories.
+  - **Path-safe and injective.** The mapping must be path-safe because an address contains `::` and `:` (COR-053 Implications). It must be injective on valid addresses, so that no two points share a file and no path binds the wrong schema.
+  - **Why it is injective.** Let two valid addresses map to the same path. Both paths carry the same prefix and the suffix `.yaml`, and removing them leaves equal strings, `p/r/q` and `p'/r'/q'`. No word contains `/`, so each string has exactly two slashes. Splitting at them gives `p = p'`, `r = r'` and `q = q'`: the same address.
+    - The argument uses a single fact, **`/` is not a word character**. As strings, then, the mapping stays injective under any word grammar that keeps `/` out. A word containing `/` could not name a directory anyway. On disk it needs one more fact, the lower case below.
+  - **Why it is path-safe.** Each address part becomes exactly one path segment, and the word alphabet keeps every segment ordinary:
+    - no `:` reaches the path: the address's separators become `/`
+    - no `.`, so no segment is `.` or `..`, and the suffix's is the only dot
+    - a letter first, so no segment is empty or starts with `-`
+    - no upper case, so a case-insensitive filesystem cannot fold two distinct paths into one. The mapping stays injective on disk, not only as strings.
+    - no whitespace, quote or glob character, so a path needs no quoting in a shell or a glob
+  - **Why directories rather than one file name.** Folding the address into a single name needs a separator no word contains. `<publisher>__<role>__<point>.yaml` works today, since `_` is not a word character. But its correctness then rests on a character the grammar merely happens to exclude. A grammar that later admitted `_` would break the inverse without a trace.
+    - Folding on `-`, as `<publisher>--<role>-<point>.yaml`, is not injective at all, because `-` is a word character: `a--b-c-d` is both `a::b:c-d` and `a::b-c:d`.
+    - The directory form rests on the one separator no path segment can contain. It lists fillers by publisher and by role in any file browser, and inverts by splitting, not parsing.
+- **How a data point resolves** ([`manifest.md`](manifest.md#how-a-data-point-resolves)): what a command filler never reads, and who chooses a point's inert policy.
+  - **What a command filler reads.** A filler never reads a base named for one run, because such a base belongs to a comparison. A value that followed it would be answered per run, a parameter by another route. Nor does a filler compare the branch at hand with settled state. That comparison answers about a change: a process point's question or the consumer's work.
+  - **Which policy a point declares.** The point's definer chooses the inert policy, because the backbone cannot tell how a value is read.
+
+### Behind the migration framework
+
+- **Naming** ([`migrations.md`](migrations.md#naming)): why each number is used once in a folder. Two scripts of one number would run in the order their slugs give, which nobody chose.
+- **Which version a migration targets** ([`migrations.md`](migrations.md#which-version-a-migration-targets)): why the stamp and the check read as they do.
+  - **The stamp:** it joins no folder further ahead, since a change may target a later release on purpose.
+  - **The check:** it reads the base's tip, not the branch point, since a release that lands after the branch was cut releases the folder too.
+- **Three scopes (per tier)** ([`migrations.md`](migrations.md#three-scopes-per-tier)): why manifest-schema migrations run first in any upgrade flow that touches them. The runtime needs to read the manifest correctly before tracking subsequent migrations.
+- **Script contract, "What it never runs"** ([`migrations.md`](migrations.md#script-contract)): why a migration script runs none of those commands. COR-004 makes a transition one operation, with propagation, migrations, seeding and merge as its parts. Such a command would repeat a part, or add another operation, inside the transition (COR-059 point 3).
+
+### Behind the upgrade flow
+
+- **The steps of a transition** ([`upgrade-flow.md`](upgrade-flow.md#the-steps-of-a-transition)): why step 1 refuses a component its bundle ships older. Copying it would move its recorded version down, under migrations that run forward only.
+- **The dependency gates** ([`upgrade-flow.md`](upgrade-flow.md#the-dependency-gates)): why no flag overrides a moving capability's refusal. The project controls that dependency.
+- **Rolling back an upgrade** ([`upgrade-flow.md`](upgrade-flow.md#rolling-back-an-upgrade)): the steps an adopter takes with git.
+  - **Undoing an upgrade:** commit the upgrade on its own, and roll it back by reverting that commit, `git revert <commit>`. The revert brings back every file the upgrade's commit changed, inside `.pkit/` and outside. It removes each file the commit added, such as the answer files of the 2.0.0 move in `.pkit/project/friction/answers/`. The manifest, with its two recorded versions, is among them, and so is the pin file where the upgrade wrote it.
+  - **An upgrade not yet committed,** such as one a failing migration stopped, is undone over every file `git status` lists, inside `.pkit/` and outside. Restore each file it lists as changed or deleted, with `git restore --staged --worktree <path>`, and delete each new file the upgrade added.
+- **The replay: a missing completion** ([`upgrade-flow.md`](upgrade-flow.md#the-replay-a-missing-completion)):
+  - **Why it is safe:** every backbone migration acts only on a positive sign that its change is needed. It never deletes by a path's name or position alone ([`migrations.md`, "Script contract"](migrations.md#script-contract)).
+- **Sync's guard: no path down, and no migration passed over** ([`upgrade-flow.md`](upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over)):
+  - **Why sync stops in both directions:** a sync at another version would copy another release's content. An older release's content would land over newer content. A newer release's would land without the migrations between the two.
+  - **Why `upgrade` checks the older direction only:** upgrade moves the project to the running version, so a newer pkit is what it is for.
+  - **Why `upgrade` refuses under the router's fallback:** an installed pkit older than the pin or the content would take the project back. A newer one would move the project and its pin to its own version, not to a release the upgrade resolved.
+- **Per-component upgrade** ([`upgrade-flow.md`](upgrade-flow.md#per-component-upgrade)): why its checks refuse a capability bundled older. Copying it would move its recorded version down.
+- **Upgrading an incubated capability (COR-031 D1/D4)** ([`upgrade-flow.md`](upgrade-flow.md#upgrading-an-incubated-capability-cor-031-d1d4)):
+  - **Why the kit-source path is closed to it:** routing an incubated capability through it would mislabel the capability "no longer ships from source". It would also steer the adopter toward the destructive uninstall.
+  - **Why the source repository's upgrade runs no migration:** migrations carry an adopter's copy forward, and there is no copy.
+  - **Why upgrading a dependent has no override:** the operator controls the dependent version, so there is no deadlock.
+  - **Why upgrading a dependency is no hard block:** a hard block would deadlock. The operator cannot advance the dependency without cascade-upgrading the dependent, which is out of scope per COR-030.
+- **Mandatory process connections (COR-053 point 6)** ([`upgrade-flow.md`](upgrade-flow.md#mandatory-process-connections-cor-053-point-6)):
+  - **Why the side carrying the mark has no override:** the operator chooses which version of the carrier to install, so nothing deadlocks.
+  - **Why the side the mark targets is never a hard block:** a hard block could deadlock.

@@ -17,7 +17,9 @@ import pytest
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
 RESOLVE_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
+TOOL_ACCESS_DECLARATION = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "tool-access.json"
 OWNERSHIP_MODULE = SOURCE_REPO / ".pkit" / "lifecycle" / "ownership.py"
+TOOL_ACCESS_READER = SOURCE_REPO / ".pkit" / "agents" / "tool_access.py"
 
 # The one write-carrying overlay category shipped today (ADR-051). Read from the
 # real module rather than restated, so a rename can't leave these tests
@@ -30,8 +32,9 @@ def mock_kit(tmp_path: Path) -> Path:
     """Stage a minimal kit layout under tmp_path with the adapter scripts copied in.
 
     Includes the propagated `.pkit/lifecycle/ownership.py` the resolver imports
-    for its write-authority check (ADR-051) — a synced adopter tree always has
-    it, so staging it is what makes this fixture a faithful stand-in.
+    for its write-authority check (ADR-051), and the agents area's reader of tool
+    access with the adapter's declaration of it (ADR-086) — a synced adopter tree always
+    has them, so staging them is what makes this fixture a faithful stand-in.
 
     Returns the project root (the directory containing `.pkit/`).
     """
@@ -39,6 +42,7 @@ def mock_kit(tmp_path: Path) -> Path:
     adapter_dir.mkdir(parents=True)
     shutil.copy2(DEPLOY_SCRIPT, adapter_dir / "deploy-agents.sh")
     shutil.copy2(RESOLVE_SCRIPT, adapter_dir / "_resolve_agent.py")
+    shutil.copy2(TOOL_ACCESS_DECLARATION, adapter_dir / "tool-access.json")
     (adapter_dir / "deploy-agents.sh").chmod(0o755)
     (adapter_dir / "_resolve_agent.py").chmod(0o755)
 
@@ -48,6 +52,7 @@ def mock_kit(tmp_path: Path) -> Path:
 
     (tmp_path / ".pkit" / "agents" / "core").mkdir(parents=True)
     (tmp_path / ".pkit" / "agents" / "project").mkdir(parents=True)
+    shutil.copy2(TOOL_ACCESS_READER, tmp_path / ".pkit" / "agents" / "tool_access.py")
 
     return tmp_path
 
@@ -281,11 +286,66 @@ def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
     assert "skipped" in result.stdout and "broken" in result.stdout
     assert "<undefined-category>" in result.stdout  # the missing category named
     assert "overlay.yaml" in result.stdout  # remediation pointer
-    assert "pkit agents adopt" in result.stdout  # lead command: adopt
-    assert "pkit agents reconcile --write" in result.stdout  # custom-layout fallback named
+    assert "pkit agents reconcile --write" in result.stdout  # remediation named
     assert "1 agent(s) skipped" in result.stdout  # end-of-run summary
     assert (mock_kit / ".claude" / "agents" / "fine.md").is_file()  # rest deployed
     assert not (mock_kit / ".claude" / "agents" / "broken.md").exists()  # the gap one skipped
+
+
+# --- the remedy a skip names (#2469) -----------------------------------------
+#
+# `pkit agents adopt` serves an agent only when every required category it lacks
+# has a conventional folder for `adopt` to create; for any other it refuses. So
+# the skip names `adopt` only then, and otherwise the remedies that work.
+
+
+def _owning_agent(root: Path, *categories: str) -> None:
+    owns = "".join(f"  - <{c}>\n" for c in categories)
+    _write_agent(root, "project", "gapped", f"---\nname: gapped\nowns:\n{owns}---\n\n# Gapped\n")
+
+
+def test_deploy_names_adopt_for_a_category_with_a_conventional_folder(mock_kit: Path) -> None:
+    _owning_agent(mock_kit, "architecture-docs")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "gapped: category <architecture-docs> referenced but not defined" in result.stdout
+    assert "Deploy it:  pkit agents adopt gapped" in result.stdout
+    assert "Conventional doc layout:      pkit agents adopt <agent>" in result.stdout
+
+
+def test_deploy_names_no_adopt_for_a_category_with_no_conventional_folder(
+    mock_kit: Path,
+) -> None:
+    """The issue's case: a project agent owning `<release-notes>`."""
+    _owning_agent(mock_kit, "release-notes")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "gapped: category <release-notes> referenced but not defined" in result.stdout
+    assert "<release-notes> has no conventional folder to create." in result.stdout
+    assert "set its paths in .pkit/agents/project/overlay.yaml" in result.stdout
+    assert "pkit agents reconcile --write" in result.stdout
+    # Neither under the skip nor in the closing note. (The run prints the overlay's
+    # path, which holds this test's name, so the bare word cannot be asserted.)
+    assert "pkit agents adopt" not in result.stdout
+
+
+def test_deploy_names_no_adopt_when_any_category_lacks_a_conventional_folder(
+    mock_kit: Path,
+) -> None:
+    """`adopt` refuses an agent while one category it lacks has no folder, so the
+    skip names every undefined category and the remedy of the one without."""
+    _owning_agent(mock_kit, "architecture-docs", "release-notes")
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert (
+        "gapped: categories <architecture-docs>, <release-notes> referenced but not defined"
+        in result.stdout
+    )
+    assert "<release-notes> has no conventional folder to create." in result.stdout
+    assert "pkit agents adopt" not in result.stdout
 
 
 # --- write-carrying categories (ADR-051) -------------------------------------
@@ -890,3 +950,153 @@ def test_deploy_refuses_to_write_a_value_the_harness_rejects(mock_kit: Path) -> 
     assert "warning" in result.stdout
     assert "'sonet'" in result.stdout and "overrides.typo.model" in result.stdout
     assert "'extreme'" in result.stdout
+
+
+# --- the agent's tool access (COR-013 point 7, ADR-085, ADR-086) ---------------------------
+
+
+def _front_matter(path: Path) -> str:
+    return path.read_text(encoding="utf-8").split("---\n")[1]
+
+
+def _tooled(root: Path, access: str, name: str = "tooled") -> Path:
+    """Write agent *name* with *access* as its tool access; its deployed copy's path."""
+    _write_agent(
+        root, "core", name, f"---\nname: {name}\ndescription: Test.\n{access}---\n\n# Body\n"
+    )
+    return root / ".claude" / "agents" / f"{name}.md"
+
+
+def test_deploy_writes_a_withheld_list_as_disallowed_tools(mock_kit: Path) -> None:
+    deployed = _tooled(
+        mock_kit, "withheld:\n  - Workflow  # starts work outside the session\n  - SendMessage\n"
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    front_matter = _front_matter(deployed)
+    assert "disallowedTools: [Workflow, SendMessage]\n" in front_matter
+    assert "withheld" not in front_matter
+    assert "tools:" not in front_matter.replace("disallowedTools:", "")
+
+
+@pytest.mark.parametrize(
+    ("access", "written"),
+    [
+        ("tools: [Read, Grep]\n", "tools: [Read, Grep]\n"),
+        ("tools: Read, Grep\n", "tools: [Read, Grep]\n"),
+        ("tools:\n  - Read\n  - Grep  # why\n", "tools: [Read, Grep]\n"),
+        ("tools: []\n", "tools: []\n"),
+        ("tools:\n", "tools: []\n"),
+        ("tools: Read, Agent(worker, reviewer)\n", "tools: [Read, 'Agent(worker, reviewer)']\n"),
+    ],
+)
+def test_deploy_writes_a_grant_from_the_readers_answer(
+    mock_kit: Path, access: str, written: str
+) -> None:
+    """Never the author's text: each entry whole, and an empty grant as an empty list."""
+    deployed = _tooled(mock_kit, access)
+    assert _run_deploy(mock_kit).returncode == 0
+    assert written in _front_matter(deployed)
+
+
+def test_deploy_writes_no_tool_key_for_a_definition_naming_neither(mock_kit: Path) -> None:
+    deployed = _tooled(mock_kit, "")
+    assert _run_deploy(mock_kit).returncode == 0
+    front_matter = _front_matter(deployed)
+    assert "tools" not in front_matter
+    assert "disallowedTools" not in front_matter
+
+
+@pytest.mark.parametrize(
+    ("access", "cause"),
+    [
+        ("tools: [Read]\nwithheld: [Workflow]\n", "names both `tools` and `withheld`"),
+        ("withheld: [Wrokflow]\n", "`withheld` names `Wrokflow`, which this adapter does not know"),
+        ("withheld: ['Bash(rm:*)']\n", "measured to withhold only a whole built-in tool"),
+        ("withheld: [Workflow]\ndisallowedTools: [Monitor]\n", "own key `disallowedTools`"),
+        ("tools: [read-file]\n", "a name in a form Claude Code does not take"),
+        ("tools: [Read,\n  Grep]\n", "goes on over more than one line"),
+    ],
+)
+def test_deploy_refuses_a_tool_access_and_removes_the_earlier_copy(
+    mock_kit: Path, access: str, cause: str
+) -> None:
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    assert deployed.is_file()
+    _tooled(mock_kit, access)
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped    tooled — tooled: its tool access is refused" in result.stdout
+    assert cause in result.stdout
+    assert "removed    .claude/agents/tooled.md (the copy deployed before" in result.stdout
+    assert "Mend its tool access in .pkit/agents/core/tooled/tooled.md" in result.stdout
+    assert "1 agent(s) refused for their tool access" in result.stdout
+    assert not deployed.exists()
+
+
+def test_deploy_refuses_a_tool_access_before_an_undefined_category(mock_kit: Path) -> None:
+    """The refusal removes the earlier copy whatever else the definition gets wrong."""
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    _tooled(mock_kit, "tools: [Read]\nwithheld: []\nowns:\n  - <no-such-category>\n")
+    result = _run_deploy(mock_kit)
+    assert "its tool access is refused" in result.stdout
+    assert "no-such-category" not in result.stdout
+    assert not deployed.exists()
+
+
+def test_deploy_leaves_an_adopters_own_copy_of_a_refused_agent(mock_kit: Path) -> None:
+    deployed = _tooled(mock_kit, "tools: [Read]\nwithheld: [Workflow]\n")
+    deployed.parent.mkdir(parents=True, exist_ok=True)
+    deployed.write_text("---\nname: tooled\n---\nThe adopter's own.\n", encoding="utf-8")
+    result = _run_deploy(mock_kit)
+    assert "its tool access is refused" in result.stdout
+    assert "removed" not in result.stdout
+    assert deployed.read_text(encoding="utf-8") == "---\nname: tooled\n---\nThe adopter's own.\n"
+
+
+def test_deploy_without_the_reader_skips_and_keeps_the_earlier_copy(mock_kit: Path) -> None:
+    """A tree with no reader cannot tell a refused access from a sound one, so the agent is
+    skipped as any other skip is, and its earlier copy stays."""
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    (mock_kit / ".pkit" / "agents" / "tool_access.py").unlink()
+    (mock_kit / ".pkit" / "agents" / "core" / "tooled" / "tooled.md").write_text(
+        "---\nname: tooled\ndescription: Changed.\ntools: [Read]\n---\n\n# Body\n",
+        encoding="utf-8",
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "cannot read the agent's tool access" in result.stdout
+    assert "pkit sync" in result.stdout
+    assert "removed" not in result.stdout
+    assert "description: Test." in deployed.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("declaration", "cause"),
+    [
+        (None, "tool-access.json, is not there"),
+        ('{"schema_version": 2}', "cannot be read: its schema version is 2"),
+    ],
+)
+def test_deploy_without_a_declaration_it_reads_skips_and_keeps_the_earlier_copy(
+    mock_kit: Path, declaration: str | None, cause: str
+) -> None:
+    """With no declaration of tool access it reads, the deploy cannot tell what Claude Code
+    can enforce, so the agent is skipped as any other skip is, and its earlier copy stays."""
+    deployed = _tooled(mock_kit, "withheld: [Workflow]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    path = mock_kit / ".pkit" / "adapters" / "claude-code" / "tool-access.json"
+    if declaration is None:
+        path.unlink()
+    else:
+        path.write_text(declaration, encoding="utf-8")
+    _tooled(mock_kit, "withheld: [Wrokflow]\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "cannot check the agent's tool access" in result.stdout
+    assert cause in result.stdout
+    assert "removed" not in result.stdout
+    assert "disallowedTools: [Workflow]" in deployed.read_text(encoding="utf-8")

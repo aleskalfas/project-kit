@@ -1,0 +1,45 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: equal
+    layout: slide
+    title: Items of equal standing, each as wide as the others
+    visual:
+      use: starter/list
+      head: Why a project writes its rules down
+      items:
+        - id: advice
+          head: Not advice
+          text: A rule an agent reads is advice. A rule the tool applies is not.
+        - id: reviewed
+          head: Reviewed
+          text: Written down, every rule can be read and reviewed, like any change.
+        - id: alike
+          head: Alike
+          text: The tool's settings bind every agent alike.
+
+  - id: own
+    layout: slide
+    title: Or each as large as it asks, as tags are
+    visual:
+      use: starter/list
+      head: What a capability may play
+      widths: own
+      item: {use: starter/tag, concept: test-notation/service}
+      items:
+        - {id: documentation, label: documentation}
+        - {id: analysis, label: analysis}
+        - {id: work-tracking, label: work tracking}
+
+  - id: no-head
+    layout: slide
+    title: With no head, the items start at the top
+    lead: Each item is drawn by a tinted card with a bar on top, which the list names for all of them.
+    visual:
+      use: starter/list
+      item: {use: starter/card, fill: tint, bar: top, concept: test-notation/store}
+      items:
+        - {id: swap, text: Swap a capability for one in the same role. The rest stays as it is.}
+        - {id: install, text: Install only what you need. An empty slot does no harm.}
+        - {id: wiring, text: "The status draws the wiring, and the check checks it."}

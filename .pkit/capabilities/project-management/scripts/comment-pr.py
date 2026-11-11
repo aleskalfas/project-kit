@@ -11,7 +11,9 @@ Post a freeform comment on a GitHub pull request through the capability's
 validated path (per [project-management:DEC-047-freeform-comment-verb]). The
 comment mutates no lifecycle state, so it carries no validation-severity gate;
 it runs the membership gate (DEC-021) and the foreign-repo session interlock
-(COR-039) like every mutating verb, and the body must be non-empty.
+(COR-039) like every mutating verb, and the body must be non-empty. The comment
+ends with a line that names the seat and instance of the clone that posts it, or
+says the clone holds no seat (`_lib/comment.py`, "Who posted").
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/comment-pr.py 42 --body "…"
@@ -21,7 +23,7 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  commented (or dry-run reported)
-  1  membership refusal / foreign-repo refusal
+  1  membership refusal / foreign-repo refusal / a seat that cannot be confirmed
   2  usage error (missing/empty body, capability not found)
   3  gh failure
 """

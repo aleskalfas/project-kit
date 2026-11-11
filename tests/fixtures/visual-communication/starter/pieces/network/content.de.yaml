@@ -1,0 +1,63 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: groups
+    layout: slide
+    title: Zwei Karten, verbunden mit den Elementen einer Gruppe in der anderen Spalte
+    visual:
+      use: starter/network
+      item: {use: starter/card, fill: tint, concept: test-notation/service}
+      left:
+        - id: living-docs
+          head: living-docs
+          tag: Dokumentation
+          text: Dokumentation für jede Leserschaft.
+        - id: software-analysis
+          head: software-analysis
+          tag: Analyse
+          text: Was die Software leisten muss.
+      right:
+        - id: groups
+          use: starter/groups
+          groups:
+            - id: project-management
+              head: project-management
+              tag: Arbeitsverfolgung
+              items:
+                - {id: doc-check, text: Was eine Änderung aktualisieren muss.}
+                - {id: fixers, text: Welcher Agent jedes Dokument korrigiert.}
+                - {id: use-cases, text: Die Anwendungsfälle für die Planung.}
+      ties:
+        - id: docs-check
+          from: {item: "left[living-docs]"}
+          to: {item: "right[groups].groups[project-management].items[doc-check]"}
+        - id: docs-fixers
+          from: {item: "left[living-docs]"}
+          to: {item: "right[groups].groups[project-management].items[fixers]"}
+        - id: analysis-fixers
+          from: {item: "left[software-analysis]"}
+          to: {item: "right[groups].groups[project-management].items[fixers]"}
+        - id: analysis-use-cases
+          from: {item: "left[software-analysis]"}
+          to: {item: "right[groups].groups[project-management].items[use-cases]"}
+
+  - id: three
+    layout: slide
+    title: Drei Spalten, ihre Verbindungen mit Ecken
+    visual:
+      use: starter/network
+      columns: three
+      tie: {use: starter/connector, route: corners}
+      left:
+        - {id: ideas, head: Ideen, text: In einem Gespräch.}
+      middle:
+        - {id: decisions, head: Entscheidungen, text: Getroffene Entscheidungen.}
+        - {id: rules, head: Arbeitsregeln, text: "Genau, was zu tun ist."}
+      right:
+        - {id: work, head: Ihr Quellcode, text: Die Arbeit selbst.}
+      ties:
+        - {id: ideas-decisions, from: {item: "left[ideas]"}, to: {item: "middle[decisions]"}}
+        - {id: ideas-rules, from: {item: "left[ideas]"}, to: {item: "middle[rules]"}}
+        - {id: decisions-work, from: {item: "middle[decisions]"}, to: {item: "right[work]"}}
+        - {id: rules-work, from: {item: "middle[rules]"}, to: {item: "right[work]"}}

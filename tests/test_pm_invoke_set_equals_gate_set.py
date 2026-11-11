@@ -59,9 +59,11 @@ DW_PATH = SCRIPTS_DIR / "done-work.py"
 RPR_PATH = SCRIPTS_DIR / "review-pr.py"
 RC_PATH = SCRIPTS_DIR / "_lib" / "review_contributions.py"
 
-# A commit timestamp every verdict comment post-dates (the gate's freshness
-# anchor); a fresh timestamp strictly after it for the verdicts.
+# When the PR's head arrived on the host, which every verdict comment
+# post-dates (the gate's anchor for a verdict naming no head); a fresh
+# timestamp strictly after it for the verdicts.
 _COMMIT_TS = "2026-06-01T00:00:00Z"
+_HEAD = "f" * 40
 _FRESH_TS = "2026-06-02T00:00:00Z"
 
 
@@ -321,6 +323,7 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
     )
     monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/99-x",))
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
+    monkeypatch.setattr(rpr, "_head_standing", lambda *a: rpr.head_programs.Standing("head"))
 
     invoked: list[str] = []
 
@@ -331,10 +334,12 @@ def _invoke_set(rpr, monkeypatch, tmp_path, *, collection, labels, opt_outs=()):
         timeout=None,
         effort=None,
         *,
+        folder=None,
         base=None,
         head="HEAD",
         sha="",
         say=None,
+        confined=False,
     ):
         invoked.append(name)
         return "APPROVED", "body"
@@ -391,7 +396,12 @@ def _run_gate(
     def fake_gh_run(args, config, **kwargs):
         if "closingIssuesReferences" in " ".join(args):
             return _closing_refs_response(args, labels, refs_rc)
-        # gh pr view --json author,comments,commits
+        if args[:2] == ["gh", "api"] and "/activity" in " ".join(args):
+            moved = [{"after": _HEAD, "timestamp": _COMMIT_TS}]
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=json.dumps(moved), stderr=""
+            )
+        # gh pr view --json author,comments,commits,headRefOid,...
         return subprocess.CompletedProcess(
             args=args,
             returncode=0,
@@ -400,6 +410,9 @@ def _run_gate(
                     "author": {"login": "author"},
                     "comments": comments,
                     "commits": [{"committedDate": _COMMIT_TS}],
+                    "headRefOid": _HEAD,
+                    "headRefName": "feat/99-x",
+                    "headRepository": {"nameWithOwner": "owner/repo"},
                 }
             ),
             stderr="",
@@ -590,6 +603,7 @@ def test_invoke_set_equals_gate_set_on_fail_closed(dw, rpr, rc, monkeypatch, tmp
     )
     monkeypatch.setattr(rpr.issue_branch, "_local_branches", lambda: ("feat/99-x",))
     monkeypatch.setattr(rpr, "_find_pr_for_branch", lambda branch, config: {"number": 99})
+    monkeypatch.setattr(rpr, "_head_standing", lambda *a: rpr.head_programs.Standing("head"))
     invoked: list[str] = []
 
     def fake_invoke(name, pr, config, timeout=None, effort=None, **_brief):

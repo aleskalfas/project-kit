@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Claude Code skills
+url: https://code.claude.com/docs/en/skills
+version: "2026-11-02"

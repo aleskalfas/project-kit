@@ -225,6 +225,7 @@ def test_refuses_a_merged_pr_that_does_not_relate_to_the_issue(
     assert "[refused] PR #1042 has merged, but nothing in it relates it to #42" in err
     assert "`edit-pr 1042 --closes 42`" in err
     assert 'close-issue 42 --reason "<R>"' in err
+    assert 'close-issue 42 --mode=completed --result "<where the result lives>"' in err
 
 
 def test_a_dry_run_refuses_an_unrelated_pr_too(ci, monkeypatch, capsys) -> None:
@@ -388,6 +389,8 @@ def test_without_pr_an_open_issue_is_refused_and_nothing_written(
     err = capsys.readouterr().err
     assert "[refused] #42 is open, and pr-merge mode without --pr moves no open issue" in err
     assert "re-run with --pr <M>" in err
+    # A Task whose work was not a pull request has a close of its own (#2282).
+    assert 'close-issue 42 --mode=completed --result "<where the result lives>"' in err
 
 
 def test_without_pr_a_closed_issue_has_its_labels_reconciled(ci, monkeypatch, capsys) -> None:

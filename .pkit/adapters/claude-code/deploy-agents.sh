@@ -45,6 +45,13 @@
 # - A listed agent whose canonical source doesn't resolve (e.g. a folder
 #   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
 #   loudly rather than aborting the run (#537).
+# - The agent's tool access is written from the agents area's reader
+#   (.pkit/agents/tool_access.py): a grant as `tools`, a withheld list as
+#   Claude Code's `disallowedTools` (ADR-085, ADR-086). The resolver refuses a
+#   definition the reader refuses, or whose access Claude Code cannot enforce
+#   or translate, and exits 3. That agent is skipped, and unlike every other
+#   skip, the copy deployed before is removed: it may give tools the
+#   definition no longer gives (COR-013 point 7).
 # - Tagged status lines: created, updated, exists, skipped, removed.
 #
 # Stale-removal pass (now that the marker convention exists): after the
@@ -75,9 +82,16 @@ OVERLAY="$KIT_AGENTS/project/overlay.yaml"
 # time but trivial to grep for here.
 MARKER="# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync"
 
+# The resolver's exit status for a definition refused for its tool access
+# (`TOOL_ACCESS_REFUSED` in `_resolve_agent.py`).
+TOOL_ACCESS_REFUSED=3
+
 mkdir -p "$CLAUDE_AGENTS"
 
 status() { printf "  %-10s %s\n" "$1" "$2"; }
+
+# A path under the project root, as the root-relative path a person types.
+relative() { printf "%s" "${1#"$ROOT"/}"; }
 
 # The agent's canonical file in one agents folder, flat form preferred over
 # folder form per COR-015's atomic-is-flat bias; returns 1 when there is none.
@@ -175,10 +189,27 @@ deploy_one() {
     fi
     local dest="$CLAUDE_AGENTS/$name.md"
 
-    local tmpfile tmperr
+    local tmpfile tmperr resolve_status
     tmpfile="$(mktemp)"
     tmperr="$(mktemp)"
-    if ! resolve_agent "$source_file" "$name" "$OVERLAY" >"$tmpfile" 2>"$tmperr"; then
+    resolve_status=0
+    resolve_agent "$source_file" "$name" "$OVERLAY" >"$tmpfile" 2>"$tmperr" || resolve_status=$?
+    if [ "$resolve_status" -eq "$TOOL_ACCESS_REFUSED" ]; then
+        # Refused for its tool access (COR-013 point 7, ADR-086 point 3): not
+        # deployed, and unlike every other skip, the copy deployed before is
+        # removed, since it may give tools the definition no longer gives. Only
+        # a copy carrying the marker is ours to remove; adopter content stays.
+        status "skipped" "$name — $(head -n 1 "$tmperr")."
+        if [ -e "$dest" ] && head -n 5 "$dest" | grep -qF "$MARKER"; then
+            rm -f "$dest"
+            status "removed" ".claude/agents/$name.md (the copy deployed before its tool access was refused)"
+        fi
+        printf "  %s\n" "         Mend its tool access in $(relative "$source_file"), then rerun the deploy."
+        rm -f "$tmpfile" "$tmperr"
+        refused=$((refused + 1))
+        return 0
+    fi
+    if [ "$resolve_status" -ne 0 ]; then
         # An unresolved overlay category is an adopter-config gap (a category
         # this agent references but the project's overlay.yaml doesn't define
         # — common when a kit agent like `architect` is newer than the
@@ -189,11 +220,13 @@ deploy_one() {
         #
         # The resolver's stderr is "reason on line 1, optional remediation
         # after". When it supplies remediation of its own, print that verbatim:
-        # the generic `adopt` advice below is wrong for a write-carrying
-        # category, which names paths only the adopter can enumerate so there is
-        # no conventional default for `adopt` to create (ADR-051). The resolver
-        # knows which categories those are because the shared ownership module
-        # declares them; this script stays dumb about it.
+        # the generic `adopt` advice below is wrong for a category with no
+        # conventional folder, since `adopt` has no folder to create for it and
+        # refuses (#2469). That covers a project's own categories and the
+        # write-carrying ones, which name paths only the adopter can enumerate
+        # (ADR-051). The resolver knows which categories have a conventional
+        # folder because the shared ownership module declares them; this script
+        # stays dumb about it.
         local skip_reason remediation
         skip_reason="$(head -n 1 "$tmperr")"
         remediation="$(tail -n +2 "$tmperr")"
@@ -206,6 +239,7 @@ deploy_one() {
             printf "  %s\n"    "         Deploy it:  pkit agents adopt $name"
             printf "  %s\n"    "         (custom doc layout? run \`pkit agents reconcile --write\`, set the"
             printf "  %s\n"    "          paths in overlay.yaml, then \`pkit sync\`)"
+            adoptable=$((adoptable + 1))
         fi
         rm -f "$tmpfile" "$tmperr"
         unresolved=$((unresolved + 1))
@@ -257,9 +291,13 @@ deploy_one() {
 
 # Pass: deploy every kit agent. An agent with an unresolved overlay category
 # is skipped (counted in `unresolved`) rather than aborting the run — see
-# deploy_one. `exit_code` is reserved for genuinely catastrophic failures.
+# deploy_one. Of those, the ones whose remedy is `pkit agents adopt` are counted
+# in `adoptable`, so the closing note names `adopt` only when it serves one.
+# `exit_code` is reserved for genuinely catastrophic failures.
 exit_code=0
 unresolved=0
+adoptable=0
+refused=0
 while IFS= read -r name; do
     [ -n "$name" ] || continue
     deploy_one "$name" || exit_code=$?
@@ -287,7 +325,14 @@ echo "Done."
 if [ "$unresolved" -gt 0 ]; then
     echo "  note: $unresolved agent(s) skipped — overlay category not set; the rest deployed."
     echo "        → Per-agent remediation is printed above; it differs by category."
-    echo "        → Conventional doc layout:      pkit agents adopt <agent>"
-    echo "        → Anything else:                pkit agents reconcile --write → set paths → pkit sync"
+    if [ "$adoptable" -gt 0 ]; then
+        echo "        → Conventional doc layout:      pkit agents adopt <agent>"
+        echo "        → Anything else:                pkit agents reconcile --write → set paths → pkit sync"
+    else
+        echo "        → Set the paths in overlay.yaml, or stub them: pkit agents reconcile --write; then pkit sync"
+    fi
+fi
+if [ "$refused" -gt 0 ]; then
+    echo "  note: $refused agent(s) refused for their tool access, and not deployed; each cause is printed above."
 fi
 exit $exit_code

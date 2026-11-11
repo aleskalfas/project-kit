@@ -2,8 +2,9 @@
 
 A fixture capability, `deriver`, declares on its place `notes` the form of the links
 a command of its own would write there: a link to a glossary entry. Each test stands
-up a real adopter repository, commits a base on `main`, branches `feature` off it and
-makes real commits before running a check. They cover:
+up a real adopter repository, its install committed once per session
+(`committed_adopter`), commits a base on `main`, branches `feature` off it and makes
+real commits before running a check. They cover:
 
 - **the reading** — `document_parts.links_set_aside` reads a link of the form in
   running text as its words alone, and leaves code, comments, headings, images and
@@ -20,8 +21,7 @@ makes real commits before running a check. They cover:
 - **the whole-repository check** — the same, measured from a revalidation point, and
   the cost the record states: a declaration withdrawn sets nothing aside;
 - **what is not friction's** — `pkit rule-sets altered` still lists an artefact
-  changed only in such links, and `pkit friction resolve` advises the outcome the
-  change check bears out;
+  changed only in such links;
 - **software-analysis** — the forms its places declare are the link command's own, a
   term's link and a citation's (#2064), and what `pkit analysis link` writes, in the
   glossary, the views, the actors, the use cases, the journeys and the requirements,
@@ -41,7 +41,6 @@ import pytest
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit import friction_repository as fr
-from project_kit import friction_resolve as fres
 from project_kit import package_validate as pv
 from project_kit.document_parts import links_set_aside
 from project_kit.manifest import (
@@ -197,10 +196,9 @@ LINKS_MOVED = {
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
-    declare_deriver(adopter.root)
-    return adopter
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    declare_deriver(committed_adopter.root)
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str] | None = None) -> None:
@@ -445,10 +443,9 @@ def test_an_updated_answer_file_on_links_alone_is_a_bump_too(repo: AdopterRepo) 
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    adopter = make_adopter_repo()
-    declare_deriver(adopter.root)
-    return Timeline(adopter)
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    declare_deriver(committed_adopter.root)
+    return Timeline(committed_adopter)
 
 
 def _states(result: fr.RepositoryCheck) -> dict[str, str]:
@@ -498,20 +495,6 @@ def test_a_links_only_edit_still_alters_the_artefact_for_its_rules(repo: Adopter
     )
     altered = {a.after.location for a in pairing.altered if a.after is not None}
     assert {NOTE, RECORD} <= altered
-
-
-def test_the_resolver_advises_unchanged_where_only_links_differ(repo: AdopterRepo) -> None:
-    """`pkit friction resolve` names the outcome the change check bears out (COR-050 point
-    5): links moved alone change no content, so it advises `unchanged`."""
-    repo.write({CONFIG: friction_config(places=("docs",)), NOTE: note()})
-    (found,) = [f for f in fd.discover_artefacts(repo.root).files if f.path == NOTE]
-    parse = fres._parsed  # pyright: ignore[reportPrivateUsage] -- the reading under test
-    owe = fres._owed  # pyright: ignore[reportPrivateUsage] -- the advice under test
-    (base,), _ = parse(NOTE, found, note())
-    (resolved,), _ = parse(NOTE, found, LINKS_MOVED[NOTE])
-    assert owe(resolved, base).outcome == fres.UNCHANGED
-    (reworded,), _ = parse(NOTE, found, note(body=note_body(lead="An order awaits.")))
-    assert owe(reworded, base).outcome == fres.UPDATED
 
 
 # --- software-analysis --------------------------------------------------------------------
@@ -602,10 +585,10 @@ SIGNED = "signed as PRJ-001 point 1 asks"
 CITED = ".pkit/decisions/project/PRJ-001-exports.md"
 
 
-def _cited(repo: AdopterRepo) -> None:
-    """`_kinds`, a project record, and the first step of the use case to place an order
-    citing one of its points. Built once per session (`installed`)."""
-    _kinds(repo)
+def _cite(repo: AdopterRepo) -> None:
+    """A project record, and the first step of the use case to place an order citing one of
+    its points. Written on a copy of `_kinds`' template, which the term links' tests share,
+    so no template of its own stamps the analysis again."""
     text = (repo.root / PLACE).read_text(encoding="utf-8")
     step = "and the system opens an order."
     assert step in text
@@ -617,7 +600,8 @@ def cited(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AdopterRepo:
     """The analysis linked on `main`, its terms and its citation, and `feature` off it."""
-    repo = installed(make_adopter_repo, monkeypatch, then=_cited)
+    repo = installed(make_adopter_repo, monkeypatch, then=_kinds)
+    _cite(repo)
     link(repo)
     repo.commit("the analysis, linked")
     repo.checkout("feature", create=True)

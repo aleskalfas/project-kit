@@ -21,19 +21,20 @@ from project_kit import friction_check as fc
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
 from project_kit.friction_git import DiffEntry, FrictionCheckError
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 from tests.test_answer_files import CLI, GUIDE, T3, answer_path, answers, bare_guide, entry
 from tests.test_friction_revisit import DECISION, SOURCE_DOC, TEST_FILE, declare_linker, requirement
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], mode: str = "warning") -> None:
-    """Commit the base state on `main` and branch `feature` off it."""
+    """Commit the base state on `main`, on the install the template committed, and branch
+    `feature` off it."""
     adopter.write({CONFIG: friction_config(mode=mode), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
@@ -330,13 +331,13 @@ def test_a_revisit_entry_on_a_target_no_link_takes_fails(repo: AdopterRepo) -> N
 
 
 def test_a_revisit_entry_answers_where_its_reason_differs_from_the_one_it_replaces(
-    make_adopter_repo: MakeAdopterRepo,
+    committed_adopter: AdopterRepo,
 ) -> None:
     """A changed statement asks the requirement to revisit both targets. In an answer
     file, an entry answers its target where its reason differs from that of each entry
     it replaces (COR-062 point 5): the decision's does, and the test's, repeating `a0`'s
     words, writes nothing, so its target is not revisited."""
-    adopter = make_adopter_repo()
+    adopter = committed_adopter
     declare_linker(adopter.root)
     test, decision = Anchor("path", TEST_FILE), Anchor("path", DECISION)
     adopter.write(
@@ -556,6 +557,40 @@ def test_the_command_reads_the_own_head_from_the_environment(
     result = CliRunner().invoke(main, ["friction", "check", "--base", "main"])
     assert result.exit_code == 0, result.output
     assert f"Own head: {branch[:7]}" in result.output
+
+
+def test_a_merge_read_from_git_objects_is_judged_against_the_head_the_flag_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A reader that builds a merge reads it from git objects, from a working tree of its
+    own, and names the change's head beside `--head`: the flag keeps the variable's rule,
+    and the variable is not read."""
+    branch = _host_merge(repo)
+    merge = repo.head()
+    repo.checkout("main")
+    monkeypatch.chdir(repo.root)
+    monkeypatch.setenv(fc.HEAD_ENV, "no-such-commit")
+    command = ["friction", "check", "--base", "main", "--head", merge]
+    result = CliRunner().invoke(main, [*command, "--own-head", branch])
+    assert result.exit_code == 0, result.output
+    assert f"Own head: {branch[:7]}" in result.output and "--own-head: what" in result.output
+    alone = CliRunner().invoke(main, command)
+    assert alone.exit_code == 1 and "name the change's own head with --own-head" in alone.output
+
+
+def test_an_own_head_flag_neither_the_commit_nor_its_parent_is_refused(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _start(repo, ANSWERED)
+    root = repo.head()
+    repo.commit("one", CLI_CHANGE)
+    head = repo.commit("two", {"src/core/engine.py": "ENGINE = 2\n"})
+    with pytest.raises(FrictionCheckError, match="neither --head"):
+        _run(repo, named=fc.named_head(repo.root, head, root))
+    with pytest.raises(FrictionCheckError, match="names no commit"):
+        _run(repo, named=fc.named_head(repo.root, head, "no-such-commit"))
+    named = _run(repo, named=fc.named_head(repo.root, head, head)).head
+    assert named is not None and (named.own, named.own_source) == (head, fc.OWN_HEAD_FLAG)
 
 
 # --- dormant -------------------------------------------------------------------------------

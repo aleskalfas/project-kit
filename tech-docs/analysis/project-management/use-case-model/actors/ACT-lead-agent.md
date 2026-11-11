@@ -13,6 +13,8 @@ pkit:
         - project-management:DEC-029
         - project-management:DEC-035#3
         - project-management:DEC-008
+        - project-management:DEC-059#2
+        - project-management:DEC-059#6
 ---
 
 # ACT-lead-agent — Lead agent
@@ -27,7 +29,7 @@ An AI agent of a topology that plans and builds the work of the agent's scope, d
 
 - its [scope](../../glossary.md#term-scope--scope)
 - its [instance](../../glossary.md#term-instance--instance)'s number
-- the harness's limit on how deep agents may start further agents ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md))
+- the [harness](../../../core/glossary.md#term-harness--harness)'s limit on how deep agents may start further agents ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md))
 
 **Note:**
 

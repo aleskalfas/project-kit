@@ -210,7 +210,7 @@ joins.
 ## Variations
 
 - **Stamping a CONSUMER or document schema** (one that doesn't own a namespace). Pass `--no-namespace` — the stamp omits `x-pkit-id-collection`, the `$defs.entry` placeholder, and the collection wrapper; you fill flat top-level `properties` in the companion and the resource's own fields in the YAML body.
-- **Stamping into a non-default capability layout** — if the capability ships its own `_defs/` for narrowed reference patterns, declare them there. For v1, narrowed patterns live alongside their namespace owner; see the schemas area README's "References between schemas" subsection.
+- **Stamping into a non-default capability layout** — if the capability ships its own `_defs/` for narrowed reference patterns, declare them there. For v1, narrowed patterns live alongside their namespace owner; see the schemas reference's page `shape-patterns.md`, "Reusable fragments via `$defs`".
 - **Stamping a schema before its capability exists** — refuses. Run `pkit new capability <name>` first.
 
 ## Adopter-data schemas — the `pkit_schema:` field + `binds_to:` fallback

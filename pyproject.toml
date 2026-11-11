@@ -20,7 +20,11 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "click>=8.1",
-    "ruamel.yaml>=0.18",
+    # The oldest version the reader of plain block YAML, `block_yaml`, is tested
+    # against: it copies the pure-Python loader's reading of that form, so it is off
+    # under a version it was not tested against, or where a part of the loader it takes
+    # is missing (`block_yaml.TESTED_VERSIONS`, #2410).
+    "ruamel.yaml>=0.19.1",
     "packaging>=24.0",
     "jsonschema>=4.20",
 ]
@@ -42,6 +46,10 @@ dev = [
     "pyright[nodejs]>=1.1.380",
     "pathspec>=0.12",  # used by check-doc-mapping.py (PM script); needed to import it under pytest
     "pytest-xdist>=3.8.0",  # scripts/check.sh runs the suite in parallel workers (#1182)
+    "uharfbuzz==0.57.0",  # visual-communication shapes text with it; pinned, since one release must give one scene
+    "fonttools==4.68.0",  # visual-communication reads font metrics with it; pinned likewise
+    "uniseg==0.10.1",  # visual-communication breaks lines by Unicode's rules with it; pinned likewise
+    "resvg-py==0.5.0",  # visual-communication draws a page as an image with it; pinned likewise
 ]
 
 [tool.hatch.version]
@@ -88,7 +96,7 @@ skip-excluded-dirs = true
 # That covers the `project/` globs only. EVERY OTHER LINE BELOW IS A HAND-COPY
 # of a specific case in `.pkit/lifecycle/ownership.py`, and hand-copies drift —
 # which is this whole change's thesis. The mapping:
-#   `.pkit/rules/project.md`      <- the `rules/project.md` case
+#   `.pkit/rules/project.md`, `.pkit/rules/capabilities.md` <- `_PROJECT_RULES_FILES`
 #   `.pkit/scratchpad/{active,done,dropped}` <- `_SCRATCHPAD_STATE_DIRS`
 #   `.pkit/manifest.yaml`, `.pkit/.gitignore` <- `_ADOPTER_OWNED_KIT_FILES`
 # Widening any of those in that module requires a matching line here, or the
@@ -101,6 +109,8 @@ withhold = [
   ".pkit/**/project",
   ".pkit/project",
   ".pkit/rules/project.md",
+  # The capabilities' rules index, rendered for each project (ADR-076 point 2).
+  ".pkit/rules/capabilities.md",
   ".pkit/scratchpad/active",
   ".pkit/scratchpad/done",
   ".pkit/scratchpad/dropped",
@@ -173,9 +183,10 @@ dev-mode-dirs = ["src"]
 # These are achieved by enumerating the included paths rather than the whole
 # tree: `decisions/` ships `core` (hook-filtered, below) + `README.md` only;
 # `scratchpad/` lists its `README.md` only.
-# TWELVE `.pkit/` trees are deliberately absent from the list below —
+# THIRTEEN `.pkit/` trees are deliberately absent from the list below —
 # `decisions/core`, `capabilities`, `agents`, `permissions`, `adapters`,
-# `skills`, `rules`, `schemas`, `cli`, `process`, `lifecycle`, `migrations`.
+# `skills`, `rules`, `schemas`, `cli`, `process`, `lifecycle`, `migrations`,
+# `rule-sets`.
 # Only single tracked files remain here: a static DIRECTORY entry ships
 # whatever sits in it, untracked files included (#909). Do not "helpfully"
 # restore any of them: they are force-included by `hatch_build.py`, file by
@@ -228,8 +239,10 @@ src = ["src", "tests"]
 # `python3` inside the macOS sandbox (ADR-014) — Python 3.9 on a stock macOS.
 ".pkit/adapters/claude-code/permission-hook.py" = "py39"
 ".pkit/permissions/*.py" = "py39"
-# The agent runner runs under the same bare `python3` (ADR-066 point 1).
+# The agent runner runs under the same bare `python3` (ADR-066 point 1), and so
+# does the reader of an agent's tool access, which the runner loads (ADR-086).
 ".pkit/adapters/claude-code/run-agent.py" = "py39"
+".pkit/agents/tool_access.py" = "py39"
 
 [tool.ruff.lint]
 select = [
@@ -304,4 +317,5 @@ addopts = "-ra --strict-markers"
 markers = [
     "serial: cannot share the machine with other test workers; runs after the parallel pass",
     "answers: reads the repository's own answers; the short check runs it too (ADR-067)",
+    "process(reason): keeps a real process of pkit or a capability script, and says why (tests/README.md)",
 ]

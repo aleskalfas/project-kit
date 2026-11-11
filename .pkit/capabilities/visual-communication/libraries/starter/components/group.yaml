@@ -1,0 +1,81 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# Where its form comes from (DEC-007 point 3): Yuri Engelhardt's containment, which also
+# checks the groups pattern, whose groups it draws.
+about: >-
+  One group of items that belong together: a box with rounded corners on its colour
+  family's fill, which holds a head, a tag and the group's items, one under another, the
+  head and the tag where the content gives them. Its items stand in a column, each as
+  wide as the group, drawn by the card. It is as wide as it is given, and as tall as what
+  it holds.
+
+fields:
+  type: object
+  required: [items]
+  properties:
+    head:
+      type: string
+      description: What the items have in common, in a few words, such as the group's name.
+      x-pkit-prose: true
+    tag:
+      type: string
+      description: A short label under the head, such as a role the group plays.
+    items:
+      type: array
+      minItems: 1
+      description: The group's items, each with the fields of the component that draws it.
+      items: {type: object}
+    item:
+      type: object
+      description: >-
+        The component that draws each item that names none, with words for its options:
+        the card unless the content names another.
+
+lists:
+  items: {component: item}
+
+colour: neutral
+
+values:
+  # Where what the group holds starts, inside its edge, and how wide it is.
+  inner: "=:width - 2 * @starter.inset"
+
+parts:
+  box:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.line"
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.corner"
+    width: "=:width"
+    height: "=:height"
+  # The head is the family's text on the family's fill, a pair the foundations declare.
+  # Each of the head, the tag and the items keeps a gap from what stands above it only
+  # where both are drawn: a part not drawn has no height.
+  head:
+    when: head
+    text:
+      content: head
+      style: starter.type.head
+      fill: ":colour.text"
+    x: "=@starter.inset"
+    y: "=@starter.inset"
+    width: "=inner"
+  tag:
+    when: tag
+    use: starter/tag
+    fields: {label: tag}
+    x: "=@starter.inset"
+    y: "=head.bottom + min(head.height, tag.height, @space.2)"
+  items:
+    repeat: items
+    draw: starter/card
+    x: "=@starter.inset"
+    y: "=tag.bottom + min(max(head.height, tag.height), @starter.gap)"
+    width: "=inner"
+    column: {gap: "=@starter.gap", align-items: stretch}
+
+preferred:
+  height: "=items.bottom + @starter.inset"

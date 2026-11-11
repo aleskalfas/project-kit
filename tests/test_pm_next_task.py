@@ -70,6 +70,7 @@ class Pool:
     def __init__(self) -> None:
         self.github = FakeGitHub()
         self.titles: dict[int, str] = {}
+        self.milestones: dict[int, int] = {}
         self.listed: list[list[str]] = []
         self.returncode = 0
 
@@ -83,10 +84,13 @@ class Pool:
         assignees: tuple[str, ...] = (),
         body: str = "Feature: #1\n\n## What\n\nx\n",
         title: str = "[Task] do the thing",
+        milestone: int | None = None,
     ) -> None:
         labels = (f"state:{state}", f"priority:{priority}", f"type:{kind}", "workstream:cli")
         self.github.add(number, assignees=assignees, labels=labels, body=body)
         self.titles[number] = title
+        if milestone is not None:
+            self.milestones[number] = milestone
 
     def list(self, argv: list[str], _config: dict, **_kw: Any) -> subprocess.CompletedProcess[str]:
         self.listed.append(list(argv))
@@ -97,12 +101,14 @@ class Pool:
     def issue(self, number: int) -> dict[str, Any]:
         """Issue `number` as `gh` returns it to a listing or to `gh issue view`."""
         held = self.github.issues[number]
+        milestone = self.milestones.get(number)
         return {
             "number": number,
+            "id": f"I_{number}",
             "title": self.titles[number],
             "labels": [{"name": n} for n in held.labels],
             "assignees": [{"login": a} for a in held.assignees],
-            "milestone": None,
+            "milestone": None if milestone is None else {"number": milestone, "title": "M"},
             "state": "OPEN",
             "body": held.body,
         }
@@ -139,6 +145,8 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
         start: Any = None,
         seated: tuple[Any, str] | None = None,
         yes: bool = True,
+        config: dict | None = None,
+        axes: dict | None = None,
     ) -> tuple[int, list[tuple[int, bool]]]:
         starts: list[tuple[int, bool]] = []
 
@@ -156,13 +164,14 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(nt, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(nt.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(nt.session_guard, "enforce", lambda **k: True)
-        monkeypatch.setattr(nt, "load_adopter_config", lambda _r: {})
+        monkeypatch.setattr(nt, "load_adopter_config", lambda _r: dict(config or {}))
         monkeypatch.setattr(nt, "_read_members", lambda *a: [])
         monkeypatch.setattr(
             nt, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
         )
         monkeypatch.setattr(nt, "check_membership", lambda *a: SimpleNamespace(allowed=True))
-        monkeypatch.setattr(nt.axis_labels, "load_substrate_map", lambda _r: None)
+        substrate_map = None if axes is None else nt.axis_labels.SubstrateMap(axes=axes)
+        monkeypatch.setattr(nt.axis_labels, "load_substrate_map", lambda _r: substrate_map)
         monkeypatch.setattr(nt, "_start_work", recorded)
         return nt.main(), starts
 
@@ -523,6 +532,115 @@ def test_a_dry_run_releases_no_retired_seat(run, nt) -> None:
     assert repo.writes() == []
 
 
+# ---- pools of workers (DEC-061 points 5, 8 and 9, ADR-072 points 2 and 6) -------------
+
+OPEN_MILESTONES = [
+    {"number": 3, "title": "Sprint 3: auth", "description": "Close trigger: either\nPool: alpha"},
+    {"number": 4, "title": "Sprint 4: docs", "description": "Pool: bravo"},
+    {"number": 5, "title": "Sprint 5: misc", "description": "Close trigger: either"},
+    {"number": 6, "title": "Sprint 6: odd", "description": "Pool: charlie"},
+]
+
+
+def _pooled_topology(nt, *, seat_pools: Any = ("alpha",), extra: dict | None = None):
+    """The run's snapshot of a topology that declares the pools alpha and bravo,
+    whose second seat, `tester`, serves `seat_pools` (None: names none), and
+    which this clone took."""
+    claims = nt.instance_claims
+    repo = FakeRepo()
+    seat_issue(claims, repo, 11, "planner")
+    seat_issue(claims, repo, 12, "tester", ("me", "k2"))
+    tester: dict[str, Any] = {"name": "tester", "role": "worker", "state_issue": 12}
+    if seat_pools is not None:
+        tester["pools"] = list(seat_pools)
+    seats = [{"name": "planner", "role": "planner", "organizer": True, "state_issue": 11}, tester]
+    doc = {"schema_version": 1, "pools": ["alpha", "bravo"], "seats": seats, **(extra or {})}
+    return seat_snapshot(claims, doc, repo), "tester"
+
+
+def _milestones(nt, monkeypatch, rows: Any = OPEN_MILESTONES) -> list[int]:
+    """The open milestones every read returns (None: the read fails); the
+    returned list counts the reads."""
+    reads: list[int] = []
+
+    def listed(_config: Any, gh: Any = None) -> Any:
+        reads.append(1)
+        return rows
+
+    monkeypatch.setattr(nt.pools.milestone, "list_open_milestones", listed)
+    return reads
+
+
+def test_a_seat_takes_only_from_the_open_milestones_of_its_pools(
+    run, nt, monkeypatch, capsys
+) -> None:
+    pool = Pool()
+    pool.add(20, priority="High", milestone=4)
+    pool.add(21, priority="Low", milestone=3)
+    pool.add(22, priority="High", milestone=5)
+    pool.add(23, priority="High")
+    reads = _milestones(nt, monkeypatch)
+    rc, starts = run(pool, seated=_pooled_topology(nt))
+    assert (rc, starts) == (0, [(21, False)])
+    assert reads == [1]
+    captured = capsys.readouterr()
+    assert "1 Task is ready for seat tester, instance 2, from its pools (alpha)" in captured.out
+    assert "milestone #6 names the pool 'charlie'" in captured.err
+
+
+def test_milestones_that_cannot_be_read_take_nothing(run, nt, monkeypatch, capsys) -> None:
+    """Never the whole Backlog: the run takes nothing and exits 3, never 5."""
+    pool = Pool()
+    pool.add(21, milestone=3)
+    _milestones(nt, monkeypatch, None)
+    rc, starts = run(pool, seated=_pooled_topology(nt))
+    assert (rc, starts) == (3, [])
+    assert "the open milestones could not be read" in capsys.readouterr().err
+    assert pool.listed == []
+
+
+def test_a_seat_that_names_no_pool_takes_nothing_and_says_why(run, nt, monkeypatch, capsys) -> None:
+    pool = Pool()
+    pool.add(21, milestone=3)
+    _milestones(nt, monkeypatch)
+    rc, starts = run(pool, seated=_pooled_topology(nt, seat_pools=None))
+    assert (rc, starts) == (nt.EXIT_NONE_READY, [])
+    assert "this seat names no pool" in capsys.readouterr().out
+
+
+def test_a_pool_with_no_open_milestone_is_said(run, nt, monkeypatch, capsys) -> None:
+    pool = Pool()
+    pool.add(21, milestone=3)
+    _milestones(nt, monkeypatch, OPEN_MILESTONES[:1])
+    rc, starts = run(pool, seated=_pooled_topology(nt, seat_pools=("bravo",)))
+    assert (rc, starts) == (nt.EXIT_NONE_READY, [])
+    assert "pool bravo has no open milestone" in capsys.readouterr().out
+
+
+def test_where_no_pool_is_declared_no_milestone_is_read(run, nt, monkeypatch) -> None:
+    pool = Pool()
+    pool.add(21, kind="test", milestone=4)
+    reads = _milestones(nt, monkeypatch)
+    seated, _repo = _scoped_topology(nt)
+    rc, starts = run(pool, seated=seated)
+    assert (rc, starts) == (0, [(21, False)])
+    assert reads == []
+
+
+def test_code_that_cannot_read_the_topology_in_full_takes_nothing(
+    run, nt, monkeypatch, capsys
+) -> None:
+    pool = Pool()
+    pool.add(21, milestone=3)
+    reads = _milestones(nt, monkeypatch)
+    rc, starts = run(pool, seated=_pooled_topology(nt, extra={"lanes": ["x"]}))
+    assert (rc, starts) == (2, [])
+    err = capsys.readouterr().err
+    assert "[refused] next-task: this code cannot read the topology" in err
+    assert "keys no topology has: lanes" in err
+    assert pool.listed == [] and reads == []
+
+
 # ---- two clones at once (DEC-035 point 6, DEC-059 point 7) ----------------------------
 
 
@@ -675,3 +793,101 @@ def test_a_project_with_no_topology_names_no_commit(run, capsys) -> None:
     rc, starts = run(pool, instance=2)
     assert (rc, starts) == (0, [(10, False)])
     assert "read the topology" not in capsys.readouterr().err
+
+
+# ---- where the board carries the state (DEC-051 point 6, DEC-062 point 5) ------
+
+BOARD = {"has_projects_v2_board": True, "projects_v2_board_id": 4}
+STATE_ON_BOARD = {
+    "type": {"kit-label": True},
+    "priority": {"kit-label": True},
+    "workstream": {"kit-label": True},
+    "state": {"board": True},
+}
+
+
+def _board_snapshot(nt, monkeypatch, statuses: dict[int, str | None] | None) -> list[list[str]]:
+    """Stand in for the one listing read of the listed issues' cards: `statuses`
+    maps an issue to the Status its card holds, None for no Status; an issue it
+    leaves out has no card. None stands for a board that cannot be read. Returns
+    the node ids each read was asked for."""
+    reads: list[list[str]] = []
+
+    def read(config, workflow, issue_node_ids, **_kw):
+        asked = list(issue_node_ids)
+        reads.append(asked)
+        if statuses is None:
+            return None, "missing required scopes [read:project]"
+        options = {f"I_{number}": status for number, status in statuses.items()}
+        options = {node_id: options[node_id] for node_id in asked if node_id in options}
+        listed = nt.board_status.ListedStatuses("board #4", workflow, options, frozenset(asked))
+        return listed, ""
+
+    monkeypatch.setattr(nt.board_status, "read_listed", read)
+    return reads
+
+
+def test_the_state_is_read_from_each_cards_status(run, nt, monkeypatch, capsys) -> None:
+    """The labels say Backlog for both, and are not read: the card of #10 says In
+    Progress, which no clone takes over outside a topology, and #11's says
+    Backlog. Only the cards of the issues listed are read."""
+    pool = Pool()
+    pool.add(10, priority="High")
+    pool.add(11, priority="Low")
+    reads = _board_snapshot(nt, monkeypatch, {10: "In Progress", 11: "Backlog", 99: "Todo"})
+
+    rc, starts = run(pool, config=BOARD, axes=STATE_ON_BOARD)
+
+    assert (rc, starts) == (0, [(11, False)])
+    assert len(reads) == 1 and sorted(reads[0]) == ["I_10", "I_11"]
+    assert "1 Task is ready for this clone" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("statuses", "says"),
+    [
+        ({11: "Backlog"}, "#10 has no card on board #4"),
+        ({10: None, 11: "Backlog"}, "#10's card on board #4 has no Status"),
+        ({10: "Done", 11: "Backlog"}, "#10's card on board #4 has the Status 'Done'"),
+    ],
+)
+def test_a_task_its_status_does_not_place_is_skipped_with_a_warning(
+    run, nt, monkeypatch, capsys, statuses, says
+) -> None:
+    pool = Pool()
+    pool.add(10, priority="High")
+    pool.add(11, priority="Low")
+    _board_snapshot(nt, monkeypatch, statuses)
+
+    rc, starts = run(pool, config=BOARD, axes=STATE_ON_BOARD)
+
+    assert (rc, starts) == (0, [(11, False)])
+    err = capsys.readouterr().err
+    assert f"[warn] next-task: #10 skipped: {says}" in err
+
+
+def test_a_board_that_cannot_be_read_takes_nothing(run, nt, monkeypatch, capsys) -> None:
+    """As Milestones that cannot be read take nothing: exit 3, never 5."""
+    pool = Pool()
+    pool.add(10)
+    _board_snapshot(nt, monkeypatch, None)
+
+    rc, starts = run(pool, config=BOARD, axes=STATE_ON_BOARD)
+
+    assert (rc, starts) == (3, [])
+    err = capsys.readouterr().err
+    assert "the board's Status could not be read" in err
+    assert "missing required scopes [read:project]" in err
+
+
+def test_where_the_map_carries_the_state_off_the_board_no_status_is_read(
+    run, nt, monkeypatch
+) -> None:
+    pool = Pool()
+    pool.add(10)
+    reads = _board_snapshot(nt, monkeypatch, {})
+
+    rc, starts = run(pool, config=BOARD)
+
+    assert (rc, starts) == (0, [(10, False)])
+    assert reads == []

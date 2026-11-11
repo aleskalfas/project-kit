@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-package-metadata
-    revalidated:
-      at: 2026-10-23T08:13:59Z
-      outcome: unchanged
-      unchanged-because: The package check fails a derived link whose target does not compile. What package metadata is stays as defined.

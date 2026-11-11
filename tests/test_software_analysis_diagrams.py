@@ -14,7 +14,8 @@ Held to software-analysis DEC-003:
   query, run on an adopter's analysis, writing nothing.
 
 The fixture analysis below is built in memory, as the backbone's reading gives
-it, so each diagram is compared whole, byte for byte.
+it, so each diagram is compared whole, byte for byte. One test keeps a process,
+marked with why: the query's end-to-end test (#2325).
 """
 
 from __future__ import annotations
@@ -470,6 +471,10 @@ def _tree(repo: AdopterRepo) -> dict[str, bytes]:
     }
 
 
+@pytest.mark.process(
+    "the query's end-to-end test: `pkit analysis diagram` as the dispatcher starts it, its "
+    "fenced Mermaid and its document as a person and a caller read them, nothing written"
+)
 def test_the_query_prints_each_diagram_in_a_fence_and_writes_nothing(seeded: AdopterRepo) -> None:
     before = _tree(seeded)
     completed = run_script(seeded, DIAGRAM)

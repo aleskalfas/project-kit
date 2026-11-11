@@ -1,0 +1,34 @@
+# The record of written code, `<out>.record.yaml` beside it (visual-communication
+# DEC-005 point 7, DEC-006 point 5): the fingerprint of the declaration, the values
+# written and the writer's version, the hash of the code written, and what is only
+# recorded. `pkit visual write-code` writes it.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:code-record
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+fingerprint:
+  form: 1
+  hash: sha256
+  format: 1
+  value: e089c6c476348d1bde80fe99861e3463afe4def9dbf9160fe3b03137ac89400c
+  inputs:
+    - code: brand-css
+      sha256: abcd0ee1fc2cdf511d8a85bd020c5f2f18468d6c442f5506fec7d859b8fea335
+    - value: accent
+      key: default
+      sha256: 3b87ce26606c234e8a9027b00aec785b88b4947b0c11fe348409b864ccd3a4ea
+    - plugin: css
+      version: 1.0.0
+      sha256: 14b0e1f20a5fbea923de4672697a1cade47cd0845cc96e197da19c65b31d3caa
+sha256: '0000000000000000000000000000000000000000000000000000000000000003'
+recorded:
+  plugins:
+    css: 1.0.0
+  programs: {}
+  machine: darwin arm64
+  time: '2026-11-01T10:00:00Z'
+  capability: 0.1.0

@@ -10,42 +10,20 @@ the rest of new).
 from __future__ import annotations
 
 import contextlib
+import importlib
 import math
 import os
 import shlex
 import sys
 from collections.abc import Callable, Generator, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 import click
 
-if TYPE_CHECKING:
-    from ruamel.yaml.comments import CommentedMap
-
-    from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
-
-from project_kit import (
-    __version__,
-    agent_runs,
-    cli_render,
-    default_branch,
-    friction_check,
-    friction_move,
-    friction_report,
-    friction_repository,
-    friction_resolve,
-    friction_since,
-    friction_write,
-    pull_request_landing,
-    router,
-    scratchpads,
-    session_guard,
-)
-from project_kit import refs as refs_mod
-from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
-from project_kit.changesets import Changeset
-from project_kit.decisions import stamp_decision
+# What every start runs in: the root group, how output renders, and where the
+# project is. The modules that run the commands load when a command uses them.
+from project_kit import __version__, cli_render, router
 from project_kit.dispatcher import CapabilityDispatchGroup
 from project_kit.install import (
     InitTargetReason,
@@ -59,62 +37,209 @@ from project_kit.install import (
     source_checkout_root,
     sync_remedy,
 )
-from project_kit.merge import run_merge
-from project_kit.migrations import refuse_inside_migration
-from project_kit.release import (
-    ReleasePlan,
-    apply_release,
-    check_changesets,
-    check_raised_ranges,
-    check_shareable,
-    compute_release,
-    lint_release_format,
-    merge_release_pr,
-    migration_dir_mismatches,
-    publish_release_notes,
-    release_summary,
-)
-from project_kit.scaffolds import (
-    AreaVariant,
-    MigrationScope,
-    MigrationTier,
-    register_kit_shipped_component,
-    stamp_adapter,
-    stamp_area,
-    stamp_capability,
-    stamp_migration,
-)
-from project_kit.scratchpads import (
-    stamp_new_scratchpad,
-    stamp_reported,
-    transition_to_done,
-    transition_to_dropped,
-)
-from project_kit.status import report_status
-from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
-from project_kit.sync import SYNC_FORCE_IGNORED, refuse_version_mismatch, run_sync
-from project_kit.upgrade import (
-    capability_move,
-    freeze_at_content,
-    reconcile_pin,
-    refuse_components_bundled_older,
-    run_tool_update,
-    run_upgrade,
-)
-from project_kit.versioning import (
-    PreKind,
-    Segment,
-    bump_pre,
-    bump_version,
-    promote_version,
-    tag_version,
-    unbump_version,
-    untag_version,
-)
+
+
+class _OnFirstUse:
+    """Stands in for a module that runs commands, or for one function of it, and
+    imports that module the first time it is used.
+
+    Importing this module declares every command, and every start imports it, so
+    a module imported here would load on every start, whatever command runs
+    (#2310). A stand-in loads its module only for a command that uses it. Type
+    checkers read the imports the stand-ins take the place of.
+    """
+
+    __slots__ = ("_module", "_name")
+
+    def __init__(self, module: str, name: str = "") -> None:
+        self._module = module
+        self._name = name
+
+    def _target(self) -> Any:
+        module = importlib.import_module(self._module)
+        return getattr(module, self._name) if self._name else module
+
+    def __getattr__(self, attribute: str) -> Any:
+        return getattr(self._target(), attribute)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self._target()(*args, **kwargs)
+
 
 if TYPE_CHECKING:
+    from ruamel.yaml.comments import CommentedMap
+
+    from project_kit import (
+        agent_runs,
+        default_branch,
+        friction_check,
+        friction_move,
+        friction_prune,
+        friction_report,
+        friction_repository,
+        friction_since,
+        friction_write,
+        pull_request_landing,
+        scratchpads,
+        session_guard,
+        workspace_remove,
+    )
+    from project_kit import refs as refs_mod
+    from project_kit.agents import stamp_new_agent
+    from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
+    from project_kit.changesets import Changeset
+    from project_kit.decisions import stamp_decision
+    from project_kit.loaded_rules import SetReading
+    from project_kit.merge import run_merge
+    from project_kit.migrations import refuse_inside_migration
     from project_kit.process import ProcessEngine
     from project_kit.process_graph import Graph
+    from project_kit.release import (
+        ReleasePlan,
+        apply_release,
+        check_changesets,
+        check_raised_ranges,
+        check_shareable,
+        compute_release,
+        lint_release_format,
+        merge_release_pr,
+        migration_dir_mismatches,
+        publish_release_notes,
+        release_summary,
+    )
+    from project_kit.scaffolds import (
+        AreaVariant,
+        MigrationScope,
+        MigrationTier,
+        register_kit_shipped_component,
+        stamp_adapter,
+        stamp_area,
+        stamp_capability,
+        stamp_migration,
+    )
+    from project_kit.scratchpads import (
+        stamp_new_scratchpad,
+        stamp_reported,
+        transition_to_done,
+        transition_to_dropped,
+    )
+    from project_kit.status import report_status
+    from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
+    from project_kit.sync import refuse_version_mismatch, run_sync
+    from project_kit.upgrade import (
+        capability_move,
+        freeze_at_content,
+        reconcile_pin,
+        refuse_components_bundled_older,
+        run_tool_update,
+        run_upgrade,
+    )
+    from project_kit.versioning import (
+        PreKind,
+        Segment,
+        bump_pre,
+        bump_version,
+        promote_version,
+        tag_version,
+        unbump_version,
+        untag_version,
+    )
+else:
+    agent_runs = _OnFirstUse("project_kit.agent_runs")
+    default_branch = _OnFirstUse("project_kit.default_branch")
+    friction_check = _OnFirstUse("project_kit.friction_check")
+    friction_move = _OnFirstUse("project_kit.friction_move")
+    friction_prune = _OnFirstUse("project_kit.friction_prune")
+    friction_report = _OnFirstUse("project_kit.friction_report")
+    friction_repository = _OnFirstUse("project_kit.friction_repository")
+    friction_since = _OnFirstUse("project_kit.friction_since")
+    friction_write = _OnFirstUse("project_kit.friction_write")
+    pull_request_landing = _OnFirstUse("project_kit.pull_request_landing")
+    scratchpads = _OnFirstUse("project_kit.scratchpads")
+    session_guard = _OnFirstUse("project_kit.session_guard")
+    workspace_remove = _OnFirstUse("project_kit.workspace_remove")
+    refs_mod = _OnFirstUse("project_kit.refs")
+    stamp_new_agent = _OnFirstUse("project_kit.agents", "stamp_new_agent")
+    stamp_decision = _OnFirstUse("project_kit.decisions", "stamp_decision")
+    run_merge = _OnFirstUse("project_kit.merge", "run_merge")
+    refuse_inside_migration = _OnFirstUse("project_kit.migrations", "refuse_inside_migration")
+    apply_release = _OnFirstUse("project_kit.release", "apply_release")
+    check_changesets = _OnFirstUse("project_kit.release", "check_changesets")
+    check_raised_ranges = _OnFirstUse("project_kit.release", "check_raised_ranges")
+    check_shareable = _OnFirstUse("project_kit.release", "check_shareable")
+    compute_release = _OnFirstUse("project_kit.release", "compute_release")
+    lint_release_format = _OnFirstUse("project_kit.release", "lint_release_format")
+    merge_release_pr = _OnFirstUse("project_kit.release", "merge_release_pr")
+    migration_dir_mismatches = _OnFirstUse("project_kit.release", "migration_dir_mismatches")
+    publish_release_notes = _OnFirstUse("project_kit.release", "publish_release_notes")
+    release_summary = _OnFirstUse("project_kit.release", "release_summary")
+    register_kit_shipped_component = _OnFirstUse(
+        "project_kit.scaffolds", "register_kit_shipped_component"
+    )
+    stamp_adapter = _OnFirstUse("project_kit.scaffolds", "stamp_adapter")
+    stamp_area = _OnFirstUse("project_kit.scaffolds", "stamp_area")
+    stamp_capability = _OnFirstUse("project_kit.scaffolds", "stamp_capability")
+    stamp_migration = _OnFirstUse("project_kit.scaffolds", "stamp_migration")
+    stamp_new_scratchpad = _OnFirstUse("project_kit.scratchpads", "stamp_new_scratchpad")
+    stamp_reported = _OnFirstUse("project_kit.scratchpads", "stamp_reported")
+    transition_to_done = _OnFirstUse("project_kit.scratchpads", "transition_to_done")
+    transition_to_dropped = _OnFirstUse("project_kit.scratchpads", "transition_to_dropped")
+    report_status = _OnFirstUse("project_kit.status", "report_status")
+    stamp_new_storyboard = _OnFirstUse("project_kit.storyboards", "stamp_new_storyboard")
+    refuse_version_mismatch = _OnFirstUse("project_kit.sync", "refuse_version_mismatch")
+    run_sync = _OnFirstUse("project_kit.sync", "run_sync")
+    capability_move = _OnFirstUse("project_kit.upgrade", "capability_move")
+    freeze_at_content = _OnFirstUse("project_kit.upgrade", "freeze_at_content")
+    reconcile_pin = _OnFirstUse("project_kit.upgrade", "reconcile_pin")
+    refuse_components_bundled_older = _OnFirstUse(
+        "project_kit.upgrade", "refuse_components_bundled_older"
+    )
+    run_tool_update = _OnFirstUse("project_kit.upgrade", "run_tool_update")
+    run_upgrade = _OnFirstUse("project_kit.upgrade", "run_upgrade")
+    bump_pre = _OnFirstUse("project_kit.versioning", "bump_pre")
+    bump_version = _OnFirstUse("project_kit.versioning", "bump_version")
+    promote_version = _OnFirstUse("project_kit.versioning", "promote_version")
+    tag_version = _OnFirstUse("project_kit.versioning", "tag_version")
+    unbump_version = _OnFirstUse("project_kit.versioning", "unbump_version")
+    untag_version = _OnFirstUse("project_kit.versioning", "untag_version")
+
+
+# The values the declarations below show, or a command maps its end to. Declaring
+# a command evaluates its options, so a value read from the module that runs the
+# command would load that module on every start. Each is written here instead,
+# and `tests/test_cli.py` holds it equal to the value its module runs on.
+
+#: The base and head a diff-scoped command reads from the environment
+#: (`default_branch.CHECK_BASE_ENV` and `CHECK_HEAD_ENV`).
+_CHECK_BASE_ENV = "PKIT_CHECK_BASE"
+_CHECK_HEAD_ENV = "PKIT_CHECK_HEAD"
+
+#: An agent run's longest limit and the effort levels it takes
+#: (`agent_runs.MAX_LIMIT_SECONDS` and `EFFORT_LEVELS`).
+_AGENT_RUN_MAX_LIMIT_SECONDS = 7 * 24 * 60 * 60
+_AGENT_RUN_EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")
+
+#: The outcomes a revalidation and a revisit take
+#: (`friction_write.OUTCOMES` and `REVISIT_OUTCOMES`).
+_REVALIDATION_OUTCOMES: tuple[str, ...] = ("updated", "unchanged")
+_REVISIT_OUTCOMES: tuple[str, ...] = ("unchanged", "deferred")
+
+#: How long a wait for the merge queue lasts when no time is given, and what a
+#: landing does with a PR queued where the queue would not make its commit
+#: (`pull_request_landing.ETA_MARGIN_SECONDS`, `MAX_WAIT_SECONDS`,
+#: `wait_limit(None)`, `SHAPE_REFUSE` and `SHAPE_WARN`).
+_QUEUE_ETA_MARGIN_SECONDS = 120.0
+_QUEUE_MAX_WAIT_SECONDS = 30 * 60.0
+_QUEUE_WAIT_DEFAULT = (
+    f"as long as the queue estimates plus {_QUEUE_ETA_MARGIN_SECONDS / 60:g} min, "
+    f"at most {_QUEUE_MAX_WAIT_SECONDS / 60:g} min"
+)
+_SHAPE_REFUSE = "refuse"
+_SHAPE_WARN = "warn"
+
+#: The flag that confirms a change in another repository than the session's
+#: anchor's (`session_guard.CONFIRM_OPTION`).
+_CONFIRM_OPTION = "--allow-foreign-repo"
 
 
 @click.group(cls=CapabilityDispatchGroup, invoke_without_command=True)
@@ -170,8 +295,11 @@ def agents(ctx: click.Context) -> None:
     whose absence never skips — the agent deploys without it, and such undefined
     categories are surfaced in an `Optional` footer state. Each row also shows the
     agent's effective model and effort: the overlay's `overrides.<agent>` value,
-    else the front matter's, else `inherit`. Deployment itself happens via
-    `pkit sync`; configuration is `.pkit/agents/project/overlay.yaml`.
+    else the front matter's, else `inherit`. An `UNKNOWN OVERRIDES` section warns
+    of each `overrides:` entry the deploy ignores, naming its key: a block for an
+    agent no source ships, or a category the agent's definition does not reference.
+    Deployment itself happens via `pkit sync`; configuration is
+    `.pkit/agents/project/overlay.yaml`.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -402,7 +530,7 @@ def _stops_on_signal() -> Generator[None]:
 @click.option(
     "--limit",
     "limit_seconds",
-    type=click.IntRange(1, agent_runs.MAX_LIMIT_SECONDS),
+    type=click.IntRange(1, _AGENT_RUN_MAX_LIMIT_SECONDS),
     required=True,
     metavar="SECONDS",
     help="The run's wall-clock limit. At it the runner ends the harness and the processes "
@@ -410,7 +538,7 @@ def _stops_on_signal() -> Generator[None]:
 )
 @click.option(
     "--effort",
-    type=click.Choice(agent_runs.EFFORT_LEVELS),
+    type=click.Choice(_AGENT_RUN_EFFORT_LEVELS),
     default=None,
     help="The effort level the agent reasons at. Unset: the agent's own, else the harness default.",
 )
@@ -813,7 +941,7 @@ def repository() -> None:
     "base_ref",
     metavar="REF",
     default=None,
-    help=f"The base to read: REF, instead of ${default_branch.CHECK_BASE_ENV}, else the "
+    help=f"The base to read: REF, instead of ${_CHECK_BASE_ENV}, else the "
     "default branch. A branch name resolves as the default branch does.",
 )
 @click.option(
@@ -869,6 +997,75 @@ def _settled_base(
         raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
     _warn_settled(settled)
     return found
+
+
+@main.group("workspace")
+def workspace() -> None:
+    """The agent workspace, `.agent-workspace/` at each checkout's root, where
+    agents keep their intermediate files (core rule 16).
+
+    `pkit init` and `pkit sync` create it; `remove` takes files out of it.
+    Reference: `.pkit/cli/README.md`, "Workspace commands".
+    """
+
+
+@workspace.command("remove")
+@click.argument("paths", nargs=-1, required=True, metavar="PATH...")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Test every path and say what would be removed; remove nothing.",
+)
+def workspace_remove_command(paths: tuple[str, ...], dry_run: bool) -> None:
+    """Remove each PATH from the agent workspace, a folder with everything in it.
+
+    Each PATH is read as the shell expanded it, against the directory the
+    command runs in. Every path is tested before any is removed, and one
+    refused path refuses the call: nothing is removed, and each refused path
+    is named with why. Refused: a path outside the checkout's own
+    `.agent-workspace/`, the folder itself, a last part of `.` or `..`, a path
+    at or under a child of the folder named after a registered capability,
+    and a path in or holding a nested repository or worktree. A symlink given
+    is removed as a link, and a link inside a removed folder is never
+    followed. A path inside the folder that names nothing is reported and
+    refuses nothing. The root is the checkout the command runs in, and the
+    cross-repository guard runs first; it takes no confirmation with the call.
+    Exit 0 when every path is gone; 1 when the call is refused or a removal
+    stopped partway; 2 on a usage error.
+    """
+    problem = workspace_remove.unsafe_platform()
+    if problem is not None:
+        raise click.ClickException(problem)
+    cwd = Path(os.getcwd())
+    target_root = find_target_root(cwd)
+    if target_root is None:
+        raise click.ClickException("not in a project tree; nothing was removed.")
+    if not cwd.resolve().is_relative_to(target_root):
+        raise click.ClickException(
+            f"the project root git names, {target_root}, does not hold the directory the "
+            "command runs in; nothing was removed."
+        )
+    passage = session_guard.clear(target_root, confirmed=False, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        raise click.ClickException(workspace_remove.guard_refusal(passage))
+    plan = workspace_remove.plan(paths, cwd=cwd, root=target_root)
+    if plan.refused:
+        for line in workspace_remove.refusal_lines(plan):
+            click.echo(line, err=True)
+        raise SystemExit(1)
+    if dry_run:
+        for line in workspace_remove.plan_lines(plan):
+            click.echo(line)
+        return
+    outcome = workspace_remove.remove(plan, passage)
+    said, stopped = workspace_remove.outcome_lines(plan, outcome)
+    for line in said:
+        click.echo(line)
+    for line in stopped:
+        click.echo(line, err=True)
+    if outcome.stopped:
+        raise SystemExit(1)
 
 
 @main.group("harness")
@@ -963,7 +1160,7 @@ def _pull_request_json_option(command: Callable[..., None]) -> Callable[..., Non
 
 def _allow_foreign_repo_option(command: Callable[..., None]) -> Callable[..., None]:
     return click.option(
-        session_guard.CONFIRM_OPTION,
+        _CONFIRM_OPTION,
         "allow_foreign_repo",
         is_flag=True,
         default=False,
@@ -1242,8 +1439,8 @@ def pull_request_delete_branch(
     type=click.FloatRange(min=0),
     default=None,
     help="How long to wait; 0 reads once. Default: as long as the queue estimates, "
-    f"plus {pull_request_landing.ETA_MARGIN_SECONDS / 60:g} min, at most "
-    f"{pull_request_landing.MAX_WAIT_SECONDS / 60:g} min.",
+    f"plus {_QUEUE_ETA_MARGIN_SECONDS / 60:g} min, at most "
+    f"{_QUEUE_MAX_WAIT_SECONDS / 60:g} min.",
 )
 @_pull_request_json_option
 def pull_request_wait(number: int, head_oid: str, seconds: float | None, as_json: bool) -> None:
@@ -1286,16 +1483,18 @@ def pull_request_wait(number: int, head_oid: str, seconds: float | None, as_json
 
 
 #: `pull-request land`'s exit by how the landing ended: for a person at a
-#: terminal only — no caller decides on it; callers read the end document.
+#: terminal only — no caller decides on it; callers read the end document. Its
+#: keys are the landing's ends (`pull_request_landing.END_*`), written out as the
+#: values at the top of this module are.
 _LAND_EXITS: Mapping[str, int] = {
-    pull_request_landing.END_MERGED: 0,
-    pull_request_landing.END_MERGED_ELSEWHERE: 0,
-    pull_request_landing.END_PLANNED: 0,
-    pull_request_landing.END_QUEUED: 4,
-    pull_request_landing.END_UNCONFIRMED: 4,
-    pull_request_landing.END_HEAD_MOVED: 3,
-    pull_request_landing.END_DROPPED: 3,
-    pull_request_landing.END_NOT_MERGED: 3,
+    "merged": 0,
+    "merged-at-another-head": 0,
+    "planned": 0,
+    "queued": 4,
+    "unconfirmed": 4,
+    "head-moved": 3,
+    "dropped": 3,
+    "not-merged": 3,
 }
 
 
@@ -1314,8 +1513,7 @@ _LAND_EXITS: Mapping[str, int] = {
     "--seconds",
     type=click.FloatRange(min=0),
     default=None,
-    help="How long to wait for the queue's merge; 0 reads once. Default: "
-    f"{pull_request_landing.wait_limit(None)}.",
+    help=f"How long to wait for the queue's merge; 0 reads once. Default: {_QUEUE_WAIT_DEFAULT}.",
 )
 @click.option(
     "--allow-dropped-head",
@@ -1338,8 +1536,8 @@ _LAND_EXITS: Mapping[str, int] = {
 )
 @click.option(
     "--queued-bad-shape",
-    type=click.Choice([pull_request_landing.SHAPE_REFUSE, pull_request_landing.SHAPE_WARN]),
-    default=pull_request_landing.SHAPE_REFUSE,
+    type=click.Choice([_SHAPE_REFUSE, _SHAPE_WARN]),
+    default=_SHAPE_REFUSE,
     show_default=True,
     help="A PR already in a queue that would not make its squash commit: refuse, leaving it "
     "queued, or wait for it with a warning.",
@@ -1772,8 +1970,8 @@ def friction() -> None:
     files the change adds, the plan of the move of the
     answers into answer files — which never write, the writers — revalidate,
     defer, revisit, record-status — which write one answer or status, only with
-    consent, and resolve, which resolves a merge's conflicting revalidations and
-    revisit entries as text and writes no answer.
+    consent, and prune, which removes, only with consent, the answer files in
+    which no answer is live and writes no answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -1826,7 +2024,7 @@ def _friction_write(
 @click.argument("artefact", metavar="ARTEFACT")
 @click.option(
     "--outcome",
-    type=click.Choice(friction_write.OUTCOMES),
+    type=click.Choice(_REVALIDATION_OUTCOMES),
     required=True,
     help="`updated`: the content changed with this revalidation; `unchanged`: it did not "
     "need to (then --because is required).",
@@ -1926,7 +2124,7 @@ def friction_defer_command(
 )
 @click.option(
     "--outcome",
-    type=click.Choice(friction_write.REVISIT_OUTCOMES),
+    type=click.Choice(_REVISIT_OUTCOMES),
     required=True,
     help="`unchanged`: the target still stands against this change; `deferred`: it is left "
     "out of date until the follow-up --reason names.",
@@ -2017,77 +2215,76 @@ def friction_move_plan_command(as_json: bool) -> None:
         click.echo(friction_move.render_human(plan), nl=False)
 
 
-@friction.command("resolve")
-@click.argument("paths", metavar="[PATH]...", nargs=-1)
+@friction.command("prune")
 @click.option(
     "--dry-run",
     is_flag=True,
     default=False,
-    help="Show the resolution, with each file's diff, and write nothing.",
+    help="List what would be removed, and remove nothing.",
 )
 @click.option(
     "--yes",
     is_flag=True,
     default=False,
-    help="Stage the resolved files without a prompt. Without it a terminal is asked, after "
-    "the diffs; a run that cannot ask leaves them unstaged and prints the `git add` to run.",
+    help="Consent to the removal without a prompt. Without it a terminal is asked, after "
+    "the list; a non-interactive run refuses.",
 )
 @click.option(
-    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit the stable JSON document. It asks nothing, so it needs --yes or --dry-run.",
 )
-def friction_resolve_command(
-    paths: tuple[str, ...], dry_run: bool, yes: bool, as_json: bool
-) -> None:
-    """Resolve a merge's conflicting revalidations and revisit entries as text (COR-050
-    points 3 and 16): each file in conflict — every one, or each PATH — whose conflicts all
-    lie inside `revalidated` blocks or `revisited` lists.
+def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
+    """Remove each answer file in which no answer is live at HEAD (COR-062 point 8).
 
-    Only git's own conflict, untouched by hand, is resolved: the file's three
-    versions are read from the index and merged again, and the result must be
-    the working file. Only the blocks and lists git conflicted on are decided:
-    the answer from the side that changed it, the deferrals merged by anchor,
-    and where both sides revalidated, the base side's answer — only when
-    MERGE_HEAD, the branch merged in, is the change check's base. A list's
-    entries merge by target, and where both sides wrote one target's entry,
-    the base side's is taken, under the same rule. Any other conflict leaves
-    the file as git left it, and says where. The file is written; it is staged
-    only with --yes or at the prompt. It writes no answer: for each artefact
-    both sides revalidated it names the revalidation owed once the merge is
-    committed, `updated` or `unchanged` as its content bears out against the
-    base side's, and for each target both sides wrote an entry for, the
-    `revisit` that writes it again. PATH is relative to the project root.
-    Outside a merge there is nothing to resolve. Exit 1 when it leaves an
-    artefact's file in conflict.
+    Liveness is judged from HEAD and its full history, as the whole-repository
+    check judges it. A file holding one live answer stays whole. A file with no
+    live answer is kept where removing it would change one that is live: where
+    it cannot be read, where its removal brings back an answer it replaced, or
+    where a live deferral keeps its point from it. Each is named with why. It
+    removes files from the working tree and adds none, and stages and commits
+    nothing: the removal lands as a change of its own (COR-062 point 3).
+    Refused while the answer folder holds an uncommitted change, and in a
+    shallow clone.
     """
     if yes and dry_run:
         raise click.UsageError(
-            "--yes and --dry-run exclude each other: one stages, the other writes nothing."
+            "--yes and --dry-run exclude each other: one removes, the other never does."
+        )
+    if as_json and not (yes or dry_run):
+        raise click.UsageError(
+            "--json asks nothing: give --yes to remove the files, or --dry-run to list them."
         )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    resolution = friction_resolve.plan_resolve(target_root, paths)
-    written = () if dry_run else friction_resolve.write(target_root, resolution)
-    staged: tuple[str, ...] = ()
+    plan = friction_prune.plan_prune(target_root)
     if as_json:
-        if yes and written:
-            staged = friction_resolve.stage(target_root, written)
-        click.echo(
-            friction_resolve.render_json(resolution, dry_run=dry_run, staged=staged), nl=False
-        )
-    else:
-        click.echo(friction_resolve.render_human(resolution, dry_run=dry_run), nl=False)
-        if written:
-            if not yes and friction_write.interactive():
-                click.echo("")
-                click.echo(friction_resolve.render_diffs(resolution), nl=False)
-                yes = click.confirm("Stage the resolved files (`git add`)?", default=True)
-            if yes:
-                staged = friction_resolve.stage(target_root, written)
-            click.echo("")
-            click.echo(friction_resolve.render_staging(written, staged), nl=False)
-    if resolution.exit_code:
-        raise SystemExit(resolution.exit_code)
+        removed = () if dry_run else friction_prune.remove(target_root, plan)
+        click.echo(friction_prune.render_json(plan, dry_run=dry_run, removed=removed), nl=False)
+        return
+    click.echo(friction_prune.render_plan(plan), nl=False)
+    if not plan.remove:
+        return
+    if dry_run:
+        click.echo("")
+        click.echo(cli_render.style("strong", "Dry run: nothing removed."))
+        return
+    if not yes:
+        if not friction_write.interactive():
+            raise friction_write.ConsentRefused(
+                "refusing to remove answer files without consent: stdin is not a terminal and "
+                "--yes was not given (COR-050 point 13). Nothing was removed.\n"
+                "To see the list only, run:\n  pkit friction prune --dry-run\n"
+                "To consent non-interactively, run:\n  pkit friction prune --yes"
+            )
+        click.echo("")
+        click.confirm(f"Remove these {len(plan.remove)} answer files?", default=True, abort=True)
+    removed = friction_prune.remove(target_root, plan)
+    click.echo("")
+    click.echo(friction_prune.render_done(removed), nl=False)
 
 
 @friction.command("check")
@@ -2096,7 +2293,7 @@ def friction_resolve_command(
     "base_ref",
     metavar="REF",
     default=None,
-    help=f"Compare against the merge-base of REF and HEAD. Default: ${friction_check.BASE_ENV}, "
+    help=f"Compare against the merge-base of REF and HEAD. Default: ${_CHECK_BASE_ENV}, "
     "else the default branch (`pkit repository base` shows it). A branch name resolves as "
     "the default branch does.",
 )
@@ -2118,14 +2315,28 @@ def friction_resolve_command(
     default=None,
     help="Check commit REV instead of the working tree: its files read from git objects, "
     "nothing checked out, the merge-base taken against REV. Uncommitted work is not read. "
-    f"REV is the change's own head too, and ${friction_check.HEAD_ENV} is not read. "
-    "Not with --all.",
+    f"REV is the change's own head too, unless --own-head names another, and "
+    f"${_CHECK_HEAD_ENV} is not read. Not with --all.",
+)
+@click.option(
+    "--own-head",
+    "own_rev",
+    metavar="REV",
+    default=None,
+    help=f"With --head: the change's own head, as ${_CHECK_HEAD_ENV} names it for a working "
+    "tree: the commit --head names, or a parent of it, such as the change's head where "
+    "--head names its merge with the base. With --json, a refusal to run a resolver away "
+    "from that commit is then a document too.",
 )
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def friction_check_command(
-    base_ref: str | None, whole_repository: bool, head_rev: str | None, as_json: bool
+    base_ref: str | None,
+    whole_repository: bool,
+    head_rev: str | None,
+    own_rev: str | None,
+    as_json: bool,
 ) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
@@ -2171,6 +2382,11 @@ def friction_check_command(
             "--head and --all exclude each other: the whole-repository check reads HEAD and "
             "its history."
         )
+    if own_rev is not None and head_rev is None:
+        raise click.UsageError(
+            f"--own-head names the change's own head beside --head; for a working tree, "
+            f"${_CHECK_HEAD_ENV} names it."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -2181,15 +2397,23 @@ def friction_check_command(
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
-    named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
+    named = None if head_rev is None else friction_check.named_head(target_root, head_rev, own_rev)
     # The fork is taken against the commit the name gave, which the diff reads too.
     settled = default_branch.settled(
         target_root, base_ref, head_rev="HEAD" if named is None else named.commit
     )
     _warn_settled(settled)
-    result = friction_check.run_change_check(
-        target_root, base_ref, resolved=settled.base, named=named
-    )
+    try:
+        result = friction_check.run_change_check(
+            target_root, base_ref, resolved=settled.base, named=named
+        )
+    except friction_check.ResolverElsewhere as refused:
+        # The sentence still reaches standard error, and the exit code stays the run's.
+        # Only a caller that names the own head gets the document: a reader older than
+        # the flag knows this refusal by an empty standard output and that sentence.
+        if as_json and own_rev is not None:
+            click.echo(friction_check.render_refusal_json(refused), nl=False)
+        raise
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
     else:
@@ -2326,7 +2550,7 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
     "base_ref",
     metavar="REF",
     default=None,
-    help=f"The base whose merges are set apart. Default: ${friction_check.BASE_ENV}, else the "
+    help=f"The base whose merges are set apart. Default: ${_CHECK_BASE_ENV}, else the "
     "default branch (`pkit repository base` shows it).",
 )
 @click.option(
@@ -2366,12 +2590,16 @@ def friction_since_command(
 @main.group("rule-sets")
 def rule_sets_group() -> None:
     """Rule sets (COR-051): which accepted rules bind on each artefact, and on what a
-    change altered.
+    change altered; and the loaded file of a loaded set (COR-068) and its budget
+    (COR-069).
 
     The reach walk's answer (COR-051 point 7), for a capability's script or a
     migration to read rather than walk routes or judge pins itself (ADR-057
-    points 1 and 2). Read-only; runs no query. Validation of rule-set files is
-    `pkit validate`'s `rule-sets` member.
+    points 1 and 2): `reach` and `altered` read only and run no query.
+    `generate` writes the file a session loads from a loaded set authored here
+    (ADR-075 point 4), and `loaded` says which loaded files bind, every layer's
+    (ADR-076 point 1). Validation of rule-set files, and of how each loaded file
+    reaches a session, is `pkit validate`'s `rule-sets` member.
     """
 
 
@@ -2386,6 +2614,7 @@ def _readable_configuration(target_root: Path, tree: friction_check.CommitTree |
 
 
 @rule_sets_group.command("reach")
+@click.argument("paths", metavar="[PATH]...", nargs=-1)
 @click.option(
     "--at",
     "at",
@@ -2405,7 +2634,9 @@ def _readable_configuration(target_root: Path, tree: friction_check.CommitTree |
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> None:
+def rule_sets_reach_command(
+    paths: tuple[str, ...], at: str | None, preview: bool, as_json: bool
+) -> None:
     """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
 
     The working tree by default, or commit REV with --at. Each artefact on
@@ -2418,8 +2649,16 @@ def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> Non
     each rule held back, binding nothing, with the pins that hold it. With
     --preview, where rules would bind if every proposed rule were accepted,
     each binding, rule held back and conflict that holds only under the
-    preview marked. Exit 0 when answered; 1 when the configuration cannot be
-    read or REV names no commit; 2 on a usage error.
+    preview marked.
+
+    Given PATHs, read from the working directory, only the artefacts at
+    those paths, so a writer reads the rules of its files before it writes
+    them: each path with what the state holds there, and the text of each
+    rule that binds. A path where no rule binds is answered so, never as an
+    error: an artefact no rule binds on, a file that is no artefact, no
+    file, a folder, or a path outside the repository. Exit 0 when answered;
+    1 when the configuration cannot be read or REV names no commit; 2 on a
+    usage error.
     """
     from project_kit import rule_set_reading, validators
 
@@ -2435,7 +2674,9 @@ def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> Non
         tree = friction_check.CommitTree(target_root, commit)
     _readable_configuration(target_root, tree)
     document = validators.as_one_run(
-        lambda: rule_set_reading.reach_document(target_root, commit, preview=preview)
+        lambda: rule_set_reading.reach_document(
+            target_root, commit, preview=preview, paths=paths or None, cwd=Path.cwd()
+        )
     )
     if as_json:
         click.echo(rule_set_reading.render_json(document), nl=False)
@@ -2450,7 +2691,7 @@ def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> Non
     metavar="REF",
     default=None,
     help=f"Compare against the merge-base of REF and the head. Default: "
-    f"${friction_check.BASE_ENV}, else the default branch (`pkit repository base` shows it).",
+    f"${_CHECK_BASE_ENV}, else the default branch (`pkit repository base` shows it).",
 )
 @click.option(
     "--head",
@@ -2478,7 +2719,10 @@ def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_jso
     the rules the change brings it under: those that bind on it at the head
     and did not at the base. An artefact the change brings under a rule
     without altering it, by a wider scope, an accepted rule, an updated pin
-    or a typed place, is listed apart (COR-057 point 2). Exit 0
+    or a typed place, is listed apart (COR-057 point 2). Each budget of a
+    rules file the change raises, lowers, adds or removes is listed too, the
+    raises first under a heading of their own: a raise is a person's to
+    authorise (COR-069 point 4). Exit 0
     when answered; 1 when a configuration cannot be read, the base cannot be
     compared or REV names no commit; 2 on a usage error.
     """
@@ -2506,6 +2750,79 @@ def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_jso
         click.echo(rule_set_reading.render_json(document), nl=False)
     else:
         click.echo(rule_set_reading.render_altered_human(document), nl=False)
+
+
+@rule_sets_group.command("generate")
+def rule_sets_generate_command() -> None:
+    """Write the loaded file of each loaded rule set authored here (COR-068 point 3).
+
+    A loaded rule set (`loaded: true`) keeps operational rules; the file a
+    session loads is generated from it: the backbone's set at
+    `.pkit/rules/core.md`, a project's own at `.pkit/rules/project.md`
+    (ADR-075 points 2 and 4). The file holds each accepted rule under the
+    heading `N. Title (RS-<SET>-NNN)` with its statement, under the set's
+    sections, and none of the set's data. Says for each file whether it
+    changed, and its count of words against the set's `budget` (COR-069),
+    with the room left or the words over; a file past its budget is written
+    all the same. Writes no other file, and validates, syncs or merges nothing.
+    Refuses, writing nothing, where every loaded set here arrives by sync —
+    the next sync brings its file — where a rule-set file cannot be read or a
+    set's rules and sections do not join (`pkit validate` names the fix), and
+    where a loaded file is a link. Exit 0 when written or already in step; 1
+    on a refusal, so 1 where every loaded set arrives by sync, as in a
+    project that receives only the backbone's.
+    """
+    from project_kit import loaded_rule_sets
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    generation = loaded_rule_sets.generate(target_root)
+    click.echo(loaded_rule_sets.render(generation), nl=False)
+
+
+@rule_sets_group.command("loaded")
+@click.option(
+    "--index",
+    "adapter",
+    metavar="ADAPTER",
+    default=None,
+    help="Print the capabilities' rules index the backbone renders for registered adapter "
+    "ADAPTER's `loaded_rules:` form, as the lifecycle writes it, instead of the list.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def rule_sets_loaded_command(adapter: str | None, as_json: bool) -> None:
+    """Which loaded files bind here, every layer's with its owner (ADR-076 point 1).
+
+    In the order a session reads them: the backbone's `.pkit/rules/core.md`;
+    the `rules.md` of each loaded set of a capability the backbone manifest
+    registers, by name, so a capability unregistered with its files kept is
+    left out; and the project's own loaded set's file or its plain
+    `.pkit/rules/project.md`. Each with the set it is generated from, or as a
+    plain file, and whether the checkout holds it. The capabilities' rules
+    index, `.pkit/rules/capabilities.md`, takes its entries from this answer,
+    and validation's `rule-sets` member checks the same answer, so a
+    capability's file is delivered exactly where it is checked. With --index,
+    the index's text for that adapter's form. Reads only. Exit 0 when
+    answered; 1 where ADAPTER is not registered; 2 on a usage error.
+    """
+    import json
+
+    from project_kit import loaded_rules
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if adapter is not None:
+        click.echo(loaded_rules.render_index_for(target_root, adapter), nl=False)
+        return
+    if as_json:
+        document = loaded_rules.loaded_document(target_root)
+        click.echo(json.dumps(document, indent=2, sort_keys=True))
+        return
+    click.echo(loaded_rules.render_loaded_human(target_root), nl=False)
 
 
 @main.group(invoke_without_command=True)
@@ -2967,7 +3284,7 @@ def release_lint(skip: bool | None) -> None:
     default=None,
     metavar="MINUTES",
     help="Where the base merges through a queue: how long to wait for the queue to merge "
-    f"the PR. Default: {pull_request_landing.wait_limit(None)}.",
+    f"the PR. Default: {_QUEUE_WAIT_DEFAULT}.",
 )
 @click.option(
     "--force",
@@ -3259,7 +3576,16 @@ def _announce_init_target(
         "exclusive with --here."
     ),
 )
-def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
+@click.option(
+    "--refuse-proposals",
+    is_flag=True,
+    default=False,
+    help=(
+        "Write `decisions.refuse-proposals: true` into the new project's configuration, "
+        "turning on the landing check's refusal (COR-066 point 4). The flag is the consent."
+    ),
+)
+def init(dry_run: bool, here: bool, yes: bool, root: Path | None, refuse_proposals: bool) -> None:
     """First install: propagation + seed + merge per COR-001 / COR-002 / COR-004.
 
     Announces the resolved install target and why it was chosen, then confirms
@@ -3342,7 +3668,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"status` to see why."
             )
         click.echo(f"pkit init -> {target}  (explicit target, --root)")
-        install_kit(target, dry_run=dry_run)
+        install_kit(target, dry_run=dry_run, refuse_proposals=refuse_proposals)
         return
 
     target, reason = resolve_init_target(cwd)
@@ -3509,7 +3835,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
                 f"install there, or run `pkit init`\n"
                 f"       from {target}.",
             )
-        install_kit(target, dry_run=dry_run)
+        install_kit(target, dry_run=dry_run, refuse_proposals=refuse_proposals)
         return
 
     # Target IS the current directory (GIT_ROOT, --here, or a fresh non-git
@@ -3523,7 +3849,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
             f"       Re-run with --yes to install project-kit into {target}.",
         )
 
-    install_kit(target, dry_run=dry_run)
+    install_kit(target, dry_run=dry_run, refuse_proposals=refuse_proposals)
 
 
 @main.command()
@@ -3982,6 +4308,17 @@ def _run_report(
     if scratchpad_note:
         note_path = scratchpads.resolve_note(target_root, scratchpad_note)
         note_text = note_path.read_text(encoding="utf-8")
+        # Refused before anything is sent where the note could not record the
+        # send (#2923). A browser filing is recorded by `scratchpad reported`,
+        # which writes no report context.
+        stamps_context = assume_yes or (gh_ok and not want_url)
+        scratchpads.refuse_unrecordable_send(
+            target_root,
+            note_path,
+            note_text,
+            project=project if stamps_context else None,
+            workstream=ws if stamps_context else None,
+        )
         findings = lint_redaction(note_text)
         payload = attach_note(body, note_path.name, note_text)
         url = build_new_issue_url(
@@ -4612,6 +4949,16 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         )
     if not gh_authenticated():
         raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
+    note_path = (target_root / draft.note) if draft.note else None
+    if note_path is not None and note_path.is_file():
+        # The note may have changed since it was staged (#2923); the draft is kept.
+        scratchpads.refuse_unrecordable_send(
+            target_root,
+            note_path,
+            note_path.read_text(encoding="utf-8"),
+            project=draft.project,
+            workstream=draft.workstream,
+        )
     refusal = (
         "refusing to post: stdin is not a terminal, so nobody can confirm the post (#2003). "
         f"Nothing was posted, and the draft is kept. Run `pkit report submit "
@@ -4625,7 +4972,6 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     if not _confirm_send_payload(draft.kind, draft.payload, current_login(), refusal=refusal):
         click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
         return
-    note_path = (target_root / draft.note) if draft.note else None
     outcome = _post_confirmed_payload(
         target_root,
         kind=draft.kind,
@@ -4677,6 +5023,8 @@ def sync(dry_run: bool, force: bool) -> None:
     if force:
         # Accepted and ignored for one release (ADR-065 point 10). Its one effect,
         # copying an older capability over a newer one, moved a version down.
+        from project_kit.sync import SYNC_FORCE_IGNORED
+
         click.echo(SYNC_FORCE_IGNORED, err=True)
     run_sync(target_root, dry_run=dry_run)
 
@@ -5208,6 +5556,13 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # under project/, the skips chosen above are recorded and each override
     # removes the project's artefact, then its copy, its migrations and its
     # restamp.
+    from project_kit import loaded_rules
+
+    # Its loaded set is read before the copy, and what the copy newly binds is said
+    # after it (ADR-076 point 6).
+    rules_before = loaded_rules.read_component(
+        name, loaded_rules.component_folder(target_root, name)
+    )
     refreshed_path = caps.refresh_capability(
         target_root,
         capability_source,
@@ -5216,6 +5571,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         record=record,
         overridden=overridden,
     )
+    _echo_capability_bound(target_root, name, rules_before, capability_source.path)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
@@ -5231,13 +5587,10 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     if not dry_run:
         # Its derivable state (ADR-065 point 4, step 8, for this capability):
         # re-run installed adapter primitives so the harness side picks up any
-        # newly-added skills/agents from the upgraded capability, then provision
-        # its query commands, as sync would (#1090), and render `.pkit/.gitignore`,
-        # which reads the capability's runtime-ignore declarations.
+        # newly-added skills/agents from the upgraded capability, render
+        # `.pkit/.gitignore` again, which reads the capability's runtime-ignore
+        # declarations, then provision its query commands, as sync would (#1090).
         _deploy_capability(target_root, source_kit, name)
-        from project_kit import visibility
-
-        click.echo(visibility.render_runtime_ignore(target_root))
     # Last, the questions its points declare (COR-061).
     _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
@@ -5270,8 +5623,8 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
 
     The backbone's members run first — manifests, schemas, configuration,
     packages, connections, versions, decisions, friction, rule-sets, refs,
-    process, data — then each installed capability's, registered in its
-    package metadata (`validators:`, each naming a `commands:` leaf that
+    process, data, scratchpad — then each installed capability's, registered
+    in its package metadata (`validators:`, each naming a `commands:` leaf that
     declares the query contract). One renderer prints every section;
     warnings, information and reports print, only errors fail. The
     diff-scoped checks (`friction check`, `migrations check-diff`, `release
@@ -5316,7 +5669,14 @@ def refs_validate() -> None:
         raise click.ClickException("not in a project tree.")
     found = refs_mod.validate_corpus(target_root)
     issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
-    warnings = [issue for issue in found if issue.kind in refs_mod.WARNING_KINDS]
+    overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
+    unknown_fields = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_FIELD]
+    warnings = [
+        issue
+        for issue in found
+        if issue.kind in refs_mod.WARNING_KINDS
+        and issue.kind not in (refs_mod.UNKNOWN_OVERRIDE, refs_mod.UNKNOWN_FIELD)
+    ]
     lines = [
         cli_render.style(
             "title",
@@ -5340,6 +5700,28 @@ def refs_validate() -> None:
             )
         )
         for issue in warnings:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if overrides:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(overrides)} warning(s) of an override the deploy ignores, which do not "
+                "fail the check:",
+            )
+        )
+        for issue in overrides:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if unknown_fields:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(unknown_fields)} warning(s) of a key outside an agent definition's "
+                "fields, which do not fail the check:",
+            )
+        )
+        for issue in unknown_fields:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     click.echo("\n".join(lines) + "\n", nl=False)
     if issues:
@@ -5561,8 +5943,16 @@ def hooks_list() -> None:
         + "   (bound provider by precedence)"
     ]
     for hook in declared_hooks:
-        winner = refs_mod.resolve_hook(providers, hook)
-        marker = f" -> {winner.tier}:{winner.source}" if winner else " (no provider)"
+        winners = refs_mod.winning_providers(providers, hook)
+        if not winners:
+            marker = " (no provider)"
+        elif len(winners) > 1:
+            sources = ", ".join(p.source for p in winners)
+            marker = cli_render.style(
+                "danger", f" (same-tier collision at {winners[0].tier}: {sources})"
+            )
+        else:
+            marker = f" -> {winners[0].tier}:{winners[0].source}"
         lines.append(f"  {hook}{marker}")
     click.echo("\n".join(lines) + "\n", nl=False)
 
@@ -5570,14 +5960,17 @@ def hooks_list() -> None:
 @hooks.command("resolve")
 @click.argument("hook")
 def hooks_resolve(hook: str) -> None:
-    """Show the currently-bound provider for a hook (by precedence)."""
+    """Show the provider a hook binds to (by precedence); refuse a same-tier collision."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    winner = refs_mod.resolve_hook(providers, hook)
-    if winner is None:
+    winners = refs_mod.winning_providers(providers, hook)
+    if not winners:
         raise click.ClickException(f"no provider declared for hook {hook!r}.")
+    if len(winners) > 1:
+        raise click.ClickException(f"{hook}: {refs_mod.collision_diagnosis(winners)}")
+    winner = winners[0]
     click.echo(f"  {hook} -> {winner.tier}:{winner.source} ({winner.implementation})")
 
 
@@ -5606,12 +5999,10 @@ def hooks_who_provides(hook: str) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    matches = [p for p in providers if p.hook == hook]
+    matches = refs_mod.by_precedence([p for p in providers if p.hook == hook])
     if not matches:
         click.echo(f"  no provider declared for hook {hook!r}.")
         return
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    matches.sort(key=lambda p: order.get(p.tier, 99))
     click.echo(cli_render.style("strong", f"{len(matches)} provider(s) for {hook!r}:"))
     for p in matches:
         click.echo(f"  {p.tier:8} {p.source:30} {p.implementation}")
@@ -6497,6 +6888,75 @@ def decisions_check_diff(base_ref: str | None, head_rev: str | None, as_json: bo
         raise click.ClickException(f"{report.errors} error(s) in the change's numbering found.")
 
 
+@decisions.command("check-landing")
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help="The base the change would land on, else $PKIT_CHECK_BASE. There is no default: "
+    "a run that names none gives no answer.",
+)
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="The commit that would land. Default: HEAD. The working tree is never read.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the check's own JSON document."
+)
+def decisions_check_landing(base_ref: str | None, head_rev: str | None, as_json: bool) -> None:
+    """Judge what a change's merge would land on its base (COR-066 points 2 to 4, ADR-081).
+
+    Compares each decision record and rule at the landing state, git's merge of the
+    head into the base's tip, with its state at that tip. Reports each proposed there
+    and not at the tip, and lists each the change makes accepted, with the commits
+    that accepted it, the work before them and the edits since. A record the project
+    receives by sync is skipped.
+
+    The key `decisions.refuse-proposals`, read at the base's tip, decides whether a
+    reported proposal fails the run, and only a landing on the default branch can fail.
+    The default branch's name is read at that tip too. Which files the project receives
+    and where the check looks are read at that tip and at the landing state.
+
+    Exits 0 on a pass and 1 on a refusal. Where the check cannot compute what lands, it
+    gives no answer and exits 3, which is never a pass. Among the causes: the base is
+    unnamed or names no commit, the head names none, the head and the base share no
+    history, the clone is shallow, the merge conflicts, a git command fails, or the
+    synced-copy test cannot run. The CLI reference lists every cause. The check gate and
+    the hooks never run it. --json prints one document either way.
+    """
+    from project_kit import decisions_landing as landing_mod
+    from project_kit.friction_check import printable
+
+    def no_answer(problem: str) -> NoReturn:
+        if as_json:
+            click.echo(landing_mod.render_json(landing_mod.no_answer_document(problem)), nl=False)
+        else:
+            click.echo(f"No answer: {printable(problem)}", err=True)
+        raise SystemExit(landing_mod.NO_ANSWER_EXIT)
+
+    target_root = find_target_root()
+    if target_root is None:
+        no_answer("not in a project tree.")
+    try:
+        found = landing_mod.check(target_root, base_ref, head_rev)
+    except landing_mod.NoAnswer as exc:
+        no_answer(exc.problem)
+    for warning in found.warnings:
+        click.echo(f"  warning: {printable(warning)}", err=True)
+    if as_json:
+        click.echo(landing_mod.render_json(landing_mod.document(found)), nl=False)
+    else:
+        click.echo(landing_mod.render_human(found), nl=False)
+    if found.refuses:
+        raise click.ClickException(
+            f"{len(found.proposals)} proposal(s) would land on the default branch."
+        )
+
+
 @main.group()
 def schemas() -> None:
     """Validate capability YAML schemas against their JSON Schema companions (per COR-018 + the
@@ -6846,14 +7306,16 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 @click.argument("name")
 @click.option("--json", "as_json", is_flag=True, default=False, help="Print the machine form.")
 def show_capability_cmd(name: str, as_json: bool) -> None:
-    """Show a capability's connections, installed or not (COR-053 point 8).
+    """Show a capability's connections and its rules, installed or not (COR-053 point 8).
 
-    Read from its package metadata alone: the roles it provides, the points it
-    accepts and offers, its extensions (contributes, subscribes, depends-on),
-    and what would connect here — the live wiring for an installed capability,
-    the wiring this project would have with it installed otherwise. Found in the
-    local catalogue only: the installed tree, capabilities authored in this
-    repository, the capabilities that ship with this pkit. Writes nothing.
+    Its connections are read from its package metadata alone: the roles it
+    provides, the points it accepts and offers, its extensions (contributes,
+    subscribes, depends-on), and what would connect here — the live wiring for an
+    installed capability, the wiring this project would have with it installed
+    otherwise. Then the loaded rule set it ships, if any, with each accepted
+    rule's id and title: installing it is the consent to them (COR-070 point 3).
+    Found in the local catalogue only: the installed tree, capabilities authored
+    in this repository, the capabilities that ship with this pkit. Writes nothing.
     """
     from project_kit import capability_plans as plans
 
@@ -7153,6 +7615,7 @@ def install_capability_cmd(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7204,6 +7667,7 @@ def _install_capability_in_source(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
@@ -7502,6 +7966,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
             f"(in-repo) at {registered_path.relative_to(target_root)}/",
         )
     )
+    _echo_capability_bound(target_root, name, None, capability_source.path)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
@@ -7601,21 +8066,40 @@ def _upgrade_capability_in_source(
 def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     """Deploy a capability just brought in or refreshed, and provision its query commands.
 
-    The tail `install`, `register` and `upgrade` share: re-run the installed
+    The tail `install`, `register` and `upgrade` share, after the manifest is
+    written: render the capabilities' rules index, so a session loads the
+    capability's rules from here on (ADR-076 point 2); re-run the installed
     adapter primitives so the harness picks up the capability's skills and
-    agents, then provision its query commands, so an offline `pkit validate`
+    agents; render `.pkit/.gitignore`, as sync does, so the capability's
+    runtime-ignore lines are there before the next sync (ADR-009 rule 7,
+    #2367); then provision its query commands, so an offline `pkit validate`
     answers without a `pkit sync` first (#1090). Deploy is identical whatever
     the capability's origin (COR-031 D1).
     """
     from project_kit import install as install_mod
+    from project_kit import visibility
 
     ctx = install_mod.InstallContext(
         target_root=target_root,
         source_kit=source_kit,
         dry_run=False,
     )
+    install_mod.render_rules_index(ctx)
     install_mod.run_installed_adapter_primitives(ctx)
+    click.echo(visibility.render_runtime_ignore(target_root))
     install_mod.provision_query_commands(ctx, component=name)
+
+
+def _echo_capability_bound(
+    target_root: Path, name: str, before: SetReading | None, source: Path
+) -> None:
+    """What a capability's install, register or upgrade newly binds of its loaded set,
+    read where it is copied from, against its reading `before`, none for an install
+    (ADR-076 point 6). A dry run says it too, as sync's does: running the step is the
+    consent to those rules, so they are read before it runs (COR-070 point 3)."""
+    from project_kit import loaded_rules
+
+    loaded_rules.echo_bound(target_root, loaded_rules.bound_by({name: before}, [(name, source)]))
 
 
 def _ask_point_questions(
@@ -8146,7 +8630,15 @@ def uninstall_capability_cmd(
             source_kit=source_kit,
             dry_run=False,
         )
+        # The capability is unregistered, so the index leaves its rules out from here
+        # on, its files kept or not (ADR-076 point 2).
+        install_mod.render_rules_index(ctx)
         install_mod.run_installed_adapter_primitives(ctx)
+        # And `.pkit/.gitignore` leaves its runtime-ignore lines out, as the next
+        # sync's render would (ADR-009 rule 7, #2367).
+        from project_kit import visibility
+
+        click.echo(visibility.render_runtime_ignore(target_root))
 
 
 @capabilities.command("list")
@@ -8604,6 +9096,8 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     rel = target.relative_to(target_root)
     verb = "Would stamp" if dry_run else "Stamped"
     if with_storyboard:
+        from project_kit.agents import STORYBOARD_FILE
+
         sibling = target.parent / STORYBOARD_FILE
         rel_sb = sibling.relative_to(target_root)
         click.echo(f"{verb}: {rel}")

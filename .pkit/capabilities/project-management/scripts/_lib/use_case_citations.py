@@ -50,7 +50,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib import provenance
+from _lib import backbone, provenance
 
 POINT = "pkit::work-tracking:use-cases"
 
@@ -231,7 +231,7 @@ def cited(body: str) -> list[str]:
 # --- reading the point ---------------------------------------------------------------
 
 
-def read_point(run: Runner = subprocess.run) -> Reading:
+def read_point(run: Runner = backbone.run) -> Reading:
     """The point through `pkit connections resolve --json`. The command exits 1 on
     an unresolved point and still prints its document, so the document decides,
     never the exit code. No document at all — `pkit` absent, a backbone without

@@ -1,0 +1,10 @@
+answers:
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T11:01:04Z
+      outcome: unchanged
+      unchanged-because: "The page names the over-broad warning only as anchors too broad among what the whole-repository check reports, which still holds: the check still warns of anchors too broad, now by ADR-080's two bars. What exclusion spares and which schema binds an answer file hold."

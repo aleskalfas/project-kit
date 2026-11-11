@@ -6,7 +6,9 @@ A clone that set its instance id (``set-instance``) marks the issues it owns.
 from birth; ``start-work`` claims an issue no instance owns yet (the commons);
 ``close-issue`` releases the owner as the issue closes, in every mode, and
 ``done-work`` releases through the ``close-issue --mode pr-merge`` it runs for
-each issue its merge closed (DEC-035 points 3 and 4).
+each issue its merge closed (DEC-035 points 3 and 4). ``move-issue`` releases
+through the same :func:`release` as a person moves an issue back from In
+Progress, since nobody is working on it (DEC-006).
 
 **Activation.** Outside a topology of seats, :func:`this_clone` answers ``None``
 when no instance id is set, and every caller then writes and prints exactly
@@ -31,7 +33,12 @@ claims for good, with no write, even where the same clone takes the seat again
 (point 5). A planner's seat files with no owner, so its work enters the shared
 pool, and every other seat claims at filing; a worker claims at ``start-work``
 (point 7). Renewal, lapse and parking
-are not built yet.
+are not built yet. The reading carries the pools the topology declares, and
+the seat the pools it serves ([project-management:DEC-061-pools-of-workers]
+point 1). Where this code cannot read the topology in full, the reading
+carries the clause a command that takes refuses with (DEC-061 point 9): the
+claim that starts a Task and the choice of the next one refuse on it, and every
+other command goes on.
 
 **The seat is confirmed before each write** (DEC-059 point 6). Every command
 that acts as an instance asks :func:`this_clone` before it writes, where the
@@ -82,6 +89,13 @@ as the owner, so it is no residue. Where the lowest such label is this clone's,
 a claim writes the comment marker first, and only then are the labels residual.
 Where a lower instance's label is there, this clone withdraws by removing its
 own label alone.
+
+**A command that must leave an issue with no owner asks first.**
+:func:`cannot_release` names each owner this clone's release would leave: every
+owner, where the clone takes no part in instance ownership, and a comment marker
+another account's clone wrote. The move back from In Progress refuses on it,
+before it writes, so an issue never waits in Backlog or Todo still claimed
+(DEC-006, DEC-035 point 4).
 
 **The mirror.** In ``comment`` mode each claim and release regenerates the owner
 mirror from the fold, before the provenance footer, through
@@ -160,23 +174,30 @@ Run = Callable[[list[str]], Any]
 @dataclass(frozen=True)
 class Seat:
     """A seat of the topology, as this clone holds it: its name, its number,
-    which is its place in the topology, its role, and the scope that narrows its
-    own pool of work, where it has one (DEC-059 points 2, 6 and 7)."""
+    which is its place in the topology, its role, the scope that narrows its
+    own pool of work, where it has one (DEC-059 points 2, 6 and 7), and the
+    pools it serves, by name, where it names them (DEC-061 point 1)."""
 
     name: str
     number: int
     role: str
     scope: topology.Scope | None = None
+    pools: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
 class Topology:
     """One run's reading of the project's topology, as instance ownership takes
     it from its caller (ADR-041 point 7, ADR-071 point 1): the seat this clone
-    holds, or None, and each seat's holder."""
+    holds, or None, and each seat's holder. ``pools`` are the pools of workers
+    the topology declares, None where it declares none (DEC-061 point 1), and
+    ``refusal`` the clause a command that takes refuses with where this code
+    cannot read the topology in full, or None (DEC-061 point 9)."""
 
     seat: Seat | None
     holders: Mapping[str, ownership.Holder]
+    pools: tuple[str, ...] | None = None
+    refusal: str | None = None
 
 
 @dataclass(frozen=True)
@@ -194,6 +215,11 @@ class Clone:
     seat: Seat | None = None
     key: str | None = None
     holders: Mapping[str, ownership.Holder] | None = None
+    #: The pools of workers the topology declares, None where it declares none.
+    pools: tuple[str, ...] | None = None
+    #: Why a command that takes refuses, where this code cannot read the
+    #: topology in full (DEC-061 point 9), or None.
+    refusal: str | None = None
 
     @property
     def files_unowned(self) -> bool:
@@ -240,6 +266,16 @@ class Guard:
     @property
     def bypassed(self) -> bool:
         return self.outcome == BYPASSED
+
+
+@dataclass(frozen=True)
+class Unreleasable:
+    """An owner this clone cannot release (:func:`cannot_release`): ``why``
+    names it, as a clause a refusal carries, and ``remedy`` says what lets the
+    command go on."""
+
+    why: str
+    remedy: str
 
 
 def say(result: Result) -> None:
@@ -313,6 +349,8 @@ def seat_clone(reading: Topology, capability_root: Path, login: str | None) -> C
         seat=reading.seat,
         key=key,
         holders=reading.holders,
+        pools=reading.pools,
+        refusal=reading.refusal,
     )
 
 
@@ -377,7 +415,12 @@ def read_topology(
     if where is not None:
         print(f"[note] ownership: this clone read the topology of {where}.", file=sys.stderr)
     seat = confirm_seat(snap, capability_root, dry_run=dry_run)
-    return Topology(seat, SeatHolders(snap))
+    return Topology(
+        seat,
+        SeatHolders(snap),
+        pools=snap.topology.pools,
+        refusal=topology.not_understood_refusal(snap.topology),
+    )
 
 
 def _snapshot(capability_root: Path, config: dict, login: str | None) -> topology.Snapshot | None:
@@ -444,7 +487,8 @@ def confirm_seat(
     if state.seat.retired:
         _release_retired(snapshot, state, capability_root, dry_run=dry_run)
         return None
-    return Seat(state.seat.name, state.seat.number, state.seat.role, state.seat.scope)
+    seat = state.seat
+    return Seat(seat.name, seat.number, seat.role, seat.scope, seat.pools)
 
 
 def _release_retired(
@@ -568,9 +612,10 @@ def claims_at_filing(clone: Clone, assignee: str | None) -> bool:
     return assignee == clone.login and not clone.files_unowned
 
 
-def release_plan(clone: Clone) -> str:
-    """What a release will do, for a pre-flight summary."""
-    return f"released on close (this clone is {clone.named()}, {clone.substrate} substrate)"
+def release_plan(clone: Clone, *, when: str = "on close") -> str:
+    """What a release will do, for a pre-flight summary. ``when`` says what
+    releases: the close, or the move back from In Progress (DEC-006)."""
+    return f"released {when} (this clone is {clone.named()}, {clone.substrate} substrate)"
 
 
 # ---- claim ------------------------------------------------------------------
@@ -832,8 +877,18 @@ def owner_named(resolution: ownership.OwnershipResolution, instance: int) -> str
 # ---- release ----------------------------------------------------------------
 
 
-def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = None) -> Result:
-    """Release every owner of ``issue_number`` as it closes (DEC-035 point 4).
+def release(
+    issue_number: int,
+    clone: Clone,
+    config: dict,
+    *,
+    run: Run | None = None,
+    happened: str = "closed",
+) -> Result:
+    """Release every owner of ``issue_number`` as it closes (DEC-035 point 4), or
+    as a person moves it back from In Progress (DEC-006). ``happened`` says which,
+    in the warning a failed release prints: ``closed``, or ``moved back to
+    backlog``.
 
     Posts a ``release`` event for each instance the comment log holds, where the
     log is this clone's account's, and removes each ``instance:N`` label. In a
@@ -884,7 +939,7 @@ def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = 
     if failures:
         return Result(
             FAILED,
-            f"[warn] ownership: #{n} closed, but its owner could not all be released: "
+            f"[warn] ownership: #{n} {happened}, but its owner could not all be released: "
             + "; ".join(failures),
             notes=tuple(notes),
         )
@@ -898,6 +953,110 @@ def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = 
         )
     instances = ", ".join(f"instance {i}" for i in sorted(set(released)))
     return Result(RELEASED, f"[ok] ownership: #{n} released ({instances}).", notes=tuple(notes))
+
+
+def cannot_release(
+    issue_number: int,
+    clone: Clone | None,
+    config: dict,
+    *,
+    capability_root: Path,
+    login: str | None,
+    run: Run | None = None,
+) -> Unreleasable | None:
+    """The owner of ``issue_number`` this clone cannot release, named, or None
+    where it can release every owner, or the issue has none.
+
+    A command that must leave the issue with no owner asks this before it
+    writes, and refuses on an answer, so the issue never keeps a claim it was to
+    lose: the move back from In Progress (DEC-006, DEC-035 point 4). Two owners
+    are beyond this clone's :func:`release`. Every owner is, where this clone
+    takes no part in instance ownership (``clone`` is None), since such a clone
+    touches no marker (DEC-035 point 1). So is a claim on the comment log made
+    under another account, since the fold trusts no other author (DEC-043 point
+    3). An issue that cannot be read refuses too, since whose it is cannot be
+    told. ``login`` is the invoker's account, read where ``clone`` is None.
+    Writes nothing."""
+    gh = run or _runner(config)
+    n = issue_number
+    issue = _read(gh, n)
+    if issue is None:
+        return Unreleasable(
+            f"#{n} could not be read, so whose it is cannot be told",
+            "run this again once the issue can be read",
+        )
+    assignees = _assignees(issue)
+    me = clone.login if clone is not None else login
+    account = me if me in assignees else (assignees[0] if assignees else None)
+    whose = f" of @{account}" if account else ""
+    if clone is not None:
+        logged = _logged(issue, account, clone.holders)
+        if not logged.claimants or account == clone.login:
+            return None
+        return Unreleasable(
+            f"#{n} is owned by {_named(logged)}{whose}, a claim on the comment log that only "
+            f"a clone of @{account} can release (DEC-043 point 3)",
+            f"run this from a clone of @{account}, or once that account's clone released it",
+        )
+    owned = _owned_with_no_clone(issue, account, capability_root, config, login)
+    if not owned:
+        return None
+    return Unreleasable(
+        f"#{n} is owned by {owned}{whose}, and this clone takes no part in instance "
+        "ownership, so it releases no claim (DEC-035 point 1)",
+        "run this from the owner's clone, or once the owner released it",
+    )
+
+
+def _logged(
+    issue: dict, account: str | None, holders: Mapping[str, ownership.Holder] | None
+) -> ownership.OwnershipResolution:
+    """The owners the issue's comment log holds for ``account``, judged against
+    the seats' ``holders`` in a project with a topology, as :func:`release`
+    reads them."""
+    return ownership.resolve_owner(
+        comments=_comments(issue),
+        labels=[],
+        assignee_login=account,
+        selector="comment",
+        holders=holders,
+    )
+
+
+def _named(resolution: ownership.OwnershipResolution) -> str:
+    """Each claimant of a folded issue, as a line names it."""
+    return ", ".join(_owner(resolution, i) for i in sorted(resolution.claimants))
+
+
+def _owned_with_no_clone(
+    issue: dict, account: str | None, capability_root: Path, config: dict, login: str | None
+) -> str:
+    """The owners of ``issue``, named, as a clone that takes no part in instance
+    ownership finds them, or an empty string where it has none.
+
+    A claim on the comment log, and an ``instance:N`` label, each make an
+    owner. Where either is there, and the default branch declares a topology,
+    the claims are judged against the seats' holders, as a clone with a seat
+    judges them: a void claim is no owner, and neither is a label, which names
+    no seat (ADR-041 point 7). A topology that cannot be read leaves every claim
+    an owner."""
+    logged = _logged(issue, account, None)
+    labelled = ownership.resolve_owner(
+        comments=[], labels=_labels(issue), assignee_login=account, selector="label"
+    ).owners
+    if not logged.claimants and not labelled:
+        return ""
+    try:
+        snap = _snapshot(capability_root, config, login)
+    except topology.Unresolved:
+        snap = None
+    if snap is not None:
+        judged = _logged(issue, account, SeatHolders(snap))
+        return _named(judged) if judged.claimants else ""
+    owners = sorted(logged.claimants | labelled)
+    return ", ".join(
+        _owner(logged, i) if i in logged.claimants else f"instance {i}" for i in owners
+    )
 
 
 # ---- shared steps -------------------------------------------------------------

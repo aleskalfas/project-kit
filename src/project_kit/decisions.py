@@ -54,10 +54,10 @@ from __future__ import annotations
 import datetime as _dt
 import re
 import subprocess
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import click
 from ruamel.yaml import YAML
@@ -75,6 +75,8 @@ Namespace = str
 _FIXED_NAMESPACES: tuple[str, ...] = ("core", "project", "adr")
 
 _OVERLAY_PATH = Path(".pkit") / "agents" / "project" / "overlay.yaml"
+#: The overlay's file, as a state's tree names it.
+OVERLAY_RELPATH = _OVERLAY_PATH.as_posix()
 
 #: The overlay category the `adr` namespace stamps into (COR-024 / COR-025).
 _ADR_CATEGORY = "adr-records"
@@ -228,6 +230,31 @@ def resolve_adr_records_dir(target_root: Path) -> Path:
     set conflicting per-agent overrides should reconcile them by hand.
     """
     return _explicit_adr_records_dir(target_root, _load_overlay(target_root))
+
+
+def adr_folder_named(overlay: Mapping[str, Any]) -> str | None:
+    """The folder of the ADR id-space that an overlay's mapping names, relative to the
+    root, read forgivingly: `None` where it names none a state could hold. The numbering
+    check's reading asks here at a commit, where no folder is on disk."""
+    entries = overlay.get(_ADR_CATEGORY)
+    if not isinstance(entries, list) or not entries:
+        return None
+    first = cast(list[Any], entries)[0]
+    if not isinstance(first, str):
+        return None
+    folder = PurePosixPath(first.rstrip("/"))
+    outside = folder.is_absolute() or ".." in folder.parts or folder.parts[:1] == (".pkit",)
+    return None if outside or not folder.parts else folder.as_posix()
+
+
+def adr_folder_unread(overlay: Mapping[str, Any]) -> str | None:
+    """Why an overlay's mapping writes an ADR folder `adr_folder_named` does not take, or
+    `None` where it takes it or nothing is written. So a reader told of no folder can tell
+    a project with none from a folder it could not read."""
+    written = overlay.get(_ADR_CATEGORY)
+    if written is None or written == [] or adr_folder_named(overlay) is not None:
+        return None
+    return f"writes `{_ADR_CATEGORY}` as {written!r}, which names no folder a state could hold"
 
 
 def _load_overlay(target_root: Path) -> dict[str, Any]:

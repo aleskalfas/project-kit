@@ -39,6 +39,25 @@ The target is the Milestone's `Rollforward target:` line, else the
 next-numbered open Milestone of its category; with no candidate, or more than
 one, nothing is moved or closed until the operator names it (--target).
 
+Pools of workers ([project-management:DEC-061-pools-of-workers] point 7).
+Where the topology declares pools, the next-numbered is sought within the
+closing Milestone's pool, counted by the number in the title, or among the open
+Milestones in no pool for one in none, so its Tasks stay with their workers. A
+target the line or --target names in another pool is named, with its pool, in
+the close's consent prompt, so the person's consent to the close covers the
+move. A forced close leaves its open Tasks on the closed Milestone, in no pool,
+and names each Task in Backlog or In Progress it so leaves.
+
+Where the topology cannot be read in full, the close reads no pool and takes
+each Milestone's `Pool:` line to stand, as a write of a Task's Milestone does
+(DEC-061 point 6). The next-numbered of every open Milestone is the target only
+where its line names the closing Milestone's pool, or neither names one, since
+it is then the next of that pool whatever the topology declares. Otherwise the
+close is refused until the operator names the target. Where the target the
+line or --target names is in another pool by its `Pool:` line, the consent
+prompt names that pool and says the pools could not be read. So no Task enters
+another pool's Milestone without the prompt naming it.
+
 Each move is `edit-issue <n> --milestone <target> --reason "<the close>"`, the
 one writer of an issue's milestone: it posts the audit comment naming the old
 Milestone, the new one and the reason (here, the close), writes the native
@@ -102,7 +121,7 @@ import datetime as _dt
 import re
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -110,7 +129,16 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, consent, session_guard
+from _lib import (
+    axis_labels,
+    board_status,
+    bootstrap_gate,
+    consent,
+    issue_position,
+    pools,
+    session_guard,
+)
+from _lib import lifecycle_inference as infer
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -125,6 +153,7 @@ from _lib.milestone import (
     fetch_milestone,
     list_milestone_children,
     list_open_milestones,
+    milestone_pool,
     native_milestone_matches,
     next_numbered_milestones,
     parse_rollforward_target,
@@ -145,10 +174,15 @@ EXIT_ROLLFORWARD_INCOMPLETE = 4
 @dataclass(frozen=True)
 class RollforwardTarget:
     """Where a date-triggered close moves the open children, and how it was
-    chosen (for the plan's output)."""
+    chosen (for the plan's output). ``other_pool`` names the target's pool,
+    or says it is in none, where the target sits in a pool other than the
+    closing Milestone's (DEC-061 point 7). ``pools_unread`` says the topology
+    could not be read, so the pools are those the `Pool:` lines name."""
 
     milestone: Milestone
     source: str
+    other_pool: str | None = None
+    pools_unread: bool = False
 
 
 @dataclass(frozen=True)
@@ -321,9 +355,34 @@ def main() -> int:
         )
         return decision.exit_code
 
+    # The pools of workers the topology declares, read only where the close
+    # moves or leaves open children (DEC-061 point 7).
+    declared: tuple[str, ...] | None = None
+    unread: str | None = None
+    if decision.rolls_forward or decision.leaves_open_children:
+        declared, unread = pools.declared_pools(capability_root)
+        if unread is not None:
+            how = (
+                " and takes each milestone's `Pool:` line to stand: the next-numbered is the "
+                "target only where its line names this milestone's pool, or neither names one, "
+                "and a target in another pool is named in the consent prompt "
+                "(DEC-061 points 6 and 7)"
+                if decision.rolls_forward
+                else ""
+            )
+            print(f"[warn] {unread}, so the close reads no pool{how}.", file=sys.stderr)
+
     plan: RollforwardPlan | None = None
     if decision.rolls_forward:
-        target = _choose_target(args.target, description, number, title, config)
+        target = _choose_target(
+            args.target,
+            description,
+            number,
+            title,
+            config,
+            declared=declared,
+            unread=unread is not None,
+        )
         if isinstance(target, int):
             return target
         plan = _plan_rollforward(open_children, number, title, target)
@@ -337,6 +396,8 @@ def main() -> int:
             '<next> --reason "<why>"`.',
             file=sys.stderr,
         )
+        if declared is not None:
+            _report_left_in_no_pool(open_children, number, capability_root, config)
 
     closed_count = len(children) - len(open_children)
     left_open = len(plan.left) if plan is not None else len(open_children)
@@ -365,9 +426,13 @@ def main() -> int:
     # to ask, so the close is refused before anything is written (#2015).
     question = "Close this milestone? [y/N] "
     if plan is not None and plan.moves:
+        # A target in another pool hands the Tasks to other workers, so the
+        # prompt names it and its pool (DEC-061 point 7), by its `Pool:` line
+        # where the pools could not be read.
+        other = f", {_other_pool_said(plan.target)}" if plan.target.other_pool is not None else ""
         question = (
             f"Close this milestone and roll {len(plan.moves)} open child issue(s) "
-            f"forward to {_milestone_label(plan.target.milestone)}? [y/N] "
+            f"forward to {_milestone_label(plan.target.milestone)}{other}? [y/N] "
         )
     stop = consent.authorise(
         question, yes=args.yes, step=f"Closing milestone #{number}", verb="close-milestone"
@@ -436,14 +501,53 @@ def _trigger_phrase(close_trigger: str, due_on: object) -> str:
 # ---- rollforward ----------------------------------------------------
 
 
+#: How a target in no pool is named where the closing Milestone is in one.
+NO_POOL = ""
+
+
+def _pool_said(pool: str | None) -> str:
+    return "no pool" if not pool else f"the pool {pool}"
+
+
+def _other_pool_said(target: RollforwardTarget) -> str:
+    """Where ``target``, in another pool than the closing Milestone's, sits:
+    by its `Pool:` line where the pools could not be read."""
+    where = _pool_said(target.other_pool)
+    if target.pools_unread:
+        return (
+            f"by its `Pool:` line in {where}, another pool than this milestone's "
+            "(the pools could not be read)"
+        )
+    return f"in {where}, another pool than this milestone's"
+
+
 def _choose_target(
-    arg: str | None, description: str, number: int, title: str, config: dict
+    arg: str | None,
+    description: str,
+    number: int,
+    title: str,
+    config: dict,
+    *,
+    declared: tuple[str, ...] | None = None,
+    unread: bool = False,
 ) -> RollforwardTarget | int:
     """The rollforward target, or the exit code to stop with.
 
     --target wins; else the Milestone's `Rollforward target:` line; else the
     next-numbered open Milestone of its category (DEC-016). No candidate, or more
     than one, is refused before anything is written — the operator names it.
+
+    Where the topology declares pools (``declared``), the next-numbered is
+    sought only among the open Milestones of the closing one's pool, or among
+    those in no pool for one in none, and a named target in another pool says
+    so, for the close's consent prompt to name (DEC-061 point 7).
+
+    Where the topology cannot be read in full (``unread``), no pool is read and
+    each `Pool:` line is taken to stand (:func:`_in_pools`). The next-numbered of
+    every open Milestone is then the target only where its line names the
+    closing Milestone's pool, or neither names one: it is the next of that pool
+    whatever the topology declares. Otherwise which comes next in the pool cannot
+    be told, and the close is refused for the operator to name it.
     """
     if arg is not None:
         named = resolve_milestone(arg, config)
@@ -461,40 +565,147 @@ def _choose_target(
                 file=sys.stderr,
             )
             return 2
-        return RollforwardTarget(named, "--target")
+        target = RollforwardTarget(named, "--target")
+        return _in_pools(target, description, config, declared, unread=unread)
 
-    declared = parse_rollforward_target(description)
-    if declared is not None:
-        named = resolve_milestone(declared, config)
+    line = parse_rollforward_target(description)
+    if line is not None:
+        named = resolve_milestone(line, config)
         if named is None or named.number == number:
             _refuse_target(
                 number,
-                f"its `Rollforward target:` line names {declared!r}, which is not "
+                f"its `Rollforward target:` line names {line!r}, which is not "
                 "another OPEN milestone",
             )
             return 1
-        return RollforwardTarget(named, "its `Rollforward target:` line")
+        target = RollforwardTarget(named, "its `Rollforward target:` line")
+        return _in_pools(target, description, config, declared, unread=unread)
 
     open_milestones = list_open_milestones(config)
     if open_milestones is None:
         print("error: could not list the open milestones (gh failure).", file=sys.stderr)
         return 3
+    within = ""
+    if declared is not None:
+        pool = milestone_pool(description, declared).name
+        open_milestones = pools.of_pool(open_milestones, pool, declared)
+        within = f" in {_pool_said(pool)}"
     candidates = next_numbered_milestones(
         title, open_milestones, config.get("milestone_categories")
     )
     if len(candidates) == 1:
-        return RollforwardTarget(candidates[0], "the next-numbered open milestone of its category")
+        target = RollforwardTarget(
+            candidates[0], f"the next-numbered open milestone of its category{within}"
+        )
+        if not unread:
+            return target
+        judged = _in_pools(target, description, config, None, unread=True, rows=open_milestones)
+        if isinstance(judged, int) or judged.other_pool is None:
+            return judged
+        _refuse_target(
+            number,
+            "the pools could not be read, and the `Pool:` line of the next-numbered open "
+            f"milestone of its category, {_milestone_label(judged.milestone)}, puts it in "
+            f"{_pool_said(judged.other_pool)}, another pool than this milestone's line names, "
+            "so whether it comes next in this milestone's pool cannot be told",
+        )
+        return 1
     if candidates:
         why = "more than one open milestone could come next: " + ", ".join(
             _milestone_label(c) for c in candidates
         )
     else:
         why = (
-            "no open milestone of its category is numbered after it (or its title "
+            f"no open milestone of its category{within} is numbered after it (or its title "
             "fits no declared `milestone_categories:` format)"
         )
     _refuse_target(number, why)
     return 1
+
+
+def _in_pools(
+    target: RollforwardTarget,
+    description: str,
+    config: dict,
+    declared: tuple[str, ...] | None,
+    *,
+    unread: bool = False,
+    rows: list[dict] | None = None,
+) -> RollforwardTarget | int:
+    """``target``, marked where it sits in a pool other than the closing
+    Milestone's, for the consent prompt to name (DEC-061 point 7).
+
+    Where the topology cannot be read (``unread``), the pools are those the two
+    Milestones' `Pool:` lines name, each taken to stand, as a write of a Task's
+    Milestone takes them (DEC-061 point 6). So no Task enters another pool's
+    Milestone without the prompt naming it. ``rows`` are the open Milestones,
+    where the caller read them already."""
+    if declared is None and not unread:
+        return target
+    if rows is None:
+        rows = list_open_milestones(config)
+        if rows is None:
+            print("error: could not list the open milestones (gh failure).", file=sys.stderr)
+            return 3
+    found = next((r for r in rows if r.get("number") == target.milestone.number), {})
+    theirs = str(found.get("description") or "")
+    if unread:
+        declared = pools.standing_pools((description, theirs))
+    pool = milestone_pool(description, declared).name
+    there = milestone_pool(theirs, declared).name
+    if there == pool:
+        return target
+    other = there if there is not None else NO_POOL
+    return replace(target, other_pool=other, pools_unread=unread)
+
+
+def _report_left_in_no_pool(
+    open_children: list[dict], number: int, capability_root: Path, config: dict
+) -> None:
+    """Name each Task in Backlog or In Progress a forced close leaves on the
+    closed Milestone, where it is in no pool, so no worker takes it of its own
+    choosing (DEC-061 point 7).
+
+    Where the map binds the state to the board, each Task's state is its card's
+    Status: the Tasks' cards are read in one listing read, and a Task its card
+    does not place is named as one whose position cannot be told. A board that
+    cannot be read is said in place of the list (DEC-051 point 6)."""
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    tasks = [child for child in open_children if child.get("type") == "task"]
+    listed = None
+    if infer.state_is_board_carried(substrate_map) and tasks:
+        workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", YAML(typ="safe"))
+        listed, failure = board_status.read_listed(
+            config, workflow, [str(child.get("id") or "") for child in tasks]
+        )
+        if listed is None:
+            print(
+                f"[warn] the closed milestone #{number} is in no pool, so the Tasks it leaves "
+                "in Backlog or In Progress are in no pool, and no seat takes them of its own "
+                "choosing (DEC-061 point 7). The board's Status could not be read "
+                f"({failure}), so which Tasks it leaves in no pool cannot be named.",
+                file=sys.stderr,
+            )
+            return
+    left: list[str] = []
+    for child in tasks:
+        status = listed.read(child.get("id")) if listed is not None else None
+        labels = list(child.get("labels") or [])
+        state = issue_position.current_state(child, labels, substrate_map, status)
+        if state == infer.UNDETERMINED and status is not None:
+            why = status.finding(int(child["number"]))
+            left.append(f"{_child_label(child)}: where it stands cannot be told, as {why}")
+        elif state in ("backlog", "in-progress"):
+            left.append(_child_label(child))
+    if not left:
+        return
+    print(
+        f"[warn] the closed milestone #{number} is in no pool, so these Tasks it leaves are "
+        "in no pool, and no seat takes them of its own choosing (DEC-061 point 7):",
+        file=sys.stderr,
+    )
+    for line in left:
+        print(f"    - {line}", file=sys.stderr)
 
 
 def _refuse_target(number: int, why: str) -> None:
@@ -536,6 +747,11 @@ def _plan_rollforward(
 def _print_plan(plan: RollforwardPlan, number: int) -> None:
     target = plan.target.milestone
     print(f"  rollforward:   → {_milestone_label(target)} ({plan.target.source})")
+    if plan.target.other_pool is not None:
+        print(
+            f"  pool:          the target is {_other_pool_said(plan.target)}: the close's "
+            "consent covers the move (DEC-061 point 7)"
+        )
     for child in plan.moves:
         print(f"    - {_child_label(child)}: #{number} → #{target.number}")
     for child in plan.left:

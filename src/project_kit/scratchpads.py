@@ -7,6 +7,9 @@ stamp on send, freeze-by-convention with drift *detection*, live pull-only
 upstream read-back. The conversational layer (slug judgement, topic
 boundary, body-drafting opening) is the `scratchpad-author` skill's job
 per COR-005's "Skill / command pairing".
+
+It also holds the `scratchpad` member of `pkit validate` (`outcome`): a note
+lies in one state folder, the folder being its state (COR-012).
 """
 
 from __future__ import annotations
@@ -20,10 +23,14 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import click
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+from ruamel.yaml.nodes import MappingNode, ScalarNode
+
+from project_kit.validators import Finding, Outcome
 
 RetiredState = Literal["done", "dropped"]
 
@@ -34,10 +41,19 @@ _SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 #: it empties.
 _ALL_STATES = ("active", "reported", "done", "dropped")
 
-#: Frontmatter keys owned by the reported stamp (COR-043). Excluded from the
-#: drift-hash view so the stamp itself never reads as drift.
-_REPORTED_FM_KEYS = ("reported_to", "reported_hash", "reported", "project", "workstream")
-_REPORTED_KEY_RE = re.compile(rf"^(?:{'|'.join(_REPORTED_FM_KEYS)}):")
+#: The fields a note's first stamp writes in its front matter, as
+#: `_insert_reported_frontmatter` lays them out (COR-043 point 3). `project`
+#: and `workstream` join them where the report names them.
+_STAMP_FIELDS = ("reported", "reported_to", "reported_hash")
+
+#: Why a later send is refused where the stamp's own block no longer stands
+#: as the stamp wrote it (`_reported_block`, #2924).
+_NO_REPORTED_BLOCK = (
+    "the reported note's front matter holds no block of the fields its send wrote, as the "
+    "send wrote them: `reported`, then `reported_to` with its refs, then `reported_hash`. "
+    "A later send records its issue in that block. Put the fields back in that order, then "
+    "run the command again."
+)
 
 _ISSUE_REF_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*#\d+$")
 _ISSUE_URL_RE = re.compile(r"^https?://github\.com/([^/\s]+)/([^/\s]+)/issues/(\d+)/?(?:[?#].*)?$")
@@ -167,7 +183,14 @@ def _add_retirement_frontmatter(content: str, *, produced: tuple[str, ...]) -> s
     yaml.indent(mapping=2, sequence=4, offset=2)
 
     fm_yaml, body = _split_frontmatter(content)
-    data = yaml.load(io.StringIO(fm_yaml)) or {}
+    _refuse_keys_held_twice(_frontmatter_keys(content))
+    try:
+        data = yaml.load(io.StringIO(fm_yaml)) or {}
+    except YAMLError as exc:
+        problem = getattr(exc, "problem", None) or exc
+        raise click.ClickException(
+            f"scratchpad note's frontmatter does not read as YAML: {problem}."
+        ) from None
     if not isinstance(data, dict):
         raise click.ClickException("scratchpad note has malformed frontmatter (not a mapping).")
 
@@ -195,12 +218,21 @@ def _split_frontmatter(content: str) -> tuple[str, str]:
     return fm_yaml, body
 
 
-def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
-    """Find a scratchpad note by slug (kebab portion) or full filename."""
+def _notes_found_by(state_dir: Path, slug: str) -> list[Path]:
+    """The notes of `state_dir` that `slug` finds: the note whose whole file name
+    it is, or each note whose file name after the date is that whole slug
+    (`note_slug`). A slug never finds a note whose slug merely ends in it."""
     if slug.endswith(".md"):
         candidate = state_dir / slug
-        return candidate if candidate.is_file() else None
-    matches = list(state_dir.glob(f"*-{slug}.md"))
+        return [candidate] if Path(slug).name == slug and candidate.is_file() else []
+    return sorted(
+        path for path in state_dir.glob("*.md") if path.is_file() and note_slug(path.name) == slug
+    )
+
+
+def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
+    """Find a scratchpad note by its whole slug or its whole file name."""
+    matches = _notes_found_by(state_dir, slug)
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -213,17 +245,15 @@ def _resolve_in_state(state_dir: Path, slug: str) -> Path | None:
 
 
 def _find_in_any_state(scratchpad_dir: Path, slug: str) -> Path | None:
-    """Search every state folder (incl. the reported side-state) for a note with this slug."""
+    """The first note, searching every state folder (incl. the reported
+    side-state), that holds this whole slug."""
     for state in _ALL_STATES:
         state_dir = scratchpad_dir / state
         if not state_dir.is_dir():
             continue
-        try:
-            match = _resolve_in_state(state_dir, slug)
-        except click.ClickException:
-            continue
-        if match is not None:
-            return match
+        matches = _notes_found_by(state_dir, slug)
+        if matches:
+            return matches[0]
     return None
 
 
@@ -331,7 +361,12 @@ def stamp_reported(
 
     The frontmatter edit is a textual insertion (no YAML round-trip) so the
     pre-stamp bytes stay recoverable — `content_hash` of the stamped file with
-    the reported block stripped equals the stamped hash.
+    the reported block stripped equals the stamped hash. The block is only the
+    fields this stamp wrote, so a field of the note's own, such as its own
+    `project` where the stamp writes none, stays in what the hash covers.
+
+    A stamp that would leave a key twice in the front matter is refused,
+    naming the key, and writes nothing (`_refuse_unrecordable`, #2923).
     """
     normalized: list[str] = []
     for ref in refs:
@@ -346,6 +381,9 @@ def stamp_reported(
     content = src.read_text(encoding="utf-8")
 
     if src.parent == scratchpad_dir / "reported":
+        # A key held twice reads no refs; a missing block refuses at the append,
+        # so a send whose issues are all recorded stays a no-op.
+        _refuse_keys_held_twice(_frontmatter_keys(content))
         existing = read_reported_refs(content)
         added = tuple(r for r in normalized if r not in existing)
         duplicate = tuple(r for r in normalized if r in existing)
@@ -366,6 +404,7 @@ def stamp_reported(
     dst = scratchpad_dir / "reported" / src.name
     if dst.exists():
         raise click.ClickException(f"target already exists at {dst.relative_to(target_root)}.")
+    _refuse_unrecordable(content, first=True, project=project, workstream=workstream)
     new_content = _insert_reported_frontmatter(
         content,
         tuple(normalized),
@@ -381,11 +420,43 @@ def stamp_reported(
     return ReportedStamp(src, dst, tuple(normalized), ())
 
 
+def refuse_unrecordable_send(
+    target_root: Path,
+    note: Path,
+    content: str,
+    *,
+    project: str | None = None,
+    workstream: str | None = None,
+) -> None:
+    """Refuse, before a report sends `note`, a send that its stamp would refuse
+    to record (`_refuse_unrecordable`), so nothing is posted that the note
+    cannot record (#2923). `project` and `workstream` are what the stamp would
+    write. A note outside `active/` and `reported/` is never stamped, and is
+    never refused here."""
+    area = target_root / ".pkit" / "scratchpad"
+    if note.parent == area / "active":
+        _refuse_unrecordable(content, first=True, project=project, workstream=workstream)
+    elif note.parent == area / "reported":
+        _refuse_unrecordable(content, first=False)
+
+
 def note_is_drifted(content: str) -> bool:
     """True iff a reported note's current content diverges from its stamped
-    hash (post-send edit — surfaced as a warning, never a gate; COR-043)."""
-    data = _read_frontmatter_data(content)
-    stored = data.get("reported_hash")
+    hash (post-send edit — surfaced as a warning, never a gate; COR-043).
+
+    The hash is read from the reported block's own line (`_reported_block`),
+    so a frontmatter holding a key twice, the note's and the stamp's, is still
+    checked. A hash the frontmatter records outside such a block is compared
+    with the whole file, and reads as drift: the stamp's fields were edited."""
+    lines = content.split("\n")
+    try:
+        block = _reported_block(lines, _frontmatter_close(lines))
+    except click.ClickException:
+        return False
+    if block is None:
+        stored = _read_frontmatter_data(content).get("reported_hash")
+    else:
+        stored = lines[block[1]].removeprefix("reported_hash:").strip()
     if not isinstance(stored, str) or not stored:
         return False
     return content_hash(_strip_reported_frontmatter(content)) != stored
@@ -431,6 +502,41 @@ def list_notes(target_root: Path) -> list[NoteEntry]:
             refs = tuple(resolve_ref(ref) for ref in read_reported_refs(content))
             entries.append(NoteEntry(path.name, state, refs=refs, drifted=note_is_drifted(content)))
     return entries
+
+
+def outcome(target_root: Path) -> Outcome:
+    """The `scratchpad` member of `pkit validate`: each note lies in one state
+    folder, which is its state (COR-012). A slug whose notes lie in more than
+    one state folder is an error, one for each such slug, naming each of its
+    files. Two notes of one slug in one folder are not this member's concern.
+    Only `.md` files are notes."""
+    scratchpad_dir = target_root / ".pkit" / "scratchpad"
+    by_slug: dict[str, list[Path]] = {}
+    for state in _ALL_STATES:
+        state_dir = scratchpad_dir / state
+        if not state_dir.is_dir():
+            continue
+        for path in sorted(state_dir.glob("*.md")):
+            if path.is_file():
+                by_slug.setdefault(note_slug(path.name), []).append(path)
+    findings: list[Finding] = []
+    for slug, paths in sorted(by_slug.items()):
+        states = len({path.parent.name for path in paths})
+        if states > 1:
+            files = ", ".join(path.relative_to(target_root).as_posix() for path in paths)
+            findings.append(
+                Finding(
+                    f".pkit/scratchpad :: {slug}",
+                    f"slug {slug!r} is in {states} state folders: {files}. A note lies in one "
+                    "state folder, which is its state (COR-012). Keep the note in the folder "
+                    "of its state, and remove or rename each other file.",
+                )
+            )
+    notes = sum(len(paths) for paths in by_slug.values())
+    return Outcome(
+        (f"{notes} scratchpad note(s) checked; {len(findings)} error(s).",),
+        tuple(findings),
+    )
 
 
 def resolve_ref(ref: str) -> ReportedRefState:
@@ -504,42 +610,145 @@ def _insert_reported_frontmatter(
 
 
 def _append_reported_refs(content: str, refs: tuple[str, ...], hash_value: str) -> str:
-    """Append refs to an existing `reported_to` list and refresh the hash line."""
+    """Append refs to the `reported_to` list of the stamp's own block
+    (`_reported_block`) and rewrite that block's `reported_hash` line, every
+    other line of the note left as it is (#2924)."""
     lines = content.split("\n")
-    close = _frontmatter_close(lines)
-    try:
-        head = next(i for i in range(1, close) if lines[i].startswith("reported_to:"))
-    except StopIteration:
-        raise click.ClickException("reported note has no reported_to frontmatter list.") from None
-    end = head + 1
-    while end < close and (lines[end].startswith(" ") or lines[end].startswith("\t")):
-        end += 1
-    new_lines = lines[:end] + [f"  - {ref}" for ref in refs] + lines[end:]
+    block = _reported_block(lines, _frontmatter_close(lines))
+    if block is None:
+        raise click.ClickException(_NO_REPORTED_BLOCK)
+    _start, hash_line, _end = block
     return "\n".join(
-        f"reported_hash: {hash_value}" if line.startswith("reported_hash:") else line
-        for line in new_lines
+        lines[:hash_line]
+        + [f"  - {ref}" for ref in refs]
+        + [f"reported_hash: {hash_value}"]
+        + lines[hash_line + 1 :]
     )
+
+
+def _refuse_unrecordable(
+    content: str,
+    *,
+    first: bool,
+    project: str | None = None,
+    workstream: str | None = None,
+) -> None:
+    """Refuse a stamp that would leave a key twice in the note's front matter
+    (#2923), naming each key and its lines. A key the front matter holds twice
+    already refuses any stamp. A first send also refuses each field it writes
+    that the front matter holds: `reported`, `reported_to`, `reported_hash`,
+    and `project` or `workstream` where it writes them. A later send writes
+    into the stamp's own block only, and adds no key, so it is refused where
+    that block no longer stands as the stamp wrote it (#2924)."""
+    keys = _frontmatter_keys(content)
+    _refuse_keys_held_twice(keys)
+    if not first:
+        lines = content.split("\n")
+        if _reported_block(lines, _frontmatter_close(lines)) is None:
+            raise click.ClickException(_NO_REPORTED_BLOCK)
+        return
+    written: set[str] = set(_STAMP_FIELDS)
+    if project:
+        written.add("project")
+    if workstream:
+        written.add("workstream")
+    held = [f"{key!r} on line {line}" for key, line in keys if key in written]
+    if held:
+        raise click.ClickException(
+            "the note's front matter holds a field that recording the send writes as "
+            f"well, so it would hold the key twice: {'; '.join(held)}. Rename the note's "
+            "own field, then run the command again."
+        )
+
+
+def _refuse_keys_held_twice(keys: list[tuple[str, int]]) -> None:
+    """Refuse a note whose front matter holds a key twice, which no YAML read
+    of it accepts, naming each such key and its lines."""
+    lines_by_key: dict[str, list[int]] = {}
+    for key, line in keys:
+        lines_by_key.setdefault(key, []).append(line)
+    twice = [
+        f"{key!r} on lines {_joined([str(line) for line in lines])}"
+        for key, lines in lines_by_key.items()
+        if len(lines) > 1
+    ]
+    if twice:
+        raise click.ClickException(
+            f"the note's front matter holds a key twice, so it does not read: "
+            f"{'; '.join(twice)}. Keep one of each, then run the command again."
+        )
+
+
+def _frontmatter_keys(content: str) -> list[tuple[str, int]]:
+    """Each top-level key of a note's front matter with its line number in the
+    file, in order. A key held twice is listed twice: the composed nodes hold
+    every key, where a YAML load refuses the second. Empty where the note has
+    no front matter, or front matter that does not parse as a mapping."""
+    lines = content.split("\n")
+    composer: Any = YAML()  # ruamel's composer and nodes are untyped
+    try:
+        close = _frontmatter_close(lines)
+        root: Any = composer.compose(io.StringIO("\n".join(lines[1:close])))
+    except (click.ClickException, YAMLError):
+        return []
+    if not isinstance(root, MappingNode):
+        return []
+    held: Any = getattr(root, "value", ())
+    keys: list[tuple[str, int]] = []
+    for key_node, _value_node in held:
+        if isinstance(key_node, ScalarNode):
+            mark: Any = getattr(key_node, "start_mark", None)
+            keys.append((str(getattr(key_node, "value", "")), int(mark.line) + 2))
+    return keys
+
+
+def _joined(items: list[str]) -> str:
+    """`a`, `a and b`, or `a, b and c`."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _reported_block(lines: list[str], close: int) -> tuple[int, int, int] | None:
+    """The reported block in a note's frontmatter, as `(start, hash_line, end)`
+    line indices: the fields the stamp wrote, laid out as
+    `_insert_reported_frontmatter` writes them and `_append_reported_refs`
+    keeps them. That is `reported`, `reported_to` and its items,
+    `reported_hash`, then `project` and `workstream` where the stamp wrote
+    them. The last such run before the closing delimiter, since the stamp
+    inserts its block last; None where the frontmatter holds none. A field
+    the note held before the stamp lies above the block, whatever its name."""
+    found = None
+    for start in range(1, close - 1):
+        if not (
+            lines[start].startswith("reported:") and lines[start + 1].startswith("reported_to:")
+        ):
+            continue
+        hash_line = start + 2
+        while hash_line < close and lines[hash_line].startswith((" ", "\t")):
+            hash_line += 1
+        if hash_line == close or not lines[hash_line].startswith("reported_hash:"):
+            continue
+        end = hash_line + 1
+        for key in ("project:", "workstream:"):
+            if end < close and lines[end].startswith(key):
+                end += 1
+        found = (start, hash_line, end)
+    return found
 
 
 def _strip_reported_frontmatter(content: str) -> str:
     """The note as it was at send time: current content minus the reported
-    block (the stamp's own keys + their nested lines). The drift-hash view."""
+    block (`_reported_block`), so only the fields the stamp wrote. The
+    drift-hash view, and the text the first stamp hashed (#2918). Content
+    with no such block is returned whole."""
     lines = content.split("\n")
     try:
-        close = _frontmatter_close(lines)
+        block = _reported_block(lines, _frontmatter_close(lines))
     except click.ClickException:
         return content
-    kept = [lines[0]]
-    skipping = False
-    for line in lines[1:close]:
-        if _REPORTED_KEY_RE.match(line):
-            skipping = True
-            continue
-        if skipping and (line.startswith(" ") or line.startswith("\t")):
-            continue
-        skipping = False
-        kept.append(line)
-    return "\n".join(kept + lines[close:])
+    if block is None:
+        return content
+    start, _hash_line, end = block
+    return "\n".join(lines[:start] + lines[end:])
 
 
 def _read_frontmatter_data(content: str) -> dict:

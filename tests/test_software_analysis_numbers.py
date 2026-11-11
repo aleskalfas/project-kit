@@ -7,7 +7,12 @@ to ADR-058 point 7: it reads a base, so it answers about a change, not the
 tree, and is a query command of its own rather than a member of `pkit
 validate`. Like the friction change check, it fails when its base names no
 commit or shares no history with HEAD, and reports an outdated base without
-failing on it.
+failing on it or naming a remedy.
+
+The number check, the stamp and the check run in the test's own process, their
+`pkit` calls answered there too (`tests/in_process.py`, #2324). Two tests keep the
+number check's process: the command end to end, in both output modes, and
+`$PKIT_CHECK_BASE` reaching the backbone through the environment its `pkit` inherits.
 """
 
 from __future__ import annotations
@@ -39,9 +44,11 @@ from tests.analysis_repo import (
     prepare,
     prepare_seeded,
     requirement,
+    run_in_process,
     run_script,
     stamped,
 )
+from tests.in_process import InProcessPkit
 
 
 @pytest.fixture
@@ -60,12 +67,31 @@ def seeded(
 
 
 def numbers(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis check-numbers …`, run as the dispatcher runs it."""
+    """`pkit analysis check-numbers …`, run as the dispatcher runs it, in the test's own
+    process (`run_in_process`)."""
+    return run_in_process(repo, NUMBERS, *args)
+
+
+def numbers_as_a_process(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis check-numbers …`, run as the dispatcher runs it: a process."""
     return run_script(repo, NUMBERS, *args)
 
 
 def document(completed: subprocess.CompletedProcess[str]) -> dict[str, Any]:
     return json.loads(completed.stdout)
+
+
+#: What the outdated-base note never advises: the remedy is the project's workflow's.
+REMEDIES = ("merge", "rebase", "run again")
+
+
+def _outdated_note(base: dict[str, Any]) -> str:
+    """The report of an outdated base, for the `base` of a `--json` document."""
+    return (
+        f"outdated base: the base {base['ref']} is at {base['tip'][:12]}, which is not an "
+        f"ancestor of HEAD: it moved on after this branch left it at {base['commit'][:12]}; "
+        "numbers were compared with its tip"
+    )
 
 
 def _main_took_ours(repo: AdopterRepo) -> str:
@@ -104,10 +130,13 @@ def test_it_is_a_query_command_and_not_a_validator(project: AdopterRepo) -> None
 # --- the comparison (DEC-001 point 3) ---------------------------------------------------------
 
 
-# Slow by design: three stamps, three number checks and the check, each starting `pkit` processes.
+@pytest.mark.process(
+    "`pkit analysis check-numbers` end to end: its exit code, its findings document with "
+    "--json and its lines without, from the script's own process"
+)
 def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> None:
     ours = _main_took_ours(project)
-    completed = numbers(project, "--base", MAIN, "--json")
+    completed = numbers_as_a_process(project, "--base", MAIN, "--json")
     assert completed.returncode == 1, completed.stderr
     answer = document(completed)
     assert answer["base"]["ref"] == MAIN and answer["base"]["outdated"] is True
@@ -127,7 +156,7 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
             "number, with every reference to it (DEC-001 point 3)"
         ),
     }
-    read_view = numbers(project, "--base", MAIN)
+    read_view = numbers_as_a_process(project, "--base", MAIN)
     assert read_view.returncode == 1
     assert f"  error  {ours}\n" in read_view.stdout
 
@@ -135,12 +164,12 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
     # files holding one id are the validator's duplicate.
     project.commit("topic's use case")
     project.git("merge", "-q", "--no-edit", MAIN)
-    merged = numbers(project, "--base", MAIN, "--json")
+    merged = numbers_as_a_process(project, "--base", MAIN, "--json")
     assert merged.returncode == 0, merged.stderr
     assert document(merged)["base"]["outdated"] is False
     assert document(merged)["summary"][0].startswith("numbers: this branch contains main (")
     fill(project)
-    validated = json.loads(run_script(project, VALIDATE, "--json").stdout)
+    validated = json.loads(run_in_process(project, VALIDATE, "--json").stdout)
     errors = [f for f in validated["findings"] if f["severity"] == "error"]
     assert [f["message"].split(":")[0] for f in errors] == [
         f"the id UC-002 is also held by {USE_CASES}/UC-002-mine.md"
@@ -150,7 +179,7 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
 # --- an artefact is known by its id, not its path ---------------------------------------------
 
 
-# Slow: two stamps, built once per session; the first test to ask pays it in its setup.
+# Two stamps, built once per session; the first test to ask pays them in its setup.
 def _leave_main(repo: AdopterRepo) -> None:
     """`prepare`, then an actor and UC-001 on main, and the branch `topic` leaving main
     there."""
@@ -199,7 +228,8 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     """One path, two versions: each line of work took UC-002 for an export. That is one
     line of work's file landed and edited since as much as two artefacts, and only the
     person can tell which — warned, never failed; merging main brings the two to one
-    path, where git asks which to keep."""
+    path, where git asks which to keep. That advice fixes a real clash, so it keeps its
+    merge, while the outdated-base note beside it names no remedy."""
     stamped(branched, "use-case", "export", "--actor", "ACT-tester", "--path", "src/run.py")
     branched.commit("UC-002 on topic")
     branched.checkout(MAIN)
@@ -209,7 +239,9 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     ours = f"{USE_CASES}/UC-002-export.md"
     completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stderr
-    _outdated, warning = document(completed)["findings"]
+    answer = document(completed)
+    outdated, warning = answer["findings"]
+    assert outdated["message"] == _outdated_note(answer["base"])
     assert warning == {
         "severity": "warning",
         "location": ours,
@@ -217,7 +249,6 @@ def test_two_branches_stamping_the_same_slug_are_warned_not_failed(
     }
 
 
-# Slow by design: three stamps, two number checks and the check, each starting `pkit` processes.
 def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
     branched: AdopterRepo,
 ) -> None:
@@ -253,7 +284,7 @@ def test_a_stacked_branch_whose_parent_squash_merged_is_no_collision(
     ]
     branched.git("merge", "-q", "--no-edit", MAIN)
     fill(branched)
-    validated = json.loads(run_script(branched, VALIDATE, "--json").stdout)
+    validated = json.loads(run_in_process(branched, VALIDATE, "--json").stdout)
     duplicates = [f["message"].split(":")[0] for f in validated["findings"]]
     assert f"the id UC-002 is also held by {USE_CASES}/UC-002-two.md" in duplicates
 
@@ -388,7 +419,11 @@ def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
     branched: AdopterRepo,
 ) -> None:
     """main moved on after this branch left it, taking no number: reported, never
-    failed, with the same base as `pkit friction check` gives."""
+    failed, with the same base as `pkit friction check` gives. Like the change check's
+    report, the note states the fact — where the base is, where this branch left it,
+    and that the numbers were compared with its tip — and names no remedy: whether and
+    how a branch takes in its base is the project's workflow to decide (COR-050 point
+    12)."""
     stamped(branched, "use-case", "two", "--actor", "ACT-tester")
     branched.commit("UC-002 on topic")
     branched.checkout(MAIN)
@@ -400,15 +435,13 @@ def test_a_stale_base_is_reported_as_the_friction_change_check_reports_it(
     answer = document(completed)
     ((finding,),) = [answer["findings"]]
     assert finding["severity"] == "report"
-    assert finding["message"].startswith(
-        f"outdated base: the base main is at {answer['base']['tip'][:12]}"
-    )
-    friction = subprocess.run(
+    assert finding["message"] == _outdated_note(answer["base"])
+    assert not [word for word in REMEDIES if word in finding["message"]]
+    friction = InProcessPkit()(
         ["pkit", "friction", "check", "--base", MAIN, "--json"],
         cwd=branched.root,
         capture_output=True,
         text=True,
-        check=False,
     )
     assert json.loads(friction.stdout)["base"] == answer["base"]
 
@@ -464,6 +497,10 @@ def test_a_base_sharing_no_history_with_head_fails(seeded: AdopterRepo) -> None:
     assert "HEAD and the base 'main' share no history to compare" in completed.stderr
 
 
+@pytest.mark.process(
+    "`$PKIT_CHECK_BASE` reaches the backbone through the environment the script's `pkit` "
+    "inherits; the in-process `pkit` runs in a query's environment, which drops it"
+)
 def test_the_base_is_the_variable_else_the_default_branch(
     seeded: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -483,7 +520,7 @@ def test_the_base_is_the_variable_else_the_default_branch(
     assert undeclared.returncode == 1
     assert "error: the default branch 'trunk' resolves to no commit here" in undeclared.stderr
     monkeypatch.setenv(BASE_ENV, MAIN)
-    named = numbers(seeded, "--json")
+    named = numbers_as_a_process(seeded, "--json")
     assert named.returncode == 0, named.stderr
     assert document(named)["base"]["ref"] == MAIN
 

@@ -1,0 +1,34 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-10-29T01:09:17Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-classification-axis
+    read:
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-10-29T01:09:22Z
+      outcome: unchanged
+      unchanged-because: This change rewords the substrate texts of classification.yaml, so that an axis lives on a board field only where the substrate map binds it there, and changes no axis, value or field. The definition's label or board field holds, and so does its distinction of a label, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-close-trigger
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-29T01:09:28Z
+      outcome: unchanged
+      unchanged-because: This change has the read of a Milestone's children carry each issue's node id, so that a forced close can read the cards of the Tasks it leaves in no pool where the board carries the state. How the close trigger is read, and when a Milestone ends, are as they were, so the definition holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-milestone
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-29T01:09:30Z
+      outcome: unchanged
+      unchanged-because: This change has the read of a Milestone's children carry each issue's node id, by which a forced close reads the cards of the Tasks it leaves in no pool. A Milestone still holds its issues apart from them and closes by its trigger, so the definition holds.

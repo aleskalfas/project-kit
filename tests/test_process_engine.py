@@ -7,7 +7,8 @@ real reality to resolve against. Covers:
 - position resolution (the state whose detection predicate matches),
 - a passing and a failing deterministic gate,
 - an authorisation-artifact gate with cross-authority (produced_by == actor
-  refuses; != actor allows),
+  refuses; != actor allows; a missing, null, empty or blank produced_by
+  refuses and says no producer is named),
 - fail-closed on a broken predicate (non-zero exit / bad JSON),
 - a predicate that cannot be evaluated says why (#752): the reason names how
   its run ended and what it said on stderr reaches `status`, `can-move` and
@@ -19,6 +20,10 @@ real reality to resolve against. Covers:
 
 The fixtures turn journal logging on (it is off by default), so the tests that
 read the journal exercise it; the logging-off section turns it off again.
+
+Each predicate the engine starts runs in the test's own process, its command
+still found through the runner's one lookup (`tests/in_process.py`,
+`start_in_process`); a test marked `process` starts it as a process.
 """
 
 from __future__ import annotations
@@ -27,6 +32,8 @@ import json
 import shutil
 import stat
 import subprocess
+import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -43,7 +50,22 @@ from project_kit.process import (
     render_status_narrative,
 )
 from project_kit.process_journal import NOT_ENABLED
+from tests.in_process import MARK, ProcessStarts, start_in_process
 from tests.process_journal_support import enable_journal_logging, set_journal_logging
+
+
+@pytest.fixture(autouse=True)
+def predicates_started(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process
+    (`start_in_process`), but in a test that keeps its process. No bytecode is written,
+    so a script a test rewrites is read afresh."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    if request.node.get_closest_marker(MARK) is not None:
+        return []
+    return start_in_process(monkeypatch)
+
 
 # --- fixture scaffolding --------------------------------------------------
 
@@ -110,9 +132,12 @@ process:
 
 
 def _write_script(path: Path, body: str) -> None:
-    """Write an executable python3 script and mark it runnable."""
+    """An executable predicate script whose `main` runs `body`, as a process and in this
+    process alike."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    code = "import sys\n\n\ndef main():\n" + textwrap.indent(body, "    ")
+    code += "\n\nif __name__ == '__main__':\n    sys.exit(main())\n"
+    path.write_text("#!/usr/bin/env python3\n" + code, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
@@ -201,14 +226,17 @@ commands:
 
     # Authorisation-artifact gate: reports {exists, produced_by} from a
     # `_review` JSON marker if present; the engine computes cross-authority.
+    # A marker with no `by` reports no `produced_by` at all.
     _write_script(
         scripts / "gate_review.py",
         "import json, sys, pathlib\n"
         "p = pathlib.Path('_review')\n"
         "if p.exists():\n"
         "    data = json.loads(p.read_text())\n"
-        "    print(json.dumps({'exists': True, 'produced_by': data['by'],\n"
-        "                      'result': True, 'reason': 'verdict present'}))\n"
+        "    answer = {'exists': True, 'result': True, 'reason': 'verdict present'}\n"
+        "    if 'by' in data:\n"
+        "        answer['produced_by'] = data['by']\n"
+        "    print(json.dumps(answer))\n"
         "else:\n"
         "    print(json.dumps({'exists': False, 'reason': 'no verdict'}))\n"
         "sys.exit(0)\n",
@@ -320,6 +348,30 @@ def test_authorisation_artifact_supplied_result_is_ignored(fixture_repo: Path) -
     (fixture_repo / "_review").write_text(json.dumps({"by": "alice"}), encoding="utf-8")
     allowed, _reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
     assert allowed is False
+
+
+@pytest.mark.parametrize("producer", ["", "   ", "\t\n", 42, True], ids=repr)
+def test_authorisation_artifact_unnamed_producer_refuses(fixture_repo: Path, producer) -> None:
+    # An empty, blank or non-string `produced_by` names no authority: the gate
+    # stays shut even though it differs from the actor (#2542).
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": producer}), encoding="utf-8")
+    allowed, reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
+    assert allowed is False
+    assert "names no producer" in reason
+
+
+@pytest.mark.parametrize("review", [{}, {"by": None}], ids=["missing", "null"])
+def test_authorisation_artifact_without_producer_refuses(fixture_repo: Path, review) -> None:
+    # The artefact exists but names no producer: the gate stays shut, and the
+    # reason says so rather than "authorised by None" (#2542).
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps(review), encoding="utf-8")
+    allowed, reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
+    assert allowed is False
+    assert "names no producer" in reason
+    assert "None" not in reason
+    assert "authorised by" not in reason
 
 
 # --- fail-closed ----------------------------------------------------------
@@ -491,7 +543,11 @@ def test_status_offers_no_move_from_an_indeterminate_position(fixture_repo: Path
     [
         ("print('not json')\n", "it printed no JSON document on its standard output"),
         ("print('[1, 2]')\n", "it answered with JSON that is not an object"),
-        ("import os, signal\nos.kill(os.getpid(), signal.SIGKILL)\n", "it was ended by signal 9"),
+        pytest.param(
+            "import os, signal\nos.kill(os.getpid(), signal.SIGKILL)\n",
+            "it was ended by signal 9",
+            marks=pytest.mark.process("a predicate ended by a signal: only a process can be"),
+        ),
     ],
 )
 def test_each_way_a_predicate_gives_no_answer_is_named(
@@ -503,6 +559,7 @@ def test_each_way_a_predicate_gives_no_answer_is_named(
     assert outcome.reason == f"couldn't evaluate gate predicate 'gate-broken': {cause}"
 
 
+@pytest.mark.process("a script the system will not run: only a process start is refused")
 def test_a_predicate_that_cannot_start_says_so(fixture_repo: Path) -> None:
     (_scripts(fixture_repo) / "gate_broken.py").chmod(0o644)  # no longer executable
     outcome = _engine(fixture_repo).precheck_transitions("draft", "script")[-1].outcome
@@ -510,6 +567,36 @@ def test_a_predicate_that_cannot_start_says_so(fixture_repo: Path) -> None:
     assert "couldn't evaluate gate predicate 'gate-broken': it could not start:" in outcome.reason
 
 
+def test_a_broken_registration_still_fails_in_this_process(
+    fixture_repo: Path, predicates_started: list[Path], process_starts: ProcessStarts
+) -> None:
+    """Only the start is in this process: the runner's one lookup still resolves each
+    predicate, so a registration naming no script cannot start, and one naming another
+    command's script runs that script."""
+    package = fixture_repo / ".pkit" / "capabilities" / "fixture" / "package.yaml"
+    text = package.read_text(encoding="utf-8")
+    text = text.replace("scripts/gate_checks.py", "scripts/gate_cheks.py")
+    text = text.replace("scripts/detect_ready.py", "scripts/detect_draft.py")
+    package.write_text(text, encoding="utf-8")
+    _set_state(fixture_repo, "ready")
+    engine = _engine(fixture_repo)
+
+    submit = engine.precheck_transitions("draft", "agent")[0].outcome
+    assert submit.indeterminate is True
+    assert submit.reason.startswith(
+        "couldn't evaluate gate predicate 'gate-checks-pass': it could not start: "
+        "[Errno 2] No such file or directory"
+    )
+    # detect-ready runs detect_draft.py, which finds the marker is not `draft`.
+    assert engine.resolve_position().state_id is None
+    scripts = _scripts(fixture_repo)
+    assert scripts / "gate_cheks.py" in predicates_started
+    assert scripts / "detect_ready.py" not in predicates_started
+    assert predicates_started.count(scripts / "detect_draft.py") == 2
+    assert process_starts.started == []
+
+
+@pytest.mark.process("a predicate stopped at its bound: only a process is bounded")
 def test_a_predicate_that_overruns_says_it_was_stopped(
     fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -544,6 +631,7 @@ def test_an_oversized_stderr_is_cut_to_its_tail(fixture_repo: Path) -> None:
     assert len(tail.splitlines()) <= DIAGNOSTIC_TAIL_LINES
 
 
+@pytest.mark.process("raw bytes on a predicate's standard error, decoded as a process's are")
 def test_a_binary_escape_laden_stderr_cannot_reach_the_terminal_raw(fixture_repo: Path) -> None:
     _write_script(
         _scripts(fixture_repo) / "gate_broken.py",
@@ -687,7 +775,9 @@ def test_logging_off_full_lifecycle_writes_no_journal_and_same_verdicts(
     # setting), once with it off. Live detection decides everything, so every
     # verdict matches; only the journal differs.
     logged = tmp_path_factory.mktemp("logged")
-    shutil.copytree(fixture_repo, logged, dirs_exist_ok=True)
+    shutil.copytree(
+        fixture_repo, logged, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__")
+    )
     set_journal_logging(fixture_repo, enabled=False)
 
     unlogged_verdicts = _lifecycle_verdicts(fixture_repo)
@@ -1140,6 +1230,9 @@ def test_keyed_cli_requires_subject(keyed_repo: Path, monkeypatch: pytest.Monkey
     assert payload["position"]["state"] == "open"
 
 
+@pytest.mark.process(
+    "pkit process status and move end to end, each predicate a process given its subject"
+)
 def test_cli_status_json_and_move(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # The CLI resolves the repo root via git; init one so find_target_root works.
     subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)

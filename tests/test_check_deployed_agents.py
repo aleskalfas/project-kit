@@ -25,6 +25,7 @@ from scripts import check_deployed_agents as cda
 REPO = Path(__file__).resolve().parents[1]
 ADAPTER = REPO / ".pkit" / "adapters" / "claude-code"
 OWNERSHIP = REPO / ".pkit" / "lifecycle" / "ownership.py"
+READER = REPO / ".pkit" / "agents" / "tool_access.py"
 
 AGENT = "helper"
 COPY = f".claude/agents/{AGENT}.md"
@@ -59,10 +60,12 @@ def repo(tmp_path: Path) -> Path:
     """A git repository whose index holds one agent's source and its deployed copy."""
     adapter = tmp_path / ".pkit" / "adapters" / "claude-code"
     adapter.mkdir(parents=True)
-    for script in ("deploy-agents.sh", "_resolve_agent.py"):
+    for script in ("deploy-agents.sh", "_resolve_agent.py", "tool-access.json"):
         shutil.copy2(ADAPTER / script, adapter / script)
     (tmp_path / ".pkit" / "lifecycle").mkdir()
     shutil.copy2(OWNERSHIP, tmp_path / ".pkit" / "lifecycle" / "ownership.py")
+    (tmp_path / ".pkit" / "agents").mkdir()
+    shutil.copy2(READER, tmp_path / ".pkit" / "agents" / "tool_access.py")
     _write_source(tmp_path, "Says one thing.")
     _deploy(tmp_path)
     _git(tmp_path, "init", "-q")
@@ -163,7 +166,8 @@ def test_an_agent_the_deploy_skips_fails_with_the_deploys_remediation(
     code, out = _run(repo, capsys)
     assert code == 1, out
     assert "- gapped: the deploy skips it: gapped — " in out
-    assert "    Deploy it:  pkit agents adopt gapped\n" in out
+    assert "    <code-paths> has no conventional folder to create.\n" in out
+    assert "    Fix: set its paths in .pkit/agents/project/overlay.yaml, or run\n" in out
     assert "To fix a skipped agent: follow the deploy's remediation under it" in out
     assert "To fix a copy" not in out
 

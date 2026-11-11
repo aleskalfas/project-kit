@@ -1,0 +1,17 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# A brand the capability's tests build on the test brand (DEC-004 point 6): its base is
+# test-brand 1, and it gives values only to roles test-brand opens. It widens the largest
+# space everywhere, and changes the accent in the dark colour scheme and at high contrast;
+# the base's values hold elsewhere. It opens the accent alone. No project locks it.
+name: test-edition
+version: 1.0.0
+kind: brand
+needs-release: 0.1.0
+builds-on:
+  - {name: foundations, major: 1}
+  - {name: test-brand, major: 1, base: true}
+dtcg: "2025.10"
+resolver: test-edition.resolver.json
+open: [accent]

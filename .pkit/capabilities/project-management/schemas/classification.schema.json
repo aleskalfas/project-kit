@@ -60,12 +60,12 @@
         "substrate_with_board": {
           "type": "string",
           "minLength": 1,
-          "description": "Where the axis lives when a Projects v2 board is configured — typically a single-select field on the board, or `label` when the axis must live as a label regardless."
+          "description": "Where the axis may live in a project with a Projects v2 board: its labels, or a single-select field on the board where the project's substrate map binds the axis there. The board flag carries no axis (project-management DEC-062)."
         },
         "substrate_without_board": {
           "type": "string",
           "minLength": 1,
-          "description": "Fallback substrate when no Projects v2 board exists — usually a `<axis>:*` label set."
+          "description": "Where the axis lives in a project with no Projects v2 board — usually a `<axis>:*` label set."
         },
         "values": {
           "type": "array",

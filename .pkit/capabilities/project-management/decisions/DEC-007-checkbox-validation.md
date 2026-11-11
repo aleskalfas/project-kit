@@ -33,6 +33,7 @@ The rule is encoded in [`schemas/body-format.yaml`](../schemas/body-format.yaml)
 - **Won't-do close.** Refuse; list the unticked boxes; ask the user to validate-and-tick or remove boxes that are no longer relevant, then retry.
 - **Cascade-eligible close (parent's last child closed).** The parent's checkboxes are part of the eligibility check; if any are unticked, the parent isn't eligible — the agent prompts the user to address them first.
 - **Task close via PR merge.** The agent verifies all checkboxes are ticked **before authorising the merge** — GitHub's auto-close on `Closes #N` would otherwise bypass the gate.
+- **Task close as completed without a pull request.** Refuse; list the unticked boxes; ask the user to validate-and-tick them, then retry. Every checkbox ticked is what says the work is done ([project-management:DEC-006-state-machine-and-cascade], `manual-completed`). A box is not removed in order to close as completed: removing one is a change of scope, made through [project-management:DEC-009-living-documents] as an edit of the issue, never as part of the close.
 
 ### Trust model
 
@@ -52,7 +53,7 @@ The hard stop on closure with unticked boxes converts the convention into mechan
 
 ## Implications
 
-- The validate-body skill emits an error listing every unticked box when the user attempts a close transition (won't-do, PR merge, cascade-eligibility).
+- The validate-body skill emits an error listing every unticked box when the user attempts a close transition (won't-do, PR merge, cascade-eligibility, a Task's close as completed without a pull request).
 - The project-manager's PR-merge flow runs a checkbox-completeness check before authorising the squash-merge — GitHub's `Closes #N` auto-close would otherwise bypass the gate.
 - Bodies that genuinely have no checkboxes (some Tasks may not) are unaffected — the rule applies only when boxes exist.
 - The mutability of the checkbox set itself (adding boxes, removing boxes, rewording them) is governed by [project-management:DEC-009-living-documents] — wording free; scope changes gated by original author.

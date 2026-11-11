@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The reference graph reports a path an agent definition or a skill declares
+  in `reads.paths` or `owns` that its body never cites (#2471). The check
+  searched the whole file for the declared path's text, front matter
+  included, so it found every declaration and reported none. It now searches
+  the body alone, with a composite skill's other files. A path in the body
+  still cites a declared file where it leads to that file, such as a relative
+  link, and a decision record's file is cited by the record's id.
+  `pkit validate` warns of such a path, and `pkit refs validate` fails on it.
+  The `schema`, `scratchpad-author` and `storyboard-author` skills now cite in
+  their bodies the files they declare. The skills reference says so.

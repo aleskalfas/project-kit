@@ -1,0 +1,49 @@
+{
+  "version": "2025.10",
+  "name": "test-edition",
+  "description": "The edition's values on its base's two axes, the colour scheme and the contrast, by their names and modes.",
+  "sets": {
+    "edition": {
+      "sources": [
+        {
+          "$ref": "tokens/edition.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "colour-scheme": {
+      "contexts": {
+        "light": [],
+        "dark": [
+          {
+            "$ref": "tokens/dark.tokens.json"
+          }
+        ]
+      },
+      "default": "light"
+    },
+    "contrast": {
+      "contexts": {
+        "standard": [],
+        "high": [
+          {
+            "$ref": "tokens/high-contrast.tokens.json"
+          }
+        ]
+      },
+      "default": "standard"
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/edition"
+    },
+    {
+      "$ref": "#/modifiers/colour-scheme"
+    },
+    {
+      "$ref": "#/modifiers/contrast"
+    }
+  ]
+}

@@ -112,7 +112,7 @@ src/project_kit/refs.py reportAssignmentType 1
 src/project_kit/refs.py reportRedeclaration 1
 src/project_kit/refs.py reportUnknownArgumentType 6
 src/project_kit/refs.py reportUnknownMemberType 12
-src/project_kit/refs.py reportUnknownVariableType 32
+src/project_kit/refs.py reportUnknownVariableType 31
 src/project_kit/refs.py reportUnnecessaryIsInstance 1
 src/project_kit/release.py reportArgumentType 2
 src/project_kit/release.py reportMissingTypeArgument 7
@@ -159,7 +159,7 @@ src/project_kit/scratchpads.py reportMissingTypeArgument 1
 src/project_kit/scratchpads.py reportUnknownArgumentType 3
 src/project_kit/scratchpads.py reportUnknownMemberType 9
 src/project_kit/scratchpads.py reportUnknownParameterType 1
-src/project_kit/scratchpads.py reportUnknownVariableType 11
+src/project_kit/scratchpads.py reportUnknownVariableType 10
 src/project_kit/settings_consolidate.py reportUnknownArgumentType 1
 src/project_kit/settings_consolidate.py reportUnknownMemberType 2
 src/project_kit/settings_consolidate.py reportUnknownVariableType 6

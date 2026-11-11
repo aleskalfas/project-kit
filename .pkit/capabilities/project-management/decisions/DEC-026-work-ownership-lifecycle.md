@@ -104,7 +104,7 @@ Reviewer assignment is governed by **review-mode resolution** per [project-manag
 
 ### Closure outside the standard flow
 
-`close-issue` (existing) handles abandonment (won't-do, duplicate) — not part of this DEC's palette because it isn't a forward-progress workflow step. The seven commands here cover **forward progress and the draft↔ready round-trip**; closure-without-completion is its own command.
+`close-issue` (existing) closes abandoned work (won't-do, duplicate), and completed work that no pull request carried. It is not part of this DEC's palette, because a close is not a step of the work's flow: the palette's commands walk the work through its states, and `close-issue` ends the work outside that walk, whether it was abandoned or completed without a pull request. The seven commands here cover **forward progress and the draft↔ready round-trip**; a close that no merge makes is its own command.
 
 ### Audit-trail comments
 
@@ -151,7 +151,7 @@ For `handoff-issue` specifically: open-mode still supports the operation as a se
 
 ### Schema-level commitment
 
-The seven command names are bound to `schemas/workflow.yaml` — a single schema, not a split. Each issue-state transition entry gains a `command:` field naming the wrapper that owns it; the entry without a wrapper (closure as won't-do) has `command: close-issue`. The PR sub-lifecycle is modelled as additional fields on the same transition entries: a `pr_state_effect:` field records "none → ready" (for `review-work`), "none → draft" (for `create-draft`, paired with a no-issue-transition row), "ready → draft" (for `back-to-draft`, also no-issue-transition), and "ready → merged" (for `done-work`). PR state is *coupled* to issue state by construction, and modelling them in one schema preserves that coupling at the file level.
+The seven command names are bound to `schemas/workflow.yaml` — a single schema, not a split. Each issue-state transition entry gains a `command:` field naming the wrapper that owns it; the entries without a wrapper (closure as won't-do, and the close of completed work that no pull request carried) have `command: close-issue`. The PR sub-lifecycle is modelled as additional fields on the same transition entries: a `pr_state_effect:` field records "none → ready" (for `review-work`), "none → draft" (for `create-draft`, paired with a no-issue-transition row), "ready → draft" (for `back-to-draft`, also no-issue-transition), and "ready → merged" (for `done-work`). PR state is *coupled* to issue state by construction, and modelling them in one schema preserves that coupling at the file level.
 
 This binding makes the wrapper-to-transition relationship schema-checkable, prevents wrapper names from being free variables across the corpus, and gives the convention-compliance-reviewer something to validate.
 
@@ -165,7 +165,7 @@ This binding makes the wrapper-to-transition relationship schema-checkable, prev
 - `create-draft` — PR creation before the work is ready for review (so CI can run during in-progress work).
 - `back-to-draft` — PR-state round-trip after a reviewer requests changes; the issue stays in Review (the work-flow phase hasn't changed, only the PR-readiness).
 
-Won't-do closure is `close-issue` — explicitly outside this palette because abandonment is its own concern, not a step in the standard work-flow.
+Won't-do closure, and the close of completed work that no pull request carried, are `close-issue`'s — explicitly outside this palette because a close is not a step in the standard work-flow: the palette's commands walk the work through its states, and `close-issue` ends the work outside that walk.
 
 **Why model the PR sub-lifecycle in the palette.** Real-world development has draft↔ready round-trips driven by review feedback, and the methodology can't pretend they don't exist. Modelling them gives reviewers and authors named commands instead of ad-hoc `gh pr ready --undo` invocations, keeps the audit trail consistent (the issue-state side-effect is automatic), and gives the convention-compliance-reviewer something to enforce.
 
@@ -204,7 +204,7 @@ The per-layer invocation principle that determines when to use a wrapper vs `mov
 - Each command consumes [project-management:DEC-023-gh-host-and-owner]'s `gh` helper for any `gh` shell-outs not delegated to `move-issue` (i.e., `gh pr create`, `gh issue comment`). The merge itself — the merge or the enqueue, the queue's reading and the wait — is delegated to the backbone's merge mechanic ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"), which the verbs run in the environment that helper pins, so the configured host is the one it reaches.
 - [project-management:DEC-024-lifecycle-hooks] fires `after_move_issue` from the substrate when a wrapper triggers a state transition — no change to the existing hook surface. `after_open_pr` and `after_merge_pr` fire from `review-work` and `done-work` respectively, also using DEC-024's existing event names. No new hook event names are introduced by this DEC.
 - Existing project-manager and human workflows that currently call `move-issue` directly for standard-flow transitions migrate to the seven wrappers. Direct `move-issue` use remains valid for non-flow state changes (e.g. triage retag).
-- `close-issue` (existing, won't-do closure) remains outside this palette per the rationale above. The convention-compliance-reviewer's awareness of "use the wrapper for forward-progress flow" doesn't extend to `close-issue`.
+- `close-issue` (existing: won't-do closure, and the close of completed work that no pull request carried) remains outside this palette per the rationale above. The convention-compliance-reviewer's awareness of "use the wrapper for forward-progress flow" doesn't extend to `close-issue`.
 - Each command has gate-enforcement + idempotence tests at `.pkit/capabilities/project-management/scripts/tests/`. Tests cover the sub-decisions table above.
 - The pm capability bumps minor version on landing (per [PRJ-002] surface-change rule — seven new commands plus a `workflow.yaml` schema_version bump for the `command:` and `pr_state_effect:` fields). The migration script updates installed adopters' `workflow.yaml`:
   - For unmodified kit-default transition rows (matched by `(from, to)` tuple), inject the `command:` and `pr_state_effect:` fields with kit-default values.

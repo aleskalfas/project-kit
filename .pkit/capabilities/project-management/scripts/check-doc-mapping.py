@@ -50,7 +50,8 @@ point existed.
 ADR-019 framing: this script is the capability-owned *mechanism* — a read-only
 check that exits non-zero on an unsatisfied mapping. The real *boundary* is the
 adopter wiring it as a required CI status check behind branch protection
-(`gh api` / `bash -c` evade any tool-layer check, per ADR-004). At the merge-pr
+(`gh api` / a code runner such as `python3 -c` evade any tool-layer check, per
+ADR-004). At the merge-pr
 layer it is only a warning (a speed-bump). The capability ships the mechanism;
 the adopter wires the boundary; the residual gap is declared, not hidden.
 
@@ -108,6 +109,7 @@ import pathspec
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, default_branch, doc_check, friction_answers
+from _lib.escaped_output import escaping
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -138,7 +140,8 @@ def _changed_files(fork: str) -> list[str] | None:
 
 def _doc_impact_section(body: str) -> str:
     """Return the text of the PR body's `## Doc impact` section (lowercased), read
-    without the friction answers' section, which overrides no mapping (DEC-055)."""
+    without a list of the answers an earlier run left, which overrides no mapping
+    (DEC-065 point 1)."""
     if not body:
         return ""
     lines = friction_answers.strip(body).splitlines()
@@ -244,6 +247,7 @@ def _ask_host(follow_up: doc_check.FollowUp, config: dict) -> bool | None:
     return None
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(

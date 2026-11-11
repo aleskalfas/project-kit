@@ -58,6 +58,8 @@ import subprocess
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
+from _lib import backbone
+
 POINT = "pkit::work-tracking:doc-check"
 POINT_VERSION = 1
 
@@ -99,7 +101,7 @@ class NoAnswer(Exception):
     """The friction on the pages cannot be read in full: the filler gives no answer."""
 
 
-def has_commit(root: str, run: Runner = subprocess.run) -> bool:
+def has_commit(root: str, run: Runner = backbone.run) -> bool:
     """Whether HEAD names a commit — the history the friction check reads — as the
     backbone reads HEAD, `head` in `pkit repository base --json`: False only when
     there is none yet. Raises NoAnswer when the reading gives no answer, or says
@@ -120,7 +122,7 @@ def has_commit(root: str, run: Runner = subprocess.run) -> bool:
     )
 
 
-def read_friction(root: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
+def read_friction(root: str, run: Runner = backbone.run) -> Mapping[str, Any]:
     """The whole-repository check's machine-readable document, through `pkit`.
     Raises NoAnswer when it gives none, or one of a version this reading does not
     understand."""

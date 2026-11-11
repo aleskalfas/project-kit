@@ -393,3 +393,63 @@ def test_type_may_carry_milestone_reads_the_schema(ei) -> None:
     assert ei._type_may_carry_milestone("feature", types)
     assert not ei._type_may_carry_milestone("leaf", types)
     assert not ei._type_may_carry_milestone(None, types)
+
+
+# ---- pools of workers (DEC-061 point 6) ----------------------------------------------
+
+POOLED_ROWS = [
+    {"number": 5, "title": "Milestone 5", "description": "Close trigger: either"},
+    {"number": 6, "title": "Milestone 6", "description": "Close trigger: either\nPool: alpha"},
+    {"number": 7, "title": "Milestone 7", "description": "Pool: bravo"},
+]
+
+
+def _pooled(ei, monkeypatch, *, tty: bool = False) -> None:
+    monkeypatch.setattr(ei, "list_open_milestones", lambda _c, gh=None: POOLED_ROWS)
+    monkeypatch.setattr(ei.pools, "declared_pools", lambda _r: (("alpha", "bravo"), None))
+    monkeypatch.setattr(ei.pools.consent, "at_a_terminal", lambda: tty)
+
+
+ALL_OPEN = ((5, "Milestone 5"), (6, "Milestone 6"), (7, "Milestone 7"))
+
+
+def test_a_task_brought_into_a_pool_off_a_terminal_without_yes_is_refused(
+    ei, monkeypatch, capsys
+) -> None:
+    _pooled(ei, monkeypatch)
+    rec = _run(ei, monkeypatch, ["42", "--milestone", "6"], _issue(), open_milestones=ALL_OPEN)
+    assert rec.rc == 1
+    assert rec.milestone_writes == [] and rec.comments == []
+    assert "Putting #42 into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_task_brought_into_a_pool_with_consent_logs_it_in_the_audit_comment(
+    ei, monkeypatch
+) -> None:
+    _pooled(ei, monkeypatch)
+    rec = _run(
+        ei, monkeypatch, ["42", "--milestone", "6", "--yes"], _issue(), open_milestones=ALL_OPEN
+    )
+    assert rec.rc == 0
+    assert rec.milestone_writes == [(42, "Milestone 6")]
+    (comment,) = rec.comments
+    assert "pool none → alpha, with the person's consent (DEC-061 point 6)" in comment
+
+
+def test_a_task_moved_between_pools_asks(ei, monkeypatch) -> None:
+    _pooled(ei, monkeypatch)
+    issue = _issue(milestone=(6, "Milestone 6"))
+    rec = _run(ei, monkeypatch, ["42", "--milestone", "7"], issue, open_milestones=ALL_OPEN)
+    assert rec.rc == 1 and rec.milestone_writes == []
+
+
+@pytest.mark.parametrize("argv", [["--milestone", "5"], ["--clear-milestone"]])
+def test_a_task_taken_out_of_a_pool_asks_nothing(ei, monkeypatch, argv) -> None:
+    _pooled(ei, monkeypatch)
+    body = TASK_BODY.replace("Milestone: [#5](../milestone/5)", "EPIC: #10")
+    issue = _issue(body=body, milestone=(6, "Milestone 6"))
+    rec = _run(ei, monkeypatch, ["42", *argv], issue, open_milestones=ALL_OPEN)
+    assert rec.rc == 0
+    assert "consent" not in " ".join(rec.comments)

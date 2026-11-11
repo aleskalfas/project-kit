@@ -140,3 +140,97 @@ def test_a_state_issue_is_never_a_milestone_child(milestone_mod, monkeypatch) ->
     monkeypatch.setattr(milestone_mod.containment, "_gh_call", fake_gh)
     children = milestone_mod.list_milestone_children(6, "M1", {}, {"types": {}})
     assert [child["number"] for child in children] == [10]
+
+
+# ---- the pool (DEC-061 point 2, ADR-072 point 3) ------------------------------
+
+
+def test_list_open_milestones_runs_a_callers_gh(milestone_mod) -> None:
+    calls: list[list[str]] = []
+
+    def gh(argv):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout=SAMPLE_MILESTONES, stderr="")
+
+    rows = milestone_mod.list_open_milestones({}, gh=gh)
+    assert [r["number"] for r in rows] == [6, 7]
+    assert calls == [list(milestone_mod.OPEN_MILESTONES_ARGV)]
+
+
+@pytest.mark.parametrize(
+    ("description", "name", "reason"),
+    [
+        ("Close trigger: date-based\nPool: alpha", "alpha", None),
+        ("Close trigger: either\n\nSome words.\n  Pool: bravo-2  \nmore", "bravo-2", None),
+        ("Pool: alpha\nClose trigger: date-based", "alpha", None),
+        ("Close trigger: date-based", None, "no-line"),
+        ("", None, "no-line"),
+        ("Pool: alpha\nPool: alpha", None, "two-lines"),
+        ("Pool: alpha\nPool: Bravo", None, "two-lines"),
+        ("Pool: Alpha", None, "unread"),
+        ("Pool:", None, "unread"),
+        ("Pool: alpha bravo", None, "unread"),
+        ("The Pool: alpha is ours", None, "no-line"),
+    ],
+)
+def test_the_pool_line_is_read_wherever_it_stands_and_every_one_counts(
+    milestone_mod, description, name, reason
+) -> None:
+    pool = milestone_mod.parse_pool_line(description)
+    assert (pool.name, pool.reason) == (name, reason)
+
+
+def test_a_milestones_pool_is_one_the_topology_declares(milestone_mod) -> None:
+    pool = milestone_mod.milestone_pool
+    assert pool("Pool: alpha", ("alpha", "bravo")).name == "alpha"
+    undeclared = pool("Pool: charlie", ("alpha",))
+    assert undeclared.name is None and undeclared.reason == milestone_mod.UNDECLARED_POOL
+    assert "'charlie', which the topology does not declare" in undeclared.warning(7)
+    assert pool("Pool: alpha", None).name is None
+    assert pool("Close trigger: either", ("alpha",)).warning(7) is None
+    assert "more than one" in pool("Pool: a\nPool: b", ("a",)).warning(7)
+    assert "'Pool: A'" in pool("Pool: A", ("a",)).warning(7)
+
+
+def test_a_write_replaces_the_line_and_never_adds_a_second(milestone_mod) -> None:
+    put = milestone_mod.with_pool_line
+    assert put("Close trigger: date-based\n\nWords.", "alpha") == (
+        "Close trigger: date-based\nPool: alpha\n\nWords."
+    )
+    assert put("Close trigger: date-based\nRollforward target: #9\n\nWords.", "alpha") == (
+        "Close trigger: date-based\nRollforward target: #9\nPool: alpha\n\nWords."
+    )
+    assert put("Words.\nPool: alpha\nMore.", "bravo") == "Words.\nPool: bravo\nMore."
+    assert put("Pool: alpha\nWords.\nPool: x y", "bravo") == "Pool: bravo\nWords."
+    assert put("Words.", "alpha") == "Pool: alpha\nWords."
+    assert put("", "alpha") == "Pool: alpha"
+    assert (
+        put("Close trigger: either\nPool: alpha\nWords.", None) == "Close trigger: either\nWords."
+    )
+    with pytest.raises(ValueError):
+        put("", "Alpha")
+
+
+def test_the_log_line_never_takes_the_pool_form(milestone_mod) -> None:
+    line = milestone_mod.pool_log_line(None, "alpha", verb="set-pool", today="2026-10-28")
+    assert "none → alpha" in line and "consent" in line
+    described = milestone_mod.with_log_line(
+        milestone_mod.with_pool_line("Close trigger: either", "alpha"), line
+    )
+    assert milestone_mod.parse_pool_line(described).name == "alpha"
+
+
+def test_the_schema_declares_the_grammar_the_parser_reads(milestone_mod) -> None:
+    from ruamel.yaml import YAML
+
+    schema = YAML(typ="safe").load(
+        (LIB_DIR.parent.parent / "schemas" / "time-containers.yaml").read_text("utf-8")
+    )
+    field = schema["containers"]["milestone"]["close_trigger_marker"]["pool_field"]
+    assert field["opening"] == milestone_mod.POOL_OPENING
+    import re
+
+    declared = re.compile(field["pattern"])
+    for line in ("Pool: alpha", "Pool: a-1", "Pool: Alpha", "Pool: a-", "Pool: a b", "Pool:"):
+        read = milestone_mod.parse_pool_line(line).name is not None
+        assert bool(declared.match(line)) == read, line

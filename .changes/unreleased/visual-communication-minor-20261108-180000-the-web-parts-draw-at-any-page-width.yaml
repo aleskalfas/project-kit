@@ -1,0 +1,21 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter's version being built, 1.1.0, adds the web parts, which draw a
+  site's pages at every size (#2819, DEC-022 points 4 to 6): `header`,
+  `navigation`, `section`, `sections`, `form` and `table`, and the blocks
+  `link`, `button`, `field`, `row` and `cell` that draw their items. Each is
+  experimental. Each fills the width it gets, and changes its shape where a size
+  leaves it too little room: a navigation's links stand in a row, or in a
+  column on a phone. A header moves its navigation under its title, and a
+  section stands its picture under its text. A header shows the brand's
+  `picture.logo`, and a section the picture file its content names. A form is
+  never sent; a field may be in `error`, and a button `disabled`. The starter
+  adds the roles `starter.margin`, `starter.logo` and `starter.button.corner`.
+  The foundations' version being built adds the shared role `size.line`, the
+  length of a line of text at most, whose default is `{size.figure}`. The
+  neutral brand's version being built gives it 600 px. The starter's README
+  lists the web parts by their job on a page, with their fields, options, states
+  and sources.

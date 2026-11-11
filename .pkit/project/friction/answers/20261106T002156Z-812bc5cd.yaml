@@ -1,0 +1,298 @@
+answers:
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "DEC-003 point 8 now says marking a published piece final moves its lock otherwise, back to the lock of the version named. This term's definition still says the lock moves only through a reviewed change, so it is out of date on that one case. The example, on a new library version, and the distinction from final hold. No piece can be published or final yet, and the definition is mended by the Task of open Feature #2572 that builds marking final."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "The definition and example of a draft hold. The distinction 'Published' still says a published piece's lock moves only through a change that shows it before and after, and DEC-003 point 8 now makes marking that piece final the one exception, so that line is out of date. No piece can be published or final yet, and the line is mended by the Task of open Feature #2572 that builds marking final."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#8
+          reason: "Sources, on variant 6b and the guarantees, still say a published piece's lock moves only through a change a person reviews. DEC-003 point 8 now makes marking that piece final the one exception, so that sentence is out of date. No piece can be published or final yet, and the sentence is mended by the Task of open Feature #2572 that builds marking final."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#9
+          reason: "Point 9's edit says only that writing back a final piece's version's lock is no move of it, and the fact that a published lock is behind holds. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-006#7
+          reason: "Step 4's copy and variant 6b hold against point 7's edits: the export's gate backs the guarantee that a figure takes a new library version only through a change that shows it before and after. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-006#8
+          reason: "Variant 6a's stale copy still fails, and the new findings on a published piece ask for the copy step 4 uses. This anchor is deferred with DEC-003#8, since a revalidation here would answer that one too. The Task of open Feature #2572 that builds marking final mends the sentence of Sources and revalidates this use case whole."
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:27:46Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, this page holds against all three changes. 20261105T175150Z-1bb0868b, updated for pkit visual look (2b11e090), added look/<piece>/ and its temporary fonts to the clone's local folder. 20261105T214836Z-09cec591 found DEC-016's edit to DEC-001 point 8 leaves the page as it stood. The two do not meet: the viewing step moves no lock, and that folder holds no fact of an export. This change gives DEC-003 point 8 what a copy of a final piece holds, what marking final does to a lock, and that a published piece may go back to a draft or be marked final. None of it is built: the state row says format 1 takes draft alone. So the sections on a draft and a pinned draft state what a render does, and the sentence added to the pinned bullet speaks only of a copy of a final piece, which no command makes yet."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:27:56Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, this page holds against all three changes. 20261105T175150Z-1bb0868b, updated for pkit visual look (2b11e090), added The viewing step. 20261105T214836Z-09cec591 found DEC-016's stand-ins, stop and folders not built. Together they stand: the viewing step takes no number and writes no exports.yaml, and the section on exports keeps what a run records today. DEC-006's top line overturns only point 7's sentence on a final piece's exports, which this page never repeats, so its plugins, producers and written code on points 1 to 5 read as before. Point 7 gains what the record of exports names and a gate on a published piece's export, and point 8 gains findings on a final or published piece. None is built, and this page says draft is the only state of format 1. So its exports, the record of exports, what refuses an export and the viewing step state what the capability does."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:28:03Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, this page holds against all three changes. 20261105T181511Z-6cf22051 found pkit visual look keeps no finding and writes nothing the check reads (2b11e090). 20261105T214836Z-09cec591 found the stand-ins, the fields an input leaves out and a copy let through not built, so the findings key and the input sets stay true. Together they stand, since the viewing step's images are no input of either. This change gives DEC-002 point 7, DEC-005 point 13 and DEC-006 point 8 what the check leaves unread of a final piece, that a final piece's render keeps no record, and findings on a final or published piece. DEC-003 point 9 adds that writing back a final piece's lock is no move. None is built, and format 1's state takes draft alone. So 'at each render' and 'The check reports no finding on exports' stay true of what the capability does. An export's input set already reads every version of the lock, and DEC-006 points 4 to 6 move only by its top line.
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+    revalidated:
+      at: 2026-11-06T00:22:41Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 9's edit says only that writing back a final piece's version's lock is no move of it. This page rests on that point for a piece that draws an experimental component being told so, which the edit leaves as it stood.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+    revalidated:
+      at: 2026-11-06T00:22:44Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 7 gains what the record of exports names, a gate on a published piece's export, and a copy that may lie outside the piece's one folder. The term says a file handed out, numbered by the run that made it and never overwritten, and its distinction says an export is written from the piece. Neither moves, and neither rests on the sentence the top line overturns.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-06T00:22:47Z
+      outcome: unchanged
+      unchanged-because: "DEC-003 point 8 now names the version handed out, has the command that marks a piece put back that version's lock, and says no state leads out of final. The definition's lock that never moves again speaks of the time after the mark, which stands, and the exports handed out stay as they were. The example and both distinctions hold: a final piece's copy is a draft whose lock a person moves."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+    revalidated:
+      at: 2026-11-06T00:22:52Z
+      outcome: unchanged
+      unchanged-because: Only DEC-006's top line reaches point 1, and it overturns a sentence of point 7 on a final piece's exports. What a helper script is, and that it runs while a piece is prepared, read as before.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-06T00:22:57Z
+      outcome: unchanged
+      unchanged-because: Only DEC-006's top line reaches point 1, and it overturns a sentence of point 7 alone. A model as a file of a subject's elements, written once for several pieces, rests on nothing that moved.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+    revalidated:
+      at: 2026-11-06T00:23:03Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 8's pinned draft gains that a copy may hold later words and need its lock moved. The definition says the lock moves only when a person moves it, and the example that a copy keeps the talk's library versions until a person moves them. Both stand, and the distinction on a final piece's lock is untouched.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+    revalidated:
+      at: 2026-11-06T00:28:11Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, this use case holds against all three changes. 20261103T165045Z-20cf3897 read DEC-014's edits to DEC-003, which left points 5, 7 and 8 and the findings it uses as they stood. 20261103T170439Z-32fb6096 read the refinement of which clash holds a draft's lock back, which leaves a first lock and a final copy's pin alone. Neither touches the other's ground. Against this change variant 1b holds: the copy starts as a pinned draft and keeps the library versions the final presentation used, which the lock put back at the mark makes exact. The sentence added to point 8, that such a copy may hold later words and need its lock moved, denies nothing the variant says. Step 4's first lock and step 5's note on an experimental component are untouched, and point 9's edit concerns a final piece's lock alone."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:23:37Z
+      outcome: unchanged
+      unchanged-because: "Variant 5a stands: a final view is left as it was handed out. DEC-006 point 8 now keeps every finding off a final piece's outputs, which covers the stale one its Sources cite, and a final piece's lock never moves after the mark. Step 5 draws again the views that are not final, and a published view's stale copy still fails. Points 1 and 5 move only by DEC-006's top line, on a sentence of point 7 no step rests on."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:23:41Z
+      outcome: unchanged
+      unchanged-because: The use case makes a local component in a piece being prepared. DEC-006 point 8 widens what is never reported on a final piece's outputs, and leaves variant 4b's stale local component asking for attention elsewhere. Variant 4c's move after a before-and-after reads DEC-003 point 8's bullets as they stood for a draft. Points 1 and 5 move only by the top line, on a sentence of point 7 this use case does not read.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-097-put-produced-picture.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+    revalidated:
+      at: 2026-11-06T00:23:45Z
+      outcome: unchanged
+      unchanged-because: DEC-006 points 1 to 5 move only by the top line, which overturns a sentence of point 7 on a final piece's exports. This use case makes a picture for a piece being prepared and anchors nothing of point 7, so each step and the guarantee hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+    revalidated:
+      at: 2026-11-06T00:28:16Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, this use case holds against all three changes. 20261103T165045Z-20cf3897 read DEC-014's edits on a library's release and the fetch, which the steps leave to the system. 20261103T170439Z-32fb6096 read the refinement of which clash holds a draft's lock back, which variant 4c meets as it stands. One speaks of a library's release and the other of a draft's lock, so together they leave each step true. Against this change variant 4a's proposal holds. Variant 4b's 'the library versions it was handed out with' is exact, since marking final puts back the lock of the version handed out. The first guarantee speaks of a new library version, and after the mark the lock never moves. Variant 4c's draft is untouched, and point 9's edit says only that writing back a final piece's version's lock is no move of it.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+    revalidated:
+      at: 2026-11-06T00:28:22Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, this use case holds against all three changes. 20261103T165045Z-20cf3897 read DEC-014's edits on a library's own versions, which step 4 meets. 20261103T170439Z-32fb6096 read the refinement of which clash holds a draft's lock back, which leaves variant 5a as it stood. They rest on different steps. Against this change variant 5a rests on point 8's bullet on one version of each library, which the edits leave as it stood. They touch the bullets on a pinned draft, final and published, of which this use case says nothing.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+    revalidated:
+      at: 2026-11-06T00:23:56Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 4 moves only by the top line, which overturns a sentence of point 7 on a final piece's exports. Written code has a declaration and a lock of its own, and no step reads a piece's export.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+    revalidated:
+      at: 2026-11-06T00:28:26Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, this use case holds against all three changes. 20261103T165045Z-20cf3897, updated for DEC-014 (346eb84d), reworded Sources on the release a library needs. 20261103T170439Z-32fb6096 read the refinement of which clash holds a draft's lock back, which leaves one version of each library and the state as they stood. The first speaks of taking a library in and the second of a lock, so they do not meet. Against this change variants 6a, 6b and 6e and the second guarantee hold: after the mark a final piece's lock never moves, a published piece moves by a proposal, and a draft by its next drawing. Marking final is no move to a newer version taken in. Point 9's edit on writing back a final piece's lock touches neither variant 5a's failed hash nor the open question on a version the project lacks."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+    revalidated:
+      at: 2026-11-06T00:28:30Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces, this use case holds against all three changes. 20261103T165045Z-20cf3897 read DEC-014's full check of a release, which steps 4 and 6 leave to the system. 20261103T170439Z-32fb6096 read the refinement of which clash holds a draft's lock back, which leaves variant 4a's move after a before-and-after as it stood. One concerns a library's release and the other a piece's lock, so they do not meet. Against this change variant 2a's failing check is the policy DEC-002 point 7 keeps, and its edit adds only what the check leaves unread of a final piece. Variant 4a's 'A final piece keeps its local component' holds, since no command changes a final piece. DEC-006 point 1 moves only by the top line, on a sentence of point 7 this use case does not read.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+    revalidated:
+      at: 2026-11-06T00:24:09Z
+      outcome: unchanged
+      unchanged-because: "Variant 4a holds: the exports of this run are the version handed out that DEC-003 point 8 now names, and they are kept with the piece. Sources' 'which of its exports' reads as that one version. The gate on a published piece and the refusal of a final piece are refusals no step denies, since the use case exports before the mark. Steps 1 to 3 and the guarantee stand, and what the record of exports gains takes nothing away."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+    revalidated:
+      at: 2026-11-06T00:24:16Z
+      outcome: unchanged
+      unchanged-because: The journey ends at UC-102's hand-out and never exports a final piece. The edits to DEC-006 point 7 leave an export drawn from the piece, one number for each run and a PDF for each language, so step 5 and the postcondition hold. The sentence the top line overturns is one neither rests on.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-011-move-component-into-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+    revalidated:
+      at: 2026-11-06T00:28:34Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces, this journey holds against all three changes. 20261103T165045Z-20cf3897 found DEC-014 left DEC-003 point 8 as it stood, and 20261103T170439Z-32fb6096 found the refinement of which clash holds a draft's lock back leaves step 3 alone. Both leave one ground standing: a copy of a final piece starts as a pinned draft. Against this change step 3's copied presentation is still a pinned draft that keeps its library versions until a person moves its lock, and the postcondition's exception for a final piece holds. DEC-003 point 8 adds that such a copy may hold later words, which this journey does not deny. DEC-006 point 1 moves only by the top line."

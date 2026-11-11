@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -10,6 +12,10 @@ from click.testing import CliRunner
 
 from project_kit import refs
 from project_kit.cli import main
+from tests.adopter_repo import MakeAdopterRepo
+
+REPO = Path(__file__).resolve().parents[1]
+READER = REPO / ".pkit" / "agents" / "tool_access.py"
 
 # --- fixtures -------------------------------------------------------
 
@@ -21,6 +27,8 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for area in ("agents", "skills", "decisions"):
         for ns in ("core", "project"):
             (tmp_path / ".pkit" / area / ns).mkdir(parents=True)
+    # The reader of an agent's tool access, as sync copies it (ADR-086 point 1).
+    shutil.copy2(READER, tmp_path / ".pkit" / "agents" / READER.name)
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
@@ -430,6 +438,27 @@ Mentions COR-999 without declaring it.
     assert any("body cites record 'COR-999'" in i.diagnosis for i in issues)
 
 
+def test_validate_flags_a_bare_reads_patterns_entry_of_an_agent(kit_target: Path) -> None:
+    """An agent's bare `reads.patterns` name is reported, and a placeholder or a path
+    passes; a skill's is not, as a skill's `reads.patterns` is never filled (#2481)."""
+    front = """reads:
+  patterns: [code-paths, <project-conventions>, docs/notes.md]
+---
+# {name}
+Reads `<project-conventions>`, `<code-paths>` and `docs/notes.md`.
+"""
+    _write_agent(kit_target, "core", "agent-a", "---\nname: agent-a\n" + front.format(name="A"))
+    _write_skill(kit_target, "core", "skill-b", "---\nname: skill-b\n" + front.format(name="B"))
+    issues = refs.validate_corpus(kit_target)
+    assert [(i.kind, i.location) for i in issues] == [
+        (refs.READS_PATTERN, ".pkit/agents/core/agent-a.md")
+    ]
+    assert issues[0].diagnosis == (
+        "`reads.patterns` entry 'code-paths' is neither a `<category>` placeholder nor a "
+        "path, so the deploy does not resolve it. Write it `<code-paths>`."
+    )
+
+
 # --- backward-citation exemptions (#584) ----------------------------
 #
 # The backward check must not flag references that are not overlay-resolved
@@ -539,6 +568,154 @@ def test_is_decision_link_unit() -> None:
     assert not refs._is_decision_link("project/config.yaml")
 
 
+# --- forward citation of a declared path (#2471) --------------------
+#
+# A path the front matter declares must appear in the body. The front matter
+# holds the declaration itself, so what the check reads for it is the body
+# alone, a composite skill's siblings included.
+
+
+def _uncited_paths(root: Path) -> list[str]:
+    issues = refs.validate_corpus(root)
+    return [i.diagnosis for i in issues if "frontmatter declares path" in i.diagnosis]
+
+
+def test_forward_declared_path_the_body_cites_is_not_reported(kit_target: Path) -> None:
+    body = """---
+name: s
+description: t
+reads:
+  paths: [docs/release-notes.md]
+---
+# S
+Append the change to `docs/release-notes.md`.
+"""
+    _write_skill(kit_target, "project", "s", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_declared_path_only_the_front_matter_names_is_reported(kit_target: Path) -> None:
+    body = """---
+name: s
+description: t
+reads:
+  paths: [docs/release-notes.md]
+---
+# S
+Write the release notes.
+"""
+    _write_skill(kit_target, "project", "s", body)
+    assert _uncited_paths(kit_target) == [
+        "frontmatter declares path 'docs/release-notes.md' but body does not cite it."
+    ]
+
+
+def test_forward_bare_file_name_the_body_names_is_not_reported(kit_target: Path) -> None:
+    """A bare file name is no path the parser reads, so the body's text is searched."""
+    body = """---
+name: a
+description: t
+reads:
+  paths: [CONTRIBUTING.md]
+---
+# A
+Read CONTRIBUTING.md before you review.
+"""
+    _write_agent(kit_target, "project", "a", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_bare_file_name_only_the_front_matter_names_is_reported(kit_target: Path) -> None:
+    body = """---
+name: a
+description: t
+reads:
+  paths: [CONTRIBUTING.md]
+---
+# A
+Read the contributing guide before you review.
+"""
+    _write_agent(kit_target, "project", "a", body)
+    assert _uncited_paths(kit_target) == [
+        "frontmatter declares path 'CONTRIBUTING.md' but body does not cite it."
+    ]
+
+
+def test_forward_bare_file_name_a_composite_sibling_names_is_not_reported(
+    kit_target: Path,
+) -> None:
+    folder = kit_target / ".pkit" / "skills" / "project" / "family"
+    folder.mkdir()
+    (folder / "family.md").write_text(
+        "---\nname: family\ndescription: t\ncomposes: [op.md]\n"
+        "reads:\n  paths: [CONTRIBUTING.md]\n---\n# Family\nFollow `op.md`.\n",
+        encoding="utf-8",
+    )
+    (folder / "op.md").write_text("# Op\nRead CONTRIBUTING.md first.\n", encoding="utf-8")
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_relative_link_to_the_declared_file_cites_it(kit_target: Path) -> None:
+    """A link is read from the body's folder, so it names the declared file another way."""
+    (kit_target / ".pkit" / "agents" / "README.md").write_text("# Agents\n", encoding="utf-8")
+    body = """---
+name: s
+description: t
+reads:
+  paths: [.pkit/agents/README.md]
+---
+# S
+See [the agents README](../../agents/README.md#the-reference-graph).
+"""
+    _write_skill(kit_target, "core", "s", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_declared_decision_file_is_cited_by_its_record(kit_target: Path) -> None:
+    """A record's file is cited by the record's id, a capability's decision in brackets."""
+    _write_decision(kit_target, "core", "COR", "001", "a-thing")
+    decisions = kit_target / ".pkit" / "capabilities" / "mycap" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "DEC-002-other.md").write_text("---\nid: DEC-002\n---\n", encoding="utf-8")
+    body = """---
+name: s
+description: t
+reads:
+  records: [COR-001]
+  paths:
+    - .pkit/decisions/core/COR-001-a-thing.md
+    - .pkit/capabilities/mycap/decisions/DEC-002-other.md
+---
+# S
+Per COR-001 and [mycap:DEC-002-other] this holds.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    assert _uncited_paths(kit_target) == []
+
+
+def test_forward_decision_file_whose_record_the_body_never_cites_is_reported(
+    kit_target: Path,
+) -> None:
+    decisions = kit_target / ".pkit" / "capabilities" / "mycap" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "DEC-002-other.md").write_text("---\nid: DEC-002\n---\n", encoding="utf-8")
+    (decisions / "DEC-003-third.md").write_text("---\nid: DEC-003\n---\n", encoding="utf-8")
+    body = """---
+name: s
+description: t
+reads:
+  paths: [.pkit/capabilities/mycap/decisions/DEC-002-other.md]
+---
+# S
+Per [mycap:DEC-003-third] this holds, and DEC-002 is named bare.
+"""
+    _write_capability_skill(kit_target, "mycap", "s", body)
+    assert _uncited_paths(kit_target) == [
+        "frontmatter declares path '.pkit/capabilities/mycap/decisions/DEC-002-other.md' "
+        "but body does not cite it."
+    ]
+
+
 def test_storyboard_bare_sibling_resolves(kit_target: Path) -> None:
     """A bare `storyboard.md` declared by a capability agent resolves against the
     agent's own directory, not target-root (#584)."""
@@ -602,6 +779,70 @@ Calls workflow.do-thing.
     # Should have no hook-closure issue; only forward/backward bidirectional
     # which are clean here.
     assert not any("no provider exists" in i.diagnosis for i in issues)
+
+
+# --- unsatisfied needs, which every deploy warns of (COR-013 point 4, #2467) ---
+
+_CONSUMER_AGENT = """---
+name: consumer-agent
+description: consumes
+needs: [workflow.do-thing]
+---
+# Consumer
+Calls workflow.do-thing.
+"""
+
+
+def _answering_skill(name: str) -> str:
+    return f"""---
+name: {name}
+description: provides
+answers: [workflow.do-thing]
+---
+# Provider
+Implements workflow.do-thing.
+"""
+
+
+def _unsatisfied(root: Path) -> list[refs.UnsatisfiedNeed]:
+    return refs.unsatisfied_needs(refs.load_artifacts(root), refs.load_hook_providers(root))
+
+
+def test_unsatisfied_needs_names_the_agent_and_the_hook_no_provider_answers(
+    kit_target: Path,
+) -> None:
+    _write_agent(kit_target, "project", "consumer-agent", _CONSUMER_AGENT)
+    needs = _unsatisfied(kit_target)
+    assert [(n.artifact.name, n.hook, n.colliding) for n in needs] == [
+        ("consumer-agent", "workflow.do-thing", ())
+    ]
+    assert needs[0].describe(kit_target) == (
+        "agent 'consumer-agent' (.pkit/agents/project/consumer-agent.md) needs hook "
+        "'workflow.do-thing', which no skill answers and no package provides (COR-013 point 4)."
+    )
+
+
+def test_unsatisfied_needs_passes_a_need_a_skill_answers(kit_target: Path) -> None:
+    _write_agent(kit_target, "project", "consumer-agent", _CONSUMER_AGENT)
+    _write_skill(kit_target, "core", "provider-skill", _answering_skill("provider-skill"))
+    assert _unsatisfied(kit_target) == []
+
+
+def test_unsatisfied_needs_names_a_need_whose_providers_collide(kit_target: Path) -> None:
+    """Two providers at the hook's winning tier bind neither, so the need is unsatisfied;
+    validation leaves it to the collision's own finding, which names the hook."""
+    _write_agent(kit_target, "project", "consumer-agent", _CONSUMER_AGENT)
+    for name in ("first-skill", "second-skill"):
+        _write_skill(kit_target, "core", name, _answering_skill(name))
+    [need] = _unsatisfied(kit_target)
+    assert [p.source for p in need.colliding] == ["first-skill", "second-skill"]
+    assert need.describe(kit_target).startswith(
+        "agent 'consumer-agent' (.pkit/agents/project/consumer-agent.md) needs hook "
+        "'workflow.do-thing', which binds no provider: same-tier collision at tier 'core'"
+    )
+    issues = refs.validate_corpus(kit_target)
+    assert not any("no provider exists" in i.diagnosis for i in issues)
+    assert any(i.location == "hooks/workflow.do-thing" for i in issues)
 
 
 # --- lookups --------------------------------------------------------
@@ -689,6 +930,107 @@ def test_resolve_hook_picks_project_over_core(kit_target: Path) -> None:
     winner = refs.resolve_hook(providers, "x.y")
     assert winner is not None
     assert winner.tier == "project"
+
+
+# --- same-tier collisions (COR-013 point 4, #2480) ------------------
+
+
+def _write_capability_package(root: Path, name: str, provides: dict[str, str]) -> None:
+    folder = root / ".pkit" / "capabilities" / name
+    folder.mkdir(parents=True)
+    lines = [f"component:\n  name: {name}\n", "provides:\n"]
+    lines += [f"  {hook}: {impl}\n" for hook, impl in provides.items()]
+    (folder / "package.yaml").write_text("".join(lines), encoding="utf-8")
+
+
+def _two_capabilities_provide(root: Path, hook: str) -> None:
+    _write_capability_package(root, "tracker-b", {hook: "scripts/b.py"})
+    _write_capability_package(root, "tracker-a", {hook: "scripts/a.py"})
+
+
+def _project_skill_answers(root: Path, hook: str) -> None:
+    body = f"---\nname: own-tracker\ndescription: own\nanswers: [{hook}]\n---\n# Own\n{hook}.\n"
+    _write_skill(root, "project", "own-tracker", body)
+
+
+def _collisions(root: Path) -> list[refs.Issue]:
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.COLLISION]
+
+
+def test_a_same_tier_collision_binds_neither_provider() -> None:
+    providers = [
+        refs.Provider(hook="x.y", tier="core", source="below", implementation="/below"),
+        refs.Provider(hook="x.y", tier="capability", source="b", implementation="b.py"),
+        refs.Provider(hook="x.y", tier="capability", source="a", implementation="a.py"),
+    ]
+    assert [p.source for p in refs.winning_providers(providers, "x.y")] == ["a", "b"]
+    assert refs.resolve_hook(providers, "x.y") is None
+    assert refs.winning_providers(providers, "x.unknown") == []
+
+
+def test_a_higher_tier_provider_settles_a_collision_below_it() -> None:
+    providers = [
+        refs.Provider(hook="x.y", tier="core", source="b", implementation="/b"),
+        refs.Provider(hook="x.y", tier="core", source="a", implementation="/a"),
+        refs.Provider(hook="x.y", tier="adapter", source="harness", implementation="h.sh"),
+    ]
+    winner = refs.resolve_hook(providers, "x.y")
+    assert winner is not None
+    assert (winner.tier, winner.source) == ("adapter", "harness")
+
+
+def test_validate_fails_a_same_tier_collision_naming_both_providers(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    collisions = _collisions(kit_target)
+    assert [i.location for i in collisions] == ["hooks/tracker.create-issue"]
+    assert "tier 'capability'" in collisions[0].diagnosis
+    assert "(tracker-a, tracker-b)" in collisions[0].diagnosis
+
+
+def test_validate_passes_a_collision_a_project_provider_settles(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    _project_skill_answers(kit_target, "tracker.create-issue")
+    assert _collisions(kit_target) == []
+
+
+def test_validate_fails_a_collision_at_the_project_tier(kit_target: Path) -> None:
+    _project_skill_answers(kit_target, "project.do-thing")
+    body = "---\nname: other\ndescription: o\nanswers: [project.do-thing]\n---\n# O\n"
+    _write_skill(kit_target, "project", "other", body + "project.do-thing.\n")
+    collisions = _collisions(kit_target)
+    assert len(collisions) == 1
+    assert "tier 'project'" in collisions[0].diagnosis
+    assert "`answers:`" in collisions[0].diagnosis
+
+
+def test_cli_hooks_resolve_refuses_a_same_tier_collision(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    result = CliRunner().invoke(main, ["hooks", "resolve", "tracker.create-issue"])
+    assert result.exit_code == 1
+    assert "same-tier collision at tier 'capability'" in result.output
+    assert "(tracker-a, tracker-b)" in result.output
+
+
+def test_cli_hooks_list_marks_a_same_tier_collision(kit_target: Path) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    result = CliRunner().invoke(main, ["hooks", "list"])
+    assert result.exit_code == 0
+    assert (
+        "tracker.create-issue (same-tier collision at capability: tracker-a, tracker-b)"
+        in result.output
+    )
+
+
+def test_cli_hooks_resolve_and_list_name_the_project_provider_that_settles_one(
+    kit_target: Path,
+) -> None:
+    _two_capabilities_provide(kit_target, "tracker.create-issue")
+    _project_skill_answers(kit_target, "tracker.create-issue")
+    resolved = CliRunner().invoke(main, ["hooks", "resolve", "tracker.create-issue"])
+    assert resolved.exit_code == 0
+    assert "tracker.create-issue -> project:own-tracker (/own-tracker)" in resolved.output
+    listed = CliRunner().invoke(main, ["hooks", "list"])
+    assert "tracker.create-issue -> project:own-tracker" in listed.output
 
 
 def test_who_references_finds_declared_and_body_mentions(kit_target: Path) -> None:
@@ -957,7 +1299,8 @@ Body never mentions the storyboard path.
 
 
 def test_validate_storyboards_flags_missing_read_tool(kit_target: Path) -> None:
-    """Declaring storyboards without Read in tools is a violation — runtime can't load them."""
+    """Declaring storyboards under a grant without Read is a violation — runtime can't load
+    them."""
     storyboard = kit_target / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
     storyboard.parent.mkdir(parents=True)
     storyboard.write_text("# Storyboard\n", encoding="utf-8")
@@ -978,7 +1321,294 @@ Body cites `.pkit/agents/project/a/storyboard.md`.
     )
 
     issues = refs.validate_corpus(kit_target)
-    assert any("Read" in i.diagnosis and "tools" in i.diagnosis for i in issues)
+    assert any("tool access does not give it `Read`" in i.diagnosis for i in issues)
+
+
+def _storyboarded(root: Path, access: str) -> list[refs.Issue]:
+    """The storyboard findings for agent `a`, which declares and cites its storyboard,
+    with *access* as its tool access."""
+    storyboard = root / ".pkit" / "agents" / "project" / "a" / "storyboard.md"
+    storyboard.parent.mkdir(parents=True)
+    storyboard.write_text(
+        "---\nconsumers:\n  - kind: agent\n    name: a\n    namespace: project\n---\n",
+        encoding="utf-8",
+    )
+    (storyboard.parent / "a.md").write_text(
+        f"---\nname: a\ndescription: test\n{access}storyboards:\n"
+        "  - .pkit/agents/project/a/storyboard.md\n---\n"
+        "Load `.pkit/agents/project/a/storyboard.md` at session start.\n",
+        encoding="utf-8",
+    )
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.STORYBOARD]
+
+
+@pytest.mark.parametrize(
+    "access",
+    ["", "withheld: [Workflow, SendMessage]\n", "tools: [Read(src/**), Edit]\n", "withheld:\n"],
+)
+def test_the_storyboard_check_passes_an_agent_its_tool_access_gives_read(
+    kit_target: Path, access: str
+) -> None:
+    """No grant gives `Read`, and neither does a withheld list that leaves it out; a
+    grant naming `Read` with an argument holds it (ADR-085 point 2)."""
+    assert _storyboarded(kit_target, access) == []
+
+
+@pytest.mark.parametrize(
+    "access", ["withheld: [Workflow, Read]\n", "tools: []\n", "tools: Edit, Bash\n"]
+)
+def test_the_storyboard_check_fails_an_agent_its_tool_access_denies_read(
+    kit_target: Path, access: str
+) -> None:
+    issues = _storyboarded(kit_target, access)
+    assert [i.diagnosis.split(":")[0] for i in issues] == [
+        "declares storyboards but its tool access does not give it `Read`"
+    ]
+
+
+# --- tool access (ADR-086) --------------------------------------------
+
+
+def test_a_tool_access_the_reader_refuses_is_an_error(kit_target: Path) -> None:
+    _write_agent(
+        kit_target,
+        "project",
+        "both",
+        "---\nname: both\ntools: [Read]\nwithheld: [Workflow]\n---\n# Both\n",
+    )
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert [i.location for i in found] == [".pkit/agents/project/both.md"]
+    assert "its tool access is refused: it names both `tools` and `withheld`" in found[0].diagnosis
+    outcome = refs.outcome(kit_target)
+    assert any(f.severity.value == "error" and "names both" in f.message for f in outcome.findings)
+
+
+def test_a_tool_access_in_a_form_the_reader_does_not_read_is_an_error(kit_target: Path) -> None:
+    _write_agent(kit_target, "project", "a", "---\nname: a\ntools: [Read,\n  Grep]\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert len(found) == 1
+    assert "goes on over more than one line" in found[0].diagnosis
+
+
+def test_a_key_outside_a_definitions_fields_is_a_warning(kit_target: Path) -> None:
+    _write_agent(
+        kit_target,
+        "project",
+        "a",
+        "---\nname: a\ndescription: x\ndisallowedTools: [Workflow]\ncolor: blue\n---\n# A\n",
+    )
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.UNKNOWN_FIELD]
+    assert [i.diagnosis.split(",")[0] for i in found] == [
+        "holds `disallowedTools`",
+        "holds `color`",
+    ]
+    assert refs.UNKNOWN_FIELD in refs.WARNING_KINDS
+    outcome = refs.outcome(kit_target)
+    assert {f.severity.value for f in outcome.findings} == {"warning"}
+
+
+def test_a_skills_own_keys_are_no_definition_fields_finding(kit_target: Path) -> None:
+    _write_skill(kit_target, "project", "s", "---\nname: s\nargument-hint: x\n---\n# S\n")
+    assert not [i for i in refs.validate_corpus(kit_target) if i.kind == refs.UNKNOWN_FIELD]
+
+
+def test_an_unreachable_reader_is_one_error_where_there_is_an_agent_to_read(
+    kit_target: Path,
+) -> None:
+    (kit_target / ".pkit" / "agents" / "tool_access.py").unlink()
+    assert not [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    for name in ("a", "b"):
+        _write_agent(kit_target, "project", name, f"---\nname: {name}\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert [i.location for i in found] == [".pkit/agents/tool_access.py"]
+    assert "holds no reader of an agent's tool access" in found[0].diagnosis
+    assert "run `pkit sync`" in found[0].diagnosis
+
+
+def test_a_reader_without_a_function_the_validator_calls_is_an_error(kit_target: Path) -> None:
+    (kit_target / ".pkit" / "agents" / "tool_access.py").write_text(
+        "def tool_access(text):\n    return None\n", encoding="utf-8"
+    )
+    _write_agent(kit_target, "project", "a", "---\nname: a\n---\n# A\n")
+    found = [i for i in refs.validate_corpus(kit_target) if i.kind == refs.TOOL_ACCESS]
+    assert len(found) == 1
+    assert "has no holds, Refused, which this command calls" in found[0].diagnosis
+
+
+# --- what an adapter that deploys agents refuses (ADR-086 point 6) -----------------------------
+
+CLAUDE_CODE = REPO / ".pkit" / "adapters" / "claude-code"
+
+
+def _adapters(root: Path, *adapters: tuple[str, str]) -> None:
+    """Register each adapter of *adapters*, as `(name, how)`: `deploy` ships a deploy of
+    agents, `runner` registers an agent runner, and `neither` does neither. Each holds the
+    Claude Code adapter's declaration of tool access and support declaration, which a test
+    then changes or removes."""
+    (root / ".pkit" / "schemas").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        REPO / ".pkit" / "schemas" / "harness-support.schema.json",
+        root / ".pkit" / "schemas" / "harness-support.schema.json",
+    )
+    for name, how in adapters:
+        folder = root / ".pkit" / "adapters" / name
+        folder.mkdir(parents=True)
+        package = f"schema_version: 1\ncomponent:\n  kind: adapter\n  name: {name}\n"
+        if how == "deploy":
+            (folder / "deploy-agents.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+        if how == "runner":
+            (folder / "run-agent.py").write_text("", encoding="utf-8")
+            package += "commands:\n  run-agent:\n    script: run-agent.py\n    help: Run.\n"
+        (folder / "package.yaml").write_text(package, encoding="utf-8")
+        for declaration in ("tool-access.json", "harness-support.yaml"):
+            shutil.copy2(CLAUDE_CODE / declaration, folder / declaration)
+    (root / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 2.1.0\ncomponents:\n"
+        + "".join(
+            f"  - kind: adapter\n    name: {name}\n    manifest: m.yaml\n" for name, _ in adapters
+        ),
+        encoding="utf-8",
+    )
+
+
+def _access_findings(root: Path, access: str = "") -> list[refs.Issue]:
+    _write_agent(root, "project", "a", f"---\nname: a\ndescription: x\n{access}---\n# A\n")
+    return [i for i in refs.validate_corpus(root) if i.kind == refs.TOOL_ACCESS]
+
+
+@pytest.mark.parametrize(
+    ("access", "cause"),
+    [
+        ("withheld: [Wrokflow]\n", "`withheld` names `Wrokflow`, which this adapter does not know"),
+        ("withheld: ['Bash(rm:*)']\n", "measured to withhold only a whole built-in tool"),
+        ("tools: [read-file]\n", "a name in a form Claude Code does not take"),
+        ("withheld: [Workflow]\ndisallowedTools: [Monitor]\n", "own key `disallowedTools`"),
+    ],
+)
+def test_a_tool_access_an_adapter_refuses_is_an_error_naming_the_adapter(
+    kit_target: Path, access: str, cause: str
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    found = _access_findings(kit_target, access)
+    assert [i.location for i in found] == [".pkit/agents/project/a.md"]
+    assert found[0].diagnosis.startswith(
+        "the claude-code adapter refuses its tool access, since Claude Code cannot enforce or "
+        "translate it: "
+    )
+    assert cause in found[0].diagnosis
+    outcome = refs.outcome(kit_target)
+    assert any(f.severity.value == "error" and cause in f.message for f in outcome.findings)
+
+
+@pytest.mark.parametrize("access", ["", "withheld: [Workflow, Monitor]\n", "tools: [Read]\n"])
+def test_a_tool_access_every_adapter_takes_is_no_finding(kit_target: Path, access: str) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    assert _access_findings(kit_target, access) == []
+
+
+def test_a_definition_passes_only_where_every_adapter_that_deploys_agents_takes_it(
+    kit_target: Path,
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"), ("other", "runner"))
+    declaration = kit_target / ".pkit" / "adapters" / "other" / "tool-access.json"
+    document = json.loads(declaration.read_text(encoding="utf-8"))
+    document.update(harness="Other", withheld_admits=[])
+    declaration.write_text(json.dumps(document), encoding="utf-8")
+    found = _access_findings(kit_target, "withheld: [Workflow]\n")
+    assert [i.diagnosis.split(",")[0] for i in found] == [
+        "the other adapter refuses its tool access"
+    ]
+    assert "Other was not measured to withhold any tool" in found[0].diagnosis
+
+
+@pytest.mark.parametrize("how", ["deploy", "runner"])
+def test_an_adapter_that_deploys_agents_with_no_declaration_is_an_error(
+    kit_target: Path, how: str
+) -> None:
+    _adapters(kit_target, ("claude-code", how))
+    (kit_target / ".pkit" / "adapters" / "claude-code" / "tool-access.json").unlink()
+    found = _access_findings(kit_target)
+    assert [i.location for i in found] == [".pkit/adapters/claude-code/tool-access.json"]
+    assert "the claude-code adapter deploys agents and declares no tool access" in (
+        found[0].diagnosis
+    )
+
+
+def test_an_adapter_that_deploys_no_agents_owes_no_declaration(kit_target: Path) -> None:
+    _adapters(kit_target, ("claude-code", "neither"))
+    (kit_target / ".pkit" / "adapters" / "claude-code" / "tool-access.json").unlink()
+    assert _access_findings(kit_target, "withheld: [Wrokflow]\n") == []
+
+
+def test_a_declaration_the_reader_cannot_read_is_an_error(kit_target: Path) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    (kit_target / ".pkit" / "adapters" / "claude-code" / "tool-access.json").write_text(
+        '{"schema_version": 2}', encoding="utf-8"
+    )
+    found = _access_findings(kit_target, "withheld: [Wrokflow]\n")
+    assert [i.location for i in found] == [".pkit/adapters/claude-code/tool-access.json"]
+    assert "its declaration of tool access cannot be read: its schema version is 2" in (
+        found[0].diagnosis
+    )
+
+
+@pytest.mark.parametrize(
+    ("support", "why"),
+    [
+        (None, "does not answer `session-agent-withheld-tools` as achievable"),
+        ("[]", "does not answer `session-agent-withheld-tools` as achievable"),
+        ("not-achievable", "does not answer `session-agent-withheld-tools` as achievable"),
+        ("unparsable", "its support declaration cannot be read"),
+    ],
+)
+def test_admitting_a_withheld_entry_the_support_declaration_does_not_answer_is_an_error(
+    kit_target: Path, support: str | None, why: str
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    path = kit_target / ".pkit" / "adapters" / "claude-code" / "harness-support.yaml"
+    text = path.read_text(encoding="utf-8")
+    if support is None:
+        path.unlink()
+    elif support == "[]":
+        path.write_text(
+            text.replace('harness_versions: ["2.1.319", "2.1.319"]', "harness_versions: []"),
+            encoding="utf-8",
+        )
+    elif support == "not-achievable":
+        answer = text.index("  session-agent-withheld-tools:")
+        path.write_text(
+            text[:answer]
+            + "  session-agent-withheld-tools:\n    grade: not-achievable\n"
+            + "    harness_versions: unbounded\n    evidence: e\n",
+            encoding="utf-8",
+        )
+    else:
+        path.write_text("requirements: [\n", encoding="utf-8")
+    found = _access_findings(kit_target)
+    assert [i.location for i in found] == [
+        ".pkit/adapters/claude-code/tool-access.json/withheld_admits"
+    ]
+    assert "declaration of tool access admits a withheld entry, while" in found[0].diagnosis
+    assert why in found[0].diagnosis
+
+
+def test_the_shipped_adapters_declarations_agree(kit_target: Path) -> None:
+    """The Claude Code adapter admits a withheld entry, and its support declaration answers
+    a session's agent withheld tools from a measurement."""
+    _adapters(kit_target, ("claude-code", "deploy"))
+    assert _access_findings(kit_target) == []
+
+
+def test_a_reader_that_reads_no_declaration_is_an_error_where_an_adapter_deploys_agents(
+    kit_target: Path,
+) -> None:
+    _adapters(kit_target, ("claude-code", "deploy"))
+    reader = kit_target / ".pkit" / "agents" / "tool_access.py"
+    text = reader.read_text(encoding="utf-8")
+    reader.write_text(text.replace("def read_declaration(", "def _read_declaration("), "utf-8")
+    found = _access_findings(kit_target)
+    assert [i.location for i in found] == [".pkit/agents/tool_access.py"]
+    assert "has no read_declaration, which this command calls" in found[0].diagnosis
 
 
 def _make_storyboarded_agent(
@@ -1307,6 +1937,60 @@ def test_rot_flags_accepted_record_citing_proposed_record_of_another_namespace(
     assert "'PRJ-001'" in issues[0].diagnosis
 
 
+def test_rot_reads_no_project_record_in_a_record_the_project_receives(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A core record an adopter receives is authored in the methodology's source, so a
+    `PRJ-` or `ADR-` id it cites names a record of the source: COR-021 cites the PRJ-001
+    that names the CLI, and COR-037 cites ADR-022. The adopter's own proposed PRJ-001
+    and ADR-022 are no grounds of theirs, while its own accepted record citing them
+    still rests on proposals (#2484)."""
+    root = make_adopter_repo().root
+    core = root / ".pkit" / "decisions" / "core"
+    received = {
+        ".pkit/decisions/core/" + path.name: key
+        for pattern, key in (("COR-021-*.md", "PRJ-001"), ("COR-037-*.md", "ADR-022"))
+        for path in core.glob(pattern)
+    }
+    for rel, key in received.items():
+        assert key in refs.record_citations((root / rel).read_text(encoding="utf-8"), None)
+    assert len(received) == 2
+
+    (root / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
+        "adr-records:\n  - docs/architecture/decisions/\n", encoding="utf-8"
+    )
+    adrs = root / "docs" / "architecture" / "decisions"
+    _record(adrs / "ADR-022-own.md", "ADR-022", "proposed")
+    project = root / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-own.md", "PRJ-001", "proposed")
+    _record(project / "PRJ-002-on-own.md", "PRJ-002", "accepted", "Per PRJ-001 and ADR-022.\n")
+
+    issues = _resting(root)
+    assert [i for i in issues if i.location in received] == []
+    own = [i.diagnosis for i in issues if i.location == ".pkit/decisions/project/PRJ-002-on-own.md"]
+    assert len(own) == 2
+    assert "'ADR-022'" in own[0]
+    assert "'PRJ-001'" in own[1]
+
+
+def test_rot_reads_a_core_records_project_citation_in_the_methodologys_source(
+    kit_target: Path,
+) -> None:
+    """In the methodology's source the core records are authored, so a `PRJ-` id one
+    cites names the project's own record, and a proposed one is listed."""
+    for marker in ("src/project_kit/__init__.py", ".pkit/lifecycle/ownership.py"):
+        (kit_target / marker).parent.mkdir(parents=True, exist_ok=True)
+        (kit_target / marker).write_bytes((REPO / marker).read_bytes())
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-cli.md", "PRJ-001", "proposed")
+    core = kit_target / ".pkit" / "decisions" / "core"
+    _record(core / "COR-021-dispatch.md", "COR-021", "accepted", "Named per PRJ-001.\n")
+
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/core/COR-021-dispatch.md"]
+    assert "'PRJ-001'" in issues[0].diagnosis
+
+
 def test_rot_reads_only_accepted_records_and_proposed_grounds(kit_target: Path) -> None:
     """A proposed record may cite a proposed one; an accepted one citing accepted is clean."""
     _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
@@ -1315,6 +1999,57 @@ def test_rot_reads_only_accepted_records_and_proposed_grounds(kit_target: Path) 
     _cap_record(kit_target, "cap-a", "004", "on-base", "accepted", "Per DEC-003 and DEC-004.\n")
     _cap_record(kit_target, "cap-a", "005", "old", "superseded", "Per DEC-001.\n")
     assert _resting(kit_target) == []
+
+
+_SCOPE = "### 1. Scope\n\nAll of it.\n"
+
+#: Each way a new record, PRJ-002, changes the accepted PRJ-001: PRJ-001's status and body
+#: once the edit is made, citing PRJ-002.
+_EDITS_TO_THE_OLD_RECORD = {
+    "refines": ("accepted", "### 1. Scope\n\nAll of it (refinement per PRJ-002).\n"),
+    "overturns in part": ("accepted", f"*Partially superseded by PRJ-002.*\n\n{_SCOPE}"),
+    "replaces whole": ("superseded", f"*Superseded by PRJ-002.*\n\n{_SCOPE}"),
+}
+
+
+@pytest.mark.parametrize("how", list(_EDITS_TO_THE_OLD_RECORD))
+def test_rot_finds_nothing_where_a_new_record_is_accepted_before_its_edits(
+    kit_target: Path, how: str
+) -> None:
+    """A new record is accepted in its change, and its edits to the accepted record it
+    refines, overturns in part or replaces whole follow there, citing it (the decisions
+    README, "The acceptance gate"). The report finds nothing at any of those steps."""
+    project = kit_target / ".pkit" / "decisions" / "project"
+    old, new = project / "PRJ-001-base.md", project / "PRJ-002-new.md"
+    _record(old, "PRJ-001", "accepted", _SCOPE)
+    _record(new, "PRJ-002", "proposed", "### 1. Narrower\n\nChanges PRJ-001.\n")
+    assert _resting(kit_target) == []
+
+    _record(new, "PRJ-002", "accepted", "### 1. Narrower\n\nChanges PRJ-001.\n")
+    assert _resting(kit_target) == []
+
+    status, edited = _EDITS_TO_THE_OLD_RECORD[how]
+    _record(old, "PRJ-001", status, edited)
+    assert _resting(kit_target) == []
+    result = CliRunner().invoke(main, ["refs", "rot"])
+    assert result.exit_code == 0, result.output
+    assert "no rotten references found." in result.output
+
+
+@pytest.mark.parametrize("how", ["refines", "overturns in part"])
+def test_rot_lists_an_edit_made_before_its_new_record_is_accepted(
+    kit_target: Path, how: str
+) -> None:
+    """An edit that cites a new record still proposed rests on a proposal, against the
+    acceptance gate: the report lists the edited record, which stays accepted."""
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-002-new.md", "PRJ-002", "proposed", "### 1. Narrower\n\nPart.\n")
+    status, edited = _EDITS_TO_THE_OLD_RECORD[how]
+    _record(project / "PRJ-001-base.md", "PRJ-001", status, edited)
+
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/project/PRJ-001-base.md"]
+    assert "'PRJ-002'" in issues[0].diagnosis
 
 
 def test_rot_attributes_a_citation_to_the_capability_it_names(kit_target: Path) -> None:
@@ -1382,6 +2117,97 @@ Per COR-001 it works.
     artifacts = refs.load_artifacts(kit_target)
     issues = refs.find_rot(kit_target, artifacts)
     assert issues == []
+
+
+def _missing(kit_target: Path) -> list[str]:
+    """The paths `find_rot` reports missing, as cited."""
+    found = refs.find_rot(kit_target, refs.load_artifacts(kit_target))
+    return sorted(i.diagnosis.split("'")[1] for i in found if "missing path" in i.diagnosis)
+
+
+def test_rot_reads_a_link_from_the_folder_of_the_file_that_holds_it(kit_target: Path) -> None:
+    """A relative link that resolves from its file's folder is no rot, its section
+    included; one that does not is, though the project's root holds the path (#2465)."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    body = (
+        "---\nname: skill-a\ndescription: t\nreads:\n  records: [COR-001]\n---\n# A\n"
+        "Per [COR-001](../../decisions/core/COR-001-thing.md), "
+        "[its section](../../decisions/core/COR-001-thing.md#1-scope), "
+        "[a lost one](../decisions/core/COR-001-thing.md) "
+        "and [one from the root](.pkit/decisions/core/COR-001-thing.md).\n"
+    )
+    _write_skill(kit_target, "core", "skill-a", body)
+    assert _missing(kit_target) == [
+        "../decisions/core/COR-001-thing.md",
+        ".pkit/decisions/core/COR-001-thing.md",
+    ]
+
+
+def test_rot_reads_a_path_in_backticks_from_the_project_root(kit_target: Path) -> None:
+    """A project-rooted path in backticks is read from the root, never from the file's
+    folder; a path that opens with `./` is read from the file's folder."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    (kit_target / ".pkit" / "skills" / "core" / "beside.md").write_text("x", encoding="utf-8")
+    body = (
+        "---\nname: skill-a\ndescription: t\n---\n# A\n"
+        "Read `.pkit/decisions/core/COR-001-thing.md`, `./beside.md`, "
+        "`decisions/core/COR-001-thing.md` and `./decisions/core/COR-001-thing.md`.\n"
+    )
+    _write_skill(kit_target, "core", "skill-a", body)
+    assert _missing(kit_target) == [
+        "./decisions/core/COR-001-thing.md",
+        "decisions/core/COR-001-thing.md",
+    ]
+
+
+def test_rot_reads_a_capabilitys_paths_inside_its_own_folder(kit_target: Path) -> None:
+    """A capability's skill names its scripts from the capability's root and its
+    sub-procedures beside it, as the reference graph reads them; a `.pkit/` path is
+    read from the project root only."""
+    skill = _write_capability_skill(
+        kit_target,
+        "mycap",
+        "s",
+        "---\nname: s\ndescription: t\n---\n# S\n"
+        "Run `scripts/do-thing.py`, follow [the walk](walk.md#2-step) and `project/gone.yaml`, "
+        "read `.pkit/capabilities/mycap/scripts/do-thing.py` and `.pkit/scripts/do-thing.py`.\n",
+    )
+    (skill.parent / "walk.md").write_text(
+        "Then [the script](../../scripts/do-thing.py).\n", encoding="utf-8"
+    )
+    scripts = kit_target / ".pkit" / "capabilities" / "mycap" / "scripts"
+    scripts.mkdir()
+    (scripts / "do-thing.py").write_text("", encoding="utf-8")
+    assert _missing(kit_target) == [".pkit/scripts/do-thing.py", "project/gone.yaml"]
+
+
+def test_rot_reads_a_link_to_a_dropped_scratchpad_note_from_its_folder(kit_target: Path) -> None:
+    dropped = kit_target / ".pkit" / "scratchpad" / "dropped"
+    dropped.mkdir(parents=True)
+    (dropped / "2026-05-01-old-idea.md").write_text("# old\n", encoding="utf-8")
+    body = (
+        "---\nname: skill-a\ndescription: t\n---\n# A\n"
+        "See [the note](../../scratchpad/active/2026-05-01-old-idea.md).\n"
+    )
+    _write_skill(kit_target, "core", "skill-a", body)
+    issues = refs.find_rot(kit_target, refs.load_artifacts(kit_target))
+    assert [i.diagnosis for i in issues] == [
+        "references dropped scratchpad note '../../scratchpad/active/2026-05-01-old-idea.md'."
+    ]
+
+
+# Slow, some five seconds: a real `pkit init`, the adapter's primitives included,
+# since they write files the shipped agents read, such as `CLAUDE.md`, which the
+# adopter fixture's stubbed install leaves out.
+def test_rot_finds_nothing_in_a_fresh_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project `pkit init` just made reports no rotten reference (#2465)."""
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["init", "--root", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert refs.find_rot(tmp_path, refs.load_artifacts(tmp_path)) == []
 
 
 # --- rename ---------------------------------------------------------

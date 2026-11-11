@@ -1,5 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Internal. The README anchors the record points and document sections its
-  statements rest on. Only its anchors change, and nothing you run changes.

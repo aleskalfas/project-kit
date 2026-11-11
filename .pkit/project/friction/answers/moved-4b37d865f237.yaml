@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
-    revalidated:
-      at: 2026-10-24T22:54:05Z
-      outcome: unchanged
-      unchanged-because: check.py now asks the backbone once for every record it reads, and reads each package metadata once. Where a body is held to its declared structure is untouched.

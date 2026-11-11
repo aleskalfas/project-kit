@@ -85,13 +85,13 @@ The relationship between a storyboard and its consumers is **two-sided** in fron
 ---
 name: review-agent
 description: ...
-tools: [Read, Edit, ...]   # Read is required when storyboards are declared
+tools: [Read, Edit, ...]   # its tool access must give it Read when storyboards are declared
 storyboards:
   - storyboard.md
 ---
 ```
 
-`storyboards:` is a list of paths. Each entry names a storyboard by its bare sibling filename (`storyboard.md`, `<scenario-slug>.storyboard.md`), resolved against the consumer's own folder, and the body cites the same name. The sibling form stays right wherever the consumer's folder lives and when the folder moves. A project-root-relative path names the same file and is accepted too. Each entry must resolve to a file on disk. `pkit refs validate` checks both that the file exists and that the body cites the entry as written. Tools must include `Read` so the runtime can load the file.
+`storyboards:` is a list of paths. Each entry names a storyboard by its bare sibling filename (`storyboard.md`, `<scenario-slug>.storyboard.md`), resolved against the consumer's own folder, and the body cites the same name. The sibling form stays right wherever the consumer's folder lives and when the folder moves. A project-root-relative path names the same file and is accepted too. Each entry must resolve to a file on disk. `pkit refs validate` checks both that the file exists and that the body cites the entry as written. The agent's tool access ([COR-013](COR-013-agent-architecture.md) point 7) must give it `Read`, so the runtime can load the file. A check of the definition holds this where the agent's grant names `Read`, or where the agent names no grant and does not withhold `Read`.
 
 The deployed copy of the consumer lives elsewhere, where a bare sibling name resolves to nothing. So the deploy rewrites each sibling entry to the storyboard's project-root-relative source path, in the deployed copy's `storyboards:` and wherever its body cites the entry, and the runtime reads the storyboard from source.
 
@@ -149,7 +149,7 @@ The authoring tooling surfaces the recommendation at scenario-design time. The q
 
 **Why storyboard-first, not storyboard-alongside or storyboard-derived.** Writing dialogue forces decisions about behavior. The implementing artifact authored first, without a storyboard, tends to elide the decisions ("when the user asks X, respond appropriately" with no specifics). The storyboard exposes the elisions. Reversing the order — artifact first, storyboard back-documented — gives the same elision-hiding behavior the storyboard was supposed to surface. The temporal discipline carries the value.
 
-**Why source-only with runtime read, not deploy-alongside.** Two paths exist for letting the runtime access a storyboard: (a) deploy a copy of the storyboard alongside the agent at the harness side, or (b) leave the storyboard at source and have the agent read it from the source path at runtime. The kit chooses (b). Reason: deploy-alongside creates a second copy that can drift from the source if a maintainer edits one and forgets the other; runtime-read-from-source keeps a single source of truth. The runtime can always reach `.pkit/` because adopters commit it alongside their project tree, so the path resolution isn't fragile. Earlier framings of this principle called for deploy-side propagation; that was reconsidered before any propagation logic shipped — single source of truth wins.
+**Why source-only with runtime read, not deploy-alongside.** Two paths exist for letting the runtime access a storyboard: (a) deploy a copy of the storyboard alongside the agent at the harness side, or (b) leave the storyboard at source and have the agent read it from the source path at runtime. The kit chooses (b). Reason: deploy-alongside creates a second copy that can drift from the source if a maintainer edits one and forgets the other; runtime-read-from-source keeps a single source of truth. The runtime can always reach `.pkit/` because adopters commit it alongside their project tree, so the path resolution isn't fragile. Single source of truth wins.
 
 There's a secondary reason: deploying storyboards alongside agents at `.claude/agents/<name>/` would put non-agent `.md` files inside the harness's recursively-scanned agent directory, where their handling by the harness is unspecified (Claude Code might try to load them as agents, error on the missing `name` field, or silently skip). Source-side reading sidesteps the harness behavior entirely.
 
@@ -177,7 +177,7 @@ There's a secondary reason: deploying storyboards alongside agents at `.claude/a
 
 - **Storyboard propagated to the deploy side alongside the resolved artifact.** Rejected — would create a second copy that can drift from the source, and (for the agent case specifically) places non-agent `.md` files inside the harness's recursively-scanned agents directory where their handling is unspecified. Runtime read from source keeps a single source of truth and avoids the harness-behavior question.
 
-- **Agent body self-contained (storyboard reference informational only).** Rejected on reconsideration. The earlier framing said the agent body must work without loading the storyboard; revisiting that, it forces the body to compress the scenarios into a sketch that drifts from the storyboard whenever either side evolves. Making the body load-bear on the storyboard keeps the agent thin (it just instructs the runtime to read and follow the storyboard) and lets the storyboard's full detail drive behavior. Requires `Read` in the agent's tools and a runtime convention that the agent loads its storyboards at session start.
+- **Agent body self-contained (storyboard reference informational only).** Rejected: it forces the body to compress the scenarios into a sketch that drifts from the storyboard whenever either side evolves. Making the body load-bear on the storyboard keeps the agent thin (it just instructs the runtime to read and follow the storyboard) and lets the storyboard's full detail drive behavior. Requires the agent's tool access to give it `Read`, and a runtime convention that the agent loads its storyboards at session start.
 
 ## Implications
 
@@ -197,17 +197,17 @@ There's a secondary reason: deploying storyboards alongside agents at `.claude/a
 
 - **Adapter deploy primitives copy no storyboard.** Storyboards stay at source; deploy operates on the agent file alone, and ignores siblings other than the canonical `<name>.md`. In the agent file it deploys, it rewrites each storyboard declared by its sibling name to the storyboard's source path (`.pkit/agents/<ns>/<name>/storyboard.md`), where the runtime reads it using the agent's `Read` tool.
 
-- **Two-sided frontmatter.** Consumers (today: agents) declare their storyboards via `storyboards:` (list of paths, each a sibling filename or a project-root-relative path). Storyboards declare their consumers via `consumers:` (list of `{kind, name, namespace}` entries). The agent's `tools` must include `Read` when `storyboards:` is non-empty. The `consumers:` list shape supports future multi-consumer sharing without schema change; today every storyboard has exactly one consumer.
+- **Two-sided frontmatter.** Consumers (today: agents) declare their storyboards via `storyboards:` (list of paths, each a sibling filename or a project-root-relative path). Storyboards declare their consumers via `consumers:` (list of `{kind, name, namespace}` entries). The agent's tool access must give it `Read` when `storyboards:` is non-empty. The `consumers:` list shape supports future multi-consumer sharing without schema change; today every storyboard has exactly one consumer.
 
 - **Reference graph (`pkit refs validate`).** Extended to walk both sides of the storyboard relationship:
-  - Each consumer's declared storyboard path exists on disk and is cited in the consumer's body; the consumer's tools include `Read`.
+  - Each consumer's declared storyboard path exists on disk and is cited in the consumer's body; the consumer's tool access gives it `Read`.
   - Each storyboard's declared consumers exist on disk; each consumer's `storyboards:` includes this storyboard's path.
   - Storyboard files present in a consumer's folder must declare that consumer (orphan check).
   Cross-references between consumers and their storyboards become part of the graph.
 
 - **Authoring tooling stamps the cross-references.** `pkit new agent <ns> <name> --with-storyboard` stamps both sides: the agent's `storyboards:` names the sibling `storyboard.md` and its body cites it, and the storyboard's `consumers:` names the agent. `pkit new storyboard agent <name>` writes the `consumers:` frontmatter on the storyboard it stamps beside an existing agent (filling `kind: agent`, `name`, `namespace` from context); the author then declares the storyboard's sibling name in the agent's `storyboards:` and cites it in the body.
 
-- **Existing agents are not retroactively migrated.** The discipline applies to new scripted scenario authoring. Existing agents whose authors find the prose-only form sufficient can stay; those who want to formalize a scripted scenario they're already running can adopt the storyboard pattern voluntarily — adding `storyboards:` to their frontmatter, ensuring `Read` is in their tools, and writing a body that loads + follows the declared storyboards.
+- **Existing agents are not retroactively migrated.** The discipline applies to new scripted scenario authoring. Existing agents whose authors find the prose-only form sufficient can stay; those who want to formalize a scripted scenario they're already running can adopt the storyboard pattern voluntarily — adding `storyboards:` to their frontmatter, ensuring their tool access gives them `Read`, and writing a body that loads + follows the declared storyboards.
 
 ### Other application classes (not shipped here)
 

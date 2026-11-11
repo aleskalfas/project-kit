@@ -9,13 +9,17 @@ and RS-SAN-009 with its declared check:
 - **the check** — each producer resolves to a use case in force of its own analysis,
   the field and the words of *Preconditions* agree, and in a numbered area each
   precondition has a producer in no later area. It binds where RS-SAN-009 binds and
-  at its status: proposed as shipped, so it reports nothing unless a preview asks;
+  at its status: accepted as shipped (#1727), as errors; proposed, in a copy of `SAN`
+  that stands for the time before, it reports nothing unless a preview asks;
 - **the areas** — the stamp takes a numbered area, such as `010-develop`, whose
   number is no part of the id (RS-ANA-003);
 - **the words** — a precondition's opening, `**From UC-003:**`, is no label a
   closed list of labels reports.
 
 The chain diagram, drawn from `after`, is `test_software_analysis_diagrams.py`'s.
+
+The check, the stamp and the chain query run in the test's own process, their `pkit`
+calls answered there too (`tests/in_process.py`, #2324).
 """
 
 from __future__ import annotations
@@ -42,7 +46,7 @@ from tests.analysis_repo import (
     load_lib,
     new,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
     with_status,
 )
@@ -101,16 +105,16 @@ def _write(repo: AdopterRepo, rel: str, after: Any, lines: list[str] | None) -> 
     repo.write({rel: text})
 
 
-def _accepted(repo: AdopterRepo) -> None:
-    """RS-SAN-009 accepted in the adopter's copy of `SAN`, a fixture and not the
-    acceptance, and a set of the project's own through which `SAN` binds."""
+def _proposed(repo: AdopterRepo) -> None:
+    """RS-SAN-009 proposed in the adopter's copy of `SAN`, a fixture: `SAN` ships it
+    accepted (#1727), so the copy stands for the time before."""
     text = (repo.root / SAN_REL).read_text(encoding="utf-8")
-    repo.write({SAN_REL: with_status(text, "RS-SAN-009", "accepted")})
-    repo.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
+    repo.write({SAN_REL: with_status(text, "RS-SAN-009", "proposed")})
 
 
 def _validate(repo: AdopterRepo, *args: str) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json", *args)
+    """The validator's findings document, run in the test's own process (`run_in_process`)."""
+    completed = run_in_process(repo, VALIDATE, "--json", *args)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -135,7 +139,7 @@ def _summary(document: dict[str, Any]) -> list[str]:
 def test_a_use_case_that_writes_no_after_fails_nothing(project: AdopterRepo) -> None:
     """`after` is optional: a use case without it is not read, and with none written the
     summary says nothing of it, previewed or not, accepted or not."""
-    _accepted(project)
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     for args in ((), ("--preview",)):
         document = _validate(project, *args)
         assert _of_after(document) == []
@@ -144,7 +148,9 @@ def test_a_use_case_that_writes_no_after_fails_nothing(project: AdopterRepo) -> 
 
 def test_the_schema_holds_after_s_shape_whatever_the_rule_s_status(project: AdopterRepo) -> None:
     """One list of producers per precondition, each a use case's id or `environment`, and
-    never `environment` alone: the schema's, so an error with RS-SAN-009 proposed."""
+    never `environment` alone: the schema's, so an error with RS-SAN-009 proposed, in a
+    copy of `SAN` (`_proposed`)."""
+    _proposed(project)
     for after in ([["environment"]], [], [["UC-1"]], "UC-001", [[]]):
         _write(project, RELEASE, after, ["**From UC-002:** a change is checked."])
         document = _validate(project)
@@ -158,9 +164,10 @@ def test_the_schema_holds_after_s_shape_whatever_the_rule_s_status(project: Adop
 
 
 def test_proposed_the_check_reports_only_in_a_preview(project: AdopterRepo) -> None:
-    """As `SAN` ships it, RS-SAN-009 is proposed: the normal check reports nothing of
-    `after` and says so, and a preview, where the rule would bind, reports each departure
-    with `preview:`, never failing (DEC-001 point 1; COR-051 point 4)."""
+    """RS-SAN-009 proposed, in a copy of `SAN` (`_proposed`): the normal check reports
+    nothing of `after` and says so, and a preview, where the rule would bind, reports each
+    departure with `preview:`, never failing (DEC-001 point 1; COR-051 point 4)."""
+    _proposed(project)
     _write(project, CHANGE, [["UC-009"]], ["**From UC-009:** the system is developed."])
     document = _validate(project)
     assert _of_after(document) == []
@@ -197,7 +204,7 @@ def test_accepted_a_chain_that_keeps_the_rule_passes(project: AdopterRepo) -> No
     """Producers in their own area or an earlier one, the use case itself, the environment
     beside a producer, and a later producer beside an earlier one, each with words that
     name the same producers (DEC-001 points 1 and 12)."""
-    _accepted(project)
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     _write(project, CHANGE, [["UC-001"]], ["**From UC-001:** the system is developed."])
     _write(
         project,
@@ -220,7 +227,7 @@ def test_accepted_a_chain_that_keeps_the_rule_passes(project: AdopterRepo) -> No
 def test_accepted_each_producer_is_a_use_case_in_force_of_its_analysis(
     project: AdopterRepo,
 ) -> None:
-    _accepted(project)
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     text = (project.root / DEVELOP).read_text(encoding="utf-8")
     project.write({DEVELOP: text.replace("status: active", "status: withdrawn", 1)})
     _write(
@@ -247,7 +254,7 @@ def test_accepted_each_producer_is_a_use_case_in_force_of_its_analysis(
 def test_accepted_after_names_the_producers_the_words_name(project: AdopterRepo) -> None:
     """One entry for each precondition, in order, each naming what its line opens with;
     a line that opens with no producers, and `None.` beside an `after`, break it."""
-    _accepted(project)
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     _write(
         project,
         RELEASE,
@@ -293,7 +300,7 @@ def test_accepted_each_precondition_has_a_producer_in_no_later_area(
     """A precondition whose producers all lie in later areas breaks the rule. A later one
     beside an earlier one, or beside the environment, is an alternative (DEC-001 point
     12)."""
-    _accepted(project)
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     _write(
         project,
         CHANGE,
@@ -326,7 +333,7 @@ def test_the_chain_query_draws_the_analysis_s_after(project: AdopterRepo) -> Non
     )
     _write(project, INSTALL, [["UC-003"]], ["**From UC-003:** a release is published."])
     _write(project, DEVELOP, [["UC-004", "environment"]], ["**From UC-004, or Environment:** x."])
-    completed = run_script(project, DIAGRAM, "chain")
+    completed = run_in_process(project, DIAGRAM, "chain")
     assert completed.returncode == 0, completed.stderr
     lines = completed.stdout.splitlines()
     assert lines[0] == "```mermaid" and lines[-1] == "```"

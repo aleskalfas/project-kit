@@ -15,12 +15,15 @@ Additive idempotent: skips state that already exists. Never modifies
 or deletes — that's the migrate script's job. Re-running on a
 fully-bootstrapped project is a clean no-op.
 
-Label-fallback mode: when `has_projects_v2_board` is false (the
-adopter is not using a Projects v2 board), bootstrap also creates the
+Each axis's palette follows its binding: bootstrap creates the kit's own
+labels for an axis only where they carry it — with no substrate map, or
+where the map binds the axis with `kit-label: true` — and a map's presence
+suppresses nothing on its own (project-management DEC-036 point 5, DEC-062
+point 4). The board flag carries no axis. For `state` that palette is the
 five lifecycle state labels (`state:todo`, `state:backlog`,
 `state:in-progress`, `state:review`, `state:done`) derived from
-`workflow.yaml`'s `states[].id` list. These labels are the substrate
-for the `move-issue` state machine on label-fallback adopters.
+`workflow.yaml`'s `states[].id` list, the substrate of the `move-issue`
+state machine where the kit's labels carry the state.
 
 The capability works on a GitHub repository. Where `gh` resolves none for
 the checkout (no remote on GitHub, `gh` not signed in, `gh` missing), bootstrap
@@ -403,11 +406,9 @@ def _compute_plan(
     # is configured, and only when not already cached.
     #
     # Board IDENTITY, not carriage — which is why this one reads the flag directly
-    # while the palette decision above asks the accessor. Routing it through
-    # carriage would lose the board's id for an adopter who bound a single axis to
-    # their own labels, and create-issue needs that id to put the issue on the
-    # board at all ([project-management:DEC-051-axis-carriage-activation]: "board
-    # membership stays with the flag").
+    # while the palette decision above asks the accessor. The flag says only that
+    # a board exists, and governs which board it is and that every issue belongs
+    # on it ([project-management:DEC-062-axes-chosen-in-the-map] point 1).
     board_node_id, board_node_id_note = _plan_project_node_id(
         config, bool(config.get("has_projects_v2_board"))
     )

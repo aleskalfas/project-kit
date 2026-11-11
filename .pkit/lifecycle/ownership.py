@@ -88,6 +88,20 @@ WRITE_CARRYING_CATEGORIES: frozenset[str] = frozenset(
     }
 )
 
+# Overlay categories that have a conventional folder, the ones `pkit agents
+# adopt` can fill: it creates the folder and records it (COR-049 point 4). The
+# backbone keeps each one's sub-path in `docs_roots.CONVENTIONAL_SUBPATHS`; the
+# names are held here as well because the deploy resolver, which runs where the
+# backbone is not importable, names `adopt` only for these. A test pins the two
+# equal. Every other undefined category, a project's own among them, has no
+# folder for `adopt` to create (#2469).
+CONVENTIONAL_FOLDER_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "architecture-docs",
+        "adr-records",
+    }
+)
+
 # Adopter-owned files that sit directly under `.pkit/` rather than inside an
 # area's `project/` tree. Each is written by the lifecycle or by the adopter,
 # never propagated from kit source, so the conservative default below must not
@@ -97,6 +111,18 @@ _ADOPTER_OWNED_KIT_FILES: frozenset[str] = frozenset(
         "manifest.yaml",  # install-state: recorded backbone version + registry.
         "version-pin",  # the adopter's per-project version pin (ADR-049).
         ".gitignore",  # regenerated per-adopter from runtime_ignore (ADR-009).
+    }
+)
+
+# Files of the rules area that are no synced copy of `core.md`'s kind: the project's
+# own `project.md`, and the capabilities' rules index, `capabilities.md`, which the
+# lifecycle renders for each project from what is installed, as it renders
+# `.gitignore` (ADR-076 point 2). Neither is propagated from the methodology's source,
+# and the packaging leaves the source's own out of the bundle.
+_PROJECT_RULES_FILES: frozenset[str] = frozenset(
+    {
+        "project.md",  # the project's own operational rules (COR-014).
+        "capabilities.md",  # rendered per project from the installed capabilities (ADR-076).
     }
 )
 
@@ -167,7 +193,7 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     # `.pkit/project/` and `.pkit/<area>/project/`.
     if parts[0] == "project":
         return True
-    if parts[0] == "rules" and len(parts) > 1 and parts[1] == "project.md":
+    if parts[0] == "rules" and len(parts) == 2 and parts[1] in _PROJECT_RULES_FILES:
         return True
     if parts[0] == "scratchpad" and len(parts) > 1 and parts[1] in _SCRATCHPAD_STATE_DIRS:
         return True
@@ -304,7 +330,8 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
       `.pkit/capabilities/<name>/project/`,
       `.pkit/adapters/<harness>/project/` (the per-component manifest) and
       `.pkit/adapters/<harness>/settings/project/` — plus
-      `.pkit/rules/project.md`, `.pkit/scratchpad/{active,done,dropped}/` and
+      `.pkit/rules/project.md`, the capabilities' rules index
+      `.pkit/rules/capabilities.md`, `.pkit/scratchpad/{active,done,dropped}/` and
       the adopter-owned top-level files above: the project side of the
       no-shared-files split (COR-001). A `project/` component elsewhere is
       *inside* a kit-owned refresh root and is not the adopter's. This step
@@ -342,8 +369,8 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
         return False
     if parts[1] == "capabilities":
         return _capability_path_is_sync_managed(root, parts)
-    if rel == ".pkit/rules/project.md":
-        return False  # adopter-authored sibling of the propagated core.md.
+    if len(parts) == 3 and parts[1] == "rules" and parts[2] in _PROJECT_RULES_FILES:
+        return False  # project.md, the project's own, and the index rendered for it.
     if parts[1] == "scratchpad" and len(parts) >= 3 and parts[2] in _SCRATCHPAD_STATE_DIRS:
         return False
     return True
@@ -469,21 +496,30 @@ def rejection_message(category: str, offences: list[str]) -> list[str]:
 
 
 def undefined_category_remediation(category: str) -> list[str] | None:
-    """Remediation lines for an *undefined* write-carrying category, or None.
+    """Remediation lines for an *undefined* category with no conventional folder, or None.
 
-    None means "this category has a conventional default; the generic
-    `pkit agents adopt` advice applies". For a write-carrying category it never
-    does — core cannot enumerate the adopter's paths, so there is nothing for
-    `adopt` to create (ADR-051 Implications).
+    None means "this category has a conventional folder; the generic
+    `pkit agents adopt` advice applies". Any other category has no folder for
+    `adopt` to create, so the lines name what works instead (#2469). For a
+    write-carrying category that is structural — core cannot enumerate the
+    adopter's paths (ADR-051 Implications) — and `reconcile --write` fills it
+    with an empty list; for the rest, the project sets the paths itself.
     """
-    if category not in WRITE_CARRYING_CATEGORIES:
+    if category in WRITE_CARRYING_CATEGORIES:
+        return [
+            f"`pkit agents adopt` cannot serve <{category}> — it names paths only you",
+            "can enumerate, so there is no conventional default to create.",
+            "Fix: run `pkit agents reconcile --write` (it fills the category with an",
+            "     empty list — the agent then deploys inert), then list your own paths",
+            "     in .pkit/agents/project/overlay.yaml and re-run `pkit sync`.",
+        ]
+    if category in CONVENTIONAL_FOLDER_CATEGORIES:
         return None
     return [
-        f"`pkit agents adopt` cannot serve <{category}> — it names paths only you",
-        "can enumerate, so there is no conventional default to create.",
-        "Fix: run `pkit agents reconcile --write` (it fills the category with an",
-        "     empty list — the agent then deploys inert), then list your own paths",
-        "     in .pkit/agents/project/overlay.yaml and re-run `pkit sync`.",
+        f"<{category}> has no conventional folder to create.",
+        "Fix: set its paths in .pkit/agents/project/overlay.yaml, or run",
+        "     `pkit agents reconcile --write` to add a commented stub and set them",
+        "     there, then re-run `pkit sync`.",
     ]
 
 

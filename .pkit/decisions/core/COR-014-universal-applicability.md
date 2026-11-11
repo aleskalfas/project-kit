@@ -43,7 +43,7 @@ The same question is asked uniformly per artifact kind:
 When an artifact in `core` fails the test, the resolution depends on what kind of specificity it carries:
 
 - **Project-specific content** moves to the **project namespace** for that artifact kind (PRJ, `project.md`, `project/<skill>/`, etc.).
-- **Bundle-specific content** moves to the **bundle's own documentation** within that bundle's directory.
+- **Bundle-specific content** moves to the **bundle's own documentation** within that bundle's directory. An operational rule that binds only where a capability is installed moves to that capability's loaded rule set instead, which every session loads where it is installed, rather than to its documentation, which no session loads; a core rule that held such a part keeps its universal part (refinement per [COR-070](COR-070-capability-loaded-rules.md) point 5).
 - **Adapter / harness-specific content** moves to the **adapter's own documentation** within that adapter's directory, or stays in core with an explicit qualifier naming the harness it applies to (until adapter-side documentation becomes a structural convention of its own).
 
 ### Cross-reference from CONTRIBUTING.md

@@ -1,0 +1,32 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: plain
+    layout: standard
+    main:
+      use: starter/header
+      title: Projektbaukasten
+      links:
+        - {id: guide, label: Anleitung}
+        - {id: rules, label: Regeln}
+        - {id: tools, label: Werkzeuge}
+        - {id: about, label: Über uns}
+
+  - id: tint
+    layout: standard
+    main:
+      use: starter/header
+      fill: tint
+      title: Projektbaukasten
+      links:
+        - {id: guide, label: Anleitung}
+        - {id: rules, label: Regeln}
+        - {id: tools, label: Werkzeuge}
+        - {id: about, label: Über uns}
+
+  - id: title
+    layout: standard
+    main:
+      use: starter/header
+      title: Die Regeln eines Projekts und die Werkzeuge, die sie durchsetzen

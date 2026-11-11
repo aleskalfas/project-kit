@@ -1,6 +1,0 @@
-component: software-engineering
-kind: none
-body: >
-  Internal. The README now says a change's answers live in answer files, which
-  the touches-code floor leaves out, and what the person who authorises a merge
-  is told of them. Nothing you run changes.

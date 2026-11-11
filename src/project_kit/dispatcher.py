@@ -7,7 +7,13 @@ parse each installed capability's `package.yaml` for a `commands:` tree.
 
 Per the COR, the dispatcher is **stateless across invocations** — no
 cache; every CLI call rediscovers the surface from disk so capability
-install / uninstall surfaces immediately without a refresh step.
+install / uninstall surfaces immediately without a refresh step. Within one
+call the walk runs once: `pkit --help` lists every name and then asks for
+each, and each answer is read from that one walk (`Context.meta`).
+
+The YAML parser and the command lookup load when a call first walks the
+capabilities, not when the CLI is imported: a call that runs a backbone
+command never walks them.
 
 The `commands:` tree is read through the backbone's one command lookup
 (`command_runner`, ADR-057 point 5) — the walk package validation, the
@@ -32,32 +38,31 @@ member reports it (`shadowed_capability_names`).
 
 from __future__ import annotations
 
+import functools
 import subprocess
 import sys
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
-from ruamel.yaml import YAML
 
-from project_kit.command_runner import (
-    HELP_KEY,
-    RegisteredCommand,
-    commands_of,
-    registered_commands,
-    resolve_command,
-)
 from project_kit.install import find_target_root
-from project_kit.manifest import read_backbone_manifest
 
-_yaml = YAML(typ="safe")
+if TYPE_CHECKING:
+    from ruamel.yaml import YAML
+
+    from project_kit.command_runner import RegisteredCommand
 
 # The package key that lists a capability's other top-level names (`pm` for
 # `project-management`).
 ALIASES_KEY = "aliases"
+
+# Where one call keeps the capabilities' groups it walked: `Context.meta`, which
+# every context of the call shares, under this key.
+_WALKED = f"{__name__}.capability_commands"
 
 
 class CapabilityDispatchGroup(click.Group):
@@ -74,13 +79,21 @@ class CapabilityDispatchGroup(click.Group):
         static = super().get_command(ctx, cmd_name)
         if static is not None:
             return static
-        capability_commands = _discover_capability_commands(self.commands)
-        return capability_commands.get(cmd_name)
+        return self._capability_commands(ctx).get(cmd_name)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         static = list(super().list_commands(ctx))
-        dynamic = list(_discover_capability_commands(self.commands).keys())
+        dynamic = list(self._capability_commands(ctx).keys())
         return sorted(set(static + dynamic))
+
+    def _capability_commands(self, ctx: click.Context) -> dict[str, click.Group]:
+        """The installed capabilities' groups, walked once in a call
+        (`_discover_capability_commands`) and read from that walk after."""
+        walked: dict[str, click.Group] | None = ctx.meta.get(_WALKED)
+        if walked is None:
+            walked = _discover_capability_commands(self.commands)
+            ctx.meta[_WALKED] = walked
+        return walked
 
 
 # --- the alias table: one precedence walk ------------------------------
@@ -199,6 +212,8 @@ def _namespace_capabilities(target_root: Path) -> list[_NamespaceCapability]:
     doesn't create a CLI surface; declaration does. A `package.yaml` that
     cannot be read skips its capability; the others still register.
     """
+    from project_kit.manifest import read_backbone_manifest
+
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return []
@@ -283,6 +298,9 @@ def resolve_capability_script(target_root: Path, capability: str, command: str) 
     declared, or the declared script file absent — so callers can treat the
     verb as optional.
     """
+    from project_kit.command_runner import registered_commands, resolve_command
+    from project_kit.manifest import read_backbone_manifest
+
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return None
@@ -309,7 +327,7 @@ def _read_commands_description_and_aliases(
     each with its position in the list.
     """
     try:
-        raw = _yaml.load(package_yaml.read_text(encoding="utf-8"))
+        raw = _safe_yaml().load(package_yaml.read_text(encoding="utf-8"))
     except Exception:
         return None, "", []
     if not isinstance(raw, dict):
@@ -322,6 +340,14 @@ def _read_commands_description_and_aliases(
     if not isinstance(commands, dict):
         return None, description, aliases
     return commands, description, aliases
+
+
+@functools.cache
+def _safe_yaml() -> YAML:
+    """The parser of a capability's `package.yaml`, made the first time one is read."""
+    from ruamel.yaml import YAML
+
+    return YAML(typ="safe")
 
 
 def _build_capability_group(
@@ -356,6 +382,8 @@ def _add_commands_to_group(
     """Add the tree's leaves and sub-groups to `group`. Which node is a leaf,
     and the script it runs, is the one lookup's answer (`commands_of`); the
     walk here only lays out the groups, each with its own `help`."""
+    from project_kit.command_runner import commands_of
+
     _add_level(group, commands_tree, (), commands_of(cap_dir, commands_tree))
 
 
@@ -365,6 +393,8 @@ def _add_level(
     prefix: tuple[str, ...],
     commands: Mapping[tuple[str, ...], RegisteredCommand],
 ) -> None:
+    from project_kit.command_runner import HELP_KEY
+
     for key, value in node.items():
         if not isinstance(value, Mapping):
             continue

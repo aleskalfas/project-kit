@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "roles.schema.json",
+  "title": "A library's declarations of roles — visual-communication capability",
+  "description": "Formal shape of a library's `roles.yaml` (DEC-004 points 2, 7, 8 and 10): the roles it declares, each with its type and a default that aliases an older role; and, in the foundations, the shared axes with their kind, modes and default, the colour families and their members, and the pairs of colour roles that must contrast at WCAG's levels. A role carries no value: a brand gives it one. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "roles"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:roles`.",
+      "const": "visual-communication:roles"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "roles": {
+      "description": "The roles the library declares, by token path, each with its type and, optionally, a default: an alias to another role, which the role takes wherever no brand gives it a value. In the foundations these are the shared roles, and a default aliases an older role (DEC-004 point 7). In another library of components they are its own roles, each under the group of the library's name and none under `component`; a default aliases another of its own roles or a role of a library it builds on, the shared roles included, of the same type, never a value or a component token (DEC-008 points 1 and 3). A role of the type `picture` takes a picture file of the brand as its value: only the foundations declare one, with no default, and no brand owes it a value (DEC-025 point 4).",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/token-path"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "color",
+              "dimension",
+              "fontFamily",
+              "fontWeight",
+              "number",
+              "typography",
+              "picture"
+            ]
+          },
+          "default": {
+            "$ref": "defs.schema.json#/$defs/alias"
+          }
+        }
+      },
+      "minProperties": 1
+    },
+    "axes": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "kind",
+          "modes",
+          "default"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "value",
+              "size"
+            ]
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "$ref": "defs.schema.json#/$defs/name"
+            },
+            "minItems": 2,
+            "uniqueItems": true
+          },
+          "default": {
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        }
+      }
+    },
+    "families": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "additionalProperties": {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        },
+        "minProperties": 1
+      }
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "text",
+          "under",
+          "level"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "$ref": "defs.schema.json#/$defs/token-path"
+          },
+          "under": {
+            "$ref": "defs.schema.json#/$defs/token-path"
+          },
+          "level": {
+            "enum": [
+              "text",
+              "large-text",
+              "marks"
+            ]
+          }
+        }
+      },
+      "uniqueItems": true
+    }
+  }
+}

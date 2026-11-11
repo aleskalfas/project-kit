@@ -10,21 +10,26 @@ pkit:
         - .pkit/schemas/harness-requirements.schema.json
         - .pkit/schemas/harness-support.yaml
         - .pkit/schemas/harness-support.schema.json
+        - .pkit/schemas/tool-access.yaml
+        - .pkit/schemas/tool-access.schema.json
+        - .pkit/agents/tool_access.py
         - src/project_kit/agent_runs.py
+        - src/project_kit/agent_tool_access.py
         - src/project_kit/capabilities.py
         - src/project_kit/cli.py
         - src/project_kit/harness_support.py
         - src/project_kit/install.py
+        - src/project_kit/loaded_rules.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, ADR-066]
+      record: [COR-005, COR-006, "COR-013#1", "COR-013#7", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
-        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
+        - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
 ---
 
 # Adapters
@@ -49,11 +54,11 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Currently shipped
 
-- **`claude-code/`** — the Claude Code adapter ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)). Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, ["The agent runner"](#the-agent-runner) below), its support declaration (harness-support.yaml, ["Harness requirements"](#harness-requirements) below), and the runtime conventions Claude Code expects.
+- **`claude-code/`** — the Claude Code adapter ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)). Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, ["The agent runner"](#the-agent-runner) below), its declaration of tool access (tool-access.json, ["What an adapter declares as data"](#what-an-adapter-declares-as-data) below), its support declaration (harness-support.yaml, ["Harness requirements"](#harness-requirements) below), and the runtime conventions Claude Code expects.
 
 ## Primitives the lifecycle calls
 
-The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync`, `pkit upgrade` and the capability verbs walk `.pkit/adapters/<name>/`, one adapter after another in name order, and run each script present. That name is the whole contract — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). `pkit new adapter` stamps none of these scripts: an adapter provides the ones its harness needs, and the Claude Code adapter's are the worked example ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)).
+The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync`, `pkit upgrade` and the capability verbs walk `.pkit/adapters/<name>/`, one adapter after another in name order, and run each script present. That name is the lifecycle's whole contract with a primitive — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). Validation also reads three of the adapter's declarations: how the harness reaches a capability's rules file (`loaded_rules:`, "How a capability's rules reach a session" below), and two that "What an adapter declares as data" below names, the support declaration and the declaration of tool access. `pkit new adapter` stamps none of these scripts: an adapter provides the ones its harness needs, and the Claude Code adapter's are the worked example ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)).
 
 What the lifecycle relies on, for every script:
 
@@ -74,14 +79,60 @@ The scripts:
 - **Deploy primitives** — the first four, run in that order whenever the harness side needs (re-)materialising: init, sync, upgrade, and a capability's install, register, upgrade and uninstall. The settings merge comes first, since a skill may rely on the settings being in place. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`.
 - **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active, and the uninstall goes on.
 
+## What an adapter declares as data
+
+Beside its scripts, an adapter states what its harness does in declarations: data files of fixed names in its folder. The backbone's commands read them and run none of the adapter's code:
+
+- **Its support declaration,** `harness-support.yaml`: how far its harness meets each harness requirement the core declares ("Harness requirements" below). It detects, and never drives what a command does (COR-047).
+- **Its enforcement declaration,** `permission-enforcement.yaml`: where its harness enforces each dimension of the permission model (COR-028 point 3), which `pkit permissions diff` reads.
+- **Its declaration of tool access,** `tool-access.json`: its harness's terms for an agent's tool access. An adapter that deploys agents declares it (below).
+
+How its harness reaches a capability's rules is a key of its `package.yaml`, `loaded_rules:` ("How a capability's rules reach a session" below).
+
+### The declaration of tool access
+
+An agent's definition names its tool access in the methodology's terms, and the agents area's reader reads it ([the agents README, "Tool access"](../agents/README.md#tool-access)). What a harness takes is its adapter's to know. So an adapter that deploys agents, one that ships `deploy-agents.sh` or registers an agent runner, declares its harness's terms in `tool-access.json`, and the reader makes the adapter's refusals against them ([ADR-086](../../tech-docs/architecture/decisions/ADR-086-tool-access-reader.md) point 4). The file is JSON, since the agent runner reads it under the system's Python. Its shape is `.pkit/schemas/tool-access.schema.json`, and `.pkit/schemas/tool-access.yaml` says what each field holds:
+
+- `schema_version`: the version of the shape. The reader refuses a version it does not read, naming its own, and a key it does not know.
+- `harness`: the harness's name, as a refusal says it.
+- `keys`: the harness's key for each form, the one the deploy writes a grant (`tools`) or a withheld list (`withheld`) under.
+- `name_forms`: the forms a tool's name may take. An entry whose name takes none of them is refused, and so is one narrowed by an argument where its form takes none.
+- `known_tools`: the harness's built-in tools, by name. A withheld name outside them is refused, since it would withhold nothing.
+- `withheld_admits`: the withheld entries the harness was measured to withhold, which may be none. A withheld entry outside them is refused.
+
+Each form and each admitted entry is a shape: a `pattern`, a regular expression in Python's dialect that matches a whole name; `argument`, whether an argument in parentheses may narrow the tool; and a `description`, which a refusal names. A name the reader cannot read as an entry is refused before any declaration is read, so no pattern widens the reader's grammar. Beside these, a definition is refused that holds the harness's own key beside the form that translates to it, such as Claude Code's `disallowedTools` beside `withheld`.
+
+**Who reads it.** The adapter's deploy and its runner give the reader their own adapter's declaration. `pkit refs validate`, and `pkit validate` in its `refs` member, give it the declaration of every registered adapter that deploys agents, and fail a definition any of them refuses, naming the adapter and the cause (ADR-086 point 6). So a definition passes only where every such adapter takes it, and registering a second harness's adapter can fail definitions that passed before. Validation also fails:
+
+- an adapter that deploys agents and declares no tool access, or whose declaration the reader cannot read;
+- an adapter whose declaration admits a withheld entry while its support declaration does not answer `session-agent-withheld-tools` as achievable for some version ([ADR-085](../../tech-docs/architecture/decisions/ADR-085-agent-tool-access.md) point 3).
+
+The Claude Code adapter's declaration, and what it refuses, are in [its README](claude-code/README.md), "Tool access" under `deploy-agents.sh`.
+
+## How a capability's rules reach a session
+
+A capability may ship operational rules of its own, as a loaded file at `.pkit/capabilities/<name>/rules.md` ([COR-070](../decisions/core/COR-070-capability-loaded-rules.md)). Each adapter delivers every installed capability's loaded file to the sessions its harness starts, by the route that carries core's rules where the harness offers one, so every session that loads core's rules loads it too.
+
+**An adapter declares its delivery** in its `package.yaml`, under `loaded_rules:` ([ADR-076](../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 4). The key says that its harness reaches the capabilities' loaded files through one index, which the host file reaches by one line:
+
+- `entry:` the index's line for one capability's loaded file, with `{file}` for its path read from the index's folder. The part before `{file}` is the harness's import token.
+- `host:` the file that reaches the index, a path relative to the project's root and inside it.
+- `line:` the line the host keeps, with `{index}` for the index's path read from the host's folder. With core's loaded file's path in place of the index's, it is core's include, which the host keeps too.
+
+**The backbone renders the index**, `.pkit/rules/capabilities.md`, from that key and `pkit rule-sets loaded`, one entry per capability the manifest registers that ships a loaded set, wherever the lifecycle regenerates derivable state. The adapter's merge primitive keeps `line:` present in `host:`. So no adapter names a path under `.pkit/`, and the backbone names no harness's syntax.
+
+**What takes a capability out.** Its uninstall, and an unregistration that keeps its files, renders the index without it. The host's line stays, since the index carries every install and uninstall.
+
+**Validation checks it**, for each registered adapter: `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a host without the line or without core's include, and warns of an adapter that declares no `loaded_rules:`, whose harness's sessions then load no capability's rules, and for whose harness core's include goes unchecked. While registered adapters declare different `entry:` forms, the index is not rendered and validation fails, until the record that adds the second adapter decides how one index serves both. An adapter whose harness reaches the files another way needs a key of its own or a validator it registers.
+
 ## The agent runner
 
 Some commands start an agent with nobody watching: project-management's `review-pr` starts its reviewers that way, and its `fix-drift` starts the fixers a project granted, confined. No such command calls a harness. It asks the backbone's run command, `pkit agents run`, and the backbone starts the runner the project's adapter registers. The runner starts the harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). So the tie to a harness's command line lives in its adapter, as every other tie does.
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by file name:
 
-- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
-- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner, which the lifecycle README states: no arguments, the request on standard input, from the project root.
+- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
+- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner, which the lifecycle reference's manifest schema states: no arguments, the request on standard input, from the project root.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
 **The request**, one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort` (a level, or `null`). A runner refuses a request with any other key, rather than run it without that key, so a runner that does not know the confined form refuses it. Then one of two forms:
@@ -93,7 +144,7 @@ Some commands start an agent with nobody watching: project-management's `review-
   - `rules`, the run's rules projected through the shared decision core: `allow`, the whole allow list, and `deny`, the denies to hold as native rules. Each rule takes one of three forms: `{"tool": T}`, the whole tool; `{"tool": T, "folder": F}`, the tool on `F` and everything below it; `{"command": [...]}`, a shell command whose words start with these. The backbone has already refused a run whose rules no native rule could hold.
   - `excluded`, the allowed commands the platform requires outside the sandbox (ADR-066 point 6), each as its words; empty off macOS
 
-  The runner reads the agent's definition from the working copy, as the deploy resolves it, and refuses where it fails its check (ADR-066 point 3). By the time the runner reads the brief, the backbone has put each folder's path in place of its marker: `{{pkit:working-copy}}`, `{{pkit:workspace}}`, `{{pkit:temp}}` and `{{pkit:commit}}`.
+  The runner reads the agent's definition from the working copy, as the deploy resolves it, and refuses where it fails its check (ADR-066 point 3). It passes the agent's tool access as the agents area's reader answers it, in its harness's keys, and refuses a definition whose tool access the reader or its adapter refuses ([the agents README, "Tool access"](../agents/README.md#tool-access)). By the time the runner reads the brief, the backbone has put each folder's path in place of its marker: `{{pkit:working-copy}}`, `{{pkit:workspace}}`, `{{pkit:temp}}` and `{{pkit:commit}}`.
 
 **The answer**, one JSON document on standard output, exit 0: `schema_version` (`1`), `ending`, `exit_code`, `output`, `diagnostics` and `reason`. The endings:
 
@@ -111,7 +162,7 @@ A confined run's answer adds two keys: `refused_calls`, each call the harness re
 **What a runner owes:**
 
 - **No bypass.** It passes the harness only flags from a closed set, which its adapter's README lists. No member of the set approves a call, or loads configuration other than the run's own (ADR-066 point 4).
-- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
+- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
 - **The environment.** It does not pass on the backbone's own variables for its run of the runner.
 - **The marker** (ADR-066 point 8). It refuses when `PKIT_AGENT_RUN` is in its own environment, even empty, and sets `PKIT_AGENT_RUN=1` in the harness's, for both forms. So no route around the backbone's run command starts an agent from a run.
 - **For a confined run, as its adapter's README states:** the harness's version within the range its author tested the confined form on, and the platform's sandbox, or a refusal (ADR-066 point 2); only its own settings and a checked definition (point 3); no flag, setting, definition field or variable that bypasses the run's rules (point 4); the run's rules in native rules, which fail closed (point 5); and the shell writing only the workspace, with no host allowed (point 6).
@@ -154,13 +205,24 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which the drift command depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds six entries:
+
+- `delegated-result-complete`;
+- `unattended-confined-run`, which the drift command depends on (ADR-066 point 13);
+- `unattended-working-run`, which the build command depends on (ADR-073);
+- `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to it names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost";
+- `session-agent-withheld-tools`, that a whole session's agent withheld named tools has none of them and keeps every other tool its session holds, observed from outside a session ([ADR-085](../../tech-docs/architecture/decisions/ADR-085-agent-tool-access.md) point 3);
+- `helper-withheld-tools`, that a helper withheld named tools has none of them, observed only inside a session (ADR-085 point 3).
+
+The Claude Code adapter answers the first five, and leaves `helper-withheld-tools` unanswered until it is measured, so it reports `indeterminate` ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 
 1. Run `pkit new adapter <new-harness-name>`, through the `adapter-author` skill. It stamps `.pkit/adapters/<new-harness-name>/` with `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It stamps no script and no settings: those depend on the harness.
 2. Fill in the stamped `README.md`: what the harness expects and how this adapter satisfies that.
-3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), and any runtime artifacts the harness needs.
+3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), the `loaded_rules:` declaration of how the harness reaches each capability's rules file (see "How a capability's rules reach a session" above), and any runtime artifacts the harness needs.
+   - **An agent's tool access.** A deploy script writes each agent's tool access as the agents area's reader answers it, in the harness's keys, never the author's text. It refuses a withheld list the harness cannot withhold, or whose tool names it cannot translate, since a withheld list fails open: a tool it does not name is given. It leaves no earlier copy of an agent it refuses, and names the cause (COR-013 point 7; [the agents README, "Tool access"](../agents/README.md#tool-access)).
+   - **Its declaration of tool access.** An adapter that deploys agents, by a deploy script or a runner, writes `tool-access.json` with its harness's terms, and its deploy and runner have the reader refuse by it ("What an adapter declares as data" above). Start from `.pkit/schemas/tool-access.yaml`, which admits no withheld entry. Admit one only once the harness was measured to withhold it, and answer `session-agent-withheld-tools` in step 4. Until the adapter declares its tool access, `pkit validate` fails.
 4. Write the adapter's `harness-support.yaml`: an answer to each requirement in `.pkit/schemas/harness-requirements.yaml` you can answer with evidence (see "Harness requirements" above). Leave out one you cannot answer yet; it reports `indeterminate`. Run `pkit validate`, then `pkit harness report --adapter <new-harness-name>` to read what the harness leaves unmet.
 5. Update this README's "Currently shipped" list.
 

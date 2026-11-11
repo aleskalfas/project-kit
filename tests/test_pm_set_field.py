@@ -202,13 +202,28 @@ def test_route_axes_no_board_sends_everything_to_labels(sf) -> None:
     assert results == []
 
 
-def test_route_axes_board_claims_priority_and_workstream(sf) -> None:
-    """The map is silent, so the flag still governs — today's behaviour, kept."""
+def test_route_axes_the_board_flag_alone_claims_no_axis(sf) -> None:
+    """With no map, the kit's own labels carry both axes, board or no board: the
+    flag says only that a board exists (DEC-062 point 1)."""
     label_axes, board_axes, results = sf._route_axes(
         priority="High",
         workstream="cli",
         config=_BOARD,
         substrate_map=None,
+    )
+    assert label_axes == {"priority": "High", "workstream": "cli"}
+    assert board_axes == {}
+    assert results == []
+
+
+def test_route_axes_board_binding_claims_priority_and_workstream(sf, axis_labels) -> None:
+    """The map binds both axes to the board, so the board carries them."""
+    sm = axis_labels.SubstrateMap(axes={"priority": {"board": True}, "workstream": {"board": True}})
+    label_axes, board_axes, results = sf._route_axes(
+        priority="High",
+        workstream="cli",
+        config=_BOARD,
+        substrate_map=sm,
     )
     assert board_axes == {"priority": "High", "workstream": "cli"}
     assert label_axes == {}
@@ -234,9 +249,8 @@ def test_route_axes_label_binding_wins_over_the_board_flag(sf, axis_labels) -> N
 
 def test_route_axes_mixed_map_splits_the_two_axes(sf, axis_labels) -> None:
     """Per-axis, not per-project: a bound axis follows its binding while a sibling
-    the map does not bind still falls through to the flag. `unsupported` names no
-    substrate, so it does NOT govern — it falls through exactly as an omitted axis
-    does (DEC-051 decision point 1)."""
+    marked `unsupported` degrades, board or no board, exactly as an omitted axis
+    does (DEC-062 point 2)."""
     sm = axis_labels.SubstrateMap(
         axes={
             "priority": {"label": {"remap": {"High": "P0"}}},
@@ -250,8 +264,8 @@ def test_route_axes_mixed_map_splits_the_two_axes(sf, axis_labels) -> None:
         substrate_map=sm,
     )
     assert label_axes == {"priority": "High"}
-    assert board_axes == {"workstream": "cli"}
-    assert results == []
+    assert board_axes == {}
+    assert [result.field for result in results] == ["workstream"]
 
 
 def test_route_axes_degraded_axis_is_a_note_not_a_refusal(sf, axis_labels) -> None:
@@ -924,20 +938,25 @@ def _stub_board_reads(
     project=None,
     fields_read=None,
     item=None,
+    owners: list | None = None,
 ) -> None:
+    """Stub the three reads; ``owners`` collects the owner each board read names."""
     bf = sf.board_fields
+    seen = owners if owners is not None else []
     monkeypatch.setattr(
         bf,
         "read_project_node_id",
         lambda config, owner=None, gh_call=None: (
-            project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
+            seen.append(owner) or project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
         ),
     )
     monkeypatch.setattr(
         bf,
         "read_fields",
         lambda config, owner=None, gh_call=None: (
-            fields_read or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
+            seen.append(owner)
+            or fields_read
+            or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
         ),
     )
     monkeypatch.setattr(
@@ -975,6 +994,25 @@ def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatc
     assert state.membership_remediation == (
         "gh project item-add 7 --owner an-org --url https://github.com/an-org/r/issues/42"
     )
+
+
+@pytest.mark.parametrize("owner", ["an-org", "a-person"])
+def test_read_board_state_without_a_default_owner_reads_the_issues_owners_board(
+    sf, monkeypatch, owner
+) -> None:
+    """A single-owner adopter omits `gh.default_owner` (the README, the `gh:`
+    block): the board is then the repository's owner's, a person's or an
+    organisation's, which the issue's url names."""
+    owners: list = []
+    _stub_board_reads(sf, monkeypatch, owners=owners)
+    config = {key: value for key, value in _BOARD_CONFIG.items() if key != "gh"}
+    issue = {"id": "I_issue42", "url": f"https://github.com/{owner}/r/issues/42"}
+
+    state = sf._read_board_state(config, issue=issue, issue_number=42)
+
+    assert state.error is None
+    assert owners == [owner, owner]
+    assert f"--owner {owner} " in state.membership_remediation
 
 
 def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> None:
@@ -1067,6 +1105,16 @@ def _stage_capability_root(tmp_path: Path, *, has_board: bool) -> Path:
     config_lines = ["schema_version: 1\ndefault_branch: main\nworkstreams: [cli]\n"]
     if has_board:
         config_lines.append("has_projects_v2_board: true\nprojects_v2_board_id: 7\n")
+        # The board carries an axis only where the map binds it there (DEC-062
+        # point 1): priority and workstream on the board, type on the kit's labels.
+        # A test that writes its own map replaces this one.
+        (root / "project" / "substrate-map.yaml").write_text(
+            "schema_version: 1\naxes:\n"
+            "  type:\n    kit-label: true\n"
+            "  priority:\n    board: true\n"
+            "  workstream:\n    board: true\n",
+            encoding="utf-8",
+        )
     (root / "project" / "config.yaml").write_text("".join(config_lines), encoding="utf-8")
     # Empty members ⇒ open mode (membership passes for any resolved identity).
     (root / "project" / "members.yaml").write_text("members: []\n", encoding="utf-8")
