@@ -15,7 +15,9 @@ body: >
   `pkit agents reconcile --write` writes a missing default and moves a value
   still as written to the query's newer answer, `pkit agents adopt` writes a
   missing one, and `pkit agents` reports a value still as written whose default
-  now answers otherwise. A value you edited is yours, and nothing writes it again. The
+  now answers otherwise. A value you edited is yours, and nothing writes it again.
+  `pkit validate` warns of a dotted category in the overlay that no installed
+  capability declares. The
   deploy refuses a grant that lies in, or holds, what the next sync overwrites,
   for every category a capability's agent names and for core's categories that
   carry writes, and counts a capability pulled from an external source. So a
