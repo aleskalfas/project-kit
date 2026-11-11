@@ -17,7 +17,8 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   the foundations' declarations and the own roles of each component library the lock
   names (DEC-008 point 1), and the brand read against it, over its base at the version
   the lock names when it builds on one (DEC-004 point 6), the notations the piece names
-  (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
+  (DEC-004 point 10), the combinations the piece names, the `Env` over them, and the
+  drawings that draw under the brand along its chain (`brand_drawings`, DEC-009 point 4). It
   computes one scene for each language and each key over the size axes the piece names
   (DEC-005 point 6), each reading the brand's roles at its key (`ProjectEnv.at`), and draws
   each combination from the scene of its key (`drawn`). A format that holds modes takes the
