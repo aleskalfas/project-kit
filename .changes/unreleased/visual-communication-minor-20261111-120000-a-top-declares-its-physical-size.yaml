@@ -15,4 +15,5 @@ body: >
   that size by one scale its width sets; the SVG and HTML renderers declare
   that their formats have no physical page, and lose nothing. A release
   breaks on a physical size that a top comes to declare, ceases to, or changes
-  in proportion.
+  in proportion. A size in the same proportion within the rounding of whole
+  millimetres, such as A2 after A1, breaks nothing.
