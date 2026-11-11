@@ -922,6 +922,43 @@ def test_a_physical_size_breaks_where_it_comes_goes_or_changes_its_proportion(
     ]
 
 
+#: Pairs of papers, earlier and later, in millimetres, each with the breaks of the move.
+PAPERS: dict[str, tuple[tuple[float, float], tuple[float, float], list[str]]] = {
+    "A2 after A1": ((594, 841), (420, 594), []),
+    "A3 after A4": ((210, 297), (297, 420), []),
+    "A5 after A2": ((420, 594), (148, 210), []),
+    "US Letter after A4": (
+        (210, 297),
+        (215.9, 279.4),
+        [
+            "`parts/slides`: changes its physical size's proportion, from 210 by 297 mm to "
+            "215.9 by 279.4 mm (DEC-034 point 3)"
+        ],
+    ),
+}
+
+
+@pytest.mark.parametrize("earlier,later,breaks", PAPERS.values(), ids=PAPERS.keys())
+def test_a_physical_size_keeps_its_proportion_within_the_rounding_of_whole_millimetres(
+    tmp_path: Path,
+    earlier: tuple[float, float],
+    later: tuple[float, float],
+    breaks: list[str],
+) -> None:
+    """Each A size rounds its sides to whole millimetres, so A1 and A2, or A4 and A3, have
+    one proportion though the width of each times the height of the other differs. A move
+    between them changes how the pages look, and breaks nothing. US Letter after A4 changes
+    the proportion (DEC-034 point 3)."""
+    root = project(tmp_path)
+    foundations(root)
+    for version, size in (("1.0.0", earlier), ("1.1.0", later)):
+        spec = copy.deepcopy(PARTS)
+        printed_at(*size)(spec)
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == breaks
+
+
 def test_a_version_that_changes_nothing_needs_a_patch(tmp_path: Path) -> None:
     found = compared_parts(tmp_path, lambda spec: None)
 

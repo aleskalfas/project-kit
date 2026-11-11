@@ -66,6 +66,10 @@ PROMISED = ("stable", "deprecated")
 
 MAJOR, MINOR, PATCH = "major", "minor", "patch"
 
+#: How far a side of a physical size, written in whole millimetres, may lie from the length
+#: it rounds (DEC-034 point 3).
+MM_ROUNDING = 0.5
+
 
 class ComparisonError(Exception):
     """Two versions the comparison cannot compare: the message says why."""
@@ -667,11 +671,9 @@ def _physical_size(
 ) -> bool:
     """A top's physical size (DEC-034 point 3): one it comes to declare, ceases to, or whose
     proportion changes breaks, since every page's height follows it. A size changed in the
-    same proportion breaks nothing: each page draws as before, only larger or smaller in
-    print. Two proportions are the same where the cross products of their sides are equal,
-    so another A size, such as A2 against A1, whose sides are rounded to whole millimetres,
-    changes it. Gives whether it found a break, so a change of the height
-    the top asks for is not reported twice."""
+    same proportion (`_same_proportion`) is a change of how its pages look, and breaks
+    nothing: each page draws as before, only larger or smaller in print. Gives whether it
+    found a break, so a change of the height the top asks for is not reported twice."""
     size_e, size_l = earlier.physical_size, later.physical_size
     if size_e is None and size_l is None:
         return False
@@ -679,7 +681,7 @@ def _physical_size(
         what = "comes to declare" if size_e is None else "ceases to declare"
         found.broken(where, f"{what} a physical size", "DEC-034 point 3")
         return True
-    if not math.isclose(size_e[0] * size_l[1], size_l[0] * size_e[1], rel_tol=1e-12):
+    if not _same_proportion(size_e, size_l):
         found.broken(
             where,
             f"changes its physical size's proportion, from {_mm(size_e)} to {_mm(size_l)}",
@@ -687,6 +689,25 @@ def _physical_size(
         )
         return True
     return False
+
+
+def _same_proportion(earlier: tuple[float, float], later: tuple[float, float]) -> bool:
+    """Whether two physical sizes have one proportion within the rounding of whole
+    millimetres: where one, scaled to the other's width, gives the other's height, each side
+    of each size taken as any length within `MM_ROUNDING` of it. So A2 after A1, 420 by 594
+    mm after 594 by 841 mm, keeps the proportion, though their sides, rounded, differ in it."""
+    least_e, most_e = _proportions(earlier)
+    least_l, most_l = _proportions(later)
+    return least_e <= most_l and least_l <= most_e
+
+
+def _proportions(size: tuple[float, float]) -> tuple[float, float]:
+    """The least and the greatest proportion, height over width, of a size whose sides each
+    lie within `MM_ROUNDING` of those it names."""
+    width, height = size
+    least = max(height - MM_ROUNDING, 0.0) / (width + MM_ROUNDING)
+    most = math.inf if width <= MM_ROUNDING else (height + MM_ROUNDING) / (width - MM_ROUNDING)
+    return least, most
 
 
 def _mm(size: tuple[float, float]) -> str:
