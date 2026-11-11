@@ -357,8 +357,8 @@ class Declarations:
     - `tokens`: the component tokens its components declare, by token path (DEC-035
       points 1 and 2), the foundations' components among them.
     - `findings`: what is wrong in a library's own roles, or in its components' tokens,
-      that leaves the rest usable. The foundations' declarations hold only their
-      components' tokens': what is wrong in their `roles.yaml` refuses them.
+      that leaves the rest usable. The foundations' declarations hold only the findings
+      of their components' tokens: what is wrong in their `roles.yaml` refuses them.
     """
 
     roles: dict[str, Role]
@@ -1036,11 +1036,10 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
     foundations' declarations and the component tokens their components declare, and of
     each other library of kind `components`, the own roles its `roles.yaml` declares
     (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1),
-    where it has either. A library whose
-    `library.yaml` cannot be read adds nothing, its own check reporting it. Where `folders`
-    holds no foundations, as for a library that builds on none, the scope holds no shared
-    role. Findings name files relative to `root` when given. Raises TokenError for the
-    foundations' declarations."""
+    where it has either. A library whose `library.yaml` cannot be read adds nothing, its
+    own check reporting it. Where `folders` holds no foundations, as for a library that
+    builds on none, the scope holds no shared role. Findings name files relative to `root`
+    when given. Raises TokenError for the foundations' declarations."""
 
     def shown(path: Path) -> str:
         return path.relative_to(root).as_posix() if root is not None else path.as_posix()
