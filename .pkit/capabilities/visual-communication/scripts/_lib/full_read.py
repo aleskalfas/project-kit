@@ -19,8 +19,9 @@ those build on (`libraries.newest_of_majors`).
   foundations it is read with, and each token it declares that its file reads nowhere
   (`layout.unread_token_findings`, DEC-035 point 9). A component of a library that is no
   brand that declares `draws` (`layout.held_drawing_finding`), a brand's drawing read as
-  one, and a top's own drawing of a layout that shows a field by no part named after it
-  (`layout.own_drawing_findings`, DEC-034 points 1, 5 and 10). A brand's components are
+  one, a drawing of a top a brand holds (`pipeline.held_top_findings`), and a top's own
+  drawing of a layout that shows a field by no part named after it
+  (`layout.own_drawing_findings`, DEC-034 points 1, 4, 5 and 10). A brand's components are
   read as a component library's are, and the brand over its base,
   its tokens and its fonts opened as the engine opens them, with the facts its version
   states (`tokens.Brand.facts`). A notation against the
@@ -176,9 +177,12 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
             data[path.stem] = env.component(use)
             file = path.relative_to(held.root).as_posix()
             found.extend(layout.unread_token_findings(component, file=file, library=label))
-            # Only a brand's component draws a layout (DEC-034 point 1).
+            # Only a brand's component draws a layout, and none a top a brand holds (DEC-034
+            # points 1 and 4).
             if component.draws is not None and library.kind != "brand":
                 found.append(layout.held_drawing_finding(use, file=file, library=label))
+            else:
+                found.extend(pl.held_top_findings(component, env, file=file, library=label))
             if component.top:
                 found.extend(layout.own_drawing_findings(component, file=file, library=label))
         found.extend(ctx.findings)

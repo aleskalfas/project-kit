@@ -1679,8 +1679,9 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pinned, the router could not fetch the pin and ran this pkit: the message names
-    reconnecting, the pin through uvx, an HTTPS install of the pin, and moving on
-    purpose with `pkit unpin` first, never a bare `pkit upgrade`."""
+    reconnecting, the pin through uvx, and moving on purpose with `pkit unpin`
+    first, never a bare `pkit upgrade`. It names no install of the pin by hand,
+    which fetches from the URL the router fetches from (ADR-090 point 1)."""
     _record_states(installed_target, _OLDER, _OLDER)
     _write_pin(installed_target, _OLDER)
     monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _OLDER)
@@ -1691,7 +1692,8 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     assert f"This project pins pkit {_OLDER}, which the router could not fetch" in message
     assert "Reconnect and run `pkit sync` again" in message
     assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
-    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{_OLDER}`" in message
+    assert "uv tool install" not in message
+    assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
     assert "Run `pkit upgrade`" not in message
 

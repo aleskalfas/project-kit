@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/core/convention-compliance-reviewer.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
-      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, PRJ-015, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
         - ACT-adopter
         - ACT-ai-agent
@@ -60,6 +60,7 @@ pkit:
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#init
+        - .pkit/cli/README.md#installing-pkit-on-path
         - .pkit/cli/README.md#upgrade
         - .pkit/cli/README.md#status
         - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
@@ -71,6 +72,7 @@ pkit:
         - docs/decisions/README.md#why-they-exist
         - docs/schemas/README.md#why-they-exist
         - docs/process/README.md#why-they-exist
+        - docs/010-nobody-at-the-terminal.md#
         - .pkit/capabilities/project-management/README.md#
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
@@ -289,17 +291,17 @@ Install `pkit` once, globally, and it serves every project on your machine.
 
 **Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` from the git URL at the tag `latest`, which marks the highest release. The install fetches over SSH with your key, so the fence below shows no output:
+Then install `pkit` from the git URL at the tag `latest`, which marks the highest release. The repository is public, so the install needs no key and no token. It fetches over the network, so the fence below shows no output:
 
 ```sh
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+uv tool install git+https://github.com/aleskalfas/project-kit.git@latest
 ```
 
 To install a given release instead, name its tag, `@v<version>`, from the [releases page](https://github.com/aleskalfas/project-kit/releases). Either tag ties the version your project records to the content that tag holds.
 
 uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
 
-*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`.)*
+On a machine with nobody at the keyboard, such as a pipeline's runner, install `pkit` in a fresh clone with the project's script, `.pkit/cli/install-pkit.sh`, instead. It installs the version the project pins or records, and the [CLI reference](.pkit/cli/README.md#installing-pkit-on-path) says how to run it and what it checks.
 
 Check that your shell finds it:
 
@@ -432,6 +434,7 @@ The friction check asks nothing of your documents until you declare where they l
 - **Decision records, explained:** [`docs/decisions/README.md`](docs/decisions/README.md) — why to keep your decisions as records a person accepts, and how to record, accept and refine one.
 - **Schemas, explained:** [`docs/schemas/README.md`](docs/schemas/README.md) — why your configuration, your rule sets and your capability's data are checked against schemas, and how to declare, write and check each.
 - **Processes, explained:** [`docs/process/README.md`](docs/process/README.md) — why to give your capability a process the engine runs and checks, and how to author one, connect it and write its checks.
+- **Running with nobody at the terminal:** [`docs/010-nobody-at-the-terminal.md`](docs/010-nobody-at-the-terminal.md) — pkit's behaviour there, an agent host's setup, and the limits pkit accepts.
 - **Adopting / navigating the methodology:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
 - **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).

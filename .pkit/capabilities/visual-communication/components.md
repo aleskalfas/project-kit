@@ -54,6 +54,7 @@ pkit:
         - visual-communication:DEC-009#1
         - visual-communication:DEC-009#2
         - visual-communication:DEC-009#3
+        - visual-communication:DEC-009#4
         - visual-communication:DEC-009#5
         - visual-communication:DEC-009#6
         - visual-communication:DEC-010#1
@@ -85,6 +86,7 @@ pkit:
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#3
+        - visual-communication:DEC-034#4
         - visual-communication:DEC-034#5
         - visual-communication:DEC-034#6
         - visual-communication:DEC-034#8
@@ -457,7 +459,7 @@ A part placed from such a page's foot, such as `y: "=:height - footer.height"`, 
 
 #### A brand's drawing
 
-A brand may hold a drawing of its own of a layout of a top, as a component of the brand. Its file names, under `draws`, the top and the layout it draws (DEC-034 point 1). Where the piece's brand holds one, it draws each instance of that layout it fits, in place of the top's own drawing (DEC-009 point 2). An instance is a page where the layout is a page's form, and the whole top where the top has one layout.
+A brand may hold a drawing of its own of a layout of a top, as a component of the brand. Its file names, under `draws`, the top and the layout it draws (DEC-034 point 1). Where the piece's brand, or a brand it builds on, holds one that draws, it draws each instance of that layout it fits, in place of the top's own drawing (DEC-009 point 2). An instance is a page where the layout is a page's form, and the whole top where the top has one layout.
 
 - **What it takes.** It declares nothing the content gives. It takes the layout's slots and the lists the layout declares for them, the top's other fields, its options with their words, its states and its colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. Content is written against the top, whichever drawing draws it.
 - **What it holds.** Its `about`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)), and carries no `status` ([A component's file](#a-components-file)).
@@ -465,7 +467,9 @@ A brand may hold a drawing of its own of a layout of a top, as a component of th
 - **What shows a field is named after it** (DEC-034 point 5). Each field it shows is shown by a part named after the field, and a part named after a field shows that field. A part *shows* a field where it places the field's component, draws its text or the picture it names, or repeats over it. A field shown only through a component it places by `use`, which shows it one level down, breaks the rule.
 - **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).
 - **Where it does not fit,** the top's own drawing draws that instance, whole, in every language and at every key, and the piece states it ([Checks](checks.md)). The engine places the piece in each language and at each key before it draws any scene, so a preview of one language at one size is drawn by the drawing chosen for the whole piece.
-- **Where it draws nothing.** Two drawings of one layout in one brand draw neither, and a drawing of a top whose library the brand does not name draws nothing (DEC-009 points 2 and 3). The test brand's drawing of the deck's cover, trimmed to its title:
+- **Along a chain of brands** (DEC-009 point 4). A brand *serves* a top where it holds a drawing of one of the top's layouts, or holds the top itself. Under a brand built on a base, the brand nearest the root that serves a top keeps its form: its drawings draw, and the top's own drawing draws each layout it leaves. A brand built on it draws none of that top, and each piece under it states each drawing of it that draws nothing ([Checks](checks.md)). A brand built on a base that serves no layout of a top draws the top by its own drawings.
+- **A top a brand holds** is drawn by its own drawing alone (DEC-034 point 4). The holding brand serves it so, and lacks none of its layouts, and each brand built on it keeps that form. No brand declares a drawing of it. Under a brand that is neither the holding brand nor built on it, it is drawn by its own drawing in that brand's values, and the check asks the piece's author to look ([Checks](checks.md)).
+- **Where it draws nothing.** Two drawings of one layout in one brand draw neither, and a drawing of a top whose library its own brand does not name draws nothing (DEC-009 points 2 and 3). Nor does a drawing of a top a brand nearer the root serves, or of a top a brand holds. The test brand's drawing of the deck's cover, trimmed to its title:
 
 ```yaml
 draws: {top: foundations/deck, layout: cover}

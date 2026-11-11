@@ -15,11 +15,14 @@
 #
 # `uv` and Python 3.11+ are required (per PRJ-003). The recommended
 # install names the tag `latest`, on the highest release's commit,
-# `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`
-# (per PRJ-004), and puts a binary
+# `uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`
+# (per PRJ-004 and PRJ-015), and puts a binary
 # on PATH that doesn't need this proxy at all. This proxy stays useful for
 # the project-kit source tree (where `uv run` resolves the in-tree Python
-# via uv's `--project` flag) and for adopters running pre-install bootstrap.
+# via uv's `--project` flag). In a project's clone it installs nothing: where
+# it names how to install pkit, it names the install script beside it,
+# `install-pkit.sh`, which installs the project's own version (ADR-090
+# point 8).
 #
 # Older bash command implementations were removed during the Python port
 # step 3 (umbrella #28). See git history for archaeology.
@@ -90,15 +93,23 @@ esac
 
 # --- Everything else routes to the Python runtime ------------------------
 
+# A project's clone carries this dispatcher but no Python package. There it
+# runs nothing, and names the install script, which installs the version the
+# project pins or records (ADR-090 point 8).
+INSTALL_SCRIPT="$SCRIPT_DIR/install-pkit.sh"
+
 if ! command -v uv >/dev/null 2>&1; then
-    cat >&2 <<'EOF'
-Error: pkit requires `uv` (per PRJ-003 + PRJ-004). Install uv via:
+    if [ -f "$SOURCE_REPO/pyproject.toml" ]; then
+        then_step="Then retry this command."
+    else
+        then_step="Then install this project's pkit: sh \"$INSTALL_SCRIPT\""
+    fi
+    cat >&2 <<EOF
+Error: pkit requires \`uv\` (per PRJ-003 + PRJ-004). Install uv via:
    curl -LsSf https://astral.sh/uv/install.sh | sh
 or:
    brew install uv
-Then either retry this command or install the highest release of pkit globally:
-   uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
-For another release, see .pkit/cli/README.md, "Installing pkit on PATH".
+$then_step
 EOF
     exit 1
 fi
@@ -108,9 +119,9 @@ if [ ! -f "$SOURCE_REPO/pyproject.toml" ]; then
 Error: source kit at $SOURCE_REPO has no pyproject.toml.
        This dispatcher needs to resolve to a project-kit source tree
        with the Python package present. If you're running from an
-       adopter project's local copy of this script, install the highest
-       release of pkit globally instead:
-         uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+       adopter project's local copy of this script, install this
+       project's pkit, at the version it pins or records, instead:
+         sh "$INSTALL_SCRIPT"
        For another release, see .pkit/cli/README.md,
        "Installing pkit on PATH".
 EOF
