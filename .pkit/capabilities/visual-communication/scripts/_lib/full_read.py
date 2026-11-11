@@ -11,11 +11,13 @@ those build on (`libraries.newest_of_majors`).
 - **Its files.** Each file of the capability's format in the version, against its binding
   and its schema (`file_findings`). The core's data validation reads no file under
   `.pkit/`, so a version the capability ships meets its schemas here alone.
-- **Read by the engine.** The foundations' declarations and the version's own roles, the
-  scope of the versions it is read with (`tokens.read_scope`). Each of its components, the
-  file of each under `components/`, through the environment of a library checked alone,
-  which no piece or brand stands behind (`pipeline.LibraryEnv`), a switch or a `when` by a
-  size against the size axes of the foundations it is read with. A brand over its base,
+- **Read by the engine.** The foundations' declarations and the version's own roles and
+  its components' tokens, the scope of the versions it is read with (`tokens.read_scope`).
+  Each of its components, the file of each under `components/`, through the environment
+  of a library checked alone, which no piece or brand stands behind
+  (`pipeline.LibraryEnv`), a switch or a `when` by a size against the size axes of the
+  foundations it is read with, and each token it declares that its file reads nowhere
+  (`layout.unread_token_findings`, DEC-035 point 9). A brand over its base,
   its tokens and its fonts opened as the engine opens them, with the facts its version
   states (`tokens.Brand.facts`). A notation against the
   foundations' colour families. Each picture file the version holds in `pictures/`, read
@@ -168,6 +170,8 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
                 continue
             components[path.stem] = component
             data[path.stem] = env.component(use)
+            file = path.relative_to(held.root).as_posix()
+            found.extend(layout.unread_token_findings(component, file=file, library=label))
         found.extend(ctx.findings)
         found.extend(_named_findings(reader, components, shown))
     elif library.kind == "brand":

@@ -135,12 +135,14 @@ pkit:
         - visual-communication:DEC-031#3
         - visual-communication:DEC-031#4
         - visual-communication:DEC-031#5
+        - visual-communication:DEC-035#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
         - .pkit/capabilities/visual-communication/components.md#parts
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#the-facts-of-an-export
+        - .pkit/capabilities/visual-communication/components.md#tokens
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#axes-and-modes
@@ -569,7 +571,7 @@ produced:
 ```
 
 - **`producer`:** the producer's name.
-- **`inputs`:** each input names a role of the brand by its token path, never a raw value. The producer must take the input, the brand must have the role, and the role must be of the value type the input takes. Every input the producer requires is given. The values come from the brand version the piece's lock names.
+- **`inputs`:** each input names a role of the brand by its token path, never a raw value or a component token, which only its component reads ([Tokens](components.md#tokens)). The producer must take the input, the brand must have the role, and the role must be of the value type the input takes. Every input the producer requires is given. The values come from the brand version the piece's lock names.
 - **`pixels`:** the width and the height of every variant, in whole pixels from 1, fixed before the producer runs (DEC-006 point 3).
 
 ### Variants

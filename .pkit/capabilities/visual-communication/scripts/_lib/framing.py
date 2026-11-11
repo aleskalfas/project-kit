@@ -10,7 +10,8 @@ the check read too, does not.
 
 1. **The declaration.** `piece.yaml` declares each produced output under
    `produced.<output>`: the producer, its inputs, each naming a role by its token path,
-   and the pixel size of each variant. The piece's lock says which brand version the
+   never a component token, which only its component reads (DEC-035 point 3), and the
+   pixel size of each variant. The piece's lock says which brand version the
    values come from. A piece with no lock yet is refused: a draft's first render writes
    one, a published piece is set back to a draft for it, and a final piece takes no run.
 2. **The values and the variants.** Each role the inputs name is resolved in every
@@ -106,7 +107,7 @@ from _lib.files import (
 )
 from _lib.findings import ATTENTION, FAILS, Finding, accepted, loss_finding
 from _lib.libraries import FOUNDATIONS
-from _lib.names import is_name, is_token_path
+from _lib.names import COMPONENT, is_name, is_token_path
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, sha256
 from _lib.root import LOCAL
@@ -738,6 +739,12 @@ def _declaration(data: Mapping[str, Any], piece: str, output: str) -> Declaratio
             raise Refused(
                 f"the input `{key}` of {at} is `{role}`, which is no role: an input names a "
                 f"role of the brand by its token path, such as `accent`, never a raw value",
+                declared=True,
+            )
+        if role.split(".")[0] == COMPONENT:
+            raise Refused(
+                f"the input `{key}` of {at} names `{role}`, a component token, which only its "
+                f"component reads: name a role, such as `accent`",
                 declared=True,
             )
     size = _size(pixels)
