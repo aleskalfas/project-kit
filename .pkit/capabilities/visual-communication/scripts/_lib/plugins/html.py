@@ -1,7 +1,7 @@
 """The HTML renderer: a scene drawn as one page file for each language and each key over the
 size axes, holding the modes a reader's signal names, each page real HTML text over SVG
-shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to 4, DEC-005
-points 4, 5, 9 and 10).
+shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to 4, DEC-026
+points 1 to 6, DEC-005 points 4, 5, 9 and 10).
 
 - **What it draws** is its declaration (`html_declaration.py`): every primitive the SVG
   renderer draws. It draws only what it declares, so the losses the capability reads from
@@ -49,8 +49,8 @@ points 4, 5, 9 and 10).
 - **The file** holds all it needs: each face once, subset to every character the file draws
   in it, each arrowhead once for its role, and every picture. It asks for nothing. Its
   head declares its encoding, its language and its viewport. Its pages follow each other
-  down the document with the gap the declaration names, and it sets no colour value
-  around them.
+  down the document, and in print down the sheets, with the gap the declaration names, and
+  it sets no colour value around them.
 - **Fixed pages** (DEC-031 points 1 to 4). Where the scene's root says its pages are fixed
   pages, as a deck's slides are, the file shows each inside a keyline, on a backdrop that
   fills the window around and between them, as the declaration's `pages.fixed` names them.
@@ -61,9 +61,19 @@ points 4, 5, 9 and 10).
   ground. The backdrop shows at the gutter on every side, which narrows with the window, and
   a page shrinks with the room the gutter leaves it. Under more contrast the keyline takes
   the text colour, and under forced colours the backdrop and each page take the reader's
-  background colour, and the keyline their text colour. Each rule is for a screen alone, so
-  a print holds none of them. Only the sheet gains these rules, and no element changes. A
-  file of other pages holds none of them.
+  background colour, and the keyline their text colour. These rules are for a screen alone.
+  In print the keyline is the page's border instead, in the same colours, and the page's
+  window is the sheet's area less the keyline on each side. Only the sheet gains these
+  rules, and no element changes. A file of other pages holds none of them.
+- **Print** (DEC-026 points 1 to 5). Every file asks the browser to keep each page whole on
+  one sheet, so a page that does not fit the rest of a sheet moves to the next, and one
+  taller than a sheet runs on. Each page lies on the browser's ground, and the file asks the
+  browser to print it in its own colours, never adjusted for paper. The document around
+  the pages takes no such rule, so the sheet around them prints as the reader's setting for
+  backgrounds says. The sheet's area is the window, so a page shrinks with it as with a
+  narrow window. The file holds no page rule and no rule on where a page breaks, so the
+  reader picks the sheet and the browser the break. The screen's rules hold nothing of
+  print, and these nothing of the screen.
 - **The text of the file** is HTML and well-formed XML alike. Whatever a brand or a piece
   names is escaped, so it can neither end the style element nor start another element.
 
@@ -138,6 +148,18 @@ SHEET = "".join(
     )
 )
 
+#: CSS's value of `print-color-adjust` that prints colours as they are, never adjusted for
+#: paper. The prefixed property is the one an older Chrome or Safari reads.
+EXACT = "-webkit-print-color-adjust:exact;print-color-adjust:exact"
+
+#: The rules every page file holds for print, after the rules above (DEC-026 points 1 and 5):
+#: each page kept whole on one sheet where it fits, on the browser's ground, and printed in
+#: its own colours. The property that keeps them passes to what the page holds, and the
+#: document around the pages takes none of it.
+PRINT_SHEET = (
+    f"@media print{{[{MARKS['page']}]{{break-inside:avoid;background:{GROUND_COLOUR};{EXACT}}}}}"
+)
+
 
 def mixed(share: float) -> str:
     """`share` percent of the browser's text colour mixed into its ground colour, in sRGB."""
@@ -146,27 +168,37 @@ def mixed(share: float) -> str:
 
 def fixed_sheet(fixed: Mapping[str, Any]) -> str:
     """The rules a file of fixed pages holds, as `fixed`, the declaration's `pages.fixed`,
-    names them (DEC-031 points 1 to 4), each for a screen alone. The backdrop is the
+    names them (DEC-031 points 1 to 4, DEC-026 point 3). On screen the backdrop is the
     document's background, and the gutter the body's padding. Each page lies on the browser's
-    ground inside its keyline, an outline. A browser that cannot mix colours keeps the plain
-    colour written before each mix."""
+    ground inside its keyline, an outline. In print the keyline is the page's border, in the
+    same colours, and the page is at most the sheet's area less the keyline on each side. A
+    browser that cannot mix colours keeps the plain colour written before each mix."""
     page = f"[{MARKS['page']}]"
     keyline, backdrop, gutter = fixed["keyline"], fixed["backdrop"], fixed["gutter"]
+    width, colour = number(keyline["width"]), mixed(keyline["share"])
     plain = "".join(
         (
             f"html{{background:{GROUND_COLOUR};background:{mixed(backdrop['share'])}}}",
             f"body{{padding:min({number(gutter['width'])}px,{number(gutter['window-share'])}vw)}}",
             f"{page}{{background:{GROUND_COLOUR};"
-            f"outline:{number(keyline['width'])}px solid {TEXT_COLOUR};"
-            f"outline-color:{mixed(keyline['share'])}}}",
+            f"outline:{width}px solid {TEXT_COLOUR};"
+            f"outline-color:{colour}}}",
         )
     )
     more = f"{page}{{outline-color:{TEXT_COLOUR}}}"
     forced = f"html,{page}{{background:{GROUND_COLOUR}}}{page}{{outline-color:{TEXT_COLOUR}}}"
+    printed = (
+        f"{page}{{border:{width}px solid {TEXT_COLOUR};border-color:{colour};"
+        f"max-width:calc(100% - {number(2 * float(keyline['width']))}px)}}"
+    )
+    printed_more = f"{page}{{border-color:{TEXT_COLOUR}}}"
     return (
         f"@media screen{{{plain}}}"
         f"@media screen and (prefers-contrast:more){{{more}}}"
         f"@media screen and (forced-colors:active){{{forced}}}"
+        f"@media print{{{printed}}}"
+        f"@media print and (prefers-contrast:more){{{printed_more}}}"
+        f"@media print and (forced-colors:active){{{printed_more}}}"
     )
 
 
@@ -385,7 +417,8 @@ class PageFile(Canvas):
             '<meta charset="utf-8"/>\n'
             f'<meta name="viewport" content="{VIEWPORT}"/>\n'
             f"<title>{title}</title>\n"
-            f"<style>{self._font_faces()}{self._modes()}{SHEET}{fixed}{self._forced()}</style>\n"
+            f"<style>{self._font_faces()}{self._modes()}{SHEET}{PRINT_SHEET}{fixed}"
+            f"{self._forced()}</style>\n"
             "</head>\n"
             f"<body>{self._arrowheads()}{pages}</body>\n"
             "</html>\n"
