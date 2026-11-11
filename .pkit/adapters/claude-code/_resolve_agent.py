@@ -42,6 +42,21 @@ scratch directory the harness's environment note names is replaced by the agent
 workspace. The start hook (`session-start-hook.py`) gives every session and
 subagent the same sentence, and a test holds the two equal.
 
+It writes the agent's tool access from the answer of the agents area's reader,
+`.pkit/agents/tool_access.py`, never from the author's text (ADR-086 point 3):
+a grant as `tools`, a withheld list as Claude Code's `disallowedTools`, and no
+key for a definition that names neither (ADR-085 point 1). Given
+`--methodology-keys`, as the agent runner gives it, it keeps the methodology's
+keys, `tools` and `withheld`, and the runner writes Claude Code's (ADR-086
+point 4). A definition the reader refuses, or whose access Claude Code cannot
+enforce or translate, by the adapter's declaration of tool access
+(`tool-access.json`, which the reader applies), is refused before anything
+else, with exit status 3 (`TOOL_ACCESS_REFUSED`): the deploy then removes the
+copy it deployed before, since that copy may give tools the definition no
+longer gives (COR-013 point 7). Where the reader or the declaration cannot be
+read, the agent is not resolved, with exit status 1, and its earlier copy
+stays.
+
 The sync-managed check above is one this script *applies* but does not
 *define*. The sync-managed predicate and the write-carrying category registry live
 once, in the lifecycle layer's propagated `.pkit/lifecycle/ownership.py`,
@@ -58,15 +73,31 @@ invocation. No host pyproject.toml required.
 
 from __future__ import annotations
 
+import importlib.util
 import io
 import re
 import sys
 from pathlib import Path
+from types import ModuleType
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 # `<root>/.pkit/adapters/claude-code/_resolve_agent.py` → `<root>`.
 TARGET_ROOT = Path(__file__).resolve().parents[3]
+
+# The agents area's reader of an agent's tool access (ADR-086 point 1), and this
+# adapter's folder, which holds its declaration of tool access (point 4).
+TOOL_ACCESS_READER = TARGET_ROOT / ".pkit" / "agents" / "tool_access.py"
+ADAPTER_FOLDER = Path(__file__).resolve().parent
+
+# The flag the agent runner passes: keep the methodology's keys of tool access.
+METHODOLOGY_KEYS_FLAG = "--methodology-keys"
+
+# The exit status of a definition refused for its tool access. `deploy-agents.sh`
+# reads it to remove the copy it deployed before (COR-013 point 7); every other
+# failure leaves that copy.
+TOOL_ACCESS_REFUSED = 3
 
 # The frontmatter keys whose list items may carry `<category>` placeholders,
 # split by *channel* per ADR-052. The backbone scanner (`agents_overlay.py`)
@@ -128,6 +159,46 @@ WORKSPACE_NOTE = (
 # `deploy-agents.sh` prints these lines for an agent that still deploys; any
 # other stderr from a successful run (e.g. from `uv`) stays hidden.
 WARNING_PREFIX = "warning: "
+
+
+def load_module(path: Path, name: str) -> ModuleType:
+    """The module at *path*, loaded from its file, writing no bytecode beside it.
+
+    Raises when the file is absent or cannot be loaded; the caller names the cause.
+    """
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
+
+
+def write_tool_access(
+    fm_data: CommentedMap, access, keys: dict[str, str], methodology_keys: tuple[str, ...]
+) -> None:
+    """Write the reader's *access* into *fm_data* under *keys*, never the author's text.
+
+    The key written takes the place of the one the author wrote. Each entry is
+    written whole, with its argument, and an empty grant as an empty list. A
+    definition that names neither form gets no key (ADR-085 point 1, ADR-086
+    point 3).
+    """
+    position = next((index for index, key in enumerate(fm_data) if key in methodology_keys), 0)
+    for key in methodology_keys:
+        fm_data.pop(key, None)
+    if access.form is None:
+        return
+    entries = CommentedSeq(str(entry) for entry in access.entries)
+    entries.fa.set_flow_style()
+    fm_data.insert(position, keys[access.form], entries)
 
 
 def load_ownership():
@@ -230,14 +301,19 @@ def end_with_workspace_note(body: str) -> str:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 4:
+    args = argv[1:]
+    methodology_keys = METHODOLOGY_KEYS_FLAG in args
+    if methodology_keys:
+        args.remove(METHODOLOGY_KEYS_FLAG)
+    if len(args) != 3:
         print(
-            "usage: _resolve_agent.py <source_file> <agent_name> <overlay_file>",
+            "usage: _resolve_agent.py <source_file> <agent_name> <overlay_file> "
+            f"[{METHODOLOGY_KEYS_FLAG}]",
             file=sys.stderr,
         )
         return 2
 
-    source_file, agent_name, overlay_file = argv[1], argv[2], argv[3]
+    source_file, agent_name, overlay_file = args
 
     yaml = YAML()
     yaml.preserve_quotes = True
@@ -281,7 +357,53 @@ def main(argv: list[str]) -> int:
     fm_yaml = match.group(1)
     body = match.group(2)
 
+    # The tool access first, so a definition refused for it is refused whatever
+    # else it gets wrong, and the deploy removes its earlier copy (ADR-086 point 3).
+    try:
+        reader = load_module(TOOL_ACCESS_READER, "pkit_agents_tool_access")
+        read_tool_access = reader.tool_access
+        read_declaration = reader.read_declaration
+        declaration_path = reader.declaration_path
+        bad_declaration = reader.BadDeclaration
+        harness_refusal = reader.harness_refusal
+    except Exception as exc:
+        print(
+            f"{agent_name}: cannot read the agent's tool access: no reader at "
+            f".pkit/agents/tool_access.py, or none this resolver can call ({exc}).\n"
+            "Fix: run `pkit sync`, which copies the reader and this resolver together.",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        declaration = read_declaration(ADAPTER_FOLDER)
+    except bad_declaration as exc:
+        declaration, cause = None, f"cannot be read: {exc}"
+    else:
+        cause = "is not there"
+    if declaration is None:
+        print(
+            f"{agent_name}: cannot check the agent's tool access: the adapter's declaration of "
+            f"tool access, {declaration_path(ADAPTER_FOLDER).relative_to(TARGET_ROOT)}, "
+            f"{cause}.\nFix: run `pkit sync`, which copies it with this resolver.",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        access = read_tool_access(content)
+    except reader.Refused as exc:
+        print(f"{agent_name}: its tool access is refused: {exc}", file=sys.stderr)
+        return TOOL_ACCESS_REFUSED
+
     fm_data = yaml.load(io.StringIO(fm_yaml)) or {}
+
+    problem = harness_refusal(access, list(fm_data), declaration)
+    if problem is not None:
+        print(
+            f"{agent_name}: its tool access is refused, since {declaration.harness} cannot "
+            f"enforce or translate it: {problem}",
+            file=sys.stderr,
+        )
+        return TOOL_ACCESS_REFUSED
 
     def _placeholder_cats(items: object) -> list[str]:
         cats: list[str] = []
@@ -408,6 +530,8 @@ def main(argv: list[str]) -> int:
                 fm_data["reads"][k] = expand_list(fm_data["reads"][k], optional=True)
 
     carry_policy(fm_data, policy_overrides, f"overrides.{agent_name}", warn)
+    keys = {key: key for key in reader.KEYS} if methodology_keys else declaration.keys
+    write_tool_access(fm_data, access, keys, reader.KEYS)
     body = rebase_sibling_storyboards(fm_data, body, Path(source_file))
     body = end_with_workspace_note(body)
 

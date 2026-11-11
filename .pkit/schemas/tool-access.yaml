@@ -1,0 +1,47 @@
+# Tool access (ADR-086 point 4) — the shape of an adapter's declaration of tool
+# access, `.pkit/adapters/<name>/tool-access.json`.
+#
+# An agent's definition names its tool access in the methodology's terms
+# (COR-013 point 7), and the agents area's reader, `.pkit/agents/tool_access.py`,
+# reads it. What a harness takes is the adapter's to know, so each adapter that
+# deploys agents declares it here, as data, and the reader makes the adapter's
+# refusals against it. The adapter's deploy and runner give the reader their own
+# adapter's declaration, and `pkit refs validate` gives it each registered one,
+# so the three refuse alike (ADR-086 point 6). The declaration is JSON, since the
+# agent runner reads it under the system's Python. Its fields:
+#
+#   schema_version:  the version of this shape; the reader refuses one it does
+#                    not read, and a change of shape takes a new version and a
+#                    migration
+#   harness:         the harness's name, as a refusal says it
+#   keys:            the harness's key for each form, `tools` (a grant) and
+#                    `withheld` (a withheld list): the key the deploy writes
+#   name_forms:      the forms a tool's name may take, each a shape
+#   known_tools:     the harness's built-in tools, by name; a withheld name
+#                    outside them is refused, since it would withhold nothing
+#   withheld_admits: the shapes of the withheld entries the harness was
+#                    measured to withhold, which may be none; an adapter admits
+#                    one only where its support declaration answers
+#                    `session-agent-withheld-tools` as achievable
+#                    (`harness-support.yaml`, ADR-085 point 3)
+#
+# A shape holds a `pattern`, a regular expression in Python's dialect that
+# matches a whole name; `argument`, whether an argument in parentheses may narrow
+# the tool; and a `description`, the shape in words. Every name a pattern matches
+# is a name in the reader's own grammar too: the reader refuses any other before
+# it reads a declaration. A `$schema` key may point an editor at this file's
+# companion.
+#
+# Below is the declaration at its emptiest, which an adapter's author starts
+# from: no form, no tool, and no withheld entry admitted. So every tool a grant
+# or a withheld list names is refused until its author declares the harness's
+# terms.
+
+schema_version: 1
+harness: the harness
+keys:
+  tools: tools
+  withheld: withheld
+name_forms: []
+known_tools: []
+withheld_admits: []
