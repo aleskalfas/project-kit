@@ -18,6 +18,9 @@ from project_kit import write_categories as wcat
 REPO = Path(__file__).resolve().parents[1]
 OWNERSHIP = REPO / ".pkit" / "lifecycle" / "ownership.py"
 
+# The query's runner as the module ships it, taken before the autouse fixture replaces it.
+_ASK = wcat.ask
+
 CATEGORY = "drawing.work"
 OVERLAY = Path(".pkit") / "agents" / "project" / "overlay.yaml"
 
@@ -197,6 +200,28 @@ def test_the_query_runs_from_the_root_and_its_failure_is_no_answer(tmp_path: Pat
     assert isinstance(wcat.ask(root, category), wcat.NoAnswer)
     _answer(root, "visual/", note="the recorded location")
     assert wcat.ask(root, category) == wcat.Answer(("visual/",), "the recorded location")
+
+
+@pytest.mark.parametrize(
+    ("entry", "says"),
+    [
+        ("    query-contract: false\n", "does not declare the query contract"),
+        ("    query-contract: true\n    reads: [history]\n", "declares `reads`"),
+    ],
+)
+def test_a_leaf_that_breaks_the_query_contract_is_never_started(
+    tmp_path: Path, entry: str, says: str
+) -> None:
+    """The backbone refuses to start a default query whose leaf is no query, as
+    package validation reports it (ADR-088 point 1; REQ-007)."""
+    root = _project(tmp_path)
+    package = root / ".pkit" / "capabilities" / "drawing" / "package.yaml"
+    text = package.read_text(encoding="utf-8")
+    package.write_text(text.replace("    query-contract: true\n", entry), encoding="utf-8")
+    (category,) = wcat.installed(root)
+    answer = _ASK(root, category)
+    assert isinstance(answer, wcat.NoAnswer)
+    assert says in answer.reason
 
 
 # --- the check (point 3) ------------------------------------------------------
