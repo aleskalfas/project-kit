@@ -18,6 +18,7 @@ pkit:
         - UC-001
         - UC-080
         - UC-081
+        - UC-112
         - REQ-060
         - RS-SWE-001
         - .pkit/capabilities/software-engineering/README.md#installing-it

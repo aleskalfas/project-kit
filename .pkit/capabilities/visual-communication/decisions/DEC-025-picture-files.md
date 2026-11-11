@@ -211,6 +211,6 @@ Each finding below fails validation where it lies in a file the project can corr
   - **A part that shows something else where the brand gives no logo,** such as the site's name. A `when` that reads a role waits for a need.
   - **A picture in written code that code outside the location can find,** since the JSON writer writes the file's name in the brand's version, which only the library copy holds.
   - **A bound on a picture's file size.**
-  - **A notation's marks,** which reach a part with the icons a notation maps, in a later change (DEC-004 point 10).
+  - **A notation's marks,** such as its logo, wait for a later change (DEC-004 point 10). Its icons are outlines, which the record of a concept's sign decides ([visual-communication:DEC-036-concept-signs] point 1).
   - **A picture that reads another piece,** so that a site shown in a slide follows the site, waits.
   - **An SVG file as a picture, and a picture cropped to fill its frame.** A person saves a logo as a PNG large enough for its largest frame.
