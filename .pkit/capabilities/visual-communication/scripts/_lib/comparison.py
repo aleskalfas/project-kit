@@ -23,8 +23,9 @@ and the record that sets it), the segment, and whether the later number allows i
 
 - *any library:* its kind, and the major of each library it builds on (DEC-003 point 6);
 - *components:* each component the earlier version marks stable or deprecated, its fields,
-  options, states, exposed parts, ends, lists and layouts with their slots, and whether a
-  top asks for a height (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8). An
+  options, states, exposed parts, ends, lists and layouts with their slots, whether a top
+  asks for a height, and a top's physical size (DEC-003 points 6 and 7, DEC-009 to DEC-012,
+  DEC-022 point 8, DEC-034 point 3). An
   experimental component may change in any release, so only its arrival is named, as for
   any new component;
 - *a component's tokens:* those of each component the earlier version marks stable or
@@ -50,6 +51,7 @@ change of its schema, such as its description, is neither a break nor an additio
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -609,10 +611,11 @@ def _layouts(
     found: _Found,
 ) -> None:
     """A top's layouts and their slots (DEC-003 point 6, DEC-009 point 7), whether its
-    layouts are its pages' forms (DEC-010 point 7), and whether it asks for a height, which
-    every page's size follows (DEC-022 point 8). A layout's height, said, changed or
-    dropped, breaks nothing: a top that asks for no height needs one in each of its
-    layouts, which validation holds to, and a page under a top that asks for one gets it."""
+    layouts are its pages' forms (DEC-010 point 7), its physical size (`_physical_size`),
+    and whether it asks for a height, by a formula or through that size, which every page's
+    size follows (DEC-022 point 8). A layout's height, said, changed or dropped, breaks
+    nothing: a top that asks for no height needs one in each of its layouts, which
+    validation holds to, and a page under a top that asks for one gets it."""
     if later.top and earlier.forms != later.forms:
         what = (
             "makes its layouts its pages' forms"
@@ -621,13 +624,14 @@ def _layouts(
         )
         found.broken(where, what, "DEC-010 point 7")
         return
-    if later.top and ("height" in earlier.preferred) != ("height" in later.preferred):
-        what = (
-            "comes to ask for a height"
-            if "height" in later.preferred
-            else "ceases to ask for a height"
-        )
-        found.broken(where, what, "DEC-022 point 8")
+    if later.top and not _physical_size(where, earlier, later, found):
+        if earlier.asks_for("height") != later.asks_for("height"):
+            what = (
+                "comes to ask for a height"
+                if later.asks_for("height")
+                else "ceases to ask for a height"
+            )
+            found.broken(where, what, "DEC-022 point 8")
     layouts_e, layouts_l = _layouts_of(data_e), _layouts_of(data_l)
     _named(where, "layout", layouts_e, layouts_l, "DEC-003 point 6", "DEC-009 point 7", found)
     forms_e, forms_l = layout.page_forms(data_e), layout.page_forms(data_l)
@@ -656,6 +660,38 @@ def _layouts(
                         else "ceases to hold pages"
                     )
                     found.broken(f"{at}, slot `{slot}`", what, "DEC-003 point 6")
+
+
+def _physical_size(
+    where: str, earlier: layout.Component, later: layout.Component, found: _Found
+) -> bool:
+    """A top's physical size (DEC-034 point 3): one it comes to declare, ceases to, or whose
+    proportion changes breaks, since every page's height follows it. A size changed in the
+    same proportion breaks nothing: each page draws as before, only larger or smaller in
+    print. Two proportions are the same where the cross products of their sides are equal,
+    so another A size, such as A2 against A1, whose sides are rounded to whole millimetres,
+    changes it. Gives whether it found a break, so a change of the height
+    the top asks for is not reported twice."""
+    size_e, size_l = earlier.physical_size, later.physical_size
+    if size_e is None and size_l is None:
+        return False
+    if size_e is None or size_l is None:
+        what = "comes to declare" if size_e is None else "ceases to declare"
+        found.broken(where, f"{what} a physical size", "DEC-034 point 3")
+        return True
+    if not math.isclose(size_e[0] * size_l[1], size_l[0] * size_e[1], rel_tol=1e-12):
+        found.broken(
+            where,
+            f"changes its physical size's proportion, from {_mm(size_e)} to {_mm(size_l)}",
+            "DEC-034 point 3",
+        )
+        return True
+    return False
+
+
+def _mm(size: tuple[float, float]) -> str:
+    """A physical size, as a message names it."""
+    return f"{size[0]} by {size[1]} mm"
 
 
 def _layouts_of(data: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
