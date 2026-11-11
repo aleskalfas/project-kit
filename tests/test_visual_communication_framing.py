@@ -385,7 +385,7 @@ def test_a_point_outside_the_pixels_is_refused(tmp_path: Path) -> None:
             {"points": {}, "programs": {"blender": "4.2"}},
             "it called `blender`, which its declaration does not name under `programs`",
         ),
-        ({"points": {}, "frames": {}}, "returned `frames`, which seam 5 does not read"),
+        ({"points": {}, "frames": {}}, "returned `frames`, which seam 6 does not read"),
         ({"points": {}, "losses": {}}, "its `losses` is not a list"),
         (
             {"points": {}, "losses": [{"plugin": "square", "what": "line", "did": "lost"}]},
