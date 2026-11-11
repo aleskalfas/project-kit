@@ -589,7 +589,7 @@ answers:
     revalidated:
       at: 2026-11-11T08:35:07Z
       outcome: unchanged
-      unchanged-because: It anchors PRJ-004 and ADR-063 for the operator, who installs the CLI. PRJ-004 adds the candidate tag, which latest never names, and ADR-063 has the tool step install no candidate, even under pkit upgrade --pre, so the operator still installs a final release. So the use case holds.
+      unchanged-because: "Main's answers, made apart, updated the use case's words under SAN's judgement rules and judged start-work's docstring on its refusals and its pool warning, neither of which changes how a new session takes up the Task its clone claimed. This change has PRJ-004 add the candidate tag, which latest never names, and ADR-063 have the tool step install no candidate, even under pkit upgrade --pre, for the operator, who installs the CLI. Judged together, the use case holds."
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
     read:
       - 20261102T222657Z-8f1fae4a.yaml
