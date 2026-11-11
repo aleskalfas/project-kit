@@ -341,7 +341,6 @@ TERM-site:
         record:
           - visual-communication:DEC-018#5
           - visual-communication:DEC-022#1
-          - visual-communication:DEC-022#2
 TERM-stable:
   name: stable
   status: active
