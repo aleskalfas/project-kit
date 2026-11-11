@@ -40,6 +40,14 @@ DEC-012).
   with `connect`. It declares no option `start` or `end`;
 - `exposes`: the parts a component that places it may read. An exposed image part
   exposes its picture's points too, as parts of zero size of the component itself;
+- `tokens`: its component tokens, each by its name, `{type, default}`, at
+  `component.<library>.<component>.<name>` (DEC-035 points 1 and 2). The scope reads and
+  judges each declaration (`tokens.read_component_tokens`). Here, only the component that
+  declares a token reads it, by its full path, wherever it reads a role: a role a part,
+  a formula or a top's drawing of a layout reads under `component` that the component does
+  not declare is `component-token-undeclared`. A piece's own component declares none
+  (`component-token-local`, DEC-035 point 5). What it reads is kept (`token_reads`), so a
+  token its file reads nowhere is found (`unread_tokens`);
 - `layouts`, on a top component. Format 1's form is one layout, `{<layout>: {slots:
   {<field>: {pages: true}?}}}`, whose slots name fields of the top and whose drawing is
   the top's parts. What a slot of pages places is a page. A top component with no slot of
@@ -173,7 +181,8 @@ from typing import Any, TypeVar
 from _lib import formula as fm
 from _lib import names
 from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, UnvaluedRole
-from _lib.findings import FAILS, Finding
+from _lib.findings import ATTENTION, FAILS, Finding
+from _lib.findings import FACT as STATED
 from _lib.keys import AxisLike, key_order
 from _lib.pictures import Judged, Picture
 from _lib.text import Broken, Faces, Run, Style, break_runs
@@ -258,8 +267,22 @@ STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
-    "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "layouts",
+    "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens", "layouts",
 )  # fmt: skip
+
+#: The key under which a component declares its component tokens (DEC-035 point 1).
+TOKENS = "tokens"
+
+#: The findings on a component's reading of component tokens (DEC-035 points 3, 5 and 9): a
+#: token it reads and does not declare, a token in a piece's own component, and a token
+#: its file reads nowhere.
+TOKEN_UNDECLARED = "component-token-undeclared"
+TOKEN_LOCAL = "component-token-local"
+TOKEN_UNREAD = "component-token-unread"
+
+#: The statuses whose components a library promises, so that a token it reads nowhere is
+#: kept until a major (DEC-003 point 7, DEC-035 point 6).
+PROMISED = ("stable", "deprecated")
 
 #: The keys of a list's entry under `lists`, and of an arrangement field's (DEC-010,
 #: DEC-011).
@@ -763,8 +786,57 @@ class Component:
         # declares `ends` of another shape is refused for that alone.
         self.takes_ends = data.get("ends") is True
         self._declares_ends = "ends" in data
+        self.status = data.get("status")
+        # The path of each component token it declares, and each it reads (DEC-035 points 1
+        # to 3).
+        self.tokens = self._declared_tokens(data)
+        self.token_reads: set[str] = set()
         self._read(data)
         self._read_runs(data)
+
+    def _declared_tokens(self, data: Mapping[str, Any]) -> frozenset[str]:
+        """The path of each component token the component declares, by the names `tokens`
+        maps, whatever their declarations, which the scope judges (DEC-035 points 1 and
+        2). A piece's own component declares none, so its `tokens` is a finding and
+        declares nothing (DEC-035 point 5)."""
+        declared = data.get(TOKENS)
+        if declared is None:
+            return frozenset()
+        library, _, name = self.use.partition("/")
+        if library == names.PIECE:
+            self._issue(
+                TOKEN_LOCAL,
+                TOKENS,
+                "declares component tokens, and a piece's own component declares none: no "
+                "brand reaches it, so its part reads the role the token would alias",
+            )
+            return frozenset()
+        if not isinstance(declared, Mapping):
+            return frozenset()
+        return frozenset(f"{names.COMPONENT}.{library}.{name}.{token}" for token in declared)
+
+    @property
+    def unread_tokens(self) -> list[str]:
+        """The path of each component token the component declares that its file reads
+        nowhere, a top's drawings of its layouts included (DEC-035 point 9)."""
+        reads = set(self.token_reads)
+        for drawing in self.drawings.values():
+            reads |= drawing.token_reads
+        return sorted(self.tokens - reads)
+
+    def _read_role(self, where: str, path: Any) -> None:
+        """Notes a role the component reads at the key path `where`. A component token is
+        read only by the component that declares it (DEC-035 point 3)."""
+        if not isinstance(path, str) or path.split(".")[0] != names.COMPONENT:
+            return
+        self.token_reads.add(path)
+        if path not in self.tokens:
+            self._issue(
+                TOKEN_UNDECLARED,
+                where,
+                f"reads `{path}`, a component token it does not declare: only the component "
+                "that declares a token reads it",
+            )
 
     def ties(self, part: Part) -> ListFields | None:
         """What the component declares for the list of ties `part` repeats over; None where
@@ -1297,7 +1369,9 @@ class Component:
                 "a top whose layouts are its pages' forms draws nothing around its pages: "
                 "each layout's `parts` draw a whole page",
             )
-        shared = ("options", "states", "colour", "values")
+        # A layout's drawing lies in the top's file, so it reads the top's tokens (DEC-035
+        # point 3).
+        shared = ("options", "states", "colour", "values", TOKENS)
         others = {name: s for name, s in self.fields.items() if name not in forms.fields}
         layouts = data.get("layouts")
         if not isinstance(layouts, Mapping) or not layouts:
@@ -1574,10 +1648,14 @@ class Component:
                 return
         if not names.is_token_path(value):
             self._shape(where, f"`{value}` is not a role's token path, nor `{FAMILY}<member>`")
+            return
+        self._read_role(where, value)
 
     def _role(self, where: str, value: Any) -> None:
         if not names.is_token_path(value):
             self._shape(where, f"`{value}` is not a role's token path")
+            return
+        self._read_role(where, value)
 
     def _words(self, words: tuple[str, ...] | None) -> Callable[[str, Any], None]:
         def check(where: str, value: Any) -> None:
@@ -1603,6 +1681,9 @@ class Component:
         except fm.FormulaError as error:
             self._issue("formula-unreadable", where, str(error))
             return
+        for ref in formula.references():
+            if isinstance(ref, fm.Role):
+                self._read_role(where, ref.path)
         for ref in formula.references():
             problem = self._unreachable(ref)
             if problem:
@@ -1717,6 +1798,38 @@ class Component:
             )
         self._value_dims[name] = found.pop() if len(found) == 1 else None
         return self._value_dims[name]
+
+
+def unread_token_findings(component: Component, *, file: str, library: str) -> list[Finding]:
+    """A finding for each component token `component` declares that its file reads nowhere
+    (DEC-035 point 9), in its file `file` of the library version `library`. A brand's value
+    for it is only wasted, so none fails. In an experimental component it asks the
+    library's owner for attention, since the component may drop the token at once; in a
+    stable or deprecated one it states a fact, since the token stays until the library's
+    next major (DEC-035 point 6)."""
+    name = component.use.partition("/")[0]
+    promised = component.status in PROMISED
+    found = []
+    for path in component.unread_tokens:
+        message = (
+            f"`{component.use}` declares the component token `{path}`, and its file reads it "
+            "nowhere, so a brand's value for it changes nothing"
+        )
+        if promised:
+            message += f": a {component.status} component keeps it until the library's next major"
+        found.append(
+            Finding(
+                TOKEN_UNREAD,
+                STATED if promised else ATTENTION,
+                message,
+                file=file,
+                where=f"{TOKENS}.{path.rpartition('.')[2]}",
+                fix="" if promised else "read it where a part draws, or take it out of `tokens`",
+                library=library,
+                who="" if promised else f"the owner of `{name}`",
+            )
+        )
+    return found
 
 
 # --- one scene's context ------------------------------------------------------------------
@@ -2341,6 +2454,13 @@ class Instance:
                 self._note(
                     "override",
                     f"{self.trace}: `override` points `{name}` at `{role}`, not a role",
+                    given="override",
+                )
+            elif role.split(".")[0] == names.COMPONENT:
+                self._note(
+                    "override",
+                    f"{self.trace}: `override` points `{name}` at `{role}`, a component token, "
+                    "which only its component reads: point it at a role",
                     given="override",
                 )
             else:

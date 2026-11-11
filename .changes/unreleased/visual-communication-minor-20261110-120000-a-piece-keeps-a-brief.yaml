@@ -15,7 +15,7 @@ body: >
   language. The check fails, as `brief-page` and `brief-path`, a page or a key
   path the brief names that names nothing in the content of the piece's
   source language, and reads no final piece's brief but for its binding. No
-  command writes a brief, and nothing drawn reads it: it is no input of a
+  command changes what a brief says, and nothing drawn reads it: it is no input of a
   findings record or of an export's fingerprint, so a change to it stales
   nothing. A fingerprint kept from before that read a file of that name in a
   piece's folder finds it no longer read, until the next render or export.

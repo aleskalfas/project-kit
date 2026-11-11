@@ -26,6 +26,7 @@ from tests.visual_communication_project import (
     FOUNDATIONS,
     RELEASED_FOUNDATIONS,
     TEST_BRAND,
+    TEST_PARTS,
     add_library,
     bound,
     copy_library,
@@ -45,7 +46,8 @@ Change = Callable[[Any], Any]
 
 #: A stable pattern: its fields, one of them of runs, its options, a state, an exposed
 #: part, and a list whose items name their component and carry an arrangement field. It
-#: paints and spaces with the library's own roles.
+#: paints and spaces with the library's own roles, and strokes its rim with a token of its
+#: own, which defaults to the library's rim.
 CARD = bound(
     "component",
     status="stable",
@@ -65,8 +67,14 @@ CARD = bound(
     states={"done": {"colour": "green"}},
     exposes=["title"],
     lists={"tags": {"component": "tag", "arrangement": {"span": {"words": ["narrow", "wide"]}}}},
+    tokens={"rim": {"type": "color", "default": "{parts.rim}"}},
     parts={
         "back": {"box": {"fill": "parts.paper"}, "width": "=:width", "height": "=:height"},
+        "rim": {
+            "box": {"fill": "parts.paper", "stroke": "component.parts.card.rim"},
+            "width": "=:width",
+            "height": "=:height",
+        },
         "title": {
             "text": {"content": "title", "style": "type.heading", "fill": "parts.ink"},
             "width": "=:width",
@@ -200,13 +208,21 @@ OLD = bound(
     parts={"box": {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"}},
 )
 
-#: An experimental component, the only one that reads the library's role `parts.glow`.
+#: An experimental component, the only one that reads the library's role `parts.glow`,
+#: through a token of its own.
 SKETCH = bound(
     "component",
     status="experimental",
     about="A glowing box, small or large.",
     options={"size": ["small", "large"]},
-    parts={"box": {"box": {"fill": "parts.glow"}, "width": "=:width", "height": "=:height"}},
+    tokens={"glow": {"type": "color", "default": "{parts.glow}"}},
+    parts={
+        "box": {
+            "box": {"fill": "component.parts.sketch.glow"},
+            "width": "=:width",
+            "height": "=:height",
+        }
+    },
 )
 
 #: An experimental component the patterns draw their items with.
@@ -217,12 +233,13 @@ TAG = bound(
     parts={"box": {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"}},
 )
 
-#: The library's own roles: its ink, paper and gap end their chains at shared roles; its
-#: glow has no default, and only an experimental component reads it.
+#: The library's own roles: its ink, paper, gap and rim end their chains at shared roles;
+#: its glow has no default, and only an experimental component reads it.
 ROLES = {
     "parts.ink": {"type": "color", "default": "{text-primary}"},
     "parts.paper": {"type": "color", "default": "{background}"},
     "parts.gap": {"type": "dimension", "default": "{space.2}"},
+    "parts.rim": {"type": "color", "default": "{line}"},
     "parts.glow": {"type": "color"},
 }
 PAIRS = [{"text": "parts.ink", "under": "parts.paper", "level": "text"}]
@@ -361,6 +378,42 @@ def new_role(default: str | None) -> Change:
         card(spec)["parts"]["back"]["box"]["stroke"] = "parts.edge"
 
     return change
+
+
+def rim(spec: Any) -> Any:
+    return card(spec)["tokens"]["rim"]
+
+
+def card_token(name: str, default: str) -> Change:
+    """A new token of the card, which its rim's box fills with."""
+
+    def change(spec: Any) -> None:
+        card(spec)["tokens"][name] = {"type": "color", "default": default}
+        card(spec)["parts"]["rim"]["box"]["fill"] = f"component.parts.card.{name}"
+
+    return change
+
+
+def without_rim(spec: Any) -> None:
+    del card(spec)["tokens"]["rim"]
+    card(spec)["parts"]["rim"]["box"]["stroke"] = "line"
+
+
+def rim_as_dimension(spec: Any) -> None:
+    """The card's rim, a width its rim's box strokes with, no longer a colour."""
+    put(card(spec)["tokens"], "rim", {"type": "dimension", "default": "{space.1}"})
+    box = card(spec)["parts"]["rim"]["box"]
+    box.update({"stroke": "line", "stroke-width": "=@component.parts.card.rim"})
+
+
+def without_glow(spec: Any) -> None:
+    sketch = spec["components"]["sketch"]
+    del sketch["tokens"]
+    sketch["parts"]["box"]["box"]["fill"] = "parts.glow"
+
+
+#: The card's rim token, as the comparison names it.
+RIM = "`parts/card`, token `component.parts.card.rim`"
 
 
 #: Each change, the breaks the comparison names for it, and an addition among those it
@@ -735,6 +788,54 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         [],
         "pair `parts.glow` on `parts.paper`: is new (DEC-008 point 7)",
     ),
+    # DEC-035 points 4 and 6: a stable component's tokens, and the roles their defaults read.
+    "a stable component's token removed": (
+        without_rim,
+        [f"{RIM}: is removed (DEC-003 point 6, DEC-035 point 6)"],
+        None,
+    ),
+    "a stable component's token of another type": (
+        rim_as_dimension,
+        [f"{RIM}: is of type `dimension`, where it was `color` (DEC-003 point 6, DEC-035 point 6)"],
+        None,
+    ),
+    "a stable component's token whose chain no longer ends at a shared role": (
+        lambda s: put(rim(s), "default", "{parts.glow}"),
+        [f"{RIM}: no longer ends its chain of defaults at a shared role (DEC-035 point 6)"],
+        None,
+    ),
+    "a stable component's token pointed at another role": (
+        lambda s: put(rim(s), "default", "{line}"),
+        [],
+        None,
+    ),
+    "a part that stops reading a token": (
+        lambda s: put(card(s)["parts"]["rim"]["box"], "stroke", "line"),
+        [],
+        None,
+    ),
+    "a role a stable component's token reads removed": (
+        lambda s: (s["roles"].pop("parts.rim"), put(rim(s), "default", "{line}")),
+        ["role `parts.rim`: is removed (DEC-003 point 6, DEC-008 point 7)"],
+        None,
+    ),
+    "a new token whose chain ends at no shared role": (
+        card_token("glow", "{parts.glow}"),
+        [],
+        "`parts/card`, token `component.parts.card.glow`: is new (DEC-035 point 6)",
+    ),
+    "a new token that reads a new role with no default": (
+        lambda s: (
+            put(s["roles"], "parts.edge", {"type": "color"}),
+            card_token("edge", "{parts.edge}")(s),
+        ),
+        [
+            "role `parts.edge`: is new, read by a stable or deprecated component, and its "
+            "chain of defaults ends at no shared role (DEC-008 point 7)"
+        ],
+        "`parts/card`, token `component.parts.card.edge`: is new (DEC-035 point 6)",
+    ),
+    "an experimental component's token removed": (without_glow, [], None),
 }
 
 
@@ -1102,6 +1203,55 @@ def test_a_brands_exported_token_removed_breaks_it_and_a_new_one_is_an_addition(
     assert (said(added.breaks), said(added.additions)) == (
         [],
         ["exported token `size.poster`: is new (DEC-004 point 5)"],
+    )
+
+
+#: The test library's tag's token, which a brand that names the library may give a value.
+TAG_FILL = "component.test-parts.tag.fill"
+
+
+def parts_brand_location(tmp: Path, version: str, gives_fill: bool) -> Any:
+    """A location that holds the foundations, the test library and the test brand at
+    `version`, which names the library and gives its warning a value, and gives the tag's
+    token one where `gives_fill` (DEC-035 point 7)."""
+    root = project(tmp)
+    foundations(root)
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    folder = copy_library(root, TEST_BRAND, "test-brand", version)
+    named = [{"name": "foundations", "major": 1}, {"name": "test-parts", "major": 1}]
+    edit(folder / "library.yaml", lambda data: data.update(version=version, **{"builds-on": named}))
+    path = folder / "tokens" / "base.tokens.json"
+    tokens = json.loads(path.read_text(encoding="utf-8"))
+    tokens["test-parts"] = {"warning": {"$type": "color", "$value": "{scheme.ink}"}}
+    if gives_fill:
+        fill = {"$type": "color", "$value": "{scheme.ink}"}
+        tokens["component"] = {"test-parts": {"tag": {"fill": fill}}}
+    path.write_text(json.dumps(tokens), encoding="utf-8")
+    return libraries.Held(root, LOCATION)
+
+
+def test_a_component_token_a_brand_ceases_to_give_breaks_it_and_a_new_one_is_an_addition(
+    tmp_path: Path,
+) -> None:
+    """A brand exports each component token it gives a value, as it does a library's own
+    role (DEC-004 point 5, DEC-035 point 7)."""
+    version = libraries.Version.parse
+
+    def compared_fill(tmp: Path, earlier: bool, later: bool) -> Any:
+        was = parts_brand_location(tmp / "earlier", "1.0.0", earlier)
+        now = parts_brand_location(tmp / "later", "1.1.0", later)
+        return comparison.compare(
+            full_read.read(was, "test-brand", version("1.0.0")),
+            full_read.read(now, "test-brand", version("1.1.0")),
+        )
+
+    removed = compared_fill(tmp_path / "removed", True, False)
+    added = compared_fill(tmp_path / "added", False, True)
+
+    assert said(removed.breaks) == [f"exported token `{TAG_FILL}`: is removed (DEC-004 point 5)"]
+    assert (said(added.breaks), said(added.additions)) == (
+        [],
+        [f"exported token `{TAG_FILL}`: is new (DEC-004 point 5)"],
     )
 
 
