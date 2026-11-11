@@ -1,0 +1,39 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# The test brand's drawing of the poster's one layout (visual-communication DEC-034 point
+# 1), which the project adds to its copy of the brand (UC-104, step 2). It declares nothing
+# the content gives: it takes the poster's fields. Each part that shows a field is named
+# after it (point 5). It writes its own width, and no height, which the poster's physical
+# size sets (point 2). It carries no status (point 8).
+about: >-
+  The test brand's poster: a band of the accent across its top, the title under it, and the
+  details at its foot.
+draws: {top: test-print/poster, layout: sheet}
+
+values:
+  margin: "=@space.4 * 2"
+
+parts:
+  background:
+    box: {fill: surface}
+    width: "=:width"
+    height: "=:height"
+  band:
+    box: {fill: accent}
+    width: "=:width"
+    height: "=@space.4"
+  title:
+    text: {content: title, style: type.heading, fill: text-primary}
+    x: "=margin"
+    y: "=band.bottom + margin"
+    width: "=:width - 2 * margin"
+  details:
+    when: details
+    text: {content: details, style: type.body, fill: text-secondary}
+    x: "=margin"
+    y: "=:height - margin - details.height"
+    width: "=:width - 2 * margin"
+
+preferred:
+  width: "=@size.figure"
