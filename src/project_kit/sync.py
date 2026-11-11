@@ -47,7 +47,6 @@ from project_kit.manifest import (
 )
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
-    DISTRIBUTION_HTTPS_URL,
     fell_back_from_pin,
     is_source_checkout,
     read_version_pin,
@@ -695,11 +694,12 @@ def fallback_remedies(command: str, pin: str) -> list[str]:
     does `pkit upgrade`'s refusal under the fallback (point 9).
 
     The router runs the pin whenever it can fetch it, so the remedies are
-    reconnecting, the pin run through `uvx`, or the pin's version installed
-    from the HTTPS URL where SSH keys fail. Moving on purpose is `pkit unpin`,
-    then `pkit upgrade`, never a bare `pkit upgrade`. A pin that is no version
-    names no release the router can ever fetch, so it gets no command built
-    from it: it is replaced with `pkit pin`, or the project moves on purpose.
+    reconnecting, or the pin run through `uvx`. An install of the pin's version
+    by hand fetches from the URL the router fetches from (ADR-090 point 1), so it
+    is no remedy of its own. Moving on purpose is `pkit unpin`, then `pkit
+    upgrade`, never a bare `pkit upgrade`. A pin that is no version names no
+    release the router can ever fetch, so it gets no command built from it: it
+    is replaced with `pkit pin`, or the project moves on purpose.
     """
     if _parse_version(pin) is None:
         return [
@@ -711,9 +711,6 @@ def fallback_remedies(command: str, pin: str) -> list[str]:
         f"Reconnect and run `pkit {command}` again: the router runs the pin whenever it can "
         f"fetch it. Or run the pin through uvx: `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} "
         f"project-kit {command}`.",
-        "Where SSH keys are what fail, install the pin's version from the repository's "
-        f"HTTPS URL: `uv tool install --force {DISTRIBUTION_HTTPS_URL}@v{pin}`. The router "
-        "then runs it with no fetch.",
         "To move the project on purpose: `pkit unpin`, then `pkit upgrade`.",
     ]
 

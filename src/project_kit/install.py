@@ -1397,7 +1397,8 @@ LATEST_TAG = "latest"
 
 
 def recommended_install_command() -> str:
-    """The install of pkit's highest release, the canonical form (PRJ-004).
+    """The install of pkit's highest release, the canonical form (PRJ-004), over
+    the repository's public HTTPS URL (PRJ-015 point 1).
 
     It names the tag `latest`, which by design only the release-tag workflow
     writes, and only onto a release's commit. So, like a release tag's, the
