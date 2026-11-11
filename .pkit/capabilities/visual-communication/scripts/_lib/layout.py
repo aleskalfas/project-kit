@@ -365,7 +365,8 @@ GIVEN_BY_FIELD = ("concept", "state", "override")
 SWITCH = "by"
 
 #: The mark of a name the engine hands a component, such as `:width`. A switch or a `when`
-#: by `:<axis>` reads the mode of that size axis (DEC-021 point 3).
+#: by `:<axis>` reads the mode of that size axis (DEC-021 point 3), and one by `:as`
+#: whether the instance is a page (`AS`).
 MARKED = ":"
 
 #: The start of the source of a value a switch by a size axis chose (DEC-021 point 7).
@@ -376,6 +377,18 @@ SIZE = "size:"
 #: one list that do not draw each item once at every size (DEC-021 point 7).
 SIZE_SWITCH = "size-switch"
 SIZE_REPEAT = "size-repeat"
+
+#: The marked name by which a drawing of a layout reads whether its instance is a page, or
+#: part of a page, and its values, the default first. The engine sets it from where the
+#: instance lies in its piece, never from content, and a value a switch by it chose names
+#: it as its source, a kind of its own (DEC-034 point 7).
+AS = ":as"
+PLACED_AS = ("page", "part")
+
+#: The finding on a switch or a `when` by `:as` in a component that is no drawing of a
+#: layout, or that names a value `:as` does not take, or no branch for its default
+#: (DEC-034 points 7 and 10).
+AS_SWITCH = "as-switch"
 
 #: The key by which a page of a top whose layouts are its pages' forms names its layout,
 #: which the format fixes on such a page alone (DEC-010 point 5).
@@ -720,32 +733,58 @@ def _leaves(value: Any) -> list[Any]:
     return [value]
 
 
-def _by_size(value: Any) -> bool:
-    """Whether `value` is a switch by a size, whose `by` is a marked name (DEC-021 point
-    3)."""
+def _by_marked(value: Any) -> bool:
+    """Whether `value` is a switch by a marked name: by a size (DEC-021 point 3), or by
+    `:as` (DEC-034 point 7)."""
     by = value.get(SWITCH) if isinstance(value, Mapping) else None
     return isinstance(by, str) and by.startswith(MARKED)
+
+
+def _by_size(value: Any) -> bool:
+    """Whether `value` is a switch by a size, whose `by` is a marked name other than `:as`
+    (DEC-021 point 3)."""
+    return _by_marked(value) and value[SWITCH] != AS
+
+
+def _as_branch(switch: Mapping[str, Any], placed_as: str) -> str:
+    """The branch a switch by `:as` takes where its instance lies as `placed_as`, one of
+    `PLACED_AS`: that value, where the switch names it, else the default (DEC-034 point
+    7)."""
+    return placed_as if placed_as in switch else PLACED_AS[0]
 
 
 def _may_draw(when: Any, modes: Mapping[str, str], axes: Mapping[str, AxisLike]) -> bool:
     """Whether a part whose `when` is `when` may be drawn where each size axis takes the mode
     `modes` gives it, as `Instance._when` draws it: with no `when`, always; by a field or an
     option's words, on some content, so it may; by a size, by the branch of that mode, else
-    of the axis's default, `true` or a `when` of those forms (DEC-021 points 3 and 5). A
-    `false`, and a `when` of no form, never draws it."""
+    of the axis's default (DEC-021 points 3 and 5); by `:as`, by the branch of either of
+    its values, since its instance may lie as either (DEC-034 point 7). A branch draws it
+    where it is `true` or a `when` of those forms. A `false`, and a `when` of no form,
+    never draws it."""
     if when is None:
         return True
-    if _by_size(when):
+    if not _by_marked(when):
+        return _may_hold(when)
+    if when[SWITCH] == AS:
+        taken = [when.get(_as_branch(when, placed_as)) for placed_as in PLACED_AS]
+    else:
         axis = str(when[SWITCH])[len(MARKED) :]
-        when = when.get(modes[axis], when.get(axes[axis].default))
-        if isinstance(when, bool):
-            return when
+        taken = [when.get(modes[axis], when.get(axes[axis].default))]
+    return any(branch if isinstance(branch, bool) else _may_hold(branch) for branch in taken)
+
+
+def _may_hold(when: Any) -> bool:
+    """Whether a `when` by a field or an option's words may hold, on some content: one of
+    either form."""
     return isinstance(when, str) or (isinstance(when, Mapping) and len(when) == 1)
 
 
 def source_of_choice(chosen: Any) -> str:
-    """The source of a value a switch chose: the size axis it reads, `size:<axis>`, or the
-    option it names, `option:<name>` (DEC-005 point 5, DEC-021 point 7)."""
+    """The source of a value a switch chose: `:as`, which is a kind of its own (DEC-034
+    point 7), the size axis it reads, `size:<axis>`, or the option it names,
+    `option:<name>` (DEC-005 point 5, DEC-021 point 7)."""
+    if chosen == AS:
+        return AS
     if isinstance(chosen, str) and chosen.startswith(MARKED):
         return f"{SIZE}{chosen[len(MARKED) :]}"
     return f"option:{chosen}"
@@ -881,6 +920,13 @@ class Component:
         self.drawings: dict[str, Component] = {}
         # The layout this component draws, where it is a top's own drawing of one.
         self.layout = layout
+        # Whether it is a drawing of a layout, the top's own or a brand's, which alone reads
+        # `:as` (DEC-034 point 7): a brand's drawing, a layout's drawing of a page, or a top
+        # whose one layout is the whole top, whose parts are that layout's drawing (DEC-009
+        # point 1).
+        self.draws_layout = (
+            draws is not None or layout is not None or (self.top and page_forms(data) is None)
+        )
         self._ctx = ctx
         self._value_dims: dict[str, int | None] = {}
         self._roles_reported: set[str] = set()
@@ -1557,15 +1603,15 @@ class Component:
             )
         return True
 
-    def _read_when(self, where: str, when: Any, *, branch: bool = False) -> None:
-        """A part's `when`: a field, an option's words, or a switch by a size whose each
-        branch is `true`, `false` or one of those, never a switch again (DEC-021 point 3).
-        `branch` reads one branch of such a switch."""
-        if _by_size(when) and not branch:
-            axis = self._size_axis(where, when[SWITCH], "`when` switches")
-            for mode in self._size_branches(where, when, axis):
-                if not isinstance(when[mode], bool):
-                    self._read_when(f"{where}.{mode}", when[mode], branch=True)
+    def _read_when(self, where: str, when: Any, *, by: str = "") -> None:
+        """A part's `when`: a field, an option's words, or a switch by a size, or by `:as`,
+        whose each branch is `true`, `false` or one of those, never a switch again (DEC-021
+        point 3, DEC-034 point 7). Given `by`, the marked name of such a switch, it reads
+        one of its branches."""
+        if _by_marked(when) and not by:
+            for value in self._marked_branches(where, when, "`when` switches"):
+                if not isinstance(when[value], bool):
+                    self._read_when(f"{where}.{value}", when[value], by=str(when[SWITCH]))
             return
         if isinstance(when, str):
             if when not in self.fields:
@@ -1582,11 +1628,11 @@ class Component:
             else:
                 self.option_reads.setdefault(name, set()).update(listed)
             return
-        if branch:
+        if by:
             self._shape(
                 where,
-                "a branch of a `when` by a size takes `true`, `false`, a field, or "
-                "`{<option>: [<word>, ...]}`",
+                f"a branch of a `when` by {'`:as`' if by == AS else 'a size'} takes `true`, "
+                "`false`, a field, or `{<option>: [<word>, ...]}`",
             )
             return
         self._shape(
@@ -1876,12 +1922,11 @@ class Component:
             check(where, value)
             return
         by = value[SWITCH]
-        if _by_size(value):
-            axis = self._size_axis(where, by, "switches")
-            for mode in self._size_branches(where, value, axis):
-                if not (nothing and value[mode] is None):
+        if _by_marked(value):
+            for branch in self._marked_branches(where, value, "switches"):
+                if not (nothing and value[branch] is None):
                     self._switched(
-                        f"{where}.{mode}", value[mode], check, nothing=nothing, runs=runs
+                        f"{where}.{branch}", value[branch], check, nothing=nothing, runs=runs
                     )
             return
         if isinstance(by, str) and by in self.runs:
@@ -1911,6 +1956,48 @@ class Component:
         for word in words:
             if word in value and not (nothing and value[word] is None):
                 self._switched(f"{where}.{word}", value[word], check, nothing=nothing, runs=runs)
+
+    def _marked_branches(self, where: str, value: Mapping[str, Any], what: str) -> list[str]:
+        """The branches of a switch or a `when` by a marked name that are read in turn: by
+        `:as`, those that name its values (`_as_branches`); by a size, those that name its
+        axis's modes (`_size_axis`, `_size_branches`). `what` says which it is, in a
+        finding."""
+        if value[SWITCH] == AS:
+            return self._as_branches(where, value, what)
+        axis = self._size_axis(where, value[SWITCH], what)
+        return self._size_branches(where, value, axis)
+
+    def _as_branches(self, where: str, value: Mapping[str, Any], what: str) -> list[str]:
+        """The branches of a switch or a `when` by `:as` that name its values, each read in
+        turn (DEC-034 point 7). Only a drawing of a layout reads `:as`, so elsewhere none is
+        read. The switch names the default, `page`, which takes `part` where it leaves it
+        out, and names no other value. Each break is reported."""
+        if not self.draws_layout:
+            self._issue(
+                AS_SWITCH,
+                where,
+                f"{what} on `{AS}`, which only a drawing of a layout reads, the top's own or a "
+                "brand's: whether its instance is a page or part of one",
+            )
+            return []
+        default = PLACED_AS[0]
+        branches = [str(key) for key in value if key != SWITCH]
+        if default not in branches:
+            self._issue(
+                AS_SWITCH,
+                where,
+                f"the switch on `{AS}` names no branch for `{default}`, its default, which "
+                "takes each value it leaves out",
+            )
+        for branch in branches:
+            if branch not in PLACED_AS:
+                self._issue(
+                    AS_SWITCH,
+                    f"{where}.{branch}",
+                    f"the switch on `{AS}` names `{branch}`, which is no value of it (its "
+                    f"values: {', '.join(PLACED_AS)})",
+                )
+        return [branch for branch in branches if branch in PLACED_AS]
 
     def _size_axis(self, where: str, by: str, what: str) -> AxisLike | None:
         """The size axis that the marked name `by`, `:<axis>`, of a switch or a `when` reads
@@ -2731,6 +2818,9 @@ class Instance:
         self.is_page = through_pages or (alone and not inside)
         if self.is_page and inside:
             self._note("page-in-page", f"{trace}: {component.use} is a page inside a page")
+        # What `:as` reads for it, from where it lies in its piece: `part` inside a page,
+        # else `page`, the default (DEC-034 point 7).
+        self.placed_as = PLACED_AS[1] if inside else PLACED_AS[0]
         if component.layout is not None and parent is not None:
             # A page in a layout gives no option: its drawing takes the top's (DEC-009
             # point 5).
@@ -2935,16 +3025,16 @@ class Instance:
 
     def pick(self, where: str, value: Any, run: str | None = None) -> tuple[str, Any, str | None]:
         """A value through its switches: the key path of the branch taken, the value, and
-        the option, the field of runs, or the marked name of the size axis, that chose it.
-        A switch on a field's run styles takes `run`, the word of the run drawn, else the
-        field's first word. A switch by a size takes the branch of the scene's mode
-        (`Context.size_branch`)."""
+        the option, the field of runs, or the marked name, that chose it. A switch on a
+        field's run styles takes `run`, the word of the run drawn, else the field's first
+        word. A switch by a marked name takes its branch for this instance
+        (`_marked_branch`)."""
         chosen = None
         while isinstance(value, Mapping) and SWITCH in value:
             chosen = value[SWITCH]
             words = self.component.runs.get(chosen) if isinstance(chosen, str) else None
-            if _by_size(value):
-                word = self.ctx.size_branch(value)
+            if _by_marked(value):
+                word = self._marked_branch(value)
             elif words is not None:
                 word = run if run in words else words[0]
             else:
@@ -2952,14 +3042,24 @@ class Instance:
             where, value = f"{where}.{word}", value.get(word)
         return where, value, chosen
 
+    def _marked_branch(self, switch: Mapping[str, Any]) -> str | None:
+        """The branch a switch by a marked name takes for this instance: by `:as`, where its
+        component is a drawing of a layout, the branch of where the instance lies (DEC-034
+        point 7); by a size, the scene's (`Context.size_branch`). None where the marked name
+        reads nothing, which was reported when its component was read."""
+        if switch[SWITCH] != AS:
+            return self.ctx.size_branch(switch)
+        return _as_branch(switch, self.placed_as) if self.component.draws_layout else None
+
     def _when(self, part: Part) -> bool:
-        """Whether the part is drawn: no `when`, or a `when` that holds. A `when` by a size
-        holds by the branch of the scene's mode: `true`, `false`, or the `when` it gives."""
+        """Whether the part is drawn: no `when`, or a `when` that holds. A `when` by a
+        marked name holds by its branch for this instance (`_marked_branch`): `true`,
+        `false`, or the `when` it gives."""
         when = part.spec.get("when")
         if when is None:
             return True
-        if _by_size(when):
-            when = when.get(self.ctx.size_branch(when))
+        if _by_marked(when):
+            when = when.get(self._marked_branch(when))
             if isinstance(when, bool):
                 return when
         if isinstance(when, str):
