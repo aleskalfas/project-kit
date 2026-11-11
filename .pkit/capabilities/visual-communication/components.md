@@ -86,6 +86,7 @@ pkit:
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#5
         - visual-communication:DEC-034#6
+        - visual-communication:DEC-034#8
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
         - visual-communication:DEC-035#3
@@ -171,7 +172,7 @@ The file takes these keys and no other:
 | Key | What it holds |
 |---|---|
 | `pkit_schema`, `schema_version` | The binding: `visual-communication:component` and `1` ([The binding](files.md#the-binding)). Required. |
-| `status` | `experimental`, `stable` or `deprecated`, below. Required. |
+| `status` | `experimental`, `stable` or `deprecated`, below. Required, but on a drawing, which carries none. |
 | `about` | What the component is for, in words. Required. |
 | `fields` | The content it takes, in a fixed subset of JSON Schema. |
 | `options` | Its options, by name. |
@@ -189,7 +190,7 @@ The file takes these keys and no other:
 
 Every name in the file takes the capability's name shape ([Shapes](files.md#shapes)).
 
-The status says what the component's library promises (DEC-003 point 7), which a release checks ([What a release compares](files.md#what-a-release-compares)). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
+The status says what the component's library promises (DEC-003 point 7), which a release checks ([What a release compares](files.md#what-a-release-compares)). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release. A drawing carries no status: nothing names one, so its library promises nothing of it, and a change of its look breaks nothing (DEC-034 point 8).
 
 ### Fields
 
@@ -457,7 +458,7 @@ A part placed from such a page's foot, such as `y: "=:height - footer.height"`, 
 A brand may hold a drawing of its own of a layout of a top, as a component of the brand. Its file names, under `draws`, the top and the layout it draws (DEC-034 point 1). Where the piece's brand holds one, it draws each instance of that layout it fits, in place of the top's own drawing (DEC-009 point 2). An instance is a page where the layout is a page's form, and the whole top where the top has one layout.
 
 - **What it takes.** It declares nothing the content gives. It takes the layout's slots and the lists the layout declares for them, the top's other fields, its options with their words, its states and its colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. Content is written against the top, whichever drawing draws it.
-- **What it holds.** Its `about` and `status`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)).
+- **What it holds.** Its `about`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)), and carries no `status` ([A component's file](#a-components-file)).
 - **The sizes it writes** (DEC-034 point 2). A drawing of a page's form writes its page's height alone, `preferred: {height: <formula>}`, as the layout's own drawing does. It must write it where the top asks for no height, and may where the top asks for one. It writes no width, since a page gets the top's. A drawing of a top whose one layout is the whole top writes its own `preferred`, whole: the top's parts are that layout's drawing, so the size the top asks for is its drawing's.
 - **What shows a field is named after it** (DEC-034 point 5). Each field it shows is shown by a part named after the field, and a part named after a field shows that field. A part *shows* a field where it places the field's component, draws its text or the picture it names, or repeats over it. A field shown only through a component it places by `use`, which shows it one level down, breaks the rule.
 - **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).

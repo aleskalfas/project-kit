@@ -65,13 +65,14 @@ DEC-012).
   the height it asks for: its layout's, or its component's. A top that asks for no height
   is as tall as its tallest page.
 - `draws: {top: <library>/<component>, layout: <layout>}`, on a brand's component: it is a
-  *drawing* of that layout of that top (DEC-009 point 2, DEC-034 point 1). It declares
-  nothing the content gives, none of `GIVEN_BY_TOP`, and takes the top's: its fields,
-  options, states and colour, and the layout's slots and lists. It holds its parts, its
-  values, its exposed parts, its component tokens and the size its instance asks for: of a
-  layout that is a page's form, its page's height alone, which it says where the top asks
-  for none; of a top whose one layout is the whole top, its `preferred` whole (DEC-034
-  point 2). It reads none of its top's component tokens. A brand's drawings reach the
+  *drawing* of that layout of that top (DEC-009 point 2, DEC-034 point 1). It carries no
+  `status`, since nothing names it (DEC-034 point 8). It declares nothing the content
+  gives, none of `GIVEN_BY_TOP`, and takes the top's: its fields, options, states and
+  colour, and the layout's slots and lists. It holds its parts, its values, its exposed
+  parts, its component tokens and the size its instance asks for: of a layout that is a
+  page's form, its page's height alone, which it says where the top asks for none; of a
+  top whose one layout is the whole top, its `preferred` whole (DEC-034 point 2). It
+  reads none of its top's component tokens. A brand's drawings reach the
   engine as a `Choice`: where one is chosen, it draws each instance of its layout in place
   of the top's own drawing, and keeps the instance's trace. One that does not fit an
   instance in every language and at every key over the size axes leaves that instance to
@@ -289,17 +290,19 @@ COMPONENT_KEYS = (
 TOKENS = "tokens"
 
 #: The key by which a brand's component names the top and the layout it draws, which makes
-#: it a drawing (DEC-034 point 1); the keys of what the content gives, which a drawing
-#: takes from its top and never declares; and the keys a drawing holds of its own.
+#: it a drawing (DEC-034 point 1); the key of a component's status, which a drawing never
+#: carries (DEC-034 point 8); the keys of what the content gives, which a drawing takes
+#: from its top and never declares; and the keys a drawing holds of its own.
 DRAWS = "draws"
+STATUS = "status"
 GIVEN_BY_TOP = ("fields", "options", "states", "colour", "lists", "layouts", "ends")
 DRAWING_KEYS = ("parts", "values", "preferred", "exposes", TOKENS)
 
-#: The findings on a drawing (DEC-034 points 1, 2 and 5, DEC-009 point 5): one that is no
-#: brand's component, holds what the content gives, or draws no layout a top declares; one
-#: that writes a size its top writes, or none its page needs; a field it shows by no part
-#: named after it, or a part named after a field that shows another thing; and content or a
-#: component that places one by `use`.
+#: The findings on a drawing (DEC-034 points 1, 2, 5 and 8, DEC-009 point 5): one that is
+#: no brand's component, carries a status, holds what the content gives, or draws no layout
+#: a top declares; one that writes a size its top writes, or none its page needs; a field it
+#: shows by no part named after it, or a part named after a field that shows another thing;
+#: and content or a component that places one by `use`.
 DRAWING_SHAPE = "drawing-shape"
 DRAWING_SIZE = "drawing-size"
 FIELD_PART = "drawing-field-part"
@@ -2239,8 +2242,9 @@ class Context:
         """A component that declares `draws`, read as a drawing of the layout of the top it
         names (DEC-034 point 1): what it holds of its own read with what it takes of the top
         (`Component.drawn_data`). Its findings lie in its own file: a piece's own component
-        that declares `draws`, a key of what the content gives, a top or a layout there is
-        none of, a size it may not write, and a field it shows by no part named after it.
+        that declares `draws`, a status, a key of what the content gives, a top or a layout
+        there is none of, a size it may not write, and a field it shows by no part named
+        after it.
         What the top declares is the top's to answer for, so no finding on it is repeated
         here. One that draws no layout a top declares draws nothing."""
         issues: list[tuple[str, str, str]] = []
@@ -2248,6 +2252,11 @@ class Context:
             issues.append(
                 (DRAWING_SHAPE, DRAWS, "declares `draws`: a piece's own component draws no layout, "
                  "only a brand's does")
+            )  # fmt: skip
+        if STATUS in data:
+            issues.append(
+                (DRAWING_SHAPE, STATUS, "is a drawing, and carries a status: nothing names a "
+                 "drawing, so its library promises nothing of it")
             )  # fmt: skip
         held = [key for key in GIVEN_BY_TOP if key in data]
         if held:
