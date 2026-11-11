@@ -104,6 +104,7 @@ pkit:
         - visual-communication:DEC-020#7
         - visual-communication:DEC-020#8
         - visual-communication:DEC-021#8
+        - visual-communication:DEC-022#3
         - visual-communication:DEC-022#7
         - visual-communication:DEC-023#1
         - visual-communication:DEC-023#2
@@ -122,6 +123,7 @@ pkit:
         - visual-communication:DEC-025#5
         - visual-communication:DEC-025#7
         - visual-communication:DEC-025#9
+        - visual-communication:DEC-026
         - visual-communication:DEC-027#1
         - visual-communication:DEC-027#2
         - visual-communication:DEC-027#3
@@ -134,12 +136,14 @@ pkit:
         - visual-communication:DEC-031#4
         - visual-communication:DEC-031#5
         - visual-communication:DEC-033
+        - visual-communication:DEC-035#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
         - .pkit/capabilities/visual-communication/components.md#parts
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#the-facts-of-an-export
+        - .pkit/capabilities/visual-communication/components.md#tokens
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#axes-and-modes
@@ -367,7 +371,17 @@ A deck's page file shows its slides as a viewer of slides does, each at its own 
 - **A browser that cannot mix colours** draws the keyline in its text colour and the backdrop in its ground colour.
 - **Size.** The keyline is 1 px wide and takes no room, so a slide keeps its size and its proportions. The backdrop shows 32 px wide on every side, or 4% of the window's width where that is less. In a narrower window a slide shrinks with the room that leaves it, and its keyline stays 1 px wide. In a window 500 px wide, a slide 1280 px wide is 460 px wide. Nothing scrolls sideways.
 - **The same elements.** The file holds the same elements as it would with no keyline. Only its rules differ.
-- **On screen alone.** A print holds neither the keyline nor the backdrop, until the record of how a page prints decides what of them it keeps ([project-kit#2824](https://github.com/aleskalfas/project-kit/issues/2824)).
+- **On screen alone.** A print holds neither the keyline nor the backdrop until the renderer prints as DEC-026 decides. [Printing](#printing) says what a print will hold then.
+
+### Printing
+
+DEC-026 decides how a page file prints: its pages follow one another down the sheets, as many to a sheet as fit, each whole where it fits one. Only a fixed page prints inside its keyline, and no backdrop prints. The renderer does not print so yet. It will once the Task that builds that record lands, filed under [project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570). Such a print gives what follows.
+
+- **A deck's slides fit a sheet.** A 16:9 slide fits the area of a sheet of A4 or Letter, upright or turned, so none is cut there, and none runs on (DEC-026 point 1). Two 16:9 slides share a sheet of A4 upright.
+- **The scale.** A page shrinks to the area's width and never grows past its own size, so it prints at the area's width over its own width, at most 1, and a fixed page at the area less its keyline over its own width (DEC-026 points 2 and 3). A page 1,280 px wide prints at about 0.56 of its size on A4 upright, at margins of 0.4 in. A deck's slides share one shape, a site's pages take the top's width (DEC-022 point 3), and a page alone is one page, so each of these prints at one scale.
+- **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), keeps at least 3 to 1 against a white sheet, in light and in dark (DEC-026 point 3). Under more contrast a dark page's keyline is white on the white sheet, and the page's own ground marks its edge there. In a dark mode, the page's dark ground, printed in its own colours, also sets it apart from the white sheet (DEC-026 point 5).
+- **A fixed page prints narrower** than the sheet's area, by its keyline's width on each side: 2 px in all (DEC-026 point 3).
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In Firefox the text below a cut may part from its shapes. Safari's only check is a person's print (DEC-026 point 7).
 
 ### What the HTML renderer declares
 
@@ -565,7 +579,7 @@ produced:
 ```
 
 - **`producer`:** the producer's name.
-- **`inputs`:** each input names a role of the brand by its token path, never a raw value. The producer must take the input, the brand must have the role, and the role must be of the value type the input takes. Every input the producer requires is given. The values come from the brand version the piece's lock names.
+- **`inputs`:** each input names a role of the brand by its token path, never a raw value or a component token, which only its component reads ([Tokens](components.md#tokens)). The producer must take the input, the brand must have the role, and the role must be of the value type the input takes. Every input the producer requires is given. The values come from the brand version the piece's lock names.
 - **`pixels`:** the width and the height of every variant, in whole pixels from 1, fixed before the producer runs (DEC-006 point 3).
 
 ### Variants

@@ -24,13 +24,15 @@ and 5, DEC-019 point 8).
   nothing and refuses no export (`behind_findings`, DEC-003 point 9, DEC-019 point 8);
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
-  major it names. A brand is read over its base, a component library's own roles are
-  judged, and so is each arrangement field of its patterns that its list's default
-  component also declares, the components read through an environment of the engine
-  that no piece or brand stands behind (`pipeline.LibraryEnv`, DEC-010 point 9); the
-  foundations' declarations are read. What it shows lies in the version; a
-  version that names majors no versions fit, or one the project holds no version of,
-  cannot be checked alone, which is a finding. A check of one piece runs no such pass;
+  major it names. A brand is read over its base, a component library's own roles and its
+  components' tokens are judged, and so is each arrangement field of its patterns that its
+  list's default component also declares, and each token a component declares and its
+  file reads nowhere (`unread_tokens`, DEC-035 point 9), the components read through an
+  environment of the engine that no piece or brand stands behind (`pipeline.LibraryEnv`,
+  DEC-010 point 9); the foundations' declarations are read, and their components' tokens
+  judged as a library's. What it shows lies in the version; a version that names majors
+  no versions fit, or one the project holds no version of, cannot be checked alone, which
+  is a finding. A check of one piece runs no such pass;
 - the libraries each piece locks, read under its lock: the own roles of each component
   library, and the brand, with its open roles, fonts and declared pairs. A fault the
   version shows alone too lies in the version, reported once; one only the lock's
@@ -669,12 +671,20 @@ class _Run:
         folders = {other.name: other.folder for other in chosen.values()}
         try:
             if name == FOUNDATIONS:
-                tokens.read_scope(folders, root=self.root)
-                found: Sequence[Finding] = []
+                scope = tokens.read_scope(folders, root=self.root)
+                env = pl.LibraryEnv(chosen, scope)
+                found: Sequence[Finding] = [
+                    *scope.findings_of(name),
+                    *unread_tokens(self.held, library, env),
+                ]
             elif library.kind == "components":
                 scope = tokens.read_scope(folders, root=self.root)
                 env = pl.LibraryEnv(chosen, scope)
-                found = [*scope.findings_of(name), *default_clashes(self.held, library, env)]
+                found = [
+                    *scope.findings_of(name),
+                    *default_clashes(self.held, library, env),
+                    *unread_tokens(self.held, library, env),
+                ]
             elif library.kind == "brand" and FOUNDATIONS in folders:
                 brand = tokens.read_brand(
                     library.folder,
@@ -780,6 +790,22 @@ def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
         or f"move the lock to versions that fit together, or mend {finding.library}",
         library="",
     )
+
+
+def unread_tokens(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
+    """Each component token a component of the library version declares that its own file
+    reads nowhere (`layout.unread_token_findings`, DEC-035 point 9), each component read
+    through `env`. A component that cannot be read is the scene's to report."""
+    ctx = layout.Context(env, "")
+    found = []
+    for path in held.files(library.name, library.version):
+        if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
+            continue
+        component = ctx.component(f"{library.name}/{path.stem}")
+        if component is not None:
+            file = path.relative_to(held.root).as_posix()
+            found.extend(layout.unread_token_findings(component, file=file, library=library.label))
+    return found
 
 
 def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:

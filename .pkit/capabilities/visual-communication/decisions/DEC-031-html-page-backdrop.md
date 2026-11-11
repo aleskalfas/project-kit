@@ -74,9 +74,9 @@ The rules it added:
 
 - **Mixes of the browser's own colours.** Each mixes the browser's ground colour and its text colour, CSS's system colours `Canvas` and `CanvasText`. The renderer declares each share. The file writes no colour value for them, and reads no role of a brand.
 - **They follow the page's mode.** A system colour takes the scheme the file names in CSS's `color-scheme` (DEC-023 point 7). That scheme follows the signal that picks the page's mode. So a dark page lies on a dark backdrop, and a file of light alone keeps a light backdrop on a dark system.
-- **The keyline reads.** Its share gives it a contrast of at least 3 to 1 against the backdrop, and against the browser's ground. That holds in light and dark, on each browser ground DEC-023's test measured. It is WCAG's level for a mark that is no text, which the records already ask of such marks ([visual-communication:DEC-004-brands-and-notations] point 8).
+- **The keyline reads.** Its share gives it a contrast of at least 3 to 1 against the backdrop, and against the browser's ground. That holds in light and dark, on each browser ground DEC-023's test measured. It is WCAG's level for a mark that is no text, which the records already ask of such marks ([visual-communication:DEC-004-brands-and-notations] point 8). In print its share keeps that floor against a white sheet too, and under more contrast a dark page's own ground marks its edge there (refinement per [visual-communication:DEC-026-html-page-print] point 3).
 - **More contrast.** Where the reader asks for more contrast, by `prefers-contrast: more`, the keyline takes the browser's text colour whole. The keyline is no mode of the page, so it reads that signal whatever modes the file holds.
-- **Forced colours.** The backdrop and each fixed page take the reader's background colour, and the keyline the reader's text colour. The keyline is of a kind a browser keeps there, CSS's outline. A shadow may add depth beside it, never in its place, since forced colours remove a shadow.
+- **Forced colours.** The backdrop and each fixed page take the reader's background colour, and the keyline the reader's text colour. The keyline is of a kind a browser keeps there, CSS's outline on screen and a border in print (refinement per [visual-communication:DEC-026-html-page-print] point 3). A shadow may add depth beside it, never in its place, since forced colours remove a shadow.
 - **Inside the keyline,** a fixed page lies on the browser's own ground, as every page does (DEC-023 point 7). So a page with no ground of its own shows no tint of the backdrop.
 - **A browser that cannot mix colours.** The keyline falls back to the browser's text colour, and the backdrop to the browser's ground.
 - **The renderer declares these choices** (DEC-001 point 2): each share, the keyline's width and the gutter. Whoever maintains the capability sets their values in the renderer's declaration, within this point's floor. No project setting changes them.
@@ -84,11 +84,11 @@ The rules it added:
 ### 4. A fixed page keeps its size and its content
 
 - **No element changes.** The keyline and the backdrop add no element, and move no place, size or value of one. The scene's root gains only the fact point 2 names. Since no element is added, the check for dropped text still paints its ground over all the file holds.
-- **The keyline takes no room.** It lies outside the page, as CSS's outline does, so the page keeps its size and its proportions. So the step's check that a page measures its size, and its cut of each image, stay as they are.
+- **The keyline takes no room on screen.** It lies outside the page, as CSS's outline does, so the page keeps its size and its proportions. So the step's check that a page measures its size, and its cut of each image, stay as they are. In print the keyline is the page's own border, and the sheet's area less the keyline on each side is the page's window (refinement per [visual-communication:DEC-026-html-page-print] point 3).
 - **The backdrop shows on every side,** at the gutter, in px of the window. In a narrow window the gutter narrows to a share of the window's width, as a page shrinks with it. No rule switches the layout by the window's width (DEC-023 point 5).
 - **A page shrinks and never grows** (DEC-020 point 4). It shrinks with the room the gutter leaves it. At the sizes the file sets, the document never scrolls sideways.
 - **The keyline keeps its width** in px of the window as a page shrinks.
-- **On screen alone.** The keyline and the backdrop are rules for a screen. So a print holds neither, until the record of how the page prints decides what of them it keeps ([project-kit#2824](https://github.com/aleskalfas/project-kit/issues/2824)).
+- **On screen alone.** The backdrop, the gutter and the room the gutter leaves are a screen's alone. In print a fixed page lies inside its keyline (refinement per [visual-communication:DEC-026-html-page-print] point 3).
 
 ### 5. The viewing step draws a fixed page alone
 
@@ -97,7 +97,7 @@ The rules it added:
 - **Pixels may round otherwise.** The gutter moves a page's place in the window. At a device scale that is not whole, that changes how its pixels round, as a second page's place does already. Images promise nothing about pixels ([visual-communication:DEC-015-viewing-step-and-reviewer] point 6).
 - **The reads hold.** The check for dropped text paints its own ground over the page and the backdrop, and compares a band of the page with itself. Its first read's planted page needs no keyline, since no read looks outside a page (DEC-020 points 6 and 7).
 - **The reviewer meets no keyline or backdrop.** They are the renderer's, the same around every fixed page, and nothing a piece holds changes them.
-- **What reads them instead.** A test on the file covers each page's keyline, the backdrop, the floor of point 3 from the declared shares, the rules for more contrast and forced colours, and a keyline that takes no room. A person judges their look in a browser, as DEC-020 point 5 leaves a reader's settings to a person.
+- **What reads them instead.** A test on the file covers each page's keyline, the backdrop, the floor of point 3 from the declared shares, the rules for more contrast and forced colours, a keyline that takes no room on screen, and the keyline in print (refinement per [visual-communication:DEC-026-html-page-print] points 3 and 7). A person judges their look in a browser, as DEC-020 point 5 leaves a reader's settings to a person.
 
 ## Rationale
 
@@ -115,7 +115,7 @@ The rules it added:
 
 **Why a floor of 3 to 1.** Where a brand's page ground lies close to the backdrop, as the dark neutral slide does, the keyline alone tells where a page ends. That is the meaning this record exists for, so the keyline must read for every reader, not only one who asks for more contrast.
 
-**Why an outline.** A border adds to a page's size. In a narrow window the document would then scroll sideways, and the page's proportions would move. A shadow alone vanishes under forced colours.
+**Why an outline on screen.** On screen a border adds to a page's size. In a narrow window the document would then scroll sideways, and the page's proportions would move. A shadow alone vanishes under forced colours. In print, where the page's drawing shrinks to leave it room, the keyline is a border (refinement per [visual-communication:DEC-026-html-page-print] point 3).
 
 **Why the step leaves them out.** The images show what a piece holds, and the reviewer judges a piece. Nothing of a piece reaches the keyline or the backdrop, so the step's images, element frames and reads stay as they are.
 
@@ -132,7 +132,7 @@ The rules it added:
 - **Roles of the brand for the keyline and the backdrop,** its own or new shared ones. Rejected, for the reasons above.
 - **A keyline in the browser's text colour always.** Rejected. It meets the floor, but heavier than a line near half that meets it too. A reader who asks for more contrast gets it.
 - **A keyline alone, on the browser's own ground.** Rejected. Where a page's ground matches the browser's, nothing but a faint line would tell its empty part from the gap.
-- **A border, or a shadow alone, as the keyline.** Rejected, for the reasons above.
+- **A border, or a shadow alone, as the keyline on screen.** Rejected, for the reasons above (refinement per [visual-communication:DEC-026-html-page-print] point 3).
 - **A top that draws a surround in the scene.** Rejected. Every renderer would draw it, and a PDF or an SVG picture needs none. The scene and the step's images would change too.
 - **The step's images with the keyline and the backdrop, or with them switched off by a style the step adds.** Rejected. The first moves every element frame by the gutter, and shows the reviewer the renderer's look. The second would read a file other than the one the renderer wrote (DEC-020 point 5).
 

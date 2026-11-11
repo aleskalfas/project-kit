@@ -78,7 +78,7 @@ The capability's design review asked how a format change reaches files that no m
 
 ### 7. A component's status says what its library promises
 
-Each library component carries a status that its library's owner marks in the library. No count of uses decides it.
+Each library component but a drawing carries a status that its library's owner marks in the library (refinement per [visual-communication:DEC-034-brand-drawings] point 8). No count of uses decides it.
 - **Experimental:** it may change in any release, renamed, reshaped or removed.
 - **Stable:** it changes in a breaking way only in a major release of its library.
 - **Deprecated:** its owner may mark it so in any release. It may be removed only in a major release.

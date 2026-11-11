@@ -1824,6 +1824,22 @@ def test_a_librarys_own_roles_are_checked_alone_their_findings_in_its_version(
     assert finding.library == "test-parts@1.0.0"
 
 
+def test_the_foundations_components_tokens_are_checked_alone_their_findings_in_its_version(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    figure = root / "visual/libraries/foundations/1.0.0/components/figure.yaml"
+    text = figure.read_text(encoding="utf-8")
+    assert "\nparts:\n" in text
+    edge = "tokens:\n  edge: {type: color, default: '{space.2}'}\n\nparts:\n"
+    figure.write_text(text.replace("\nparts:\n", f"\n{edge}"), encoding="utf-8")
+    report = checks.check(root)
+    place = "visual/libraries/foundations/1.0.0/components/figure.yaml#tokens.edge"
+    for code in ("role-default", "component-token-unread"):
+        [(finding, _)] = judged(report, code)
+        assert (checks.place(finding), finding.library) == (place, "foundations@1.0.0")
+
+
 def test_a_brands_finding_against_a_library_it_names_lies_in_its_version_once(
     tmp_path: Path,
 ) -> None:
