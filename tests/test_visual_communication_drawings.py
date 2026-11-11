@@ -1,6 +1,6 @@
-"""A brand's drawing of a layout (visual-communication DEC-034 points 1, 2, 3, 5 and 6, DEC-009
-points 2, 5 and 6): a component of the brand whose file names, under `draws`, the top and
-the layout it draws.
+"""A brand's drawing of a layout (visual-communication DEC-034 points 1 to 6, DEC-009 points
+2 to 6): a component of the brand whose file names, under `draws`, the top and the layout
+it draws.
 
 - **The declaration.** It declares nothing the content gives, reads none of its top's
   component tokens, and only a brand's component declares one (point 1). Content, or a
@@ -17,10 +17,19 @@ the layout it draws.
   every key, and the top's own drawing draws it in all of them where it does not, which
   the piece states (point 6). A preview in one language takes the drawing chosen for the
   whole piece.
+- **Along a chain of brands.** A brand built on a base draws a top its base does not serve.
+  The brand nearest the root that serves a top keeps its form, so a brand's drawing of a
+  top its base serves draws nothing, which the piece states (DEC-009 point 4, DEC-034
+  point 8).
+- **A top a brand holds.** It is drawn by its own drawing under that brand and every brand
+  built on it, and no drawing of it draws, which the check fails. Under any other brand it
+  is drawn by its own drawing too, and the check asks the piece's author for attention
+  (DEC-034 point 4).
 
 The engine's rules are drawn from components written as mappings in memory (`FakeEnv`);
 the deck under the test brand from a project in a temporary folder, its drawing of the
-cover the committed fixture `drawings/cover.yaml`.
+cover the committed fixture `drawings/cover.yaml`. A chain of brands is the test edition
+built on the test brand.
 """
 
 from __future__ import annotations
@@ -34,6 +43,7 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import (
     FIXTURES,
+    TEST_EDITION,
     bound,
     copy_library,
     hold_shipped,
@@ -45,8 +55,15 @@ from tests.visual_communication_project import (
 )
 from tests.visual_engine import COMPONENTS, FakeEnv, block, codes, draw, layout, top
 
-pl, checks, reading, findings, files = load(
-    "visual-communication", "pipeline", "checks", "reading", "findings", "files"
+pl, checks, reading, findings, files, libraries, full_read = load(
+    "visual-communication",
+    "pipeline",
+    "checks",
+    "reading",
+    "findings",
+    "files",
+    "libraries",
+    "full_read",
 )
 
 #: The test brand that gives the sizes of `device`, built on the foundations being built.
@@ -55,6 +72,11 @@ SIZED_BRAND = FIXTURES / "libraries" / "test-brand" / "1.1.0"
 DRAWING = FIXTURES / "drawings" / "cover.yaml"
 PIECE = "talk"
 BRAND_COMPONENTS = "visual/libraries/test-brand/1.1.0/components"
+#: The brand the tests build on the test brand, and its folder of components.
+EDITION = "test-edition"
+EDITION_COMPONENTS = "visual/libraries/test-edition/1.0.0/components"
+#: The list's entry for a version of the project's own that is not released.
+UNRELEASED = {"released": False}
 
 #: The deck's pages a piece's content gives, unless a test gives others.
 SLIDES = [
@@ -82,9 +104,12 @@ def cover(**changes: Any) -> dict[str, Any]:
     return data
 
 
-def hold(root: Path, data: dict[str, Any], name: str = "cover") -> Path:
-    """A component the test brand holds, written as `components/<name>.yaml`."""
-    return write(root / BRAND_COMPONENTS / f"{name}.yaml", yaml_text(data))
+def hold(
+    root: Path, data: dict[str, Any], name: str = "cover", into: str = BRAND_COMPONENTS
+) -> Path:
+    """A component a brand holds, the test brand unless `into` names another's folder of
+    components, written as `components/<name>.yaml`."""
+    return write(root / into / f"{name}.yaml", yaml_text(data))
 
 
 def write_slides(
@@ -94,6 +119,20 @@ def write_slides(
         root / "visual" / "pieces" / PIECE / f"content.{language}.yaml",
         yaml_text(bound("content", slides=list(SLIDES if slides is None else slides))),
     )
+
+
+def brands(tmp_path: Path, *, edition: bool = False) -> tuple[Path, str]:
+    """A project that holds the foundations being built and the test brand that gives sizes,
+    and with `edition` the test edition built on it, neither brand released; and the
+    foundations' version."""
+    root = project(tmp_path)
+    copy_library(root, SIZED_BRAND, "test-brand", "1.1.0")
+    listed = {"test-brand": {"source": {"kind": "project"}, "versions": {"1.1.0": UNRELEASED}}}
+    if edition:
+        copy_library(root, TEST_EDITION, EDITION, "1.0.0")
+        listed[EDITION] = {"source": {"kind": "project"}, "versions": {"1.0.0": UNRELEASED}}
+    write_list(root, listed)
+    return root, hold_shipped(root, "foundations").version
 
 
 def deck(
@@ -106,11 +145,7 @@ def deck(
     """A project that holds the foundations being built and the test brand that gives sizes,
     and the deck `talk` under it in `languages`, drawn on `devices`. The brand holds the
     fixture's cover, or `drawing`."""
-    root = project(tmp_path)
-    copy_library(root, SIZED_BRAND, "test-brand", "1.1.0")
-    unreleased = {"1.1.0": {"released": False}}
-    write_list(root, {"test-brand": {"source": {"kind": "project"}, "versions": unreleased}})
-    built = hold_shipped(root, "foundations").version
+    root, built = brands(tmp_path)
     write_piece(
         root,
         PIECE,
@@ -745,3 +780,211 @@ def test_a_drawing_never_draws_where_no_choice_names_it() -> None:
         components={"lab/top": lab_top(), "brand/look": look({"caption": CAPTION})},
     )
     assert result.scene.children[0].properties["component"] == "lab/top"
+
+
+# --- along a chain of brands -------------------------------------------------------------------
+
+
+PIECE_FILE = f"visual/pieces/{PIECE}/piece.yaml"
+
+
+def chain(tmp_path: Path, *, top: str = "foundations/deck", brand: str = EDITION) -> Path:
+    """A project that holds the foundations being built, the test brand and the test edition
+    built on it, neither holding a component, and the piece `talk` of `top` under `brand`,
+    locked at all three, with the deck's slides as its content."""
+    root, built = brands(tmp_path, edition=True)
+    lock = {"foundations": built, "test-brand": "1.1.0", EDITION: "1.0.0"}
+    write_piece(root, PIECE, top=top, brand=brand, lock=lock)
+    write_slides(root)
+    return root
+
+
+def stated(root: Path, code: str) -> list[tuple[Any, str]]:
+    """Each finding the check makes of the code `code`, with its level."""
+    return [
+        (finding, level) for finding, level in checks.check(root).judged if finding.code == code
+    ]
+
+
+def test_a_brand_built_on_a_base_draws_each_page_of_a_top_its_base_does_not_serve_it_fits(
+    tmp_path: Path,
+) -> None:
+    root = chain(tmp_path)
+    hold(root, without_link(), into=EDITION_COMPONENTS)
+    slides = [
+        {"id": "opening", "layout": "cover", "title": "The flow"},
+        {"id": "closing", "layout": "cover", "title": "Thanks", "link": "example.org"},
+    ]
+    write_slides(root, slides=slides)
+    [(_, result)] = scenes(root)
+    page = group(result, COVER)
+    assert (page["component"], page["version"]) == ("test-edition/cover", "1.0.0")
+    assert group(result, "deck/slides[closing]")["component"] == "foundations/deck"
+    [stated_misfit] = misfits(result)
+    assert stated_misfit.where == "deck/slides[closing]"
+
+
+def test_a_bases_drawing_draws_under_a_brand_built_on_it(tmp_path: Path) -> None:
+    root = chain(tmp_path)
+    hold(root, cover())
+    [(_, result)] = scenes(root)
+    assert group(result, COVER)["component"] == "test-brand/cover"
+    assert project_of(root).kept == {}
+
+
+def test_where_a_base_serves_a_top_the_brand_built_on_it_draws_none_of_it_and_the_piece_says_so(
+    tmp_path: Path,
+) -> None:
+    """The base draws the cover, so it serves the deck: its cover draws, the slide it leaves
+    to the deck draws by the deck's own drawing, and the edition's drawings of either draw
+    nothing (DEC-009 point 4, DEC-034 point 8)."""
+    root = chain(tmp_path)
+    hold(root, cover())
+    hold(root, cover(), into=EDITION_COMPONENTS)
+    slide = cover(draws={"top": "foundations/deck", "layout": "slide"})
+    hold(root, slide, "slide", into=EDITION_COMPONENTS)
+    [(_, result)] = scenes(root)
+    assert group(result, COVER)["component"] == "test-brand/cover"
+    assert group(result, "deck/slides[first]")["component"] == "foundations/deck"
+    found = stated(root, checks.DRAWING_BASE_SERVES)
+    assert [(f.file, f.where, level) for f, level in found] == [(PIECE_FILE, "lock", "fact")] * 2
+    assert [f.message for f, _ in found] == [
+        f"the drawing `test-edition/{name}` draws nothing under this lock: test-brand@1.1.0, "
+        "which its brand builds on, serves `foundations/deck`, and keeps its form"
+        for name in ("cover", "slide")
+    ]
+
+
+def test_a_brand_with_no_base_keeps_its_own_drawings(tmp_path: Path) -> None:
+    root = deck(tmp_path)
+    assert project_of(root).kept == {}
+    assert stated(root, checks.DRAWING_BASE_SERVES) == []
+
+
+# --- a top a brand holds -----------------------------------------------------------------------
+
+
+#: A top a brand holds, a page alone: its title on its background.
+POSTER = bound(
+    "component",
+    status="experimental",
+    about="A poster a brand holds: its title on its background.",
+    fields={"type": "object", "required": ["title"], "properties": {"title": {"type": "string"}}},
+    layouts={"poster": {"slots": {"title": {}}}},
+    parts={
+        "background": {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"},
+        "title": {
+            "text": {"content": "title", "style": "type.heading", "fill": "text-primary"},
+            "x": "=@space.3",
+            "y": "=@space.3",
+            "width": "=:width - 2 * @space.3",
+        },
+    },
+    preferred={"width": "=@size.figure", "height": "=title.bottom + @space.3"},
+)
+
+COMPONENTS_OF = {"test-brand": BRAND_COMPONENTS, EDITION: EDITION_COMPONENTS}
+
+
+def poster_piece(tmp_path: Path, *, holder: str, brand: str) -> Path:
+    """The piece `talk` of the poster that the brand `holder` holds, under `brand`."""
+    root = chain(tmp_path, top=f"{holder}/poster", brand=brand)
+    hold(root, POSTER, "poster", into=COMPONENTS_OF[holder])
+    write(
+        root / "visual" / "pieces" / PIECE / "content.en.yaml",
+        yaml_text(bound("content", title="Come along")),
+    )
+    return root
+
+
+def poster_look(holder: str) -> dict[str, Any]:
+    """A brand's drawing of the poster that `holder` holds."""
+    return bound(
+        "component",
+        about="A drawing of a poster a brand holds.",
+        draws={"top": f"{holder}/poster", "layout": "poster"},
+        parts={"title": POSTER["parts"]["title"]},
+        preferred={"width": "=@size.figure", "height": "=title.bottom"},
+    )
+
+
+@pytest.mark.parametrize("brand", ["test-brand", EDITION])
+def test_a_top_a_brand_holds_is_drawn_by_its_own_drawing_under_it_and_a_brand_built_on_it(
+    tmp_path: Path, brand: str
+) -> None:
+    """The holding brand serves the top by its own drawing, and lacks none of its layouts,
+    so nothing is stated (DEC-034 point 4)."""
+    root = poster_piece(tmp_path, holder="test-brand", brand=brand)
+    [(_, result)] = scenes(root)
+    assert group(result, "poster")["component"] == "test-brand/poster"
+    assert group(result, "poster/title")["text"] == "Come along"
+    found = {finding.code for finding, _ in checks.check(root).judged}
+    assert not found & {checks.TOP_OF_OTHER_BRAND, checks.DRAWING_BASE_SERVES}
+    assert misfits(result) == []
+
+
+@pytest.mark.parametrize("into", [BRAND_COMPONENTS, EDITION_COMPONENTS])
+def test_no_drawing_of_a_top_a_brand_holds_draws_and_the_check_fails_it(
+    tmp_path: Path, into: str
+) -> None:
+    """In the holding brand or in a brand built on it, the drawing draws nothing, and fails
+    in its own brand's version (DEC-034 points 4 and 10)."""
+    root = poster_piece(tmp_path, holder="test-brand", brand=EDITION)
+    hold(root, poster_look("test-brand"), "look", into=into)
+    [(_, result)] = scenes(root)
+    assert group(result, "poster")["component"] == "test-brand/poster"
+    [(finding, level)] = stated(root, layout.DRAWING_HELD_TOP)
+    assert (level, finding.file, finding.where) == ("fails", f"{into}/look.yaml", "draws")
+    assert "a top the brand test-brand@1.1.0 holds" in finding.message
+    # A release reads it as the check alone does.
+    name, version = into.split("/")[2:4]
+    read = full_read.read(libraries.Held(root, "visual"), name, libraries.Version.parse(version))
+    assert [f.file for f in read.findings if f.code == layout.DRAWING_HELD_TOP] == [finding.file]
+
+
+@pytest.mark.parametrize("named", ["nothing-here", "plain"])
+def test_a_drawing_of_a_brands_component_that_is_no_top_fails_as_drawing_nothing_alone(
+    tmp_path: Path, named: str
+) -> None:
+    """A drawing that names a component the brand does not hold, or one it holds that is no
+    top, draws no layout of a top. It fails as that, and never as a drawing of a top the
+    brand holds, where its brand is checked alone and where a release reads it (DEC-034
+    points 1 and 4)."""
+    root = poster_piece(tmp_path, holder="test-brand", brand=EDITION)
+    hold(root, {key: value for key, value in POSTER.items() if key != "layouts"}, "plain")
+    draws = {"top": f"test-brand/{named}", "layout": "poster"}
+    hold(root, {**poster_look("test-brand"), "draws": draws}, "look", into=EDITION_COMPONENTS)
+    file = f"{EDITION_COMPONENTS}/look.yaml"
+    assert ("fails", file, "draws") in judged(root, layout.DRAWING_SHAPE)
+    assert judged(root, layout.DRAWING_HELD_TOP) == []
+    read = full_read.read(libraries.Held(root, "visual"), EDITION, libraries.Version.parse("1.0.0"))
+    codes = {finding.code for finding in read.findings}
+    assert layout.DRAWING_SHAPE in codes
+    assert layout.DRAWING_HELD_TOP not in codes
+
+
+def test_a_top_a_brand_holds_under_another_brand_asks_its_author_for_attention(
+    tmp_path: Path,
+) -> None:
+    """The edition holds the poster, and the test brand is neither the edition nor built
+    on it: the poster is drawn by its own drawing in the test brand's values, the lock names
+    the edition, and the piece's author is asked to look (DEC-034 point 4)."""
+    root = poster_piece(tmp_path, holder=EDITION, brand="test-brand")
+    drawn = project_of(root)
+    [(_, result)] = scenes(root)
+    assert group(result, "poster")["component"] == "test-edition/poster"
+    assert EDITION in pl.needed(drawn.piece)
+    lock = libraries.move_lock(pl.Held(root, "visual"), pl.needed(drawn.piece)).lock
+    assert lock[EDITION] == "1.0.0"
+    [(finding, level)] = stated(root, checks.TOP_OF_OTHER_BRAND)
+    assert (level, finding.file, finding.where, finding.who) == (
+        "attention",
+        PIECE_FILE,
+        "top",
+        "the piece's author",
+    )
+    assert finding.message == (
+        "the top `test-edition/poster` is the form of the brand test-edition@1.0.0, and the "
+        "piece's brand test-brand@1.1.0 is neither that brand nor built on it: the top is "
+        "drawn by its own drawing, in the values of test-brand@1.1.0"
+    )
