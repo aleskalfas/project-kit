@@ -7,9 +7,6 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 shortfalls:
-  - at: 6
-    issue: "#2573"
-    record: visual-communication:DEC-001#5
   - at: 7
     issue: "#2573"
     record: visual-communication:DEC-001#5
@@ -57,14 +54,10 @@ pkit:
 4. For each mode, the developer gives the values that differ in it, such as a dark mode's own logo or a phone's smaller one.
 5. For each axis, the developer says whether its modes alter only colours and pictures, or any value, such as sizes, spacing and fonts.
 6. The developer adds how the brand draws each layout of each kind of piece it serves.
-
-> [!WARNING]
-> **Not built yet:** a brand cannot hold how it draws a layout, so each layout is drawn by the top library component that declares it. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that a brand holds how it draws the layouts of the kinds of piece it serves, and #2573 tracks it.
-
 7. The system checks that the brand draws each layout of each kind of piece it serves, with the content slots that kind names.
 
 > [!WARNING]
-> **Not built yet:** the system makes no such check, since a brand cannot hold how it draws a layout. DEC-001 point 5 decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
+> **Not built yet:** the system makes no such check. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
 
 **Variants:**
 
