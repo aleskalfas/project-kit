@@ -2,7 +2,8 @@
 to 9, DEC-031 point 5, DEC-027 points 2 to 4): how it finds a browser, what one start asks of
 it, the window that holds each page at its own size with its gutters, the four reads, the first
 read of a page with planted faults, its bounds, what a stop says, and the start that forces its
-colours.
+colours. The step's browser also prints the renderer's page file here, as DEC-026 point 7 lets
+a test do and no step.
 
 A stand-in program speaks the pipe in the browser's place (`visual_communication_browser`), so
 these tests need no browser. The ones that start a real browser skip where none is found, or
@@ -14,10 +15,13 @@ a contract (DEC-015 point 6).
 from __future__ import annotations
 
 import ast
+import base64
+import contextlib
 import copy
 import dataclasses
 import json
 import os
+import re
 import sys
 import time
 from collections.abc import Iterator, Mapping, Sequence
@@ -1883,16 +1887,28 @@ def test_in_a_real_browsers_narrow_window_a_fixed_page_shrinks_and_nothing_scrol
 
     file = tmp_path / "slides.html"
     file.write_bytes(draw(SLIDES).document)
+
+    with opened_by_a_real_browser(file, tmp_path, 500) as started:
+        measured = started.ask(MEASURED)
+
+    assert (measured["window"], measured["scrolls"]) == (500, 500)
+    assert (measured["width"], measured["left"], measured["top"]) == (460, 20, 20)
+
+
+@contextlib.contextmanager
+def opened_by_a_real_browser(file: Path, tmp_path: Path, window: float) -> Iterator[Any]:
+    """`file` open in the browser found, in a window `window` px wide, at a scale of 1. The
+    test skips where a sandbox stopped the browser."""
     browser = found_browser()
     assert browser is not None
     place = tmp_path / "browser"
     place.mkdir()
-    started = viewing_browser._Started(browser, place, 500, 1.0)
+    started = viewing_browser._Started(browser, place, window, 1.0)
     try:
         started.call("Browser.getVersion", within=viewing_browser.START_SECONDS)
         started.open_tab()
         started.open(file.resolve().as_uri())
-        measured = started.ask(MEASURED)
+        yield started
     except viewing_browser.Stopped as stop:
         if stop.sandbox:
             pytest.skip(f"a sandbox stopped the browser: {stop}")
@@ -1900,5 +1916,122 @@ def test_in_a_real_browsers_narrow_window_a_fixed_page_shrinks_and_nothing_scrol
     finally:
         started.close()
 
-    assert (measured["window"], measured["scrolls"]) == (500, 500)
-    assert (measured["width"], measured["left"], measured["top"]) == (460, 20, 20)
+
+# A real browser's print (DEC-026 point 7). The test prints the file in the step's browser and
+# counts its sheets, as no step does. It asserts no mode, and nothing of where a page that runs
+# on breaks.
+
+#: A sheet of A4, upright and turned, in inches, at the margins of Chrome's print dialog: an
+#: area 717 px wide and 1,045 px high upright, at CSS's 96 px to the inch.
+A4_UPRIGHT = {"paperWidth": 8.27, "paperHeight": 11.69}
+A4_TURNED = {"paperWidth": 11.69, "paperHeight": 8.27}
+MARGINS = {f"margin{side}": 0.4 for side in ("Top", "Bottom", "Left", "Right")}
+
+
+def sheets_of(pdf: bytes) -> int:
+    """How many sheets a PDF the browser printed holds: its objects of a page."""
+    return len(re.findall(rb"/Type\s*/Page\b", pdf))
+
+
+def printed_by_a_real_browser(
+    drawn: Mapping[str, Any], tmp_path: Path, *sheets: Mapping[str, float]
+) -> list[int]:
+    """The page file of `drawn`, printed by the browser found on each of `sheets` with no
+    background, as the dialog defaults: how many sheets each print takes."""
+    from tests.test_visual_communication_html import draw
+
+    file = tmp_path / "printed.html"
+    file.write_bytes(draw(drawn).document)
+    with opened_by_a_real_browser(file, tmp_path, 500) as started:
+        printed = [started.call("Page.printToPDF", **sheet, **MARGINS)["data"] for sheet in sheets]
+    return [sheets_of(base64.b64decode(each)) for each in printed]
+
+
+def slides(count: int) -> dict[str, Any]:
+    """A deck of `count` slides 1,280 by 720 px, as fixed pages."""
+    from tests.test_visual_communication_html import fixed, of_pages, page_of, said
+
+    return fixed(
+        of_pages(
+            *(
+                page_of(f"deck/slides[{n}]", 1280, 720, said(f"deck/slides[{n}]/title", f"S{n}"))
+                for n in range(count)
+            )
+        )
+    )
+
+
+def pages(count: int, width: float, height: float) -> dict[str, Any]:
+    """`count` pages of one size that are no fixed pages, each with a text."""
+    from tests.test_visual_communication_html import of_pages, page_of, said
+
+    return of_pages(
+        *(
+            page_of(f"site/{n}", width, height, said(f"site/{n}/title", f"P{n}"))
+            for n in range(count)
+        )
+    )
+
+
+@real_browser
+def test_a_real_browser_prints_a_decks_slides_two_to_a_sheet_of_a4_upright_and_one_turned(
+    tmp_path: Path,
+) -> None:
+    """Points 1 to 3: four 16:9 slides each print whole inside its keyline. On A4 upright two
+    share a sheet, at about 0.56 of their size; turned, each takes a sheet of its own."""
+    assert printed_by_a_real_browser(slides(4), tmp_path, A4_UPRIGHT, A4_TURNED) == [2, 4]
+
+
+@real_browser
+def test_a_real_browser_moves_a_page_that_does_not_fit_the_rest_of_a_sheet_whole_to_the_next(
+    tmp_path: Path,
+) -> None:
+    """Point 1: three pages 650 px high, each more than half a sheet, print on a sheet each. A
+    page cut at a sheet's foot would let them take two."""
+    assert printed_by_a_real_browser(pages(3, 600, 650), tmp_path, A4_UPRIGHT) == [3]
+
+
+@real_browser
+def test_a_real_browser_runs_a_page_taller_than_a_sheet_on(tmp_path: Path) -> None:
+    """Point 1: a page 2,500 px high at its own width runs on across three sheets of A4
+    upright."""
+    assert printed_by_a_real_browser(pages(1, 600, 2500), tmp_path, A4_UPRIGHT) == [3]
+
+
+#: What the browser holds of each page as it lays the document out for print, and of the
+#: document.
+PRINT_MEASURED = """() => [...document.querySelectorAll('[data-page]')].map((page) => {
+  const {width, height} = page.getBoundingClientRect();
+  const held = getComputedStyle(page);
+  return {
+    width, height, drawing: page.clientWidth, border: held.borderTopWidth,
+    page: held.printColorAdjust, document: getComputedStyle(document.body).printColorAdjust,
+  };
+})"""
+
+
+@real_browser
+@pytest.mark.parametrize("fixed_pages", [True, False], ids=["fixed pages", "pages that are none"])
+def test_in_a_real_browsers_print_the_area_is_the_window_and_a_fixed_page_lies_inside_its_border(
+    tmp_path: Path, fixed_pages: bool
+) -> None:
+    """Points 2, 3 and 5, as the browser lays the file out for print in an area 500 px wide: a
+    slide 1,280 px wide prints at the area, its drawing 2 px narrower inside a border of 1 px,
+    in its own proportions. A page that is none fills the area with no border. Each page keeps
+    its colours exactly, and the document around it does not."""
+    from tests.test_visual_communication_html import draw
+
+    drawn = slides(1) if fixed_pages else {**slides(1), "fixed-pages": False}
+    file = tmp_path / "printed.html"
+    file.write_bytes(draw(drawn).document)
+
+    with opened_by_a_real_browser(file, tmp_path, 500) as started:
+        started.call("Emulation.setEmulatedMedia", media="print")
+        [measured] = started.ask(PRINT_MEASURED)
+
+    drawing = 498 if fixed_pages else 500
+    border = (500 - drawing) / 2
+    assert (measured["width"], measured["drawing"]) == (500, drawing)
+    assert measured["height"] == drawing * 720 / 1280 + 2 * border
+    assert measured["border"] == f"{border:g}px"
+    assert (measured["page"], measured["document"]) == ("exact", "economy")

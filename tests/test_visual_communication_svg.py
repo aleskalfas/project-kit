@@ -548,7 +548,7 @@ def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
 
 
 #: Each plugin the capability ships, with its own version.
-SHIPPED = {"svg": "1.1.0", "pdf": "1.2.0", "html": "1.3.0", "css": "1.0.0", "json": "1.0.0"}
+SHIPPED = {"svg": "1.1.0", "pdf": "1.2.0", "html": "1.4.0", "css": "1.0.0", "json": "1.0.0"}
 
 
 def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:
@@ -556,7 +556,8 @@ def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version
     the picture it is handed (DEC-025 point 7). The SVG and HTML renderers came to draw a
     JPEG and a picture file, and the PDF renderer every image, so their versions rose; the
     code writers read no scene, so theirs stand. The HTML renderer rose again for fixed pages,
-    which the scene's root names and the seam stays at 5 for (DEC-031 point 2)."""
+    which the scene's root names and the seam stays at 5 for (DEC-031 point 2), and again
+    for print, which reads nothing new from the scene (DEC-026)."""
     assert seam.SEAM_VERSION == 5
     declared = {name: seam.declaration(name) for name in SHIPPED}
     assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 5)
