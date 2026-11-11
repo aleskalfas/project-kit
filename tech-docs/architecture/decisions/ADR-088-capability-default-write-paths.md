@@ -1,7 +1,7 @@
 ---
 id: ADR-088
 title: A capability declares its write categories in its package file, and install writes each default with a mark
-status: proposed
+status: accepted
 date: 2026-11-10
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
