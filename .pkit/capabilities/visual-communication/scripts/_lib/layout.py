@@ -3452,7 +3452,11 @@ class Instance:
         component = self.component
         if component.draws is None:
             return None
-        shown = component.shown
+        # A part a `when` leaves out here, such as one a size hides, takes nothing here.
+        shown: set[str] = set()
+        for part in component.parts.values():
+            if self._when(part):
+                shown |= part.passes | ({part.shows} if part.shows else set())
         for name in component.fields:
             given = self.given.get(name)
             if _filled(given, runs=name in component.runs) and name not in shown:
