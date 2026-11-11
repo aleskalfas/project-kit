@@ -2049,6 +2049,45 @@ def unread_token_findings(component: Component, *, file: str, library: str) -> l
     return found
 
 
+def held_drawing_finding(use: str, *, file: str, library: str) -> Finding:
+    """The finding on a component of a library that is no brand that declares `draws`, in
+    its file `file` of the version `library` (DEC-034 point 1): only a brand's component
+    draws a layout."""
+    return Finding(
+        DRAWING_SHAPE,
+        FAILS,
+        f"{use}: declares `draws`, and only a brand's component draws a layout",
+        file=file,
+        where=DRAWS,
+        fix="take `draws` out, or move the drawing into a brand, in a version of its own",
+        library=library,
+    )
+
+
+def own_drawing_findings(component: Component, *, file: str, library: str) -> list[Finding]:
+    """A call for attention for each break, in a top's own drawing of a layout, of the rule
+    that names what shows a field after the field (`Component.field_breaks`, DEC-034 point
+    5), in its file `file` of the version `library`: what the field shows would take
+    another trace id under a brand's drawing. It names the top's owner, and never fails,
+    since the drawing was accepted before the rule."""
+    drawings = [("", component)] if component.drawn is not None else []
+    drawings += [(f"layouts.{name}.", each) for name, each in sorted(component.drawings.items())]
+    return [
+        Finding(
+            FIELD_PART,
+            ATTENTION,
+            f"{component.use}: {why}",
+            file=file,
+            where=f"{at}{where}",
+            fix="name the part that shows each field after the field, in a version of its own",
+            who="the top's owner",
+            library=library,
+        )
+        for at, drawing in drawings
+        for where, why in drawing.field_breaks()
+    ]
+
+
 # --- one scene's context ------------------------------------------------------------------
 
 
