@@ -1,0 +1,9 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-022, the record of a web site, keeps its method and leaves the design
+  of the foundations' `site` to its component file (#3043). Its point 2, the
+  site's fields, layout and slot and their edge-to-edge stacking, is retired,
+  and point 3 drops the default of `size.site`. The capability's files page
+  and the site's file state each. No command, file format, key or check
+  changes, so no surface moves.
