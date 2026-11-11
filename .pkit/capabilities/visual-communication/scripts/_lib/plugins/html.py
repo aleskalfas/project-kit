@@ -71,9 +71,9 @@ points 1 to 6, DEC-005 points 4, 5, 9 and 10).
   browser to print it in its own colours, never adjusted for paper. The document around
   the pages takes no such rule, so the sheet around them prints as the reader's setting for
   backgrounds says. The sheet's area is the window, so a page shrinks with it as with a
-  narrow window. The file holds no page rule and no rule on where a page breaks, so the
-  reader picks the sheet and the browser the break. The screen's rules hold nothing of
-  print, and these nothing of the screen.
+  narrow window. The file holds no page rule, and no rule on where a page that runs on
+  breaks, so the reader picks the sheet and the browser the break. The screen's rules hold
+  nothing of print, and these nothing of the screen.
 - **The text of the file** is HTML and well-formed XML alike. Whatever a brand or a piece
   names is escaped, so it can neither end the style element nor start another element.
 
