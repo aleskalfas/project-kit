@@ -853,6 +853,27 @@ def test_no_drawing_of_a_top_a_brand_holds_draws_and_the_check_fails_it(
     assert [f.file for f in read.findings if f.code == layout.DRAWING_HELD_TOP] == [finding.file]
 
 
+@pytest.mark.parametrize("named", ["nothing-here", "plain"])
+def test_a_drawing_of_a_brands_component_that_is_no_top_fails_as_drawing_nothing_alone(
+    tmp_path: Path, named: str
+) -> None:
+    """A drawing that names a component the brand does not hold, or one it holds that is no
+    top, draws no layout of a top. It fails as that, and never as a drawing of a top the
+    brand holds, where its brand is checked alone and where a release reads it (DEC-034
+    points 1 and 4)."""
+    root = poster(tmp_path, holder="test-brand", brand=EDITION)
+    hold(root, {key: value for key, value in POSTER.items() if key != "layouts"}, "plain")
+    draws = {"top": f"test-brand/{named}", "layout": "poster"}
+    hold(root, {**poster_look("test-brand"), "draws": draws}, "look", into=EDITION_COMPONENTS)
+    file = f"{EDITION_COMPONENTS}/look.yaml"
+    assert ("fails", file, "draws") in judged(root, layout.DRAWING_SHAPE)
+    assert judged(root, layout.DRAWING_HELD_TOP) == []
+    read = full_read.read(libraries.Held(root, "visual"), EDITION, libraries.Version.parse("1.0.0"))
+    codes = {finding.code for finding in read.findings}
+    assert layout.DRAWING_SHAPE in codes
+    assert layout.DRAWING_HELD_TOP not in codes
+
+
 def test_a_top_a_brand_holds_under_another_brand_asks_its_author_for_attention(
     tmp_path: Path,
 ) -> None:

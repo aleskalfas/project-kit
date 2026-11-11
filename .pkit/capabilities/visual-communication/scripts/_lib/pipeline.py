@@ -641,9 +641,15 @@ def _served(brand: tokens.Brand) -> tuple[dict[tuple[str, str], list[str]], list
         drawn = draws.get("layout") if isinstance(draws, Mapping) else None
         if isinstance(top, str) and isinstance(drawn, str) and top.split("/")[0] in brand.named:
             drawings.setdefault((top, drawn), []).append(use)
-        elif data is not None and draws is None and layout.LAYOUTS in data:
+        elif _is_top(data):
             held.append(use)
     return drawings, held
+
+
+def _is_top(data: Mapping[str, Any] | None) -> bool:
+    """Whether the component of the data `data` is a top: it declares `layouts` and draws no
+    layout (DEC-034 point 4). None, the data of no component, is no top."""
+    return data is not None and data.get(layout.DRAWS) is None and layout.LAYOUTS in data
 
 
 def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis]) -> str:
@@ -1048,11 +1054,19 @@ def held_top_findings(
 ) -> list[Finding]:
     """The finding on `component`, a drawing in its file `file` of the version `library`,
     whose top a brand among the versions `env` reads holds (DEC-034 points 4 and 10,
-    `layout.held_top_drawing_finding`); none on any other component."""
+    `layout.held_top_drawing_finding`); none on any other component. A drawing that names a
+    component of a brand that is no top, or that the brand does not hold, gets none: it
+    draws no layout of a top, which `drawing-shape` says."""
     if component is None or component.draws is None:
         return []
-    holder = env.brand_of(component.draws[0])
+    top = component.draws[0]
+    holder = env.brand_of(top)
     if holder is None:
+        return []
+    try:
+        if not _is_top(env.component(top)):
+            return []
+    except KeyError:
         return []
     return [
         layout.held_top_drawing_finding(
