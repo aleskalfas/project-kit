@@ -187,7 +187,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 - the `svg` renderer, at version 1.1.0, which draws the formats `svg` and `svg-modes`
 - the `pdf` renderer, at version 1.2.0
-- the `html` renderer, at version 1.3.0
+- the `html` renderer, at version 1.4.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -207,6 +207,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stays at 5.
 - **What came with switching files.** The SVG renderer came to draw a second format, `svg-modes` ([The switching file](#the-switching-file)). A one-key file draws as before, so its version stays at 1.1.0, and the switching file is pinned to that version beside it. Seam 5 already hands a renderer of a format that holds modes every key of one file in one call, so the seam stays at 5 too.
 - **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stays at 5, and no other plugin's version rises.
+- **What rose with print.** The HTML renderer rose to 1.4.0, since its file prints each page as [Printing](#printing) says. It reads nothing new from the scene, so the seam stays at 5, and no other plugin's version rises.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stays at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
