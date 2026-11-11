@@ -43,7 +43,7 @@ The capability's next slice ships a deck whose pages each take one of its layout
 
 ### 3. A brand draws a top's layouts only where it holds the top or names the top's library
 
-- **Named by major.** Apart from a top it holds, a brand draws a layout only of a top whose library it names among those it builds on, by the major it fits (DEC-001 point 5; refinement per [visual-communication:DEC-034-brand-drawings] point 4). It is the rule by which a brand reaches a library's own roles (DEC-008 point 4). So a drawing never meets a major of the top whose layouts it was not written for.
+- **Named by major.** Apart from a top it holds, which it draws by the top's own drawing, a brand draws a layout only of a top whose library it names among those it builds on, by the major it fits (DEC-001 point 5; refinement per [visual-communication:DEC-034-brand-drawings] point 4). It is the rule by which a brand reaches a library's own roles (DEC-008 point 4). So a drawing never meets a major of the top whose layouts it was not written for.
 - **An experimental top** may still change its layouts, slots and fields in any release (DEC-003 point 7). A drawing that no longer fits it leaves it to its own drawing (point 6).
 - **Where it names none,** every top of that library draws itself under the brand.
 - **A local top always draws itself.** A local component is the piece's alone, and lies in no library a brand names.
@@ -54,7 +54,7 @@ The capability's next slice ships a deck whose pages each take one of its layout
 
 - **Serving.** A brand *serves* a top when it draws one of the top's layouts. A brand that holds a top draws each of its layouts by the top's own drawing, and so serves it (refinement per [visual-communication:DEC-034-brand-drawings] point 4). The kinds of work a brand serves, in the founding record's words (DEC-001 point 5), are the tops it serves.
 - **Built on a base that serves a top,** a brand keeps the base's form for it: the layouts the base draws, and the top's own drawing of the rest. It draws none of that top's layouts itself. A brand keeps its base's layouts, and adds only the layouts of a kind of work its base does not serve (DEC-004 point 6).
-- **Built on a base that serves no layout of a top,** a brand may draw the top's layouts, where it holds the top or names the top's library itself (point 3; refinement per [visual-communication:DEC-034-brand-drawings] point 4).
+- **Built on a base that serves no layout of a top,** a brand may draw the top's layouts, where it names the top's library itself (point 3).
 - **No base opens a layout.** The record of a library's own roles offers its stance to layouts: a brand reaches a library only where it names it, and built on a base only where the base opens what it reaches (DEC-008, Implications). This record takes the first half (point 3). The second is already decided for layouts: a brand adds the layouts of a kind of work its base does not serve, with no list a base opens (DEC-004 point 6). A base that leaves a top to the brands built on it serves none of its layouts.
 - **So one link draws a top.** Along a chain, the drawings of the brand nearest the root that serves a top are the ones that win. A lock may pair a base that serves a top with a brand built on it that draws that top too, as when the base began to serve it in a later version. The base's drawings win there, and the brand's draw nothing (point 9).
 
