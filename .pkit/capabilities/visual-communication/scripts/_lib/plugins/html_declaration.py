@@ -82,7 +82,7 @@ DECLARATION = {
     "name": "html",
     "kind": "renderer",
     "version": "1.3.0",
-    "seam": 5,
+    "seam": 6,
     "module": "html",
     "about": (
         "A page file for each language and each key over the size axes, holding the modes a "

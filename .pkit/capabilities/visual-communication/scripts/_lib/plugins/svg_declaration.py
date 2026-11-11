@@ -52,7 +52,7 @@ DECLARATION = {
     "name": "svg",
     "kind": "renderer",
     "version": "1.1.0",
-    "seam": 5,
+    "seam": 6,
     "module": "svg",
     "about": (
         "An SVG file for each page, language and combination of modes, or, as `svg-modes`, "

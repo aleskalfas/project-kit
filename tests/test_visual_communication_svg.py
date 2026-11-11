@@ -76,7 +76,7 @@ def scene(*children: dict[str, Any], width: float = 200, height: float = 100) ->
         "lock": {"foundations": "1.0.0"},
         "language": "en",
         "size-key": "default",
-        "seam": 5,
+        "seam": 6,
         "pages": ["figure"],
         "children": [page],
     }
@@ -552,14 +552,13 @@ SHIPPED = {"svg": "1.1.0", "pdf": "1.2.0", "html": "1.3.0", "css": "1.0.0", "jso
 
 
 def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:
-    """The seam's version rose to 5 for an image of every source, which a renderer draws from
-    the picture it is handed (DEC-025 point 7). The SVG and HTML renderers came to draw a
-    JPEG and a picture file, and the PDF renderer every image, so their versions rose; the
-    code writers read no scene, so theirs stand. The HTML renderer rose again for fixed pages,
-    which the scene's root names and the seam stays at 5 for (DEC-031 point 2)."""
-    assert seam.SEAM_VERSION == 5
+    """The seam's version rose to 6 for the physical size of the piece's top, which the
+    scene's root holds (DEC-034 point 3). The PDF renderer came to map each page onto it, so
+    its version rose; the SVG and HTML renderers draw as before, and the code writers read no
+    scene, so theirs stand."""
+    assert seam.SEAM_VERSION == 6
     declared = {name: seam.declaration(name) for name in SHIPPED}
-    assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 5)
+    assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 6)
     assert {name: each["version"] for name, each in declared.items()} == SHIPPED
     assert set(SHIPPED) <= set(seam.names())
 
