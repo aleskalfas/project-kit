@@ -54,8 +54,15 @@ from tests.visual_communication_project import (
 )
 from tests.visual_engine import COMPONENTS, FakeEnv, block, draw, layout, top
 
-pl, checks, reading, findings, files, libraries = load(
-    "visual-communication", "pipeline", "checks", "reading", "findings", "files", "libraries"
+pl, checks, reading, findings, files, libraries, full_read = load(
+    "visual-communication",
+    "pipeline",
+    "checks",
+    "reading",
+    "findings",
+    "files",
+    "libraries",
+    "full_read",
 )
 
 #: The test brand that gives the sizes of `device`, built on the foundations being built.
@@ -840,6 +847,10 @@ def test_no_drawing_of_a_top_a_brand_holds_draws_and_the_check_fails_it(
     [(finding, level)] = stated(root, layout.DRAWING_HELD_TOP)
     assert (level, finding.file, finding.where) == ("fails", f"{into}/look.yaml", "draws")
     assert "a top the brand test-brand@1.1.0 holds" in finding.message
+    # A release reads it as the check alone does.
+    name, version = into.split("/")[2:4]
+    read = full_read.read(libraries.Held(root, "visual"), name, libraries.Version.parse(version))
+    assert [f.file for f in read.findings if f.code == layout.DRAWING_HELD_TOP] == [finding.file]
 
 
 def test_a_top_a_brand_holds_under_another_brand_asks_its_author_for_attention(

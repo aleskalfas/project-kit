@@ -461,16 +461,6 @@ class Project:
         """`<library>@<version>` of a locked library."""
         return f"{library}@{self.lock[library]}"
 
-    @property
-    def chain(self) -> list[tokens.Brand]:
-        """The piece's brand, then each brand it builds on as its base, the root last."""
-        found: list[tokens.Brand] = []
-        brand: tokens.Brand | None = self.brand
-        while brand is not None:
-            found.append(brand)
-            brand = brand.base
-        return found
-
     def kind(self, library: str) -> str | None:
         """The kind of the version of `library` the lock names; None where it names none, or
         the version's `library.yaml` cannot be read, which the lock's findings report."""
@@ -580,6 +570,16 @@ class Project:
         ]
 
 
+def chain_of(brand: tokens.Brand) -> list[tokens.Brand]:
+    """The brand, then each brand it builds on as its base, the root last (DEC-004 point 6)."""
+    chain: list[tokens.Brand] = []
+    link: tokens.Brand | None = brand
+    while link is not None:
+        chain.append(link)
+        link = link.base
+    return chain
+
+
 @dataclass(frozen=True)
 class Kept:
     """A brand's drawing that draws nothing, since a brand nearer the root of its chain
@@ -613,14 +613,9 @@ def brand_drawings(brand: tokens.Brand) -> Drawings:
     drawing of it is the check's to fail (DEC-034 point 4). Where a brand holds two drawings of
     one layout, neither draws, and the top's own drawing does. A file that cannot be read
     draws nothing, and the check of its brand reports it."""
-    chain: list[tokens.Brand] = []
-    link: tokens.Brand | None = brand
-    while link is not None:
-        chain.append(link)
-        link = link.base
     drawn = Drawings()
     serving: dict[str, str] = {}
-    for link in reversed(chain):
+    for link in reversed(chain_of(brand)):
         own, held = _served(link)
         for (top, layout_name), uses in sorted(own.items()):
             if top in serving:

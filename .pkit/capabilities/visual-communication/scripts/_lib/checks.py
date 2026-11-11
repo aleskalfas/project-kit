@@ -2667,7 +2667,8 @@ def _brand_forms(project: pl.Project) -> list[Finding]:
     ]
     top = project.piece.top
     holder = top.partition("/")[0]
-    if holder not in {brand.name for brand in project.chain} and project.kind(holder) == "brand":
+    chain = {brand.name for brand in pl.chain_of(project.brand)}
+    if holder not in chain and project.kind(holder) == "brand":
         held, brand = project.label(holder), project.label(project.piece.brand)
         found.append(
             Finding(

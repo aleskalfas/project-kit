@@ -302,8 +302,8 @@ DRAWING_KEYS = ("parts", "values", "preferred", "exposes", TOKENS)
 #: The findings on a drawing (DEC-034 points 1, 2 and 5, DEC-009 point 5): one that is no
 #: brand's component, holds what the content gives, or draws no layout a top declares; one
 #: that writes a size its top writes, or none its page needs; a field it shows by no part
-#: named after it, or a part named after a field that shows another thing; and content or a
-#: component that places one by `use`. One whose top a brand holds (DEC-034 point 4).
+#: named after it, or a part named after a field that shows another thing; content or a
+#: component that places one by `use`; and one whose top a brand holds (DEC-034 point 4).
 DRAWING_SHAPE = "drawing-shape"
 DRAWING_SIZE = "drawing-size"
 FIELD_PART = "drawing-field-part"

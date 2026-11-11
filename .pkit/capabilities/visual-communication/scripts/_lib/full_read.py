@@ -181,7 +181,8 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
             # points 1 and 4).
             if component.draws is not None and library.kind != "brand":
                 found.append(layout.held_drawing_finding(use, file=file, library=label))
-            found.extend(pl.held_top_findings(component, env, file=file, library=label))
+            else:
+                found.extend(pl.held_top_findings(component, env, file=file, library=label))
             if component.top:
                 found.extend(layout.own_drawing_findings(component, file=file, library=label))
         found.extend(ctx.findings)
