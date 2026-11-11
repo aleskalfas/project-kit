@@ -66,11 +66,13 @@ from typing import Any
 from _lib import formula as fm
 from _lib import names
 from _lib.env import Env
-from _lib.findings import ATTENTION, Finding
+from _lib.findings import ATTENTION, FACT, Finding
 from _lib.layout import (
+    DRAWING_MISFIT,
     ENDS,
     ENDS_OF_LINE,
     TOLERANCE,
+    Choice,
     Context,
     Facts,
     Instance,
@@ -188,13 +190,23 @@ def compute_scene(
     env: Env,
     facts: Facts,
     sizes: Sizes | None = None,
+    choice: Choice | None = None,
 ) -> SceneResult:
     """The scene of a piece in one language and size combination, with what computing it
     found. `facts` fills the facts of its export, and no caller takes one by default (DEC-016
     point 5). `sizes` gives the size axes a piece can name, each at its mode at `size_key`
-    (DEC-021 point 3); none where it is not given. Raises `MissingFont`, or `MissingGlyph`,
-    before anything is laid out."""
-    ctx = Context(env, language, facts, sizes)
+    (DEC-021 point 3); none where it is not given. `choice` says which drawing draws each
+    instance of a layout, the piece's for every scene, and the scene states, at the piece,
+    each instance it leaves to its top's own drawing (DEC-034 point 6); with none, every
+    top draws its own layouts. Raises `MissingFont`, or `MissingGlyph`, before anything is
+    laid out."""
+    ctx = Context(env, language, facts, sizes, choice)
+    for trace, why in sorted(ctx.choice.refused.items()):
+        message = (
+            f"{trace} is drawn by its top's own drawing, in every language and at every size: "
+            f"the brand's drawing {why}"
+        )
+        ctx.add(Finding(DRAWING_MISFIT, FACT, message, where=trace, extra={"piece": True}))
     root = place_top(ctx, top, content)
     pages: list[str] = []
     children = []

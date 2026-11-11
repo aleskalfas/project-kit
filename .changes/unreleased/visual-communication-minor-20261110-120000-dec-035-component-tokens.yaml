@@ -1,0 +1,24 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A component declares component tokens (#2966, DEC-035): under `tokens` in
+  its own file, each a name, a type and a default that aliases a role. Its
+  parts read each by its full path, `component.<library>.<component>.<name>`,
+  in a paint, a text's style or a formula, and no other component reads it.
+  A brand that names the library may give a token a value, and exports each
+  it gives; a base may open one; the document of resolved values holds every
+  token of the libraries locked with the brand. The check reports a token
+  that cannot be read (`component-token-shape`), a part that reads a token
+  its component does not declare (`component-token-undeclared`), a token in a
+  piece's own component (`component-token-local`), and a token the
+  component's file reads nowhere (`component-token-unread`). An override, a
+  producer's input or a contrast pair that names a component token is
+  refused. A release compares a stable or deprecated component's tokens, and
+  the component tokens a brand exports. A brand's token under
+  `component.<library>` was private wherever it lay. Now, for a library the
+  brand names, it gives a token of that library's components a value or
+  fails as `library-token`, so a brand that kept a private token under
+  `component.foundations` fails until it moves it; for a library it does not
+  name, it asks for attention at a lock that holds that library.

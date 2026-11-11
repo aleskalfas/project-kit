@@ -50,7 +50,7 @@ Three things stand in the way:
 - **A switch** chooses by it wherever a switch chooses by an option: `{by: ":device", desktop: "=@space.3", phone: "=@space.1"}`.
 - **A `when` by a size** is such a switch. Each branch says yes, no, or what a `when` says already: `{by: ":device", desktop: head, phone: false}`.
 - **The default is named, and takes what is left out.** Each names the axis's default, and a mode it does not name takes that branch. So `tablet` above follows `desktop`. A new mode draws the default's shape until a component names it.
-- **Only a size axis a piece can name.** One scene serves every mode of a value axis (DEC-004 point 2). A renderer names a font profile, and a renderer picks no shape (DEC-001 point 2).
+- **Only a size axis a piece can name.** One scene serves every mode of a value axis (DEC-004 point 2). A renderer names a font profile, and a renderer picks no shape (DEC-001 point 2). A drawing of a layout also reads `:as`, which says whether its instance is a page (refinement per [visual-communication:DEC-034-brand-drawings] point 7).
 - **No line declares it.** The marked name is the declaration, found where it is used.
 
 ### 4. A list changes direction on two parts
@@ -66,7 +66,7 @@ Three things stand in the way:
 
 ### 6. The size is the page's, not the slot's
 
-A component reads the size the piece is drawn at, whatever room its placer gives it. So a row at `desktop` stays a row in a narrow slot, and no placer changes that. A component answers to its slot only by formulas on `:width`, which change numbers.
+A component reads the size the piece is drawn at, whatever room its placer gives it. So a row at `desktop` stays a row in a narrow slot, and no placer changes that. A component answers to its slot only by formulas on `:width`, which change numbers. A drawing of a layout also answers to whether its instance is a page (refinement per [visual-communication:DEC-034-brand-drawings] point 7).
 
 ### 7. What the scene and the checks read
 
@@ -74,10 +74,11 @@ A component reads the size the piece is drawn at, whatever room its placer gives
 - **The search for a lock** places a piece at each key it names, in each language. An end lost at one key holds its versions back, and what the render states names the key (DEC-011 point 4).
 - **A library checked alone** places nothing, at any size or under any option, so a size adds no new blind spot. A fault shows in a piece, and a component's reference renders draw each mode it names (DEC-007 point 3).
 - **Fails validation,** as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7):
-  - a `when` or a switch by a marked name that reads no size axis a piece can name, or names a mode the foundations lack
+  - a `when` or a switch by a marked name that reads no size axis a piece can name, or names a mode the foundations lack, other than one by `:as` in a drawing of a layout (refinement per [visual-communication:DEC-034-brand-drawings] point 7)
   - such a `when` or switch that leaves out the default
   - two parts over one list whose `when`s by a size say yes or no, where not exactly one says yes at each mode
   - at the lock, a component that reads an axis the locked foundations lack
+  - in a drawing of a layout, a `when` or a switch by `:as` that names a value other than `page` and `part`, or leaves out the default, `page` (refinement per [visual-communication:DEC-034-brand-drawings] points 7 and 10)
 - **Stated as a fact,** at its key: hidden content, and a piece drawn in a value mode neither its brand nor its base gives.
 
 ### 8. Written code
@@ -155,5 +156,5 @@ A component reads the size the piece is drawn at, whatever room its placer gives
 - **The capability's pages** change with these Tasks.
 - **Left open:**
   - **A brand's own axes** wait for a later change, which makes a new shared axis breaking again. A mode a brand adds to a shared size axis waits with them, since it could meet a later shared mode.
-  - **A brand's drawing at each key** waits for the change that lets a brand declare one (DEC-009 point 8). Its fit rests on a found end.
+  - **A brand's drawing at each key** is decided by [visual-communication:DEC-034-brand-drawings] point 6. Its fit rests on a found end.
   - **A font profile** is a size axis too (DEC-004 point 2), but a piece's `modes` do not name one (DEC-005 point 6). So one scene for each key serves a profile only once a renderer's profile joins the keys.

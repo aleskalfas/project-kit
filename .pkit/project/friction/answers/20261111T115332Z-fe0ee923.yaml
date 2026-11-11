@@ -1,0 +1,1133 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T221712Z-f1d0fca0.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:32Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261107T225725Z-d491b7e6.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:34Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-034's answer, which read main's answers on DEC-013's trim, `pkit visual new`, DEC-032's colour steps and DEC-035's component tokens: the page states the files and the release's comparison as built, tokens among them, and leaves a drawing, a physical size and an order's roles to the Tasks that build them. DEC-033's run `link`, a field's marks for a reader who does not see the piece and which of their changes break are not built either, so Content files, What a release compares and The foundations still state what is built, and DEC-033's Implications give each to the change that builds it."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161850Z-308ad562.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:37Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-034's answer, which read main's answers on `pkit visual new`, DEC-032's colour steps and DEC-035's component tokens: Tokens states what is built, and `:as`, a physical size, the ids kept under every drawing and an order's steps wait for the Tasks that build them. DEC-033's run structure and link, a text's mark, a reading order and a picture's text are not built either and alter none of those rules, so Lists, Layouts, Text and What a scene holds state what a component and a scene hold now, and DEC-033's Implications bring their examples with the change that builds each."
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:39Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-034's answer, which read DEC-032's and DEC-035's: no starter component declares a token, offers a colour step or is a drawing, so its roles, patterns and statuses stand as the README states them. DEC-033 lets a component give a run style a structure and a field a mark, which no starter version declares yet and a release of the library brings, so the README holds with all three."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+    revalidated:
+      at: 2026-11-11T11:53:41Z
+      outcome: unchanged
+      unchanged-because: A brand still holds the values pieces are drawn in, in each of its modes, its values for a library's component tokens among them (DEC-035). DEC-033's edit to DEC-001 point 5 adds that switching it may change a page's reading order and the text of a picture its drawing chose, which neither the definition nor its distinctions from a theme and a mode rule out.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:44Z
+      outcome: unchanged
+      unchanged-because: An experimental component is still one its library owner has not marked ready, whose tokens may change in any release (DEC-035), and a drawing, which DEC-034 exempts from a status, is no component content uses. DEC-033's edit to DEC-003 point 7 states changes of a stable component's reader's side as facts at a release, which touches no experimental component, so the definition and its example hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+    revalidated:
+      at: 2026-11-11T11:53:46Z
+      outcome: unchanged
+      unchanged-because: A layout is still a page's arrangement that a kind of piece declares and a brand draws, and component tokens (DEC-035) change neither how a top declares its layouts nor how a brand draws them. DEC-033 adds that a brand's drawing may change the order a page reads in, which leaves the definition, its example and its distinctions true.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:48Z
+      outcome: unchanged
+      unchanged-because: A library owner still keeps a library, numbers its versions and marks each of its components ready but a drawing, which DEC-034 exempts from a status. DEC-033 adds what switching the brand may change for a reader who does not see the piece, and that a release states changes of a stable component's reader's side as facts, so the definition and its example hold with both.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-notation
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:53:50Z
+      outcome: unchanged
+      unchanged-because: A notation still says what each thing of a subject is and names the colour family that marks it, never a value, while DEC-032 declares an order's roles apart from the families and maps no concept to them. DEC-033's edit to DEC-001 point 5 concerns what switching the brand changes for a reader who does not see the piece, so the definition and its distinctions hold with both.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:53:52Z
+      outcome: unchanged
+      unchanged-because: A piece still keeps its content as data and takes its look from libraries, whether `pkit visual new` stamps its first files or a person writes them. DEC-033's edit to DEC-001 point 3 adds that a run of that content may hold a link, so the definition holds with both.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:55Z
+      outcome: unchanged
+      unchanged-because: A stable component still breaks only in a library version with a new major, whether by a token removed (DEC-035) or by a picture's text pointed at another field (DEC-033), and a drawing carries no status at all (DEC-034). DEC-033 states a change of a stable component's structure, marks or reading order as a fact that breaks nothing, so the definition, its example and its distinctions hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:53:58Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-034's answer, which read DEC-032's and DEC-035's: colour steps, component tokens and a drawing without a status change how a chosen component looks or what carries a status, never what the developer names, writes or chooses, and step 5 still names the experimental components. DEC-033 adds formats read whole, a run's `link` among a run's known keys and facts of a stable component's reader's side at a release, which no step relies on or contradicts, so the use case holds with all of them."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+      - 20261106T024508Z-5f0b1c44.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:01Z
+      outcome: unchanged
+      unchanged-because: Judged with DEC-032's step named in the scene and DEC-034's physical size and ids kept under every drawing, under which a diagram is still a page alone or part of one, drawn in each mode it names. DEC-033 adds a run's link to content and the reader's side to the scene, which change no step of putting the figure in the page, so the use case holds with both.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T11:54:03Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-035's answer, which read DEC-032's: an element that names a concept still takes its colour through roles, never a component token, before any colour step, as step 4 and variant 5b need. DEC-033 adds only that a run may hold a link, which no step of drawing views from one model relies on, so the use case holds with all three."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:06Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-034's answer, which read DEC-032's and DEC-035's: a local component still declares no token, takes each colour, font and size from a role and lines up its parts by plain arithmetic, and colour steps and `:as` are choices it need not make. DEC-033 adds what switching the brand may change for a reader who does not see the piece, which no step of adding a visual as data relies on, so the use case holds."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-097-put-produced-picture.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T11:54:09Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 2 now holds both edits, what is written for a produced picture naming roles, never raw values or component tokens (DEC-035), and the picture's text being content in a field tied to it (DEC-033), while DEC-032 keeps a step's value out of the document of resolved values the program reads. So step 1 still takes each colour from a role, step 2 hands over the brand's values in that document's form, and the piece's words stay out of the picture, as the use case says.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T081413Z-78f2c9ae.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:54:12Z
+      outcome: unchanged
+      unchanged-because: DEC-028's edits leave its points 2 to 5, the two rule sets and the reviewer's findings as they were, and DEC-033's edit to DEC-001 point 3 adds a run's link to what a piece holds. Neither changes a design step or what the reviewer judges, so the use case holds with both.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:15Z
+      outcome: unchanged
+      unchanged-because: A stable component's break, DEC-033's pointing of a picture's or an instance's text at another field among them, is still refused outside a new major and an experimental one's change only warned of, and a drawing, which DEC-034 exempts from a status, is never compared. DEC-033 states its changes of structure, marks and reading order as facts that break nothing, so variants 2a and 2b and the guarantee hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md
+    read:
+      - 20261103T140411Z-459661c4.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+    revalidated:
+      at: 2026-11-11T11:54:18Z
+      outcome: unchanged
+      unchanged-because: Adding a kind of piece still rests on a top's layouts that a brand draws, and none of its steps declares a component token, which DEC-035 keeps from a local component. DEC-033 adds that a brand's drawing may change the reading order and the text of a picture it chose, which no step contradicts, so the use case holds with both.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:20Z
+      outcome: unchanged
+      unchanged-because: A code writer still declares the kinds of value it has a form for and reports its losses in one form, writing each value from the document of resolved values, which no colour step enters (DEC-032). What a renderer comes to declare, a physical page (DEC-034) and the reader's side with a fallback picture's text (DEC-033), no code writer reads, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:23Z
+      outcome: unchanged
+      unchanged-because: A library component is still written, checked, drawn with each option's value, reviewed and released, experimental first and stable once its owner marks it, and only a new major may then break it, by a token (DEC-035) or by a picture's text pointed at another field (DEC-033), while a drawing carries no status (DEC-034). The colour steps a pattern may give and the facts a release states of the reader's side add nothing a step relies on, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:54:26Z
+      outcome: unchanged
+      unchanged-because: Another brand or mode still changes only the look and keeps the content, a step's values coming with the scene (DEC-032), DEC-025's naming of each picture that does not follow the brand kept, and no agent's tool access stated. DEC-033 adds that the brand may change the order a page reads in and the text of a picture its drawing chose, which is no change of content, and a run's link stays in the content under every brand, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:29Z
+      outcome: unchanged
+      unchanged-because: A renderer still draws what the engine computed and reports what it could not draw, its declaration growing by a step's value handed with the scene (DEC-032) and by whether its format has a physical page (DEC-034). DEC-033 lets it say a format is read whole and report no loss of the reader's side, which holds nothing a seeing reader sees, so every difference in what it draws is still reported and the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-100-take-back-edits.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:54:31Z
+      outcome: unchanged
+      unchanged-because: Taking back edits still rests on renderers that only project and on the record of what a renderer last drew (DEC-005 point 11), which neither DEC-032's step values nor DEC-033's formats read whole and run links change. Ids and traces find an edit as before, so the use case holds with both.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-101-give-second-language.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:54:57Z
+      outcome: unchanged
+      unchanged-because: A second language still keeps its source's fields and ids, each text measured in its own language, while an order's roles join the foundations and a step's value comes with each scene (DEC-032). DEC-033 lets a run's link differ between languages as its text does, which fits the same structure, so the use case holds with both.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:54:59Z
+      outcome: unchanged
+      unchanged-because: A PDF still holds a page for each page of the piece, in order, one for each language, drawn at a top's physical size where it declares one (DEC-034) and with a step's value from the scene (DEC-032). Variant 2c's headings, reading order and text for each picture are the reader's side DEC-033 has the scene hold for the renderer to spell, so the use case holds with all three.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:01Z
+      outcome: unchanged
+      unchanged-because: A talk still runs through content, a brand, a render and an export, DEC-032's step values handed over with the scene and DEC-033's run link kept in content. Neither changes a step's hand-over, so the journey holds with both.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T090717Z-79117d13.yaml
+    revalidated:
+      at: 2026-11-11T11:55:04Z
+      outcome: unchanged
+      unchanged-because: "Judged with DEC-034's answer, which read main's answers on DEC-013's trim, `pkit visual new`, DEC-032's colour steps and DEC-035's component tokens: the page states the check as built, the tokens' findings among them, and leaves the findings of `:as`, a drawing, a physical size and an order's roles to the Tasks that build them. DEC-033's findings are not built either, so `run-key` still refuses a run's key other than `text`, `style` and `concept` and the page holds of the check as it runs, DEC-033's Implications bringing its findings with the change that builds them."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T210953Z-944553cc.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T081413Z-78f2c9ae.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T221712Z-f1d0fca0.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T11:55:07Z
+      outcome: unchanged
+      unchanged-because: Judged with 52fe4b1c's answer, which read main's answers on DEC-013's trim, `pkit visual new`, the HTML page's printing, GRAPHIC 1.1.0's order's steps and component tokens, under which each of the README's pointers holds and it says nothing of how a page prints. DEC-033's run link, what switching the brand may change for a reader who does not see the piece and the before-and-after's naming of the reader's side come with the change that builds them, and the PDF renderer's section gains only a note of its later tagged version, so the README holds with all of them.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-001
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:10Z
+      outcome: unchanged
+      unchanged-because: RS-COMM-001 still asks a page's lead to answer its title on a piece that explains, since DEC-028's edits leave its points 3, 4 and 6 as they were. DEC-033's edit to DEC-001 point 3 adds a run's link, which changes neither the fields a piece declares nor what the rule judges, so it holds with both.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-002
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:13Z
+      outcome: unchanged
+      unchanged-because: RS-COMM-002 still asks a piece that explains to say what a thing is before its detail, since DEC-028's edits leave its points 3, 4 and 6 as they were. DEC-033's edit to DEC-001 point 3 adds a run's link, which changes neither the fields a piece declares nor what the rule judges, so it holds with both.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-003
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:15Z
+      outcome: unchanged
+      unchanged-because: RS-COMM-003 still asks the leads of a piece that explains, read in order, to tell its story, since DEC-028's edits leave its points 3, 4 and 6 as they were. DEC-033's edit to DEC-001 point 3 adds a run's link, which changes neither the fields a piece declares nor what the rule judges, so it holds with both.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-004
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:18Z
+      outcome: unchanged
+      unchanged-because: RS-COMM-004 still asks the words of a piece that explains to fit the audience its `audience` field names, since DEC-028's edits leave its points 3, 4 and 7 as they were. DEC-033's edit to DEC-001 point 3 adds a run's link, which changes neither that field nor what the rule judges, so it holds with both.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-005
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:24Z
+      outcome: unchanged
+      unchanged-because: RS-COMM-005 still asks each fact a piece that explains shows to be true against a source it names, since DEC-028's edits leave its points 3, 4 and 7 as they were. DEC-033's edit to DEC-001 point 3 adds a run's link, which a piece may use to name a source and which changes nothing the rule asks, so it holds with both.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/graphic.md#RS-GRAPHIC-005
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+    revalidated:
+      at: 2026-11-11T11:55:32Z
+      outcome: unchanged
+      unchanged-because: RS-GRAPHIC-005 still asks everything on a page to be readable where its `shown` field says the piece is shown, since DEC-028's edits leave its points 3, 4 and 10 as they were. DEC-033's edit to DEC-001 point 3 adds a run's link, which changes neither that field nor what the rule judges, so it holds with both.

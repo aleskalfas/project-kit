@@ -27,16 +27,20 @@ and the record that sets it), the segment, and whether the later number allows i
   top asks for a height (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8). An
   experimental component may change in any release, so only its arrival is named, as for
   any new component;
+- *a component's tokens:* those of each component the earlier version marks stable or
+  deprecated, as its component promises them (DEC-035 point 6): a token removed, of
+  another type, or whose chain of defaults no longer ends at a shared role where it did,
+  breaks; a new one is an addition, whatever its chain ends at;
 - *a library's own roles:* those its stable and deprecated components read, directly or
-  through a default, and a new one such a component reads (DEC-008 point 7);
+  through a default, a token's default among them, and a new one such a component reads
+  (DEC-008 point 7, DEC-035 point 4);
 - *pairs:* every pair a library declares, whatever reads it (DEC-008 point 7);
 - *the foundations:* their shared roles and the top groups they lie in, axes and colour
   families, whatever reads them (DEC-004 point 5);
 - *a brand:* the token paths it exports, a shared picture role among them only where it
   gives it a value (DEC-025 point 4), its axes and modes, every shared value axis whole
-  and each size it gives (DEC-021 point 2), and the roles it opens to a brand built on it
-  (DEC-004 point 5). The component tokens it exports join them with the
-  Task that builds them (#2573).
+  and each size it gives (DEC-021 point 2), the component tokens it gives values among its
+  token paths, and the roles it opens to a brand built on it (DEC-004 point 5).
 
 **What a field's schema breaks.** A field changes what it means where what content gave it
 may no longer be taken: it no longer takes a type, a value or a count of items it took, a
@@ -219,6 +223,7 @@ def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
             later.data[name],
             found,
         )
+        _tokens(f"`{use}`", name, earlier, later, found)
     for name in sorted(set(later.components) - set(earlier.components) - set(earlier.unread)):
         found.added(f"`{later.name}/{name}`", "is new", "DEC-003 point 1")
 
@@ -253,6 +258,43 @@ def _component(
     _lists(where, earlier.list_fields, later.list_fields, earlier.fields, later.fields, found)
     if earlier.top:
         _layouts(where, earlier, later, data_e, data_l, found)
+
+
+def _tokens_of(read: FullRead, component: str) -> dict[str, tokens.ComponentToken]:
+    """The component tokens the component `component` of the version declares, by path."""
+    assert read.scope is not None
+    return {
+        path: token
+        for path, token in read.scope.tokens.items()
+        if token.component == component and read.scope.owner[path] == read.name
+    }
+
+
+def _tokens(where: str, name: str, earlier: FullRead, later: FullRead, found: _Found) -> None:
+    """A compared component's tokens, as it promises them (DEC-035 point 6): a token
+    removed, of another type, or whose chain of defaults no longer ends at a shared role
+    where it did, breaks; a new token is an addition, whatever its chain ends at. Any other
+    change, such as a default pointed at another role, is neither."""
+    assert earlier.scope is not None and later.scope is not None
+    tokens_e, tokens_l = _tokens_of(earlier, name), _tokens_of(later, name)
+    for path, token in sorted(tokens_e.items()):
+        at = f"{where}, token `{path}`"
+        now = tokens_l.get(path)
+        if now is None:
+            found.broken(at, "is removed", "DEC-003 point 6, DEC-035 point 6")
+            continue
+        if now.type != token.type:
+            found.broken(
+                at,
+                f"is of type `{now.type}`, where it was `{token.type}`",
+                "DEC-003 point 6, DEC-035 point 6",
+            )
+        if _ends_shared(earlier.scope, path) and not _ends_shared(later.scope, path):
+            found.broken(
+                at, "no longer ends its chain of defaults at a shared role", "DEC-035 point 6"
+            )
+    for path in sorted(set(tokens_l) - set(tokens_e)):
+        found.added(f"{where}, token `{path}`", "is new", "DEC-035 point 6")
 
 
 def _required(data: Mapping[str, Any]) -> set[str]:
@@ -660,14 +702,15 @@ def _leaves(value: Any) -> list[Any]:
 
 def _promised(read: FullRead) -> set[str]:
     """The library's own roles its stable and deprecated components read, directly or
-    through a default (DEC-008 point 7)."""
+    through a default, the default of each token such a component declares among them
+    (DEC-008 point 7, DEC-035 point 4)."""
     scope = read.scope
     assert scope is not None
     found: set[str] = set()
     for name, component in read.components.items():
         if _status(read, name) not in PROMISED:
             continue
-        for path in _roles_read(component):
+        for path in sorted(_roles_read(component) | set(_tokens_of(read, name))):
             step: str | None = path
             while step is not None and step not in found and scope.owner.get(step) == read.name:
                 found.add(step)
@@ -695,10 +738,14 @@ def _own_roles(earlier: FullRead, later: FullRead, found: _Found) -> None:
     scope_e, scope_l = earlier.scope, later.scope
     assert scope_e is not None and scope_l is not None
     own_e = {
-        path: role for path, role in scope_e.roles.items() if scope_e.owner[path] == earlier.name
+        path: role
+        for path, role in scope_e.roles.items()
+        if scope_e.owner[path] == earlier.name and path not in scope_e.tokens
     }
     own_l = {
-        path: role for path, role in scope_l.roles.items() if scope_l.owner[path] == later.name
+        path: role
+        for path, role in scope_l.roles.items()
+        if scope_l.owner[path] == later.name and path not in scope_l.tokens
     }
     promised_e, promised_l = _promised(earlier), _promised(later)
     for path, role in sorted(own_e.items()):
