@@ -44,7 +44,6 @@ from _lib import copies, current_copy, exports, fingerprint, location, records
 from _lib import pipeline as pl
 from _lib.files import Change, FileError, refuse_links
 from _lib.fingerprint import COPY_PLACE, CURRENT_COPY, HANDED_OUT
-from _lib.names import is_name
 
 #: What only the final piece's past holds, at the top of its folder, which a copy leaves out
 #: (DEC-017 point 8): its record of exports, its findings record, and the folders of the
@@ -80,7 +79,7 @@ def plan(piece: pl.Piece, name: str) -> Planned:
     """The copy of `piece`, read from its own file alone, as the new piece `name`, every file
     it reads and writes checked. Raises Refused, naming what stops it, so `write` refuses
     nothing."""
-    target = _target(piece, name)
+    target = pl.new_piece_folder(piece.root, piece.location, name)
     number = _handed_out(piece)
     version = _version(piece, number)
     lock = _lock(piece, version)
@@ -112,21 +111,6 @@ def report(planned: Planned) -> list[str]:
         f"taken up: `{planned.name}`, a draft copied from `{piece.name}` with the lock of version "
         f"{number} pinned, in {planned.rel}: commit its folder. `{piece.name}` stays as it was",
     ]
-
-
-def _target(piece: pl.Piece, name: str) -> Path:
-    """The new piece's folder. Raises Refused where `name` is not a piece's name, or anything
-    lies there already."""
-    if not is_name(name):
-        raise pl.Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
-    rel = f"{piece.location}/{pl.PIECES}/{name}"
-    target = piece.root / rel
-    if target.exists() or target.is_symlink():
-        raise pl.Refused(
-            f"{rel} lies in the location already, so the name `{name}` is taken: name the new "
-            f"piece another"
-        )
-    return target
 
 
 def _handed_out(piece: pl.Piece) -> int:
