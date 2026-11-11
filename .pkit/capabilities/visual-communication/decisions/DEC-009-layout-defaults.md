@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 > **Partially superseded by [visual-communication:DEC-034-brand-drawings].** Overturned: point 7's "Breaking, for a base", since a base that begins to serve a top breaks nothing. Also overturned: point 9's failure of a drawing of a layout of a top that the brand's base serves, which asks for attention instead. The rest stands.
 
-**In plain terms:** a top component, such as a deck or a figure, declares its layouts and draws each of them, as the figure draws its frame today. That drawing is the layout's default. A brand may hold a drawing of its own for a layout, as a component of the brand, and that drawing wins. It may do so only for a top whose library it names, and a brand built on a base keeps the base's form for each top the base has drawings for. So every page of a top draws under a brand that has never heard of it, in that brand's values. Content never names a brand's drawing, so switching the brand changes no content. Where a brand has no drawing of a layout, or its drawing cannot take what the content gives, the top's own drawing draws, and the check states it. Every file format 1 accepted draws as before.
+**In plain terms:** a top component, such as a deck or a figure, declares its layouts and draws each of them, as the figure draws its frame today. That drawing is the layout's default. A brand may hold a drawing of its own for a layout, as a component of the brand, and that drawing wins. It may do so only for a top it holds or whose library it names (refinement per [visual-communication:DEC-034-brand-drawings] point 4), and a brand built on a base keeps the base's form for each top the base has drawings for. So every page of a top draws under a brand that has never heard of it, in that brand's values. Content never names a brand's drawing, so switching the brand changes no content. Where a brand has no drawing of a layout, or its drawing cannot take what the content gives, the top's own drawing draws, and the check states it. Every file format 1 accepted draws as before.
 
 ## Context
 
@@ -41,9 +41,9 @@ The capability's next slice ships a deck whose pages each take one of its layout
 - **What a fix to the top reaches.** A change of the top's own drawing of a layout reaches every piece whose brand does not draw that layout, and no piece whose brand does. A brand that draws a layout owns its form there, as a brand that gives a role a value owns that value (DEC-008 point 1). A change of what the top takes, its slots, fields and options, reaches every drawing, since each is written against them (point 5).
 - **Traced.** Every element a drawing draws traces back to that drawing (DEC-001 point 3), through its instance's group, which names the drawing, and what a field shows keeps the field's id under every drawing (refinement per [visual-communication:DEC-034-brand-drawings] point 5).
 
-### 3. A brand draws a top's layouts only where it names the top's library
+### 3. A brand draws a top's layouts only where it holds the top or names the top's library
 
-- **Named by major.** A brand draws a layout only of a top whose library it names among those it builds on, by the major it fits (DEC-001 point 5). It is the rule by which a brand reaches a library's own roles (DEC-008 point 4). So a drawing never meets a major of the top whose layouts it was not written for.
+- **Named by major.** Apart from a top it holds, a brand draws a layout only of a top whose library it names among those it builds on, by the major it fits (DEC-001 point 5; refinement per [visual-communication:DEC-034-brand-drawings] point 4). It is the rule by which a brand reaches a library's own roles (DEC-008 point 4). So a drawing never meets a major of the top whose layouts it was not written for.
 - **An experimental top** may still change its layouts, slots and fields in any release (DEC-003 point 7). A drawing that no longer fits it leaves it to its own drawing (point 6).
 - **Where it names none,** every top of that library draws itself under the brand.
 - **A local top always draws itself.** A local component is the piece's alone, and lies in no library a brand names.
@@ -54,7 +54,7 @@ The capability's next slice ships a deck whose pages each take one of its layout
 
 - **Serving.** A brand *serves* a top when it draws one of the top's layouts. A brand that holds a top draws each of its layouts by the top's own drawing, and so serves it (refinement per [visual-communication:DEC-034-brand-drawings] point 4). The kinds of work a brand serves, in the founding record's words (DEC-001 point 5), are the tops it serves.
 - **Built on a base that serves a top,** a brand keeps the base's form for it: the layouts the base draws, and the top's own drawing of the rest. It draws none of that top's layouts itself. A brand keeps its base's layouts, and adds only the layouts of a kind of work its base does not serve (DEC-004 point 6).
-- **Built on a base that serves no layout of a top,** a brand may draw the top's layouts, where it names the top's library itself (point 3).
+- **Built on a base that serves no layout of a top,** a brand may draw the top's layouts, where it holds the top or names the top's library itself (point 3; refinement per [visual-communication:DEC-034-brand-drawings] point 4).
 - **No base opens a layout.** The record of a library's own roles offers its stance to layouts: a brand reaches a library only where it names it, and built on a base only where the base opens what it reaches (DEC-008, Implications). This record takes the first half (point 3). The second is already decided for layouts: a brand adds the layouts of a kind of work its base does not serve, with no list a base opens (DEC-004 point 6). A base that leaves a top to the brands built on it serves none of its layouts.
 - **So one link draws a top.** Along a chain, the drawings of the brand nearest the root that serves a top are the ones that win. A lock may pair a base that serves a top with a brand built on it that draws that top too, as when the base began to serve it in a later version. The base's drawings win there, and the brand's draw nothing (point 9).
 
@@ -149,7 +149,7 @@ Each finding below fails validation where it lies in a file the project can corr
 - **A drawing that does not fit fails, or leaves undrawn what it lacks.** Rejected. The first makes every addition to a top a breaking change, and the second drops content unseen.
 - **The whole top drawn by its own drawing where one page does not fit.** Rejected. One new word on one slide would turn a whole deck back to the top's form.
 - **A fact at each piece that its brand does not draw a layout.** Rejected. It would fire on every piece under a brand that serves no top, by design.
-- **A brand that draws a top's layouts without naming its library.** Rejected. Its drawing could meet a major whose slots it was not written for.
+- **A brand that draws a top's layouts without holding the top or naming its library** (refinement per [visual-communication:DEC-034-brand-drawings] point 4). Rejected. Its drawing could meet a major whose slots it was not written for.
 
 ## Implications
 

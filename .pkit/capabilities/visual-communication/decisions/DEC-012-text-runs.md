@@ -113,7 +113,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why the key is `style`.** It is the word an author reaches for, and in content it can name only a word. The cost: it names a typography role in a component and the scene, so a reader must know which file it is in.
 
-**Why the format fixes a run's keys.** Runs then read alike in every component, for people, agents and translators, and `concept` means one thing wherever content writes it. A run holds no other key, so a later key, such as a run's link (DEC-005 point 5) or the methodology's container's key, is an addition, and none is kept free on a run (DEC-002 point 4).
+**Why the format fixes a run's keys.** Runs then read alike in every component, for people, agents and translators, and `concept` means one thing wherever content writes it. A run holds no other key, so a later key, such as the methodology's container's key, is an addition, and none is kept free on a run (DEC-002 point 4; refinement per [visual-communication:DEC-033-structure-for-readers] point 3).
 
 **Why a run's concept reaches only the paints that read a family.** A concept does so on every component content places, which leaves the component deciding how a run looks, and keeps a run's concept out of a drawing's fit. No member is promised where a run's text lies, so neither rule would make its colour safer, and a piece may pass under one brand and fail under another, though both meet every pair they are given. The cost is a concept that shows in no colour.
 
@@ -154,7 +154,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 - **Edits to accepted records,** each citing this record:
   - DEC-001 points 3 and 6: a field's run words among content's choices, a list of runs with no ids that may differ between languages, and a run's concept and family under a state.
-  - DEC-002 points 3 and 4: a run's three fixed keys in the strict reading, which takes a list of runs only in a field marked to take them, with no ids and no key kept free, and a run style's word with no path marks.
+  - DEC-002 points 3 and 4: a run's fixed keys in the strict reading (refinement per [visual-communication:DEC-033-structure-for-readers] point 3), which takes a list of runs only in a field marked to take them, with no ids and no key kept free, and a run style's word with no path marks.
   - DEC-004 point 8: each run measured against the fill under it, at its own size and weight.
   - DEC-005 points 1, 4 and 5: a text part's choice by a run's style, each run shaped and measured in its own role, lines broken across runs, and a text's runs with their paint and fonts under one line height, each saying how it was measured.
   - DEC-007 point 3: each run word of each field drawn once in a component's reference renders.

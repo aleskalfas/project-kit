@@ -47,9 +47,9 @@ The capability's next slice ships the starter and a neutral brand, which rest on
 - **What it may alias:** another of the library's own roles, or a role of a library it builds on, the foundations' shared roles included. A library names the libraries it builds on, by major (DEC-001 point 5).
 - **Of the same type** as the role.
 - **Never a value.** Only a brand holds a raw value (DEC-001 point 5), so a component library still holds none.
-- **Never a component token.** A component token narrows a role for one part (DEC-004 point 7). So the defaults run one way: from a part to a library's role, and on to a shared role.
+- **Never a component token.** A component token narrows a role for one component (DEC-004 point 7; refinement per [visual-communication:DEC-035-component-tokens]). So the defaults run one way: from a component to a library's role, and on to a shared role.
 - **A chain of defaults ends,** never in a loop. A role draws under every brand only where its chain ends at a shared role.
-- **A component token's default** may alias a library's own role, as it aliases what a library's own role's default may alias, and never a component token (DEC-004 point 7; refinement per [visual-communication:DEC-035-component-tokens]). So a brand that gives the role a value restyles the part too.
+- **A component token's default** may alias a library's own role, as it aliases what a library's own role's default may alias, and never a component token (DEC-004 point 7; refinement per [visual-communication:DEC-035-component-tokens]). So a brand that gives the role a value restyles the token too.
 - **Never a role of an order.** No default of a library's own role, or of a component token, aliases a role of an order (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 6).
 
 ### 4. A brand reaches a library's roles only where it names the library
@@ -117,7 +117,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why a default may alias a role of its own library, or of one it builds on.** One role can then lead several, such as a small gap that follows the library's gap, so a brand that gives one a value restyles all. A library built on the starter follows the starter's roles, so a brand that restyles the starter restyles it too. Both reach only names the library already names (DEC-001 point 5), and a breaking change to them waits for a major release.
 
-**Why never a component token.** A component token is the narrowest role, for one part. A library's role that followed one part would invert the narrowing, and let one component reshape the whole library.
+**Why never a component token.** A component token is the narrowest role, for one component. A library's role that followed one would invert the narrowing, and let one component reshape the whole library (refinement per [visual-communication:DEC-035-component-tokens]).
 
 **Why defaults lie under the brand, and aliases resolve after the merge.** A default is the library's stand-in, and a brand's value is the brand's choice, so the brand wins. Resolved after the merge, a default takes the brand's value for the role it aliases, which is what makes the library look like the brand.
 
@@ -136,7 +136,7 @@ Each finding below fails validation where it lies in a file the project can corr
 - **No defaults for a library's own roles.** Rejected. Every brand would have to name every library its pieces use, and a brand released before a library could never draw it.
 - **A default that holds a value, as a component library often ships a theme of its own.** Rejected. A component library would hold a look, against the founding record ([visual-communication:DEC-001-visual-communication-discipline] point 5), and a brand would draw it in foreign colours.
 - **A default required on every own role.** Rejected. It would make a field required (DEC-003 point 3), and force a misleading colour where no role carries the right meaning.
-- **No own roles: shared roles and component tokens only.** Rejected. A library could add a meaning only through the foundations, which one owner releases. A component token restyles one part, not every part of a library at once.
+- **No own roles: shared roles and component tokens only.** Rejected. A library could add a meaning only through the foundations, which one owner releases. A component token restyles one component, not every part of a library at once (refinement per [visual-communication:DEC-035-component-tokens]).
 - **A default that aliases a shared role only.** Rejected. No role could lead another within a library, and a library built on the starter could not follow it.
 - **Another brand's values, such as a neutral brand's, where a brand gives none.** Rejected. One piece would mix the looks of two brands, and lock two brands.
 - **A brand that gives a library's roles values without naming it.** Rejected. Its values could meet a major they were not tuned for.
@@ -155,4 +155,4 @@ Each finding below fails validation where it lies in a file the project can corr
 - **The starter** gives each of its own roles a default whose chain ends at a shared role, and its tests check it. Where no role is a fair stand-in, the foundations gain a shared role.
 - **A type the shared roles lack,** such as a font weight, gives a library's role of that type no chain that ends at a shared role. The foundations declare a shared role of that type when a library needs one.
 - **The neutral brand** need not name the starter. It draws the starter at its defaults, and names it only to give a role a value. It gives a value to every shared role, those the starter adds to the foundations included.
-- **Layouts are not roles.** Whether a top component's layouts take a default that a brand may replace is decided apart ([visual-communication:DEC-009-layout-defaults]). It shares the first half of point 4's rule: a brand draws a top's layouts only where it names the top's library. A base opens no layout to the brands built on it, since a brand keeps its base's layouts and adds those of a kind of work its base does not serve (DEC-004 point 6).
+- **Layouts are not roles.** Whether a top component's layouts take a default that a brand may replace is decided apart ([visual-communication:DEC-009-layout-defaults]). It shares the first half of point 4's rule: a brand draws a top's layouts, but for a top it holds, only where it names the top's library (refinement per [visual-communication:DEC-034-brand-drawings] point 4). A base opens no layout to the brands built on it, since a brand keeps its base's layouts and adds those of a kind of work its base does not serve (DEC-004 point 6).
