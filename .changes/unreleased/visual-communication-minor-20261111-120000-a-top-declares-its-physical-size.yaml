@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A top declares its physical size (#3021, DEC-034 point 3): a page alone, or a
+  top whose layouts are its pages' forms, may declare `physical-size: {width,
+  height}`, its trim size in millimetres. The engine sets the height it asks
+  for from the width it asks for and the size's proportion, wherever it lies,
+  and names itself as the height's source; such a top's pages are fixed pages.
+  The check fails a physical size on any other component, one that is not two
+  positive numbers, and a height asked for by a formula beside it
+  (`physical-size`). The scene's root holds the physical size of the piece's
+  top, and the seam rises to 6. The PDF renderer, now 1.3.0, draws each page at
+  that size by one scale its width sets; the SVG and HTML renderers declare
+  that their formats have no physical page, and lose nothing. A release
+  breaks on a physical size that a top comes to declare, ceases to, or changes
+  in proportion.
