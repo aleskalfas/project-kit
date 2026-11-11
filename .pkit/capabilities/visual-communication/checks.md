@@ -97,6 +97,7 @@ pkit:
         - visual-communication:DEC-029#4
         - visual-communication:DEC-029#5
         - visual-communication:DEC-030#6
+        - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
         - visual-communication:DEC-035#4
         - visual-communication:DEC-035#5

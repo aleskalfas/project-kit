@@ -135,6 +135,7 @@ pkit:
         - visual-communication:DEC-031#3
         - visual-communication:DEC-031#4
         - visual-communication:DEC-031#5
+        - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes

@@ -78,6 +78,7 @@ pkit:
         - visual-communication:DEC-025#6
         - visual-communication:DEC-025#7
         - visual-communication:DEC-031#2
+        - visual-communication:DEC-034#3
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
         - visual-communication:DEC-035#3
@@ -458,7 +459,7 @@ physical-size: {width: 594, height: 841}
 - **The top's alone.** No brand gives it a value, and no formula reads it.
 - **The height follows the proportion.** The top asks for its width under `preferred`, as any top does, and for no height there. The engine sets its height from the width it asks for and the size's proportion, and names itself as the height's [source](#sources). So a poster 640 px wide at A1 is 906.13 px tall.
 - **Its pages.** In a top whose layouts are its pages' forms, each page gets the top's width and that height, so its pages are fixed pages. A layout may still say its page's height, and a page that asks for more than it gets is reported.
-- **The width sets the scale.** An export whose format has a physical page draws each page at the size, so the page's width, a brand's value, sets how large the brand's type and spacing print, as the PDF renderer's do.
+- **The width sets the scale.** An export whose format has a physical page, as PDF has, draws each page at the size, so the page's width, a brand's value, sets how large the brand's type and spacing print.
 - **Placed elsewhere,** in another component's slot or as a page of another top, it asks for its size as it does alone, its height in the proportion, and gets what its placer gives. Only the piece's top prints at its size.
 
 ## Formulas
