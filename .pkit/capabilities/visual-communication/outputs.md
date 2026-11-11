@@ -157,6 +157,8 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+      source:
+        - html-page-print-runs
 ---
 
 # What is made from a piece
@@ -188,7 +190,7 @@ Every plugin is the capability's, and a project adds none (DEC-005 point 12): no
 
 - the `svg` renderer, at version 1.1.0, which draws the formats `svg` and `svg-modes`
 - the `pdf` renderer, at version 1.3.0
-- the `html` renderer, at version 1.3.0
+- the `html` renderer, at version 1.4.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -208,6 +210,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with web pages.** The PDF renderer rose to 1.2.0, since it draws a page too large for a PDF smaller. Every other page draws as before, and the seam stayed at 5.
 - **What came with switching files.** The SVG renderer came to draw a second format, `svg-modes` ([The switching file](#the-switching-file)). A one-key file draws as before, so its version stays at 1.1.0, and the switching file is pinned to that version beside it. Seam 5 already hands a renderer of a format that holds modes every key of one file in one call, so the seam stayed at 5 too.
 - **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stayed at 5, and no other plugin's version rose.
+- **What rose with print.** The HTML renderer rose to 1.4.0, since its file prints each page as [Printing](#printing) says. It read nothing new from the scene, so the seam stayed at 5, and no other plugin's version rose.
 - **What rose with a physical size.** The scene's root came to hold the physical size of the piece's top. A renderer that did not read it would draw a printed page at a wrong size with no error, so the seam rose to 6, and every plugin's declaration names it. The PDF renderer rose to 1.3.0, since it draws each page at that size ([The PDF renderer](#the-pdf-renderer)). A scene with none draws as before. The SVG and HTML renderers draw as before, and the code writers read no scene, so their versions stay.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stayed at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
@@ -338,7 +341,7 @@ The `html` renderer draws a scene as one *page file*: the scene's pages in one w
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
 - **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths.
 - **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
-- **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)).
+- **Pages** follow each other down the document in the scene's order, each in the middle of the window, 24 px apart. Each keeps its own size. The file sets no colour value around them. It holds no rule on a window's width. A deck's slides lie inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). In print the pages follow each other down the sheets ([Printing](#printing)).
 - **A physical size.** A page file is read in a window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026 point 4). So its format has no physical page of its own, and it draws a top with a physical size as any other, losing nothing (DEC-034 point 3). The PDF export draws each page at that size.
 - **The head** declares the file's encoding, UTF-8, its language and its viewport.
 - **What the file holds.** A file asks for nothing. Its pictures lie inside it, each as the SVG renderer embeds it ([The SVG renderer](#the-svg-renderer)). Each font lies once, from the brand's committed font file, cut down to every character the file draws in it. Each arrowhead lies once for each colour role, and every page reaches it.
@@ -376,17 +379,21 @@ A deck's page file shows its slides as a viewer of slides does, each at its own 
 - **A browser that cannot mix colours** draws the keyline in its text colour and the backdrop in its ground colour.
 - **Size.** The keyline is 1 px wide and takes no room, so a slide keeps its size and its proportions. The backdrop shows 32 px wide on every side, or 4% of the window's width where that is less. In a narrower window a slide shrinks with the room that leaves it, and its keyline stays 1 px wide. In a window 500 px wide, a slide 1280 px wide is 460 px wide. Nothing scrolls sideways.
 - **The same elements.** The file holds the same elements as it would with no keyline. Only its rules differ.
-- **On screen alone.** A print holds neither the keyline nor the backdrop until the renderer prints as DEC-026 decides. [Printing](#printing) says what a print will hold then.
+- **On screen alone.** The backdrop, the gutter and the keyline as an outline are a screen's. In print a slide lies inside its keyline as its border, with no backdrop ([Printing](#printing)).
 
 ### Printing
 
-DEC-026 decides how a page file prints: its pages follow one another down the sheets, as many to a sheet as fit, each whole where it fits one. Only a fixed page prints inside its keyline, and no backdrop prints. The renderer does not print so yet. It will once the Task that builds that record lands, filed under [project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570). Such a print gives what follows.
+The renderer prints a page file as DEC-026 decides: its pages follow one another down the sheets, as many to a sheet as fit, each whole where it fits one. Only a fixed page prints inside its keyline, and no backdrop prints. The file holds these rules for print alone, beside the screen's, and the screen's rules hold nothing of print.
 
-- **A deck's slides fit a sheet.** A 16:9 slide fits the area of a sheet of A4 or Letter, upright or turned, so none is cut there, and none runs on (DEC-026 point 1). Two 16:9 slides share a sheet of A4 upright.
+- **Each page whole on one sheet.** The file asks the browser to keep each page on one sheet, by CSS's `break-inside: avoid`, so a page that does not fit the rest of a sheet moves whole to the next. A page taller than the sheet's area runs on. No rule forces a break, and two pages lie the screen's gap apart (DEC-026 point 1).
+- **A deck's slides fit a sheet.** A 16:9 slide fits the area of a sheet of A4 or Letter, upright or turned, so none is cut there, and none runs on (DEC-026 point 1). Two 16:9 slides share a sheet of A4 upright, and each takes a sheet of its own turned, in Chrome and in Firefox ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)).
 - **The scale.** A page shrinks to the area's width and never grows past its own size, so it prints at the area's width over its own width, at most 1, and a fixed page at the area less its keyline over its own width (DEC-026 points 2 and 3). A page 1,280 px wide prints at about 0.56 of its size on A4 upright, at margins of 0.4 in. A deck's slides share one shape, a site's pages take the top's width (DEC-022 point 3), and a page alone is one page, so each of these prints at one scale.
+- **A fixed page inside its keyline.** In print the keyline is the page's border, of the width and the colour the keyline takes on screen, under more contrast and forced colours too. The page is at most the sheet's area less the keyline on each side, 2 px in all, so the page and its keyline move to a sheet together (DEC-026 point 3).
 - **The keyline on a white sheet.** The keyline's share, 48 ([What the HTML renderer declares](#what-the-html-renderer-declares)), keeps at least 3 to 1 against a white sheet, in light and in dark (DEC-026 point 3). Under more contrast a dark page's keyline is white on the white sheet, and the page's own ground marks its edge there. In a dark mode, the page's dark ground, printed in its own colours, also sets it apart from the white sheet (DEC-026 point 5).
-- **A fixed page prints narrower** than the sheet's area, by its keyline's width on each side: 2 px in all (DEC-026 point 3).
-- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In Firefox the text below a cut may part from its shapes. Safari's only check is a person's print (DEC-026 point 7).
+- **Each page in its own colours.** Each page lies on the browser's ground colour, and the file asks the browser to print the page, and what it holds, in their own colours, by CSS's `print-color-adjust: exact`. The document around the pages takes neither, so the sheet around them prints as the reader's setting for backgrounds says. No mode is picked for print: the reader's signals pick it, as the browser sets them when it prints (DEC-026 point 5).
+- **The sheet is the reader's.** The file holds no page rule, so the reader's print dialog sets the sheet's size, its margins and its orientation, with its header, its footer and its scale (DEC-026 point 4).
+- **Where a page that runs on breaks** is the browser's pick, until a record of its own decides it (DEC-026 point 1). A page that runs on breaks where the sheet ends. The renderer places each line alone, so a break may cut a line of text or move it off its place, and cut or lose a shape. In the print runs, Chrome cut each shape the sheet's end crossed, a part on each sheet, and kept each text on its shapes. Firefox printed a page's shapes on its first sheet alone, and lost the line the first sheet's end crossed ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)). WebKit printed nothing under the tool the runs used, so Safari's only check is a person's print (DEC-026 point 7).
+- **Firefox and a page narrower than the area.** In Firefox, the text of a page narrower than the sheet's area prints at a larger scale than its shapes, near the area's width over the page's, so its lines drift off their boxes. A page the area shrinks, such as a deck's slide, keeps its text on its shapes there ([the print runs](https://github.com/aleskalfas/project-kit/issues/3010)).
 
 ### What the HTML renderer declares
 
@@ -396,6 +403,7 @@ The renderer draws in the default font profile, and it declares each primitive a
 - **`forced-colours`** names what each paint takes under a reader's forced colours: lines, opaque fills, their edge with its width, and translucent fills.
 - **`physical-size`** says that its format has no physical page, and maps no physical size (*A physical size* in [The HTML renderer](#the-html-renderer)).
 - **`pages.fixed`** names how the file shows [fixed pages](#fixed-pages) (DEC-031 point 3). The keyline's `width`, 1 px, and its `share`, 48. The backdrop's `share`, 7. The gutter's `width`, 32 px, and its `window-share`, 4. Each share is the percent of the browser's text colour mixed into its ground colour. The gutter is the backdrop's width at each side of a page, or that share of the window's width where it is less. No project setting changes them.
+- **`pages.print`** names how the file prints ([Printing](#printing), DEC-026 point 6): its pages down the sheets, each kept whole on one sheet where it fits, the sheet's area as the window, a fixed page inside its keyline as a border, and each page on the browser's ground in its own colours. It leaves the sheet to the reader and the break to the browser. Print has no width or share of its own: the keyline's are those of `pages.fixed`.
 
 ### What the HTML renderer does not carry yet
 

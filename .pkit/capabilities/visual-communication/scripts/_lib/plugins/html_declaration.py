@@ -1,5 +1,6 @@
 """What the HTML renderer draws: its declaration, plain data (visual-communication DEC-005
-points 9 and 10, DEC-020 points 1 to 4, DEC-023 points 2, 5 and 7, DEC-031 points 3 and 5).
+points 9 and 10, DEC-020 points 1 to 4, DEC-023 points 2, 5 and 7, DEC-031 points 3 and 5,
+DEC-026 point 6).
 
 The HTML renderer writes one page file for each language and each key over the size axes,
 its pages in order, holding the modes a reader's signal names. So it draws, and only draws:
@@ -31,6 +32,12 @@ calls no outside program and reaches no service. Writing a page file takes no br
   of backdrop at each side of a page: `width` px, or `window-share` percent of the window's
   width where that is less. The viewing step widens its window by the gutter's `width` on
   each side, for every file (DEC-031 point 5). No project setting changes these values.
+  Under `print`, how the file prints its pages (DEC-026 points 1 to 6), beside how they lie
+  on screen: down the sheets with the same gap, each kept whole on one sheet where it fits;
+  the sheet's area as the window; a fixed page inside its keyline, a border of the width and
+  the share `fixed` names, as print has no value of its own; each page on the browser's
+  ground in its own colours; and the sheet, and where a page breaks, left to the reader and
+  the browser.
 - `physical-size`: its format has no physical page of its own. A page file is read in a
   window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026
   point 4), so it loses nothing of a top's physical size (DEC-034 point 3).
@@ -84,7 +91,7 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "seam": 6,
     "module": "html",
     "about": (
@@ -109,6 +116,14 @@ DECLARATION = {
             "keyline": {"width": 1, "share": 48},
             "backdrop": {"share": 7},
             "gutter": {"width": 32, "window-share": 4},
+        },
+        "print": {
+            "lie": "one after another down the sheets, each kept whole on one sheet where it fits",
+            "scale": "shrinks with the sheet's area and never grows",
+            "fixed": "inside its keyline, a border, in the sheet's area less the keyline",
+            "colours": "each page on the browser's ground, in its own colours exactly",
+            "sheet": "the reader's",
+            "breaks": "the browser's",
         },
     },
     "physical-size": {"page": False, "maps": False},

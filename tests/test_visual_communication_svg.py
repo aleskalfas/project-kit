@@ -548,14 +548,14 @@ def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
 
 
 #: Each plugin the capability ships, with its own version.
-SHIPPED = {"svg": "1.1.0", "pdf": "1.3.0", "html": "1.3.0", "css": "1.0.0", "json": "1.0.0"}
+SHIPPED = {"svg": "1.1.0", "pdf": "1.3.0", "html": "1.4.0", "css": "1.0.0", "json": "1.0.0"}
 
 
 def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:
     """The seam's version rose to 6 for the physical size of the piece's top, which the
     scene's root holds (DEC-034 point 3). The PDF renderer came to map each page onto it, so
     its version rose; the SVG and HTML renderers draw as before, and the code writers read no
-    scene, so theirs stand."""
+    scene, so theirs stand. The HTML renderer's 1.4.0 came with print, at seam 5 (DEC-026)."""
     assert seam.SEAM_VERSION == 6
     declared = {name: seam.declaration(name) for name in SHIPPED}
     assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 6)
