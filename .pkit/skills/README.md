@@ -162,7 +162,7 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 - **Edit the source, never the deployed link** (core rule 12). An edit to the source needs no new deploy, since the link leads to it.
 - **A new or removed skill** reaches the harness at the next `pkit sync`. The sync removes the deploy's own links to a skill that has gone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
 - **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)). No skill of that name is deployed over it, and the deploy reports it skipped.
-- **Claude Code's own skills:** a personal skill of the same name, in `~/.claude/skills/`, wins over the project's (Claude Code's skills documentation).
+- **Claude Code's own skills:** a personal skill of the same name, in `~/.claude/skills/`, wins over the project's (Claude Code's skills documentation). `pkit status` warns of each deployed skill a personal skill hides, and names the personal skill's folder ([the CLI reference, `status`](../cli/README.md#status)).
 - <a id="today"></a>**What is deployed:** `pkit status` lists each deployed skill under where it was deployed from. It lists the project's own files in the harness's folder apart ([the CLI reference, `status`](../cli/README.md#status)).
 - **A folder with no `<name>/<name>.md`** is skipped by the deploy, which names it, and the other skills deploy ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
 
