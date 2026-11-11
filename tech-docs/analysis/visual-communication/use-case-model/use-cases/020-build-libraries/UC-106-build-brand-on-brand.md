@@ -54,7 +54,7 @@ pkit:
 
 - **1a.** The brand to build on builds on a brand in turn, such as a game's brand on its platform's. The new brand alters only what is open to it along the chain, since each brand narrows what the one before it opens.
 - **1b.** The look would build on two brands at once. A brand builds on one brand at most, so the developer chooses one.
-- **2a.** The look needs a part, or the layouts of a kind of piece, that the brand it builds on lacks. The new brand adds them as its own, and never replaces a layout or a part that brand has.
+- **2a.** The look needs the layouts of a kind of piece the brand it builds on does not serve, or a part that brand lacks. The new brand adds them as its own, and never replaces a layout or a part that brand has.
 
 > [!WARNING]
 > **Not built yet:** a release does not compare the parts a brand holds between its versions, so it finds no break in the new brand's own parts. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another may add parts of its own, and #3020 tracks it.
