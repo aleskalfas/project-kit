@@ -7786,12 +7786,14 @@ def _default_states(
     categories: list[write_categories_mod.WriteCategory],
 ) -> list[str]:
     """What install would do with each write category, for its dry run (ADR-088 point 5)."""
+    from project_kit import write_categories as wcat
+
     lines: list[str] = []
     for category in categories:
         try:
             written = document.still_as_written(category.name)
             valued = document.gives_value(category.name, category.owner)
-        except write_categories_mod.OverlayDoesNotRead as exc:
+        except wcat.OverlayDoesNotRead as exc:
             return [f"the capability's defaults: the overlay does not read: {exc}"]
         if written is not None:
             lines.append(f"{category.name}: written earlier, left as it is")
