@@ -22,15 +22,20 @@ and the record that sets it), the segment, and whether the later number allows i
 **What it compares,** kind by kind, as `files.md`, "What a release compares", lists it:
 
 - *any library:* its kind, and the major of each library it builds on (DEC-003 point 6);
-- *components:* each component the earlier version marks stable or deprecated, its fields,
-  options, states, exposed parts, ends, lists and layouts with their slots, and whether a
-  top asks for a height (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8). An
-  experimental component may change in any release, so only its arrival is named, as for
-  any new component;
+- *components,* a component library's or a brand's: each component the earlier version
+  marks stable or deprecated, its fields, options, states, exposed parts, ends, lists and
+  layouts with their slots, and whether a top asks for a height (DEC-003 points 6 and 7,
+  DEC-009 to DEC-012, DEC-022 point 8). An experimental component may change in any
+  release, so only its arrival is named, as for any new component. A drawing carries no
+  status, so it is passed over, its look and its parts, and so are a drawing new and one
+  removed, a base's that begins to serve a top among them. One the earlier version
+  promises, which the later declares a drawing, breaks, as one removed does, and a drawing
+  that ceases to be one is new (DEC-034 point 8);
 - *a component's tokens:* those of each component the earlier version marks stable or
   deprecated, as its component promises them (DEC-035 point 6): a token removed, of
   another type, or whose chain of defaults no longer ends at a shared role where it did,
-  breaks; a new one is an addition, whatever its chain ends at;
+  breaks; a new one is an addition, whatever its chain ends at. A brand's own components'
+  tokens are read from their files, since no scope reads them (DEC-035 point 7);
 - *a library's own roles:* those its stable and deprecated components read, directly or
   through a default, a token's default among them, and a new one such a component reads
   (DEC-008 point 7, DEC-035 point 4);
@@ -156,6 +161,7 @@ def compare(earlier: FullRead, later: FullRead) -> Comparison:
                 _own_roles(earlier, later, found)
             _pairs(earlier, later, found)
         elif kind == "brand":
+            _components(earlier, later, found)
             _brand(earlier, later, found)
     return Comparison(
         earlier.name, earlier.version, later.version, tuple(found.breaks), tuple(found.additions)
@@ -193,12 +199,19 @@ def _status(read: FullRead, name: str) -> Any:
     return read.data[name].get("status")
 
 
+def _is_drawing(read: FullRead, name: str) -> bool:
+    """Whether the component `name` of the version is a drawing: it declares `draws`
+    (DEC-034 point 1)."""
+    return read.components[name].draws is not None
+
+
 def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
     """Each component the earlier version marks stable or deprecated, against the later
-    version; and each component new in the later version."""
+    version; and each component new in the later version. A drawing promises nothing, so
+    neither version's drawings are compared or named (DEC-034 point 8)."""
     for name in sorted(earlier.components):
         status = _status(earlier, name)
-        if status not in PROMISED:
+        if _is_drawing(earlier, name) or status not in PROMISED:
             continue
         use = f"{earlier.name}/{name}"
         if name in later.unread:
@@ -208,6 +221,9 @@ def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
         if name not in later.components:
             record = "DEC-003 points 6 and 7" if status == "stable" else "DEC-003 point 7"
             found.broken(f"`{use}`", f"is removed, where it was {status}", record)
+            continue
+        if _is_drawing(later, name):
+            found.broken(f"`{use}`", f"is a drawing, where it was {status}", "DEC-034 point 8")
             continue
         if _status(later, name) not in PROMISED:
             found.broken(
@@ -224,8 +240,15 @@ def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
             found,
         )
         _tokens(f"`{use}`", name, earlier, later, found)
-    for name in sorted(set(later.components) - set(earlier.components) - set(earlier.unread)):
-        found.added(f"`{later.name}/{name}`", "is new", "DEC-003 point 1")
+    for name in sorted(set(later.components) - set(earlier.unread)):
+        if _is_drawing(later, name):
+            continue
+        if name not in earlier.components:
+            found.added(f"`{later.name}/{name}`", "is new", "DEC-003 point 1")
+        elif _is_drawing(earlier, name):
+            found.added(
+                f"`{later.name}/{name}`", "is new, where it was a drawing", "DEC-034 point 8"
+            )
 
 
 def _component(
@@ -261,8 +284,13 @@ def _component(
 
 
 def _tokens_of(read: FullRead, component: str) -> dict[str, tokens.ComponentToken]:
-    """The component tokens the component `component` of the version declares, by path."""
-    assert read.scope is not None
+    """The component tokens the component `component` of the version declares, by path: as
+    the scope reads them, or, in a brand, whose own components' tokens no scope reads
+    (DEC-035 point 7), as its file declares them."""
+    assert read.scope is not None and read.library is not None
+    if read.library.kind == "brand":
+        declared, _ = tokens.read_component_tokens(read.library.folder, name=read.name)
+        return {path: token for path, token in declared.items() if token.component == component}
     return {
         path: token
         for path, token in read.scope.tokens.items()
@@ -289,7 +317,7 @@ def _tokens(where: str, name: str, earlier: FullRead, later: FullRead, found: _F
                 f"is of type `{now.type}`, where it was `{token.type}`",
                 "DEC-003 point 6, DEC-035 point 6",
             )
-        if _ends_shared(earlier.scope, path) and not _ends_shared(later.scope, path):
+        if _token_ends_shared(earlier.scope, token) and not _token_ends_shared(later.scope, now):
             found.broken(
                 at, "no longer ends its chain of defaults at a shared role", "DEC-035 point 6"
             )
@@ -728,6 +756,13 @@ def _ends_shared(scope: tokens.Scope, path: str) -> bool:
         seen.add(step)
         step = scope.default_of(step)
     return False
+
+
+def _token_ends_shared(scope: tokens.Scope, token: tokens.ComponentToken) -> bool:
+    """Whether a component token's chain of defaults ends at a shared role: followed from
+    the token where the scope holds it, and else, as for a brand's own component, from the
+    role its default aliases."""
+    return _ends_shared(scope, token.path if token.path in scope.roles else token.default)
 
 
 def _own_roles(earlier: FullRead, later: FullRead, found: _Found) -> None:

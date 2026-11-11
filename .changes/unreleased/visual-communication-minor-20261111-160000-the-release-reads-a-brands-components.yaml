@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The release reads a brand's components (#3020, DEC-034 point 8, DEC-003
+  point 7). A drawing carries no `status`: the component schema refuses one on
+  a drawing, and the check fails it as `drawing-shape`. A brand's other
+  components are compared between its versions as a component library's are,
+  so a release of a brand that breaks a stable or deprecated component of its
+  own outside a major is now refused. A component the earlier version promises
+  that the later declares a drawing breaks, as one removed does. The comparison
+  passes over each drawing, so a change of its look, a drawing removed and a
+  drawing new break nothing, and a base that begins to serve a top needs no
+  major.
