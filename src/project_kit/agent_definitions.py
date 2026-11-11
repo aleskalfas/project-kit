@@ -14,7 +14,9 @@ the reader of tool access, but for a command that changes which capabilities are
 installed: an install, a registration, an uninstall and a version transition
 load them from the release the command brings, its source tree (`release=`), so
 a project that predates the modules can still move to the release that ships
-them (ADR-087 point 2). Either way the records read are the project's.
+them (ADR-087 point 2). Sync, which its guard runs only at the release the
+project records, loads them from that release too, so the sync that a refusal
+names can restore them. Either way the records read are the project's.
 
 **A command that cannot reach either module** refuses that step: `Unreachable`,
 a `click.ClickException`, names the side to bring up to date, by the comparison

@@ -13,6 +13,7 @@ import pytest
 from project_kit import install, router, sync
 from project_kit.manifest import read_backbone_manifest, read_kit_version, write_backbone_manifest
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 
 # The backbone version an installed fixture records: the real source kit's. A
 # fake source a capability test stages carries it too, since sync refuses a
@@ -522,8 +523,9 @@ def _stage_capability_in_source(
 
     Mirrors the layout `pkit capabilities install` expects in source:
     package.yaml + skills/ + decisions/. Also stamps a VERSION, at the version
-    the installed fixture records so sync's guard lets it run, and the
-    decisions/ scaffold the source-kit-missing guard reads.
+    the installed fixture records so sync's guard lets it run, the
+    decisions/ scaffold the source-kit-missing guard reads, and the picker with
+    the records' reader, which sync loads from its source (ADR-087 point 2).
 
     ``version`` sets the capability's package.yaml version, letting a test
     stage a source that is older / equal / newer than an installed copy —
@@ -538,6 +540,7 @@ def _stage_capability_in_source(
         version_file.write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     # Sync's _refuse_if_source_kit_missing equivalent wants decisions/.
     (source_kit / "decisions").mkdir(parents=True, exist_ok=True)
+    stage_picker(source_kit)
     (cap_dir / "package.yaml").write_text(
         f"""component:
   kind: capability
@@ -637,6 +640,7 @@ def test_sync_warns_when_capability_no_longer_in_source(
     # equivalent doesn't trip and sync's guard reads the recorded version.
     (fake_source_b / "decisions").mkdir()
     (fake_source_b / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source_b)
 
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
@@ -968,6 +972,22 @@ def test_sync_reads_every_record_before_it_copies_anything(
     assert all(event.startswith("copy") for event in events[first_copy:]), events
 
 
+def test_sync_restores_the_records_reader_a_projects_tree_lacks(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Sync reads the records through the reader its own release brings, so a project
+    whose tree lacks the reader syncs, and the sync copies the reader back (ADR-087
+    points 2 and 5)."""
+    root = make_adopter_repo(capabilities=("evidence",)).root
+    reader = Path("lifecycle") / "capability_records.py"
+    (root / ".pkit" / reader).unlink()
+
+    sync.run_sync(root)
+
+    shipped = install.find_source_kit() / reader
+    assert (root / ".pkit" / reader).read_bytes() == shipped.read_bytes()
+
+
 def test_sync_reads_the_installed_package_when_no_manifest_records_a_version(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1135,6 +1155,7 @@ def test_sync_skips_source_reconciliation_for_incubated_capability(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1168,6 +1189,7 @@ def test_sync_still_registers_incubated_capability_after_run(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1240,6 +1262,7 @@ def test_sync_dry_run_does_not_refresh_incubated_capability(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
