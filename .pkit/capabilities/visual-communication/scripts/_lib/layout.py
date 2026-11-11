@@ -20,6 +20,11 @@ DEC-012).
 - `colour`: the component's default colour family;
 - `values`: named formulas, read by their name alone;
 - `preferred`: `width` and `height`, the size it asks for;
+- `physical-size`, on a page alone or a top whose layouts are its pages' forms alone:
+  `{width: <mm>, height: <mm>}`, the trim size its pages print at, each a positive number
+  (DEC-034 point 3). No formula reads it. The top asks for its height through it, never
+  under `preferred`: the engine sets the height from the width it asks for and the size's
+  proportion, wherever the top lies, and names itself as the height's source;
 - `parts`: drawn in order (below);
 - `lists`: for each list field a `repeat` part of its own repeats over, the fields DEC-010
   gives that list, `{component: <field>, arrangement: {<field>: {words: [<word>, ...],
@@ -59,19 +64,22 @@ DEC-012).
   field is, the height of its page, by a formula on its parts, the layout's own drawing,
   its default (DEC-009 point 1), and the fields of each list among its slots that the
   drawing repeats over, as a pattern's `lists` (DEC-011 point 5). A layout says no width,
-  and says its page's height where the top asks for none (DEC-022 point 3). Each page
+  and says its page's height where the top asks for none, by a formula or through its
+  physical size (DEC-022 point 3). Each page
   names its layout with `layout`, or its component with `use`, and is drawn as a page of
   its own. It gets the top's width, and the top's height where the top asks for one, else
   the height it asks for: its layout's, or its component's. A top that asks for no height
   is as tall as its tallest page.
 - `draws: {top: <library>/<component>, layout: <layout>}`, on a brand's component: it is a
-  *drawing* of that layout of that top (DEC-009 point 2, DEC-034 point 1). It declares
-  nothing the content gives, none of `GIVEN_BY_TOP`, and takes the top's: its fields,
-  options, states and colour, and the layout's slots and lists. It holds its parts, its
-  values, its exposed parts, its component tokens and the size its instance asks for: of a
-  layout that is a page's form, its page's height alone, which it says where the top asks
-  for none; of a top whose one layout is the whole top, its `preferred` whole (DEC-034
-  point 2). It reads none of its top's component tokens. A brand's drawings reach the
+  *drawing* of that layout of that top (DEC-009 point 2, DEC-034 point 1). It carries no
+  `status`, since nothing names it (DEC-034 point 8). It declares nothing the content
+  gives, none of `GIVEN_BY_TOP`, and takes the top's: its fields, options, states and
+  colour, and the layout's slots and lists. It holds its parts, its values, its exposed
+  parts, its component tokens and the size its instance asks for: of a layout that is a
+  page's form, its page's height alone, which it says where the top asks for none, by a
+  formula or through its physical size; of a top whose one layout is the whole top, its
+  `preferred` whole, but for a height the top's physical size sets (DEC-034 points 2 and
+  3). It reads none of its top's component tokens. A brand's drawings reach the
   engine as a `Choice`: where one is chosen, it draws each instance of its layout in place
   of the top's own drawing, and keeps the instance's trace. One that does not fit an
   instance in every language and at every key over the size axes leaves that instance to
@@ -188,6 +196,7 @@ that brand's own finding says what it owes, and the part takes none.
 from __future__ import annotations
 
 import itertools
+import math
 import re
 from collections.abc import Callable, Collection, Iterator, Mapping
 from dataclasses import dataclass, field, replace
@@ -282,9 +291,13 @@ STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
-    "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens", "layouts",
-    "draws",
+    "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens",
+    "physical-size", "layouts", "draws",
 )  # fmt: skip
+
+#: The key under which a top whose pages print at one size declares it, its trim width and
+#: height in millimetres (DEC-034 point 3), and the code of every finding on it.
+PHYSICAL_SIZE = "physical-size"
 
 #: The key under which a component declares its component tokens (DEC-035 point 1).
 TOKENS = "tokens"
@@ -293,17 +306,20 @@ TOKENS = "tokens"
 LAYOUTS = "layouts"
 
 #: The key by which a brand's component names the top and the layout it draws, which makes
-#: it a drawing (DEC-034 point 1); the keys of what the content gives, which a drawing
-#: takes from its top and never declares; and the keys a drawing holds of its own.
+#: it a drawing (DEC-034 point 1); the key of a component's status, which a drawing never
+#: carries (DEC-034 point 8); the keys of what the content gives, which a drawing takes
+#: from its top and never declares; and the keys a drawing holds of its own.
 DRAWS = "draws"
+STATUS = "status"
 GIVEN_BY_TOP = ("fields", "options", "states", "colour", "lists", "layouts", "ends")
 DRAWING_KEYS = ("parts", "values", "preferred", "exposes", TOKENS)
 
-#: The findings on a drawing (DEC-034 points 1, 2 and 5, DEC-009 point 5): one that is no
-#: brand's component, holds what the content gives, or draws no layout a top declares; one
-#: that writes a size its top writes, or none its page needs; a field it shows by no part
-#: named after it, or a part named after a field that shows another thing; content or a
-#: component that places one by `use`; and one whose top a brand holds (DEC-034 point 4).
+#: The findings on a drawing (DEC-034 points 1, 2, 4, 5 and 8, DEC-009 point 5): one that
+#: is no brand's component, carries a status, holds what the content gives, or draws no
+#: layout a top declares; one that writes a size its top writes, or none its page needs; a
+#: field it shows by no part named after it, or a part named after a field that shows
+#: another thing; content or a component that places one by `use`; and one whose top a
+#: brand holds.
 DRAWING_SHAPE = "drawing-shape"
 DRAWING_SIZE = "drawing-size"
 FIELD_PART = "drawing-field-part"
@@ -425,6 +441,12 @@ def _is_list(schema: Any) -> bool:
     types that holds `array`, such as `[array, null]`."""
     kind = schema.get("type") if isinstance(schema, Mapping) else None
     return kind == "array" or (isinstance(kind, list) and "array" in kind)
+
+
+def _positive(value: Any) -> bool:
+    """Whether a value is a finite number above zero, and no boolean."""
+    is_number = isinstance(value, int | float) and not isinstance(value, bool)
+    return is_number and math.isfinite(value) and value > 0
 
 
 def run_problem(name: str, schema: Any) -> str | None:
@@ -872,6 +894,9 @@ class Component:
         self.colour: str | None = data.get("colour")
         self.values = self._mapping(data, "values")
         self.preferred = self._mapping(data, "preferred")
+        # The trim width and height its pages print at, in millimetres, as declared, read
+        # before its layouts, whose pages' heights may follow it (DEC-034 point 3).
+        self.physical_size = self._physical_size(data)
         exposes = data.get("exposes") or []
         self.exposes: tuple[str, ...] = tuple(exposes) if isinstance(exposes, list) else ()
         # Whether it takes ends: drawn as a tie, it is given two (DEC-011 point 1). One that
@@ -948,8 +973,10 @@ class Component:
         It takes the top's fields, options, states and colour, and the layout's slots and
         lists, as the top's own drawing does, and holds its own parts, values, exposed
         parts and tokens. Of a layout that is a page's form, it says its page's height
-        alone, and says it where the top asks for none. Of a top whose one layout is the
-        whole top, its `preferred` is its own, whole."""
+        alone, and says it where the top asks for none, by a formula or through its physical
+        size. Of a top whose one layout is the whole top, its `preferred` is its own, whole,
+        but for a height the top's physical size sets (DEC-034 point 3): such a height is a
+        finding, and is not read."""
         if self.forms:
             page = self._page_data(layout)
             if page is None:
@@ -966,7 +993,7 @@ class Component:
                     )
                 )
             says = isinstance(preferred, Mapping) and "height" in preferred
-            if "height" not in self.preferred and not says:
+            if not self.asks_for("height") and not says:
                 sizes.append(
                     (
                         DRAWING_SIZE,
@@ -990,7 +1017,18 @@ class Component:
         if layout != self._whole:
             return None
         kept = {key: value for key, value in self.data.items() if key not in DRAWING_KEYS}
-        return {**kept, **own}, []
+        preferred = own.get("preferred")
+        writes_height = isinstance(preferred, Mapping) and "height" in preferred
+        if self.physical_size is None or not writes_height:
+            return {**kept, **own}, []
+        height = (
+            DRAWING_SIZE,
+            "preferred.height",
+            f"draws `{layout}`, and writes a height, which its top's physical size sets: the "
+            "engine sets it from the width the drawing asks for, in the size's proportion",
+        )
+        unread = {s: f for s, f in preferred.items() if s != "height"}
+        return {**kept, **own, "preferred": unread}, [height]
 
     def _page_data(self, layout: str) -> dict[str, Any] | None:
         """What a drawing of the layout `layout`, a page's form, takes of what its top
@@ -1033,6 +1071,32 @@ class Component:
         if not isinstance(declared, Mapping):
             return frozenset()
         return frozenset(f"{names.COMPONENT}.{library}.{name}.{token}" for token in declared)
+
+    def _physical_size(self, data: Mapping[str, Any]) -> tuple[float, float] | None:
+        """The trim width and height, in millimetres, at which the component's pages print,
+        as it declares them under `physical-size` (DEC-034 point 3). None where it declares
+        none, or a value that is not two positive numbers, which is a finding. Whether the
+        component may declare one is judged once its layouts are read
+        (`_read_physical_size`)."""
+        declared = data.get(PHYSICAL_SIZE)
+        if declared is None:
+            return None
+        if isinstance(declared, Mapping) and set(declared) == {"width", "height"}:
+            width, height = declared["width"], declared["height"]
+            if _positive(width) and _positive(height):
+                return width, height
+        self._issue(
+            PHYSICAL_SIZE,
+            PHYSICAL_SIZE,
+            f"`{PHYSICAL_SIZE}` takes `{{width: <mm>, height: <mm>}}`, each a positive number",
+        )
+        return None
+
+    def asks_for(self, size: str) -> bool:
+        """Whether the component asks for `size`: by a formula under `preferred`, or its
+        height through its physical size, whose proportion the engine sets it by (DEC-034
+        point 3)."""
+        return size in self.preferred or (size == "height" and self.physical_size is not None)
 
     @property
     def unread_tokens(self) -> list[str]:
@@ -1147,6 +1211,34 @@ class Component:
             self._read_layouts(data)
         elif any(isinstance(s, Mapping) and PAGES in s for s in self.fields.values()):
             self._shape("fields", f"marks a field `{PAGES}`, and declares no layouts")
+        self._read_physical_size(data)
+
+    def _read_physical_size(self, data: Mapping[str, Any]) -> None:
+        """Whether the component may declare its physical size (DEC-034 point 3): a page
+        alone, or a top whose layouts are its pages' forms, may. A top whose slot holds pages
+        gives each page its size by the parts that place it, and no other component prints
+        at one, so their physical size is a finding, and the engine reads none. A brand's
+        drawing declares none either (`Context._drawing`): one of a page alone is read with
+        its top's, and prints at it. A top that declares one asks for its height through it,
+        so a height under its `preferred` is a finding too."""
+        if PHYSICAL_SIZE not in data:
+            return
+        if not self.top or self.pages:
+            what = "a top whose slot holds pages" if self.top else "no top component"
+            self._issue(
+                PHYSICAL_SIZE,
+                PHYSICAL_SIZE,
+                f"declares a physical size, and is {what}: only a page alone, or a top whose "
+                "layouts are its pages' forms, prints at one",
+            )
+            self.physical_size = None
+        elif "height" in self.preferred:
+            self._issue(
+                PHYSICAL_SIZE,
+                "preferred.height",
+                "declares a physical size, and asks for a height by a formula: the engine sets "
+                "its height from the width it asks for, in the physical size's proportion",
+            )
 
     def _read_options(self, options: Mapping[str, Any]) -> None:
         for name, decl in options.items():
@@ -1657,8 +1749,9 @@ class Component:
     def _page_height(self, where: str, layout: str, decl: Mapping[str, Any]) -> dict[str, Any]:
         """What a layout that is a page's form asks for its page, as its drawing's
         `preferred` (DEC-022 point 3): its height alone, by a formula on its parts. A width
-        is refused, since a page gets the top's width. Where the top asks for no height, a
-        layout that says none is refused, since its page would get no height."""
+        is refused, since a page gets the top's width. Where the top asks for no height, by
+        a formula or through its physical size (DEC-034 point 3), a layout that says none is
+        refused, since its page would get no height."""
         preferred = decl.get("preferred")
         if isinstance(preferred, Mapping) and "width" in preferred:
             self._shape(
@@ -1667,7 +1760,7 @@ class Component:
                 "layout says its page's height alone",
             )
         says = isinstance(preferred, Mapping) and "height" in preferred
-        if "height" not in self.preferred and not says:
+        if not self.asks_for("height") and not says:
             self._shape(
                 f"{where}.preferred",
                 f"the top asks for no height, so the layout `{layout}` says its page's "
@@ -2264,8 +2357,9 @@ class Context:
         """A component that declares `draws`, read as a drawing of the layout of the top it
         names (DEC-034 point 1): what it holds of its own read with what it takes of the top
         (`Component.drawn_data`). Its findings lie in its own file: a piece's own component
-        that declares `draws`, a key of what the content gives, a top or a layout there is
-        none of, a size it may not write, and a field it shows by no part named after it.
+        that declares `draws`, a status, a key of what the content gives, a physical size,
+        which its top alone declares (DEC-034 point 3), a top or a layout there is none of, a
+        size it may not write, and a field it shows by no part named after it.
         What the top declares is the top's to answer for, so no finding on it is repeated
         here. One that draws no layout a top declares draws nothing."""
         issues: list[tuple[str, str, str]] = []
@@ -2274,12 +2368,22 @@ class Context:
                 (DRAWING_SHAPE, DRAWS, "declares `draws`: a piece's own component draws no layout, "
                  "only a brand's does")
             )  # fmt: skip
+        if STATUS in data:
+            issues.append(
+                (DRAWING_SHAPE, STATUS, "is a drawing, and carries a status: nothing names a "
+                 "drawing, so its library promises nothing of it")
+            )  # fmt: skip
         held = [key for key in GIVEN_BY_TOP if key in data]
         if held:
             listed = ", ".join(f"`{key}`" for key in held)
             issues.append(
                 (DRAWING_SHAPE, held[0], f"is a drawing, and holds {listed}: a drawing declares "
                  "nothing the content gives, and takes its top's")
+            )  # fmt: skip
+        if PHYSICAL_SIZE in data:
+            issues.append(
+                (PHYSICAL_SIZE, PHYSICAL_SIZE, "declares a physical size, and is a drawing: its "
+                 "top alone declares the size its pages print at")
             )  # fmt: skip
         draws = data.get(DRAWS)
         top_use = draws.get("top") if isinstance(draws, Mapping) else None
@@ -3580,6 +3684,11 @@ class Instance:
         if kind == "stretch":
             return self._stretch(name)
         if kind == "preferred":
+            physical = self.component.physical_size
+            if name == "height" and physical is not None:
+                # Wherever it lies, its height follows the width it asks for in the physical
+                # size's proportion (DEC-034 point 3).
+                return self.get("preferred", "width") * physical[1] / physical[0]
             if name not in self.component.preferred:
                 use = self.component.use
                 raise self._fail(
@@ -3647,12 +3756,13 @@ class Instance:
     def _size(self, size: str) -> float:
         """The size this instance gets: from its parent's part or list, or, at the top,
         the size it asks for. A page of a top whose layouts are its pages' forms gets the
-        top's width, and the top's height where the top asks for one, else the height it
-        asks for (`takes_own`). Such a top that asks for no height is as tall as its
-        tallest page (DEC-022 point 3). A component its parent's last part places gets,
-        beside its part's size, the stretch its parent passes on (`passed_on`)."""
+        top's width, and the top's height where the top asks for one, by a formula or
+        through its physical size, else the height it asks for (`takes_own`). Such a top
+        that asks for no height is as tall as its tallest page (DEC-022 point 3, DEC-034
+        point 3). A component its parent's last part places gets, beside its part's size,
+        the stretch its parent passes on (`passed_on`)."""
         if self.parent is None:
-            if self.component.forms and size == "height" and size not in self.component.preferred:
+            if self.component.forms and size == "height" and not self.component.asks_for(size):
                 heights = [
                     self.ctx.attempt(lambda p=p: p.get("size", size), 0.0) for p in self.pages
                 ]
@@ -3674,13 +3784,14 @@ class Instance:
 
     def takes_own(self, size: str) -> bool:
         """Whether this instance is a page of a top whose layouts are its pages' forms that
-        takes the `size` it asks for: its height, where the top asks for none (DEC-022
-        point 3). A page always gets the top's width."""
+        takes the `size` it asks for: its height, where the top asks for none, by a formula
+        or through its physical size (DEC-022 point 3, DEC-034 point 3). A page always gets
+        the top's width."""
         return (
             self._is_forms_page
             and size == "height"
             and self.parent is not None
-            and size not in self.parent.component.preferred
+            and not self.parent.component.asks_for(size)
         )
 
     @property
@@ -3707,7 +3818,7 @@ class Instance:
         part = parent.nodes[self.part_name].part
         if size == part.main or parent.setting(self.part_name, "align-items") != "stretch":
             return 0.0
-        if size not in self.component.preferred:
+        if not self.component.asks_for(size):
             return 0.0  # it asks for no such size, so none is more than it asks
         return max(self.get("size", size) - self.get("preferred", size), 0.0)
 
@@ -4363,7 +4474,7 @@ class Instance:
             return []
         short = []
         for size in ("width", "height"):
-            if size in self.component.preferred:
+            if self.component.asks_for(size):
                 gets, asks = self.get("size", size), self.get("preferred", size)
                 if asks - gets > TOLERANCE:
                     short.append((size, gets, asks))

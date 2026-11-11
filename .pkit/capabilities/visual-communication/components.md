@@ -85,6 +85,7 @@ pkit:
         - visual-communication:DEC-031#2
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
+        - visual-communication:DEC-034#3
         - visual-communication:DEC-034#4
         - visual-communication:DEC-034#5
         - visual-communication:DEC-034#6
@@ -174,7 +175,7 @@ The file takes these keys and no other:
 | Key | What it holds |
 |---|---|
 | `pkit_schema`, `schema_version` | The binding: `visual-communication:component` and `1` ([The binding](files.md#the-binding)). Required. |
-| `status` | `experimental`, `stable` or `deprecated`, below. Required. |
+| `status` | `experimental`, `stable` or `deprecated`, below. Required, but on a drawing, which carries none. |
 | `about` | What the component is for, in words. Required. |
 | `fields` | The content it takes, in a fixed subset of JSON Schema. |
 | `options` | Its options, by name. |
@@ -187,12 +188,13 @@ The file takes these keys and no other:
 | `exposes` | The parts a component that places it may read. |
 | `ends` | `true` where the component takes ends, so a pattern may draw a tie with it ([Ties and connectors](#ties-and-connectors)). |
 | `tokens` | Its component tokens, by name, each with its type and default ([Tokens](#tokens)). |
+| `physical-size` | On a page alone, or a top whose layouts are its pages' forms: the size its pages print at, `{width, height}` in millimetres ([A physical size](#a-physical-size)). |
 | `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 | `draws` | On a brand's component only: `{top: <library>/<component>, layout: <layout>}`, the top and the one layout it draws, which makes the component a drawing ([A brand's drawing](#a-brands-drawing)). A drawing holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. |
 
 Every name in the file takes the capability's name shape ([Shapes](files.md#shapes)).
 
-The status says what the component's library promises (DEC-003 point 7), which a release checks ([What a release compares](files.md#what-a-release-compares)). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
+The status says what the component's library promises (DEC-003 point 7), which a release checks ([What a release compares](files.md#what-a-release-compares)). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release. A drawing carries no status: nothing names one, so its library promises nothing of it, and a change of its look breaks nothing (DEC-034 point 8).
 
 ### Fields
 
@@ -390,7 +392,7 @@ A top component declares `layouts`, by name. Each layout has a *drawing*, the pa
 - **`slots`:** the fields a page in that layout fills, each written as a field of `fields` is. They are a page's fields, not the top's. No slot takes a reserved key's name, nor `layout`, the key by which a page names its layout, nor the name of a field of the top. No slot holds pages.
 - **`required`:** the slots a page in that layout must fill.
 - **`lists`:** the fields of each list among its slots that its drawing repeats over, as a pattern declares them ([Lists](#lists)). They lie in the top's file, and content gives them as it gives the slots (DEC-011 point 5).
-- **`preferred`:** the height of a page in that layout, `preferred: {height: <formula>}`, by a formula on its drawing's parts (DEC-022 point 3). A layout says it where the top asks for no height, and may say it where the top asks for one. It never says a width.
+- **`preferred`:** the height of a page in that layout, `preferred: {height: <formula>}`, by a formula on its drawing's parts (DEC-022 point 3). A layout says it where the top asks for no height, and may say it where the top asks for one, by a formula or through its [physical size](#a-physical-size). It never says a width.
 - **`parts`:** the layout's drawing, which draws one page. Every layout has one. It takes the page's slots, the top's other fields and the words of the top's options, as the content gives them to the top, and the states, colour and values the top declares (DEC-009 point 5). Its `:width` and `:height` are the page's size. A part that shows a slot is named after the slot, as the deck's are, so what the slot places keeps one trace id under every drawing ([A brand's drawing](#a-brands-drawing)).
 
 The deck's field of pages, and its slide trimmed to two of its slots, their descriptions left out:
@@ -427,7 +429,7 @@ layouts:
 
 - **The top draws nothing around its pages.** It has no `parts` of its own. Each page is a page of its own, drawn by its layout's drawing at the top's origin. The top is not a page.
 - **A page names its form.** It names its layout with `layout`, and fills that layout's slots, or names the component that draws it with `use` ([content files](files.md#content-files)).
-- **A page gets the top's width** (DEC-022 point 3). It gets the top's height where the top asks for one, as the deck does. Otherwise it gets the height it asks for: its layout's `preferred`, or the component that draws it.
+- **A page gets the top's width** (DEC-022 point 3). It gets the top's height where the top asks for one, as the deck does, by its `preferred` or through its [physical size](#a-physical-size). Otherwise it gets the height it asks for: its layout's `preferred`, or the component that draws it.
 - **A page that asks for more than the top's height** gets the top's, and is reported as an element that gets less than it asks.
 - **The top's own frame** in the scene is as large as it asks. Where it asks for no height, it is as tall as its tallest page, and the height names `engine` as its source.
 - **A slot that holds one page** places it as every slot places a component, by `use`, and names no layout. The key `layout` belongs to a page of a top whose layouts are its pages' forms, which places no component.
@@ -460,8 +462,8 @@ A part placed from such a page's foot, such as `y: "=:height - footer.height"`, 
 A brand may hold a drawing of its own of a layout of a top, as a component of the brand. Its file names, under `draws`, the top and the layout it draws (DEC-034 point 1). Where the piece's brand, or a brand it builds on, holds one that draws, it draws each instance of that layout it fits, in place of the top's own drawing (DEC-009 point 2). An instance is a page where the layout is a page's form, and the whole top where the top has one layout.
 
 - **What it takes.** It declares nothing the content gives. It takes the layout's slots and the lists the layout declares for them, the top's other fields, its options with their words, its states and its colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. Content is written against the top, whichever drawing draws it.
-- **What it holds.** Its `about` and `status`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)).
-- **The sizes it writes** (DEC-034 point 2). A drawing of a page's form writes its page's height alone, `preferred: {height: <formula>}`, as the layout's own drawing does. It must write it where the top asks for no height, and may where the top asks for one. It writes no width, since a page gets the top's. A drawing of a top whose one layout is the whole top writes its own `preferred`, whole: the top's parts are that layout's drawing, so the size the top asks for is its drawing's.
+- **What it holds.** Its `about`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)), and carries no `status` ([A component's file](#a-components-file)).
+- **The sizes it writes** (DEC-034 point 2). A drawing of a page's form writes its page's height alone, `preferred: {height: <formula>}`, as the layout's own drawing does. It must write it where the top asks for no height, and may where the top asks for one, by a formula or through its [physical size](#a-physical-size). It writes no width, since a page gets the top's. A drawing of a top whose one layout is the whole top writes its own `preferred`, whole: the top's parts are that layout's drawing, so the size the top asks for is its drawing's. Where that top declares a physical size, the drawing writes no height: the engine sets it from the width the drawing asks for, in the size's proportion, and a height the drawing writes is refused and not read.
 - **What shows a field is named after it** (DEC-034 point 5). Each field it shows is shown by a part named after the field, and a part named after a field shows that field. A part *shows* a field where it places the field's component, draws its text or the picture it names, or repeats over it. A field shown only through a component it places by `use`, which shows it one level down, breaks the rule.
 - **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).
 - **Where it does not fit,** the top's own drawing draws that instance, whole, in every language and at every key, and the piece states it ([Checks](checks.md)). The engine places the piece in each language and at each key before it draws any scene, so a preview of one language at one size is drawn by the drawing chosen for the whole piece.
@@ -486,6 +488,23 @@ parts:
 ```
 
 Content, or a component, that places a drawing by `use`, and a piece whose top is one, are refused: a drawing draws only in place of its top's own drawing (DEC-009 point 5).
+
+### A physical size
+
+A top whose pages print at one size, such as a poster, declares it under `physical-size`: its trim width and height, the size the printed sheet is cut to, in millimetres, each a positive number (DEC-034 point 3). A poster at A1, upright:
+
+```yaml
+preferred:
+  width: "=@size.figure"
+physical-size: {width: 594, height: 841}
+```
+
+- **Which tops.** A page alone, or a top whose layouts are its pages' forms, and each of its pages takes the size. A top whose slot holds pages gives each page its size by the parts that place it, so it declares none. Nor does any other component, a brand's drawing among them: a drawing of a page alone prints at its top's ([A brand's drawing](#a-brands-drawing)).
+- **The top's alone.** No brand gives it a value, and no formula reads it.
+- **The height follows the proportion.** The top asks for its width under `preferred`, as any top does, and for no height there. The engine sets its height from the width it asks for and the size's proportion, and names itself as the height's [source](#sources). So a poster 640 px wide at A1 is 906.13 px tall.
+- **Its pages.** In a top whose layouts are its pages' forms, each page gets the top's width and that height, so its pages are fixed pages. A layout may still say its page's height, and a page that asks for more than it gets is reported.
+- **The width sets the scale.** An export whose format has a physical page, as PDF has, draws each page at the size, so the page's width, a brand's value, sets how large the brand's type and spacing print.
+- **Placed elsewhere,** in another component's slot or as a page of another top, it asks for its size as it does alone, its height in the proportion, and gets what its placer gives. Only the piece's top prints at its size.
 
 ## Formulas
 
@@ -677,6 +696,7 @@ links:
   - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
   - **The size passed on names `engine` as its source** ([Sources](#sources)).
   - **Only a stretch passes on.** A component that a part's formula gives more than it asks for keeps its parts as they ask.
+- **A top with a physical size asks for its height through it,** wherever it lies: the width it asks for, in the size's proportion ([A physical size](#a-physical-size)). Its height names `engine` as its source, and so does the height of a page that gets it, or of a part that places it and gives none.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
 
@@ -723,7 +743,7 @@ Which text fills `version` and `date`:
 
 ### What a scene holds
 
-The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
+The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages`, `physical-size` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, by a formula or through its physical size, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. `physical-size` holds the physical size of the piece's top, `{width, height}` in millimetres as the top declares it, or `null` where it declares none, and every page of the scene takes it ([A physical size](#a-physical-size)). Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
 A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
@@ -782,7 +802,7 @@ Each drawn property names its source in `sources`:
 - **`size:<axis>`:** a value a switch on that size axis chose, such as `size:device`.
 - **`default:<library>/<component>`:** the component's own value, such as the picture file an image names by `file`. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes. It is also the source of the picture role an image shows.
-- **`engine`:** a value the engine computed, such as a text's measured height or an item's frame, or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
+- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
 
 ## Text
 

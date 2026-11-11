@@ -3146,10 +3146,26 @@ def renderers(piece: pl.Piece) -> list[str]:
 def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[seam.Loss]:
     """What a renderer will lose of a scene, known from its declaration before it runs
     (DEC-005 point 9): a primitive it does not draw it refuses, and a property it does not
-    draw it leaves out."""
+    draw it leaves out. One whose format has a physical page and does not map the physical
+    size the scene's root holds onto it draws each page at its own unit, an approximation
+    it names at the top; one whose format has none loses nothing (DEC-034 point 3)."""
     plugin = str(declaration["name"])
     draws: Mapping[str, Mapping[str, Any]] = declaration.get("draws", {})
     found: list[seam.Loss] = []
+    physical = scene.get("physical-size")
+    held: Mapping[str, Any] = declaration.get("physical-size", {})
+    if isinstance(physical, Mapping) and held.get("page") is True and held.get("maps") is not True:
+        children = scene.get("children") or [{}]
+        size = f"{physical.get('width')} by {physical.get('height')} mm"
+        found.append(
+            seam.Loss(
+                plugin,
+                str(children[0].get("id", "")),
+                seam.APPROXIMATED,
+                f"the {plugin} renderer draws each page at its own unit, not at the top's "
+                f"physical size of {size}",
+            )
+        )
     for element, _, _ in _walk(scene.get("children", [])):
         kind, what = str(element.get("type")), str(element.get("id"))
         if kind not in draws:

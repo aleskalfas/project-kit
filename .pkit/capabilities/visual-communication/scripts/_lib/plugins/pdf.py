@@ -5,11 +5,14 @@ point 7).
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
   1's scene, the image among them. It draws only what it declares, so the losses the
   capability reads from the declaration before it runs are the ones it makes.
-- **Pages.** Each page of the scene, in the scene's order, is a page of the file, as large
-  as the page's frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the
-  inch, as the declaration's `unit` says.
+- **Pages.** Each page of the scene, in the scene's order, is a page of the file. Where the
+  scene's root holds the physical size of the piece's top, every page is that size, at 72
+  pt to 25.4 mm, and is drawn by one scale for the whole page: the page's width in pt over
+  its width in px (DEC-034 point 3). Its height follows its width in that proportion, so
+  the scale fits it too. Elsewhere a page is as large as its frame, each px of the scene
+  0.75 pt of the page, CSS's 96 px to the inch, as the declaration's `unit` says.
 - **The largest page.** A page of PDF is at most `LARGEST` pt on a side, as readers hold it.
-  A page larger at 0.75 pt to a px, such as a phone's page of a long site, is drawn smaller,
+  A page larger, such as a phone's page of a long site at 0.75 pt to a px, is drawn smaller,
   its proportions kept, its long side `LARGEST` pt. The page is reported, as drawn otherwise
   (DEC-022 point 7). Every other page draws as before.
 - **Colours** stay roles in the scene. The renderer takes each from the brand's resolved
@@ -81,8 +84,13 @@ from _lib.plugins.pdf_declaration import DECLARATION
 NAME: str = DECLARATION["name"]
 VERSION: str = DECLARATION["version"]
 
-#: How many pt of the page each px of the scene is (the declaration's `unit`).
+#: How many pt of the page each px of the scene is (the declaration's `unit`), on a page
+#: with no physical size.
 SCALE: float = DECLARATION["unit"]["scale"]
+
+#: How many pt of the page a millimetre of a physical size is: 72 pt to the inch, which is
+#: 25.4 mm.
+PT_PER_MM = 72 / 25.4
 
 #: The most pt a page of the file takes on a side: the largest page readers of PDF hold, at
 #: the user unit every file here keeps. At `SCALE`, 19,200 px of the scene.
@@ -549,7 +557,7 @@ class _Document:
         self.shown = shown
         self.losses: list[seam.Loss] = []
         self.traces: list[str] = []
-        self._pages: list[tuple[float, float, list[Part], float]] = []
+        self._pages: list[tuple[_Sheet, list[Part]]] = []
         self._faces: dict[str, _Face] = {}
         self._fonts: dict[str, _Font] = {}
         # Each opacity the pages take, by the operand it sets and its value: its name.
@@ -568,16 +576,17 @@ class _Document:
         self.traces.append(element["id"])
         parts = [part for child in element.get("children", []) for part in self._element(child)]
         width, height = float(element["width"]), float(element["height"])
-        fit = _fit(width, height)
-        if fit < 1:
+        sheet = _sheet(width, height, self.scene.get("physical-size"))
+        if sheet.fit < 1:
+            measures = " by ".join(number(side) for side in sheet.measures)
             self._lose(
                 element["id"],
                 seam.APPROXIMATED,
-                f"the page measures {number(width * SCALE)} by {number(height * SCALE)} pt, "
-                f"past the {number(LARGEST)} pt a page of PDF takes on a side, so it is drawn "
-                f"{number(fit, 4)} as large, its proportions kept",
+                f"the page measures {measures} pt, past the {number(LARGEST)} pt a page of PDF "
+                f"takes on a side, so it is drawn {number(sheet.fit, 4)} as large, its "
+                "proportions kept",
             )
-        self._pages.append((width, height, parts, fit))
+        self._pages.append((sheet, parts))
 
     def _element(self, element: Mapping[str, Any]) -> list[Part]:
         kind = element.get("type")
@@ -832,10 +841,10 @@ class _Document:
             name: _embedded_image(image, add, profiles) for name, image in self._images.values()
         }
         kids = []
-        for width, height, parts, fit in self._pages:
-            content = _stream(_content(width, height, parts, fit).encode("latin-1"))
+        for sheet, parts in self._pages:
+            content = _stream(_content(sheet, parts).encode("latin-1"))
             contents = add(content)
-            box = f"[0 0 {number(width * SCALE * fit)} {number(height * SCALE * fit)}]"
+            box = f"[0 0 {' '.join(number(side) for side in sheet.box)}]"
             kids.append(
                 add(
                     f"<< /Type /Page /Parent {tree} 0 R /MediaBox {box} "
@@ -961,18 +970,51 @@ def _arrowhead(route: Sequence[tuple[float, float]], which: str, width: float) -
     return f"{_point(*left)} m {_point(*tip)} l {_point(*right)} l h f\n"
 
 
+@dataclass(frozen=True)
+class _Sheet:
+    """How one page of the scene lies on a page of the file: the page's size in pt before it
+    is fitted, `measures`; how large it is drawn, as a share of that size, `fit`; how many pt
+    of the page each px of the scene is, fitted, `scale`; and how far above the page's foot
+    the scene's top lies, in pt, `top`."""
+
+    measures: tuple[float, float]
+    fit: float
+    scale: float
+    top: float
+
+    @property
+    def box(self) -> tuple[float, float]:
+        """The page's size in pt, as drawn."""
+        return self.measures[0] * self.fit, self.measures[1] * self.fit
+
+
+def _sheet(width: float, height: float, physical: Any) -> _Sheet:
+    """How a page of `width` by `height` px is drawn. Where `physical`, the physical size the
+    scene's root holds, is given, the page is that size, and its width sets one scale for
+    the whole page (DEC-034 point 3). Elsewhere each px is `SCALE` pt. Either way a page
+    whose long side would pass `LARGEST` pt is fitted to it."""
+    if isinstance(physical, Mapping) and width > 0:
+        measures = (float(physical["width"]) * PT_PER_MM, float(physical["height"]) * PT_PER_MM)
+        fit = _fit(*measures)
+        return _Sheet(measures, fit, measures[0] / width * fit, measures[1] * fit)
+    measures = (width * SCALE, height * SCALE)
+    fit = _fit(*measures)
+    scale = SCALE * fit
+    return _Sheet(measures, fit, scale, height * scale)
+
+
 def _fit(width: float, height: float) -> float:
-    """How large a page of `width` by `height` px is drawn, as a share of its size at `SCALE`:
-    1, or less where its long side would pass `LARGEST` pt."""
-    longest = max(width, height) * SCALE
+    """How large a page of `width` by `height` pt is drawn, as a share of its size: 1, or less
+    where its long side would pass `LARGEST` pt."""
+    longest = max(width, height)
     return LARGEST / longest if longest > LARGEST else 1.0
 
 
-def _content(width: float, height: float, parts: Sequence[Part], fit: float = 1.0) -> str:
-    """A page's content: the scene's px mapped onto the page's pt, `fit` as large, down the
-    page as the scene runs, with SVG's miter limit, then what the page draws."""
-    scale = SCALE * fit
-    head = f"{number(scale, 6)} 0 0 {number(-scale, 6)} 0 {number(height * scale)} cm 4 M\n"
+def _content(sheet: _Sheet, parts: Sequence[Part]) -> str:
+    """A page's content: the scene's px mapped onto the page's pt at the sheet's scale, down
+    the page as the scene runs, with SVG's miter limit, then what the page draws."""
+    scale = sheet.scale
+    head = f"{number(scale, 6)} 0 0 {number(-scale, 6)} 0 {number(sheet.top)} cm 4 M\n"
     drawn = (
         part.font.shown(part.glyphs, part.size) + "\n" if isinstance(part, _Shown) else part
         for part in parts

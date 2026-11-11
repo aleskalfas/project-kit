@@ -1,13 +1,14 @@
-"""A brand's drawing of a layout (visual-communication DEC-034 points 1, 2, 4, 5 and 6,
-DEC-009 points 2 to 6): a component of the brand whose file names, under `draws`, the top
-and the layout it draws.
+"""A brand's drawing of a layout (visual-communication DEC-034 points 1 to 6, DEC-009 points
+2 to 6): a component of the brand whose file names, under `draws`, the top and the layout
+it draws.
 
 - **The declaration.** It declares nothing the content gives, reads none of its top's
   component tokens, and only a brand's component declares one (point 1). Content, or a
   component, that places one by `use` fails (DEC-009 point 5).
 - **Sizes.** A drawing of a page's form writes its page's height alone, and writes it where
-  the top asks for none; a drawing of a top whose one layout is the whole top writes its
-  own `preferred` (point 2).
+  the top asks for none, by a formula or through its physical size; a drawing of a top
+  whose one layout is the whole top writes its own `preferred`, but for a height its top's
+  physical size sets; and a drawing declares no physical size (points 2 and 3).
 - **Trace ids.** The instance keeps its id, and what a field shows keeps the same trace id,
   under every drawing; the instance's group names the drawing and its brand's version. A
   brand's drawing that shows a field by no part named after it fails; a top's own asks
@@ -52,7 +53,7 @@ from tests.visual_communication_project import (
     write_piece,
     yaml_text,
 )
-from tests.visual_engine import COMPONENTS, FakeEnv, block, draw, layout, top
+from tests.visual_engine import COMPONENTS, FakeEnv, block, codes, draw, layout, top
 
 pl, checks, reading, findings, files, libraries, full_read = load(
     "visual-communication",
@@ -322,13 +323,15 @@ def judged(root: Path, code: str) -> list[tuple[str, str, str]]:
 
 
 def test_the_brand_checked_alone_judges_each_drawing_it_holds(tmp_path: Path) -> None:
-    """A drawing that holds what the content gives fails in the brand's version, though no
-    piece draws it."""
+    """A drawing that holds what the content gives, or carries a status, fails in the
+    brand's version, though no piece draws it."""
     root = deck(tmp_path)
-    hold(root, cover(fields={"type": "object"}, draws={"top": "foundations/deck", "layout": "end"}))
+    drawn = {"top": "foundations/deck", "layout": "end"}
+    hold(root, cover(fields={"type": "object"}, status="stable", draws=drawn))
     found = judged(root, layout.DRAWING_SHAPE)
     file = f"{BRAND_COMPONENTS}/cover.yaml"
     assert ("fails", file, "fields") in found
+    assert ("fails", file, "status") in found
     assert ("fails", file, "draws") in found
 
 
@@ -344,7 +347,7 @@ def test_the_check_states_at_the_piece_each_page_left_to_the_decks_own_drawing(
 
 def test_a_component_library_whose_component_declares_draws_fails(tmp_path: Path) -> None:
     root = deck(tmp_path)
-    data = {**cover(), "status": "experimental"}
+    data = cover()
     write(
         root
         / "visual/libraries/foundations"
@@ -375,13 +378,20 @@ def test_the_schema_refuses_a_drawing_that_names_no_layout() -> None:
     assert files.shape_problems(cover(draws={"top": "foundations/deck"}), "component") != []
 
 
+def test_the_schema_asks_a_status_of_every_component_but_a_drawing() -> None:
+    """Every component but a drawing carries a status (DEC-034 point 8)."""
+    assert files.shape_problems(cover(status="experimental"), "component") != []
+    no_drawing = cover(draws=None, status=None)
+    assert files.shape_problems(no_drawing, "component") != []
+    assert files.shape_problems({**no_drawing, "status": "stable"}, "component") == []
+
+
 # --- the engine: what a drawing declares and writes ------------------------------------------
 
 
 def look(parts: dict[str, Any], **keys: Any) -> dict[str, Any]:
     """A brand's drawing of `lab/top`'s layout `frame`."""
     return {
-        "status": "experimental",
         "about": "A drawing a test draws.",
         "draws": {"top": "lab/top", "layout": "frame"},
         "parts": dict(parts),
@@ -417,6 +427,12 @@ def test_a_drawing_that_declares_what_the_content_gives_fails(key: str) -> None:
     assert (layout.DRAWING_SHAPE, key) in issues(look({"caption": CAPTION}, **{key: {}}))
 
 
+def test_a_drawing_that_carries_a_status_fails() -> None:
+    assert (layout.DRAWING_SHAPE, layout.STATUS) in issues(
+        look({"caption": CAPTION}, status="stable")
+    )
+
+
 def test_a_piece_s_own_component_declares_no_drawing() -> None:
     found = issues(look({"caption": CAPTION}), use="piece/look")
     assert (layout.DRAWING_SHAPE, layout.DRAWS) in found
@@ -443,7 +459,6 @@ def test_a_drawing_that_reads_a_token_of_its_top_fails() -> None:
 
 def page_look(preferred: dict[str, Any] | None) -> dict[str, Any]:
     drawing = {
-        "status": "experimental",
         "about": "A brand's cover.",
         "draws": {"top": "foundations/deck", "layout": "cover"},
         "parts": {
@@ -479,6 +494,81 @@ def test_a_drawing_of_a_whole_top_writes_its_own_size() -> None:
     root = result.scene.children[0].properties
     assert (root["component"], root["width"], root["height"]) == ("brand/look", 320.0, 32.0)
     assert result.scene.find("top/caption") is not None
+
+
+# --- the engine: a drawing of a top with a physical size ---------------------------------------
+
+#: A poster's trim size, A1 upright, in millimetres (DEC-034 point 3), and the height it
+#: gives the width `look` asks for, 320 px.
+A1 = {"width": 594, "height": 841}
+A1_HEIGHT = round(320 * 841 / 594, 2)
+
+
+def poster() -> dict[str, Any]:
+    """`lab/top` as a page alone printed at A1, which asks for its width alone."""
+    return lab_top(preferred={"width": "=@size.figure"}, **{"physical-size": A1})
+
+
+def test_a_drawing_of_a_page_alone_takes_the_height_its_tops_physical_size_sets() -> None:
+    """The drawing writes its own width, and the engine sets the height from it in the
+    size's proportion (DEC-034 points 2 and 3); the root holds the top's physical size."""
+    drawing = look({"caption": CAPTION}, preferred={"width": "=@space.4 * 10"})
+    result = draw(
+        {"caption": "A caption."},
+        components={"lab/top": poster(), "brand/look": drawing},
+        choice=CHOICE,
+    )
+    assert codes(result) == []
+    element = result.scene.find("top")
+    assert element is not None
+    root = element.properties
+    assert (root["component"], root["width"], root["height"]) == ("brand/look", 320.0, A1_HEIGHT)
+    assert element.sources["height"] == "engine"
+    assert result.scene.to_dict()["physical-size"] == A1
+
+
+def test_a_drawing_of_a_page_alone_that_writes_a_height_beside_a_physical_size_fails() -> None:
+    """A height by a formula beside its top's physical size is refused, and not read: the
+    size's proportion sets it (DEC-034 point 2, "but for a height a physical size sets")."""
+    components = {"lab/top": poster(), "brand/look": look({"caption": CAPTION})}
+    component = layout.Context(FakeEnv(components=components), "en").component("brand/look")
+    assert component is not None
+    assert [(c, w) for c, w, _ in component.issues] == [(layout.DRAWING_SIZE, "preferred.height")]
+    result = draw({"caption": "A caption."}, components=components, choice=CHOICE)
+    root = result.scene.children[0].properties
+    assert (root["component"], root["width"], root["height"]) == ("brand/look", 320.0, A1_HEIGHT)
+
+
+def test_a_drawing_of_a_page_needs_no_height_where_its_top_has_a_physical_size() -> None:
+    """A top with a physical size asks for its pages' height through it, so a drawing of a
+    page's form may leave its height unwritten, and its page gets that height (DEC-034
+    points 2 and 3)."""
+    deck_data = copy.deepcopy(COMPONENTS["foundations/deck"])
+    del deck_data["preferred"]["height"]
+    deck_data["physical-size"] = A1
+    components = {"foundations/deck": deck_data, "brand/look": page_look(None)}
+    component = layout.Context(FakeEnv(components=components), "en").component("brand/look")
+    assert component is not None and component.issues == []
+    result = draw(
+        {"slides": [{"id": "opening", "layout": "cover", "title": "The flow"}]},
+        use="foundations/deck",
+        components=components,
+        choice=layout.Choice({("foundations/deck", "cover"): "brand/look"}),
+    )
+    deck_group = result.scene.children[0].properties
+    page = result.scene.find("deck/slides[opening]")
+    assert page is not None
+    assert page.properties["component"] == "brand/look"
+    assert (page.properties["width"], page.properties["height"]) == (
+        deck_group["width"],
+        round(deck_group["width"] * 841 / 594, 2),
+    )
+
+
+def test_a_drawing_declares_no_physical_size() -> None:
+    """Only its top declares the size its pages print at (DEC-034 point 3)."""
+    found = issues(look({"caption": CAPTION}, **{"physical-size": A1}))
+    assert (layout.PHYSICAL_SIZE, layout.PHYSICAL_SIZE) in found
 
 
 # --- the engine: fields named after the field --------------------------------------------------
@@ -796,7 +886,7 @@ POSTER = bound(
 COMPONENTS_OF = {"test-brand": BRAND_COMPONENTS, EDITION: EDITION_COMPONENTS}
 
 
-def poster(tmp_path: Path, *, holder: str, brand: str) -> Path:
+def poster_piece(tmp_path: Path, *, holder: str, brand: str) -> Path:
     """The piece `talk` of the poster that the brand `holder` holds, under `brand`."""
     root = chain(tmp_path, top=f"{holder}/poster", brand=brand)
     hold(root, POSTER, "poster", into=COMPONENTS_OF[holder])
@@ -811,7 +901,6 @@ def poster_look(holder: str) -> dict[str, Any]:
     """A brand's drawing of the poster that `holder` holds."""
     return bound(
         "component",
-        status="experimental",
         about="A drawing of a poster a brand holds.",
         draws={"top": f"{holder}/poster", "layout": "poster"},
         parts={"title": POSTER["parts"]["title"]},
@@ -825,7 +914,7 @@ def test_a_top_a_brand_holds_is_drawn_by_its_own_drawing_under_it_and_a_brand_bu
 ) -> None:
     """The holding brand serves the top by its own drawing, and lacks none of its layouts,
     so nothing is stated (DEC-034 point 4)."""
-    root = poster(tmp_path, holder="test-brand", brand=brand)
+    root = poster_piece(tmp_path, holder="test-brand", brand=brand)
     [(_, result)] = scenes(root)
     assert group(result, "poster")["component"] == "test-brand/poster"
     assert group(result, "poster/title")["text"] == "Come along"
@@ -840,7 +929,7 @@ def test_no_drawing_of_a_top_a_brand_holds_draws_and_the_check_fails_it(
 ) -> None:
     """In the holding brand or in a brand built on it, the drawing draws nothing, and fails
     in its own brand's version (DEC-034 points 4 and 10)."""
-    root = poster(tmp_path, holder="test-brand", brand=EDITION)
+    root = poster_piece(tmp_path, holder="test-brand", brand=EDITION)
     hold(root, poster_look("test-brand"), "look", into=into)
     [(_, result)] = scenes(root)
     assert group(result, "poster")["component"] == "test-brand/poster"
@@ -861,7 +950,7 @@ def test_a_drawing_of_a_brands_component_that_is_no_top_fails_as_drawing_nothing
     top, draws no layout of a top. It fails as that, and never as a drawing of a top the
     brand holds, where its brand is checked alone and where a release reads it (DEC-034
     points 1 and 4)."""
-    root = poster(tmp_path, holder="test-brand", brand=EDITION)
+    root = poster_piece(tmp_path, holder="test-brand", brand=EDITION)
     hold(root, {key: value for key, value in POSTER.items() if key != "layouts"}, "plain")
     draws = {"top": f"test-brand/{named}", "layout": "poster"}
     hold(root, {**poster_look("test-brand"), "draws": draws}, "look", into=EDITION_COMPONENTS)
@@ -880,7 +969,7 @@ def test_a_top_a_brand_holds_under_another_brand_asks_its_author_for_attention(
     """The edition holds the poster, and the test brand is neither the edition nor built
     on it: the poster is drawn by its own drawing in the test brand's values, the lock names
     the edition, and the piece's author is asked to look (DEC-034 point 4)."""
-    root = poster(tmp_path, holder=EDITION, brand="test-brand")
+    root = poster_piece(tmp_path, holder=EDITION, brand="test-brand")
     drawn = project_of(root)
     [(_, result)] = scenes(root)
     assert group(result, "poster")["component"] == "test-edition/poster"

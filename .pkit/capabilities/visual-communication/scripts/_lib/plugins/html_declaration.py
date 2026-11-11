@@ -38,6 +38,9 @@ calls no outside program and reaches no service. Writing a page file takes no br
   the share `fixed` names, as print has no value of its own; each page on the browser's
   ground in its own colours; and the sheet, and where a page breaks, left to the reader and
   the browser.
+- `physical-size`: its format has no physical page of its own. A page file is read in a
+  window, and prints on the sheets its reader picks, since it holds no page rule (DEC-026
+  point 4), so it loses nothing of a top's physical size (DEC-034 point 3).
 - `not-carried`: what the file does not carry yet. What a reader who does not see the page
   gets (DEC-005 point 5) comes with a later version.
 - `marks`: the attribute that marks each thing the file holds (`MARKS`), so the viewing
@@ -89,7 +92,7 @@ DECLARATION = {
     "name": "html",
     "kind": "renderer",
     "version": "1.4.0",
-    "seam": 5,
+    "seam": 6,
     "module": "html",
     "about": (
         "A page file for each language and each key over the size axes, holding the modes a "
@@ -123,6 +126,7 @@ DECLARATION = {
             "breaks": "the browser's",
         },
     },
+    "physical-size": {"page": False, "maps": False},
     "not-carried": ["alternative text", "reading order", "structure"],
     "marks": MARKS,
     "draws": {

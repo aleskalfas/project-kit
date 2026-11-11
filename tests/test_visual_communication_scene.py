@@ -166,15 +166,17 @@ def test_the_root_says_what_the_scene_is_and_to_dict_is_stable_and_ordered() -> 
         "seam",
         "pages",
         "fixed-pages",
+        "physical-size",
         "children",
     ]
     assert (first["piece"], first["language"], first["size-key"], first["seam"]) == (
         "test-piece",
         "en",
         "default",
-        5,
+        6,
     )
     assert first["fixed-pages"] is False
+    assert first["physical-size"] is None
     assert list(first["lock"]) == sorted(first["lock"])
     group = first["children"][0]
     assert list(group)[:8] == ["type", "id", "x", "y", "width", "height", "component", "version"]

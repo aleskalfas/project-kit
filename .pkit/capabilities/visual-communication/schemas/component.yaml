@@ -2,7 +2,7 @@
 # 1 to 3): its status and purpose, the fields of content it takes (a fixed subset of JSON
 # Schema 2020-12), and how it is drawn. The engine reads its options, states, colour,
 # values, preferred size, parts, the fields of the lists it repeats over, exposed parts
-# and points, layouts, and component tokens (DEC-035).
+# and points, layouts, component tokens (DEC-035), and a top's physical size (DEC-034).
 #
 # The body below is the reference instance.
 

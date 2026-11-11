@@ -8,10 +8,6 @@ other-actors:
 requirements: []
 after:
   - [UC-105, UC-109]
-shortfalls:
-  - at: "2a"
-    issue: "#3020"
-    record: visual-communication:DEC-004#6
 pkit:
   friction:
     anchors:
@@ -55,10 +51,6 @@ pkit:
 - **1a.** The brand to build on builds on a brand in turn, such as a game's brand on its platform's. The new brand alters only what is open to it along the chain, since each brand narrows what the one before it opens.
 - **1b.** The look would build on two brands at once. A brand builds on one brand at most, so the developer chooses one.
 - **2a.** The look needs the layouts of a kind of piece the brand it builds on does not serve, or a part that brand lacks. The new brand adds them as its own, and never replaces a layout or a part that brand has.
-
-> [!WARNING]
-> **Not built yet:** a release does not compare the parts a brand holds between its versions, so it finds no break in the new brand's own parts. [DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open) decides that a brand built on another may add parts of its own, and #3020 tracks it.
-
 - **2b.** The look needs an axis or a mode that the brand it builds on lacks, such as a high contrast. The new brand adds none, so the developer asks that brand's library owner to add it.
 - **3a.** The new brand gives a value that the brand it builds on does not list. The developer removes the value, or asks that brand's library owner to list it, and the path rejoins at step 3.
 - **5a.** A piece uses two libraries that fit different major numbers of one brand. The system says that the two cannot be used in one piece.
