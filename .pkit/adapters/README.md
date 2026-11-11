@@ -15,6 +15,7 @@ pkit:
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - .pkit/agents/tool_access.py
         - .pkit/lifecycle/ownership.py
+        - src/project_kit/agent_policy.py
         - src/project_kit/agent_runs.py
         - src/project_kit/agent_tool_access.py
         - src/project_kit/capabilities.py
@@ -30,6 +31,7 @@ pkit:
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
+        - .pkit/adapters/claude-code/README.md#deploy-agentssh
         - .pkit/adapters/claude-code/README.md#the-agent-runner-run-agentpy
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
@@ -194,7 +196,11 @@ A command that starts an agent with nobody watching never calls a harness. It as
 - **Where it runs:** from the project's root, or from the clone's root for a confined run.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
-**The request** is one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort`, a level or `null`. A runner refuses a request with any other key, rather than run it without that key. So a runner that does not know the confined form refuses it. The request then takes one of two forms:
+**The request** is one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort`, a level or `null`. A runner refuses a request with any other key, rather than run it without that key. So a runner that does not know the confined form refuses it.
+
+**The levels of `effort`** are `low`, `medium`, `high`, `xhigh` and `max`, the named levels Claude Code takes ([the Claude Code adapter's README, "`deploy-agents.sh`"](claude-code/README.md#deploy-agentssh)). A runner passes a level, where one is set, to its harness in that harness's own terms. That level wins over the effort the agent's definition sets.
+
+The request then takes one of two forms:
 
 - **Unconfined,** the form of the review command's runs: `folder`, an absolute path, where the run runs under the person's and the project's settings.
 - **Confined,** the form of the drift command's runs: no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone.
