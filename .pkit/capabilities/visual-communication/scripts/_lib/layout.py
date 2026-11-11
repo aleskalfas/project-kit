@@ -77,7 +77,8 @@ DEC-012).
   instance in every language and at every key over the size axes leaves that instance to
   the top's own drawing in all of them (DEC-034 point 6), which the caller works out from
   each scene's `Context.misfits`. Content, or a component, that places a drawing by `use`
-  is `drawing-placed` (DEC-009 point 5).
+  is `drawing-placed` (DEC-009 point 5). A drawing of a top a brand holds is
+  `drawing-held-top`, which the brand's check alone finds (DEC-034 point 4).
 
 **A part** is one of:
 
@@ -288,6 +289,9 @@ COMPONENT_KEYS = (
 #: The key under which a component declares its component tokens (DEC-035 point 1).
 TOKENS = "tokens"
 
+#: The key under which a top component declares its layouts (DEC-001 point 4).
+LAYOUTS = "layouts"
+
 #: The key by which a brand's component names the top and the layout it draws, which makes
 #: it a drawing (DEC-034 point 1); the keys of what the content gives, which a drawing
 #: takes from its top and never declares; and the keys a drawing holds of its own.
@@ -299,11 +303,12 @@ DRAWING_KEYS = ("parts", "values", "preferred", "exposes", TOKENS)
 #: brand's component, holds what the content gives, or draws no layout a top declares; one
 #: that writes a size its top writes, or none its page needs; a field it shows by no part
 #: named after it, or a part named after a field that shows another thing; and content or a
-#: component that places one by `use`.
+#: component that places one by `use`. One whose top a brand holds (DEC-034 point 4).
 DRAWING_SHAPE = "drawing-shape"
 DRAWING_SIZE = "drawing-size"
 FIELD_PART = "drawing-field-part"
 DRAWING_PLACED = "drawing-placed"
+DRAWING_HELD_TOP = "drawing-held-top"
 
 #: The fact a piece states for each instance its top's own drawing draws, since the brand's
 #: drawing does not fit it (DEC-034 point 6, DEC-009 point 9).
@@ -2060,6 +2065,26 @@ def held_drawing_finding(use: str, *, file: str, library: str) -> Finding:
         file=file,
         where=DRAWS,
         fix="take `draws` out, or move the drawing into a brand, in a version of its own",
+        library=library,
+    )
+
+
+def held_top_drawing_finding(
+    use: str, draws: tuple[str, str], holder: str, *, file: str, library: str
+) -> Finding:
+    """The finding on the brand's drawing `use` whose `draws` names a top that the brand
+    `holder`, by its label, holds, in its file `file` of the version `library` (DEC-034
+    points 4 and 10): that brand draws each of the top's layouts by the top's own drawing,
+    and no brand declares a drawing of it."""
+    top, drawn = draws
+    return Finding(
+        DRAWING_HELD_TOP,
+        FAILS,
+        f"{use}: draws `{drawn}` of `{top}`, a top the brand {holder} holds: that brand draws "
+        "each of its layouts by the top's own drawing, and no brand declares a drawing of it",
+        file=file,
+        where=DRAWS,
+        fix="take the drawing out, in a version of its own",
         library=library,
     )
 

@@ -58,8 +58,9 @@ from _lib import copies, keys, layout, notations, pictures, records, tokens, val
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding
+from _lib.findings import Finding
 from _lib.fingerprint import COPY_PLACE
-from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, LibraryError, Misfit, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
 from _lib.plugins import seam
@@ -450,12 +451,32 @@ class Project:
         self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
         self._values: dict[str, Any] | None = None
         self.env = ProjectEnv(self)
-        self.drawings = brand_drawings(self.brand)
+        drawn = brand_drawings(self.brand)
+        self.drawings = drawn.drawings
+        self.kept = drawn.kept
         self._choice: layout.Choice | None = None
 
     def label(self, library: str) -> str:
         """`<library>@<version>` of a locked library."""
         return f"{library}@{self.lock[library]}"
+
+    @property
+    def chain(self) -> list[tokens.Brand]:
+        """The piece's brand, then each brand it builds on as its base, the root last."""
+        found: list[tokens.Brand] = []
+        brand: tokens.Brand | None = self.brand
+        while brand is not None:
+            found.append(brand)
+            brand = brand.base
+        return found
+
+    def kind(self, library: str) -> str | None:
+        """The kind of the version of `library` the lock names; None where it names none, or
+        the version's `library.yaml` cannot be read, which the lock's findings report."""
+        try:
+            return self.held.library(library, Version.parse(self.lock[library])).kind
+        except (KeyError, LibraryError):
+            return None
 
     def version_folder(self, library: str) -> Path:
         """The folder of the version of `library` the lock names. Raises Refused when the
@@ -558,21 +579,75 @@ class Project:
         ]
 
 
-def brand_drawings(brand: tokens.Brand) -> dict[tuple[str, str], str]:
-    """The brand's drawings, each by its use under the top and the layout its `draws` names
-    (DEC-009 point 2, DEC-034 point 1): each component of the brand's version that declares
-    `draws`, of a top whose library the brand names (DEC-009 point 3). Where the brand holds
-    two drawings of one layout, neither draws, and the top's own drawing does. A file that
-    cannot be read draws nothing, and the check of the brand reports it."""
-    found: dict[tuple[str, str], list[str]] = {}
+@dataclass(frozen=True)
+class Kept:
+    """A brand's drawing that draws nothing, since a brand nearer the root of its chain
+    serves its top (DEC-009 point 4): the top, and the label of the brand that serves it."""
+
+    top: str
+    by: str
+
+
+@dataclass(frozen=True)
+class Drawings:
+    """What draws along a brand's chain (DEC-009 points 2 to 4, DEC-034 point 4): each
+    drawing that draws, by its use under the top and the layout its `draws` names, and each
+    a brand nearer the root keeps from drawing, by its use (`Kept`)."""
+
+    drawings: dict[tuple[str, str], str] = field(default_factory=dict)
+    kept: dict[str, Kept] = field(default_factory=dict)
+
+
+def brand_drawings(brand: tokens.Brand) -> Drawings:
+    """The drawings of the brand and of each brand it builds on as its base, as they draw
+    under it (DEC-009 points 2 to 4, DEC-034 points 1 and 4).
+
+    Along the chain, the brand nearest the root that serves a top keeps its form. A brand
+    serves a top where it holds a drawing of one of its layouts, or holds the top itself,
+    whose own drawing draws each of its layouts. So each brand's drawings draw only the tops
+    no brand nearer the root serves, and a drawing of any other top draws nothing, which the
+    piece states (`Drawings.kept`). A drawing draws only where its `draws` names a top whose
+    library its own brand names (DEC-009 point 3). A brand names component libraries alone
+    (`tokens.Brand.named`), so a top a brand holds is drawn by its own drawing alone, and a
+    drawing of it is the check's to fail (DEC-034 point 4). Where a brand holds two drawings of
+    one layout, neither draws, and the top's own drawing does. A file that cannot be read
+    draws nothing, and the check of its brand reports it."""
+    chain: list[tokens.Brand] = []
+    link: tokens.Brand | None = brand
+    while link is not None:
+        chain.append(link)
+        link = link.base
+    drawn = Drawings()
+    serving: dict[str, str] = {}
+    for link in reversed(chain):
+        own, held = _served(link)
+        for (top, layout_name), uses in sorted(own.items()):
+            if top in serving:
+                drawn.kept.update({use: Kept(top, serving[top]) for use in uses})
+            elif len(uses) == 1:
+                drawn.drawings[top, layout_name] = uses[0]
+        for top in [*(top for top, _ in own), *held]:
+            serving.setdefault(top, link.label)
+    return drawn
+
+
+def _served(brand: tokens.Brand) -> tuple[dict[tuple[str, str], list[str]], list[str]]:
+    """What the brand's own version holds of the tops it serves: each drawing, by its use
+    under the top and the layout its `draws` names, of a top whose library the brand names
+    (DEC-009 point 3); and each top it holds, by its use (DEC-034 point 4)."""
+    drawings: dict[tuple[str, str], list[str]] = {}
+    held: list[str] = []
     for path in sorted((brand.folder / COMPONENTS).glob("*.yaml")):
         data, _ = read_component(path)
+        use = f"{brand.name}/{path.stem}"
         draws = data.get(layout.DRAWS) if data is not None else None
         top = draws.get("top") if isinstance(draws, Mapping) else None
         drawn = draws.get("layout") if isinstance(draws, Mapping) else None
-        if isinstance(top, str) and isinstance(drawn, str) and brand.names(top.split("/")[0]):
-            found.setdefault((top, drawn), []).append(f"{brand.name}/{path.stem}")
-    return {key: uses[0] for key, uses in found.items() if len(uses) == 1}
+        if isinstance(top, str) and isinstance(drawn, str) and top.split("/")[0] in brand.named:
+            drawings.setdefault((top, drawn), []).append(use)
+        elif data is not None and draws is None and layout.LAYOUTS in data:
+            held.append(use)
+    return drawings, held
 
 
 def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis]) -> str:
@@ -891,6 +966,12 @@ class LibraryEnv:
         self._unreadable: dict[str, str] = {}
         self._folders: dict[str, pictures.Folder] = {}
 
+    def brand_of(self, use: str) -> str | None:
+        """The label of the brand, among the versions the library is checked with, that
+        holds the component `use`; None where its library is none of them, or no brand."""
+        version = self._versions.get(use.partition("/")[0])
+        return version.label if version is not None and version.kind == "brand" else None
+
     def component(self, use: str) -> dict:
         if use not in self._components:
             data, why = read_component(self.component_path(use))
@@ -964,6 +1045,24 @@ class LibraryEnv:
 
     def library_version(self, library: str) -> str:
         return str(self._versions[library].version)
+
+
+def held_top_findings(
+    component: layout.Component | None, env: LibraryEnv, *, file: str, library: str
+) -> list[Finding]:
+    """The finding on `component`, a drawing in its file `file` of the version `library`,
+    whose top a brand among the versions `env` reads holds (DEC-034 points 4 and 10,
+    `layout.held_top_drawing_finding`); none on any other component."""
+    if component is None or component.draws is None:
+        return []
+    holder = env.brand_of(component.draws[0])
+    if holder is None:
+        return []
+    return [
+        layout.held_top_drawing_finding(
+            component.use, component.draws, holder, file=file, library=library
+        )
+    ]
 
 
 class _Missing(Exception):

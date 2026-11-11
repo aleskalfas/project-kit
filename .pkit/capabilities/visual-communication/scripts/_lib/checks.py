@@ -63,7 +63,9 @@ accepted, the components it uses that are experimental or deprecated, content dr
 one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7), and,
 for a piece that exports switching files, a page with no ground of its own in a
 combination its file holds, which asks for attention and never fails (`_no_ground`,
-DEC-018 point 5). A
+DEC-018 point 5). At the piece, each drawing of its brand's chain that a brand nearer the
+root keeps from drawing is a fact, and a top a brand holds, drawn under a brand that is
+neither that brand nor built on it, asks for attention (`_brand_forms`, DEC-034 point 4). A
 render keeps them in the piece's `findings.yaml`, keyed by a fingerprint of every file
 they were computed from. The check reads that record while its key verifies, and computes
 the scenes now otherwise. It computes no more once the validator's bound
@@ -899,7 +901,8 @@ def drawing_findings(held: Held, library: Library, env: pl.LibraryEnv) -> list[F
     brand's drawing is read against the top it names, from the versions the brand is
     checked alone with, and each finding the engine makes of it fails in its file: a key of
     what the content gives, a top or a layout there is none of, a size it may not write, a
-    field it shows by no part named after it, and a token of its top it reads. A top's own
+    field it shows by no part named after it, and a token of its top it reads. So does one
+    whose top a brand holds (`pipeline.held_top_findings`, DEC-034 point 4). A top's own
     drawing that shows a field by no part named after it asks the top's owner for
     attention, and never fails (`layout.own_drawing_findings`). A component that cannot be
     read is the scene's to report."""
@@ -918,7 +921,8 @@ def drawing_findings(held: Held, library: Library, env: pl.LibraryEnv) -> list[F
             found.append(layout.held_drawing_finding(use, file=file, library=library.label))
         elif layout.DRAWS in data:
             drawings[use] = file
-            ctx.component(use)
+            drawing = ctx.component(use)
+            found.extend(pl.held_top_findings(drawing, env, file=file, library=library.label))
         else:
             component = ctx.component(use)
             if component is not None and component.top:
@@ -2544,7 +2548,8 @@ def scene_findings(
     at one key and not at another is stated at the key that hides it (`_hidden`). A finding
     in what a field of the top draws, read alike on several pages, is reported once, naming
     its pages (`_once_on_pages`). A size at which the top is as wide as at the default asks
-    for attention (`_widths`)."""
+    for attention (`_widths`). What the piece states of the forms its brand's chain draws its
+    tops in is said once (`_brand_forms`)."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2585,7 +2590,7 @@ def scene_findings(
             else:
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
-    for finding in _widths(project, results):
+    for finding in [*_widths(project, results), *_brand_forms(project)]:
         unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
 
@@ -2632,6 +2637,53 @@ def _widths(project: pl.Project, results: Sequence[tuple[str, SceneResult]]) -> 
         for key in sized
         if abs(widths[key] - default) <= layout.TOLERANCE
     ]
+
+
+#: The fact a piece states for each drawing of its brand's chain that draws nothing, since a
+#: brand nearer the root serves its top (DEC-009 points 4 and 9, DEC-034 point 8); and the
+#: call for attention on a piece whose top a brand holds, drawn under a brand that is
+#: neither that brand nor built on it (DEC-034 point 4).
+DRAWING_BASE_SERVES = "drawing-base-serves"
+TOP_OF_OTHER_BRAND = "top-of-other-brand"
+
+
+def _brand_forms(project: pl.Project) -> list[Finding]:
+    """What the piece states of the forms its brand's chain draws its tops in. Each drawing
+    a brand nearer the root keeps from drawing is a fact at the piece's lock, which pairs the
+    two versions (`pipeline.brand_drawings`). A piece whose top a brand holds, drawn under a
+    brand that is neither that brand nor built on it, asks its author for attention, naming
+    the top and both brands, and never fails: its top is drawn by its own drawing, the
+    holding brand's form, in its own brand's values (DEC-034 point 4)."""
+    found = [
+        Finding(
+            DRAWING_BASE_SERVES,
+            FACT,
+            f"the drawing `{use}` draws nothing under this lock: {kept.by}, which its brand "
+            f"builds on, serves `{kept.top}`, and keeps its form",
+            file=pl.PIECE_FILE,
+            where="lock",
+        )
+        for use, kept in sorted(project.kept.items())
+    ]
+    top = project.piece.top
+    holder = top.partition("/")[0]
+    if holder not in {brand.name for brand in project.chain} and project.kind(holder) == "brand":
+        held, brand = project.label(holder), project.label(project.piece.brand)
+        found.append(
+            Finding(
+                TOP_OF_OTHER_BRAND,
+                ATTENTION,
+                f"the top `{top}` is the form of the brand {held}, and the piece's brand "
+                f"{brand} is neither that brand nor built on it: the top is drawn by its own "
+                f"drawing, in the values of {brand}",
+                file=pl.PIECE_FILE,
+                where="top",
+                fix=f"draw the piece under `{holder}` or a brand built on it; where its form is "
+                f"meant to be {held}'s in the values of {brand}, leave it",
+                who=AUTHOR,
+            )
+        )
+    return found
 
 
 def _top_width(project: pl.Project, size_key: str) -> float | None:
