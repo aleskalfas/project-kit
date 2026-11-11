@@ -67,6 +67,7 @@ HOLDS_NO_PYTHON = {
     "test_visual_communication_look.py": {"PIECES"},
     "test_visual_communication_neutral.py": {"PIECES"},
     "test_visual_communication_pipeline.py": {"TESTS"},
+    "test_visual_communication_poster.py": {"POSTER"},
     "test_visual_communication_render.py": {"TESTS"},
     "test_visual_communication_shipped_libraries.py": {"built(folder, name)", "place(folder)"},
     "test_visual_communication_site.py": {"PIECES"},

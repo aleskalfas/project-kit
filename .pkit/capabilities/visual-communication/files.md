@@ -109,6 +109,7 @@ pkit:
         - visual-communication:DEC-008#6
         - visual-communication:DEC-008#7
         - visual-communication:DEC-009#3
+        - visual-communication:DEC-009#4
         - visual-communication:DEC-009#7
         - visual-communication:DEC-010#1
         - visual-communication:DEC-010#2
@@ -165,6 +166,7 @@ pkit:
         - visual-communication:DEC-030#6
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#3
+        - visual-communication:DEC-034#4
         - visual-communication:DEC-034#8
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
@@ -404,7 +406,7 @@ lock:
 
 ### The lock
 
-A piece's *lock* names one version of each library it uses, those they build on included (DEC-001 point 7). A piece uses its top's library, its brand, each notation it names, and each library its content names in a `use`, other than `piece`. Through `builds-on`, it also uses every library those build on. The lock must name `foundations`, since a brand's values are read against the foundations' roles. The test brand brings it in: it builds on `foundations` 1.
+A piece's *lock* names one version of each library it uses, those they build on included (DEC-001 point 7). A piece uses its top's library, its brand, each notation it names, and each library its content names in a `use`, other than `piece`. Through `builds-on`, it also uses every library those build on. So a piece whose top a brand holds locks that brand, whichever brand the piece names (DEC-034 point 4). The lock must name `foundations`, since a brand's values are read against the foundations' roles. The test brand brings it in: it builds on `foundations` 1.
 
 **A draft** that is not pinned moves its lock at each render (DEC-003 point 8). The render takes the newest versions the location holds that the installed capability reads and that fit together. It stays within the major each library's locked version has, the library's *line*. A library the lock does not name yet takes its newest version of any major that fits. A library the piece no longer uses leaves the lock. A draft may lock a version not yet released. To take a new major on purpose, write a version of that major in the lock; the next render moves within it.
 
@@ -851,7 +853,7 @@ A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It ke
 
 The capability ships one brand to start from ([The neutral brand](#the-neutral-brand)). A project may write its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
-A brand's version may hold components, in `components/<component>.yaml`, as a component library's does. Among them are its *drawings*: each a component whose file names, under `draws`, the top and the one layout of it that it draws, such as `draws: {top: foundations/deck, layout: cover}` (DEC-034 point 1). Nothing else lists a brand's drawings, and content never names one. A drawing draws only for a top whose library the brand names among those it builds on (DEC-009 point 3). The brand checked alone reads each component it holds, as a component library's are read, and each drawing against the top it names ([A brand's drawing](components.md#a-brands-drawing)).
+A brand's version may hold components, in `components/<component>.yaml`, as a component library's does. Among them are its *drawings*: each a component whose file names, under `draws`, the top and the one layout of it that it draws, such as `draws: {top: foundations/deck, layout: cover}` (DEC-034 point 1). Nothing else lists a brand's drawings, and content never names one. A drawing draws only for a top whose library the brand names among those it builds on (DEC-009 point 3). A brand may hold a top too, a component that declares `layouts`, and so serves it: the top's own drawing draws each of its layouts, under that brand and every brand built on it, and no brand holds a drawing of it (DEC-034 point 4). Along a chain of brands, the brand nearest the root that serves a top keeps its form, and a brand built on it draws none of that top (DEC-009 point 4). The brand checked alone reads each component it holds, as a component library's are read, and each drawing against the top it names ([A brand's drawing](components.md#a-brands-drawing)).
 
 ### Token files
 
