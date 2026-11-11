@@ -1,7 +1,7 @@
 ---
 id: DEC-036
 title: A concept shows a sign beside its colour, an icon its notation holds or a shape the foundations declare
-status: proposed
+status: accepted
 date: 2026-11-11
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
