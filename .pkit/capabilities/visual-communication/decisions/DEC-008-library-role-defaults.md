@@ -50,6 +50,7 @@ The capability's next slice ships the starter and a neutral brand, which rest on
 - **Never a component token.** A component token narrows a role for one part (DEC-004 point 7). So the defaults run one way: from a part to a library's role, and on to a shared role.
 - **A chain of defaults ends,** never in a loop. A role draws under every brand only where its chain ends at a shared role.
 - **A component token's default** may alias a library's own role, as it aliases any role (DEC-004 point 7). So a brand that gives the role a value restyles the part too.
+- **Never a role of an order.** No default of a library's own role, or of a component token, aliases a role of an order (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 6).
 
 ### 4. A brand reaches a library's roles only where it names the library
 

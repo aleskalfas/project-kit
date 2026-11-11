@@ -6,6 +6,8 @@ date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [visual-communication:DEC-032-ordered-colour-steps].** Overturned: the rejected alternative "Roles named by a place", so far as its example refuses a ramp from a first level's role to the last's. The rest stands, and that alternative stays as it stood.
+
 **In plain terms:** a pattern, such as a row of cards, may declare for a list it repeats a field in which content may name one component for every item, and declares the fields an item may carry for how the pattern arranges it. Those that take a word, its arrangement fields, take one the pattern declares, never a number. A weight is such a field, and the pattern turns its word into a share of the row. A list of ties also carries two end fields, each naming an item (refinement per [visual-communication:DEC-011-tie-ends]). Where an item's component and its list both claim a key, neither reads it. Each page of a top whose layouts are its pages' forms, such as a deck's, names its layout with the key `layout`, or names its own component, and never names a layout by the component that draws it. A colour by place keys on where an item stands in its list, never on a word it carries. Every file format 1 accepted reads and draws as before.
 
 ## Context
@@ -72,6 +74,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 - **An item's place** is its position in the order of the items its list draws. A weight sets the item's share, never its place (point 3).
 - **A family for each place.** A pattern may give each place of a list a colour family of its own, in its data, and may switch those families on an option (DEC-001 point 6). One family for every item of a list is the case where every place takes the same.
+- **An order's steps, spread from two ends.** Under a word of an option, a pattern may give an order's places colour steps instead. The engine spreads the brand's two ends evenly over the places drawn, and that is the one colour computed from a place, while no role's name is computed from one (refinement per [visual-communication:DEC-032-ordered-colour-steps] points 3 and 4).
 - **A place past those the pattern names** takes no family from the pattern, and the order goes on to its item component's. The pattern's families do not start again from the first.
 - **Never on an arrangement field** (point 3). An item says what it is by naming a concept, which a notation maps to a family ([visual-communication:DEC-004-brands-and-notations] point 10). A condition of the item, such as marked, is a state its component declares, which may change the family (DEC-001 point 6).
 - **Items that belong together** name one concept, or are the items of an inner list that one item of an outer list holds. That outer item takes its family by its own concept or place, and passes it to what sits in it, where nothing nearer gives one (DEC-001 point 6).
@@ -83,7 +86,7 @@ A component field, an arrangement field and each of its words, the field that ho
 
 - **Breaking, for a pattern:** marking a field it holds as a list's component field, since what content gave that field changes its meaning.
 - **Breaking, for a top:** making its layouts its pages' forms, or ceasing to, since every page's content changes with it (point 5).
-- **Not breaking:** a new component field, a new arrangement field, a new word or a new layout. Nor is a change of a word's share, of an arrangement field's default or of the family a place takes, which changes how pieces look. None changes what an item already says (DEC-003 point 6), and a piece meets each only when its lock moves (DEC-003 point 8).
+- **Not breaking:** a new component field, a new arrangement field, a new word or a new layout. Nor is a change of a word's share, of an arrangement field's default, of the family a place takes or of whether it takes a step, which changes how pieces look (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 8). None changes what an item already says (DEC-003 point 6), and a piece meets each only when its lock moves (DEC-003 point 8).
 - **A clash two releases make.** A new arrangement field, or a new field or option of an item component, may take a name the other already declares for the same item. Neither library can see it when it releases, so neither release breaks (point 2).
 
 ### 8. What this adds to format 1, and what still holds
