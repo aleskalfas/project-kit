@@ -25,7 +25,7 @@ pkit:
 
 # Running pkit with nobody at the terminal
 
-Software outside pkit may start Claude Code sessions for a person and drive their turns, from a chat, a schedule, an editor or a pipeline. Such software is an *agent host*, and *host* below always means one. A person who runs Claude Code at a terminal of their own uses none.
+Software outside pkit may start Claude Code sessions for a person and drive those sessions' turns, from a chat, schedule, editor or pipeline. Such software is an *agent host*, and *host* below always means one. A person who runs Claude Code at a terminal of their own uses none.
 
 This guide covers pkit's behaviour with nobody at the terminal, a host's setup, and the limits pkit accepts. DAM, which runs Claude Code in hosted machines, serves as its worked example. What pkit requires of Claude Code, and how far Claude Code meets each requirement, is in [the Claude Code adapter's reference, "Harness support"](../.pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml).
 
@@ -43,7 +43,7 @@ This guide covers pkit's behaviour with nobody at the terminal, a host's setup, 
 
 A session nobody watches differs from one at your terminal in three ways:
 
-- **A question or an ask may reach nobody.** A capability's install asks its questions only where a person can answer at a terminal ([COR-061](../.pkit/decisions/core/COR-061-point-questions.md)). A host that drives Claude Code may answer its prompts itself, in a turn nobody watches.
+- **A question or an ask may reach nobody.** A capability's install asks its questions only where a person can answer at a terminal ([COR-061](../.pkit/decisions/core/COR-061-point-questions.md)). A host that drives Claude Code may answer Claude Code's prompts itself, in a turn nobody watches.
 - **Software prepared the machine.** The host's setup chose the repository's place, the pkit installed and the clone's depth. pkit reaches a session through the project's files, so a session that loads none of them holds nothing of pkit.
 - **Hosts differ, and change.** Each host starts its sessions its own way, such as through a protocol bridge rather than a terminal. Its owner may change that way without telling pkit.
 
@@ -72,7 +72,7 @@ pkit ships nothing for any one host, and meets what hosts vary through facts it 
 - **Nothing else keyed to one host.** pkit ships no area, no variant inside a capability and no deployed file that differs by host.
 - **No test of which host it runs under.** pkit never tells one host from another, by a name, a variable, a path or a file. A host's owner may change these without telling pkit, and a test by name would miss the next host with the same property.
 - **A host as an example only.** pkit's text may name a host as an example, as this page names DAM. No step pkit takes or requires depends on one.
-- **A second host.** Once project-kit writes a second host's setup for pkit, or one is brought to its issue tracker, the two setups are compared. What both need, and a property or a requirement can state, moves into pkit.
+- **A second host.** Once project-kit writes a second host's setup for pkit, or one is brought to project-kit's issue tracker, the two setups are compared. What both need, and a property or a requirement can state, moves into pkit.
 
 ### Where each need of a host goes
 
