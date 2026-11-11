@@ -11,9 +11,11 @@ body: >
   by it in each instance it fits, in every language and at every size, and by
   the top's own drawing elsewhere, which the piece states as the fact
   `drawing-misfit`. A drawing of a page's form writes its page's height alone.
-  A brand checked alone reads each component it holds and judges its drawings:
-  `drawing-shape`, `drawing-size` and `drawing-field-part` fail there, and
-  content or a component that places a drawing by `use` fails as
-  `drawing-placed`. A top's own drawing that shows a field by no part named
+  A brand's own components are now judged when the brand is checked alone, as
+  a component library's are, and a release reads each of them in full, so a
+  brand that holds a faulty component now fails where it passed before. Its
+  drawings are judged there as drawings: `drawing-shape`, `drawing-size` and
+  `drawing-field-part` fail. Content or a component that places a drawing by
+  `use` fails as `drawing-placed`. A top's own drawing that shows a field by no part named
   after it asks the top's owner for attention. Files of format 1 that name no
   `draws` are read and drawn as before.
