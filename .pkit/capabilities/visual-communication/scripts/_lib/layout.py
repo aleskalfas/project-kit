@@ -268,6 +268,7 @@ STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
     "colour", "values", "preferred", "parts", "lists", "exposes", "ends", "tokens", "layouts",
+    "draws",
 )  # fmt: skip
 
 #: The key under which a component declares its component tokens (DEC-035 point 1).
