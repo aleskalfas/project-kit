@@ -5670,12 +5670,14 @@ def refs_validate() -> None:
     found = refs_mod.validate_corpus(target_root)
     issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
     overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
+    undeclared = [issue for issue in found if issue.kind == refs_mod.UNDECLARED_CATEGORY]
     unknown_fields = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_FIELD]
     warnings = [
         issue
         for issue in found
         if issue.kind in refs_mod.WARNING_KINDS
-        and issue.kind not in (refs_mod.UNKNOWN_OVERRIDE, refs_mod.UNKNOWN_FIELD)
+        and issue.kind
+        not in (refs_mod.UNKNOWN_OVERRIDE, refs_mod.UNDECLARED_CATEGORY, refs_mod.UNKNOWN_FIELD)
     ]
     lines = [
         cli_render.style(
@@ -5711,6 +5713,17 @@ def refs_validate() -> None:
             )
         )
         for issue in overrides:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if undeclared:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(undeclared)} warning(s) of a capability's category no installed "
+                "capability declares, which do not fail the check:",
+            )
+        )
+        for issue in undeclared:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     if unknown_fields:
         lines.append(
