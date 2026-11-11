@@ -49,7 +49,7 @@ When the install succeeds, the upgrade hands itself over, replacing its own proc
 
 ### 3. Print the command where it cannot or may not install, and stop where the hand-over fails
 
-The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here.
+The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here. This test governs the upgrade's replacement of the installed tool (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5). The install script, `.pkit/cli/install-pkit.sh`, installs with nobody at a terminal, and only where it finds no pkit installed (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5).
 
 The upgrade installs only under the installed tool. A pkit run another way is not that tool: through `uv run`, a pip install or a `uvx` served from uv's cache. Such a pkit prints the newer release and its command, and the upgrade goes on under it. So does any pkit when `uv` cannot say where its tools live, unless a hand-over started it.
 
@@ -77,7 +77,7 @@ The new process routes like any `pkit` command. In an un-pinned project the rout
 
 ### 7. The tool, from its compiled URL
 
-The step installs the tool from the distribution URL compiled into it. It touches no content a project takes from an external source ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). A fork that builds its own wheel compiles its own URL, so its tool updates from the fork. A tool installed from anywhere else — a local path, a mirror — is replaced by the compiled URL's release once that release is newer. `--no-self-update` keeps such an install. The step uses the router's URL and leaves the router's route decision as ADR-039 sets it.
+The step installs the tool from the distribution URL compiled into it. It touches no content a project takes from an external source ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). A fork that builds its own wheel compiles its own URL, and puts the same URL in the install script, where a test holds the two equal, so its tool updates from the fork (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) points 1 and 7). A tool installed from anywhere else — a local path, a mirror — is replaced by the compiled URL's release once that release is newer. `--no-self-update` keeps such an install. The step uses the router's URL and leaves the router's route decision as ADR-039 sets it.
 
 ## Rationale
 

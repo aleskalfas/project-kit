@@ -6,6 +6,8 @@ date: 2026-05-08
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [PRJ-015](PRJ-015-https-install-form.md).** The install names the repository's public HTTPS URL, `uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`, and needs no credential. Overturned: the SSH form of the canonical command in the Decision; the frontend paragraph's sentence keeping HTTPS for token users; the SSH command in "Why git URL beats `curl … | bash`"; "Why SSH is the recommended URL form"; the premise that an install needs the person's GitHub auth, in "Why git URL beats every registry option" and the private-registry alternative; and, in the Implications, that an install authenticates with an SSH key or a token, that a pipeline needs an SSH deploy key or a token, and the promise to document that pattern. Kept: pkit adds no credential surface, and a private repository's credential in a pipeline is its project's own concern (PRJ-015 point 3). The rest of PRJ-004 stands.
+
 ## Context
 
 PRJ-003 settled the language (Python 3.11+, distributed as a `uv tool install` target). What remained was *where* the package gets installed *from* — registry choice or a direct-from-source path. Candidates considered: PyPI public, a private artifact registry, Homebrew tap, GitHub releases tarball, `curl … | bash` installer, and direct git URL.
