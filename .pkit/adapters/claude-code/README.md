@@ -470,7 +470,7 @@ The start hook adds one line to its context where no `pkit` command is on the `P
 
 > No `pkit` command is on the `PATH`: run `sh .pkit/cli/install-pkit.sh` at the project's root to install this project's version.
 
-The line names the install script, which installs the version the project pins or records ([ADR-090](../../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md) point 4). [The CLI reference, "Installing pkit on PATH"](../../cli/README.md#installing-pkit-on-path), says how to run it. The hook names the script and never runs it, as no hook does (ADR-090 point 3).
+The line names the install script, which installs the version the project pins or records ([ADR-090](../../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md) point 4). The CLI reference's ["Installing pkit on PATH"](../../cli/README.md#installing-pkit-on-path) <!-- unanchored: named as the section that says how to run the script, whose form rests on ADR-090 point 3, which the page anchors --> says how to run it. The hook names the script and never runs it, as no hook does (ADR-090 point 3).
 
 Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches each session and each subagent at its start, as the workspace sentence does, and no confined run, which loads no project settings.
 
