@@ -1,7 +1,7 @@
 ---
 id: DEC-034
 title: A brand's drawing names its layout in its own file, and keeps the sizes and field names its top sets
-status: proposed
+status: accepted
 date: 2026-11-10
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
