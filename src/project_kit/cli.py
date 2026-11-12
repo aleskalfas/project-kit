@@ -7695,15 +7695,17 @@ def install_capability_cmd(
     )
     caps.apply_overrides(target_root, overridden, dry_run=dry_run)
     # An override of an agent another capability ships records the project's
-    # choice of this one for the name, once it is registered (COR-017).
-    overridden_names = {
+    # choice of this one for the name, once it is registered (COR-017). Only an
+    # agent's own answer counts: a skill of the same name may have been overridden
+    # while the agent was skipped.
+    overridden_agents = {
         finding.artifact_name
         for finding in collisions
-        if (finding.artifact_kind, finding.artifact_name) not in skipped
+        if finding.artifact_kind == "agent" and ("agent", finding.artifact_name) not in skipped
     }
     caps.record_agent_choices(
         target_root,
-        caps.overridden_agent_choices(collisions, overridden_names, name),
+        caps.overridden_agent_choices(collisions, overridden_agents, name),
         dry_run=dry_run,
     )
 

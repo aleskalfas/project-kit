@@ -1075,6 +1075,43 @@ def test_cli_install_override_of_another_capabilitys_agent_records_the_choice(
     assert pick.agent.place == "capability:evidence"
 
 
+@pytest.mark.parametrize(
+    ("answers", "choices", "picked"),
+    [
+        ("override\nskip\n", None, "capability:audit"),
+        ("skip\noverride\n", {"keeper": "evidence"}, "capability:evidence"),
+    ],
+    ids=["skill-overridden-agent-skipped", "skill-skipped-agent-overridden"],
+)
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_install_records_a_choice_from_the_agents_own_answer(
+    kit_target: Path,
+    kit_source: Path,
+    monkeypatch,
+    answers: str,
+    choices: object,
+    picked: str,
+) -> None:
+    """A skill and an agent of one name collide, and each gets its own answer: the
+    choice for the agent's name follows the agent's answer alone, never the
+    skill's (COR-017)."""
+    _stage_capability_in_source(
+        kit_source, "audit", with_skills=("keeper",), with_agents=("keeper",)
+    )
+    assert _install(kit_source, monkeypatch, "audit", "").exit_code == 0
+    _stage_capability_in_source(
+        kit_source, "evidence", with_skills=("keeper",), with_agents=("keeper",)
+    )
+
+    result = _install(kit_source, monkeypatch, "evidence", answers)
+
+    assert result.exit_code == 0, result.output
+    assert "2 naming collision(s) detected" in result.output
+    assert _choices(kit_target) == choices
+    assert ("the project's choice of capability 'evidence'" in result.output) == bool(choices)
+    assert agent_definitions.answer(kit_target).picks["keeper"].agent.place == picked
+
+
 @pytest.mark.usefixtures("at_a_terminal")
 def test_uninstall_drops_the_capabilitys_choices_in_the_same_write(
     kit_target: Path, kit_source: Path, monkeypatch
