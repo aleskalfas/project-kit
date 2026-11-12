@@ -1949,6 +1949,11 @@ def extract_body_refs(body: str) -> BodyRefs:
         start = match.start()
         if start > 0 and stripped[start - 1] in ("/", ".", "$"):
             continue
+        # A capability's category is named with a dot (COR-073 point 1), so its
+        # placeholder, `<visual-communication.work>`, holds a hook-shaped name.
+        # It names an overlay category, not a hook.
+        if stripped[start - 1 : start] == "<" and stripped[match.end() : match.end() + 1] == ">":
+            continue
         hooks.add(token)
 
     return BodyRefs(
