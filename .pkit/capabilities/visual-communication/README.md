@@ -239,7 +239,7 @@ Shows where the visual work lies, and each piece with its state and its lock.
 Answers the paths [the designer](#the-designer)'s grant takes by default. It is the query the capability names for the category `visual-communication.work`, which install and `pkit agents reconcile --write` ask ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)).
 
 - **Prints** the location the configuration records. Where none is recorded, it prints `visual/` where that folder is absent, holds no file, or holds the visual work, as a command that writes there would take it ([How a command finds it](files.md#how-a-command-finds-it)). A `visual/` that holds files of another kind, or cannot be the location, is never granted: it prints no path, and says why. `--json` prints one document, `{"paths": [...]}`, with a `note` where it answers no path.
-- **Writes** nothing, and needs no network. `pkit sync` provisions it, as it does every query.
+- **Writes** nothing, and needs no network. [`pkit sync`](../../cli/README.md#sync) provisions it, as it does every query command.
 - **Exits** 0 when it answered, with a path or with none; 1 when the configuration cannot be read, or records a location that is refused.
 
 ### `pkit visual add <library>`
@@ -469,7 +469,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 - **Installing the capability writes it** into the agents overlay, as the answer of [`pkit visual work-paths`](#pkit-visual-work-paths), such as `visual/`. An install from before the category takes it from `pkit agents reconcile --write` ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)).
 - **A value the project sets is kept.** Change the line to name a folder of helpers too, or a location you moved. An empty list, `[]`, switches the designer off: it deploys, and writes nothing.
-- **Never within its grant:** a released version of a library, or a copy of a library the capability ships, which only `pkit visual add` writes. What a command writes, such as a lock or a findings record, stays the command's.
+- **Never written, though the grant reaches them:** a released version of a library, or a copy of a library the capability ships, which only `pkit visual add` writes. What a command writes, such as a lock or a findings record, stays the command's.
 
 To use it:
 
