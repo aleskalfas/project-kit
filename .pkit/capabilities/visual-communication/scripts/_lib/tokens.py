@@ -40,7 +40,9 @@ role of another type or of a library it does not build on, a default that leads 
 or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
 falls on no pair the foundations, the library or a library it builds on declares at a
 level as strict fails; a role whose chain of defaults does not end at a shared role is
-stated as a fact. A role's type reads from the scope with no brand.
+stated as a fact. A role's type reads from the scope with no brand. It holds each
+component library, one that declares neither an own role nor a component token among them,
+since a brand that names a library draws its tops too (DEC-009 point 3).
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -741,7 +743,8 @@ class Scope:
     - `foundations`: the foundations' declarations; `axes`, `families` and `top_groups`
       are theirs.
     - `libraries`: each component library's declarations of its own roles and of its
-      components' tokens, by its name. The foundations' lie among them where the scope
+      components' tokens, by its name, a library that declares neither among them, so a
+      brand names it (DEC-009 point 3). The foundations' lie among them where the scope
       holds their version, with their components' tokens and no role, since their roles
       are shared (DEC-035 points 1 and 7).
     - `roles`: every role, by its token path, each component token among them; `owner`,
@@ -1033,13 +1036,15 @@ class Scope:
 
 def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scope:
     """The scope of the library versions whose folders `folders` gives, by name: the
-    foundations' declarations and the component tokens their components declare, and of
-    each other library of kind `components`, the own roles its `roles.yaml` declares
-    (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1),
-    where it has either. A library whose `library.yaml` cannot be read adds nothing, its
-    own check reporting it. Where `folders` holds no foundations, as for a library that
-    builds on none, the scope holds no shared role. Findings name files relative to `root`
-    when given. Raises TokenError for the foundations' declarations."""
+    foundations' declarations and the component tokens their components declare, and each
+    other library of kind `components`, with the own roles its `roles.yaml` declares
+    (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1). A
+    library that declares neither lies in the scope all the same, with none, since a brand
+    that names it draws its tops (DEC-009 point 3). A library whose `library.yaml` cannot
+    be read adds nothing, its own check reporting it. Where `folders` holds no foundations,
+    as for a library that builds on none, the scope holds no shared role. Findings name
+    files relative to `root` when given. Raises TokenError for the foundations'
+    declarations."""
 
     def shown(path: Path) -> str:
         return path.relative_to(root).as_posix() if root is not None else path.as_posix()
@@ -1055,8 +1060,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
         foundations = replace(foundations, tokens=tokens, findings=problems)
     own = []
     for name, folder in sorted(folders.items()):
-        path = folder / "roles.yaml"
-        if name == FOUNDATIONS or not (path.is_file() or (folder / COMPONENTS).is_dir()):
+        if name == FOUNDATIONS:
             continue
         try:
             library = read_library(folder)
@@ -1068,6 +1072,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
         tokens, problems = read_component_tokens(
             folder, name=library.name, library=library.label, root=root
         )
+        path = folder / "roles.yaml"
         if path.is_file():
             declared = read_own_roles(
                 path,
@@ -1076,7 +1081,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
                 shown=shown(path),
                 builds_on=builds_on,
             )
-        elif tokens or problems:
+        else:
             declared = Declarations(
                 roles={},
                 axes={},
@@ -1086,8 +1091,6 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
                 own=library.name,
                 builds_on=tuple(builds_on),
             )
-        else:
-            continue
         own.append(replace(declared, tokens=tokens, findings=(*declared.findings, *problems)))
     return Scope(foundations, own)
 
@@ -1154,7 +1157,8 @@ class Brand:
       it varies it or not, and each shared size axis it or its base gives, with the modes
       given (DEC-021 point 2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
-      their version fits, whose roles it reaches (DEC-008 point 4).
+      their version fits, whose roles it reaches (DEC-008 point 4) and whose tops it draws
+      (DEC-009 point 3).
     - `roles`: the token paths it exports, in path order: the shared roles, each shared
       picture role only where it or its base gives it a value (DEC-025 point 4), and each
       role of a library it names that it or its base gives a value (DEC-008 point 5).
