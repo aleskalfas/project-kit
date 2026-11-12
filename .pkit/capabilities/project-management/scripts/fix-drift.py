@@ -41,7 +41,7 @@ What a run does, in order (`_lib/drift.py` holds each step):
           listed with its reason, and each `none` that stands is listed at
           every run. With nobody at a terminal the run ends here, having
           started and written nothing.
-  run     Each fixer watched (DEC-056 point 5): through the backbone's run
+  run     Each fixer watched (DEC-069 point 2): through the backbone's run
           command in the runner's unconfined form, as `review-pr` runs its
           reviewers, in a working copy of the commit made for that fixer, under
           the person's settings and the project's, with one brief. At most

@@ -26,8 +26,8 @@ module is the drift command's work, in the order a run takes it:
   limit on fixers at once, a wall-clock limit for each, and one retry of a
   start that failed for a cause outside the fixer's work. A run a person
   started at a terminal is watched (`run_watched`): the runner's unconfined
-  form, in a working copy of the commit made for that fixer alone (DEC-056
-  point 5). With nobody at a terminal the command starts no fixer.
+  form, in a working copy of the commit made for that fixer alone (DEC-069
+  point 2). With nobody at a terminal the command starts no fixer.
 - **Gathering** (`gather`): each fixer's result lines and answers are read by
   the run's contract (`fixer_contract`), and the queue in the main working
   tree's agent workspace (`drift_queue`) records each artefact's state.
@@ -802,15 +802,15 @@ def brief(
 
     A `watched` run's frame says that a person started the command at a
     terminal and watches it, names no temp folder, and tells the fixer to keep
-    to the forms, which its settings do not hold it to (DEC-056 point 5). A
-    run nobody watches is confined, and its frame says so."""
+    to the forms, which its settings do not hold it to (DEC-069 point 2). A
+    confined run's frame says that nobody watches it."""
     nonce = nonce or secrets.token_hex(8)
     opening, closing = f"<<<pkit-data-{nonce}", f"pkit-data-{nonce}>>>"
     if watched:
         frame = [
             f"The drift command, `pkit pm {VERB}`, started you as the fixer of the artefacts "
             "below. A person started it at a terminal and watches the run (project-management "
-            "DEC-056 points 3 and 5). Nobody can answer you during this run, and this brief is "
+            "DEC-069 point 2). Nobody can answer you during this run, and this brief is "
             "your only instruction.",
             "",
             f"- The commit: {commit}, the default branch's commit this run is pinned to.",
@@ -1194,7 +1194,7 @@ def run_watched(
     copy: Copy | None = None,
     start: Callable[..., agent_runs.AgentRun] | None = None,
 ) -> agent_runs.AgentRun:
-    """Run one fixer watched (DEC-056 point 5): through the backbone's run
+    """Run one fixer watched (DEC-069 point 2): through the backbone's run
     command in the runner's unconfined form, as the review command runs its
     reviewers, in a clone of `commit` made for this fixer alone (`clone_at`),
     never in the person's checkout. The fixer runs under the person's settings
@@ -1295,7 +1295,7 @@ def make_watched_workspace(working_copy: Path) -> Path | agent_runs.AgentRun:
 
 def definition_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun | None:
     """None where the definition a watched run of `agent` runs is the one at
-    the commit; else the refused run (DEC-056 point 3).
+    the commit; else the refused run (DEC-069 point 2).
 
     For a name some place of the methodology ships, in a clone that is a
     project's root, the backbone runs the runner the clone registers, and that

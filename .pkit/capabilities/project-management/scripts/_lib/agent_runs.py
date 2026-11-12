@@ -5,11 +5,11 @@ backbone's run command, `pkit agents run`, which starts the runner the
 project's adapter registers, and the runner starts the harness. This module is
 the one place project-management asks. `review-pr` starts its reviewers
 through it (`run_agent`, the unconfined form), and so does `fix-drift` each
-fixer a person watches, in a working copy of its own (DEC-056 point 5).
+fixer a person watches, in a working copy of its own (DEC-069 point 2).
 `run_confined` is the confined form, the later hardening of a run nobody
 watches: a clone at a pinned commit, under the rules `permissions/runs.yaml`
 declares. The drift command starts no confined run, and a run nobody watches
-waits for the project's switch (DEC-056 point 7).
+waits for the project's switch (DEC-069 point 4).
 
 The command reads the brief on standard input and writes one JSON document, a
 version this module reads (`VERSION`): how the run ended, the harness's exit,
