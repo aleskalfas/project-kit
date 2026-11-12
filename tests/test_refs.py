@@ -95,6 +95,13 @@ def test_parser_extracts_hook_names() -> None:
     assert "workflow.github.create-pr" in refs_.hooks
 
 
+def test_parser_does_not_flag_a_capability_categorys_placeholder_as_a_hook() -> None:
+    """A capability's category holds a dot (COR-073 point 1), so its placeholder is no hook."""
+    body = "You write within `<drawing.work>`, and <drawing.work> again; call `drawing.work`."
+    refs_ = refs.extract_body_refs(body)
+    assert refs_.hooks == frozenset({"drawing.work"})
+
+
 def test_parser_skips_fenced_code_blocks() -> None:
     body = (
         "Outside text references COR-005.\n\n```yaml\nreads:\n  records: [COR-999]\n```\n\n"

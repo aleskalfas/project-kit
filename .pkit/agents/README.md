@@ -201,7 +201,7 @@ A body cites what its front matter declares, in forms the validator reads withou
 - **A hook name:** `<topic>.<operation>` or `<topic>.<provider>.<operation>` ([`hooks.md`](hooks.md)).
 - **An operational rule** by its layer and number, such as "core rule 16", or by its id in a loaded set, such as `RS-OPS-NNN` (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
 - **A point of a record** is held to its record, such as `COR-NNN point N`, `PRJ-NNN DN`, `COR-NNN#N` or `[<capability>:DEC-NNN] point N` (COR-058). `pkit refs validate` warns, without failing, of a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
-- **Not counted:** anything inside a fenced code block, an HTML comment or strikethrough.
+- **Not counted:** anything inside a fenced code block, an HTML comment or strikethrough. Nor is a dotted word inside a placeholder, such as `<drawing.work>`, which names a capability's overlay category ([COR-073](../decisions/core/COR-073-capability-grant-defaults.md) point 1), not a hook.
 
 The discipline:
 
