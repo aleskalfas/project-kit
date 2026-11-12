@@ -2,7 +2,7 @@
 
 Sub-procedure of the pm composite skill (`pm.md` in this folder). It follows [project-management:DEC-056-drift-fixers] points 2, 3 and 6, and [project-management:DEC-069-when-fixers-start] point 1. A fixer only proposes. The person, or the delegate they named, decides each proposal, and what is accepted reaches the default branch through an ordinary pull request. The commands are the [capability README](../../README.md)'s, under "Starting the fixers" and "Deciding the proposals".
 
-A fixer starts where a person runs the drift command at a terminal and watches it. With nobody at a terminal, it starts only where the project's switch is on ([project-management:DEC-069-when-fixers-start] point 4), which [project-kit#3050](https://github.com/aleskalfas/project-kit/issues/3050) builds. Until then this procedure starts none: it shows the person what went stale, and brings what the fixers they ran proposed.
+A fixer starts where a person runs the drift command at a terminal and watches it. With nobody at a terminal, it starts one only in the confined form, where that form is built and the harness holds it, or where the project's switch is on ([project-management:DEC-069-when-fixers-start] points 2 and 4). [project-kit#2225](https://github.com/aleskalfas/project-kit/issues/2225) builds the one and [project-kit#3050](https://github.com/aleskalfas/project-kit/issues/3050) the other. Until then this procedure starts none: it shows the person what went stale, and brings what the fixers they ran proposed.
 
 ## When to use this operation
 
