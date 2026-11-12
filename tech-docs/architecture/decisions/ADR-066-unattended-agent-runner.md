@@ -132,7 +132,7 @@ Each refusal names its cause. A start report that does not match the run's setti
   - the candidate exclusions
   - the runner itself, and the deploy's resolution of an agent, which the runner applies
 
-  A working run reads them from the default branch's head instead (refinement per [ADR-073](ADR-073-builder-runs.md) point 2). So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
+  A working run reads them from the default branch's head instead (refinement per [ADR-073](ADR-073-builder-runs.md) point 2). So no unmerged change shapes a confined run, as DEC-056 point 3 keeps for the agent.
 - **A checked agent definition.** The runner always passes the definition itself, with `--agents`. It makes it from the agent's file at the pinned commit.
   - **As the deploy resolves it.** The file is the one the adapter's deploy picks among agents of one name. The overlay is applied. Each storyboard is named by its path from the clone's root, where the run reads it.
   - **Refused where the deploy would not carry it.** The run is refused where the deploy would not resolve the file, such as over an overlay category its checks refuse ([ADR-051](ADR-051-process-author-edit-authority.md) and [ADR-052](ADR-052-optional-read-category-empty-tolerance.md)). It is refused too where the deploy would drop a value the run passes, such as a model it does not accept. Nobody watches the run to read the deploy's warning.
@@ -236,7 +236,7 @@ DEC-056 point 5 makes a fixer start no other agent. A run could start one in two
 
 Two kinds of run take the runner's unconfined form. They are the review command's runs, and a drift command's runs: one a person started at a terminal and watches, and one nobody watches that the project's switch starts (DEC-056 points 5 and 7). Each such run:
 - works in the folder its caller names, under the person's and the project's settings there
-- starts in the mode those settings or the harness choose, which may approve calls no rule allows
+- starts in the mode those settings or the harness choose, which may approve calls no rule allows. A run nobody watches, a review or a fixer, refuses to start where those settings approve calls without asking (DEC-056 point 7).
 - is passed `-p`, and `--effort` where one is set. For a name some place of the methodology ships, the runner passes the agent's definition as the confined form resolves it, under a name unique to the run, so the harness loads that agent and no other copy of the name. For a name no place ships, such as a reviewer the project wrote straight into the harness's own folder, it passes `--agent` and the harness loads it by name ([ADR-087](ADR-087-agent-definition-picker.md) point 3).
 
 **The review command's runs** work in the person's checkout. Moving the review command onto the runner keeps what its reviewers may do. What changes around them:
@@ -255,7 +255,7 @@ Two kinds of run take the runner's unconfined form. They are the review command'
 
 The run takes the project's settings at the commit, and the person's own. A settings file the person keeps in their checkout, out of git, does not reach it. The clone is not provisioned, as a confined run's is (point 7), since its commands share the person's `uv` cache and network, as a session of the person's does. No check of point 7's kind follows such a run. A person watching it sees which fixers start and how each ends, and can stop the run, and a run the switch starts has nobody watching, as a review has none (point 11).
 
-**Not decided here:** how the review command's runs are confined. The confined form is the later hardening of every run nobody watches, the reviewers' and the fixers' alike (#2225). A confined review would run in a clone at the pull request's head, under rules for reading it. The record that decides it first weighs a mode that cannot bypass, for these runs too.
+**The review command's runs nobody watches** are confined once a form for reviewing is built and the harness holds it, and keep today's form until then (#2225). Once built, they take it with no further step, as a fixer's run does under DEC-056 point 7. Their rules, their clone at the pull request's head and their mode are the follow-up record's, which first weighs a mode that cannot bypass.
 
 ### 11. What stays open
 
@@ -385,7 +385,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 ## Implications
 
 - **The review command's move** (#1742) builds the backbone's run command, the adapter's runner in its unconfined form, and the review command's call to it. Point 10 lists what changes around it. The backbone and the adapter each gain something an adopter can see, so each change declares it (PRJ-002).
-- **A run nobody watches** takes the confined form where it is built and the harness holds it: the backbone's clone and its check, and the run's rules in project-management's file for them. It starts only on a harness release that the probe of point 12 passed on (point 2). The marker of point 8 covers every run, confined or not.
+- **A fixer's confined run,** which a run nobody watches takes where it is built and the harness holds it, needs the backbone's clone and its check, and the run's rules in project-management's file for them. It starts only on a harness release that the probe of point 12 passed on (point 2). The marker of point 8 covers every run, confined or not.
 - **A drift command's unconfined run,** watched or started by the switch, uses the run command's unconfined form as it is. The drift command makes the run's clone and workspace, puts their paths in its brief, and copies its files (point 10). So point 7's copy guards live twice, in the backbone and in project-management, and a change to either is made to both. A test runs both copies on one workspace and holds them in step.
 - **The switch of DEC-056 point 7,** which project-kit#3050 builds, lets the drift command start a run nobody watches in the unconfined form, and turning it on is the person's consent to such runs.
 - **The catalog gains a form:** a privilege that is every call none of a set of privileges recognises. The change judges whether that moves the catalog schema's version ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
@@ -400,7 +400,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
   - the adapter's enforcement declaration names what holds a run, and what stays open (COR-028 point 3)
   - the permissions README, "Default-agent subject resolution", says that `--agent` sets a session's agent without changing the file the hook reads
   - the CLI reference documents the backbone's run command
-- **A follow-up record** decides how the review command's runs are confined (point 10).
+- **A follow-up record** decides the review command's confined form: its rules, its clone at the pull request's head and its mode (point 10).
 - **No migration.** Every change adds.
 - **Supersedes nothing.** It changes no decision of DEC-056 or COR-028.
 - **Stands on these accepted records:**
