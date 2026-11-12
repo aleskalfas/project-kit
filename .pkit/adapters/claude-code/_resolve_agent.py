@@ -16,8 +16,9 @@ Writes the resolved agent file content to stdout (frontmatter with
 placeholders substituted + original body). Exits non-zero with a clear
 error message if a placeholder references a category the overlay does
 not define *through a hard channel* (any list key or `reads.paths` /
-`reads.records`), or if a *write-carrying* category names sync-managed
-content (the no-shared-files invariant at the agent surface, per ADR-051).
+`reads.records`), or if a category the ownership check binds names a path that
+reaches what sync overwrites (the no-shared-files invariant at the agent
+surface, per ADR-051 and ADR-088 point 7).
 A category referenced *only* through `reads.patterns` is an **optional
 read** (ADR-052): undefined, its item is dropped and the resolver still
 exits 0 so the agent deploys as a generalist. A *bare* optional key (present,
@@ -83,14 +84,15 @@ which definition of a name is the agent (COR-013 point 8, ADR-087 point 2):
   file of the name's agent, or whether no place ships the name, or why it has no
   agent the runner may run (`pick_answer`).
 
-The sync-managed check above is one this script *applies* but does not
-*define*. The sync-managed predicate and the write-carrying category registry live
-once, in the lifecycle layer's propagated `.pkit/lifecycle/ownership.py`,
-and this resolver imports them (ADR-051 Decision point 3): re-deriving
-the tier-ownership map per adapter would fork the predicate and silently
-skip the check on the next harness. The import is the ADR-003 pattern —
-a propagated in-tree module both the global `pkit` runtime and this
-script can load.
+The ownership check above is one this script *applies* but does not
+*define*. The test of what a grant may not reach, and which categories it
+binds, live once, in the lifecycle layer's propagated
+`.pkit/lifecycle/ownership.py`: this resolver passes each category with its
+values and asks (ADR-051 Decision point 3, ADR-088 point 7). Re-deriving the
+tier-ownership map, or which categories are a capability's, per adapter would
+fork the rule and silently skip the check on the next harness. The import is
+the ADR-003 pattern — a propagated in-tree module both the global `pkit`
+runtime and this script can load.
 
 Self-contained: PEP 723 inline metadata declares the `ruamel.yaml`
 dependency, so `uv run --script` installs it transparently on first
@@ -282,7 +284,7 @@ def load_ownership():
 
     Raises when the module is absent; the caller turns that into a loud skip.
     Degrading is not an option: the module is also what says *which* categories
-    are write-carrying, so without it the resolver cannot tell a checked grant
+    the check binds, so without it the resolver cannot tell a checked grant
     from an unchecked one — and deploying an unchecked grant is the outcome
     ADR-051 exists to prevent.
     """
@@ -553,7 +555,7 @@ def resolve(
 
         Lazy so an agent with no placeholders at all needs nothing from the
         lifecycle tree; from the first placeholder onwards the module is required,
-        because it is what says whether that category is write-carrying.
+        because it is what says whether the check binds that category.
         """
         if not ownership_cache:
             try:

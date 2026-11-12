@@ -85,6 +85,7 @@ if TYPE_CHECKING:
         workspace_remove,
     )
     from project_kit import refs as refs_mod
+    from project_kit import write_categories as write_categories_mod
     from project_kit.agents import stamp_new_agent
     from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
     from project_kit.changesets import Changeset
@@ -5748,6 +5749,7 @@ def refs_validate() -> None:
     found = refs_mod.validate_corpus(target_root)
     issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
     overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
+    undeclared = [issue for issue in found if issue.kind == refs_mod.UNDECLARED_CATEGORY]
     unknown_fields = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_FIELD]
     choices = [issue for issue in found if issue.kind == refs_mod.AGENT_CHOICE]
     warnings = [
@@ -5755,7 +5757,12 @@ def refs_validate() -> None:
         for issue in found
         if issue.kind in refs_mod.WARNING_KINDS
         and issue.kind
-        not in (refs_mod.UNKNOWN_OVERRIDE, refs_mod.UNKNOWN_FIELD, refs_mod.AGENT_CHOICE)
+        not in (
+            refs_mod.UNKNOWN_OVERRIDE,
+            refs_mod.UNDECLARED_CATEGORY,
+            refs_mod.UNKNOWN_FIELD,
+            refs_mod.AGENT_CHOICE,
+        )
     ]
     lines = [
         cli_render.style(
@@ -5791,6 +5798,17 @@ def refs_validate() -> None:
             )
         )
         for issue in overrides:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if undeclared:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(undeclared)} warning(s) of a capability's category no installed "
+                "capability declares, which do not fail the check:",
+            )
+        )
+        for issue in undeclared:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     if unknown_fields:
         lines.append(
@@ -7721,6 +7739,8 @@ def install_capability_cmd(
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
     _echo_capability_bound(target_root, name, None, capability_source.path)
+    # The defaults its write categories declare, before the deploy (ADR-088 point 5).
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7773,10 +7793,128 @@ def _install_capability_in_source(
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
     _echo_capability_bound(target_root, name, None, capability_source.path)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
     _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
+
+
+def _write_declared_defaults(
+    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool
+) -> None:
+    """Provision the capability's default queries, then write each default its write
+    categories declare into the agents overlay, before the deploy (ADR-088 point 5).
+
+    Read from the capability in place, once the copy or the registration has run.
+    Each category is written, in the block's order, only where neither the top
+    level nor the owner's override gives it a value. Over a path that is absent or
+    holds nothing, running install is the consent. Over content, a terminal is
+    asked once for the run; on a "no", or off a terminal, those categories are
+    left undefined and the fill commands named. A query with no answer, or an
+    answer refused, leaves its category undefined, saying why. Install never fails
+    on a default. A dry run asks no query and provisions nothing: it lists each
+    category's state. A missing overlay gets no default."""
+    from project_kit import agents_overlay as ao
+    from project_kit import provisioning, upgrade
+    from project_kit import write_categories as wcat
+    from project_kit.command_runner import registered_commands, resolve_command
+
+    name = capability_source.name
+    in_place = target_root / ".pkit" / "capabilities" / name
+    categories = wcat.declared_in(name, capability_source.path if dry_run else in_place)
+    if not categories:
+        return
+    overlay = target_root / ao.OVERLAY_PATH
+    fill = "`pkit agents reconcile --write` or `pkit agents adopt <agent>`"
+    if not overlay.is_file():
+        click.echo(
+            f"  {'skipped':<12} the capability's defaults: the agents overlay "
+            f"({ao.OVERLAY_PATH.as_posix()}) is missing. Run `pkit agents reconcile --write` "
+            f"to create it, then {fill}."
+        )
+        return
+    document = wcat.OverlayDocument(overlay.read_text(encoding="utf-8"))
+    if dry_run:
+        for line in _default_states(document, categories):
+            click.echo(f"  {'would write' if 'to be written' in line else 'unchanged':<12} {line}")
+        return
+    # Step 4: the scripts the default queries name, and no other.
+    commands = registered_commands(in_place)
+    for category in categories:
+        command = (
+            resolve_command(commands, category.default_query) if category.default_query else None
+        )
+        if command is not None:
+            query = provisioning.QueryScript(name, command.reference, command.script)
+            verb, detail = provisioning.provision(query).line
+            click.echo(f"  {verb:<12} {detail}")
+    # Step 5: the defaults.
+    try:
+        outcomes = ao.plan_defaults(target_root, categories, document, moves=False)
+    except wcat.OverlayDoesNotRead as exc:
+        click.echo(f"  {'skipped':<12} the capability's defaults: the overlay does not read: {exc}")
+        return
+    held = [o for o in outcomes if o.kind == ao.WRITE and o.over_content]
+    taken = [o for o in outcomes if o.kind == ao.WRITE and not o.over_content]
+    if held:
+        listing = "".join(
+            f"  {o.category.name} = {', '.join(o.paths)}  (owned by {o.category.owner})\n"
+            for o in held
+        )
+        if upgrade.at_a_terminal() and click.confirm(
+            "These paths already hold content; writing each category grants its agent "
+            f"them (COR-073 point 6):\n{listing}Write them in {ao.OVERLAY_PATH.as_posix()}",
+            default=True,
+        ):
+            taken = [o for o in outcomes if o.kind == ao.WRITE]
+        else:
+            for outcome in held:
+                click.echo(
+                    f"  {'skipped':<12} {outcome.category.name}: its paths hold content, and "
+                    f"nobody at a terminal agreed to grant them. Run {fill}."
+                )
+    ao.apply_defaults(document, taken)
+    overlay.write_text(document.text, encoding="utf-8")
+    for outcome in outcomes:
+        if outcome in taken:
+            note = f" ({outcome.note})" if outcome.note else ""
+            click.echo(
+                f"  {'wrote':<12} {outcome.category.name} = {ao.listed(outcome.paths)} in "
+                f"{ao.OVERLAY_PATH.as_posix()}{note}; edit it and the value is the project's."
+            )
+        elif outcome.kind in (ao.REFUSED, ao.NO_ANSWER):
+            click.echo(
+                f"  {'skipped':<12} {outcome.category.name}, left undefined: {outcome.reason}. "
+                f"The deploy skips {outcome.category.owner} until {fill} writes it."
+            )
+
+
+def _default_states(
+    document: write_categories_mod.OverlayDocument,
+    categories: list[write_categories_mod.WriteCategory],
+) -> list[str]:
+    """What install would do with each write category, for its dry run (ADR-088 point 5)."""
+    from project_kit import write_categories as wcat
+
+    lines: list[str] = []
+    for category in categories:
+        try:
+            written = document.still_as_written(category.name)
+            valued = document.gives_value(category.name, category.owner)
+        except wcat.OverlayDoesNotRead as exc:
+            return [f"the capability's defaults: the overlay does not read: {exc}"]
+        if written is not None:
+            lines.append(f"{category.name}: written earlier, left as it is")
+        elif valued:
+            lines.append(f"{category.name}: set by the project, left as it is")
+        elif category.default_query is None:
+            lines.append(f"{category.name}: to be written as [], having no default")
+        else:
+            lines.append(
+                f"{category.name}: to be written from its query once the capability is in place"
+            )
+    return lines
 
 
 def _create_declared_rule_set(
@@ -8074,6 +8212,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
         )
     )
     _echo_capability_bound(target_root, name, None, capability_source.path)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the

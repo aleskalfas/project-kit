@@ -8,6 +8,7 @@ pkit:
       path:
         - src/project_kit/agents.py
         - src/project_kit/agents_overlay.py
+        - src/project_kit/write_categories.py
         - src/project_kit/agent_policy.py
         - src/project_kit/refs.py
         - src/project_kit/friction_check.py
@@ -29,7 +30,7 @@ pkit:
         - .pkit/lifecycle/capability_records.py
         - src/project_kit/agent_definitions.py
         - .pkit/rules/core.md
-      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11", ADR-085, ADR-086, ADR-087]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-041, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, COR-073, ADR-051, ADR-052, "ADR-065#11", ADR-085, ADR-086, ADR-087, ADR-088]
       artefact:
         - .pkit/agents/hooks.md#
         - .pkit/agents/storyboards.md#
@@ -45,6 +46,7 @@ pkit:
         - .pkit/agents/storyboards.md#frontmatter-declaration
         - .pkit/agents/storyboards.md#authoring
         - .pkit/lifecycle/upgrade-flow.md#seed-paths
+        - .pkit/lifecycle/manifest.md#field-layout-and-casing
         - .pkit/decisions/README.md#citing
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/README.md#what-an-adapter-declares-as-data
@@ -145,6 +147,7 @@ What each field holds:
 - **`owns`:** the paths whose modification is the agent's responsibility, each a literal path or a `<category>` placeholder the overlay resolves. Agents only, since skills own no path.
   - Each path that matters to the methodology is meant to have exactly one owning agent. `pkit refs validate` enforces that by reporting overlaps between agents over resolved paths ("Exactly-one-owner over `owns:`" below).
   - A category core declares write-carrying, which a core definition writes and the project names, follows four more rules ("Write-carrying categories" below).
+  - A category a capability declares for its agents' writes is a *write category*. Install writes its default into the overlay ("A capability's write categories" below).
   - A definition whose `owns:` resolves to decision records cites the rule for editing them where it describes editing records: `.pkit/decisions/README.md`, "Refining an accepted record". It does not restate the rule, since agents reference rather than embed (COR-006).
   - **A command's writes** are the command's, where one of the methodology's own mutating commands makes them, and `owns:` does not declare them. That holds for the backbone's commands and an installed capability's. The agent's body, or a skill it hands the work to, names the command and the conditions for running it.
   - **A write the agent makes itself,** with a file tool or any program through a shell, is never a command's write (COR-013). For the friction writers, see "Friction writers" below.
@@ -295,6 +298,7 @@ Commands an agent returns are run by one of these:
   - a cited point its record does not hold
   - a cited operational rule that is missing or retired
   - an unknown override in the overlay ("Adopter overlay" below)
+  - a dotted category in the overlay that no installed capability declares ("Adopter overlay" below)
   - a key in an agent's definition that is none of the definition's fields ("Frontmatter schema" above)
   - a collision between two capabilities no choice of the project's settles, and a choice that decides nothing ("Name-collision precedence" below)
 
@@ -365,7 +369,7 @@ overrides:
 - a block for an agent no source ships, whatever keys it holds
 - a category in an agent's block that the agent's definition does not name, the definition being the one that is the agent ("Name-collision precedence" below)
 
-`pkit agents` and the `refs` member of `pkit validate` warn of each, naming its key, such as `overrides.critc` or `overrides.critic.code-pths`. A warning fails no command, `pkit refs validate` included. A `model` or `effort` there that the harness does not accept is still reported, as an error ("Model and effort" below).
+`pkit agents` and the `refs` member of `pkit validate` warn of each, naming its key, such as `overrides.critc` or `overrides.critic.code-pths`. They warn too of a dotted category that no installed capability declares, at the top level or in an override. A warning fails no command, `pkit refs validate` included. A `model` or `effort` there that the harness does not accept is still reported, as an error ("Model and effort" below).
 
 **The first install** writes the overlay with a value for each category core's definitions name, so they deploy before the project names a path. A missing overlay comes back as "Diagnosing + repairing the overlay" below says.
 
@@ -391,14 +395,39 @@ Four rules apply to a write-carrying category:
    - The difference from a bare or absent key is mechanical, not cosmetic. `[]` resolves to an empty `owns:`, so the agent deploys inert, owning nothing. A bare or absent key does not resolve at all, so the agent is skipped.
    - The first install writes the `[]`. An install from before the category upgrades into the skipped state, since sync cannot add a key to the project's overlay. `pkit agents reconcile --write` fills the `[]` to restore parity ("Diagnosing + repairing the overlay" below).
 2. **File granularity, not subtree grants.** List definition files and predicate-script folders, not a capability's whole subtree. Never list a capability's `package.yaml`, since registering a predicate belongs to the `pkit process` commands, which own that stamp.
-3. **Nothing sync manages.** No entry may resolve into content the next sync overwrites, which is the no-shared-files invariant at the agent's surface (core rule 1). An agent must never be granted write authority over that content. The deploy's resolver refuses such an entry, names the path, and skips the agent rather than deploy an invalid grant. `.pkit/lifecycle/ownership.py` decides once what sync manages, and every adapter's resolver imports it, so a second harness cannot silently skip the check:
-   - core's areas, and a shipped capability's own subtree: managed
-   - that capability's `project/` folder: the project's
-   - an incubated or unregistered capability's subtree: the project's
-   - every other declared project-tier position: the project's, such as an adapter's `settings/project/`, which holds the project's harness permission additions, so a category may name it
+3. **Nothing sync manages.** No entry may reach content the next sync overwrites, which is the no-shared-files invariant at the agent's surface (core rule 1). The deploy's resolver refuses such an entry, names it with its category, and skips the agent rather than deploy an invalid grant. `.pkit/lifecycle/ownership.py` holds the test and the categories it binds. Every adapter's resolver imports it, so a second harness cannot silently skip the check:
+   - **Reach** means that either path holds the other. So the repository's root and `.pkit/` are refused, since each holds managed content. A glob is read as the folder that holds its first glob character.
+   - **What sync manages:**
+     - core's areas, and a shipped capability's own subtree: managed
+     - that capability's `project/` folder: the project's
+     - an incubated or unregistered capability's subtree: the project's
+     - every other declared project-tier position: the project's, such as an adapter's `settings/project/`, which holds the project's harness permission additions, so a category may name it
+   - **A registered externally-sourced capability's folder,** outside its `project/` folder, is refused too ([COR-041](../decisions/core/COR-041-external-source-distribution.md)).
+   - **The categories bound** are each one core declares write-carrying, and each one in the `owns` of an agent a capability ships, declared or not. A project's definition that wins by name is still bound.
 4. **One consumer, by convention.** A category a core record introduces is named by exactly the agent that record names. A core definition naming a write-carrying category another record introduced is a red flag in review. Categories the project defines are its own to share across its agents.
 
 `pkit agents adopt` cannot serve a write-carrying category, since there is no conventional folder to create for paths core cannot enumerate. It says so rather than fail obscurely. Run `pkit agents reconcile --write`, then name the project's paths.
+
+### A capability's write categories
+
+A capability declares the categories its agents write, and install writes each one's default into the overlay ([COR-073](../decisions/core/COR-073-capability-grant-defaults.md)). An edit makes the value the project's.
+
+- **The declaration.** The capability's `package.yaml` lists them under `write_categories` ([the manifest reference, "Field layout and casing"](../lifecycle/manifest.md#field-layout-and-casing)). A category is named `<capability>.<word>`, and `owner` names the one agent that owns it. An optional `default-query` names the query command that answers its default.
+- **The default query** prints one document, `{"paths": [...]}`, with an optional one-line `note` that a writer prints beside what it writes. It runs from the project's root with `--json`, offline-marked and bounded, and is asked afresh each time. A failure, a timeout or another shape is no answer. `{"paths": []}` answers no path.
+- **The check.** A writer refuses an answer whole when one path fails. A path fails when it lies outside the repository, or in or around the capability's folder. It fails too when it reaches what sync manages, or overlaps a path another agent owns. The writer writes nothing for that category, and says which path failed and why.
+- **The written line** sits at the top level, its value in flow form. A mark at its end repeats the value, and a comment above it says an edit makes the value the project's:
+
+  ```yaml
+  # Written as a capability's default for the category below. While it stays as written, `pkit agents reconcile` may move it; edit it and it is the project's.
+  drawing.work: ["visual/"]  # pkit-written: ["visual/"]
+  ```
+
+- **Still as written** means that the line's value equals its mark's. Every other state is the project's, and no writer writes or moves it. A writer writes a category only where neither the top level nor the owner's override gives it a value.
+- **The writers:**
+  - `pkit capabilities install`, `register` and install in the methodology's source write each default before the deploy. Over a path that holds content, install asks once at a terminal. Off a terminal, or on a "no", it leaves that category undefined and names the fill commands. It never fails on a default.
+  - `pkit agents reconcile` shows each write and each move of a value still as written, and `--write` makes them.
+  - `pkit agents adopt <agent>` writes each category the agent owns, the answer or `[]`. It creates no folder and moves nothing.
+- **Upgrade writes no default.** `pkit capabilities upgrade` and `pkit upgrade` deploy as before, so the deploy skips an owner whose category is undefined and names the fill commands.
 
 ### Diagnosing + repairing the overlay
 
@@ -412,11 +441,13 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 
 #### `pkit agents`
 
-`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It warns of each unknown override too ("Adopter overlay" above). It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
+`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It warns of each unknown override too, and, in an `UNDECLARED CAPABILITY CATEGORIES` section, of each dotted category no installed capability declares ("Adopter overlay" above). It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
+
+It also asks the query of each line still as written ("A capability's write categories" above). Where the answer differs, it shows the line, the answer and `pkit agents reconcile`. Where there is no answer, it says why.
 
 #### `pkit agents adopt <agent> [--yes]`
 
-`pkit agents adopt` fills each undefined category of the agent that has a conventional folder, in one command:
+`pkit agents adopt` fills each undefined category of the agent that has a conventional folder, in one command. It writes each write category the agent owns too, from its default ("A capability's write categories" above):
 
 1. It creates the folder if absent, with a seed README on its purpose. A folder that exists but holds nothing gets the README too.
 2. It writes the category into the overlay, uncommented, with that path, and never over a value the project set.
@@ -439,12 +470,13 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 - an agent that names no overlay category
 - a required category with no conventional folder, for which it names `reconcile`
 - a write-carrying category, where the refusal is structural and says so: core cannot enumerate the project's paths, so `adopt` has nothing to create
+- a capability's write category whose query gives no answer, or whose answer is refused, for which it names why and writes nothing
 
 An optional category with no conventional folder is no prerequisite: `adopt` leaves it undefined, names it as optional, and deploys the agent.
 
 #### `pkit agents reconcile [--write]`
 
-`pkit agents reconcile` surfaces each category a definition names and the overlay leaves undefined into `overlay.yaml`. It is a dry run by default, and `--write` writes. It uses detect-then-fill logic, with six states for each missing category:
+`pkit agents reconcile` surfaces each category a definition names and the overlay leaves undefined into `overlay.yaml`. It is a dry run by default, and `--write` writes. A capability's write category comes first, and is written or moved from its default ("A capability's write categories" above). Every other missing category takes one of six states, through detect-then-fill logic:
 
 1. **Missing and write-carrying:** written uncommented as `<category>: []`. The agent then deploys inert rather than being skipped, as on a fresh install. The project names real paths when ready.
 2. **Missing, with its conventional folder present:** written uncommented with that path, so the next sync deploys the agent with no manual step. Examples are `architecture-docs` with `docs/architecture/`, and `adr-records` with `docs/architecture/decisions/`.

@@ -324,6 +324,25 @@ def test_install_in_the_source_creates_the_declared_project_rule_set(source_repo
     assert f"inherits: [{_NAME}:HW@1]" in created.read_text(encoding="utf-8")
 
 
+def test_install_in_the_source_writes_the_declared_default(source_repo: Path) -> None:
+    """The overlay is the project's file, so install in the source writes a write
+    category's default as anywhere (ADR-088 point 5): here `[]`, as it declares no query."""
+    cap = _cap_dir(source_repo)
+    (cap / "agents").mkdir()
+    (cap / "agents" / "tutor.md").write_text(
+        f"---\nname: tutor\ndescription: t\nowns:\n  - <{_NAME}.notes>\n---\n# tutor\n",
+        encoding="utf-8",
+    )
+    with (cap / "package.yaml").open("a", encoding="utf-8") as package:
+        package.write(f"write_categories:\n  {_NAME}.notes:\n    owner: tutor\n")
+
+    result = CliRunner().invoke(main, ["capabilities", "install", _NAME])
+
+    assert result.exit_code == 0, result.output
+    overlay = source_repo / ".pkit" / "agents" / "project" / "overlay.yaml"
+    assert f"{_NAME}.notes: []  # pkit-written: []" in overlay.read_text(encoding="utf-8")
+
+
 def test_install_dry_run_in_the_source_writes_nothing(source_repo: Path) -> None:
     before = _snapshot(_cap_dir(source_repo))
 

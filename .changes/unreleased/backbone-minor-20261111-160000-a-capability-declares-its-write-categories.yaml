@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability declares, in an optional `write_categories` block of its
+  `package.yaml`, each overlay category it introduces for its agents' writes,
+  named with the capability's name and a dot, with the one agent that owns it
+  and an optional query that answers its default (ADR-088, realizing COR-073,
+  #2961). Its install and registration write each default into the agents
+  overlay before they deploy, only where the project set no value, with a
+  `# pkit-written:` mark that repeats the value, and ask first, at a terminal,
+  where the answer names a path that already holds content; off a terminal they
+  leave that category unset and name the fill commands.
+  `pkit agents reconcile --write` writes a missing default and moves a value
+  still as written to the query's newer answer, `pkit agents adopt` writes a
+  missing one, and `pkit agents` reports a value still as written whose default
+  now answers otherwise. A value you edited is yours, and nothing writes it again.
+  `pkit validate` warns of a dotted category in the overlay that no installed
+  capability declares. The
+  deploy refuses a grant that lies in, or holds, what the next sync overwrites,
+  for every category a capability's agent names and for core's categories that
+  carry writes, and counts a capability pulled from an external source. So a
+  grant in one of core's write-carrying categories of a folder that holds what
+  sync overwrites, such as the repository's root, now stops its agent
+  deploying, and the deploy names the entry: list in its place the files and
+  folders the agent writes. No migration, since only you know which paths such a grant
+  meant. COR-073, ADR-051 and ADR-065 take the edits ADR-088 names.

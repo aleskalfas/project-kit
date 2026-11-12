@@ -18,7 +18,7 @@ pkit:
         - .pkit/lifecycle/capability_records.py
         - .pkit/agents/definition_source.py
         - .pkit/adapters/claude-code/undeploy-capability.sh
-      record: [COR-001, COR-005, COR-007, COR-010, COR-013, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11", ADR-087]
+      record: [COR-001, COR-005, COR-007, COR-010, COR-013, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11", ADR-087, "ADR-088#5"]
       artefact:
         - .pkit/lifecycle/manifest.md#discovery-what-a-capability-would-connect-to
         - .pkit/lifecycle/manifest.md#a-data-points-question
@@ -104,6 +104,8 @@ agent_choices:
   - It reads the plan through `pkit capabilities project-rule-set <name> --json`.
   - It writes the `text` given, where `creates` is `true` and the file is still missing.
   - It never fails the upgrade when the answer cannot be read. It warns, and names the command.
+
+**The defaults its write categories declare.** Before the deploy, install writes each default the capability's write categories declare into the agents overlay. Register and install in the methodology's source write them too. What it writes, and when it asks, is in [the agents README, "A capability's write categories"](../agents/README.md#a-capabilitys-write-categories) <!-- unanchored: points the reader on to the page that says how a default is written, a pointer and no statement of it -->.
 
 **The questions its points declare.** Install ends, after the deploy, with the questions of the points the capability defines and of the points its contributions reach ([COR-061](../decisions/core/COR-061-point-questions.md)). They are asked where a person can answer, and printed otherwise ([`manifest.md`, "A data point's question"](manifest.md#a-data-points-question)).
 

@@ -568,6 +568,93 @@ def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
     assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
 
 
+# --- every category a capability's agent owns (ADR-088 point 7) --------------
+#
+# The check binds each category in the `owns` of an agent a capability ships, in any
+# definition that names it, and refuses a grant that lies in, or holds, what sync
+# overwrites, or an externally-sourced copy.
+
+_CAPABILITY_CATEGORY = "drawing.work"
+
+
+def _capability_designer(root: Path) -> None:
+    cap_dir = root / ".pkit" / "capabilities" / "drawing"
+    (cap_dir / "agents").mkdir(parents=True, exist_ok=True)
+    (cap_dir / "package.yaml").write_text(
+        "component:\n  kind: capability\n  name: drawing\n  version: 0.1.0\n", encoding="utf-8"
+    )
+    (cap_dir / "agents" / "designer.md").write_text(
+        f"---\nname: designer\ndescription: From drawing.\nowns:\n  - <{_CAPABILITY_CATEGORY}>\n"
+        "---\n\n# Designer\n",
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.parametrize("grant", [".pkit/agents/core/", ".pkit/", "."])
+def test_deploy_refuses_a_capability_agent_a_grant_reaching_managed_content(
+    mock_kit: Path, grant: str
+) -> None:
+    _capability_designer(mock_kit)
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: ["{grant}"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "designer" in result.stdout
+    assert f"<{_CAPABILITY_CATEGORY}>" in result.stdout and "sync-managed" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "designer.md").exists()
+
+
+def test_deploy_refuses_a_capability_agent_an_externally_sourced_copy(mock_kit: Path) -> None:
+    _capability_designer(mock_kit)
+    _register_capability(mock_kit, "pulled", origin="externally-sourced")
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: [".pkit/capabilities/pulled/scripts/"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and ".pkit/capabilities/pulled/scripts/" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "designer.md").exists()
+
+
+def test_deploy_refuses_a_projects_copy_of_a_capability_agent_alike(mock_kit: Path) -> None:
+    """The project's definition wins by name, and is bound by the capability's."""
+    _capability_designer(mock_kit)
+    _write_agent(
+        mock_kit,
+        "project",
+        "designer",
+        f"---\nname: designer\ndescription: From project.\nreads:\n  paths:\n"
+        f"    - <{_CAPABILITY_CATEGORY}>\n---\n\n# Mine\n",
+    )
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: [".pkit/"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "sync-managed" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "designer.md").exists()
+
+
+def test_deploy_grants_a_capability_agent_its_folder(mock_kit: Path) -> None:
+    _capability_designer(mock_kit)
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: ["visual/"]  # pkit-written: ["visual/"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" not in result.stdout
+    assert "visual/" in (mock_kit / ".claude" / "agents" / "designer.md").read_text()
+
+
+def test_deploy_names_the_fill_commands_for_an_undefined_capability_category(
+    mock_kit: Path,
+) -> None:
+    _capability_designer(mock_kit)
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert f"<{_CAPABILITY_CATEGORY}> is a capability's category" in result.stdout
+    assert "pkit agents reconcile --write" in result.stdout
+    assert "Deploy it:  pkit agents adopt designer" not in result.stdout
+
+
 def test_deploy_reports_bare_optional_key_and_still_deploys(mock_kit: Path) -> None:
     """A bare optional key deploys the agent (ADR-052) and the run says so (#916)."""
     _write_agent(

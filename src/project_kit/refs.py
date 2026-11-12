@@ -87,6 +87,7 @@ from project_kit import (
     lifecycle_ownership,
     record_points,
     rule_sets,
+    write_categories,
 )
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
@@ -234,6 +235,11 @@ OPERATIONAL_CITATION = "operational-rule-citation"
 # (#2468). The agent deploys as if it were absent, so a warning.
 UNKNOWN_OVERRIDE = "unknown-override"
 
+# A dotted category of the overlay, at the top level or in an override, that no
+# installed capability declares (ADR-088 point 1), such as one an uninstall left.
+# Nothing deploys from it, so a warning, beside the unknown overrides.
+UNDECLARED_CATEGORY = "undeclared-category"
+
 # An agent's tool access the tree's reader refuses, or an adapter that deploys
 # agents refuses; such an adapter with no declaration of tool access the reader
 # reads, or one admitting a withheld entry its support declaration does not answer
@@ -260,7 +266,14 @@ AGENT_DEFINITION = "agent-definition"
 
 #: The kinds of finding that warn and never fail `pkit refs validate`.
 WARNING_KINDS = frozenset(
-    {POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE, UNKNOWN_FIELD, AGENT_CHOICE}
+    {
+        POINT_CITATION,
+        OPERATIONAL_CITATION,
+        UNKNOWN_OVERRIDE,
+        UNDECLARED_CATEGORY,
+        UNKNOWN_FIELD,
+        AGENT_CHOICE,
+    }
 )
 
 
@@ -367,8 +380,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
     tool-access + definition-field + storyboard + capability-, rule-, address- and
-    point-citation + composes + agent-policy + `reads.patterns` form + unknown-override
-    checks."""
+    point-citation + composes + agent-policy + `reads.patterns` form + unknown-override +
+    undeclared-category checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -404,6 +417,7 @@ def check_corpus(
     issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
     if picked is not None:
         issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
+    issues.extend(_kind(_validate_undeclared_categories(target_root), UNDECLARED_CATEGORY))
     return issues
 
 
@@ -2380,24 +2394,11 @@ def resolved_owns(
     )
     owned: dict[str, str | None] = {}
     for entry in entries:
-        path = _normalize_owned_path(entry.value)
+        path = write_categories.normalised(entry.value)
         if not path:
             continue
         owned.setdefault(path, entry.category)
     return owned
-
-
-def _normalize_owned_path(path: str) -> str:
-    """Comparison form of an owned path: no leading `./`, no trailing `/`."""
-    normalized = path.strip()
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    return normalized.rstrip("/")
-
-
-def _paths_overlap(left: str, right: str) -> bool:
-    """True when the two paths are equal or one contains the other."""
-    return left == right or left.startswith(right + "/") or right.startswith(left + "/")
 
 
 def _validate_ownership(
@@ -2449,7 +2450,7 @@ def _validate_ownership(
     for first, second in itertools.combinations(sorted(owned_by_agent), 2):
         for first_path, first_category in sorted(owned_by_agent[first].items()):
             for second_path, second_category in sorted(owned_by_agent[second].items()):
-                if not _paths_overlap(first_path, second_path):
+                if not write_categories.overlap(first_path, second_path):
                     continue
                 issues.append(
                     Issue(
@@ -3589,6 +3590,21 @@ def _validate_unknown_overrides(target_root: Path) -> list[Issue]:
             f"Correct the name, or remove the entry.",
         )
         for unknown in agents_overlay.unknown_overrides(target_root)
+    ]
+
+
+def _validate_undeclared_categories(target_root: Path) -> list[Issue]:
+    """Each dotted category of the overlay no installed capability declares, at
+    `overlay.yaml` and naming its key (ADR-088 point 1). A dotted name is a
+    capability's alone, so nothing deploys from it: a warning."""
+    return [
+        Issue(
+            location=str(agents_overlay.OVERLAY_PATH),
+            diagnosis=f"`{found.key}` names <{found.category}>, a capability's category that no "
+            "installed capability declares. Remove it, or install the capability that declares "
+            "it.",
+        )
+        for found in agents_overlay.undeclared_capability_categories(target_root)
     ]
 
 
