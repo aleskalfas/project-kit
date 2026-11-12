@@ -40,3 +40,6 @@ roles:
   starter.logo: {type: dimension, default: '{space.4}'}
   # The radius of a button's corners: a card's, unless a brand rounds its buttons apart.
   starter.button.corner: {type: dimension, default: '{starter.corner}'}
+  # The side of the square a component draws its concept's sign in (DEC-036 point 2): a
+  # medium spacing, so a sign stands about as tall as a letter of the body's text.
+  starter.sign: {type: dimension, default: '{space.3}'}

@@ -8,30 +8,34 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 43c102ba20a3cbe9e72d01f0dca31ab9209defd662d575cccc1f9d213272a022
+  value: 9526433f6e86a18115cf5c936e98fabd119ff6234a7f7f1b0ae15a1fd7c4c95f
   inputs:
     - file: content.cs.yaml
       sha256: dba4143c6cece44b78b2f02ad0845bfd876313aab71a9a043904434b7e6cbdcb
     - file: content.en.yaml
       sha256: 328f670af0ffaa39d042e47d6f3b2f5d9b2ed1e97623e962626b70fdcaa39481
     - file: piece.yaml
-      sha256: 30fb30da8c34c96378540ca5a4884b443bf9a54e8dd6226cce5b784e54985937
+      sha256: 33a7a1a3e6592bc9b9ea56d7a709a99114cfacf7c667630f499d39bbab4e1bd5
     - library: foundations
-      version: 1.0.0
+      version: 1.1.0
       path: components/deck.yaml
       sha256: ca873f7ffebd71d2d91aae6c98feae0838c17bd0696927ba0753b6e00fe48c1e
     - library: foundations
-      version: 1.0.0
+      version: 1.1.0
       path: components/figure.yaml
       sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
     - library: foundations
-      version: 1.0.0
-      path: library.yaml
-      sha256: 5232f7c279e8a693b956b1f7a35e2d2050ef71d1fd95c5722f7784e7c3e1471a
+      version: 1.1.0
+      path: components/site.yaml
+      sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
     - library: foundations
-      version: 1.0.0
+      version: 1.1.0
+      path: library.yaml
+      sha256: 7aa67f21dffcb98619515afa3d0cda910a035043561c108df9fde2be435a82b0
+    - library: foundations
+      version: 1.1.0
       path: roles.yaml
-      sha256: 8c5c29cd8d9797a7527fb2979fc830415c14f09bfa9ed47f96bceeb6d609d92a
+      sha256: 4b56d8f38100d1c8af0ada43a12e7a69a127b3438841eeab3c76d7c6e152793b
     - library: neutral
       version: 1.0.0
       path: fonts/LICENSE-Source-Code-Pro.txt
@@ -83,63 +87,111 @@ key:
     - library: pkit
       version: 1.0.0
       path: notation.yaml
-      sha256: 84054c2eb8aede31b8a5d6ec6111d5d55be24fe4e5082f41beb54d3353f331fb
+      sha256: faf4fd6c11e892f244050108425f273b8ef712ca71d26fbe2e8d20a8b9f7c97c
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: README.md
-      sha256: dee9e1d5c6c0017471f1263225823cdfa7268a00c15ea46f2323bc44bdb827bf
+      sha256: cd316df78c6bff54f77ba1f3d2e08a2c051ed686141f55ee20662dc1b5673566
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: components/aside.yaml
-      sha256: d146fb3313ebe69b310a7110430086d77c3a1730dc629ddd1b9af06a4d7ab36a
+      sha256: 9afac3ed065da2f3a20ecc6d88cec592e460555712a62503102344c9a6743339
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/button.yaml
+      sha256: b0ca039fcda87ce1b7bc6e5f475aa192d5c02ebd9adb7dd50461a6c6f1aef8fd
+    - library: starter
+      version: 1.1.0
       path: components/card.yaml
-      sha256: e619126a1660995bdcfc982cb297ce02bd02267150e763bbec3b0348fccd1257
+      sha256: 5e6ebf5aaa8762d7a0de4eb4eda333d005a451d2f7c11ea38cfefaa16830a9b9
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/cell.yaml
+      sha256: 54b5836023e1c4ab9eb8c4da54af4d0fbb14a167a0ae29465fc4bd660b22a824
+    - library: starter
+      version: 1.1.0
       path: components/code.yaml
-      sha256: 3e6a2f4ec3b80615bf9a2c9e4741590f4cca03806e70a289ad36eede5c2e0091
+      sha256: e0ac757ab6d7ef35ebc0c0c523cf9fc260eb09c66e6a97224ecaba90ad6d973a
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: components/connector.yaml
-      sha256: 5cd6d3368c7567cac75db10977411e9cda9a6527afb743fbb1d8d105b8af094f
+      sha256: 0612b6c71bbbb2fc6cd0e023a8a60539b25c02be31d8dcc063208b73d97dcc35
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/field.yaml
+      sha256: f8f793968a2ad26dac7ef1001bcb712a55a5756a953dc5e19435b83207c0ec47
+    - library: starter
+      version: 1.1.0
+      path: components/form.yaml
+      sha256: 1527833e38694cc6c0ba70ab022c045432996561bbdc05689bffe90803177027
+    - library: starter
+      version: 1.1.0
       path: components/group.yaml
-      sha256: 143f41db915237bf1043b67b1b4ea6bb6f6ad9520f0b7b4c2e5beccc099af04d
+      sha256: fb69bbb14c6c4f102a4a476d379e4fae332d4ac5dda478e4f895aa608064a736
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: components/groups.yaml
       sha256: 37debaaaaf13cdcbc1f298bbdd4062adf92f586c6a996a0397d6be96da99aa36
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/header.yaml
+      sha256: 52d3e5738ee391eb095cd483168c6c4b21cca4259c7feb1939462a80c7acf085
+    - library: starter
+      version: 1.1.0
       path: components/layers.yaml
       sha256: 0473b6d1ae11ee5d5f7f6bbe39d717f72e6514b2f51cbf9ea8192c6a340be730
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/legend.yaml
+      sha256: 04a839254a5548115b1a7ee69f3184b7c4e434ffe7650c5584ddcc26f1c6307d
+    - library: starter
+      version: 1.1.0
+      path: components/link.yaml
+      sha256: bb5a52162987ea7af9ae4ffbdd1dd0a2900bbe753e4fbb3aefd2d63c95998e79
+    - library: starter
+      version: 1.1.0
       path: components/list.yaml
       sha256: edde107e8f1600bdea6dccab77ec2e0e20f4da1e746441319b2fd46c3cdb91f7
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/navigation.yaml
+      sha256: a4631213b1569855d284b2e8e9628754530139f3cebd961cf3cd068c56dea454
+    - library: starter
+      version: 1.1.0
       path: components/network.yaml
       sha256: 574d764434208251df9d59f6a0bb1215722603debb0c7f21c222ab4ba0db47f0
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: components/panels.yaml
       sha256: e69eacf30582338572ac3329e1c9bf433f479960982f85380a8821e5ebc6e35a
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
+      path: components/row.yaml
+      sha256: 5a6256d45d86913f296f325c260de04adff1f75af4a37f30c8b4b41281a857ef
+    - library: starter
+      version: 1.1.0
+      path: components/section.yaml
+      sha256: 653d0f6cadf02fb120175f22c8bcd5a94e8e57d08740f17855870ddb5feee1dc
+    - library: starter
+      version: 1.1.0
+      path: components/sections.yaml
+      sha256: e170684f6819f0ea993065a127ca9784274ae51dac764d7efa8d48301acb4ea1
+    - library: starter
+      version: 1.1.0
+      path: components/table.yaml
+      sha256: 17c7cb7ef1bd3b10f06039417e79edf02b77803c234dbc15441db61daa4918bc
+    - library: starter
+      version: 1.1.0
       path: components/tag.yaml
-      sha256: adc7ad1f9f74417fcd37f77fea07dfb9534414490847981588ab203143f764d3
+      sha256: 869eebf4dd39a3cdda0523d2d21d801a0885d6b3810c50f40bad20ff7f73bf3f
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: library.yaml
-      sha256: f95417dd798f27428bc27f91dab7effeecf598e7f8b42b9b9748d6d4628efe90
+      sha256: f0199e2c8f8f78046a1f9a46cb95be0588555afc42ff3b3fe5e17b1da29364f7
     - library: starter
-      version: 1.0.0
+      version: 1.1.0
       path: roles.yaml
-      sha256: 79b92318a8086e32ea86f9eea75a246b9283357324492d2cd7a89f6ff9c6c4a0
+      sha256: 23ca8760b401f5649dc9a0da9ba42b6769a65a6c652534cb9c0799fab8e08405
 findings:
   - code: component-experimental
     level: fact

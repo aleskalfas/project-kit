@@ -39,3 +39,7 @@ slides:
           text: Its code block keeps a family of its own.
         - id: text
           text: A text alone, with nothing above it.
+        - id: person
+          concept: test-notation/person
+          head: A person
+          text: The sign ends the head's row.

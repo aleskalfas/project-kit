@@ -2,10 +2,11 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 
 # The code block's reference renders (DEC-007 point 3): each run word of its text drawn
-# once, a terminal's session under a head and a file's text without one, in English and in
-# German, whose compound words and diacritics stress its text. It has no option. Pinned
-# with the test brand, the starter and the test notation, so only a person moves what they
-# draw.
+# once, a terminal's session under a head and a file's text without one, and the sign of
+# a concept that has one, at the end of its head's row and before a plain run that names
+# it, in English and in German, whose compound words and diacritics stress its text. It
+# has no option. Pinned with the test brand, the starter and the test notation, so only a
+# person moves what they draw.
 top: foundations/deck
 brand: test-brand
 notations: [test-notation]
