@@ -8929,13 +8929,12 @@ def list_capabilities_cmd() -> None:
 
     rows: list[dict[str, str]] = []
     for n in names:
-        origin = origins.get(n, "")
         # Only mark origin for installed capabilities; an available-but-not-
-        # installed one has no install-state origin to report.
+        # installed one has no install-state origin to report. The mark is the one
+        # `pkit status` gives, and a kit-shipped one, which status leaves unmarked,
+        # is named here.
         origin_label = (
-            "incubated"
-            if origin == caps.INCUBATED_IN_REPO
-            else "kit-shipped"
+            (caps.origin_mark(origins.get(n, caps.KIT_SHIPPED)) or caps.KIT_SHIPPED)
             if n in installed
             else ""
         )

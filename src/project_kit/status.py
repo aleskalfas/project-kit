@@ -501,15 +501,15 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     available_value = ", ".join(available) if available else "(none)"
     click.echo(f"    {'available':<18} {available_value}")
 
-    # Annotate each installed capability with its origin so an incubated
-    # (in-repo) capability is visibly distinct from a kit-shipped one
-    # (COR-031): the adopter sees it's home-grown, not something to upgrade
-    # from kit source.
+    # Mark each installed capability whose origin is not the default, so that an
+    # incubated one (COR-031), the project's own source, and an externally-sourced
+    # one (COR-041), a copy of another repository's, are each told from a
+    # kit-shipped one.
     if installed:
-        labelled = [
-            f"{name} (incubated)" if origins.get(name) == caps.INCUBATED_IN_REPO else name
-            for name in installed
-        ]
+        labelled: list[str] = []
+        for name in installed:
+            mark = caps.origin_mark(origins.get(name, caps.KIT_SHIPPED))
+            labelled.append(f"{name} ({mark})" if mark else name)
         installed_value = ", ".join(labelled)
     else:
         installed_value = "(none)"
