@@ -44,6 +44,7 @@ pkit:
         - .pkit/capabilities/visual-communication/rule-sets/comm.md
         - .pkit/capabilities/visual-communication/rule-sets/graphic.md
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
+        - .pkit/capabilities/visual-communication/design-knowledge/README.md
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
@@ -69,6 +70,7 @@ pkit:
         - visual-communication:DEC-024#6
         - visual-communication:DEC-028#2
         - visual-communication:DEC-028#5
+        - visual-communication:DEC-030#8
         - COR-017
         - COR-070#1
         - COR-031
@@ -164,6 +166,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
 - **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@1]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
+- **Its design knowledge,** in [`design-knowledge/`](design-knowledge/README.md): what the published practice of visual communication teaches, a short file for each topic, each idea credited to its author, and an index that says when to read each topic ([visual-communication:DEC-030-design-agents] point 8). The reviewer reads it. It holds no rule, no value and no threshold.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
 No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)). A piece shows a picture of its own, such as a photo, from a picture file it holds ([Picture files](files.md#picture-files)).
@@ -446,7 +449,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 To use it:
 
 1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). Add `--forced-colours` where it should see what a reader who forces their own colours gets ([Under forced colours](outputs.md#under-forced-colours)). The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
+2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, the capability's design knowledge, and the rule sets the capability ships, but the one sessions load. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
 3. **Read its report.** It opens with the pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
@@ -458,7 +461,7 @@ Each finding names the page, the element's trace id where the element was drawn 
 - **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
 - **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
-- **A note,** anything else worth a look. A note never fails.
+- **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
 
 Its findings are advice. They join no validation and hold no merge.
 
