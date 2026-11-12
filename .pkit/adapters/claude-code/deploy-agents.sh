@@ -22,6 +22,13 @@
 #   The project's definition wins, then an installed capability's (the one the
 #   project chose, else the first by name, by code points, so every locale
 #   takes the same one), then core's. This script keeps no order of its own.
+# - Each run names each suspension it applies (COR-074): a `suspended` line for
+#   each file of a definition core or an installed capability ships that a file
+#   of the project's keeps out — the project's own definition, which is the
+#   agent whether it deploys or is refused, or a file at the agent's place
+#   without the mark — naming both files, and a closing note with their count.
+#   The plan names each definition's files, so one the picker does not count,
+#   such as one the project skipped, is not named.
 # - Overlay placeholders (`<category-name>`) are resolved from
 #   `overlay.yaml`'s top-level categories, with per-agent values in
 #   `overrides.<name>` taking precedence per COR-013.
@@ -66,7 +73,7 @@
 # - A file with no mark is never written over. Where it takes a name a place
 #   ships, the harness may run it in the agent's place, and the run says so.
 # - Tagged status lines: created, updated, exists, skipped, removed, kept,
-#   warning, error.
+#   warning, error, suspended.
 #
 # Deferred:
 # - Disable mechanism (adopter wants a kit agent not deployed) — same
@@ -131,6 +138,15 @@ remove_copy() {
         rm -f "$dest"
         status "removed" ".claude/agents/$1.md ($2)"
     fi
+}
+
+# Name a suspension the deploy applies (COR-074): the file $1 of a definition
+# core or an installed capability ships, which $2, a file of the project's,
+# keeps out. Each run names it again, for as long as it holds. Counts the lines
+# in `suspended`.
+name_suspension() {
+    status "suspended" "$(relative "$1") (replaced by $2)"
+    suspended=$((suspended + 1))
 }
 
 # Resolve placeholders in the source file using the overlay, write to stdout.
@@ -266,6 +282,7 @@ adoptable=0
 refused=0
 doubled=0
 untold=0
+suspended=0
 plan_file="$(mktemp)"
 plan_err="$(mktemp)"
 plan_status=0
@@ -283,22 +300,46 @@ rm -f "$plan_err"
 
 # Pass: each name some place ships. A skip never aborts the run — see
 # deploy_one. `exit_code` is reserved for genuinely catastrophic failures.
+#
+# The `definition` lines after a name's line name the files of its definitions
+# that count, the project's first (COR-074). `holder` is the file of the
+# project's that keeps out the name's shipped ones, if any. `project_holds` is
+# set where the project's definition is the agent, whether it deploys or is
+# refused, so its files are the holder.
 shipped_names=""
+holder_name=""
+holder=""
+project_holds=""
 while IFS=$'\t' read -r kind name first second third; do
     [ -n "$name" ] || continue
+    if [ "$kind" = "definition" ]; then
+        [ "$name" = "$holder_name" ] || continue
+        if [ "$first" = "project" ]; then
+            [ -z "$project_holds" ] || holder="${holder:+$holder and }$(relative "$second")"
+        elif [ -n "$holder" ]; then
+            name_suspension "$second" "$holder"
+        fi
+        continue
+    fi
+    holder_name="$name"
+    holder=""
+    project_holds=""
     shipped_names="$shipped_names$name"$'\n'
     dest="$CLAUDE_AGENTS/$name.md"
     # A file without the mark is never written over: it is the project's own,
     # or a copy from before the mark. The harness may run it in the agent's place.
     if [ -e "$dest" ] && ! carries_marker "$dest"; then
         status "skipped" ".claude/agents/$name.md carries no deploy mark, so the deploy leaves it; the harness may run it in place of the agent $name a place ships (to have the deploy write its copy, delete it and rerun this script)"
+        holder=".claude/agents/$name.md, a file the deploy did not make"
         continue
     fi
     case "$kind" in
         agent)
+            [ "$first" != "project" ] || project_holds=1
             deploy_one "$name" "$first" "$third" "$second" || exit_code=$?
             ;;
         refused)
+            [ "$first" != "project" ] || project_holds=1
             status "skipped" "$name — $second."
             remove_copy "$name" "its definition is refused, and has no one current text"
             doubled=$((doubled + 1))
@@ -349,5 +390,9 @@ if [ "$doubled" -gt 0 ]; then
 fi
 if [ "$untold" -gt 0 ]; then
     echo "  note: $untold agent(s) left as they were: what decides them cannot be read; each cause is printed above."
+fi
+if [ "$suspended" -gt 0 ]; then
+    echo "  note: $suspended shipped agent(s) suspended — a file of the project's takes each one's name, so no session reaches it."
+    echo "        → To deploy one again, rename or remove the file its line names as replacing it, then run pkit sync."
 fi
 exit $exit_code

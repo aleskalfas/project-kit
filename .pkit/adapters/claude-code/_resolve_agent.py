@@ -78,8 +78,10 @@ which definition of a name is the agent (COR-013 point 8, ADR-087 point 2):
 
 - `--plan` writes, a line for each name some place ships, what the deploy does
   with it, tab-separated: `agent`, `refused`, `none` or `untold`, then the name
-  and what that needs (`plan`). Where the picker cannot be reached, it exits
-  with status 5 and writes nothing to standard output.
+  and what that needs (`plan`). After an agent's line, a `definition` line names
+  each file of each definition of the name that counts, so the deploy can name
+  the ones a file of the project's keeps out (COR-074). Where the picker cannot
+  be reached, it exits with status 5 and writes nothing to standard output.
 - `--pick <name>`, the agent runner's entry, writes one JSON document naming the
   file of the name's agent, or whether no place ships the name, or why it has no
   agent the runner may run (`pick_answer`).
@@ -712,6 +714,11 @@ def plan() -> int:
       place holds both layouts, which the deploy does not resolve.
     - `none`, the name and why: no definition of it counts.
     - `untold`, the name and why: the records that decide it cannot be read.
+
+    After an `agent` or a `refused` line, a `definition` line for each canonical file
+    of each definition of the name that counts, with the name, the definition's place
+    and the file, in the order of their places, the project's first: the files a file
+    of the project's keeps out, which the deploy names (COR-074).
     """
     try:
         answer = the_answer()
@@ -728,8 +735,19 @@ def plan() -> int:
             fields = ["refused", name, decided.agent.place, decided.refused, shipped]
         else:
             fields = ["agent", name, decided.agent.place, str(decided.file), shipped]
-        print("\t".join(_field(field) for field in fields))
+        _write_plan_line(fields)
+        if decided.agent is None:
+            continue
+        for definition in decided.definitions:
+            if definition.counts:
+                for file in definition.files:
+                    _write_plan_line(["definition", name, definition.place, str(file)])
     return 0
+
+
+def _write_plan_line(fields: list[str]) -> None:
+    """Write *fields* as one line of the plan, tab-separated."""
+    print("\t".join(_field(field) for field in fields))
 
 
 def pick_answer(name: str) -> dict:

@@ -347,6 +347,75 @@ def test_a_project_agent_the_deploy_skips_still_suspends_the_shipped_one(
     ]
 
 
+def test_a_project_definition_in_both_layouts_still_suspends_the_shipped_one(
+    mock_kit: Path,
+) -> None:
+    """Refused for holding both layouts, the project's definition stays the agent
+    (COR-013 point 8), so core's is named as left out, beside both its files."""
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_area_agent(mock_kit, "project", "critic")
+    (mock_kit / ".pkit" / "agents" / "project" / "critic.md").write_text(
+        "---\nname: critic\ndescription: Flat.\n---\n", encoding="utf-8"
+    )
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "ships two texts of it" in result.stdout
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/critic/critic.md (replaced by"
+        " .pkit/agents/project/critic.md and .pkit/agents/project/critic/critic.md)"
+    ]
+
+
+def test_a_definition_the_picker_does_not_count_is_not_named(mock_kit: Path) -> None:
+    """A capability's definition the project skipped, or one of a capability the
+    registry does not record, is no file the project's keeps out (COR-074,
+    "Why the installed files decide")."""
+    _write_capability_agent(mock_kit, "skipping-cap", "shared", "skipping-cap")
+    state = mock_kit / ".pkit" / "capabilities" / "skipping-cap" / "project" / "manifest.yaml"
+    state.parent.mkdir(parents=True)
+    state.write_text(
+        "backend_state:\n  skipped:\n    - kind: agent\n      name: shared\n", encoding="utf-8"
+    )
+    _write_capability_agent(
+        mock_kit, "unrecorded-cap", "shared", "unrecorded-cap", registered=False
+    )
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_area_agent(mock_kit, "project", "shared")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert _deployed_description(mock_kit, "shared") == "From project."
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/shared/shared.md"
+        " (replaced by .pkit/agents/project/shared/shared.md)"
+    ]
+
+
+def test_an_unmarked_file_at_a_capability_agent_s_place_names_each_shipped_one(
+    mock_kit: Path,
+) -> None:
+    """A file without the mark keeps out every shipped definition of its name, the
+    capability's that would deploy and core's alike."""
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    own = mock_kit / ".claude" / "agents" / "shared.md"
+    own.parent.mkdir(parents=True)
+    own.write_text("---\nname: shared\ndescription: Kept by hand.\n---\n", encoding="utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    replaced_by = " (replaced by .claude/agents/shared.md, a file the deploy did not make)"
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/capabilities/my-cap/agents/shared.md" + replaced_by,
+        "suspended  .pkit/agents/core/shared/shared.md" + replaced_by,
+    ]
+    assert "2 shipped agent(s) suspended" in result.stdout
+
+
 def test_a_capability_agent_over_core_s_suspends_nothing(mock_kit: Path) -> None:
     """A capability's agent over core's is precedence between shipped agents."""
     _write_area_agent(mock_kit, "core", "shared")
