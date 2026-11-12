@@ -13,7 +13,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 Under this record, no command calls a harness. A command asks the backbone to run an agent, and the backbone starts the runner the project's adapter registers. The runner starts the harness. Where no adapter registers a runner, no agent starts, and the command says why.
 
 A run takes one of two forms:
-- **Unconfined,** the form the review command's runs take. The run takes the person's and the project's settings, in the mode they or the harness choose. A drift command's run takes it too, where a person started the command at a terminal and watches it. So does a run the project's switch starts with nobody watching, where no confined form holds it (DEC-056 points 5 and 7). Such a run works in a clone the drift command makes at a pinned commit, never in the person's checkout.
+- **Unconfined,** the form the review command's runs take. The run takes the person's and the project's settings, in the mode they or the harness choose. A drift command's run takes it too, where a person started the command at a terminal and watches it. So does a run the project's switch starts with nobody watching, where no confined form holds it ([project-management:DEC-069-when-fixers-start] points 2 and 4). A drift command's unconfined run works in a clone the drift command makes at a pinned commit, never in the person's checkout.
 - **Confined,** the later hardening of a run nobody watches, the reviewers' and the fixers' alike (#2225), as DEC-056 point 5 decides for a fixer:
   - Each runs in a fresh clone of the repository at a pinned commit, and its shell writes only the run's own workspace.
   - It loads none of the person's or the project's settings, and no agent definition the runner has not checked.
@@ -21,15 +21,15 @@ A run takes one of two forms:
   - The operating-system sandbox bounds its shell, and no network host is allowed.
   - After the run, the backbone checks the clone, and only then hands back the run's files.
 
-With nobody at a terminal, the drift command starts no fixer unless the project's switch is on, which only the person turns on (DEC-056 point 7).
+With nobody at a terminal, the drift command starts no fixer unless the project's switch is on, which only the person turns on (DEC-069 points 1 and 4).
 
-No run, confined or not, is passed a flag that bypasses permissions. The review command's runs keep today's shape until a form for reviewing is built and the harness holds it (point 10). What the harness cannot hold is stated, not hidden (point 11).
+No run, confined or not, is passed a flag that bypasses permissions. The review command's runs stay unconfined until a form for reviewing is built and the harness holds it (point 10). What the harness cannot hold is stated, not hidden (point 11).
 
 ## Context
 
 Two commands start agents that nobody can answer during a run, so the runner has earned a home of its own ([COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md)).
 - **The review command** runs each required reviewer as `claude -p <brief> --agent <name>`, with `--effort` where one is set. It runs in the person's checkout, under a wall-clock limit. Nothing confines the run, and the tie to `claude` sits in a capability's script that no record decided.
-- **The drift command** starts the fixers the person granted, each bounded (DEC-056 points 3 and 4). A run a person started at a terminal and watches takes the unconfined form, in a clone at a pinned commit, and so does a run nobody watches that the project's switch starts (DEC-056 point 7). A run nobody watches is confined where the confined form is built and the harness holds it (DEC-056 point 5). With nobody at a terminal and the switch off, the command starts no fixer, and lists the stale artefacts with the command a person runs.
+- **The drift command** starts the fixers the person granted, each bounded (DEC-056 points 3 and 4). A run a person started at a terminal and watches takes the unconfined form, in a clone at a pinned commit, and so does a run nobody watches that the project's switch starts (DEC-069 points 2 and 4). A run nobody watches is confined where the confined form is built and the harness holds it (DEC-069 point 4). With nobody at a terminal and the switch off, the command starts no fixer, and lists the stale artefacts with the command a person runs (DEC-069 point 1).
 
 DEC-056's Implications leave three things to the methodology's architecture decisions:
 - where the runner lives
@@ -85,6 +85,7 @@ The points:
   - it makes, checks and removes a confined run's clone (point 7), and makes, checks and keeps a working run's for its caller (refinement per [ADR-073](ADR-073-builder-runs.md) point 1)
   - it reads the run's rules from the clone, and projects them through the shared decision core (ADR-003). For a working run it reads them, the hook, the model, the definition and the runner itself from the default branch's head the caller names, never from the clone (refinement per [ADR-073](ADR-073-builder-runs.md) point 2)
   - it judges which allowed commands the platform requires outside the sandbox, by ADR-027's test (point 6)
+  - it runs the runner a confined run's clone registers, from the clone's root. For an unconfined run whose folder is a project's root, it runs the runner that project registers, from that folder, so a drift command's run in its clone gets the runner its commit registers (point 10). For any other unconfined run, such as a review's in the person's checkout, it runs the project's own.
 - **What the runner does,** in its harness's terms:
   - it checks the platform and the harness's version
   - it builds the run's settings and the agent's definition
@@ -132,7 +133,7 @@ Each refusal names its cause. A start report that does not match the run's setti
   - the candidate exclusions
   - the runner itself, and the deploy's resolution of an agent, which the runner applies
 
-  A working run reads them from the default branch's head instead (refinement per [ADR-073](ADR-073-builder-runs.md) point 2). So no unmerged change shapes a confined run or a working run, as DEC-056 point 3 keeps for the agent.
+  A working run reads them from the default branch's head instead (refinement per [ADR-073](ADR-073-builder-runs.md) point 2). A drift command's unconfined run reads the runner, and the deploy's resolution of a shipped agent, from its clone too, since its folder is the clone's root (point 1). So no unmerged change shapes a confined run, a working run, or the agent of a drift command's unconfined run, as DEC-056 point 3 keeps for the agent.
 - **A checked agent definition.** The runner always passes the definition itself, with `--agents`. It makes it from the agent's file at the pinned commit.
   - **As the deploy resolves it.** The file is the one the adapter's deploy picks among agents of one name. The overlay is applied. Each storyboard is named by its path from the clone's root, where the run reads it.
   - **Refused where the deploy would not carry it.** The run is refused where the deploy would not resolve the file, such as over an overlay category its checks refuse ([ADR-051](ADR-051-process-author-edit-authority.md) and [ADR-052](ADR-052-optional-read-category-empty-tolerance.md)). It is refused too where the deploy would drop a value the run passes, such as a model it does not accept. Nobody watches the run to read the deploy's warning.
@@ -234,7 +235,7 @@ DEC-056 point 5 makes a fixer start no other agent. A run could start one in two
 
 ### 10. What a run in the unconfined form gets
 
-Two kinds of run take the runner's unconfined form. They are the review command's runs, and a drift command's runs: one a person started at a terminal and watches, and one nobody watches that the project's switch starts where no confined form holds it (DEC-056 points 5 and 7). Each such run:
+Two kinds of run take the runner's unconfined form. They are the review command's runs, and a drift command's runs: one a person started at a terminal and watches, and one nobody watches that the project's switch starts where no confined form holds it (DEC-069 points 2 and 4). Each such run:
 - works in the folder its caller names, under the person's and the project's settings there
 - starts in the mode those settings or the harness choose, which may approve calls no rule allows.
 - is passed `-p`, and `--effort` where one is set. For a name some place of the methodology ships, the runner passes the agent's definition as the confined form resolves it, under a name unique to the run, so the harness loads that agent and no other copy of the name. For a name no place ships, such as a reviewer the project wrote straight into the harness's own folder, it passes `--agent` and the harness loads it by name ([ADR-087](ADR-087-agent-definition-picker.md) point 3).
@@ -250,12 +251,12 @@ Two kinds of run take the runner's unconfined form. They are the review command'
 - It clones the repository outside the person's checkout, with a git folder of the clone's own that holds no hook, and no remote. Git reads the repository's objects by reference, and writes none of them. The clone checks out the pinned commit with no branch.
 - It makes the run's workspace inside the clone's agent workspace, which the permission layer lets every agent write (ADR-060). It refuses the run where the commit holds anything at that path, and makes the workspace as folders of its own, as ADR-060 points 1 and 2 guard it.
 - It puts the paths of the clone and the workspace in place of the markers that name them in the brief. The brief names no temp folder.
-- It refuses the run where the commit deploys no definition of the agent. The harness would find the person's own then, which may not have merged (DEC-056 point 3).
+- For a name no place of the methodology ships, it refuses the run where the commit deploys no copy of the agent. The harness would find the person's own then, which may not have merged (DEC-056 point 3). A shipped name needs no copy: the backbone runs the runner the clone registers (point 1), which picks and checks the agent's definition in the clone and passes it itself.
 - After the run, it copies the workspace's regular files to its queue, with the guards of point 7's copy. A queue folder the run wrote into itself refuses the copy, since the person's settings may let a fixer write there. Where a guard refuses an entry, it sets the run's files aside. Then it removes the clone.
 
 The run takes the project's settings at the commit, and the person's own. A settings file the person keeps in their checkout, out of git, does not reach it. The clone is not provisioned, as a confined run's is (point 7), since its commands share the person's `uv` cache and network, as a session of the person's does. No check of point 7's kind follows such a run. A person watching it sees which fixers start and how each ends, and can stop the run, and a run the switch starts has nobody watching, as a review has none (point 11).
 
-**The review command's runs nobody watches** are confined once a form for reviewing is built and the harness holds it, and keep today's form until then (#2225). Once built, they take it with no further step, as a fixer's run does under DEC-056 point 7. Their rules, their clone at the pull request's head and their mode are the follow-up record's, which first weighs a mode that cannot bypass.
+**The review command's runs nobody watches** are confined once a form for reviewing is built and the harness holds it, with no opt-in of their own, and stay unconfined until then (#2225). Their rules, their clone at the pull request's head and their mode are the follow-up record's, which first weighs a mode that cannot bypass.
 
 ### 11. What stays open
 
@@ -281,7 +282,7 @@ Each item says what holds the intent and what is left (COR-028 point 3).
 - **Unconfined runs** (point 10). Each may start in a mode that approves calls no rule allows, and no check of point 7's kind follows it.
   - A reviewer runs in the person's checkout, and may write there.
   - A fixer's unconfined run may write outside its clone, and reach the network, wherever the person's settings let it. Git run in its clone changes no reference, hook or configuration of the person's repository, since the clone has a git folder of its own. Git pointed elsewhere reaches what those settings let it.
-  - The fixer's brief tells it to propose only, but only the person's settings hold it (DEC-056 point 5). The person watching sees which fixers start and how each ends, not each call, and nobody sees a run the switch starts (DEC-056 point 7).
+  - The fixer's brief tells it to propose only, but only the person's settings hold it (DEC-069 point 2). The person watching sees which fixers start and how each ends, not each call, and nobody sees a run the switch starts (DEC-069 point 4).
   - The marker stops the methodology's commands that start agents, not the harness's own command line (point 8). Only the person's settings keep an unconfined run's shell from calling it.
   - The terminal test tells that a terminal is attached, not that a person watches. An agent can run the drift command at a terminal it fakes, and a harness whose shell gives a command a terminal passes the test unasked. Only the permission layer holds this, in a mode that asks about a call no rule allows, and no rule the methodology ships names such a call. A mode that approves such calls, or rules that allow them, let an agent start fixers that nobody watches.
 - **A working run** reaches the network hosts its build is allowed, and the rest of the machine is readable to it but for its caller's clone and the signing key. What stays open there is [ADR-073](ADR-073-builder-runs.md)'s point 10.
@@ -353,7 +354,9 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 
 **Why the review command stays as it is.** The move is a move. Changing what reviewers may do inside it would hide a decision.
 
-**Why a drift command's runs take the unconfined form.** The probe found that Claude Code 2.1.310 could not hold the confined form (#2225). So DEC-056 starts a fixer where a person started the drift command at a terminal and watches it, and, where the project's switch is on, with nobody watching, as reviewers run (DEC-056 points 5 and 7). The unconfined form already serves the reviewers, so the runner keeps two forms, not three. A run nobody watches takes the confined form where it is built and the harness holds it.
+**Why the review command's runs take a form for reviewing with no opt-in of their own.** Confining narrows what a run may do, so it needs no consent. The switch of DEC-069 point 4 widens what runs, a fixer with nobody watching, so it needs the person's.
+
+**Why a drift command's runs take the unconfined form.** The probe found that Claude Code 2.1.310 could not hold the confined form (#2225). So DEC-069 starts a fixer where a person started the drift command at a terminal and watches it, and, where the project's switch is on, with nobody watching, as reviewers run (DEC-069 points 2 and 4). The unconfined form already serves the reviewers, so the runner keeps two forms, not three. A run nobody watches takes the confined form where it is built and the harness holds it.
 
 **Why the drift command makes the clone.** The fixer must read the pinned commit, not the person's branch (DEC-056 point 3), so it cannot run in the person's checkout as a review does. The run command makes a clone only for the confined form (point 7), and its unconfined form runs in whatever folder its caller names. So the drift command makes the clone and names it, and its unconfined run needs no change to the run command or the runner. The cost is a second copy with point 7's guards, which project-management keeps in step with the backbone's.
 
@@ -378,6 +381,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 - **The run's rules in the permission hook.** Rejected. The hook fails open (ADR-002), so a broken hook would leave a run unconfined while it looked confined.
 - **A container or a virtual machine for each run.** Not taken now. It would close the network and macOS gaps, but the methodology ships no such mechanism.
 - **A mode that cannot bypass for the review command's runs, now.** Not taken. The move keeps what reviewers do, and the record on confining them weighs it first.
+- **An opt-in for each project to a form for reviewing.** Not taken. Runs would stay unconfined in every project that never opts in.
 - **A fixer's unconfined run in the person's checkout, as a review runs.** Rejected. The checkout may be on another branch, so the fixer would read work that has not merged (DEC-056 point 3).
 - **A fixer's unconfined run in a linked worktree.** Rejected, for the reasons above.
 - **The run command's clone, copy and check for a fixer's unconfined run.** Not taken now. It would change the run command for a run its unconfined form already serves. Its check sees only the clone, and the person's settings let such a run write past it.
@@ -387,7 +391,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 - **The review command's move** (#1742) builds the backbone's run command, the adapter's runner in its unconfined form, and the review command's call to it. Point 10 lists what changes around it. The backbone and the adapter each gain something an adopter can see, so each change declares it (PRJ-002).
 - **A fixer's confined run,** which a run nobody watches takes where it is built and the harness holds it, needs the backbone's clone and its check, and the run's rules in project-management's file for them. It starts only on a harness release that the probe of point 12 passed on (point 2). The marker of point 8 covers every run, confined or not.
 - **A drift command's unconfined run,** watched or started by the switch, uses the run command's unconfined form as it is. The drift command makes the run's clone and workspace, puts their paths in its brief, and copies its files (point 10). So point 7's copy guards live twice, in the backbone and in project-management, and a change to either is made to both. A test runs both copies on one workspace and holds them in step.
-- **The switch of DEC-056 point 7,** which project-kit#3050 builds, lets the drift command start the granted fixers whenever it runs with nobody at a terminal. Each such run takes the unconfined form until a fixer's confined run is built and the harness holds it. Turning the switch on is the person's consent to such runs, and the refusal of settings that approve calls without asking, which project-kit#3041 builds, covers each of them.
+- **The switch of DEC-069 point 4,** which project-kit#3050 builds, lets the drift command start the granted fixers whenever it runs with nobody at a terminal. Each such run takes the unconfined form until a fixer's confined run is built and the harness holds it. Turning the switch on is the person's consent to such runs. Each is an agent a command starts in the unconfined form, so the refusal of settings that approve calls without asking covers it. project-kit#3041 is to build that refusal, and the record it rests on decides which modes count.
 - **The catalog gains a form:** a privilege that is every call none of a set of privileges recognises. The change judges whether that moves the catalog schema's version ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
 - **The command runner gains a policy for an agent run,** as ADR-057 point 5 gives each kind of command its own.
 - **Refinements of accepted records.** When this record is accepted, each gains a pointer, "(refinement per ADR-066)":
@@ -404,7 +408,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 - **No migration.** Every change adds.
 - **Supersedes nothing.** It changes no decision of DEC-056 or COR-028.
 - **Stands on these accepted records:**
-  - the drift fixers (DEC-056)
+  - the drift fixers (DEC-056), and when a fixer starts and the form its run takes (DEC-069)
   - the permission model, harness requirements and pattern extraction (COR-028, COR-047 and COR-007)
   - adapters as a harness's translation, an agent's fields and its storyboards (COR-005, COR-013 and COR-016), and the rules for migrations and versions (COR-010 and PRJ-002)
   - the permission realiser and its shared core (ADR-002 and ADR-003), intent and confinement (ADR-004), and confinement allowances (ADR-008)
