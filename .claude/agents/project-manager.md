@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:project-management
-# pkit-digest: sha256:d1cab7f07c178c769706229e7d217efbb1015bab8209401fb7635e50dc20de72
+# pkit-digest: sha256:a95740d58d01e3ae79941dd005f9308f17de49ceb1f93c475e1e5a7e0ede2a8d
 # pkit-tool-access: withheld: ["Monitor", "PowerShell", "RemoteTrigger", "Workflow", "SendMessage", "ListAgents"]
 name: project-manager
 description: Project-management agent that files, validates, and transitions 

@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:software-analysis
-# pkit-digest: sha256:4c53fedc1e398b0d3c687647d84d3b6bf29d71e030d8ab60fa614d3dae46e1fc
+# pkit-digest: sha256:bcf51f86379ae08455ee6ce6e30af089d6b854e7b68c964fee1f4c4d971454a4
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: analysis-resolver
 description: Revalidation agent of the software-analysis capability, and the 
