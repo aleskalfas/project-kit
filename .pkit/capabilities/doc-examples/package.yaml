@@ -4,7 +4,7 @@ component:
   name: doc-examples
   version: 1.0.1
 description: Executed documentation checks — a page's console examples run as tests, so a change in behaviour fails wherever it comes from.
-requires_backbone: ">=1.149.0,<2.2.0"
+requires_backbone: ">=1.149.0,<2.3.0"
 # The default pages are the documents of living-docs' page type (DEC-001 point
 # 3), so the range names living-docs itself. The dependency is optional: a
 # project that names the types of its pages needs no living-docs (COR-030).

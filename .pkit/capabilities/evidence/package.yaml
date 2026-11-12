@@ -4,7 +4,7 @@ component:
   name: evidence
   version: 0.5.2
 description: Citation discipline — every factual claim cites an `[ev:slug]` token that resolves to a record in a per-directory `evidence.yaml`.
-requires_backbone: ">=1.26.0,<2.2.0"
+requires_backbone: ">=1.26.0,<2.3.0"
 commands:
   validate:
     script: scripts/validate.py

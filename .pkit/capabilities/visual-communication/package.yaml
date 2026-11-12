@@ -2,9 +2,9 @@ schema_version: 1
 component:
   kind: capability
   name: visual-communication
-  version: 0.3.0
+  version: 0.4.0
 description: Visual work from reusable parts — pieces whose content is data, styled by libraries of components, brands and notations, and drawn by several renderers.
-requires_backbone: ">=2.0.0,<3.0.0"
+requires_backbone: ">=2.2.0,<3.0.0"
 aliases:
   - visual
 # What a render or an export makes that is not committed — previews, exports nobody

@@ -1,9 +1,0 @@
-component: backbone
-kind: none
-body: >
-  Two core records adopters receive are refined in place to state what the
-  backbone already does (#2454). COR-069 point 3 says an install writes no
-  rules file of the project's own, where it called that file the install's
-  seed. COR-043 point 3 says a reported note's hash covers the note without
-  the fields the stamp writes, where it said the full file. No command,
-  file, key or check changes, so no surface moves.

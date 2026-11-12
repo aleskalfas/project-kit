@@ -1,8 +1,0 @@
-component: evidence
-kind: none
-body: >
-  Only the README's wording moves (#2867). Its "Dependencies" no longer states
-  the backbone range `>=1.26.0,<2.0.0`, which the package had already
-  widened. It names the range the capability's package.yaml declares under
-  `requires_backbone`, links the file and anchors it. The range itself, the
-  validator and its command stay as they were, so no surface moves.
