@@ -422,7 +422,7 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     the sizes, which that release does not declare either."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
-    hold_shipped(root, "foundations", being_built=False)
+    hold_shipped(root, "foundations", version="1.0.0")
     hold_shipped(root, "starter", being_built=False)
     drawn = on_each_foundations(root)
     released, built = drawn.values()

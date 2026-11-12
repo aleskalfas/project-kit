@@ -1,7 +1,0 @@
-component: backbone
-kind: none
-body: >
-  COR-074, which decides that the deploy names each suspension it applies, and
-  the skills and agents references and guides that say so (#2464). The
-  behaviour ships in the claude-code adapter's deploys, whose changeset
-  carries it. No backbone code, command or file a project keeps moves.

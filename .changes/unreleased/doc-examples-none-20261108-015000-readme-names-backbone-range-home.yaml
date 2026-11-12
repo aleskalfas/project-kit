@@ -1,9 +1,0 @@
-component: doc-examples
-kind: none
-body: >
-  Only the README's wording moves (#2867). Its "Dependencies" no longer states
-  the backbone range `>=1.149.0,<2.0.0`, which the package had already
-  widened. It names the range the capability's package.yaml declares under
-  `requires_backbone`, and links the file, so a release that widens the range
-  leaves the page true. The range itself, the contract a page is written
-  against, and every command stay as they were, so no surface moves.

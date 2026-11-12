@@ -1,8 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  software-analysis' README anchors the sections of the lifecycle
-  reference's `manifest.md` and `component-registry.md` that its
-  statements rest on, where the lifecycle README held them before it split
-  (#2473). Its links stay on the lifecycle README, whose headings lead
-  there. Nothing software-analysis ships to an adopter changes.

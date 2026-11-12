@@ -14,7 +14,14 @@ import pytest
 
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import every_file
-from tests.visual_communication_project import CONFIG, add_library, importable, project, write
+from tests.visual_communication_project import (
+    CONFIG,
+    add_library,
+    importable,
+    project,
+    taken,
+    write,
+)
 from tests.visual_communication_writes import FULL, failing
 
 script, add, render, check, svg, seam, files, reading = load(
@@ -265,7 +272,8 @@ def test_it_refuses_a_library_of_the_project_s_own_it_lacks(tmp_path: Path) -> N
 def test_it_refuses_a_top_its_library_lacks(tmp_path: Path) -> None:
     root = _with_libraries(tmp_path)
     said = _refused(root, PIECE, "--top", "foundations/poster", *CHOSEN)
-    assert "foundations@1.0.0 holds no component `poster`" in said
+    added = taken("foundations").version
+    assert f"foundations@{added} holds no component `poster`" in said
 
 
 def test_it_refuses_a_choice_the_piece_s_schema_refuses(tmp_path: Path) -> None:

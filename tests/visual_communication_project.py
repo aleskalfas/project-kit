@@ -35,8 +35,8 @@ FOUNDATIONS = CAPABILITY / "libraries" / "foundations"
 #: beside the library's record, `releases/<library>/releases.yaml` (DEC-013 point 2).
 RELEASES = CAPABILITY / "releases"
 #: The foundations' released version 1.0.0, which never changes (DEC-013 point 2): what a
-#: test copies where it holds the foundations at 1.0.0, as `pkit visual add foundations`
-#: takes them, whatever the version being built carries since.
+#: test copies where it holds the foundations at 1.0.0, as `pkit visual add
+#: foundations@1.0.0` takes them, whatever the version being built carries since.
 RELEASED_FOUNDATIONS = RELEASES / "foundations" / "1.0.0"
 FIXTURES = REPO / "tests" / "fixtures" / "visual-communication"
 TEST_BRAND = FIXTURES / "libraries" / "test-brand" / "1.0.0"
@@ -172,11 +172,13 @@ class Taken:
     entry: dict[str, Any]
 
 
-def taken(name: str, *, being_built: bool = False) -> Taken:
+def taken(name: str, *, being_built: bool = False, version: str | None = None) -> Taken:
     """What `pkit visual add <name>` takes of a library the capability ships, read from the
     tree (DEC-013 point 5): the newest released version, with the entry its record keeps,
     or with `being_built` the released version of the number the version being built
-    carries. Where no such version is released, the version being built, not released."""
+    carries. Where no such version is released, the version being built, not released.
+    With `version`, the released version of that number, as `pkit visual add
+    <name>@<version>` takes it, which the capability must have released."""
     built = CAPABILITY / "libraries" / name
     safe = YAML(typ="safe")
     number = str(safe.load((built / "library.yaml").read_text(encoding="utf-8"))["version"])
@@ -184,8 +186,10 @@ def taken(name: str, *, being_built: bool = False) -> Taken:
     released: dict[str, Any] = {}
     if record.is_file():
         versions = safe.load(record.read_text(encoding="utf-8"))["libraries"][name]["versions"]
-        released = {str(version): entry for version, entry in versions.items()}
-    if being_built:
+        released = {str(each): entry for each, entry in versions.items()}
+    if version is not None:
+        assert version in released, f"the capability released no {name}@{version}"
+    elif being_built:
         version = number if number in released else None
     else:
         version = max(released, key=lambda v: tuple(int(p) for p in v.split(".")), default=None)
@@ -195,14 +199,20 @@ def taken(name: str, *, being_built: bool = False) -> Taken:
 
 
 def hold_shipped(
-    root: Path, name: str, location: str = "visual", *, being_built: bool = True
+    root: Path,
+    name: str,
+    location: str = "visual",
+    *,
+    being_built: bool = True,
+    version: str | None = None,
 ) -> Taken:
     """A version of `name`, a library the capability ships, held as `pkit visual add <name>`
     takes it from the tree: the version being built, as `--being-built` takes it, or where
-    `being_built` is false the newest released version. Copied whole in place of any copy
-    of its number, and listed from the source `shipped` with its entry, every other entry
-    of the list kept."""
-    held = taken(name, being_built=being_built)
+    `being_built` is false the newest released version, or the released version `version`
+    names, as `<name>@<version>` takes it. Copied whole in place of any copy of its number,
+    and listed from the source `shipped` with its entry, every other entry of the list
+    kept."""
+    held = taken(name, being_built=being_built, version=version)
     target = version_folder(root, name, held.version, location)
     if target.exists():
         shutil.rmtree(target)
