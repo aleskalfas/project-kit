@@ -136,9 +136,9 @@ The hook resolves the subject for every PreToolUse call, in this order:
 
 **Implication:** in a session with a configured default agent, the operator's `!`-typed command is also bound to that agent's grants.
 
-**A session started with `--agent`:** project-management's `review-pr`, and a watched `fix-drift`, name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json` <!-- unanchored: named as the file rule 2 reads, and the statement rests on the anchored hook -->, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
+**A session started with `--agent`:** project-management's `review-pr`, and an unconfined run of `fix-drift`, name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json` <!-- unanchored: named as the file rule 2 reads, and the statement rests on the anchored hook -->, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
 
-**A confined run,** such as a fixer's run nobody watches, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
+**A confined run,** which a fixer's run nobody watches takes where the harness holds it, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
 
 ## Compound commands (segment splitting + leading-`cd` strip)
 

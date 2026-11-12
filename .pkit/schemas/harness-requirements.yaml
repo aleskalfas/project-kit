@@ -56,7 +56,7 @@ requirements:
       5 holds a fixer's confined run to what proposing needs, and ADR-066
       point 13 words what it requires of the harness. The drift command,
       `pkit pm fix-drift`, depends on it once it starts a confined run, the
-      later hardening of a run nobody watches (DEC-056 point 7).
+      later hardening of a run nobody watches (DEC-069 point 4).
   unattended-working-run:
     title: A process can start an agent unattended that edits and builds in a folder the process names
     behaviour: >-

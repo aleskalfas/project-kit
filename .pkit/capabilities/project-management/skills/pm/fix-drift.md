@@ -1,8 +1,8 @@
 # pm fix-drift — show what a merge left stale, and bring the fixers' proposals in one batch
 
-Sub-procedure of the pm composite skill (`pm.md` in this folder). It follows [project-management:DEC-056-drift-fixers] points 2, 3 and 6. A fixer only proposes. The person, or the delegate they named, decides each proposal, and what is accepted reaches the default branch through an ordinary pull request. The commands are the [capability README](../../README.md)'s, under "Starting the fixers" and "Deciding the proposals".
+Sub-procedure of the pm composite skill (`pm.md` in this folder). It follows [project-management:DEC-056-drift-fixers] points 2, 3 and 6, and [project-management:DEC-069-when-fixers-start] point 1. A fixer only proposes. The person, or the delegate they named, decides each proposal, and what is accepted reaches the default branch through an ordinary pull request. The commands are the [capability README](../../README.md)'s, under "Starting the fixers" and "Deciding the proposals".
 
-A fixer starts only when a person runs the drift command at a terminal and watches it. So this procedure starts none: it shows the person what went stale, and brings what the fixers they ran proposed.
+A fixer starts where a person runs the drift command at a terminal and watches it. With nobody at a terminal, it starts only where the project's switch is on ([project-management:DEC-069-when-fixers-start] point 4), which [project-kit#3050](https://github.com/aleskalfas/project-kit/issues/3050) builds. Until then this procedure starts none: it shows the person what went stale, and brings what the fixers they ran proposed.
 
 ## When to use this operation
 
@@ -15,7 +15,7 @@ A fixer starts only when a person runs the drift command at a terminal and watch
 pkit project-management fix-drift
 ```
 
-Run it with no flags. It reads what the default branch left out of date, and starts the fixers the project granted only where a person ran it at a terminal and watches it. Your session has no terminal, so it starts no fixer and writes nothing ([project-management:DEC-056-drift-fixers] point 3).
+Run it with no flags. It reads what the default branch left out of date, and starts the fixers the project granted only where a person ran it at a terminal and watches it. Your session has no terminal, so it starts no fixer and writes nothing ([project-management:DEC-069-when-fixers-start] point 1).
 
 - **What went stale.** It prints each stale artefact a granted fixer would take, on a `stale:` line, then `no fixer started: nobody is at a terminal` and the command to run. Show the person those lines whole, and tell them to run `pkit pm fix-drift` at a terminal, where they watch the fixers and can stop them. Never start a fixer through the dispatch tool in its place, and never pass a flag that bypasses the permission rules.
 - **The fixers question.** Where it prints the question with nobody at a terminal, relay each question to the person word for word. Record only the answer they give: a yes by the grant command printed beside it, a no by `revoke-fixer` for the same types. Never answer for them. A grant counts once its change merges.

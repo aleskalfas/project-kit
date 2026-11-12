@@ -207,7 +207,7 @@ A command that starts an agent nobody can answer during its run never calls a ha
 The request then takes one of two forms:
 
 - **Unconfined,** the form of the review command's runs, and of a drift command's run a person watches: `folder`, an absolute path, where the run runs under the person's and the project's settings.
-- **Confined,** the form of a drift command's run nobody watches: no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone.
+- **Confined,** the form a drift command's run nobody watches takes where the harness holds it: no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone.
 
 A confined request's `confined` holds these keys:
 
@@ -333,7 +333,7 @@ The methodology depends on properties of the harness that hosts it, which it can
 **Status.** The core declares six requirements:
 
 - `delegated-result-complete`: a delegated helper's full result reaches the agent that delegated to it.
-- `unattended-confined-run`: a process can start an agent unattended, confined for that one run. A drift command's run nobody watches depends on it.
+- `unattended-confined-run`: a process can start an agent unattended, confined for that one run. A drift command's confined run depends on it.
 - `unattended-working-run`: a process can start an agent unattended that edits and builds in a folder the process names. The build command depends on it.
 - `session-loads-rules`: every session holds every layer's loaded rules from its start to its end ([COR-070](../decisions/core/COR-070-capability-loaded-rules.md) point 6). An answer names apart each kind of session the adapter's own way of starting one leaves without the files.
 - `session-agent-withheld-tools`: a whole session's agent withheld named tools has none of them, and keeps every other tool its session holds. It is observed from outside a session.
