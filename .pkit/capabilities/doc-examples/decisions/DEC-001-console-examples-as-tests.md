@@ -187,7 +187,7 @@ The costs are those of a program started by its path (COR-021). The CLI's help l
 - **A configuration key** changes as any surface does. Renaming or removing one ships a migration (COR-010).
 - **The capability's tests never reach the network.** They run the run on fixture pages, with a setup that needs none.
 - **A test holds point 9 true:** no grant the methodology ships, and no core baseline an adapter merges, allows the run's call.
-- **living-docs' README** names this capability where it says a project brings its own runner. living-docs' records change nothing.
+- **living-docs' page on pages, `pages.md`,** names this capability where it says a project brings its own runner. living-docs' records change nothing.
 - **Two follow-ups:**
   - a record that says where kept results live, so that the run can fill the reading-evidence point (point 10)
   - a core record, with its realization, on the grants that reach a project's own code: the CLI's, through an incubated capability's commands or a process's predicates, and a version-control grant, through a hook. After it, the run may become a command of the CLI (point 9).
