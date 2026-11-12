@@ -30,6 +30,8 @@ pkit:
       path:
         - src/project_kit/cli.py
         - src/project_kit/capabilities.py
+        - src/project_kit/agents_overlay.py
+        - src/project_kit/write_categories.py
         - src/project_kit/declared_rule_sets.py
         - src/project_kit/point_questions.py
         - src/project_kit/manifest.py
@@ -156,7 +158,7 @@ pkit:
 - **15b.** In the source repository, the adopter passes `--purge`. The system refuses, since uninstall never deletes a capability's source, and names `git rm -r .pkit/capabilities/<name>` ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **15c.** The adopter declines. The system writes nothing, and the use case ends.
 - **20a.** A path of a default holds content already. Where a person can reply, the system asks once for the run, listing each category with its paths and its owner. With nobody to reply, or on a no, it leaves that category unset, and names `pkit agents reconcile --write` and `pkit agents adopt <agent>`.
-- **20b.** The capability's [query command](../../../glossary.md#term-query-command--query-command) gives no <!-- pkit:not-the-term -->answer, or a path of its <!-- pkit:not-the-term -->answer is refused, such as one in what [sync](../../../glossary.md#term-sync--sync) manages ([ADR-088 point 3](../../../../../architecture/decisions/ADR-088-capability-default-write-paths.md#3-a-writer-checks-the-whole-answer-before-it-writes)). The system leaves the category unset, and says why. The install goes on, and the adapter skips the category's owner ([UC-027](UC-027-find-agent-definition-deployed.md) variant 6a).
+- **20b.** The capability's [query command](../../../glossary.md#term-query-command--query-command) gives no result, or names a path the system refuses, such as one in what [sync](../../../glossary.md#term-sync--sync) manages ([ADR-088 point 3](../../../../../architecture/decisions/ADR-088-capability-default-write-paths.md#3-a-writer-checks-the-whole-answer-before-it-writes)). The system leaves the category unset, and says why. The install goes on, and the adapter skips the category's owner ([UC-027](UC-027-find-agent-definition-deployed.md) variant 6a).
 
 **Postconditions:**
 

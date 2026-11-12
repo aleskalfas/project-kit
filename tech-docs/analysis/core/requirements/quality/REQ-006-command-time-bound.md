@@ -4,8 +4,8 @@ title: The backbone stops a command it runs for an anchor, a data point, validat
 status: active
 statement: The backbone never waits past a fixed time bound on the commands it runs for anchors, data points, validation, capabilities' defaults or processes.
 measure: Thirty seconds after such a command starts, the backbone kills it and reads it as giving no result. A command started inside another such run has at most the time that run has left.
-applies-to: "Every command the backbone runs to resolve an anchor, fill a data point, join validation or answer the default paths of a capability. It also covers every command a process's definition declares. An agent run, `pkit agents run`, is outside it: its bound is the limit its caller sets, and thirty seconds more."
-obligation: v1:sha256:6c9759d5d6238dad16b018ee7a56766a68f1394e7b02073527eec8aba5e4d37a
+applies-to: "Every command the backbone runs to resolve an anchor, fill a data point, join validation or give the default paths of a capability. It also covers every command a process's definition declares. An agent run, `pkit agents run`, is outside it: its bound is the limit its caller sets, and thirty seconds more."
+obligation: v1:sha256:476c33e7f336d75a7eae44bc37f533d00cd431507aab3a302c90b3a2f676b5fb
 actors:
   - ACT-ci-pipeline
 refines: []

@@ -4,8 +4,8 @@ title: A query command is offline, read-only and deterministic
 status: active
 statement: A query command needs no network, changes nothing in the project and is deterministic.
 measure: Once the checkout is provisioned, a query command gives a result with the network cut off, and leaves each tracked file as it was. Run twice over the same state of the repository, and the same anchor where it resolves one, it prints the same output.
-applies-to: Every query command a component registers to resolve an anchor, fill a data point, join validation or answer the default paths of a capability. The constraint holds whichever command of the backbone runs the query.
-obligation: v1:sha256:48a3653432acd364a89fab6527f37f086096eca03ecf5a3b952f016de75acdd3
+applies-to: Every query command a component registers to resolve an anchor, fill a data point, join validation or give the default paths of a capability. The constraint holds whichever command of the backbone runs the query.
+obligation: v1:sha256:7e462c907138802caa0600b3779f503cba0dcaefe0eaddfcbc7be80a39b875d5
 actors:
   - ACT-ci-pipeline
   - ACT-developer
