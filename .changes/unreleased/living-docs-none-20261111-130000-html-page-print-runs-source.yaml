@@ -1,7 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  visual-communication's page on outputs captures the print runs of the HTML
-  page file, their results on #3010, as a source in living-docs' project tier
-  (#3010). The project tier is this repository's own and never ships, so no
-  surface moves.

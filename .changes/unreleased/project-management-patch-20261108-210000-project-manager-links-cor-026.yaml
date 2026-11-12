@@ -1,9 +1,0 @@
-component: project-management
-kind: patch
-custom:
-  category: Fixed
-body: >
-  The project-manager agent's link to COR-026, the record that places the
-  agent in this capability, now opens that record (#2897). It went one folder
-  too high, to a path that does not exist, so `pkit refs rot` listed it as a
-  missing reference.

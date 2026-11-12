@@ -1,7 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Only the `analysis-resolver` agent's wording moves (#2471). Its body now
-  names `scripts/_lib/answers.py` by the full path its front matter declares,
-  so the reference graph finds it cited. No step, command or file of the
-  capability changes, so no surface moves.

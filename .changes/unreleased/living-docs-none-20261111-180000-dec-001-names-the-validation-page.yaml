@@ -1,8 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  Only the wording of DEC-001 point 6 moves (#2415). It names the capability's
-  page on validation, `validation.md`, as saying where in a page's text each
-  form of a mention is read, where it named the capability's README, which
-  #2397 split into a reference and pages beside it. What the record decides is
-  unchanged, so no surface moves.

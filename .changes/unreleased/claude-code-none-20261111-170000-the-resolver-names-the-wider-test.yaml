@@ -1,7 +1,0 @@
-component: claude-code
-kind: none
-body: >
-  The agents resolver's docstrings name the deploy's wider ownership test,
-  which the lifecycle layer holds and the resolver asks (ADR-088 point 7).
-  The resolver's code is as it was, so nothing you run changes here: the
-  backbone's changeset says what the deploy now refuses.

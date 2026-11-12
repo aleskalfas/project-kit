@@ -1,8 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  Only the wording of the `docs-author` skill and the `living-docs` agent
-  moves (#2471). Their bodies now name in full the capability's reference
-  pages their front matter declares, and the skill cites the guide kind's
-  decision in brackets, so the reference graph finds each cited. No step,
-  command or file of the capability changes, so no surface moves.

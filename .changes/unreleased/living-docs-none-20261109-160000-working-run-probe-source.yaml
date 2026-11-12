@@ -1,6 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  The Claude Code adapter's README captures the probe of a working run, its
-  results on #2289, as a source in living-docs' project tier (#2289). The
-  project tier is this repository's own and never ships, so no surface moves.
