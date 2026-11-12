@@ -8,6 +8,8 @@ pkit:
       path:
         - .pkit/lifecycle/ownership.py
         - .pkit/agents/tool_access.py
+        - .pkit/lifecycle/capability_records.py
+        - .pkit/agents/definition_source.py
         - .pkit/lifecycle/templates/README.md
         - src/project_kit/__init__.py
         - src/project_kit/lifecycle_ownership.py
@@ -38,7 +40,7 @@ pkit:
         - .pkit/schemas/backbone/config.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - .pkit/schemas/backbone/rule-set.schema.json
-      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1", "ADR-088#7"]
+      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1", "ADR-087#1", "ADR-087#2", "ADR-088#7"]
       artefact:
         - .pkit/lifecycle/manifest.md
         - .pkit/lifecycle/component-registry.md
@@ -111,11 +113,13 @@ The lifecycle keeps a project's state in these places under `.pkit/`:
 
 ```
 .pkit/
-├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
+├── manifest.yaml                                    ← backbone manifest (recorded version + component registry + the project's agent choices)
 ├── agents/
-│   └── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
+│   ├── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
+│   └── definition_source.py                         ← the picker of which definition of each name is the agent, propagated as ownership.py is (the agents README, "Name-collision precedence")
 ├── lifecycle/
-│   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
+│   ├── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
+│   └── capability_records.py                        ← the reader of the registry, each capability's skips and the agent choices, propagated as ownership.py is (component-registry.md)
 ├── migrations/
 │   └── backbone/
 │       └── <major>.<minor>.0/

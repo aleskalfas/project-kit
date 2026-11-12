@@ -136,6 +136,7 @@ pkit:
 - **7a.** In the source repository, a [skill](../../../glossary.md#term-skill--skill) or an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) of the capability collides with other content of the project. The system lists each, refuses with `rename the colliding artifact(s) in your capability tree, then retry.`, and writes nothing.
 - **7b.** The project is not the source repository (6a), and a skill or an agent definition of the capability collides with one the project holds. For each, the system prints `<kind> '<name>' collides with existing <path>`, and asks `[override / skip / inspect]` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)):
   - **override:** the capability's file replaces the project's once the copy is in place. Git holds the project's file, so the adopter can get it back.
+  - **override of another capability's agent definition, or of the core's:** nothing is removed. Against another capability's, the system records the project's choice of this capability for the agent's name (COR-017).
   - **skip:** the project's file stays, and the rest of the capability installs without that file.
   - **inspect:** the system shows how the two files differ, and asks again.
 - **7c.** The adopter chooses override for a file git does not hold as it stands. The system refuses the override, since git could not give the file back, and asks again.

@@ -13,6 +13,7 @@ pkit:
         - .pkit/schemas/tool-access.yaml
         - .pkit/schemas/tool-access.schema.json
         - .pkit/agents/tool_access.py
+        - .pkit/agents/definition_source.py
         - src/project_kit/agent_runs.py
         - src/project_kit/agent_tool_access.py
         - src/project_kit/capabilities.py
@@ -23,10 +24,11 @@ pkit:
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", "COR-013#7", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086]
+      record: [COR-005, COR-006, "COR-013#1", "COR-013#7", "COR-013#8", COR-028, COR-047, COR-070, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
+        - .pkit/adapters/claude-code/README.md#deploy-skillssh
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
@@ -76,8 +78,8 @@ The scripts:
 | `deploy-agents.sh` | none | fourth | skipped silently |
 | `undeploy-capability.sh` | the capability's name | when a capability is unregistered but its subtree stays on disk | **reported** in a `warning` line naming the adapter |
 
-- **Deploy primitives** — the first four, run in that order whenever the harness side needs (re-)materialising: init, sync, upgrade, and a capability's install, register, upgrade and uninstall. The settings merge comes first, since a skill may rely on the settings being in place. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`.
-- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active, and the uninstall goes on.
+- **Deploy primitives** — the first four, run in that order whenever the harness side needs (re-)materialising: init, sync, upgrade, and a capability's install, register, upgrade and uninstall. The settings merge comes first, since a skill may rely on the settings being in place. They deploy what the tree ships and drop what they deployed from a source that is gone. An agent's deploy deploys, for each name, the definition the agents area's picker says is the agent, and drops a copy it wrote whose name the picker no longer gives a definition ([the agents README, "Name-collision precedence"](../agents/README.md#name-collision-precedence) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`.
+- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The script removes the skills the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. A skills deploy that deploys only a registered capability's skills, as [Claude Code's](claude-code/README.md#deploy-skillssh) does, drops them as well. Skills keep this step until [project-kit#2956](https://github.com/aleskalfas/project-kit/issues/2956) decides their rules, as the Implications of [ADR-087](../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md) say. The script removes no agent: the picker counts a capability's definitions only while the component registry records the capability, so the agents' deploy the lifecycle runs after the uninstall removes the capability's agents and writes the definition that now wins for each name ([ADR-087](../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md) point 4). An adapter that deploys no skill per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness may keep the unregistered capability's skills active, and the uninstall goes on.
 
 ## What an adapter declares as data
 
@@ -220,7 +222,7 @@ The Claude Code adapter answers the first five, and leaves `helper-withheld-tool
 
 1. Run `pkit new adapter <new-harness-name>`, through the `adapter-author` skill. It stamps `.pkit/adapters/<new-harness-name>/` with `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It stamps no script and no settings: those depend on the harness.
 2. Fill in the stamped `README.md`: what the harness expects and how this adapter satisfies that.
-3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), the `loaded_rules:` declaration of how the harness reaches each capability's rules file (see "How a capability's rules reach a session" above), and any runtime artifacts the harness needs.
+3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills (see "Primitives the lifecycle calls" above), the `loaded_rules:` declaration of how the harness reaches each capability's rules file (see "How a capability's rules reach a session" above), and any runtime artifacts the harness needs.
    - **An agent's tool access.** A deploy script writes each agent's tool access as the agents area's reader answers it, in the harness's keys, never the author's text. It refuses a withheld list the harness cannot withhold, or whose tool names it cannot translate, since a withheld list fails open: a tool it does not name is given. It leaves no earlier copy of an agent it refuses, and names the cause (COR-013 point 7; [the agents README, "Tool access"](../agents/README.md#tool-access)).
    - **Its declaration of tool access.** An adapter that deploys agents, by a deploy script or a runner, writes `tool-access.json` with its harness's terms, and its deploy and runner have the reader refuse by it ("What an adapter declares as data" above). Start from `.pkit/schemas/tool-access.yaml`, which admits no withheld entry. Admit one only once the harness was measured to withhold it, and answer `session-agent-withheld-tools` in step 4. Until the adapter declares its tool access, `pkit validate` fails.
 4. Write the adapter's `harness-support.yaml`: an answer to each requirement in `.pkit/schemas/harness-requirements.yaml` you can answer with evidence (see "Harness requirements" above). Leave out one you cannot answer yet; it reports `indeterminate`. Run `pkit validate`, then `pkit harness report --adapter <new-harness-name>` to read what the harness leaves unmet.

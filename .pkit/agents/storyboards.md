@@ -16,6 +16,7 @@ pkit:
         - COR-016
         - "ADR-085#2"
         - ADR-086
+        - "ADR-087#3"
 ---
 
 # Storyboards
@@ -132,7 +133,7 @@ pkit new storyboard agent <agent-name> --scenario <slug>   # one scenario's own 
 pkit new storyboard agent <agent-name> --namespace <ns>    # where the agent lives
 ```
 
-- **Which agent.** The command finds the agent in the deploy's order: the project, the capabilities by name, then core. So it stamps beside the agent that deploys. `--namespace`, `core`, `project` or a capability's name, looks in that one place instead.
+- **Which agent.** The command stamps beside the definition that is the agent, as the picker the deploy asks names it (the agents README, "Name-collision precedence"). A name whose agent has no one text, or that the picker cannot tell, is refused with the picker's why. `--namespace`, `core`, `project` or a capability's name, looks in that one place instead.
 - **An unknown capability** gets the same refusal as `pkit new agent`.
 - **A synced copy is refused.** The command stamps nothing beside an agent the project receives by sync, and leaves a flat definition flat. It says where such an agent is authored.
 - **A flat definition** moves into a folder of its own, named after it, first.

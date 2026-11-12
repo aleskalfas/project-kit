@@ -1368,9 +1368,11 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
 
     Adapters are discovered as `run_installed_adapter_primitives` discovers
     them; each runs `ADAPTER_UNDEPLOY_PRIMITIVE <capability>`, which removes
-    what the adapter deployed for that capability and nothing else. The
-    lifecycle names the capability only — where a harness keeps skills and
-    agents is the adapter's knowledge (COR-013).
+    the skills the adapter deployed for that capability and nothing else. It
+    removes no agent: once the capability is unregistered, the deploy its
+    caller runs removes each copy written from the capability's definitions
+    (ADR-087 point 4). The lifecycle names the capability only — where a
+    harness keeps skills is the adapter's knowledge (COR-013).
 
     An adapter that ships no undeploy primitive is reported by a `warning`
     line naming it, and its name is returned, so no caller can miss that its
@@ -1385,7 +1387,7 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
             click.echo(
                 f"  {'warning':<12} adapter {adapter_dir.name!r} ships no "
                 f"{ADAPTER_UNDEPLOY_PRIMITIVE}: capability {capability!r} stays deployed in "
-                "its harness. Remove its skills and agents there by hand."
+                "its harness. Remove its skills there by hand."
             )
             continue
         _run_adapter_primitive(script, ctx, capability)

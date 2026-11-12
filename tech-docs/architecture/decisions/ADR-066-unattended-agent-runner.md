@@ -230,7 +230,7 @@ DEC-056 point 5 makes a fixer start no other agent. A run could start one in two
 Moving the review command onto the runner keeps what its reviewers may do. Its runs take the runner's unconfined form:
 - They run in the person's checkout, under the person's and the project's settings.
 - They start in the mode those settings or the harness choose.
-- The runner passes `-p`, `--agent`, and `--effort` where one is set.
+- The runner passes `-p` and `--effort` where one is set. For a name some place of the methodology ships, it passes the agent's definition as the confined form resolves it, under a name unique to the run, so the harness loads that agent and no other copy of the name. For a name no place ships, such as a reviewer the project wrote straight into the harness's own folder, it passes `--agent` and the harness loads it by name ([ADR-087](ADR-087-agent-definition-picker.md) point 3).
 
 **What changes around them:**
 - A project whose registered adapters have no runner loses its reviews, as a project without `claude` loses them today.

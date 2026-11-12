@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: core
+# pkit-digest: sha256:b7c9962fcecc03afc08b8a37dc9f9fd3518a5b352e1dc2f5ad4a07cab9dd7559
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"]
 name: process-author
 description: Writes the predicates behind a process definition — detection ("is 
   this subject at this state?"), gates, entry guards, wait-resume conditions, 

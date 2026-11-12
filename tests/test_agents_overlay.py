@@ -22,6 +22,8 @@ from project_kit import agent_policy as ap
 from project_kit import agents_overlay as ao
 from project_kit import project_config as pc
 from project_kit.cli import main
+from tests.agent_definitions_support import stage_picker
+from tests.backbone_manifest import register_capabilities
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -110,6 +112,9 @@ def _project(tmp_path: Path, *, overlay: str | None = None) -> Path:
     shutil.copy2(
         REPO / ".pkit" / "agents" / "tool_access.py", proj / ".pkit" / "agents" / "tool_access.py"
     )
+    # The propagated picker of an agent's definition, and its reader of the
+    # records (ADR-087), which every listing of the agents asks.
+    stage_picker(proj / ".pkit")
     if overlay is not None:
         (proj / ".pkit" / "agents" / "project" / "overlay.yaml").write_text(
             overlay, encoding="utf-8"
@@ -274,8 +279,10 @@ def test_project_namespace_wins_over_core(tmp_path):
 
 
 def test_capability_wins_over_core_and_project_over_capability(tmp_path):
-    """The agents README's name-collision precedence: project > capability > core."""
+    """The agents README's name-collision precedence: project > capability > core,
+    for a capability the registry records (COR-017)."""
     proj = _project(tmp_path, overlay="")
+    register_capabilities(proj, "my-cap")
     caps = proj / ".pkit" / "capabilities"
     for name in ("cap-over-core", "project-over-cap"):
         _agent(caps / "my-cap" / "agents", name)

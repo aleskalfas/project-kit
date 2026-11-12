@@ -15,6 +15,7 @@ import pytest
 
 from project_kit import agents_overlay as ao
 from project_kit import write_categories as wcat
+from tests.agent_definitions_support import stage_picker
 
 REPO = Path(__file__).resolve().parents[1]
 OWNERSHIP = REPO / ".pkit" / "lifecycle" / "ownership.py"
@@ -42,6 +43,7 @@ def _project(tmp_path: Path, *, overlay: str = "", query: bool = True) -> Path:
     root = tmp_path / "proj"
     (root / ".pkit" / "lifecycle").mkdir(parents=True)
     shutil.copy2(OWNERSHIP, root / ".pkit" / "lifecycle" / "ownership.py")
+    stage_picker(root / ".pkit")
     (root / ".pkit" / "manifest.yaml").write_text(
         "schema_version: 1\nbackbone_version: 1.0.0\ncomponents:\n"
         "  - kind: capability\n    name: drawing\n"

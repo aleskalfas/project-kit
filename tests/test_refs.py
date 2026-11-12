@@ -13,6 +13,8 @@ from click.testing import CliRunner
 from project_kit import refs
 from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
+from tests.backbone_manifest import register_capabilities
 
 REPO = Path(__file__).resolve().parents[1]
 READER = REPO / ".pkit" / "agents" / "tool_access.py"
@@ -27,8 +29,10 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for area in ("agents", "skills", "decisions"):
         for ns in ("core", "project"):
             (tmp_path / ".pkit" / area / ns).mkdir(parents=True)
-    # The reader of an agent's tool access, as sync copies it (ADR-086 point 1).
+    # The reader of an agent's tool access, as sync copies it (ADR-086 point 1), and
+    # the picker of an agent's definition with the reader of the records (ADR-087).
     shutil.copy2(READER, tmp_path / ".pkit" / "agents" / READER.name)
+    stage_picker(tmp_path / ".pkit")
     monkeypatch.chdir(tmp_path)
     return tmp_path
 
@@ -2643,3 +2647,99 @@ Calls workflow.do-thing.
     result = runner.invoke(main, ["hooks", "who-needs", "workflow.do-thing"])
     assert result.exit_code == 0
     assert "consumer" in result.output
+
+
+# --- which definition is the agent (ADR-087 point 3) -------------------------------------
+
+
+def _picked_agent(root: Path, place: str, name: str, *, front_name: str | None = None) -> Path:
+    """A definition of *name* at *place*: `core`, `project` or a capability's name."""
+    folder = (
+        root / ".pkit" / "agents" / place
+        if place in ("core", "project")
+        else root / ".pkit" / "capabilities" / place / "agents"
+    )
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{name}.md"
+    path.write_text(
+        f"---\nname: {front_name or name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8"
+    )
+    return path
+
+
+def _findings(root: Path, kind: str) -> list[tuple[str, str]]:
+    return [(i.location, i.diagnosis) for i in refs.validate_corpus(root) if i.kind == kind]
+
+
+def test_a_collision_no_choice_settles_is_a_warning(kit_target: Path) -> None:
+    register_capabilities(kit_target, "beta", "alpha")
+    _picked_agent(kit_target, "alpha", "twin")
+    _picked_agent(kit_target, "beta", "twin")
+
+    found = _findings(kit_target, refs.AGENT_CHOICE)
+
+    assert len(found) == 1
+    assert found[0][0] == ".pkit/manifest.yaml"
+    assert "shipped by capabilities alpha, beta" in found[0][1]
+    assert "capability alpha's is, the first by name" in found[0][1]
+    assert refs.AGENT_CHOICE in refs.WARNING_KINDS
+
+
+def test_a_choice_that_decides_nothing_is_a_warning(kit_target: Path) -> None:
+    register_capabilities(kit_target, "alpha")
+    path = kit_target / ".pkit" / "manifest.yaml"
+    path.write_text(path.read_text(encoding="utf-8") + "agent_choices:\n  ghost: alpha\n", "utf-8")
+    _picked_agent(kit_target, "alpha", "real")
+
+    found = _findings(kit_target, refs.AGENT_CHOICE)
+
+    assert [diagnosis for _, diagnosis in found] == [
+        "the project's choice of capability alpha for agent 'ghost' decides nothing: "
+        "capability alpha ships no agent named ghost (COR-017). Record another with "
+        "`pkit agents choose`, or remove the entry under `agent_choices`."
+    ]
+
+
+def test_a_winning_place_holding_both_layouts_is_an_error(kit_target: Path) -> None:
+    _picked_agent(kit_target, "project", "twice")
+    folder = kit_target / ".pkit" / "agents" / "project" / "twice"
+    folder.mkdir()
+    (folder / "twice.md").write_text("---\nname: twice\ndescription: t\n---\n", "utf-8")
+
+    found = _findings(kit_target, refs.AGENT_DEFINITION)
+
+    assert [location for location, _ in found] == [".pkit/agents/project/twice.md"]
+    assert "the project ships two texts of it" in found[0][1]
+
+
+def test_a_definition_naming_another_agent_is_an_error(kit_target: Path) -> None:
+    _picked_agent(kit_target, "core", "named", front_name="other")
+
+    found = _findings(kit_target, refs.AGENT_DEFINITION)
+
+    assert [location for location, _ in found] == [".pkit/agents/core/named.md"]
+    assert "its front matter names the agent 'other', not 'named'" in found[0][1]
+
+
+def test_a_name_the_picker_cannot_tell_is_an_error(kit_target: Path) -> None:
+    register_capabilities(kit_target, "alpha")
+    broken = kit_target / ".pkit" / "capabilities" / "alpha" / "project" / "manifest.yaml"
+    broken.parent.mkdir(parents=True)
+    broken.write_text("backend_state: [\n", encoding="utf-8")
+    _picked_agent(kit_target, "alpha", "from-cap")
+    _picked_agent(kit_target, "core", "from-core")
+
+    found = _findings(kit_target, refs.AGENT_DEFINITION)
+
+    assert [location for location, _ in found] == [".pkit/capabilities/alpha/agents/from-cap.md"]
+    assert "cannot tell which is the agent" in found[0][1]
+
+
+def test_a_picker_the_command_cannot_reach_is_an_error(kit_target: Path) -> None:
+    (kit_target / ".pkit" / "agents" / "definition_source.py").unlink()
+    _picked_agent(kit_target, "core", "lonely")
+
+    found = _findings(kit_target, refs.AGENT_DEFINITION)
+
+    assert [location for location, _ in found] == [".pkit/agents/definition_source.py"]
+    assert "run `pkit sync`" in found[0][1]

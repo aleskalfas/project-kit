@@ -98,6 +98,7 @@ The backbone manifest carries:
   - **How it is written:** each of the two keys is written by an edit of its own line, so neither write re-serialises the manifest. Both stay top-level scalars in every `schema_version`, and no manifest-schema migration moves them, so a pkit that reads only `backbone_version` still finds the target. The key needs no schema bump. The manifest's writer has kept a key it does not know since the first published release.
   - **Who writes it:** first install writes it last, and so does a transition of the backbone. In the methodology's own source repository, where no transition runs, its release step writes it beside `backbone_version`.
 - **`components`:** the registry. Each entry is a `{kind, name, manifest}` triple pointing at a per-component manifest file, optionally carrying an **`origin`** marker (below). A capability's entry names `.pkit/capabilities/<name>/project/manifest.yaml`, whatever its origin. An entry an older release wrote may name the capability's root instead ("Where a capability's manifest lives", below).
+- **`agent_choices`:** the project's choice between capabilities that ship an agent of one name, a capability for each agent's name. It is absent until a choice is recorded, and the registry's own writes keep it ([`component-registry.md`](component-registry.md) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 ### Capability origin (COR-031)
 
