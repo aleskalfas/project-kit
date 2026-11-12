@@ -1,7 +1,7 @@
 ---
 id: DEC-069
 title: A fixer runs unconfined only where a person watches it or the project's switch is on
-status: proposed
+status: accepted
 date: 2026-11-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
