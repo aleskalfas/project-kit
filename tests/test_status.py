@@ -15,6 +15,15 @@ from project_kit import data_points as dp
 from project_kit import install
 from project_kit import status as status_module
 from project_kit.cli import main, status
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
+    ComponentRegistryEntry,
+    capability_manifest_rel,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from project_kit.status import _data_point_lines, _skill_owner
 from tests.adopter_repo import MakeAdopterRepo
 from tests.shipped_rule_sets import shipped_rules
@@ -595,6 +604,60 @@ def test_status_shows_no_transition_line_in_the_methodology_source(
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
     assert "Transition:" not in result.output
+
+
+# --- capabilities: the signs of a copy and of its source (COR-031, COR-041) ---------
+# The graphic designer's body tells whether a capability's folder is a copy or its
+# source by the `Source kit` line and the marks on the `installed` line.
+
+ORIGINS = {
+    "fetched": ORIGIN_EXTERNALLY_SOURCED,
+    "mine": ORIGIN_INCUBATED_IN_REPO,
+    "shipped": ORIGIN_KIT_SHIPPED,
+}
+INSTALLED = f"    {'installed':<18} fetched (externally-sourced), mine (incubated), shipped"
+
+
+def _register_capabilities(root: Path, origins: dict[str, str]) -> None:
+    """Register each capability at its origin, as the install registry records it.
+    The capabilities section reads no more than the registry."""
+    backbone = read_backbone_manifest(root)
+    assert backbone is not None
+    backbone.components.extend(
+        ComponentRegistryEntry(
+            kind="capability", name=name, manifest=capability_manifest_rel(name), origin=origin
+        )
+        for name, origin in origins.items()
+    )
+    write_backbone_manifest(root, backbone)
+
+
+def test_status_marks_each_installed_capability_by_its_origin(installed_target: Path) -> None:
+    """A kit-shipped capability goes unmarked and an incubated one is marked
+    `(incubated)`, as before; one pulled from another repository is marked
+    `(externally-sourced)`."""
+    _register_capabilities(installed_target, ORIGINS)
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert INSTALLED in _section(result.output, "Capabilities").splitlines()
+
+
+@pytest.mark.parametrize("source", [False, True], ids=["adopter", "methodology-source"])
+def test_status_names_the_source_kit_beside_the_marks(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, source: bool
+) -> None:
+    """The `Source kit` line is the project root's own `.pkit/` only in the
+    methodology's source repository. A capability pulled from another repository is
+    marked there too, since it is a copy wherever it is registered (COR-041)."""
+    own = installed_target / ".pkit"
+    if source:
+        monkeypatch.setattr(status_module, "find_source_kit", lambda: own)
+    _register_capabilities(installed_target, ORIGINS)
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    assert (f"  {'Source kit:':<22} {own}" in lines) is source
+    assert INSTALLED in _section(result.output, "Capabilities").splitlines()
 
 
 # --- rule sets (COR-051 point 7) ---------------------------------------------------

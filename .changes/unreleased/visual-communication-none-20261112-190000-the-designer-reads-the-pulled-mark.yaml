@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  The body of `graphic-designer`, which no release has shipped yet, tells a
+  capability pulled whole from another repository by the `(externally-sourced)`
+  mark `pkit status` now gives it, and no longer points to the install registry
+  (#3066). The pending minor that ships the designer declares its surface, so
+  no surface moves.

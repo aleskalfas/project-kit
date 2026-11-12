@@ -50,6 +50,7 @@ from project_kit import agent_definitions, treecopy
 from project_kit.agents import carries_deploy_mark
 from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     ComponentKind,
@@ -337,6 +338,21 @@ CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo"
 KIT_SHIPPED: CapabilityOrigin = ORIGIN_KIT_SHIPPED
 INCUBATED_IN_REPO: CapabilityOrigin = ORIGIN_INCUBATED_IN_REPO
 
+# The mark `pkit status` and `pkit capabilities list` give an installed capability
+# whose origin is not the default, so that a reader tells from them alone whether
+# its folder is the project's own source (incubated, COR-031) or a copy pulled from
+# another repository (externally sourced, COR-041).
+_ORIGIN_MARKS: dict[str, str] = {
+    ORIGIN_INCUBATED_IN_REPO: "incubated",
+    ORIGIN_EXTERNALLY_SOURCED: "externally-sourced",
+}
+
+
+def origin_mark(origin: str) -> str | None:
+    """The mark of an installed capability of *origin*, or None for a kit-shipped one,
+    which `pkit status` leaves unmarked."""
+    return _ORIGIN_MARKS.get(origin)
+
 
 @dataclass(frozen=True)
 class ResolvedCapability:
@@ -483,8 +499,8 @@ def installed_capability_origins(target_root: Path) -> dict[str, str]:
 
     Reads origin from lifecycle-owned install-state (the backbone manifest's
     component registry), where an absent origin reads as ``kit-shipped``.
-    Lets `list` / status mark each installed capability as kit-shipped or
-    incubated-in-repo without the caller re-deriving the default.
+    Lets `list` / status mark each installed capability by its origin
+    (`origin_mark`) without the caller re-deriving the default.
     """
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
