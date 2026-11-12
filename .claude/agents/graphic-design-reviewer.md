@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:visual-communication
+# pkit-digest: sha256:d6e53db9ee7dd7487777bc2b6255f8ab5025f4b1cebb42257091ff18ff398918
+# pkit-tool-access: tools: ["Read", "Glob", "Grep"]
 name: graphic-design-reviewer
 description: Reads the images `pkit visual look` draws of a piece, through the 
   SVG renderer or through a browser for the HTML renderer, with the piece, its 

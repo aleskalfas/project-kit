@@ -3,7 +3,11 @@
 Two manifest forms today:
 
 - **Backbone manifest** at `.pkit/manifest.yaml` — adopter-side. Records
-  the backbone version installed and a registry of installed components.
+  the backbone version installed, a registry of installed components, and
+  the project's choices between capabilities that ship one agent's name
+  (`agent_choices`, COR-017). This module writes the choices; the
+  lifecycle's reader, `.pkit/lifecycle/capability_records.py`, reads them
+  (ADR-087 point 1).
 - **Per-component manifest** at `<component-project-side>/manifest.yaml`
   — one per installed adapter / capability. Records the component's
   version, install timestamp, `requires_backbone` range, and any opaque
@@ -48,6 +52,11 @@ COMPONENT_MANIFEST_NAME = "manifest.yaml"
 # `backbone_version` still finds the target.
 BACKBONE_VERSION_KEY = "backbone_version"
 COMPLETED_VERSION_KEY = "completed_version"
+
+# The backbone manifest's key of the project's choices between capabilities: a
+# mapping from an agent's name to the capability chosen (COR-017, ADR-087 point 1).
+# The lifecycle's reader, `.pkit/lifecycle/capability_records.py`, holds the same.
+AGENT_CHOICES_KEY = "agent_choices"
 
 
 # Singleton YAML instance: round-trip mode preserves comments and key
@@ -221,13 +230,20 @@ def record_completed_version(target_root: Path, version: str) -> Path:
     return path
 
 
-def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Path:
+def write_backbone_manifest(
+    target_root: Path, manifest: BackboneManifest, *, dropping_choices_of: str | None = None
+) -> Path:
     """Write `.pkit/manifest.yaml`. Round-trip-preserves comments if the file already exists.
 
     An existing file keeps every key this writer does not set, so a key a later
     release adds survives an older writer. `completed_version` is never written
     here: only its own in-place edit writes it (`record_completed_version`), so
     a registry write from a manifest read earlier cannot move it.
+
+    *dropping_choices_of* names a capability whose choices the same write drops
+    from `agent_choices`, as an uninstall does with its registration (COR-017,
+    ADR-087 point 1). A key left with no choice goes. A value under the key that
+    is no mapping is left as it is, since it records no choice this could drop.
     """
     path = _backbone_manifest_path(target_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,6 +256,13 @@ def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Pa
         existing["schema_version"] = manifest.schema_version
         existing["backbone_version"] = manifest.backbone_version
         existing["components"] = [_entry_to_map(e) for e in manifest.components]
+        choices = cast("dict[str, object]", existing).get(AGENT_CHOICES_KEY)
+        if dropping_choices_of is not None and isinstance(choices, dict):
+            mapping = cast("dict[Any, Any]", choices)
+            for agent in [a for a, chosen in mapping.items() if chosen == dropping_choices_of]:
+                del mapping[agent]
+            if not mapping:
+                del existing[AGENT_CHOICES_KEY]
         with path.open("w", encoding="utf-8") as f:
             _yaml_dump(existing, f)
     else:
@@ -252,6 +275,43 @@ def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Pa
             _yaml_dump(doc, f)
 
     return path
+
+
+def record_agent_choice(target_root: Path, agent: str, capability: str) -> bool:
+    """Record the project's choice of *capability* for agent *agent*, in the backbone
+    manifest's `agent_choices` (COR-017, ADR-087 point 1). It replaces a choice
+    recorded for the name before, and keeps every other key and comment.
+
+    Whether the choice decides anything is its caller's to check. Raises
+    `click.ClickException` where there is no backbone manifest, or where its
+    `agent_choices` is not a mapping, which this would write over. Returns True
+    when the manifest was written, False when it already held the choice.
+    """
+    import click
+
+    path = _backbone_manifest_path(target_root)
+    if not path.is_file():
+        raise click.ClickException(
+            f"cannot record the choice: {path.relative_to(target_root)} is not there."
+        )
+    existing = cast(CommentedMap, _yaml_load(path.read_text(encoding="utf-8")) or CommentedMap())
+    choices = cast("dict[str, object]", existing).get(AGENT_CHOICES_KEY)
+    if choices is None:
+        choices = CommentedMap()
+        existing[AGENT_CHOICES_KEY] = choices
+    if not isinstance(choices, dict):
+        raise click.ClickException(
+            f"cannot record the choice: `{AGENT_CHOICES_KEY}` in "
+            f"{path.relative_to(target_root)} is not a mapping from an agent's name to a "
+            "capability's. Mend it first, and nothing else is written."
+        )
+    mapping = cast("dict[Any, Any]", choices)
+    if mapping.get(agent) == capability:
+        return False
+    mapping[agent] = capability
+    with path.open("w", encoding="utf-8") as f:
+        _yaml_dump(existing, f)
+    return True
 
 
 def read_capability_origin(target_root: Path, name: str) -> str:

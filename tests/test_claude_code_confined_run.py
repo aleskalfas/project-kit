@@ -49,6 +49,8 @@ ADAPTER = REPO_ROOT / ".pkit" / "adapters" / "claude-code"
 RUNNER = ADAPTER / "run-agent.py"
 DECLARATION = ADAPTER / "tool-access.json"
 READER = REPO_ROOT / ".pkit" / "agents" / "tool_access.py"
+PICKER = REPO_ROOT / ".pkit" / "agents" / "definition_source.py"
+RECORDS_READER = REPO_ROOT / ".pkit" / "lifecycle" / "capability_records.py"
 PROBE = ADAPTER / "probe-confined-run.py"
 REFS = REPO_ROOT / "src" / "project_kit" / "refs.py"
 
@@ -99,7 +101,24 @@ gates: [COR-001]
 You are the probe.
 """
 
-IDENTITY_RESOLVER = "import sys\nsys.stdout.write(open(sys.argv[1], encoding='utf-8').read())\n"
+# A resolver that answers the runner's pick as the picker would for an agent of the
+# project's or core's place (ADR-087 point 2), and resolves a definition to its text.
+IDENTITY_RESOLVER = (
+    "import json, os, sys\n"
+    "if sys.argv[1:2] == ['--pick']:\n"
+    "    name = sys.argv[2]\n"
+    "    for place in ('project', 'core'):\n"
+    "        for file in (f'{name}.md', f'{name}/{name}.md'):\n"
+    "            path = os.path.join('.pkit', 'agents', place, file)\n"
+    "            if os.path.lexists(path):\n"
+    "                answer = {'name': name, 'shipped': True, 'place': place,\n"
+    "                          'agent': os.path.join(os.getcwd(), path)}\n"
+    "                print(json.dumps(answer))\n"
+    "                sys.exit(0)\n"
+    "    print(json.dumps({'name': name, 'shipped': False}))\n"
+    "    sys.exit(0)\n"
+    "sys.stdout.write(open(sys.argv[1], encoding='utf-8').read())\n"
+)
 
 # A harness that answers `--version`, records how it was started, then prints
 # the stream the test wrote beside it (a `SLEEP n` line waits) and exits.
@@ -141,12 +160,16 @@ def _script(path: Path, body: str) -> Path:
 
 def _copy_tool_access(root: Path) -> None:
     """The agents area's reader of tool access, and the adapter's declaration of it,
-    into the tree at *root*, as sync copies them."""
+    into the tree at *root*, as sync copies them, with the agents area's picker and
+    the lifecycle's reader of capability records (ADR-087)."""
     adapter = root.joinpath(".pkit", "adapters", "claude-code")
     adapter.mkdir(parents=True, exist_ok=True)
     shutil.copy2(DECLARATION, adapter / DECLARATION.name)
     (root / ".pkit" / "agents").mkdir(parents=True, exist_ok=True)
     shutil.copy2(READER, root / ".pkit" / "agents" / READER.name)
+    shutil.copy2(PICKER, root / ".pkit" / "agents" / PICKER.name)
+    (root / ".pkit" / "lifecycle").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(RECORDS_READER, root / ".pkit" / "lifecycle" / RECORDS_READER.name)
 
 
 @pytest.fixture
@@ -705,8 +728,11 @@ def test_a_field_outside_the_methodologys_shape_refuses_the_run(
 def test_the_resolvers_failure_refuses_the_run(runner: ModuleType, scene: Scene) -> None:
     _script(
         scene.adapter / "_resolve_agent.py",
-        "import sys\nprint('probe: category <code-paths> referenced but not defined', "
-        "file=sys.stderr)\nsys.exit(1)\n",
+        IDENTITY_RESOLVER.replace(
+            "sys.stdout.write(open(sys.argv[1], encoding='utf-8').read())\n",
+            "print('probe: category <code-paths> referenced but not defined', "
+            "file=sys.stderr)\nsys.exit(1)\n",
+        ),
     )
     scene.harness([INIT, RESULT])
     reason = _refusal(runner, scene)
@@ -760,22 +786,83 @@ def test_an_agent_file_leading_outside_the_working_copy_is_refused(
     assert "leads outside the working copy" in _refusal(runner, scene)
 
 
-def test_the_deploy_picks_the_project_then_a_capability_then_core(
-    runner: ModuleType, tmp_path: Path
+@pytest.mark.parametrize(
+    ("answer", "says"),
+    [
+        ({"shipped": True, "untold": "the registry cannot be read"}, "cannot tell which"),
+        ({"shipped": True, "none": "no definition of it counts"}, "a has no agent"),
+        ({"shipped": True, "refused": "two texts"}, "the agent a is refused: two texts"),
+        ({"shipped": True}, "named no file"),
+    ],
+)
+def test_the_runner_refuses_an_agent_the_picker_gives_none_to_run(
+    runner: ModuleType, tmp_path: Path, answer: dict[str, Any], says: str
 ) -> None:
-    pkit = tmp_path / ".pkit"
-    core = pkit / "agents" / "core" / "a.md"
-    later = pkit / "capabilities" / "zeta" / "agents" / "a" / "a.md"
-    first = pkit / "capabilities" / "alpha" / "agents" / "a" / "a.md"
-    flat = pkit / "capabilities" / "alpha" / "agents" / "a.md"
-    project = pkit / "agents" / "project" / "a" / "a.md"
-    picks = []
-    for path in (core, later, first, flat, project):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("x", encoding="utf-8")
-        picks.append(runner.agent_source(tmp_path, "a"))
-    assert picks == [core, later, first, flat, project]
-    assert runner.agent_source(tmp_path, "b") is None
+    """The runner keeps no order of its own: the picker, through the resolver, names
+    the file (ADR-087 point 2), and every answer that names none refuses."""
+    resolver = _script(
+        tmp_path / "_resolve_agent.py", f"import json\nprint(json.dumps({answer!r}))\n"
+    )
+    with pytest.raises(runner.Refused, match=says):
+        runner.picked_source(resolver, tmp_path, "a", dict(os.environ))
+
+
+def test_the_runner_reads_the_file_the_picker_names(runner: ModuleType, tmp_path: Path) -> None:
+    named = tmp_path / ".pkit" / "capabilities" / "alpha" / "agents" / "a.md"
+    resolver = _script(
+        tmp_path / "_resolve_agent.py",
+        "import json\n"
+        f"print(json.dumps({{'shipped': True, 'agent': {str(named)!r}, 'place': 'x'}}))\n",
+    )
+    assert runner.picked_source(resolver, tmp_path, "a", dict(os.environ)) == named
+    unshipped = _script(
+        tmp_path / "unshipped.py", "import json\nprint(json.dumps({'shipped': False}))\n"
+    )
+    assert runner.picked_source(unshipped, tmp_path, "a", dict(os.environ)) is None
+
+
+def test_the_unconfined_form_passes_the_definition_of_a_name_a_place_ships(
+    runner: ModuleType, scene: Scene
+) -> None:
+    """For a name some place ships, the unconfined form passes the agent's definition,
+    checked as the confined form checks it, under a name unique to the run, so the
+    harness loads no other copy of the name (ADR-087 point 3)."""
+    argv = runner.unconfined_command(
+        "claude", "probe", scene.checkout, "low", scene.env(), time.monotonic() + 60
+    )
+    name = argv[argv.index("--agent") + 1]
+    assert re.fullmatch(r"pkit-run-[0-9a-f]{16}", name)
+    passed = json.loads(argv[argv.index("--agents") + 1])
+    assert list(passed) == [name]
+    assert passed[name]["description"] == "A probe agent."
+    assert passed[name]["effort"] == "low"
+    assert argv[-2:] == ["--effort", "low"]
+
+
+def test_the_unconfined_form_refuses_where_the_confined_form_refuses(
+    runner: ModuleType, scene: Scene
+) -> None:
+    _agent(scene, AGENT_FILE.replace("owns: []\n", "owns: []\nhooks: {}\n"))
+    with pytest.raises(runner.Refused, match="fields outside the methodology's shape: hooks"):
+        runner.unconfined_command(
+            "claude", "probe", scene.checkout, None, scene.env(), time.monotonic() + 60
+        )
+
+
+def test_the_unconfined_form_loads_by_name_a_name_no_place_ships(
+    runner: ModuleType, scene: Scene
+) -> None:
+    """A reviewer the project wrote straight into the harness's own folder is no
+    place's definition, so the harness loads it by name (COR-013 point 8)."""
+    deadline = time.monotonic() + 60
+    with pytest.raises(runner.Refused, match="is not deployed"):
+        runner.unconfined_command("claude", "mine", scene.checkout, None, scene.env(), deadline)
+    own = scene.checkout / ".claude" / "agents" / "mine.md"
+    own.parent.mkdir(parents=True)
+    own.write_text("---\nname: mine\n---\n", encoding="utf-8")
+    assert runner.unconfined_command(
+        "claude", "mine", scene.checkout, None, scene.env(), deadline
+    ) == ["claude", "-p", "--agent", "mine"]
 
 
 def test_only_the_runs_fields_are_passed_under_a_name_unique_to_the_run(
@@ -1155,7 +1242,7 @@ def test_the_command_line_is_the_confined_closed_set(runner: ModuleType, scene: 
         "high",
     ]
     assert json.loads(settings)["permissions"]["defaultMode"] == "dontAsk"
-    assert set(runner.FLAGS) == {"-p", "--agent", "--effort"}
+    assert set(runner.FLAGS) == {"-p", "--agents", "--agent", "--effort"}
 
 
 @pytest.mark.parametrize(

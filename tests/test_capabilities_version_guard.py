@@ -33,6 +33,7 @@ from project_kit.manifest import (
     record_completed_version,
 )
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 
 # The version an installed fixture records: the real source kit's, which the
 # scratch kit below carries as its own.
@@ -57,6 +58,7 @@ def source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (kit / "capabilities").mkdir(parents=True)
     (kit / "decisions").mkdir()
     (kit / "VERSION").write_text(f"{_PROJECTS_VERSION}\n", encoding="utf-8")
+    stage_picker(kit)
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit)
     return kit
 

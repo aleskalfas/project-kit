@@ -1,0 +1,76 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-sync
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T08:23:52Z
+      outcome: unchanged
+      unchanged-because: In this change, sync.py reads the capability records through the lifecycle's reader loaded from the release it brings, which its guard holds at the release the project records, so a project whose tree lacks the reader syncs and the copy restores it. Sync still runs propagation at the recorded versions and regenerates what derives from the project's declarations, moving no version and running no migration, so the term holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-propagation
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T08:23:58Z
+      outcome: unchanged
+      unchanged-because: In this change, sync.py reads the capability records, before its copy, through the lifecycle's reader loaded from the release it brings, so the copy restores a reader the project's tree lacks. Propagation still writes the methodology's files into the project verbatim, at the recorded versions or a transition's target, over what stands there, so the term holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-010-stop-under-another-version.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261110T212240Z-c6177e80.yaml
+    revalidated:
+      at: 2026-11-11T08:24:17Z
+      outcome: unchanged
+      unchanged-because: In this change, sync.py reads the capability records through the reader its release brings, after its guard; upgrade.py reads capability records through the shared reader and records the choice an override of another capability's agent makes; test_capabilities_version_guard.py only stages the picker in its fixture; test_sync.py lets a stub reader take keyword arguments, stages the picker and the records' reader in the sources it fakes, and adds a test that sync restores the reader a project's tree lacks; test_upgrade.py adds a test that an override of an incubated capability's agent records the choice, and stages the picker. Sync's guard still runs before it reads the records or writes anything, so a command under another version than the project records still stops, and the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-002-project-owned-writers.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+    revalidated:
+      at: 2026-11-11T08:24:23Z
+      outcome: unchanged
+      unchanged-because: "In this change, test_sync.py lets a stub reader take keyword arguments, stages the picker and the records' reader in the sources it fakes, and adds a test that sync restores the reader a project's tree lacks. Project-owned content is still written only by the writers records name: the choice of an agent is written to the backbone manifest, as COR-017 names, and the reader sync restores is a propagated file of the lifecycle area, not the project's, so the requirement holds."
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T212240Z-c6177e80.yaml
+    revalidated:
+      at: 2026-11-11T08:24:25Z
+      outcome: unchanged
+      unchanged-because: In this change, test_sync.py lets a stub reader take keyword arguments, stages the picker and the records' reader in the sources it fakes, and adds a test that sync restores the reader a project's tree lacks; test_upgrade.py adds a test that an override of an incubated capability's agent records the choice, and stages the picker; test_capabilities.py adds tests of recorded choices, `agents choose` and an uninstall that leaves another place's agent; test_refs.py adds tests of the picker's findings and stages the picker. The commands that change more than the person names still offer `--dry-run`, and `agents choose` writes only the one choice it is given, so the requirement holds.

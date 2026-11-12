@@ -25,6 +25,12 @@ queries:
 - Unknown overrides: every entry under the overlay's `overrides:` names an agent
   some source ships, and a category its definition references; one the deploy
   ignores is warned of (#2468).
+- Agent definitions: from the picker's answer and the definitions alone, never
+  from deployed copies (ADR-087 point 3): a collision between capabilities no
+  choice settles, and a choice that decides nothing, are warned of; a name whose
+  winning place holds both layouts, a definition whose front matter gives
+  another name than its file's, a name the picker cannot tell, and a picker the
+  command cannot reach are errors.
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -72,6 +78,7 @@ import click
 from ruamel.yaml import YAML
 
 from project_kit import (
+    agent_definitions,
     agent_policy,
     agent_tool_access,
     agents_overlay,
@@ -185,6 +192,9 @@ class Artifact:
     # Every top-level key of the front matter, as written: an agent's key outside
     # `DEFINITION_FIELDS` is reported (ADR-086 point 2).
     fields: tuple[str, ...] = ()
+    # The name the front matter gives, as written, or None where it gives none: an
+    # agent's that is not its file's name is reported (COR-013 point 8).
+    named: str | None = None
 
 
 @dataclass(frozen=True)
@@ -243,9 +253,27 @@ TOOL_ACCESS = "tool-access"
 # and the agent deploys, so a warning (ADR-086 point 2).
 UNKNOWN_FIELD = "unknown-field"
 
+# A collision between capabilities over an agent's name that no choice of the
+# project's settles, or a choice that decides nothing (ADR-087 point 3): the first
+# capability by name wins, or the choice is idle, and an agent deploys, so a warning.
+AGENT_CHOICE = "agent-choice"
+
+# A name whose winning place holds both layouts, a definition whose front matter
+# gives another name than its file's, a name the picker cannot tell, or a picker the
+# command cannot reach (ADR-087 point 3): the deploy refuses the agent or changes
+# nothing for it, so an error.
+AGENT_DEFINITION = "agent-definition"
+
 #: The kinds of finding that warn and never fail `pkit refs validate`.
 WARNING_KINDS = frozenset(
-    {POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE, UNDECLARED_CATEGORY, UNKNOWN_FIELD}
+    {
+        POINT_CITATION,
+        OPERATIONAL_CITATION,
+        UNKNOWN_OVERRIDE,
+        UNDECLARED_CATEGORY,
+        UNKNOWN_FIELD,
+        AGENT_CHOICE,
+    }
 )
 
 
@@ -363,15 +391,22 @@ def check_corpus(
     artifacts: list[Artifact], providers: list[Provider], target_root: Path
 ) -> list[Issue]:
     """Every check over an already-loaded corpus, each finding tagged with its kind."""
+    picked, unreachable = _picked(artifacts, target_root)
+    agents = agent_definitions.agents(picked) if picked is not None else {}
     issues: list[Issue] = []
     issues.extend(_kind(_validate_bidirectional(artifacts, target_root), DRIFT))
-    issues.extend(_kind(_validate_ownership(artifacts, target_root), OWNERSHIP))
+    issues.extend(_kind(unreachable, AGENT_DEFINITION))
+    if picked is not None:
+        issues.extend(_kind(_validate_agent_definitions(picked, target_root), AGENT_DEFINITION))
+        issues.extend(_kind(_validate_agent_choices(picked), AGENT_CHOICE))
+    issues.extend(_kind(_validate_agent_names(artifacts, target_root), AGENT_DEFINITION))
+    issues.extend(_kind(_validate_ownership(artifacts, target_root, agents), OWNERSHIP))
     issues.extend(_kind(_validate_hook_closure(artifacts, providers), HOOK_CLOSURE))
     issues.extend(_kind(_validate_same_tier_collisions(providers), COLLISION))
     holds, access_issues = _tool_accesses(artifacts, target_root)
     issues.extend(_kind(access_issues, TOOL_ACCESS))
     issues.extend(_kind(_validate_definition_fields(artifacts, target_root), UNKNOWN_FIELD))
-    issues.extend(_kind(_validate_storyboards(artifacts, target_root, holds), STORYBOARD))
+    issues.extend(_kind(_validate_storyboards(artifacts, target_root, holds, agents), STORYBOARD))
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
@@ -380,7 +415,8 @@ def check_corpus(
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
-    issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
+    if picked is not None:
+        issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
     issues.extend(_kind(_validate_undeclared_categories(target_root), UNDECLARED_CATEGORY))
     return issues
 
@@ -403,10 +439,14 @@ def outcome(target_root: Path) -> Outcome:
     measured to withhold, a reader the command cannot reach, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
     model or effort the harness does not accept, an agent's `reads.patterns`
-    entry that is neither a placeholder nor a path — is an **error**. A citation of
-    a point its record does not hold is a **warning** too, read from prose as
-    drift is, and so are an override the deploy ignores and a key outside an agent
-    definition's fields, since the agent deploys regardless. `pkit refs validate`,
+    entry that is neither a placeholder nor a path, a name whose winning place
+    holds both layouts, a definition whose front matter gives another name than
+    its file's, a name the picker cannot tell, a picker the command cannot reach —
+    is an **error**. A citation of a point its record does not hold is a
+    **warning** too, read from prose as drift is, and so are an override the
+    deploy ignores, a key outside an agent definition's fields, a collision
+    between capabilities no choice settles and a choice that decides nothing,
+    since the agent deploys regardless. `pkit refs validate`,
     the focused surface, keeps its stricter exit: it fails on any finding but those
     warnings.
     """
@@ -2023,6 +2063,7 @@ def _load_one(
         capability=capability,
         policy={key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None},
         fields=tuple(str(key) for key in fm),
+        named=str(fm["name"]) if fm.get("name") is not None else None,
     )
 
 
@@ -2360,7 +2401,11 @@ def resolved_owns(
     return owned
 
 
-def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+def _validate_ownership(
+    artifacts: list[Artifact],
+    target_root: Path,
+    agents: Mapping[str, tuple[str, Path]],
+) -> list[Issue]:
     """Exactly-one-owner over agents' *resolved* `owns:` paths (per COR-013 rule 5).
 
     COR-013's overlay rule fixes that the consistency check operates on resolved
@@ -2380,21 +2425,21 @@ def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Is
       deploy primitive already surfaces that loudly by skipping the agent
       (`pkit agents` reports it); failing here as well would punish an
       upgraded-not-yet-remediated install twice for one gap.
-    - **Only the agent that actually deploys counts as an owner.** Name-collision
-      precedence (project > capability > core) means a shadowed same-name source
-      is never deployed, so it is not a second owner of its paths.
+    - **Only the agent counts as an owner.** At most one definition of a name is
+      the agent, the one the picker names in *agents* (ADR-087), so a shadowed
+      same-name definition, one that does not count and a refused one are never
+      deployed, and none is a second owner of its paths.
     """
     overlay = agents_overlay.load_overlay_values(target_root)
-    winners = agents_overlay.discover_kit_agents(target_root)
 
     owned_by_agent: dict[str, dict[str, str | None]] = {}
     locations: dict[str, str] = {}
     for art in artifacts:
         if art.kind != "agent" or not art.declared.owns:
             continue
-        winner = winners.get(art.name)
-        if winner is not None and winner[1].resolve() != art.path.resolve():
-            continue  # shadowed by name-collision precedence — never deployed
+        winner = agents.get(art.name)
+        if winner is None or winner[1].resolve() != art.path.resolve():
+            continue  # not the agent of its name: never deployed
         owned = resolved_owns(art, overlay)
         if not owned:
             continue
@@ -2620,6 +2665,7 @@ def _validate_storyboards(
     artifacts: list[Artifact],
     target_root: Path,
     holds: Mapping[Path, Callable[[str], bool]],
+    agents: Mapping[str, tuple[str, Path]],
 ) -> list[Issue]:
     """Validate the storyboard relationship per COR-016 (two-sided).
 
@@ -2736,7 +2782,7 @@ def _validate_storyboards(
                     )
                 )
                 continue
-            consumer = _find_agent(artifacts, name, ns)
+            consumer = _find_agent(artifacts, name, ns, agents)
             if consumer is None:
                 issues.append(
                     Issue(
@@ -2834,23 +2880,40 @@ def _walk_storyboard_files(target_root: Path) -> list[Path]:
 
 
 def _find_agent(
-    artifacts: list[Artifact], name: str | None, namespace: str | None
+    artifacts: list[Artifact],
+    name: str | None,
+    namespace: str | None,
+    agents: Mapping[str, tuple[str, Path]],
 ) -> Artifact | None:
     """The agent a storyboard's `consumers:` entry names.
 
     `namespace` is `core` or `project` for an agent in the agents area, or the
     capability's name for a capability's agent — capability agents load with
-    `namespace="core"`, so their capability is what identifies them.
+    `namespace="core"`, so their capability is what identifies them. An entry
+    naming no namespace names the agent of its name, the definition the picker
+    names in *agents* (ADR-087).
     """
     if not name:
         return None
+    if namespace is None:
+        winner = agents.get(name)
+        if winner is None:
+            return None
+        return next(
+            (
+                art
+                for art in artifacts
+                if art.kind == "agent" and art.path.resolve() == winner[1].resolve()
+            ),
+            None,
+        )
     for art in artifacts:
         if art.kind != "agent":
             continue
         if art.name != name:
             continue
         where = art.capability if art.capability is not None else art.namespace
-        if namespace is not None and where != namespace:
+        if where != namespace:
             continue
         return art
     return None
@@ -3410,6 +3473,105 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
                     )
                 )
     return issues
+
+
+def _picked(artifacts: list[Artifact], target_root: Path) -> tuple[Any | None, list[Issue]]:
+    """The picker's answer for the tree, or None and the error that it cannot be
+    reached, at the picker's own path (ADR-087 point 5).
+
+    Asked only where some place ships an agent, as the reader of tool access is
+    loaded only where it has a definition to read: a tree with none has no name
+    to pick, and None stands for its empty answer.
+    """
+    if not any(art.kind == "agent" for art in artifacts):
+        return None, []
+    try:
+        return agent_definitions.answer(target_root), []
+    except agent_definitions.Unreachable as exc:
+        location = (Path(".pkit") / agent_definitions.PICKER).as_posix()
+        return None, [Issue(location=location, diagnosis=f"{exc.message}.")]
+
+
+def _validate_agent_definitions(picked: Any, target_root: Path) -> list[Issue]:
+    """Each name whose agent has no one text, from the picker's answer alone
+    (ADR-087 point 3).
+
+    A name whose winning place holds both layouts is refused by the deploy and
+    the runner, and no other definition stands in. A name the picker cannot tell
+    is one the deploy changes nothing for, until the record it names is mended.
+    Each is reported at the first of the name's definitions.
+    """
+    issues: list[Issue] = []
+    for name, pick in sorted(picked.picks.items()):
+        why = pick.refused or pick.untold
+        if why is None:
+            continue
+        first = pick.definitions[0].files[0]
+        issues.append(
+            Issue(
+                location=_relative(first, target_root),
+                diagnosis=f"agent {name!r}: {why}.",
+            )
+        )
+    return issues
+
+
+def _validate_agent_choices(picked: Any) -> list[Issue]:
+    """Each collision between capabilities no choice settles, and each choice that
+    decides nothing, at the backbone manifest where a choice is recorded
+    (ADR-087 point 3, COR-017)."""
+    manifest = (Path(".pkit") / "manifest.yaml").as_posix()
+    issues: list[Issue] = []
+    for collision in picked.collisions:
+        others = ", ".join(collision.capabilities)
+        issues.append(
+            Issue(
+                location=manifest,
+                diagnosis=(
+                    f"agent {collision.name!r} is shipped by capabilities {others}, and no "
+                    f"choice of the project's settles which is the agent: capability "
+                    f"{collision.winner}'s is, the first by name (COR-017). Record a choice "
+                    f"with `pkit agents choose {collision.name} <capability>`."
+                ),
+            )
+        )
+    for idle in picked.idle_choices:
+        issues.append(
+            Issue(
+                location=manifest,
+                diagnosis=(
+                    f"the project's choice of capability {idle.capability} for agent "
+                    f"{idle.name!r} decides nothing: {idle.why} (COR-017). Record another "
+                    f"with `pkit agents choose`, or remove the entry under `agent_choices`."
+                ),
+            )
+        )
+    return issues
+
+
+def _validate_agent_names(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Each agent's definition whose front matter gives another name than its
+    file's: the deploy and the runner refuse it (COR-013 point 8)."""
+    return [
+        Issue(
+            location=_relative(art.path, target_root),
+            diagnosis=(
+                f"its front matter names the agent {art.named!r}, not {art.name!r}, the name "
+                f"of its file (COR-013 point 8): write `name: {art.name}`, or rename the file "
+                "to the name it gives."
+            ),
+        )
+        for art in artifacts
+        if art.kind == "agent" and art.named is not None and art.named != art.name
+    ]
+
+
+def _relative(path: Path, target_root: Path) -> str:
+    """*path* relative to *target_root* where it lies there, else as it is."""
+    try:
+        return path.relative_to(target_root).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _validate_unknown_overrides(target_root: Path) -> list[Issue]:

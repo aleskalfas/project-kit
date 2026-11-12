@@ -456,6 +456,77 @@ def agents_adopt(agent_name: str, yes: bool) -> None:
     click.echo("\n".join(lines))
 
 
+@agents.command("choose")
+@click.argument("agent_name", metavar="AGENT")
+@click.argument("capability", metavar="CAPABILITY")
+def agents_choose(agent_name: str, capability: str) -> None:
+    """Record the project's choice of CAPABILITY's definition as AGENT (COR-017).
+
+    Where two or more installed capabilities ship an agent's name, the one the
+    project chose is the agent, else the first by name. The choice is kept in
+    `.pkit/manifest.yaml` under `agent_choices`, one for each agent's name, and
+    replaces one recorded before; uninstalling the capability drops it.
+
+    Refused, with nothing written, where the choice would decide nothing: a
+    capability that is not installed, one that ships no agent of that name, and
+    one whose definition of it the project skipped. The project's place and
+    core's are not chosen, since COR-013 point 8 orders them already: the
+    project's wins over every capability's, and core's yields to them. The next
+    deploy, at `pkit sync`, deploys the agent the choice names.
+    """
+    refuse_inside_migration("agents choose")
+    from project_kit import agent_definitions
+    from project_kit.manifest import AGENT_CHOICES_KEY, record_agent_choice
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if capability in ("project", "core"):
+        raise click.ClickException(
+            f"{capability} is no capability, and its place is not chosen: the project's "
+            "definition wins over every capability's, and core's yields to them "
+            "(COR-013 point 8). Name an installed capability that ships the agent."
+        )
+    records = agent_definitions.records(target_root)
+    if records.registry_unreadable is not None:
+        raise click.ClickException(
+            f"cannot record the choice: {records.registry_unreadable}. Nothing was written."
+        )
+    if capability not in records.installed:
+        raise click.ClickException(
+            f"capability {capability!r} is not installed, so a choice of it would decide "
+            "nothing. Nothing was written."
+        )
+    pick = agent_definitions.answer(target_root).picks.get(agent_name)
+    place = f"{agent_definitions.CAPABILITY_PLACE}{capability}"
+    definition = next(
+        (d for d in (pick.definitions if pick is not None else ()) if d.place == place), None
+    )
+    if definition is None:
+        raise click.ClickException(
+            f"capability {capability!r} ships no agent named {agent_name!r}, so a choice of "
+            "it would decide nothing. Nothing was written."
+        )
+    if not definition.counts:
+        raise click.ClickException(
+            f"a choice of capability {capability!r} for agent {agent_name!r} would decide "
+            f"nothing: {definition.why_not}. Nothing was written."
+        )
+    written = record_agent_choice(target_root, agent_name, capability)
+    where = f".pkit/manifest.yaml, `{AGENT_CHOICES_KEY}`"
+    if written:
+        click.echo(f"  recorded     capability {capability}'s {agent_name} is the agent ({where})")
+    else:
+        click.echo(f"  unchanged    capability {capability}'s {agent_name} is already chosen")
+    if pick is not None and any(d.place == "project" for d in pick.definitions):
+        click.echo(
+            f"  note         the project ships its own {agent_name}, which wins while it does "
+            "(COR-013 point 8)"
+        )
+    if written:
+        click.echo("  The next deploy, at `pkit sync`, deploys it.")
+
+
 class _AskedToStop(BaseException):
     """`SIGTERM` or `SIGHUP` reached `agents run`. Raised so the run stops its
     runner as an interrupt would, rather than leaving it behind."""
@@ -5424,7 +5495,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # bundle ships older than the project records (point 7), with no override:
     # a transition never moves a recorded version down. The record is read once,
     # before anything is written, and serves the collision flow below.
-    record = caps.read_capability_record(target_root, name)
+    record = caps.read_capability_record(target_root, name, release=source_kit)
     move = capability_move(name, record.version, capability_source.package.version)
     refuse_components_bundled_older(
         [move] if move is not None else [], command=f"capabilities upgrade {name}"
@@ -5499,6 +5570,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         capability_source,
         skipped=prior_skipped,
         released=caps.shipped_capability_names(target_root, source_kit),
+        release=source_kit,
     )
 
     if new_collisions and not interactive:
@@ -5552,6 +5624,11 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     # Merge prior + new skip state. De-dup by (kind, name).
     merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped).difference(overrides)))
+    # An override of an agent another capability ships records the project's
+    # choice of this one for the name (COR-017).
+    chosen = caps.overridden_agent_choices(
+        new_collisions, {artefact for kind, artefact in overrides if kind == "agent"}, name
+    )
 
     # The transition of one capability (ADR-065 point 4): its manifest moves
     # under project/, the skips chosen above are recorded and each override
@@ -5571,6 +5648,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         dry_run=dry_run,
         record=record,
         overridden=overridden,
+        chosen=chosen,
     )
     _echo_capability_bound(target_root, name, rules_before, capability_source.path)
 
@@ -5673,12 +5751,18 @@ def refs_validate() -> None:
     overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
     undeclared = [issue for issue in found if issue.kind == refs_mod.UNDECLARED_CATEGORY]
     unknown_fields = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_FIELD]
+    choices = [issue for issue in found if issue.kind == refs_mod.AGENT_CHOICE]
     warnings = [
         issue
         for issue in found
         if issue.kind in refs_mod.WARNING_KINDS
         and issue.kind
-        not in (refs_mod.UNKNOWN_OVERRIDE, refs_mod.UNDECLARED_CATEGORY, refs_mod.UNKNOWN_FIELD)
+        not in (
+            refs_mod.UNKNOWN_OVERRIDE,
+            refs_mod.UNDECLARED_CATEGORY,
+            refs_mod.UNKNOWN_FIELD,
+            refs_mod.AGENT_CHOICE,
+        )
     ]
     lines = [
         cli_render.style(
@@ -5736,6 +5820,17 @@ def refs_validate() -> None:
             )
         )
         for issue in unknown_fields:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if choices:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(choices)} warning(s) of an agent's name no choice settles, or a choice "
+                "that decides nothing, which do not fail the check:",
+            )
+        )
+        for issue in choices:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     click.echo("\n".join(lines) + "\n", nl=False)
     if issues:
@@ -7583,7 +7678,7 @@ def install_capability_cmd(
         return
 
     # Pre-flight: collision detection.
-    collisions = caps.detect_collisions(target_root, capability_source)
+    collisions = caps.detect_collisions(target_root, capability_source, release=source_kit)
     skipped: list[tuple[str, str]] = []
     # The project's artefacts an override replaces (COR-017), removed once the
     # capability's are in place.
@@ -7617,6 +7712,20 @@ def install_capability_cmd(
         dry_run=dry_run,
     )
     caps.apply_overrides(target_root, overridden, dry_run=dry_run)
+    # An override of an agent another capability ships records the project's
+    # choice of this one for the name, once it is registered (COR-017). Only an
+    # agent's own answer counts: a skill of the same name may have been overridden
+    # while the agent was skipped.
+    overridden_agents = {
+        finding.artifact_name
+        for finding in collisions
+        if finding.artifact_kind == "agent" and ("agent", finding.artifact_name) not in skipped
+    }
+    caps.record_agent_choices(
+        target_root,
+        caps.overridden_agent_choices(collisions, overridden_agents, name),
+        dry_run=dry_run,
+    )
 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
@@ -7631,7 +7740,7 @@ def install_capability_cmd(
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
     _echo_capability_bound(target_root, name, None, capability_source.path)
     # The defaults its write categories declare, before the deploy (ADR-088 point 5).
-    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7684,7 +7793,7 @@ def _install_capability_in_source(
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
     _echo_capability_bound(target_root, name, None, capability_source.path)
-    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
@@ -7692,7 +7801,7 @@ def _install_capability_in_source(
 
 
 def _write_declared_defaults(
-    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool
+    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool, release: Path
 ) -> None:
     """Provision the capability's default queries, then write each default its write
     categories declare into the agents overlay, before the deploy (ADR-088 point 5).
@@ -7705,9 +7814,12 @@ def _write_declared_defaults(
     left undefined and the fill commands named. A query with no answer, or an
     answer refused, leaves its category undefined, saying why. Install never fails
     on a default. A dry run asks no query and provisions nothing: it lists each
-    category's state. A missing overlay gets no default."""
+    category's state. A missing overlay gets no default. The other agents whose
+    grants a default may not overlap are the picker's, loaded from *release*, the
+    `.pkit/` tree the command brings (ADR-087 point 2); a picker it cannot reach
+    leaves every category undefined, saying why."""
+    from project_kit import agent_definitions, provisioning, upgrade
     from project_kit import agents_overlay as ao
-    from project_kit import provisioning, upgrade
     from project_kit import write_categories as wcat
     from project_kit.command_runner import registered_commands, resolve_command
 
@@ -7742,9 +7854,15 @@ def _write_declared_defaults(
             click.echo(f"  {verb:<12} {detail}")
     # Step 5: the defaults.
     try:
-        outcomes = ao.plan_defaults(target_root, categories, document, moves=False)
+        outcomes = ao.plan_defaults(target_root, categories, document, moves=False, release=release)
     except wcat.OverlayDoesNotRead as exc:
         click.echo(f"  {'skipped':<12} the capability's defaults: the overlay does not read: {exc}")
+        return
+    except agent_definitions.Unreachable as exc:
+        click.echo(
+            f"  {'skipped':<12} the capability's defaults, left undefined: {exc.message}. "
+            f"Then run {fill}."
+        )
         return
     held = [o for o in outcomes if o.kind == ao.WRITE and o.over_content]
     taken = [o for o in outcomes if o.kind == ao.WRITE and not o.over_content]
@@ -7845,7 +7963,9 @@ def _refuse_collisions_in_place(target_root: Path, capability_source: Capability
     """
     from project_kit import capabilities as caps
 
-    collisions = caps.detect_incubated_collisions(target_root, capability_source)
+    collisions = caps.detect_incubated_collisions(
+        target_root, capability_source, release=find_source_kit()
+    )
     if not collisions:
         return
     click.echo(
@@ -8101,7 +8221,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
         )
     )
     _echo_capability_bound(target_root, name, None, capability_source.path)
-    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
@@ -8641,7 +8761,7 @@ def uninstall_capability_cmd(
 
     # Reference safety check.
     if not force:
-        references = caps.find_references(target_root, name)
+        references = caps.find_references(target_root, name, release=source_kit)
         if references:
             click.echo(
                 "\n  "
@@ -8755,9 +8875,12 @@ def uninstall_capability_cmd(
     if not dry_run:
         # Re-run installed adapter primitives so the harness drops stale
         # entries of a deleted subtree (e.g., deploy-skills.sh's "stale
-        # removal" pass). A subtree kept on disk was already undeployed
-        # inside `uninstall_capability`, through each adapter's undeploy
-        # primitive, since a deploy re-run cannot see it as gone.
+        # removal" pass), and the agents deploy removes each copy written from
+        # the capability's definitions, which no longer count once it is
+        # unregistered, kept on disk or not (ADR-087 point 4). The skills of a
+        # subtree kept on disk were already undeployed inside
+        # `uninstall_capability`, through each adapter's undeploy primitive,
+        # since a skills deploy re-run cannot see it as gone.
         from project_kit import install as install_mod
 
         ctx = install_mod.InstallContext(
@@ -9249,7 +9372,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     type=str,
     default=None,
     help="Where the agent lives: core, project or a capability name. "
-    "Default: the agent the deploy resolves — project, capabilities by name, then core.",
+    "Default: the definition the picker names as the agent, the one the deploy writes.",
 )
 @click.option(
     "--scenario",

@@ -154,7 +154,7 @@ A project already current returns after these checks, before step 1, and only wr
    - the refusal of a clash of area names (point 13), and beside it the refusal of a file at the capabilities' rules index's path that lacks its marker (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 2)
    - compatibility resolution (COR-010)
    - the dependency gates and the collision flow (point 6)
-2. **The target is recorded:** `backbone_version` becomes the target. `completed_version` keeps its value, or stays missing. Then each capability manifest still at its root moves under `project/` (point 2). Each skip chosen in step 1 is recorded in its capability's manifest (point 6).
+2. **The target is recorded:** `backbone_version` becomes the target. `completed_version` keeps its value, or stays missing. Then each capability manifest still at its root moves under `project/` (point 2). Each skip chosen in step 1 is recorded in its capability's manifest, and each override of another capability's agent as the project's choice for that agent's name, in the backbone manifest beside the registry (point 6).
 3. **Propagation at the target,** through the propagation step: the backbone's trees, every adapter, and every shipped capability with its skips. An adapter the target adds is registered here. Then `.pkit/.gitignore` is rendered, so a migration reads the target's render.
 4. **Backbone migrations,** from `completed_version`, or every one when it is missing (point 5). The lower bound is read in PEP 440 order, so a completion at a candidate sits below its final release's folder, and the next transition runs that folder again. Steps 5 and 6 read each component's lower bound the same way (refinement per ADR-089 point 5).
 5. **Adapter migrations,** each from the version its manifest records. Their scripts are read from the bundle, as a capability's are, so the adapter copy carries no `migrations/`. Each adapter is recorded at its bundled version when its migrations finish.
@@ -177,7 +177,7 @@ A project already current returns after these checks, before step 1, and only wr
 - **First install records the same two states.** It writes the target before it copies anything, registers the adapters after the copy, and writes `completed_version` last. The next `pkit upgrade` finishes an interrupted install, or, after an `init` run by a release candidate, the candidate's upgrade through the bypass does (refinement per ADR-089 point 7). That upgrade also pins the project by ADR-064's default, while a finished init writes no pin unless a release candidate ran it (ADR-064 point 3).
 - **A transition of one capability** (`pkit capabilities upgrade <name>`) runs in the same order for that capability alone (COR-010). It writes neither of the backbone's two keys. Its steps:
   1. the guard (point 7), then step 1 for that capability. Each may refuse, and none writes.
-  2. its manifest moves under `project/` where it is still at the root, and each skip chosen in step 1 is recorded
+  2. its manifest moves under `project/` where it is still at the root, each skip chosen in step 1 is recorded, and each override of another capability's agent is recorded as the project's choice for that agent's name (point 6)
   3. steps 3, 6 and 8, for that capability
 
   After them, outside the transition, it runs the questions of the points that capability defines and of those its contributions reach (COR-061 point 2), as `pkit capabilities install` and `register` do after their deploy.
@@ -231,7 +231,7 @@ The running pkit is the one that runs the transition. While the migrations run, 
 - **A new collision** is a skill or agent name that a shipped capability's target version ships and another installed artefact already uses. A name the capability's installed copy holds, or its manifest records as skipped, is not new.
 - **The flow is COR-017's install-time flow.** In step 1 a person chooses, for each new collision, override, skip or inspect:
   - **skip:** the copy leaves the capability's artefact out. The capability's manifest records it in `backend_state.skipped` in step 2, before the copy, so an interrupted transition does not ask again.
-  - **override:** the capability's artefact replaces the project's colliding one, which git can recover (COR-017). Nothing is recorded.
+  - **override:** the capability's artefact replaces the project's colliding one, which git can recover (COR-017). Nothing is recorded, except for an override of another capability's agent: that removes nothing, and step 2 records the capability being moved as the project's choice for that agent's name, in the backbone manifest beside the registry, in place of any earlier choice (COR-017, "Collision prevention").
   - **inspect:** shows the diff and asks again
 - **Two consent shapes:** a transition of the backbone asks where a person can answer (point 4). `pkit capabilities upgrade` asks only under `--interactive`, and without it refuses and names the flag.
 - **With nobody to answer,** a transition of the backbone refuses before it writes anything. It names two ways on: run it again where a person can answer, or rename the project's artefact.
