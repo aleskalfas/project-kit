@@ -468,7 +468,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 **Its grant.** It writes within the location, which the overlay category `visual-communication.work` grants it ([visual-communication:DEC-030-design-agents] point 5):
 
 - **Installing the capability writes it** into the agents overlay, as the answer of [`pkit visual work-paths`](#pkit-visual-work-paths), such as `visual/`. An install from before the category takes it from `pkit agents reconcile --write` ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)).
-- **A value the project sets is kept.** Change the line to name a folder of helpers too, or a location you moved. An empty list, `[]`, switches the designer off: it deploys, and writes nothing.
+- **A value the project sets is kept.** Change the line to name a folder of helpers too, or a location you moved. An empty list you set, `[]`, switches the designer off: it deploys, and writes nothing.
 - **Never written, though the grant reaches them:** a released version of a library, or a copy of a library the capability ships, which only `pkit visual add` writes. What a command writes, such as a lock or a findings record, stays the command's.
 
 To use it:
@@ -477,7 +477,9 @@ To use it:
 2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). It never changes what the piece says to fit what a library draws.
 3. **Read what it hands back.** Before it stops, [the reviewer](#the-reviewer) reads every page in every language, mode and size. Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It mends what it judges right, then tells you what it changed and why, with the reviewer's report as written.
 
-In mending, it asks you only where a fix would change what the piece says, needs a write it may not make, such as to a library the capability ships, or two rounds of mending did not clear a finding. Where its grant names no location yet, it asks you where the visual work goes. You answer, and it makes the change.
+In mending, it asks you only where a fix would change what the piece says, needs a write it may not make, such as to a library the capability ships, or two rounds of mending did not clear a finding. You answer, and it makes the change.
+
+Where its grant names no location yet, it asks you where the visual work goes, and writes nothing. You record the location, with `pkit visual add foundations --location <path>` ([How a command finds it](files.md#how-a-command-finds-it)), and move its grant there, with `pkit agents reconcile --write` ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)). The next `pkit sync` deploys it with the grant ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 ## The reviewer
 

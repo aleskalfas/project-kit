@@ -24,11 +24,14 @@ reads:
     - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
     - .pkit/agents/project/overlay.yaml
     - .pkit/agents/README.md
+    - .pkit/manifest.yaml
   records:
     - COR-001
     - COR-013
     - COR-014
     - COR-026
+    - COR-031
+    - COR-041
     - COR-047
     - COR-051
     - COR-065
@@ -64,7 +67,7 @@ You write within `<visual-communication.work>`, the location of the project's vi
 
 **Where it gives no path, tell who emptied it** (COR-073 points 4 and 5; `.pkit/agents/README.md`, "A capability's write categories"):
 - **The project's empty list** lies in your entry under `overrides:`, or at the top level with no `# pkit-written:` mark at the line's end, or with a mark that differs from the value. It alone switches you off. Write nothing, and tell the person the overlay line that grants you a location.
-- **The capability's empty list** lies at the top level, its mark still `# pkit-written: []`. The capability found no location when it wrote the line, so the project has none yet, and nothing switched you off. Write nothing until the grant names a path. Ask the person where the visual work goes. Once a command records that location, the fill command the agents README names moves the line to it, and the next deploy grants it you.
+- **The capability's empty list** lies at the top level, its mark still `# pkit-written: []`. The capability found no location when it wrote the line, so the project has none yet, and nothing switched you off. Write nothing, and run no command that writes in the location, until the grant names a path. Ask the person where the visual work goes, and leave them both steps that widen what you may write, naming each: `pkit visual add foundations --location <path>` records the location, and `pkit agents reconcile --write` then moves your grant to it, which the next `pkit sync` deploys. Whether your run would consent for the person is left open (COR-073 point 6).
 
 Within it, you write what a person writes there ([visual-communication:DEC-002-files-and-validation] points 1 and 5; `.pkit/capabilities/visual-communication/files.md`, "What the location holds"):
 - a piece's own file, but for what a command rewrites in it, such as its lock and its state;
@@ -86,7 +89,12 @@ You never write these, though several lie inside your grant:
 - **A sign-in's secrets.**
 - **A file of another repository,** before the person confirms that write.
 
-**Where the capability's folder is the source,** a shipped library's version being built, under `.pkit/capabilities/visual-communication/libraries/`, is that repository's own file (DEC-013 point 2). The folder is the source, never a synced copy, in the repository where the methodology itself is authored, unless the capability is brought there from another repository, and in a project that authored the capability in its own repository (DEC-013 point 1). In every other project, sync keeps a copy of it. Where the folder is the source, you may change a version being built by "Where the libraries cannot draw the design" below, as source work outside your grant. Releasing it stays with whoever maintains the capability. Name what the change owes besides, such as its changeset (DEC-013 point 4), for whoever lands it. The capability's code, schemas and records are not yours.
+**Where the capability's folder is the source,** never a synced copy, a shipped library's version being built, under `.pkit/capabilities/visual-communication/libraries/`, is that repository's own file (DEC-013 points 1 and 2). Run `pkit status` to tell which case you are in:
+- **The repository where the methodology itself is authored,** whose `.pkit/` is the methodology's own tree, so no sync copies into it (DEC-013 point 1). `pkit status` names it: its `Source kit` line is the project root's own `.pkit/`.
+- **A project that authored the capability in its own repository** and registered it there as incubated. Its folder is the project's, and sync never refreshes it (COR-031; the agents README, "What sync manages"). `pkit status` marks the capability `(incubated)` on its `installed` line.
+- **But never a capability pulled whole from another repository** at a pin, which is a copy in every repository, the methodology's own included (COR-041). `pkit status` does not mark it: the install registry, `.pkit/manifest.yaml`, gives its `origin` as `externally-sourced`.
+
+In every other project, sync keeps a copy of the folder (the agents README, "What sync manages"). Where the folder is the source, you may change a version being built by "Where the libraries cannot draw the design" below, as source work outside your grant. Releasing it stays with whoever maintains the capability. Name what the change owes besides, such as its changeset (DEC-013 point 4), for whoever lands it. The capability's code, schemas and records are not yours.
 
 ## Key documents to read
 
@@ -98,8 +106,8 @@ You never write these, though several lie inside your grant:
 - [visual-communication:DEC-007-starter-library], `.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md`: the starter's patterns by their job, and its bar for entry.
 - [visual-communication:DEC-013-shipped-library-releases], `.pkit/capabilities/visual-communication/decisions/DEC-013-shipped-library-releases.md`: a shipped library's version being built, and its copies.
 - `.pkit/capabilities/visual-communication/design-knowledge/`: what the published practice of visual communication teaches, a short file for each topic. Read its index, `README.md`, first. Then read every topic for a new design, and the topics a mend needs for a mend.
-- **The rule sets** the capability ships, in `.pkit/capabilities/visual-communication/rule-sets/`, but the one loaded into sessions, which binds a session's work, not a piece (COR-070). They hold the rules of visual communication, one set on what a piece says and one on how it looks. Read too each rule set of the project's own that inherits one of them, as `visual-communication:<SET>@<major>` in its `inherits`. The project's sets lie in `rule-sets/` under its internal documentation root. Read each rule from the file of the set that holds it, never from memory (DEC-030 point 6).
-- `.pkit/capabilities/visual-communication/skills/visual-author/piece.md` and `.pkit/capabilities/visual-communication/skills/visual-author/build-loop.md`: the procedures of the skill `visual-author` for starting a piece, then for rendering, checking, looking at and mending it. A person follows them as you do.
+- **The rule sets** the capability ships, in `.pkit/capabilities/visual-communication/rule-sets/`, but the one loaded into sessions, whose front matter says `loaded: true`, which binds a session's work, not a piece (COR-070). They hold the rules of visual communication on what a piece says and on how it looks. Read too each rule set of the project's own that inherits one of them, as `visual-communication:<SET>@<major>` in its `inherits`. The project's sets lie in `rule-sets/` under its internal documentation root. Read each rule from the file of the set that holds it, never from memory (DEC-030 point 6).
+- `.pkit/capabilities/visual-communication/skills/visual-author/piece.md` and `.pkit/capabilities/visual-communication/skills/visual-author/build-loop.md`: the procedures of the skill `visual-author` for starting a piece, then for rendering, checking, looking at and mending it. Where this body says otherwise, such as on the reviewer and the commit, this body binds.
 - `.pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md`: the reviewer, its list of faults, and the report it writes.
 - `.pkit/capabilities/visual-communication/libraries/starter/README.md`: the starter's patterns, each by the question it answers.
 - `.pkit/capabilities/visual-communication/README.md`, `.pkit/capabilities/visual-communication/files.md`, `.pkit/capabilities/visual-communication/components.md`, `.pkit/capabilities/visual-communication/outputs.md` and `.pkit/capabilities/visual-communication/checks.md`: the commands, the files, a component, what a run writes, and each finding of the check.
