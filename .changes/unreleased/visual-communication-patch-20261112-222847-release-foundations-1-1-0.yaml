@@ -3,4 +3,4 @@ kind: patch
 custom:
   category: Added
 body: >
-  `foundations` 1.1.0, a library the capability ships, is released: its files are fixed from now on, and the capability records their hash.
+  `foundations` 1.1.0, a library the capability ships, is released: its files are fixed from now on, and the capability records their hash. `pkit visual add foundations` now takes it, where it took the release 1.0.0; `pkit visual add foundations@1.0.0` still takes the older one.
