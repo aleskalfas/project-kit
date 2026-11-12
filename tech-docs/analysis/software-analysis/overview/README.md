@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=5 fingerprint=sha256:81732abdcbee124c95a0b58b4c3d48a5ec5d2c705df97b6646c2dc2e8cabcaa4 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:7485790d6b228d7f7f2dc6ed2b8e6b85e738c36762081e8761445c8639b26ede -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -57,7 +57,7 @@ Keep the analysis true as the project changes, revised before a change is built 
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| [ACT-project-management — Project management](../use-case-model/actors/ACT-project-management.md) | The project-management capability, where installed, which starts the analysis-resolver agent the project granted, in a run nobody can answer the agent during. | [020-revalidate](#020-revalidate) |
+| [ACT-project-management — Project management](../use-case-model/actors/ACT-project-management.md) | The project-management capability, where installed, which starts the analysis-resolver agent the project granted, in a run with nobody to ask. | [020-revalidate](#020-revalidate) |
 | core:ACT-adopter — Adopter | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-describe](#010-describe) |
 | core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-describe](#010-describe), [020-revalidate](#020-revalidate) |
 | core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-describe](#010-describe), [020-revalidate](#020-revalidate) |

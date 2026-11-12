@@ -90,7 +90,7 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 ## What it never does
 
 - **Apply anything.** Its definition keeps it read-only on the repository. It never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`).
-  - **What holds it:** its definition alone. Nothing at run time confines its Write tool or its shell to the agent workspace, outside a fixer run that a work-tracking command confines. So never ask it to apply a change.
+  - **What holds it:** its definition alone. Nothing at run time confines its Write tool or its shell to the agent workspace, outside a confined fixer run. So never ask it to apply a change.
   - **Why:** for what this agent proposes, the answer a page carries is a person's decision (COR-050 point 3). This agent has no tool for asking the person, and judges pages besides.
   - **Where its proposals land:** in the agent workspace, under `.agent-workspace/living-docs/`, as diffs applied with `git apply` and pull-request bodies.
   - **Its one write outside the workspace:** a reader-review posted as a pull-request comment, on request.

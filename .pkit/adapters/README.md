@@ -192,7 +192,7 @@ An adapter whose harness reaches the files another way needs a key of its own, o
 
 ## The agent runner
 
-A command that starts an agent nobody can answer during its run never calls a harness. It asks the backbone's run command, `pkit agents run`, which starts the runner the project's adapter registers. The runner starts the harness, so the tie to a harness's command line lives in its adapter, as every other tie does. project-management's `review-pr` starts its reviewers this way, and its `fix-drift` the fixers a project granted, when [its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift) says.
+A command that starts an agent nobody can answer during its run never calls a harness. It asks the backbone's run command, `pkit agents run`, which starts the runner the project's adapter registers. The runner starts the harness, so the tie to a harness's command line lives in its adapter, as every other tie does. project-management's `review-pr` starts its reviewers this way, and its `fix-drift` starts the fixers a project granted, when [its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift) says.
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by a file's name:
 
@@ -210,7 +210,9 @@ The request then takes one of two forms:
 - **Unconfined,** the form of the review command's runs, and of a drift command's fixers where the confined form does not hold them. It holds `folder`, an absolute path, where the run runs under the person's and the project's settings.
 - **Confined,** the form every fixer's run takes where that form is built and the harness holds it. It has no `folder` and no `local_settings_from`, and holds `confined`, an object the backbone fills in once it has made the run's clone.
 
-**The person's local settings:** an unconfined request may also hold `local_settings_from`, the absolute path of the person's checkout. The runner then copies the file its harness keeps for one checkout, out of git, from there into `folder` before the harness starts. It copies nothing where `folder` already holds that file, and refuses the run where a link lies on the way. Only the runner knows which file it is, so no capability names a harness's file.
+An unconfined request may also hold this key:
+
+- `local_settings_from`: the absolute path of the person's checkout. The runner then copies the file its harness keeps for one checkout, out of git, from there into `folder` before the harness starts. It copies nothing where `folder` already holds that file, and refuses the run where a link lies on the way. Only the runner knows which file it is, so no capability names a harness's file.
 
 When the drift command starts a fixer, and in which form, is project-management's ([its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift)).
 

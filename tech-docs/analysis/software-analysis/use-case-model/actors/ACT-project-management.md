@@ -2,7 +2,7 @@
 id: ACT-project-management
 name: Project management
 status: active
-summary: "The project-management capability, where installed, which starts the analysis-resolver agent the project granted, in a run nobody can answer the agent during."
+summary: "The project-management capability, where installed, which starts the analysis-resolver agent the project granted, in a run with nobody to ask."
 needs:
   - Have the agent the project granted propose an answer for each stale artefact of the analysis, with nobody to ask.
 pkit:
@@ -22,7 +22,7 @@ pkit:
 
 # ACT-project-management — Project management
 
-The project-management capability, where installed, which starts the analysis-resolver agent the project granted, in a run nobody can answer the agent during. It is an actor because it triggers the [analysis](../../glossary.md#term-analysis--analysis)'s own agent on its own occasion ([DEC-001 point 2](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
+The project-management capability, where installed, which starts the analysis-resolver agent the project granted, in a run with nobody to ask. It is an actor because it triggers the [analysis](../../glossary.md#term-analysis--analysis)'s own agent on its own occasion ([DEC-001 point 2](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
 
 **Occasions:** whenever a person runs its drift command at a terminal, on one commit of the [default branch](../../../core/glossary.md#term-default-branch--default-branch) ([project-management DEC-056 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 
