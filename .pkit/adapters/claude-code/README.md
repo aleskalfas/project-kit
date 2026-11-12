@@ -23,6 +23,7 @@ pkit:
       record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
       source: [claude-code-hooks, working-run-probe]
 ---
 
@@ -168,7 +169,7 @@ The one place `claude` is started for an agent a command starts, which nobody ca
 
 It runs under the system `python3` with the standard library only, as the permission hook does, so it needs nothing to provision. In the confined form it runs the deploy's resolver, which runs on `uv`, as the deploy does.
 
-**Two forms.** A request with `folder` takes the unconfined form (ADR-066 point 10). The review command's runs take it, and so does a drift command's run that a person started at a terminal and watches, in a working copy the drift command makes. A request with `confined` takes the confined form, the one a drift command's run nobody watches takes where the harness holds it, and the drift command starts no such run yet. A request with both, or with any other key the runner does not run, is refused.
+**Two forms.** A request with `folder` takes the unconfined form (ADR-066 point 10). The review command's runs take it, and so do the drift command's fixers, in a clone the drift command makes. A request with `confined` takes the confined form, which every fixer's run takes where that form is built and the harness holds it. When the drift command starts a fixer, and in which form, is project-management's to say ([its README, "Starting the fixers"](../../capabilities/project-management/README.md#starting-the-fixers--fix-drift)). A request with both, or with any other key the runner does not run, is refused.
 
 **The marker** (ADR-066 point 8). The runner refuses every request when `PKIT_AGENT_RUN` is in its own environment, even empty, and starts nothing. It sets `PKIT_AGENT_RUN=1` in the harness's environment for every run, of either form. So every process of a run inherits it, and a run cannot start another agent through the runner.
 

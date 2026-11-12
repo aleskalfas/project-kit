@@ -106,6 +106,7 @@ pkit:
         - .pkit/agents/hooks.md#pkit-hooks-who-needs-hook
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/README.md#the-agent-runner
+        - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
         - .pkit/adapters/README.md#harness-requirements
         - .pkit/adapters/README.md#what-an-adapter-declares-as-data
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
@@ -1107,14 +1108,14 @@ With the bounds as they stand, a dry run takes at most `98` seconds, and a landi
 
 ## Agent runs
 
-A command that starts an agent never calls a harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). It asks the backbone, and the backbone starts the runner the project's adapter registers, which starts the harness (`src/project_kit/agent_runs.py`). project-management's `review-pr` starts its reviewers this way, and its `fix-drift` the granted fixers, where a person started it at a terminal. What the runner owes is in [the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner). How the backbone runs it is the agent-run policy in [the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run).
+A command that starts an agent never calls a harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). It asks the backbone, and the backbone starts the runner the project's adapter registers, which starts the harness (`src/project_kit/agent_runs.py`). project-management's `review-pr` starts its reviewers this way, and its `fix-drift` the granted fixers, when [its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift) says. What the runner owes is in [the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner). How the backbone runs it is the agent-run policy in [the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run).
 
 ### `agents run <agent> (--folder <dir> | --commit <sha> --rules-of <capability>:<command> --files-to <dir>) --limit <seconds> [--effort <level>] [--json]`
 
 Runs `<agent>` once, on the brief read from standard input, and ends it at `<seconds>`. Two forms:
 
-- **Unconfined, with `--folder`,** the form the review command's runs take, and a drift command's run a person watches (ADR-066 point 10): the run takes the person's and the project's settings in `<dir>`, and starts in the mode those settings or the harness choose, as a session started there would.
-- **Confined, with `--commit`, `--rules-of` and `--files-to` together** (ADR-066 points 3 to 8), the form a drift command's run nobody watches takes where the harness holds it:
+- **Unconfined, with `--folder`,** the form the review command's runs take, and a drift command's fixers where the confined form does not hold them (ADR-066 point 10): the run takes the person's and the project's settings in `<dir>`, and starts in the mode those settings or the harness choose, as a session started there would.
+- **Confined, with `--commit`, `--rules-of` and `--files-to` together** (ADR-066 points 3 to 8), the form every fixer's run takes where that form is built and the harness holds it:
   - **The clone.** The run works in a fresh clone of the repository at `<sha>`, a full commit id the repository holds. The clone shares no object file with the person's repository, and lies in a folder of the backbone's that only the person's account writes, outside every working tree: `$XDG_STATE_HOME/pkit/agent-runs`, else `~/.local/state/pkit/agent-runs`. A clone a killed run left behind is removed first. The clone is provisioned as the project's checks are, then given its workspace, `.agent-workspace/`, with the shell's temp folder inside it. A commit that holds anything at that path refuses the run.
   - **The rules.** The rules `<capability>` declares for the runs `<command>` starts, read from the clone and projected through the shared decision core (`pkit agents rules`, below). Rules that cannot be held refuse the run.
   - **The run's `pkit`.** A `pkit` of the run's own, first on its path, outside every folder the run writes, runs this backbone's code from the clone's root, with git pointed at the clone's own git folder and `uv` reading no configuration file.
