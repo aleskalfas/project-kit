@@ -1693,7 +1693,7 @@ pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECO
 
 - **At a terminal,** each granted fixer runs watched. Before the first starts, the command says that the fixers run under your settings, and that Ctrl-C stops the run. You see which fixers start and how each ends.
 - **With nobody at a terminal,** it starts no fixer and writes nothing. The project manager runs it so after each merge into the default branch, in the session that landed the merge (the pm skill's `fix-drift` sub-procedure). It prints each stale artefact a granted fixer would take, as `stale: <fixer> would take N artefact(s): …`, then `no fixer started: nobody is at a terminal`, and the command to run.
-- **A fixer never starts with nobody watching.** [project-management:DEC-056-drift-fixers] point 7 decides a switch of the project's that you alone turn on, to start the fixers so after each merge in the form a watched fixer takes. [project-kit#3050](https://github.com/aleskalfas/project-kit/issues/3050) builds it.
+- **A fixer never starts with nobody watching.** [project-management:DEC-056-drift-fixers] point 7 decides a switch of the project's that you alone turn on. With it on, the command starts the granted fixers whenever it runs with nobody at a terminal, such as the project manager's run after each merge, in the form point 7 sets. [project-kit#3050](https://github.com/aleskalfas/project-kit/issues/3050) builds it.
 
 **What it reads.** It pins the default branch's commit, as `pkit repository base` resolves it, and reads everything that decides a dispatch at that commit, in a detached copy of it, never in your checkout:
 
