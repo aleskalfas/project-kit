@@ -471,6 +471,8 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 - **A value the project sets is kept.** Change the line to name a folder of helpers too, or a location you moved. An empty list you set, `[]`, switches the designer off: it deploys, and writes nothing.
 - **Never written, though the grant reaches them:** a released version of a library, or a copy of a library the capability ships, which only `pkit visual add` writes. What a command writes, such as a lock or a findings record, stays the command's.
 
+Where its grant names no location yet, it asks you where the visual work goes, writes nothing, and stops. You record the location with `pkit visual add foundations --location <path>`, which also brings the foundations library in ([`pkit visual add <library>`](#pkit-visual-add-library), [How a command finds it](files.md#how-a-command-finds-it)). Then you move its grant there, with `pkit agents reconcile --write` ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)). The next `pkit sync` deploys it with the grant ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+
 To use it:
 
 1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them.
@@ -478,8 +480,6 @@ To use it:
 3. **Read what it hands back.** Before it stops, [the reviewer](#the-reviewer) reads every page in every language, mode and size. Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It mends what it judges right, then tells you what it changed and why, with the reviewer's report as written.
 
 In mending, it asks you only where a fix would change what the piece says, needs a write it may not make, such as to a library the capability ships, or two rounds of mending did not clear a finding. You answer, and it makes the change.
-
-Where its grant names no location yet, it asks you where the visual work goes, and writes nothing. You record the location, with `pkit visual add foundations --location <path>` ([How a command finds it](files.md#how-a-command-finds-it)), and move its grant there, with `pkit agents reconcile --write` ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)). The next `pkit sync` deploys it with the grant ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 ## The reviewer
 
