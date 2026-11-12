@@ -67,9 +67,20 @@ commands:
   write-code:
     script: scripts/write-code.py
     help: "Write a brand out as code, as a declaration in the location asks (DEC-005 point 7, DEC-006 points 4 and 5): read `code/<name>.yaml`, its code writer, the form of its spelling, its brand and the lock of the brand and what it builds on; resolve every token the brand exports in every combination of its axes at the versions the lock names, which it never moves; write the code to the declaration's `out` and its record beside it, `<out>.record.yaml`, with the fingerprint `pkit visual check` verifies. Writes nothing where the record verifies and the code is what the writer writes now. Prints each token the writer has no form for as a loss, unless the declaration accepts it. Writes `out` and its record; exit 1 when refused, or when a write fails, naming the file, every file then as it was before the run or named."
+  work-paths:
+    script: scripts/work-paths.py
+    help: "Answer the paths the graphic-designer's grant takes by default, the query its overlay category `visual-communication.work` names (DEC-030 point 5, COR-073 point 3): the location the configuration records, or `visual/` where none is recorded and that folder is absent, holds no file or holds the visual work. A `visual/` that holds files of another kind, or cannot be the location, is never granted: it answers no path, and says why. Installing the capability, and `pkit agents reconcile --write`, write its answer into the agents overlay where the project set no value. --json prints one document, `{\"paths\": [...]}`, with a `note` where it answers no path. A query: read-only, offline; `pkit sync` provisions its dependencies. It takes no subject. Exit 1 when it gives no answer: the configuration cannot be read or records a location that is refused."
+    query-contract: true
 # The `visual-communication:check` member of `pkit validate`: a component joins
 # validation by naming a command it registers (COR-055 point 3); the block's
 # keys are ADR-058's.
 validators:
   check:
     command: check
+# The overlay category the graphic-designer's writes take (DEC-030 point 5): the
+# location of the visual work, which `work-paths` answers and install writes into the
+# agents overlay (COR-073; ADR-088 point 1).
+write_categories:
+  visual-communication.work:
+    owner: graphic-designer
+    default-query: work-paths
