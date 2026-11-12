@@ -101,6 +101,8 @@ Mend at the nearest place that holds the fault. Try the content first, then a lo
 
 **Never a value in a component.** A component takes its lengths, colours and fonts from roles, and a brand gives the values ([visual-communication:DEC-005-engine-and-plugins] point 1). The check fails a hand-written `#ff0000` or `=:width - 24`.
 
+**When to hand it to `graphic-designer`.** A mend changes a word, an option or a part. A page whose design does not carry its point needs designing again: its form shows another structure than its content has, it has no focal point, a brief finding asks for another form, or no library draws what the brief asks. Hand such a page, or the whole piece, to the capability's designer, naming the piece and its pages ([The designer](../../README.md#the-designer)). It designs them from the brief, mends at the root, has the reviewer read every page before it stops, and tells you what it changed.
+
 ### The content
 
 Most faults end here, in `content.<language>.yaml`. Shorten a text. Choose another word of an option, or another pattern. Move items to a page of their own.
@@ -235,6 +237,6 @@ It reads the piece's brief, and the capability's rule sets, beside the images. I
 - **A brief finding,** which cites the part of the brief a page does not show: a relation, a goal, a takeaway, or a reason that does not hold of the drawing. Mend the drawing, in the content or a component, so it shows what the brief asks. Where you changed a choice on purpose, write its reason again. Never draw a relation the brief names as another to fit what a library draws.
 - **A note,** anything else worth a look, which never fails.
 
-Its findings are advice, and it changes nothing. Where a piece keeps no brief, it has none to judge against, and says so.
+Its findings are advice, and it changes nothing. Where a piece keeps no brief, it has none to judge against, and says so. Where `graphic-designer` builds the piece, it dispatches the reviewer itself before it stops, or asks you to where it cannot, and hands you the report as the reviewer wrote it.
 
 **Then commit** the piece's folder: `piece.yaml`, the content, its brief, any local component, its `pictures/`, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.

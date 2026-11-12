@@ -38,3 +38,6 @@ project-conventions:
 # name. The explicit `[]` (rather than a bare or absent key) is what makes the
 # agent deploy inert instead of being skipped.
 process-authoring-targets: []
+
+# Written as a capability's default for the category below. While it stays as written, `pkit agents reconcile` may move it; edit it and it is the project's.
+visual-communication.work: ["visual/"]  # pkit-written: ["visual/"]
