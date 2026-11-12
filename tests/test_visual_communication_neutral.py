@@ -327,8 +327,9 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece draws
     under it on them as under the brand's release 1.0.0 on theirs, byte for byte: each
     preview, but for the foundations' version they name, and its values, but for the role
-    `size.site` they add, which the brand gives as wide as its slide on a desktop, and
-    `size.line`, which no piece that names no size reads. A web part's piece names the
+    `size.site` they add, which the brand gives as wide as its slide on a desktop,
+    `size.line`, which no piece that names no size reads, and those of a run's sign and
+    ground, at its smallest space. A web part's piece names the
     sizes, which the foundations' release does not declare."""
     importable(monkeypatch, starter.svg)
     root = reference_location(project(tmp_path))

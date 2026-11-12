@@ -102,7 +102,10 @@ DEC-012).
   a field of runs: its `style`
   and `fill` may switch on the run styles of the field it shows, `{by: <field>, <word>:
   <value>, ...}`, naming every word, and give each run the role and the paint its word
-  chooses;
+  chooses. Such a part alone may take `sign`, `true` or `false`, whether a run that names a
+  concept with a sign draws it before its text, and `ground`, a paint or none, drawn behind
+  the run, and either may switch on the run styles too (DEC-036 point 3). Their lengths
+  come from the foundations' roles `SIGN_GAP`, `GROUND_ROOM` and `GROUND_CORNER`;
 - `use: <library>/<component>`, a component the part places, with `fields` (its field ->
   a field of this component) and `options` (its option -> a word, or a switch);
 - `slot: <field>`, the component the content places in that field;
@@ -153,7 +156,8 @@ image's height, where none is given, keeps its picture's proportions, a produced
 first variant's, a picture file's, or a picture role's file's at the scene's key. Any
 property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
-switch on a field's run styles serves only a text part's `style` and `fill`, and no part
+switch on a field's run styles serves only a text part's `style`, `fill`, `sign` and
+`ground`, and no part
 passes a field of runs on, or reads one but in `when`. A colour is a role's token path,
 or `:colour.<member>`: the role the foundations map that member of the instance's colour
 family to (DEC-004 point 10). The instance's family is the one a notation maps the
@@ -218,7 +222,7 @@ from _lib.findings import FACT as STATED
 from _lib.keys import AxisLike, key_order
 from _lib.outlines import Outline
 from _lib.pictures import Judged, Picture
-from _lib.text import Broken, Faces, Run, Style, break_runs
+from _lib.text import Broken, Faces, Marks, Run, Style, break_runs
 
 PRIMITIVES = ("box", "ellipse", "text", "line", "image", "sign")
 PLACING = ("use", "slot", "repeat")
@@ -258,7 +262,7 @@ ENDS_OF_LINE = ("x1", "y1", "x2", "y2")
 PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "box": ("fill", "stroke", "stroke-width", "rx"),
     "ellipse": ("fill", "stroke", "stroke-width"),
-    "text": ("content", "fact", "style", "fill", "text-anchor"),
+    "text": ("content", "fact", "style", "fill", "text-anchor", "sign", "ground"),
     "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
     "image": ("produced", "content", "file", "role"),
     "sign": ("fill", "stroke", "stroke-width"),
@@ -278,6 +282,23 @@ OVERRIDDEN = {"box": "fill", "ellipse": "fill", "text": "fill", "line": "stroke"
 
 PAINTS = ("fill", "stroke")
 LENGTHS = ("stroke-width", "rx")
+
+#: What a text part that shows a field of runs may choose for each run beside its role and
+#: its paint (DEC-036 point 3): whether it draws its concept's sign, and its ground, a paint.
+RUN_MARKS = ("sign", "ground")
+
+#: The roles the foundations declare for a run's sign and ground (DEC-036 point 3): the gap
+#: between a sign and the character after it, the room at each end of a ground, and the
+#: radius of a ground's corners where it starts and ends.
+SIGN_GAP = "space.sign-gap"
+GROUND_ROOM = "space.ground-room"
+GROUND_CORNER = "space.ground-corner"
+
+#: The roles each choice of a run's sign or ground reads.
+MARK_ROLES: Mapping[str, tuple[str, ...]] = {
+    "sign": (SIGN_GAP,),
+    "ground": (GROUND_ROOM, GROUND_CORNER),
+}
 OPERATORS = ("row", "column")
 
 #: The words a property takes, the first its default.
@@ -1488,13 +1509,16 @@ class Component:
             sources = ", ".join(f"`{source}`" for source in IMAGE_SOURCES)
             self._shape(where, f"the image `{part.name}` names exactly one of {sources}")
         # A text part that shows a field of runs may choose its role and paint by the
-        # field's run styles (DEC-012 point 2).
+        # field's run styles (DEC-012 point 2), and each run's sign and ground (DEC-036
+        # point 3).
         shown = part.props.get("content") if part.kind == "text" else None
         runs = shown if isinstance(shown, str) and shown in self.runs else None
         for key, value in part.props.items():
             at = f"{where}.{key}"
             if key not in PROPERTIES[part.kind]:
                 self._shape(at, f"the {part.kind} `{part.name}` takes no property `{key}`")
+            elif key in RUN_MARKS:
+                self._read_run_mark(part, key, value, runs)
             elif key in PAINTS:
                 self._switched(at, value, self._paint, nothing=True, runs=runs)
             elif key in LENGTHS:
@@ -1518,6 +1542,34 @@ class Component:
                     f"the image `{part.name}` names the field of runs `{value}`, which only a "
                     "text part shows",
                 )
+
+    def _read_run_mark(self, part: Part, key: str, value: Any, runs: str | None) -> None:
+        """A text part's choice of each run's sign, `true` or `false`, or of its ground, a
+        paint or none (DEC-036 point 3). Only a text part that shows a field of runs makes
+        either, and each reads its lengths from roles the foundations declare."""
+        at = f"parts.{part.name}.text.{key}"
+        if runs is None:
+            self._shape(
+                at,
+                f"the text `{part.name}` chooses a run's {key}, and shows no field of runs",
+            )
+            return
+        if key == "sign":
+            self._switched(at, value, self._yes_or_no, runs=runs)
+        else:
+            self._switched(at, value, self._paint, nothing=True, runs=runs)
+        for role in MARK_ROLES[key]:
+            dimension, problem = self._ctx.role_dimension(role)
+            if problem is None and dimension != fm.LENGTH:
+                problem = "takes a number, not a length"
+            if problem is not None and role not in self._roles_reported:
+                self._roles_reported.add(role)
+                code = "unknown-role" if "no value" in problem else "role-type"
+                self._issue(code, at, f"a run's {key}, reading `@{role}`, {problem}")
+
+    def _yes_or_no(self, where: str, value: Any) -> None:
+        if not isinstance(value, bool):
+            self._shape(where, f"`{value}` is neither `true` nor `false`")
 
     def _read_use(self, part: Part) -> None:
         where = f"parts.{part.name}"
@@ -1997,7 +2049,7 @@ class Component:
                 self._shape(
                     f"{at}.{RUNS}",
                     f"the field of runs `{name}` declares {len(schema[RUNS])} words, and no "
-                    "text part chooses its role or paint by them",
+                    "text part chooses its role, its paint, a run's sign or its ground by them",
                 )
 
     # -- values, which may switch on an option
@@ -2014,7 +2066,8 @@ class Component:
         """Checks a value, or each branch of its switch; `nothing` lets a branch be null.
         A switch names an option of words, or, where `runs` names the field of runs a text
         part shows, that field's run styles: a text part's role and paint alone choose by
-        them (DEC-012 point 2). It names each of their words and no other. In a brand's
+        them (DEC-012 point 2), and its runs' signs and grounds (DEC-036 point 3). It names
+        each of their words and no other. In a brand's
         drawing, a word it leaves out is one the drawing does not take, which asks the
         brand's owner for attention and never fails (`switch_gaps`, DEC-009 point 9, DEC-012
         point 8); a word the top does not declare still fails."""
@@ -2033,8 +2086,8 @@ class Component:
             if by != runs:
                 self._shape(
                     where,
-                    f"chooses by the run styles of `{by}`, which only the role and the paint "
-                    f"of a text part that shows `{by}` choose by",
+                    f"chooses by the run styles of `{by}`, which only the role, the paint, "
+                    f"the sign and the ground of a text part that shows `{by}` choose by",
                 )
                 return
             self.chosen_by.add(by)
@@ -2787,7 +2840,8 @@ class TextRun:
     style, which a field that takes no runs has none of, the typography role that word
     chooses, the concept it names, its colour family, and where each comes from: its
     text, its word and its family. `place` is its key path in the content file, where it
-    has one, else its text's trace."""
+    has one, else its text's trace. `outline` is the sign of the concept it names, where
+    the piece's notations hold the concept and give it one (DEC-036 point 3)."""
 
     text: str
     word: str | None
@@ -2798,6 +2852,7 @@ class TextRun:
     source: str
     word_source: str
     place: str
+    outline: Outline | None = None
 
 
 @dataclass
@@ -3360,7 +3415,8 @@ class Instance:
         """A run as its text part draws it. Its source names its field and, in a list, its
         place among the field's runs, as a source names an item with no id (DEC-012,
         Implications). A run that names a concept takes its concept's family before the
-        instance's own, and a state that gives the instance a family replaces it (point 3)."""
+        instance's own, and a state that gives the instance a family replaces it (point 3).
+        It keeps its concept's sign under any state (DEC-036 point 3)."""
         source = self.source_of_field(content)
         path = self.field_path(content)
         at = trace
@@ -3369,13 +3425,18 @@ class Instance:
             at = f"{path}#{place}" if path is not None else trace
         word_source = f"{source}.style" if named else f"default:{self.component.use}"
         family, family_source = self.family, self.family_source
+        outline = None
         if concept is not None:
             found = self._run_concept(content, concept, at, trace)
             state = self.given.get("state")
             stated = isinstance(state, str) and bool(self.component.states.get(state))
             if found is not None and not stated:
                 family, family_source = found, f"{source}.concept"
-        return TextRun(text, word, style, concept, family, family_source, source, word_source, at)
+            if found is not None:
+                outline = self.ctx.sign(concept)  # a state changes the paint, never the sign
+        return TextRun(
+            text, word, style, concept, family, family_source, source, word_source, at, outline
+        )
 
     def _run_concept(self, content: str, raw: Any, at: str, trace: str) -> str | None:
         """The colour family of the concept a run names, read with its notation's name as an
@@ -4143,11 +4204,37 @@ class Instance:
         raise Fault()  # a size the part needs, recorded when the component was read
 
     def _lines(self, name: str) -> Broken:
-        """A text's lines, broken across its runs (DEC-012 point 4)."""
+        """A text's lines, broken across its runs (DEC-012 point 4), each run with the sign
+        and the ground its part chooses for it, measured with the lengths the foundations'
+        roles give them (DEC-036 point 3)."""
         node = self.nodes[name]
         width = self.get("part", name, "width") if "width" in node.part.spec else None
-        runs = [Run(run.text, run.style) for run in node.runs]
-        return break_runs(runs, width, self.ctx.language)
+        runs = [
+            Run(run.text, run.style, self.run_sign(name, run), self.run_ground(name, run)[0])
+            for run in node.runs
+        ]
+        marks = None
+        if any(run.sign is not None or run.ground is not None for run in runs):
+            gap, room = (
+                self.ctx.attempt(lambda path=path: self.ctx.role_number(path), 0.0)
+                for path in (SIGN_GAP, GROUND_ROOM)
+            )
+            marks = Marks(gap, room)
+        return break_runs(runs, width, self.ctx.language, marks)
+
+    def run_sign(self, name: str, run: TextRun) -> str | None:
+        """The concept whose sign the text `name` draws before `run`, where it chooses one for
+        the run's word, and the run names a concept with a sign (DEC-036 point 3)."""
+        part = self.nodes[name].part
+        _, value, _ = self.pick(f"parts.{name}.text.sign", part.props.get("sign"), run.word)
+        return str(run.concept) if value is True and run.outline is not None else None
+
+    def run_ground(self, name: str, run: TextRun) -> tuple[str | None, str]:
+        """The paint the text `name` draws behind `run`, as a role, and where it comes from;
+        none where it chooses none for the run's word (DEC-036 point 3)."""
+        if "ground" not in self.nodes[name].part.props:
+            return None, ""
+        return self.ctx.attempt(lambda: self.paint(name, "ground", run), (None, ""))
 
     def word(self, where: str, raw: Any, default: str) -> str:
         _, value, _ = self.pick(where, raw)
