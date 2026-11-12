@@ -1423,10 +1423,10 @@ def test_scene_findings_name_the_component_file_and_the_command_that_makes_a_pic
 
 
 def test_the_skeleton_piece_with_its_picture_fails_nothing(tmp_path: Path) -> None:
-    """With the foundations held as `pkit visual add foundations` takes them, so their copy
-    raises no finding of its own."""
+    """With the foundations the piece locks held as `pkit visual add foundations@1.0.0`
+    takes them, so their copy raises no finding of its own."""
     root = drawing_project(tmp_path)
-    hold_shipped(root, "foundations", being_built=False)
+    hold_shipped(root, "foundations", version="1.0.0")
     write_picture(root, framing)
     report = checks.check(root)
     assert not report.failed()
