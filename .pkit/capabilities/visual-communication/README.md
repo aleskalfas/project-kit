@@ -39,6 +39,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pruning.py
         - .pkit/capabilities/visual-communication/scripts/_lib/rendering.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
@@ -148,6 +149,7 @@ pkit:
         - .pkit/capabilities/visual-communication/checks.md#contents
         - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
         - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
+        - .pkit/capabilities/visual-communication/checks.md#files-and-binding
         - .pkit/capabilities/visual-communication/checks.md#content-against-components
         - .pkit/capabilities/visual-communication/checks.md#the-findings-record
         - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
@@ -469,6 +471,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 - **Installing the capability writes it** into the agents overlay, as the answer of [`pkit visual work-paths`](#pkit-visual-work-paths), such as `visual/`. An install from before the category takes it from `pkit agents reconcile --write` ([the agents README, "A capability's write categories"](../../agents/README.md#a-capabilitys-write-categories)).
 - **A value the project sets is kept.** Change the line to name a folder of helpers too, or a location you moved. An empty list, `[]`, switches the designer off: it deploys, and writes nothing.
+- **Held to the location.** `pkit visual check` fails a grant that does not cover the location the configuration records, or that names a path inside `.pkit/` ([`grant`](checks.md#files-and-binding)). So move the grant with the location: each message that says how to move the work names its line, and `pkit agents reconcile --write` moves a line still as `pkit` wrote it ([The location](files.md#the-location)).
 - **Never written, though the grant reaches them:** a released version of a library, or a copy of a library the capability ships, which only `pkit visual add` writes. What a command writes, such as a lock or a findings record, stays the command's.
 
 To use it:

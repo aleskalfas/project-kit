@@ -20,6 +20,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
@@ -102,6 +103,7 @@ pkit:
         - visual-communication:DEC-025#9
         - visual-communication:DEC-029#4
         - visual-communication:DEC-029#5
+        - visual-communication:DEC-030#5
         - visual-communication:DEC-030#6
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
@@ -121,6 +123,7 @@ pkit:
         - visual-communication:DEC-036#1
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#8
+        - COR-073#5
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -235,7 +238,7 @@ A few findings that lie in a library folder name no version, so their level stan
 
 ## What each run judges
 
-Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, what its brief names, its lock, what its state owes of its current copy, whether a published lock is behind, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
+Without a piece named, each run judges, in order: the configuration, the designer's grant, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, what its brief names, its lock, what its state owes of its current copy, whether a published lock is behind, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
 
 **A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns against the default component of each list it declares fields for, a drawing of a top's layout included. Its findings are `arrangement-clash`, `end-clash` and `tie-default` (DEC-010 point 9, DEC-011 point 8). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. A brand's components are read so too, each of its drawings against the top it draws ([a brand's drawing](components.md#a-brands-drawing)). Their findings are `drawing-shape`, `drawing-size`, `drawing-field-part`, `drawing-held-top`, `as-switch` and `component-token-undeclared` (DEC-034 points 1, 2, 4, 5, 7, 8 and 10), and `component-shape` for a field, an option or a word a drawing takes that its top does not declare. A brand's drawing is judged against its lists' default components as a pattern is, each clash at the part's `draw`. Read over its base, a brand's version shows the forms it draws (DEC-009 point 9): `drawing-unnamed`, `drawing-twice`, `drawing-base-serves`, `drawing-lacks` and `brand-serves`. A drawing that fails as one that draws nothing takes none of the others. A component of a library that is no brand that declares `draws` is `drawing-shape`, and a top's own drawing of a layout that shows a field by no part named after it is `drawing-field-part` ([Scenes](#scenes)). What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
 
@@ -245,11 +248,11 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 **A final piece.** The check reads its files, its lock and the version handed out, and no more (DEC-002 point 7, DEC-017 point 4). A piece is final by its state or by its record of exports, and one whose record cannot be read reads as final ([the lock](files.md#the-lock)). The check reads the binding of each of its files, and what its lock names. It holds the piece's state and lock to the version handed out, and each file of that version to its hash. No finding at the lock stops this (*The version handed out*, under [Exports](#exports)). It computes no scene and reads no findings record. It leaves out the piece's ids, what its brief names, its content against its components, the libraries read under its lock, its brand, its notations, its produced pictures and its current copy. So a content file may be missing, or hold what its components refuse, and no finding follows. A library its content came to use is no finding either. A content file that cannot be read, or whose binding is broken, takes its finding as any file does, and the lock is still read. A version its lock names that no longer matches what was released fails as `library-changed`, once, in a run on the piece alone too. A finding at its lock fails only where something other than a move mends it (*At a final piece's lock*, under [Libraries and locks](#libraries-and-locks)). The summary counts the piece apart, as left out as final.
 
-`pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
+`pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the designer's grant, nor the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
 
 Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it after its current copy and before its brand, so a stale copy stands beside that finding, and so does the fact that the lock is behind. On a final piece it stops nothing. A brand that cannot be read, or a mode the brand lacks, stops it before its notations, its content, its produced pictures and its scenes. A notation's findings stop nothing. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
 
-Where the configuration records no location and the default folder holds no visual work, the summary says so, and only the configuration is judged. Where the configuration records a location that is refused or missing, or an empty `location:`, the check reports `location`, and judges nothing but the configuration.
+Where the configuration records no location and the default folder holds no visual work, the summary says so, and only the configuration and the designer's grant are judged. Where the configuration records a location that is refused or missing, or an empty `location:`, the check reports `location`, and judges nothing but the configuration and the designer's grant.
 
 ## Findings by area
 
@@ -260,6 +263,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 | Label | What it means | Level | Where it points | What to do |
 |---|---|---|---|---|
 | `location` | The configuration records a location that is refused or missing, or a `location:` line with no value. | fails | the configuration, `.pkit/capabilities/visual-communication/project/config.yaml` | Restore the folder, or change the `location:` line; write the folder on an empty one, or remove it ([files](files.md#the-location)). |
+| `grant` | The grant of the designer, `graphic-designer`, the category `visual-communication.work` of the agents overlay, does not cover the location the configuration records, or names a path inside `.pkit/`. The check reads the category as the deploy reads it, so a value the designer's own block under `overrides.graphic-designer` gives replaces the top-level line (DEC-030 point 5). A path covers the location where it is the location or a folder that holds it, so a pattern such as `visual/**` covers none. With no location recorded, only the paths inside `.pkit/` are judged. A grant that names no path, such as `[]`, which switches the designer off, fails nothing. An overlay that cannot be read fails too. A check of one piece does not judge the grant. | fails | the overlay, `.pkit/agents/project/overlay.yaml#visual-communication.work`, or `#overrides.graphic-designer.visual-communication.work` | For the top-level line, run `pkit agents reconcile --write`, which moves it to the location while it stays as `pkit` wrote it (COR-073 point 5). Otherwise name the location in the line, or write `[]`. Take any path inside `.pkit/` out. |
 | `files-unlisted` | git cannot list the location's files, or those of a version's `pictures/` folder. | fails | `.`, or `<version>/pictures/` | The message gives git's error. |
 | `file-unreadable` | The configuration, or a file of the capability's format, cannot be read ([how files are read](files.md#how-the-files-are-read)). | fails | the file | Mend the file. |
 | `binding` | The file names no schema, or another schema than its name and place call for. A file at another format number is the core's data validation's to report. | fails | the file | Write the binding the message names ([the binding](files.md#the-binding)). |

@@ -20,6 +20,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/config_text.py
         - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/names.py
@@ -163,6 +164,7 @@ pkit:
         - visual-communication:DEC-025#9
         - visual-communication:DEC-025#10
         - visual-communication:DEC-029
+        - visual-communication:DEC-030#5
         - visual-communication:DEC-030#6
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#3
@@ -213,7 +215,7 @@ schema_version: 1
 location: visual
 ```
 
-The command adds the line as text at the end of the file. It keeps every other byte: comments, order, line endings and a byte-order mark. Where the file records another location already, the command refuses, since a command never moves the location. To move the work, move the folder and change the `location:` line by hand.
+The command adds the line as text at the end of the file. It keeps every other byte: comments, order, line endings and a byte-order mark. Where the file records another location already, the command refuses, since a command never moves the location. To move the work, move the folder and change the `location:` line by hand. Then move the designer's grant with it: the category `visual-communication.work` of the agents overlay, `.pkit/agents/project/overlay.yaml`, or the designer's own value under `overrides.graphic-designer` there (DEC-030 point 5). Each message that says how to move the work names that line, and no command of the capability writes in the agents' area. The check fails a grant that does not cover the location the configuration records.
 
 A `location:` line with no value, such as `location:` alone or `location: null`, records no folder. Every command refuses it, and the check reports it as `location`, each saying how to mend it: write the folder that holds the work there, such as `location: visual`, or remove the line.
 

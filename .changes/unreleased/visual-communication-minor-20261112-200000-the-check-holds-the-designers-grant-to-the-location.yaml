@@ -1,0 +1,19 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The check holds the designer's grant to the location (#2972;
+  visual-communication DEC-030 point 5). A run of `pkit visual check` with no
+  piece named, and so `pkit validate`, reads the category
+  `visual-communication.work` from the agents overlay as the deploy reads it,
+  the designer's own value under `overrides.graphic-designer` in place of the
+  top-level line. It fails, as `grant`, a value that does not cover the
+  location the configuration records, or that names a path inside `.pkit/`,
+  and an overlay it cannot read. A value that names no path, such as `[]`,
+  which switches the designer off, fails nothing. Each message that says how to
+  move the work, and the line a command prints when it records the location,
+  now names the grant's line in the overlay too, and `pkit agents reconcile
+  --write` moves a line still as pkit wrote it. The capability still writes
+  nothing in the agents' area. A project whose grant names another folder than
+  its recorded location fails validation until it moves the grant.
