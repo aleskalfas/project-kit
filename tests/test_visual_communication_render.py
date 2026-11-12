@@ -41,7 +41,13 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, importable, write, write_list
+from tests.visual_communication_project import (
+    CONFIG,
+    RECORDED_DEFAULT,
+    importable,
+    write,
+    write_list,
+)
 from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl, checks, libraries = load(
@@ -61,10 +67,7 @@ PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
 TESTS_FOLDER = "visual/libraries/tests/1.0.0"
 BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
-LOCATION = (
-    f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-    f"to move the work, move the folder and change the `location:` line there"
-)
+LOCATION = RECORDED_DEFAULT
 
 
 @pytest.fixture(autouse=True)

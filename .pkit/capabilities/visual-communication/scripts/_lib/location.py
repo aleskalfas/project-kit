@@ -17,6 +17,9 @@ pieces (DEC-002 points 1 and 2).
 - **Refused:** the repository's top itself, a path outside the repository, under `.pkit/`,
   under a hidden folder, reached through a link, or not a folder. An empty `location:` is
   refused too, by reading and writing commands alike, rather than read as no location.
+- **Moving the work** is a person's: no command moves a recorded location. Each message
+  that says how to move it names the designer's grant in the agents overlay too, the line a
+  person moves with it, and nothing here writes the overlay (DEC-030 point 5).
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
 Outside a git repository, the folder is walked. A link is listed only where a caller asks
@@ -34,7 +37,7 @@ from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from _lib import config_text
+from _lib import config_text, grant
 from _lib.files import Change, is_of_format
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
@@ -178,7 +181,8 @@ def for_reading(root: Path) -> Location | None:
         if found is not None:
             raise LocationRefused(
                 f"{CONFIG} records the location `{recorded}`, which {found}: restore the "
-                f"folder, or change the `{KEY}:` line to where the work lies"
+                f"folder, or change the `{KEY}:` line to where the work lies, and move "
+                f"{grant.moved_with(root)}"
             )
         return Location(recorded, recorded=True)
     if (root / DEFAULT).is_dir() and problem(root, DEFAULT) is None and holds_marker(root, DEFAULT):
@@ -195,12 +199,14 @@ def for_writing(root: Path, given: str | None = None, cwd: Path | None = None) -
         if given is not None and normalise(root, given, cwd) != recorded:
             raise LocationRefused(
                 f"{CONFIG} records the location `{recorded}`; a command never moves it. To "
-                f"move the work, move the folder and change the `{KEY}:` line"
+                f"move the work, move the folder, change the `{KEY}:` line, and move "
+                f"{grant.moved_with(root)}"
             )
         if not (root / recorded).is_dir():
             raise LocationRefused(
                 f"{CONFIG} records the location `{recorded}`, which does not exist: restore "
-                f"the folder, or change the `{KEY}:` line to where the work lies"
+                f"the folder, or change the `{KEY}:` line to where the work lies, and move "
+                f"{grant.moved_with(root)}"
             )
         return ForWriting(recorded, record=False)
     if given is not None:
@@ -237,7 +243,7 @@ def record(change: Change, where: ForWriting) -> str | None:
     origin = " (the default, at the repository's top)" if where.path == DEFAULT else ""
     return (
         f"recorded the location `{where.path}`{origin} in {CONFIG}; to move the work, move "
-        f"the folder and change the `{KEY}:` line there"
+        f"the folder, change the `{KEY}:` line there, and move {grant.moved_with(change.root)}"
     )
 
 

@@ -50,6 +50,7 @@ from tests.test_visual_communication_pipeline import (
 from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import (
     CONFIG,
+    RECORDED_DEFAULT,
     SCHEMAS,
     bound,
     importable,
@@ -131,8 +132,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     shown = run(root, PIECE)
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines() == [
-        f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-        f"to move the work, move the folder and change the `location:` line there",
+        RECORDED_DEFAULT,
         f"export: {FOLDER}/flow.v1.en.default.svg",
         f"export: {FOLDER}/flow.v1.en.colour-scheme.dark.svg",
         f"export: version 1 recorded in {RECORD}",
