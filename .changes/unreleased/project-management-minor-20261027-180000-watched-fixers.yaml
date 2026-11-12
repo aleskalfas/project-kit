@@ -25,5 +25,7 @@ body: >
   run after a merge, it starts no fixer and writes nothing: it lists each
   stale artefact a granted fixer would take, and the command to run. The
   fixers question says the same, "When you run `pkit pm fix-drift` at a
-  terminal", and the pm skill's `fix-drift` sub-procedure and the project
+  terminal", and, with `grant-fixer`, that the fixer also starts after each
+  merge with nobody watching: confined, once your harness can confine it, and
+  where the project's switch is on (DEC-069 point 3). The pm skill's `fix-drift` sub-procedure and the project
   manager show you what went stale instead of starting a fixer.

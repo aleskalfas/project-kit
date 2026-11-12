@@ -60,7 +60,10 @@ def run_answer_verb(*, verb: str, answer: str, argv: Sequence[str] | None = None
         description=(
             (
                 "Grant a fixer: let the drift command start the agent on the stale "
-                "artefacts of its types (DEC-056 point 2). Running it is your answer yes."
+                "artefacts of its types (DEC-056 point 2): when you run it at a terminal, and "
+                "after each merge with nobody watching, confined once the harness can confine "
+                "it, and where the project's switch is on, under the settings of whoever runs "
+                "it (DEC-069 point 3). Running it is your answer yes."
             )
             if granting
             else (

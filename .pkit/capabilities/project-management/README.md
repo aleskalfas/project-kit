@@ -1636,10 +1636,10 @@ A *fixer* is the agent that keeps one type of artefact true. When the default br
 **The question.** `pkit pm ask-fixers` asks one question for each fixer nobody asked you about. Its words come from the declaration, for example:
 
 ```
-living-docs can keep your pages true. When you run `pkit pm fix-drift` at a terminal, its agent living-docs proposes a fix for each one that went out of date, under your settings and the project's. Nothing it proposes is applied until you approve it. Turn this on? [Y/n]
+living-docs can keep your pages true. When you run `pkit pm fix-drift` at a terminal, its agent living-docs proposes a fix for each one that went out of date, under your settings and the project's. After each merge, its agent living-docs also starts with nobody watching: confined, once your harness can confine it, and where the project's switch is on, under the settings of whoever runs the drift command. Nothing it proposes is applied until you approve it. Turn this on? [Y/n]
 ```
 
-A grant counts for every run you start at a terminal, one you gave with the grant command and no question included ([project-management:DEC-069-when-fixers-start] point 3).
+A grant counts for every run you start at a terminal, one you gave with the grant command and no question included. It counts for a run nobody watches only where the question it answered said so, as this one does. A grant given under earlier words counts for those runs once you answer the question again ([project-management:DEC-069-when-fixers-start] point 3).
 
 - **At a terminal,** each answer is recorded as you give it. A yes is a grant, and a no is a refusal, so nothing asks about those types again.
 - **With nobody at a terminal,** such as in CI, nothing is granted or recorded. Each question is printed with the one command that grants its fixer.

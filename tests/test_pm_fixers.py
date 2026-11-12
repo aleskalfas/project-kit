@@ -634,11 +634,15 @@ def test_the_question_is_built_from_the_capability_s_name_and_the_descriptions()
     question = fixers.Question(
         FIXER, (_entry(), _entry(type=GUIDE, description="your guides")), (PAGE, GUIDE)
     )
+    # It says when the agent starts: at a terminal, and after each merge with
+    # nobody watching, confined or where the switch is on (DEC-069 point 3).
     assert fixers.question_text(question) == (
         f"{DOCS} can keep your pages and your guides true. When you run `pkit pm fix-drift` "
         f"at a terminal, its agent {FIXER} proposes a fix for each one that went out of date, "
-        "under your settings and the project's. Nothing it proposes is applied until you "
-        "approve it. Turn this on?"
+        f"under your settings and the project's. After each merge, its agent {FIXER} also "
+        "starts with nobody watching: confined, once your harness can confine it, and where "
+        "the project's switch is on, under the settings of whoever runs the drift command. "
+        "Nothing it proposes is applied until you approve it. Turn this on?"
     )
     project = _entry(
         type="handbook", agent="editor", origin="project filler", description="your handbook"
@@ -646,7 +650,10 @@ def test_the_question_is_built_from_the_capability_s_name_and_the_descriptions()
     assert fixers.question_text(fixers.Question("editor", (project,), ("handbook",))) == (
         "The agent editor can keep your handbook true. When you run `pkit pm fix-drift` at a "
         "terminal, it proposes a fix for each one that went out of date, under your settings "
-        "and the project's. Nothing it proposes is applied until you approve it. Turn this on?"
+        "and the project's. After each merge, it also starts with nobody watching: confined, "
+        "once your harness can confine it, and where the project's switch is on, under the "
+        "settings of whoever runs the drift command. Nothing it proposes is applied until you "
+        "approve it. Turn this on?"
     )
 
 
@@ -828,8 +835,10 @@ def test_with_nobody_at_a_terminal_the_question_grants_nothing_and_prints_the_li
     assert result.stdout.splitlines() == [
         f"{DOCS} can keep your pages true. When you run `pkit pm fix-drift` at a terminal, "
         f"its agent {FIXER} proposes a fix for each one that went out of date, under your "
-        "settings and the project's. Nothing it proposes is applied until you approve it. "
-        "Turn this on?",
+        f"settings and the project's. After each merge, its agent {FIXER} also starts with "
+        "nobody watching: confined, once your harness can confine it, and where the project's "
+        "switch is on, under the settings of whoever runs the drift command. Nothing it "
+        "proposes is applied until you approve it. Turn this on?",
         f"  To turn it on: pkit pm grant-fixer {FIXER} --type {PAGE}",
         "Nothing was granted: nobody was at a terminal to answer.",
     ]

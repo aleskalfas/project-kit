@@ -10,8 +10,11 @@
 Grants a fixer: records in the grant list (`fixers` in `project/config.yaml`)
 that the drift command may start the agent on the stale artefacts of its types — every
 type the `pkit::work-tracking:fixers` point gives it, or only those named with
-`--type`. Running it is the person's own answer yes, as answering the question
-of `ask-fixers` is. The change shows in the project's diff, and the grant counts
+`--type`: when a person runs it at a terminal, and after each merge with nobody
+watching, confined once the harness can confine it, and where the project's
+switch is on, under the settings of whoever runs it (DEC-069 point 3). Running
+it is the person's own answer yes, as answering the question of `ask-fixers` is,
+and it prints the question it answers. The change shows in the project's diff, and the grant counts
 once it merges into the default branch.
 
 Usage:
