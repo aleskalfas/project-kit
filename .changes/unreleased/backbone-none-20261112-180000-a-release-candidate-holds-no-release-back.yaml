@@ -5,10 +5,10 @@ body: >
   before it ships is tested on its own branch before it merges. A candidate is
   cut from that branch's head, a person withdraws a candidate with a tag, a
   candidate's number counts every candidate cut, and every final release is
-  the ordinary release PR from the default branch's head, merged only while
-  that head is the commit it was planned from. A tester's project moves only
-  to a newer candidate, each move running every migration folder since the
-  last final release it finished, and leaves by leaving the testers' branch.
-  They partly supersede PRJ-002 D3 and D5 and ADR-089's points 1, 2, 3, 8 and
-  9, and refine ADR-065. It is record text only, and nothing you run changes.
-  The build for #2211 carries the real changesets.
+  the ordinary release PR from the default branch's head, merged only onto the
+  commit it was planned from. A tester enters each candidate fresh from a
+  final release, and a project on a candidate moves to no other release, so a
+  branch may change its migration scripts until it merges. They partly
+  supersede PRJ-002 D3 and D5 and ADR-089's points 1, 2, 3, 5, 8 and 9, and
+  refine ADR-089 point 7, ADR-049 and ADR-065. It is record text only, and
+  nothing you run changes. The build for #2211 carries the real changesets.
