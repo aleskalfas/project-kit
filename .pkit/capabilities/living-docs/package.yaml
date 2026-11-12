@@ -4,7 +4,7 @@ component:
   name: living-docs
   version: 1.0.0
 description: Living documentation — documentation spaces by audience, every page anchored to what makes it true, drift detected as friction and fixed by reviewed proposals.
-requires_backbone: ">=2.0.0,<2.2.0"
+requires_backbone: ">=2.0.0,<2.3.0"
 # The review contribution (`review-contributions.yaml`, DEC-001 point 9) names
 # project-management's floor on ruled artefacts, which an older release
 # refuses. So an installed project-management must have the floor, and the

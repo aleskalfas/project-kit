@@ -1,8 +1,0 @@
-component: project-management
-kind: none
-body: >
-  Only the `project-manager` agent's wording moves (#2471). Its body now names
-  the eight schemas, the pm skill's dispatcher and the capability README by
-  their paths, which its front matter declares, so the reference graph finds
-  them cited. No step, command or file of the capability changes, so no
-  surface moves.
