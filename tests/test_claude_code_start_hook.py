@@ -9,6 +9,9 @@ its delivery, not an agent's obedience.
   `SubagentStart` with the sentence as `additionalContext`, under the event's
   own name. It gives nothing, and exits 0, on any other event or a payload it
   cannot read.
+- **The line on a missing `pkit`** (#3005). Where no `pkit` command is on the
+  `PATH` the hook runs with, the context gains one line naming the install
+  script the CLI area ships. With one there, it adds nothing.
 - **Its runtime** is the bare system python3, with no PEP 723 metadata, as the
   permission hook's is. Git tracks it executable, and the command the baseline
   registers starts it.
@@ -56,11 +59,28 @@ def _constant(path: Path, name: str) -> str:
 
 
 NOTE = _constant(HOOK, "WORKSPACE_NOTE")
+NO_PKIT = _constant(HOOK, "NO_PKIT_NOTE")
 
 
-def _run_hook(stdin: str) -> subprocess.CompletedProcess[str]:
+def _folder(path: Path, *, with_pkit: bool) -> Path:
+    """A folder for the hook's `PATH`, holding an executable `pkit` or nothing."""
+    path.mkdir()
+    if with_pkit:
+        pkit = path / "pkit"
+        pkit.write_text("#!/bin/sh\n", encoding="utf-8")
+        pkit.chmod(0o755)
+    return path
+
+
+def _run_hook(stdin: str, *, path: Path) -> subprocess.CompletedProcess[str]:
+    """The hook run as the harness runs it, with *path* alone on its `PATH`."""
     return subprocess.run(
-        [sys.executable, str(HOOK)], input=stdin, capture_output=True, text=True, check=False
+        [sys.executable, str(HOOK)],
+        input=stdin,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={"PATH": str(path)},
     )
 
 
@@ -88,12 +108,31 @@ def test_the_sentence_names_the_harness_note_and_the_workspace() -> None:
 
 
 @pytest.mark.parametrize("event", EVENTS)
-def test_the_hook_gives_the_sentence_at_each_start(event: str) -> None:
-    done = _run_hook(_payload(event))
+def test_the_hook_gives_the_sentence_at_each_start(event: str, tmp_path: Path) -> None:
+    done = _run_hook(_payload(event), path=_folder(tmp_path / "bin", with_pkit=True))
     assert done.returncode == 0, done.stderr
     assert json.loads(done.stdout) == {
         "hookSpecificOutput": {"hookEventName": event, "additionalContext": NOTE}
     }
+
+
+@pytest.mark.parametrize("event", EVENTS)
+def test_the_hook_names_the_install_script_where_no_pkit_is_on_the_path(
+    event: str, tmp_path: Path
+) -> None:
+    done = _run_hook(_payload(event), path=_folder(tmp_path / "bin", with_pkit=False))
+    assert done.returncode == 0, done.stderr
+    assert json.loads(done.stdout) == {
+        "hookSpecificOutput": {"hookEventName": event, "additionalContext": f"{NOTE}\n{NO_PKIT}"}
+    }
+
+
+def test_the_line_names_the_install_script_the_cli_area_ships() -> None:
+    """The line names the script by the form that is its interface, `sh
+    .pkit/cli/install-pkit.sh`, run at the project's root (ADR-090 point 3)."""
+    assert "`sh .pkit/cli/install-pkit.sh`" in NO_PKIT
+    assert (REPO / ".pkit" / "cli" / "install-pkit.sh").is_file()
+    assert "\n" not in NO_PKIT
 
 
 @pytest.mark.parametrize(
@@ -108,8 +147,8 @@ def test_the_hook_gives_the_sentence_at_each_start(event: str) -> None:
         "",
     ],
 )
-def test_the_hook_gives_nothing_elsewhere_and_never_blocks(stdin: str) -> None:
-    done = _run_hook(stdin)
+def test_the_hook_gives_nothing_elsewhere_and_never_blocks(stdin: str, tmp_path: Path) -> None:
+    done = _run_hook(stdin, path=_folder(tmp_path / "bin", with_pkit=False))
     assert done.returncode == 0, done.stderr
     assert done.stdout == ""
 
@@ -159,7 +198,8 @@ def test_the_baseline_registers_the_hook_and_its_command_starts_it(event: str) -
         env={"CLAUDE_PROJECT_DIR": str(REPO), "PATH": os.environ["PATH"]},
     )
     assert done.returncode == 0, done.stderr
-    assert json.loads(done.stdout)["hookSpecificOutput"]["additionalContext"] == NOTE
+    context = json.loads(done.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert context.splitlines()[0] == NOTE
 
 
 @pytest.mark.skipif(shutil.which("jq") is None, reason="the merge runs on jq")
