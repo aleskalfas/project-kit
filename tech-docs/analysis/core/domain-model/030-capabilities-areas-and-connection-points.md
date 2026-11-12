@@ -176,7 +176,7 @@ A range is the set of [versions](../glossary.md#term-version--version) a compone
 **Always true:**
 
 - A capability installs only where what it depends on falls within its ranges. Install never proceeds silently past one, and never installs a dependency by itself (COR-030).
-- In a component project-kit ships, a floor rises only where a declaration asks for it, never by itself ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- In a component project-kit ships, a floor rises only where a declaration asks for it, never by itself ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 
 ## Area
 
@@ -472,6 +472,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation, a capability's default or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
@@ -496,6 +498,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Area:**
 
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
@@ -535,7 +538,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
-- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation, a capability's default or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 
@@ -544,7 +547,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
-- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation, a capability's default or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 
 **Process subject:**

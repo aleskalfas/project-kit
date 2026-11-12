@@ -1,7 +1,9 @@
 # A notation's concepts, `libraries/<notation>/<version>/notation.yaml` in the location
 # (visual-communication DEC-001 point 5, DEC-004 point 10): the concepts of one subject,
 # each mapped to `{colour: <family>}`, a colour family the foundations declare, never to a
-# value. Content names a concept read with the notation's name, `<notation>/<concept>`.
+# value. A concept may hold its icon, an outline, or map to a shape the foundations
+# declare, by its name: its sign beside its colour (visual-communication DEC-036 point 1).
+# Content names a concept read with the notation's name, `<notation>/<concept>`.
 #
 # The body below is the reference instance.
 
@@ -13,7 +15,12 @@ schema_version: 1
 concepts:
   person:
     colour: purple
+    icon:
+      d: M 12 2 A 5 5 0 1 1 12 12 A 5 5 0 1 1 12 2 Z M 3 22 C 3 17 7 14 12 14 C 17 14 21 17 21 22 Z
+      fill-rule: nonzero
+      square: 24
   service:
     colour: blue
+    shape: hexagon
   store:
     colour: green

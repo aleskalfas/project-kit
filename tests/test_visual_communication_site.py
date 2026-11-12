@@ -111,9 +111,9 @@ SHARED = {"header": {"use": "lab/band"}, "footer": {"use": "lab/band"}}
 
 def test_the_site_holds_its_pages_a_header_a_footer_and_the_layout_standard() -> None:
     """Its field `pages` holds its pages, and `header` and `footer` are optional. Its one
-    layout, `standard`, has one slot, `main`. It asks for its width alone (DEC-022 points 1
-    to 3). The foundations being built pass the check alone with it, which the shipped
-    libraries' tests read."""
+    layout, `standard`, has one slot, `main` (`files.md`, *The foundations*). It asks for
+    its width alone (DEC-022 points 1 and 3). The foundations being built pass the check
+    alone with it, which the shipped libraries' tests read."""
     fields = SITE["fields"]
     assert fields["required"] == ["pages"]
     assert fields["properties"]["pages"]["x-pkit-pages"] is True
@@ -128,7 +128,7 @@ def test_the_site_holds_its_pages_a_header_a_footer_and_the_layout_standard() ->
 def test_a_page_lays_its_header_main_part_and_footer_one_under_another_each_its_whole_width() -> (
     None
 ):
-    """On the page's background, each part as tall as it asks (DEC-022 point 2)."""
+    """On the page's background, each part as tall as it asks (`files.md`, *The foundations*)."""
     result = drawn_site({**SHARED, "pages": [page("home", "lab/tall")]})
     assert codes(result) == []
     assert frame(result, "site/pages[home]") == (0, 0, WIDTH, 32 + 320 + 32)
@@ -334,7 +334,7 @@ def test_the_header_and_footer_lie_on_every_page_in_a_layout_from_edge_to_edge(
     location: Path,
 ) -> None:
     """The header's card sets its own inset, so its box reaches the page's edges; the
-    notice, drawn by its own component, holds neither (DEC-022 point 2)."""
+    notice, drawn by its own component, holds neither (`files.md`, *The foundations*)."""
     for key, scene in scenes_of(project_of(location, "portal")).items():
         width = scene.children[0].properties["width"]
         for id_ in ("home", "guide"):
@@ -384,7 +384,7 @@ def test_a_brand_that_gives_size_site_no_value_draws_a_site_as_wide_as_its_slide
     tmp_path: Path,
 ) -> None:
     """The test brand 1.0.0 gives no size and no `size.site`, which takes `size.slide`
-    (DEC-004 point 7, DEC-022 point 3)."""
+    (DEC-004 point 7)."""
     root = project(tmp_path)
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     write_list(

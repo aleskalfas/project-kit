@@ -8,8 +8,8 @@ family's text on every fill a component lays them on, beyond the pairs declared.
 starter's reference renders, drawn under it, pass the check, and each of their texts
 reaches its contrast as drawn in every combination (DEC-004 point 8). Its fonts and their
 licences are the files their upstream releases ship, unchanged, and each weight its
-typography roles use is a family of its own, whose file has that weight (DEC-012,
-Implications, "A weight's own file").
+typography roles use is a family of its own, whose file has that weight (DEC-012 point 4,
+"A weight's own file").
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 pinned here with the neutral brand in place of the test brand. Run in this process
@@ -305,17 +305,19 @@ def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 
 def test_every_reference_render_passes_the_check_under_it(location: Path) -> None:
     """The brand's version states, once, that it gives `picture.logo` no value, and no
-    piece states it (DEC-025 point 9)."""
+    piece states it (DEC-025 point 9). Beside it, the pieces ask for attention where their
+    concepts' signs are not drawn, as under the test brand."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental"
+        if finding.code != "component-experimental" and finding.code not in starter.SIGN_LABELS
     ]
     built = taken("neutral", being_built=True).version
     assert found == [
         ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
     ]
+    assert starter.on_signs(report.judged) == starter.UNSIGNED
     assert not report.failed()
 
 
@@ -327,8 +329,9 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece draws
     under it on them as under the brand's release 1.0.0 on theirs, byte for byte: each
     preview, but for the foundations' version they name, and its values, but for the role
-    `size.site` they add, which the brand gives as wide as its slide on a desktop, and
-    `size.line`, which no piece that names no size reads. A web part's piece names the
+    `size.site` they add, which the brand gives as wide as its slide on a desktop,
+    `size.line`, which no piece that names no size reads, and those of a run's sign and
+    ground, at its smallest space. A web part's piece names the
     sizes, which the foundations' release does not declare."""
     importable(monkeypatch, starter.svg)
     root = reference_location(project(tmp_path))
@@ -431,8 +434,8 @@ def test_each_family_it_names_has_its_file(brand: Any) -> None:
 
 def test_each_typography_roles_weight_is_the_weight_of_its_familys_file(brand: Any) -> None:
     """A family's one file measures and draws it whatever its weight, so a weight its file
-    does not have would be drawn in another (DEC-012, Implications, "A weight's own file").
-    Each weight is so a family of its own."""
+    does not have would be drawn in another (DEC-012 point 4, "A weight's own file", and
+    DEC-004 point 9). Each weight is so a family of its own."""
     measured = 0
     for role, combination in itertools.product(brand.valued, brand.combinations()):
         if brand.type_of(role) != "typography":

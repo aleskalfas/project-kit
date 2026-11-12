@@ -1,19 +1,26 @@
 """The PDF renderer (visual-communication DEC-005 points 4, 5, 9 and 10, DEC-006 point 7,
 DEC-025 points 5 to 7): what it declares, what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.2.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.5.0. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). Version 1.1.0 came to draw every image, from the picture it is
 handed, whatever its source: a scene of no picture draws as 1.0.0 drew it, but for the
 renderer's version it names. Version 1.2.0 came to draw a page past the largest a reader of
 PDF holds smaller, to fit (DEC-022 point 7): every other page draws as 1.1.0 drew it, but for
-the renderer's version the file names. A page's content is pinned whole. An embedded font is pinned
-by the glyphs its subset holds and the characters its map gives them, not by its bytes,
-which are fontTools'. A picture is pinned by its image's dictionary and its data: a JPEG's
-own bytes, a PNG's image data as the file holds it, or what the decoder gives
-(`test_visual_communication_png.py`). The pictures are those the SVG and HTML renderers'
-tests draw. The files are read here by their own table of objects, as a reader of PDF reads
-them (`read`); the export of a piece as PDF is `test_visual_communication_export.py`'s.
+the renderer's version the file names. Version 1.3.0 came to draw each page of a scene whose
+root holds a physical size at that size (DEC-034 point 3): a scene with none draws as 1.2.0
+drew it, but for the renderer's version the file names. Version 1.4.0 came to draw the path,
+a concept's sign, at seam 7 (DEC-036 point 1): a scene of no path draws as 1.3.0 drew it, but
+for the renderer's version the file names. Version 1.5.0 came to draw a run's sign and
+ground, at seam 8 (DEC-036 point 3): a scene of neither draws as 1.4.0 drew it, but for the
+renderer's version the file names. A page's content is pinned whole.
+An embedded font is pinned by the glyphs its subset holds and the characters its map gives
+them, not by its bytes, which are fontTools'. A picture is pinned by its image's dictionary
+and its data: a JPEG's own bytes, a PNG's image data as the file holds it, or what the
+decoder gives (`test_visual_communication_png.py`). The pictures are those the SVG and HTML
+renderers' tests draw. The files are read here by their own table of objects, as a reader
+of PDF reads them (`read`); the export of a piece as PDF is
+`test_visual_communication_export.py`'s.
 """
 
 from __future__ import annotations
@@ -930,12 +937,74 @@ def test_beside_a_page_drawn_smaller_every_other_page_of_the_file_draws_as_befor
     assert [loss.what for loss in drawn.losses] == ["deck/large"]
 
 
+# --- a physical size ----------------------------------------------------------------------------
+
+#: A poster's trim size, A1 upright, in millimetres, and its page, 640 px wide and as tall as
+#: the proportion makes it, as the engine sets it (DEC-034 point 3).
+A1 = {"width": 594, "height": 841}
+
+
+def poster(physical: dict[str, Any] = A1, *ids: str) -> dict[str, Any]:
+    """A scene of the pinned shapes on one page, or on a page for each of `ids`, 640 px wide,
+    whose root holds `physical`."""
+    height = round(640 * physical["height"] / physical["width"], 2)
+    page = {**SHAPES["children"][0], "width": 640, "height": height}
+    pages = [{**page, "id": id_} for id_ in ids] or [page]
+    return {
+        **SHAPES,
+        "pages": [each["id"] for each in pages],
+        "children": pages,
+        "physical-size": physical,
+    }
+
+
+def test_a_page_of_a_top_with_a_physical_size_is_that_size_by_one_scale() -> None:
+    """594 by 841 mm is 1683.78 by 2383.94 pt, and the page's 640 px are 1683.78 pt."""
+    drawn = draw(poster())
+    file, page = page_of(drawn)
+    assert re.findall(r"/MediaBox \[([^\]]*)\]", file.value(page)) == ["0 0 1683.78 2383.94"]
+    assert file.content(page).startswith("2.630906 0 0 -2.630906 0 2383.94 cm 4 M\n")
+    assert drawn.losses == []
+
+
+def test_every_page_of_the_scene_takes_the_physical_size() -> None:
+    file = read(draw(poster(A1, "deck/one", "deck/two")).document)
+    boxes = [re.findall(r"/MediaBox \[([^\]]*)\]", file.value(page)) for page in file.pages()]
+    assert boxes == [["0 0 1683.78 2383.94"], ["0 0 1683.78 2383.94"]]
+
+
+def test_the_shapes_draw_as_on_a_page_with_none_but_for_the_scale() -> None:
+    """One scale maps the scene onto the page: what the page draws is the same."""
+    unit = read(draw(tall(round(640 * 841 / 594, 2), width=640)).document)
+    physical = read(draw(poster()).document)
+    [unit_page], [physical_page] = unit.pages(), physical.pages()
+    head = re.compile(r"\A[^\n]* cm 4 M\n")
+    assert head.sub("", physical.content(physical_page)) == head.sub("", unit.content(unit_page))
+
+
+def test_a_physical_size_past_the_largest_a_reader_holds_is_drawn_smaller() -> None:
+    """6 m by 1 m is 17007.87 pt wide: drawn 0.8467 as large, it fits."""
+    drawn = draw(poster({"width": 6000, "height": 1000}))
+    file, page = page_of(drawn)
+    assert re.findall(r"/MediaBox \[([^\]]*)\]", file.value(page)) == ["0 0 14400 2400"]
+    assert file.content(page).startswith("22.5 0 0 -22.5 0 2400 cm 4 M\n")
+    assert drawn.losses == [
+        seam.Loss(
+            "pdf",
+            "figure",
+            seam.APPROXIMATED,
+            "the page measures 17007.87 by 2834.65 pt, past the 14400 pt a page of PDF takes "
+            "on a side, so it is drawn 0.8467 as large, its proportions kept",
+        )
+    ]
+
+
 def test_the_file_names_its_language_and_its_renderer() -> None:
     file = read(draw(SHAPES).document)
     root = int(re.findall(r"/Root (\d+) 0 R", file.trailer)[0])
     assert file.value(root) == "<< /Type /Catalog /Pages 2 0 R /Lang (en) >>"
     info = int(re.findall(r"/Info (\d+) 0 R", file.trailer)[0])
-    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.2.0) >>"
+    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.5.0) >>"
 
 
 # --- the same bytes -----------------------------------------------------------------------------
@@ -1007,7 +1076,7 @@ def test_every_family_a_run_draws_in_is_named_as_itself() -> None:
 def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
     drawn = draw(
         scene(
-            element("path", "figure/arrow", x=0, y=0, width=10, height=10),
+            element("polygon", "figure/arrow", x=0, y=0, width=10, height=10),
             element("box", "figure/odd", x=0, y=0, width=10, height=10, fill="no-such-role"),
             element("image", "figure/picture", x=0, y=0, width=10, height=10, output="square"),
         )
@@ -1018,7 +1087,7 @@ def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
             "plugin": "pdf",
             "what": "figure/arrow",
             "did": "refused",
-            "why": "the pdf renderer draws no `path`",
+            "why": "the pdf renderer draws no `polygon`",
         },
         {
             "plugin": "pdf",
@@ -1125,9 +1194,8 @@ def test_text_in_a_family_with_no_outlines_is_a_loss_left_out_in_its_place(
 
 def test_it_draws_every_primitive_it_declares_and_declares_every_one_it_draws() -> None:
     declared = set(pdf_declaration.DECLARATION["draws"])
-    assert declared == {"group", "box", "ellipse", "line", "text", "image"}
-    kinds = declared | {"path"}
-    drawn_by = {name[1:] for name in vars(pdf._Document) if name[1:] in kinds}
+    assert declared == {"group", "box", "ellipse", "line", "text", "image", "path"}
+    drawn_by = {name[1:] for name in vars(pdf._Document) if name[1:] in declared}
     assert drawn_by == declared
 
 
@@ -1143,7 +1211,8 @@ def test_it_declares_each_property_of_an_image_of_every_source_as_the_svg_render
 def test_it_is_shipped_through_the_seam_as_plain_data_at_the_seams_version() -> None:
     declared = seam.declaration("pdf", seam.RENDERER)
     assert declared == pdf_declaration.DECLARATION
-    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.2.0", seam.SEAM_VERSION)
+    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.5.0", seam.SEAM_VERSION)
     assert (declared["programs"], declared["services"], declared["profile"]) == ([], [], "default")
     assert declared["unit"] == {"scene": "px", "page": "pt", "scale": 0.75}
+    assert declared["physical-size"] == {"page": True, "maps": True}
     assert declared["not-carried"] == ["alternative text", "reading order", "structure"]

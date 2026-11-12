@@ -1,0 +1,60 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# The poster: a page alone, printed at A1 upright (visual-communication DEC-034 point 3). It
+# asks for its width alone, and the engine sets its height in the size's proportion. Each
+# part that shows a field is named after it (point 5).
+#
+# Its library declares neither an own role nor a component token, and a brand that names
+# the library still draws the poster by the brand's drawing of it (DEC-009 point 3).
+status: experimental
+about: >-
+  A poster for a conference, one page alone printed at A1: what it announces, and when and
+  where, below it. Its width comes from the brand's figure width, its height from its
+  physical size.
+
+fields:
+  type: object
+  required: [title]
+  properties:
+    title:
+      type: string
+      description: What the poster announces, in a few words.
+      x-pkit-prose: true
+    details:
+      type: string
+      description: When and where, in a sentence or two.
+      x-pkit-prose: true
+
+# One layout, whose slots are the fields the content fills. It holds no slot of pages, so
+# the poster is one page itself.
+layouts:
+  sheet:
+    slots:
+      title: {}
+      details: {}
+
+values:
+  margin: "=@space.4"
+
+parts:
+  background:
+    box: {fill: background}
+    width: "=:width"
+    height: "=:height"
+  title:
+    text: {content: title, style: type.heading, fill: text-primary}
+    x: "=margin"
+    y: "=margin"
+    width: "=:width - 2 * margin"
+  details:
+    when: details
+    text: {content: details, style: type.body, fill: text-secondary}
+    x: "=margin"
+    y: "=title.bottom + @space.3"
+    width: "=:width - 2 * margin"
+
+preferred:
+  width: "=@size.figure"
+
+physical-size: {width: 594, height: 841}

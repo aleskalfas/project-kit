@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A drawing of a layout, the top's own or a brand's, chooses by whether its
+  instance is a page, through the marked name `:as` (#3022, DEC-034 point 7). It
+  reads `:as` in a switch or a `when` whose values are `page`, the default, and
+  `part`: the engine sets `page` where the instance is a page and `part` where it
+  lies inside another page, as a figure placed in a slide's slot does, and a
+  value it chose names `:as` as its source. So one drawing may draw page
+  dressing, such as a backdrop, only where its top is the piece's top. A switch
+  or a `when` by `:as` in a component that is no drawing of a layout, one that
+  names a value other than `page` and `part`, and one with no branch for `page`
+  fail as `as-switch`, which takes from `size-switch` the reading of `:as` it
+  failed before. A drawing that reads no `:as` draws as before.

@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:software-engineering
+# pkit-digest: sha256:67833c77e4bb87603b097fc8b941157505ea8d1f3bc283682c67f48a19b2f20f
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: code-reviewer
 description: Generalist code reviewer — the "review this PR" headline of the 
   software-engineering code-review panel. Reviews a PR diff for 

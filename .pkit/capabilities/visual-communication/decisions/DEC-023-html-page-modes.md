@@ -51,7 +51,7 @@ A small page in DEC-020's form held four keys over the foundations' two value ax
 
 ### 3. A paint is a custom property
 
-- **One custom property for each colour role the file paints,** in the CSS writer's spelling. HTML text and the shapes of a layer read the same property.
+- **One custom property for each colour role the file paints,** in the CSS writer's spelling. HTML text and the shapes of a layer read the same property. Each step of an order the file paints takes one too, under a name no role's spelling by the CSS writer can take, and its value in each mode comes with the scene (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 5).
 - **A mode is a set of their values.** So text and shapes change together, an arrowhead defined once for a role serves every mode, and a colour's alpha lies in its value.
 - **At the file's size.** Each mode's values are its key's, and that key's combination takes the file's size. So a colour a size changes takes that size's value in every mode of the file.
 - **The renderer writes these rules itself,** for the keys the file holds and the roles it paints. It shares the writer's spelling, never its output (DEC-005 point 7).
@@ -74,13 +74,13 @@ A small page in DEC-020's form held four keys over the foundations' two value ax
 ### 6. The step sets a mode through the browser
 
 - **By the browser's emulation of a key's signals.** A file holds no switch for the step, so the step reads what a reader's browser reads. It takes a key's signals from the declaration, and hands them to the browser's module, which knows no axis.
-- **Every key it draws, in the file's one start,** with no reload (DEC-020 point 5). A file holds every key point 1 gives it, whichever the caller picks. The step sets each signal the file reads, so the machine's light or dark plays no part.
-- **Each read of the check for dropped text runs in each key drawn** (DEC-020 point 6).
+- **Every key it draws, in the file's first start,** with no reload (DEC-020 point 5). A file holds every key point 1 gives it, whichever the caller picks. The step sets each signal the file reads, so the machine's light or dark plays no part. An image the browser draws in a *forced palette*, the colours a browser gives a page under forced colours, is a *forced image*. Forced images take a start of their own (refinement per [visual-communication:DEC-027-forced-colours-viewing] point 3).
+- **Each read of the check for dropped text runs in each key drawn** (DEC-020 point 6), and in each forced palette drawn (refinement per [visual-communication:DEC-027-forced-colours-viewing]).
 - **The first read holds this too.** Its small page holds a mode for each signal the file reads, and the run stops if setting one does not repaint it, since those keys would then read as one (DEC-020 point 7).
 
 ### 7. A page with no ground lies on the browser's own ground
 
-- **The file names its schemes.** CSS's `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`. The browser's ground then follows the mode, and the file sets no colour value around its pages (DEC-020 point 4). A keyline and a backdrop mix the browser's colours (refinement per [visual-communication:DEC-031-html-page-backdrop] point 3).
+- **The file names its schemes.** CSS's `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`. The browser's ground then follows the mode, and the file sets no colour value around its pages (DEC-020 point 4). A keyline and a backdrop mix the browser's colours (refinement per [visual-communication:DEC-031-html-page-backdrop] point 3). In print each page lies on the browser's ground, and the file asks the browser to keep the colours of its pages and their keylines exactly, and nothing around them (refinement per [visual-communication:DEC-026-html-page-print] point 5).
 - **No check reads that ground,** which differs between browsers. A file with no such mode names no scheme, so its page lies on the browser's default ground, white in the test. Only a person catches a light text that fades there.
 - **Under forced colours,** one rule of the file gives each line, stroke and arrowhead the reader's text colour. A fill opaque in every key the file holds takes the reader's background colour, with an edge in that text colour. The browser colours the text itself. The backdrop and each fixed page take the reader's background colour, and the keyline the reader's text colour (refinement per [visual-communication:DEC-031-html-page-backdrop] point 3).
 - **A translucent fill stays.** A line over it, or over a picture, may fade.

@@ -33,9 +33,9 @@ from typing import Literal
 
 import click
 
+from project_kit import agent_definitions
 from project_kit.agents import (
     Namespace,
-    agent_locations,
     agents_dir_for,
     find_agent_file,
     refuse_synced_copy,
@@ -121,8 +121,8 @@ def stamp_new_storyboard(
     `kind` selects the handler; today only `agent` is supported. `name`
     is the implementing artifact's name (kebab-case). `namespace`, if
     given, is where the agent lives — `core`, `project` or a capability
-    name; otherwise the agent is looked up in the deploy's resolution
-    order. `scenario`, if given, produces `<scenario>.storyboard.md` for
+    name; otherwise the agent is the definition the picker names
+    (ADR-087). `scenario`, if given, produces `<scenario>.storyboard.md` for
     the multi-scenario case; otherwise the file is `storyboard.md`.
 
     Returns the absolute path written. In dry-run mode, returns the
@@ -201,9 +201,9 @@ def _locate_agent(
     """The agent's (namespace, agents folder, canonical file), or refuse.
 
     With `namespace`, only that namespace's folder is searched (an unknown
-    namespace gets the shared refusal). Without it, every location agents ship
-    from is searched in the deploy's order — project, capabilities by name,
-    then core — so the agent found is the one that deploys.
+    namespace gets the shared refusal). Without it, the agent is the definition
+    the picker names (ADR-087), the one that deploys; a name whose agent has no
+    one text, or that the picker cannot tell, is refused with the picker's why.
     """
     if namespace is not None:
         ns_dir = agents_dir_for(target_root, namespace)
@@ -215,15 +215,18 @@ def _locate_agent(
             )
         return namespace, ns_dir, agent_file
 
-    for ns, ns_dir in agent_locations(target_root):
-        agent_file = find_agent_file(ns_dir, agent_name)
-        if agent_file is not None:
-            return ns, ns_dir, agent_file
-    raise click.ClickException(
-        f"no agent named {agent_name!r} found in .pkit/agents/{{core,project}}/ "
-        f"or any capability's agents/ folder. "
-        f"Stamp the agent first with `pkit new agent <namespace> {agent_name}`."
-    )
+    pick = agent_definitions.answer(target_root).picks.get(agent_name)
+    if pick is None:
+        raise click.ClickException(
+            f"no agent named {agent_name!r} found in .pkit/agents/{{core,project}}/ "
+            f"or any capability's agents/ folder. "
+            f"Stamp the agent first with `pkit new agent <namespace> {agent_name}`."
+        )
+    if pick.file is None:
+        why = pick.refused or pick.none or pick.untold
+        raise click.ClickException(f"agent {agent_name!r} has no one definition: {why}.")
+    owner = agent_definitions.place_owner(pick.agent.place)
+    return owner, agents_dir_for(target_root, owner), pick.file
 
 
 def _validate_name(name: str) -> None:

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "package.schema.json",
   "title": "Component package metadata (`package.yaml`)",
-  "description": "A backbone file schema (ADR-056) for the `package.yaml` of a component — a capability or an adapter: every field the shipped package files use and the blocks the connection-points, documentation-roots and friction records add. STRICT ON UNKNOWN KEYS: every object here that declares its keys closes with `additionalProperties: false`, at the top level and inside every block, so a key the schema does not know is an error; `project_kit.package_validate` reports it at the key with the nearest known key suggested, through the one renderer of ADR-056 point 4. The lifecycle reference's manifest schema records the decision and what an adopter does about such a key ('Validation: the package schema'); a tree whose schema predates it keeps its permissive copy until synced, and there an unknown key is a warning. The fields COR-017 lists among a component's required ones — `schema_version`, `component`, `description`, `requires_backbone` — are required of capabilities and adapters alike. Every part of a role name or a point address is a word, `[a-z][a-z0-9-]*`: the word the configuration schema's selection keys admit, defined once as `project_kit.refs.ADDRESS_WORD_PATTERN` and held equal here by a test. Two `schema_version` values are in use and both are accepted: version 2 marks a file that adopted the `commands:` block (COR-021 said the version bumps with it); no reader distinguishes the two, and both require the same fields. `provides` is admitted from COR-013 (hook implementations) though no shipped file uses it; no egress or privilege declaration exists in any package file — those live in the permission model's own data.",
+  "description": "A backbone file schema (ADR-056) for the `package.yaml` of a component — a capability or an adapter: every field the shipped package files use and the blocks the connection-points, documentation-roots and friction records add, with the write categories a capability declares (ADR-088 point 1). STRICT ON UNKNOWN KEYS: every object here that declares its keys closes with `additionalProperties: false`, at the top level and inside every block, so a key the schema does not know is an error; `project_kit.package_validate` reports it at the key with the nearest known key suggested, through the one renderer of ADR-056 point 4. The lifecycle reference's manifest schema records the decision and what an adopter does about such a key ('Validation: the package schema'); a tree whose schema predates it keeps its permissive copy until synced, and there an unknown key is a warning. The fields COR-017 lists among a component's required ones — `schema_version`, `component`, `description`, `requires_backbone` — are required of capabilities and adapters alike. Every part of a role name or a point address is a word, `[a-z][a-z0-9-]*`: the word the configuration schema's selection keys admit, defined once as `project_kit.refs.ADDRESS_WORD_PATTERN` and held equal here by a test. Two `schema_version` values are in use and both are accepted: version 2 marks a file that adopted the `commands:` block (COR-021 said the version bumps with it); no reader distinguishes the two, and both require the same fields. `provides` is admitted from COR-013 (hook implementations) though no shipped file uses it; no egress or privilege declaration exists in any package file — those live in the permission model's own data.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -89,6 +89,9 @@
     },
     "loaded_rules": {
       "$ref": "#/$defs/loaded-rules"
+    },
+    "write_categories": {
+      "$ref": "#/$defs/write-categories"
     }
   },
   "$defs": {
@@ -827,7 +830,7 @@
     },
     "loaded-rules": {
       "title": "How an adapter's harness reaches the installed capabilities' loaded files (COR-070 point 2; ADR-076 point 4)",
-      "description": "An adapter's delivery of each installed capability's loaded file, `.pkit/capabilities/<name>/rules.md`: the backbone renders one index of them at `.pkit/rules/capabilities.md` in the form `entry` gives, and the adapter's merge primitive keeps `line` present in `host`, so the harness's syntax reaches the backbone only as this data. An adapter without the key delivers no capability's rules, and validation warns of it. Validation fails while registered adapters' `entry` forms differ. A capability declares none.",
+      "description": "An adapter's delivery of each installed capability's loaded file, `.pkit/capabilities/<name>/rules.md`: the backbone renders one index of them at `.pkit/rules/capabilities.md` in the form `entry` gives, and the adapter's merge primitive keeps `line` present in `host`, beside core's include in the same form, so the harness's syntax reaches the backbone only as this data. An adapter without the key delivers no capability's rules, and validation warns of it. Validation fails while registered adapters' `entry` forms differ. A capability declares none.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -846,7 +849,7 @@
           "$ref": "#/$defs/relative-path"
         },
         "line": {
-          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`.",
+          "description": "The line the host keeps, `{index}` standing for the index's path read from the host's folder, such as `@{index}`. Read for core's loaded file's path in place of the index's, it is core's include, which the host keeps too and validation checks (ADR-083).",
           "type": "string",
           "pattern": "^[^\\n]*\\{index\\}[^\\n]*$"
         }
@@ -902,6 +905,32 @@
     "point-description": {
       "description": "Required prose: what the point means and what one may rely on. Nothing parses it (COR-053 point 3).",
       "$ref": "#/$defs/non-empty-string"
+    },
+    "write-categories": {
+      "title": "The overlay categories a capability declares for its agents' writes (COR-073 point 1, ADR-088 point 1)",
+      "description": "Each key is the category's whole name: the capability's name, a dot, then a word, `[a-z][a-z0-9-]*` — the same string the owner's `owns` holds as a placeholder and the agents overlay holds as a key. Python checks that the part before the dot is the capability's name, that `owner` is an agent the capability ships whose `owns` names the category and that no other agent of it does, and that `default-query` names a leaf of `commands:` declaring the query contract and no `reads`. Only a capability holds the block. Its install, and the commands that fill missing overlay categories, write the query's answer into the overlay where the project set no value; a category without `default-query` gets the empty list.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/write-category"
+      }
+    },
+    "write-category": {
+      "title": "One write category",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner"
+      ],
+      "properties": {
+        "owner": {
+          "description": "The one agent of the capability that owns the category: an agent it ships under `agents/`, whose `owns` names the category's placeholder (checked in Python).",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "default-query": {
+          "description": "The leaf of the capability's `commands:` that answers the category's default: run from the project root with `--json` alone, offline-marked and bounded, it prints one JSON document, `{\"paths\": [...]}`, with an optional one-line `note`. It must declare the query contract and no `reads` (checked in Python). Absent: the category has no default, and the empty list is written.",
+          "$ref": "#/$defs/command-reference"
+        }
+      }
     },
     "command-reference": {
       "description": "A path through the `commands:` tree, tokens separated by spaces (`create issue`), landing on a leaf.",

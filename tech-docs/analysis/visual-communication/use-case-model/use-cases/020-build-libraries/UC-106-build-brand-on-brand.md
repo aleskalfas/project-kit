@@ -50,7 +50,7 @@ pkit:
 
 - **1a.** The brand to build on builds on a brand in turn, such as a game's brand on its platform's. The new brand alters only what is open to it along the chain, since each brand narrows what the one before it opens.
 - **1b.** The look would build on two brands at once. A brand builds on one brand at most, so the developer chooses one.
-- **2a.** The look needs a part, or the layouts of a kind of piece, that the brand it builds on lacks. The new brand adds them as its own, and never replaces a layout or a part that brand has.
+- **2a.** The look needs the layouts of a kind of piece the brand it builds on does not serve, or a part that brand lacks. The new brand adds them as its own, and never replaces a layout or a part that brand has.
 - **2b.** The look needs an axis or a mode that the brand it builds on lacks, such as a high contrast. The new brand adds none, so the developer asks that brand's library owner to add it.
 - **3a.** The new brand gives a value that the brand it builds on does not list. The developer removes the value, or asks that brand's library owner to list it, and the path rejoins at step 3.
 - **5a.** A piece uses two libraries that fit different major numbers of one brand. The system says that the two cannot be used in one piece.

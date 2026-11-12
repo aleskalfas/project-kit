@@ -87,17 +87,18 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 ### 7. Roles a library adds lie under its own name
 
 - **Shared roles** are the foundations'. Each other library's own roles lie under a group named after the library, so a role a base adds never meets one a brand built on it adds. No library takes the name of a top group of the shared roles.
-- **A component token** is a role one component declares for one of its parts, such as a control's fill, so a brand can style that part apart from a shared role. All component tokens lie under one group, `component`, then the component's library and name.
+- **A component token** is a role one component declares for what its parts draw, such as a control's fill, so a brand can style it apart from a shared role. All component tokens lie under one group, `component`, then the component's library and name. The component declares it in its own file, at `component.<library>.<component>.<name>`, and among components and what a piece writes only that component reads it. No library takes the name `component` (refinement per [visual-communication:DEC-035-component-tokens]).
 - **A component token's default aliases a role, never a value.** So a component library holds no raw value, and no brand has to give the token a value.
 - **A shared role the foundations add after their first version** carries a default that aliases an older role. Every brand already released still gives it a value. A picture role is the exception: it carries no default, and no brand owes it a value (refinement per [visual-communication:DEC-025-picture-files] point 4).
-- **A base may open a component token alone,** so a brand built on it restyles that one part without changing the shared role everywhere. A component declares one only where a brand needs to differ.
+- **A base may open a component token alone,** so a brand built on it restyles that one component without changing the shared role everywhere (refinement per [visual-communication:DEC-035-component-tokens]). A component declares one only where a brand needs to differ.
 - **How far a brand reaches into a component** (refinement per [visual-communication:DEC-009-layout-defaults]). A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
 
 ### 8. Pairs of colours that must contrast
 
-- **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles.
+- **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles, and none of them names a component token (refinement per [visual-communication:DEC-035-component-tokens]).
 - **Checked in every combination of the axes that change a colour.**
-- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. It measures each run of a text, a span set in one style, against the fill under that run, at the run's own size and weight (refinement per [visual-communication:DEC-012-text-runs]). Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
+- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. It measures each run of a text, a span set in one style, against the fill under that run, at the run's own size and weight (refinement per [visual-communication:DEC-012-text-runs]). It measures each sign against the fill under it, at WCAG's level for other marks (refinement per [visual-communication:DEC-036-concept-signs] point 8). Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text or a sign over a picture, which a reviewer judges.
+- **An order's ends.** The text on an order's steps is a declared pair with each of the order's two ends, at the level for text. In every combination, that text is lighter than both ends or darker than both, by WCAG's relative luminance. The first end contrasts with the page's ground, the shared role the foundations declare for it, at least as much as the last does, by WCAG's ratio, an end with alpha measured over it (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 2).
 
 ### 9. Fonts come from committed files, and a missing font refuses the render
 
@@ -109,11 +110,12 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 10. A notation maps concepts to roles, read with its name
 
-- **What a concept maps to.** A notation lists the concepts of one subject. Each maps to a *colour family*, a group of colour roles that paints one thing, such as its line, its fill and the text on it, which the foundations declare. A concept may also map to an icon among the notation's marks, and to a shape from a list the foundations declare. It never maps to a value, so each brand colours a concept its own way.
-- **Colour is never the only sign.** The foundations' families bound how many concepts one piece tells apart by colour. An icon or a shape tells the rest apart.
-- **An icon follows the brand,** tinted by a role of its concept's family.
+- **What a concept maps to.** A notation lists the concepts of one subject. Each maps to a *colour family*, a group of colour roles that paints one thing, such as its line, its fill and the text on it, which the foundations declare. A concept may also map to an icon the notation holds as an outline, and to a shape from a list the foundations declare. It never maps to a value, so each brand colours a concept its own way. A concept's *sign* is its icon, or else its shape (refinement per [visual-communication:DEC-036-concept-signs] point 1).
+- **An order's roles.** The foundations also declare an order's two ends and its text, apart from the families a notation maps to, and which end is the first. No concept maps to a role of an order (refinement per [visual-communication:DEC-032-ordered-colour-steps] points 1 and 6).
+- **Colour is never the only sign.** The foundations' families bound how many concepts one piece tells apart by colour, and no finding judges the bound. Every concept shown by colour shows a sign too, and the check asks for attention where none is drawn, and where two concepts of a piece share a sign (refinement per [visual-communication:DEC-036-concept-signs] point 8).
+- **An icon follows the brand,** painted as its part or its run is (refinement per [visual-communication:DEC-036-concept-signs] points 2 and 3).
 - **A concept is read with its notation's name,** as a component is read with its library's. A piece uses concepts only from the notations it names.
-- **A notation's file** is of the capability's format, checked by its schema. Its marks, such as a logo, are files it holds. The words it gives its subject, for translators, are decided with translation, later.
+- **A notation's file** is of the capability's format, checked by its schema. It holds its icons' outlines, and gives no concept a label, for now, a legend's labels being content (refinement per [visual-communication:DEC-036-concept-signs] points 1 and 6). Its marks, such as a logo, are files it holds. The words it gives its subject, for translators, are decided with translation, later.
 
 ### 11. What the checks report, and how severely
 
@@ -166,7 +168,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 ## Implications
 
-- **The foundations** declare the shared roles with their types, the shared axes with their common modes, the colour families, the shapes, and the contrast pairs among shared roles.
+- **The foundations** declare the shared roles with their types, the shared axes with their common modes, the colour families, an order's two ends and its text with which end is the first (refinement per [visual-communication:DEC-032-ordered-colour-steps] point 1), the shapes, and the contrast pairs among shared roles.
 - **The capability's schema for a brand** names the extension point, the kinds of value a value axis may change, and how a key is spelled. The capability's reference gives each code writer's spelling.
 - **The walking skeleton** reads a base brand and its open roles, and resolves two value axes, the colour scheme and the contrast. It writes the brand out as CSS under the naming rule, and checks contrast and missing fonts at the severities of point 11.
 - **The record of the engine and its plugins** decides how text is measured, and the document of a brand's resolved values that code writers and producers read ([visual-communication:DEC-005-engine-and-plugins] points 4 and 7).

@@ -10,13 +10,14 @@
 # ]
 # ///
 """visual-communication capability — pages: what `pkit visual look` can draw of a piece, and
-the tools that would draw it (DEC-015 points 2 and 5, DEC-020 points 5 and 7).
+the tools that would draw it (DEC-015 points 2 and 5, DEC-020 points 5 and 7, DEC-027 point 2).
 
 It lists the piece's languages, its keys and its pages in each language, by number and
 trace id, computed under the lock its `piece.yaml` holds. It says which renderer a run reads
 by default, and each renderer's tool. It reads resvg's version from the module that holds
 the tool, so it needs the wheel as `look` does. It finds the browser as a run would, and
-starts none, so it names the program and no version. It only reads: being a query, `pkit
+starts none, so it names the program and no version, and the forced palettes it draws where
+`look` is asked for them. It only reads: being a query, `pkit
 sync` resolves this script's packages into uv's cache, and so `look` finds them there with
 no network.
 
@@ -104,6 +105,10 @@ def _print(listed: Mapping[str, Any]) -> None:
     resvg, browser = listed["tools"][viewing.SVG], listed["tools"][viewing.HTML]
     print(f"tool of svg: {resvg['name']} {resvg['version']}, through resvg-py {resvg['wheel']}")
     print(f"tool of html: {_browser(browser)}")
+    print(
+        f"forced palettes of html: {', '.join(browser['forced-palettes'])}, drawn where "
+        f"`look` is asked `{viewing.ASK_FORCED}`"
+    )
 
 
 def _browser(found: Mapping[str, Any]) -> str:

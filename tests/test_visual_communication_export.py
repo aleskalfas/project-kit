@@ -3,7 +3,9 @@ the clone's local folder, never overwriting another; their record, `exports.yaml
 or missing produced picture, unless the person names a stale one; a piece of several
 pages, one file for each page under one number; a piece exported as PDF, one file for each
 language and combination holding its pages in order; a piece exported as HTML, one page file
-for each language and set of combinations that share one (DEC-023 point 1); what a write
+for each language and set of combinations that share one (DEC-023 point 1); a piece exported
+as switching files, one for each page, language and set of combinations that share one, each
+held to the one-key file of each combination it holds (DEC-018 points 1 to 4); what a write
 that fails leaves; and a published piece's current copy, in its folder or at a place, with
 the gate on its lock (DEC-017 points 5, 7 and 8)."""
 
@@ -48,6 +50,7 @@ from tests.test_visual_communication_pipeline import (
 from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import (
     CONFIG,
+    RECORDED_DEFAULT,
     SCHEMAS,
     bound,
     importable,
@@ -95,6 +98,7 @@ from tests.visual_communication_writes import FULL, failing
 FOLDER = ".pkit/capabilities/visual-communication/project/local/exports/flow"
 RECORD = f"{PIECE_FOLDER}/exports.yaml"
 COPY = f"{PIECE_FOLDER}/current-copy"
+PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 TEXT = "{http://www.w3.org/2000/svg}text"
 
 
@@ -128,8 +132,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     shown = run(root, PIECE)
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines() == [
-        f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-        f"to move the work, move the folder and change the `location:` line there",
+        RECORDED_DEFAULT,
         f"export: {FOLDER}/flow.v1.en.default.svg",
         f"export: {FOLDER}/flow.v1.en.colour-scheme.dark.svg",
         f"export: version 1 recorded in {RECORD}",
@@ -153,7 +156,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     recorded = second["recorded"]
     assert (recorded["state"], recorded["renderers"], recorded["used-stale"]) == (
         "draft",
-        {"svg": "1.1.0"},
+        {"svg": "1.3.0"},
         [],
     )
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
@@ -415,7 +418,7 @@ def test_a_published_pieces_lock_refused_is_told_of_its_state_and_of_no_pin(
         pytest.param(
             {"exports": []},
             "error: visual/pieces/flow/piece.yaml declares no format under `exports`: name "
-            "`svg`, `pdf` or `html` there",
+            "`svg`, `svg-modes`, `pdf` or `html` there",
             id="no-format",
         ),
     ],
@@ -1061,7 +1064,7 @@ def test_a_deck_exported_as_pdf_makes_one_file_for_each_language_its_pages_in_or
     assert version["files"] == {
         name: reading.sha256((root / FOLDER / name).read_bytes()) for name in PDF_FILES
     }
-    assert version["recorded"]["renderers"] == {"pdf": "1.2.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.5.0"}
 
 
 def test_a_pdf_draws_each_combination_in_its_own_colours(tmp_path: Path) -> None:
@@ -1088,7 +1091,7 @@ def test_svg_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     ]
     assert exported(root) == sorted([*svgs, *PDF_FILES])
     [version] = reading.read_yaml(root / RECORD)["versions"]
-    assert version["recorded"]["renderers"] == {"pdf": "1.2.0", "svg": "1.1.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.5.0", "svg": "1.3.0"}
 
 
 def test_the_same_scene_gives_the_same_pdf_under_each_number(tmp_path: Path) -> None:
@@ -1210,7 +1213,7 @@ def test_html_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     assert files.shape_problems(record, "exports") == []
     [version] = record["versions"]
     assert sorted(version["files"]) == exported(root)
-    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.2.0"}
+    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.5.0"}
 
 
 @pytest.mark.parametrize(
@@ -1385,16 +1388,218 @@ REFUSED: dict[str, Callable[[Path, str], Path]] = {
 
 
 @pytest.mark.parametrize("kind", sorted(REFUSED))
-def test_what_refuses_an_svg_or_a_pdf_export_refuses_an_html_one_before_any_write(
+def test_what_refuses_an_svg_or_a_pdf_export_refuses_an_html_or_a_switching_one_before_any_write(
     tmp_path: Path, kind: str
 ) -> None:
     """Each refusal names the same, but a file's format where it names a file."""
     said = {}
-    for form in ("svg", "pdf", "html"):
+    for form in ("svg", "pdf", "html", "svg-modes"):
         root = REFUSED[kind](tmp_path / form, form)
         said[form] = re.sub(r"\.(svg|pdf|html)\b", ".<format>", refused(root))
-    assert said["html"] == said["svg"] == said["pdf"]
+    assert said["html"] == said["svg"] == said["pdf"] == said["svg-modes"]
     assert said["html"].startswith("error: ")
+
+
+# --- a piece exported as switching files (DEC-018 points 1 to 4) --------------------------------
+
+#: The format of switching files, and the files a run of the deck makes in it as version 1:
+#: one for each page and language, which holds both colour schemes under its first key.
+MODES = "svg-modes"
+SWITCHING_FILES = [
+    f"flow.v1.{language}.default.{number}.svg" for language in SLIDES for number in (1, 2)
+]
+
+
+def rules_of(path: Path) -> list[str]:
+    """The signals each rule of an exported switching file lies under, in order."""
+    return re.findall(r"@media ([^{]+)\{", path.read_text(encoding="utf-8"))
+
+
+def test_a_deck_exported_as_switching_files_makes_one_for_each_page_and_language(
+    tmp_path: Path,
+) -> None:
+    root = deck(tmp_path, exports=[MODES])
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[1:] == [
+        *(f"export: {FOLDER}/{name}" for name in SWITCHING_FILES),
+        f"export: version 1 recorded in {RECORD}",
+    ]
+    assert exported(root) == sorted(SWITCHING_FILES)
+    for name in SWITCHING_FILES:
+        assert rules_of(root / FOLDER / name) == ["(prefers-color-scheme:dark)"]
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert version["files"] == {
+        name: reading.sha256((root / FOLDER / name).read_bytes()) for name in SWITCHING_FILES
+    }
+    assert version["recorded"]["renderers"] == {"svg": svg.VERSION}
+    assert "differing" not in version["recorded"]
+
+
+@pytest.mark.parametrize(
+    ("modes", "key"),
+    [(["light", "dark"], "default"), (["dark"], DARK)],
+    ids=["light-and-dark", "dark-alone"],
+)
+def test_a_switching_file_takes_the_first_key_it_serves(
+    tmp_path: Path, modes: list[str], key: str
+) -> None:
+    root = drawing_project(tmp_path, picture=False, modes={"colour-scheme": modes}, exports=[MODES])
+    assert run(root, PIECE).returncode == 0
+    assert exported(root) == [f"flow.v1.en.{key}.svg"]
+    assert rules_of(root / FOLDER / f"flow.v1.en.{key}.svg") == (
+        ["(prefers-color-scheme:dark)"] if len(modes) > 1 else []
+    )
+
+
+def test_a_mode_the_combinations_hold_alike_parts_nothing(tmp_path: Path) -> None:
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "contrast": ["standard"]},
+        exports=[MODES],
+    )
+    assert run(root, PIECE).returncode == 0
+    assert exported(root) == ["flow.v1.en.default.svg"]
+
+
+def test_each_key_over_a_size_axis_takes_a_switching_file_of_its_own(tmp_path: Path) -> None:
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]},
+        exports=[MODES],
+    )
+    add_device(root, PHONE_GROUND)
+    assert run(root, PIECE).returncode == 0
+    names = ["flow.v1.en.default.svg", f"flow.v1.en.{PHONE}.svg"]
+    assert exported(root) == names
+    for name in names:
+        assert rules_of(root / FOLDER / name) == ["(prefers-color-scheme:dark)"]
+
+
+def test_a_produced_picture_shows_the_variant_that_serves_each_combination(
+    tmp_path: Path,
+) -> None:
+    root = ready(tmp_path, exports=[MODES])
+    colours = {"default": (200, 30, 30, 255), "colour-scheme.dark": (30, 60, 200, 128)}
+    write_picture(root, framing, by_variant=colours)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    drawn = (root / FOLDER / "flow.v1.en.default.svg").read_text(encoding="utf-8")
+    assert re.findall(r'data-shown-in="([^"]*)"', drawn) == ["default", DARK]
+    assert '[data-shown-in~="colour-scheme.dark"]{display:inline}' in drawn
+
+
+def test_a_piece_that_names_both_svg_formats_is_refused_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=["svg", MODES])
+    assert refused(root) == (
+        f"error: {PIECE_FOLDER}/piece.yaml names both `svg` and `svg-modes` under `exports`, "
+        f"which write files of one name: name one of them\n"
+    )
+
+
+def test_a_piece_whose_combinations_differ_in_a_mode_of_no_pair_is_refused(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(
+        tmp_path,
+        picture=False,
+        modes={"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]},
+        exports=[MODES],
+    )
+    assert refused(root) == (
+        f"error: {PIECE_FOLDER}/piece.yaml: its combinations differ in a mode no switching file "
+        f"of its format can hold: `svg-modes` reads no pair of `contrast`'s mode `standard`; "
+        f"`svg-modes` reads no pair of `contrast`'s mode `high`. Draw that mode in a piece of "
+        f"its own, or export the piece as `svg`\n"
+    )
+
+
+def slipping(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A slip in the switching file's rules, from now to the end of the test: the rule of a
+    combination repaints nothing, so the plain drawing shows there."""
+    monkeypatch.setattr(svg.Switching, "_key_rules", lambda self, key: "")
+
+
+def differing_elements(said: str) -> list[str]:
+    """The elements a refusal names as differing, in order."""
+    return re.findall(r"`([^`]+)` of `flow\.v1\.en\.default\.svg` in `colour-scheme\.dark`", said)
+
+
+def test_a_switching_file_that_differs_from_the_one_key_file_stops_the_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=[MODES])
+    slipping(monkeypatch)
+    said = refused(root)
+    assert said.startswith(
+        "error: a switching file paints a combination otherwise than the SVG renderer's file "
+        "of that combination: `"
+    )
+    assert said.endswith(
+        "Name each such element with `--use-differing <element>` to export its file as it is, "
+        "and report it to whoever maintains the capability\n"
+    )
+    assert differing_elements(said)
+    assert "and the one-key file's" in said
+
+
+def test_each_element_named_is_let_through_and_the_record_keeps_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=[MODES])
+    slipping(monkeypatch)
+    elements = differing_elements(refused(root))
+    named = [part for element in elements for part in ("--use-differing", element)]
+    assert differing_elements(refused(root, *named[2:])) == elements[:1]
+    done = run(root, PIECE, *named)
+    assert done.returncode == 0, done.stderr
+    let_through = [line for line in done.stdout.splitlines() if line.startswith("let through: ")]
+    assert differing_elements("\n".join(let_through)) == elements
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert version["recorded"]["differing"] == [
+        {"file": "flow.v1.en.default.svg", "key": DARK, "element": element} for element in elements
+    ]
+
+
+def test_an_element_named_that_does_not_differ_is_said_and_stops_nothing(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=[MODES])
+    done = run(root, PIECE, "--use-differing", "figure")
+    assert done.returncode == 0, done.stderr
+    assert "not differing, so used as it is: figure" in done.stdout.splitlines()
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert "differing" not in version["recorded"]
+
+
+def test_a_published_switching_files_copy_holds_its_versions_bytes(tmp_path: Path) -> None:
+    root = published(tmp_path, exports=[MODES])
+    assert run(root, PIECE).returncode == 0
+    assert copied(root) == ["flow.en.default.svg"]
+    copy = (root / COPY / "flow.en.default.svg").read_bytes()
+    assert copy == (root / FOLDER / "flow.v1.en.default.svg").read_bytes()
+    [version] = record_of(root)["versions"]
+    assert record_of(root)["current-copy"]["files"] == {
+        "current-copy/flow.en.default.svg": version["files"]["flow.v1.en.default.svg"]
+    }
+
+
+def test_the_previews_stay_one_key_files_whatever_the_format(tmp_path: Path) -> None:
+    drawn = {}
+    for form in ("svg", MODES):
+        root = drawing_project(tmp_path / form, picture=False, exports=[form])
+        assert run_main(render_script, PIECE, cwd=root).returncode == 0
+        drawn[form] = every_file(root / PREVIEWS)
+    assert sorted(drawn[MODES]) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
+    assert drawn[MODES] == drawn["svg"]
 
 
 # --- what a failed export leaves ----------------------------------------------------------------

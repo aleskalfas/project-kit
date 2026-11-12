@@ -1,0 +1,10 @@
+component: backbone
+kind: none
+body: >
+  COR-013 gains point 7, accepted with this change (#2947): an agent's
+  definition names the tools it is granted, the tools it is withheld, or
+  neither, never both, and an adapter refuses a withheld list its harness
+  cannot enforce. Point 1 makes a definition's tool names an exception to
+  its harness neutrality. No command, file, key or check changes yet, so no
+  surface moves: the deploy, the runner and the validator admit the withheld
+  list in a later change.

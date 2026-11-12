@@ -41,7 +41,13 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, importable, write, write_list
+from tests.visual_communication_project import (
+    CONFIG,
+    RECORDED_DEFAULT,
+    importable,
+    write,
+    write_list,
+)
 from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl, checks, libraries = load(
@@ -61,10 +67,7 @@ PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
 TESTS_FOLDER = "visual/libraries/tests/1.0.0"
 BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
-LOCATION = (
-    f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-    f"to move the work, move the folder and change the `location:` line there"
-)
+LOCATION = RECORDED_DEFAULT
 
 
 @pytest.fixture(autouse=True)
@@ -144,7 +147,7 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
     drawn = previews(root)
     assert sorted(drawn) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
     light = drawn["flow.en.default.svg"]
-    assert 'data-key="default"' in light and 'data-renderer="svg 1.1.0"' in light
+    assert 'data-key="default"' in light and 'data-renderer="svg 1.3.0"' in light
     assert '<image data-id="figure/body/steps[note]/pictures[square]/image"' in light
     assert ">Here</tspan>" in light and ">The flow.</tspan>" in light
     assert '@font-face{font-family:"Source Sans Pro"' in light

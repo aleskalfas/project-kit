@@ -459,6 +459,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Version pin:**
 
+- [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
@@ -503,7 +504,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
-- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation, a capability's default or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 

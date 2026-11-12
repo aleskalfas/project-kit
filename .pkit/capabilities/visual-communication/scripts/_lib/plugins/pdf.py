@@ -3,13 +3,16 @@ and combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10, DE
 point 7).
 
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
-  1's scene, the image among them. It draws only what it declares, so the losses the
+  1's scene, the image and the path among them. It draws only what it declares, so the losses the
   capability reads from the declaration before it runs are the ones it makes.
-- **Pages.** Each page of the scene, in the scene's order, is a page of the file, as large
-  as the page's frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the
-  inch, as the declaration's `unit` says.
+- **Pages.** Each page of the scene, in the scene's order, is a page of the file. Where the
+  scene's root holds the physical size of the piece's top, every page is that size, at 72
+  pt to 25.4 mm, and is drawn by one scale for the whole page: the page's width in pt over
+  its width in px (DEC-034 point 3). Its height follows its width in that proportion, so
+  the scale fits it too. Elsewhere a page is as large as its frame, each px of the scene
+  0.75 pt of the page, CSS's 96 px to the inch, as the declaration's `unit` says.
 - **The largest page.** A page of PDF is at most `LARGEST` pt on a side, as readers hold it.
-  A page larger at 0.75 pt to a px, such as a phone's page of a long site, is drawn smaller,
+  A page larger, such as a phone's page of a long site at 0.75 pt to a px, is drawn smaller,
   its proportions kept, its long side `LARGEST` pt. The page is reported, as drawn otherwise
   (DEC-022 point 7). Every other page draws as before.
 - **Colours** stay roles in the scene. The renderer takes each from the brand's resolved
@@ -29,12 +32,21 @@ point 7).
   its run's font, size and paint (DEC-012). Each span is shaped again with HarfBuzz from
   the committed file, in pieces of one font each, as the engine shaped it (DEC-005 point
   4), and its glyphs are placed at the advances shaped.
+- **A run's sign and ground** (DEC-036 point 3) take the room the engine gave them beside
+  the span's text, which the line's width, its anchor and each span after them count. Each
+  piece of a ground is drawn behind the text in its role, its corners rounded where the
+  ground starts and ends and square where a line breaks it, and each sign is its outline,
+  moved to its square, filled by its rule in its run's paint. A sign that holds no such
+  outline is refused, and left out.
 - **A line**, or a tie's connector through each of its points, is stroked as the SVG
   renderer strokes it; an arrowhead is the triangle it draws, five strokes long, its tip
   at the line's end, in the line's stroke. A line that holds neither its ends nor its
   points is refused, and left out.
 - **Shapes.** A box's stroke lies inside its frame. Rounded corners and ellipses are cubic
-  Bézier curves.
+  Bézier curves. A path, such as a concept's sign, is drawn from the outline the engine
+  mapped into its frame, its moves, lines, cubic curves and closes, filled by its rule,
+  nonzero or even-odd, its stroke on its outline. A path that holds no such outline is
+  refused, and left out.
 - **A picture** is drawn from the file its image shows in the combination drawn
   (`seam.Shown`), whatever its source, and from nothing else (DEC-025 point 7). It is
   drawn whole, centred, as large as its frame allows, as the scene's `xMidYMid meet` says
@@ -64,6 +76,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,15 +87,20 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 from _lib import pictures, png
-from _lib.canvas import shows, unshown
+from _lib.canvas import Placed, ground_path, marked, placed, room, shows, unshown
 from _lib.plugins import seam
 from _lib.plugins.pdf_declaration import DECLARATION
 
 NAME: str = DECLARATION["name"]
 VERSION: str = DECLARATION["version"]
 
-#: How many pt of the page each px of the scene is (the declaration's `unit`).
+#: How many pt of the page each px of the scene is (the declaration's `unit`), on a page
+#: with no physical size.
 SCALE: float = DECLARATION["unit"]["scale"]
+
+#: How many pt of the page a millimetre of a physical size is: 72 pt to the inch, which is
+#: 25.4 mm.
+PT_PER_MM = 72 / 25.4
 
 #: The most pt a page of the file takes on a side: the largest page readers of PDF hold, at
 #: the user unit every file here keeps. At `SCALE`, 19,200 px of the scene.
@@ -549,7 +567,7 @@ class _Document:
         self.shown = shown
         self.losses: list[seam.Loss] = []
         self.traces: list[str] = []
-        self._pages: list[tuple[float, float, list[Part], float]] = []
+        self._pages: list[tuple[_Sheet, list[Part]]] = []
         self._faces: dict[str, _Face] = {}
         self._fonts: dict[str, _Font] = {}
         # Each opacity the pages take, by the operand it sets and its value: its name.
@@ -568,16 +586,17 @@ class _Document:
         self.traces.append(element["id"])
         parts = [part for child in element.get("children", []) for part in self._element(child)]
         width, height = float(element["width"]), float(element["height"])
-        fit = _fit(width, height)
-        if fit < 1:
+        sheet = _sheet(width, height, self.scene.get("physical-size"))
+        if sheet.fit < 1:
+            measures = " by ".join(number(side) for side in sheet.measures)
             self._lose(
                 element["id"],
                 seam.APPROXIMATED,
-                f"the page measures {number(width * SCALE)} by {number(height * SCALE)} pt, "
-                f"past the {number(LARGEST)} pt a page of PDF takes on a side, so it is drawn "
-                f"{number(fit, 4)} as large, its proportions kept",
+                f"the page measures {measures} pt, past the {number(LARGEST)} pt a page of PDF "
+                f"takes on a side, so it is drawn {number(sheet.fit, 4)} as large, its "
+                "proportions kept",
             )
-        self._pages.append((width, height, parts, fit))
+        self._pages.append((sheet, parts))
 
     def _element(self, element: Mapping[str, Any]) -> list[Part]:
         kind = element.get("type")
@@ -617,9 +636,12 @@ class _Document:
         name = self._opacities.setdefault(mark, f"A{len(self._opacities)}")
         return f"/{name} gs"
 
-    def _shape(self, element: Mapping[str, Any], path: str | None) -> list[Part]:
-        """A closed shape filled and stroked as its paints say; nothing where it takes
-        neither, or has no `path` since it has no size, its paints still read."""
+    def _shape(
+        self, element: Mapping[str, Any], path: str | None, *, even_odd: bool = False
+    ) -> list[Part]:
+        """A closed shape filled and stroked as its paints say, its fill by the even-odd rule
+        where `even_odd`, else by the nonzero; nothing where it takes neither, or has no
+        `path` since it has no size, its paints still read."""
         fill = self._paint(element, "fill")
         stroke = self._paint(element, "stroke")
         width = float(element.get("stroke-width", 1))
@@ -635,6 +657,8 @@ class _Document:
             ops += [self._opacity("CA", stroke[1])] if stroke[1] < 1 else []
             ops += [f"{stroke[0]} RG", f"{number(width)} w"]
         paint = "B" if fill and stroke else "f" if fill else "S"
+        if fill and even_odd:
+            paint += "*"
         return [f"{' '.join(ops)}\n{path}{paint}\nQ\n"]
 
     def _box(self, element: Mapping[str, Any]) -> list[Part]:
@@ -651,6 +675,20 @@ class _Document:
         rx, ry = float(element["width"]) / 2, float(element["height"]) / 2
         cx, cy = float(element["x"]) + rx, float(element["y"]) + ry
         return self._shape(element, _ellipse(cx, cy, rx, ry) if rx > 0 and ry > 0 else None)
+
+    def _path(self, element: Mapping[str, Any]) -> list[Part]:
+        """A path, such as a concept's sign (DEC-036 point 1): the outline the engine mapped
+        into its frame, filled by its rule. A path that holds no outline of moves, lines,
+        cubic curves and closes is refused, as an element the renderer does not draw is."""
+        path = _outline(element.get("d"))
+        if path is None:
+            self._lose(
+                element["id"],
+                seam.REFUSED,
+                "the path holds no outline, `d`, of moves, lines, cubic curves and closes",
+            )
+            return []
+        return self._shape(element, path, even_odd=element.get("fill-rule") == "evenodd")
 
     def _line(self, element: Mapping[str, Any]) -> list[Part]:
         """A line, or a tie's connector through each of its points, stroked, with an
@@ -738,31 +776,70 @@ class _Document:
         step = float(element["line-height"])
         paragraphs = element.get("paragraphs") or [[{}]]
         parts: list[Part] = []
+        marks: list[Part] = []
         look = _Look()
         for index, line in enumerate(element.get("lines", [])):
             runs = paragraphs[line.get("paragraph", 0)]
-            pieces = []
-            for span in line.get("spans", []):
-                run = runs[span["run"]]
-                pieces += [
+            spans = [(span, runs[span["run"]]) for span in line.get("spans", [])]
+            shaped = [
+                [
                     (run, face, font, glyphs)
                     for face, font, glyphs in self._pieces(element, run, span["text"])
                 ]
-            total = sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for span, run in spans
+            ]
+            widths = [
+                sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for pieces in shaped
+            ]
+            total = sum(widths) + sum(room(span) for span, _ in spans)
             pen = at - {"middle": total / 2, "end": total}.get(anchor, 0.0)
             baseline = y + float(line["baseline"]) + index * step
-            for run, face, font, glyphs in pieces:
-                # A piece with no font is left out, and keeps its place in the line.
-                if font is not None:
-                    size = float(run.get("font-size", 0))
-                    paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
-                    parts.append(look.change(self, font, size, paint))
-                    parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
-                    parts.append(_Shown(font, glyphs, size))
-                pen += _advance(face, glyphs, run)
+            where = placed(spans, pen, widths) if marked(line) else None
+            if where is not None:
+                marks += self._marks(element, baseline - float(line["baseline"]), where)
+            for place, pieces in enumerate(shaped):
+                if where is not None:
+                    pen = where.starts[place]
+                for run, face, font, glyphs in pieces:
+                    # A piece with no font is left out, and keeps its place in the line.
+                    if font is not None:
+                        size = float(run.get("font-size", 0))
+                        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+                        parts.append(look.change(self, font, size, paint))
+                        parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
+                        parts.append(_Shown(font, glyphs, size))
+                    pen += _advance(face, glyphs, run)
         if not any(isinstance(part, _Shown) for part in parts):
-            return []
-        return ["q BT\n", *parts, "ET Q\n"]
+            return marks
+        return [*marks, "q BT\n", *parts, "ET Q\n"]
+
+    def _marks(self, element: Mapping[str, Any], top: float, where: Placed) -> list[Part]:
+        """The grounds and the signs of a line whose top lies at `top`, drawn before its
+        text, so behind it (DEC-036 point 3): each piece of a ground in its role, its corners
+        rounded where the ground starts and ends, and each sign its outline, moved to its
+        square, filled by its rule in its run's paint."""
+        drawn: list[Part] = []
+        for piece in where.grounds:
+            if piece.role is not None:
+                ground = {"id": element["id"], "fill": piece.role}
+                drawn += self._shape(ground, _outline(ground_path(piece, top)))
+        for left, span, run in where.signs:
+            sign = span["sign"]
+            outline = _outline(sign["d"])
+            if outline is None:
+                self._lose(
+                    element["id"],
+                    seam.REFUSED,
+                    "a run's sign holds no outline, `d`, of moves, lines, cubic curves and closes",
+                )
+                continue
+            filled = {"id": element["id"], "fill": run.get("fill")}
+            shape = self._shape(filled, outline, even_odd=sign.get("fill-rule") == "evenodd")
+            if shape:
+                moved = f"q 1 0 0 1 {_point(left, top + float(sign['top']))} cm\n"
+                drawn += [moved, *shape, "Q\n"]
+        return drawn
 
     def _pieces(
         self, element: Mapping[str, Any], run: Mapping[str, Any], text: str
@@ -832,10 +909,10 @@ class _Document:
             name: _embedded_image(image, add, profiles) for name, image in self._images.values()
         }
         kids = []
-        for width, height, parts, fit in self._pages:
-            content = _stream(_content(width, height, parts, fit).encode("latin-1"))
+        for sheet, parts in self._pages:
+            content = _stream(_content(sheet, parts).encode("latin-1"))
             contents = add(content)
-            box = f"[0 0 {number(width * SCALE * fit)} {number(height * SCALE * fit)}]"
+            box = f"[0 0 {' '.join(number(side) for side in sheet.box)}]"
             kids.append(
                 add(
                     f"<< /Type /Page /Parent {tree} 0 R /MediaBox {box} "
@@ -927,6 +1004,37 @@ def _rectangle(x: float, y: float, width: float, height: float, rx: float) -> st
     )
 
 
+#: The commands of a path's outline as the engine writes it, each with the operator that
+#: draws it and how many numbers it takes.
+_OUTLINE = {"M": ("m", 2), "L": ("l", 2), "C": ("c", 6), "Z": ("h", 0)}
+
+
+def _outline(data: Any) -> str | None:
+    """The path of a path's outline, `data`, as the engine writes it: absolute moves, lines,
+    cubic curves and closes, each a letter and its numbers, a move first. None where `data`
+    is no such outline."""
+    words = data.split() if isinstance(data, str) else []
+    if not words or words[0] != "M":
+        return None
+    drawn: list[str] = []
+    at = 0
+    while at < len(words):
+        if words[at] not in _OUTLINE:
+            return None
+        operator, count = _OUTLINE[words[at]]
+        given = words[at + 1 : at + 1 + count]
+        try:
+            numbers = [float(word) for word in given]
+        except ValueError:
+            return None
+        if len(numbers) != count or not all(math.isfinite(n) for n in numbers):
+            return None
+        points = [_point(numbers[i], numbers[i + 1]) for i in range(0, count, 2)]
+        drawn.append(" ".join([*points, operator]) + "\n")
+        at += 1 + count
+    return "".join(drawn)
+
+
 def _ellipse(cx: float, cy: float, rx: float, ry: float) -> str:
     """An ellipse's path: four cubic Bézier curves, one for each quarter."""
     kx, ky = rx * KAPPA, ry * KAPPA
@@ -961,18 +1069,51 @@ def _arrowhead(route: Sequence[tuple[float, float]], which: str, width: float) -
     return f"{_point(*left)} m {_point(*tip)} l {_point(*right)} l h f\n"
 
 
+@dataclass(frozen=True)
+class _Sheet:
+    """How one page of the scene lies on a page of the file: the page's size in pt before it
+    is fitted, `measures`; how large it is drawn, as a share of that size, `fit`; how many pt
+    of the page each px of the scene is, fitted, `scale`; and how far above the page's foot
+    the scene's top lies, in pt, `top`."""
+
+    measures: tuple[float, float]
+    fit: float
+    scale: float
+    top: float
+
+    @property
+    def box(self) -> tuple[float, float]:
+        """The page's size in pt, as drawn."""
+        return self.measures[0] * self.fit, self.measures[1] * self.fit
+
+
+def _sheet(width: float, height: float, physical: Any) -> _Sheet:
+    """How a page of `width` by `height` px is drawn. Where `physical`, the physical size the
+    scene's root holds, is given, the page is that size, and its width sets one scale for
+    the whole page (DEC-034 point 3). Elsewhere each px is `SCALE` pt. Either way a page
+    whose long side would pass `LARGEST` pt is fitted to it."""
+    if isinstance(physical, Mapping) and width > 0:
+        measures = (float(physical["width"]) * PT_PER_MM, float(physical["height"]) * PT_PER_MM)
+        fit = _fit(*measures)
+        return _Sheet(measures, fit, measures[0] / width * fit, measures[1] * fit)
+    measures = (width * SCALE, height * SCALE)
+    fit = _fit(*measures)
+    scale = SCALE * fit
+    return _Sheet(measures, fit, scale, height * scale)
+
+
 def _fit(width: float, height: float) -> float:
-    """How large a page of `width` by `height` px is drawn, as a share of its size at `SCALE`:
-    1, or less where its long side would pass `LARGEST` pt."""
-    longest = max(width, height) * SCALE
+    """How large a page of `width` by `height` pt is drawn, as a share of its size: 1, or less
+    where its long side would pass `LARGEST` pt."""
+    longest = max(width, height)
     return LARGEST / longest if longest > LARGEST else 1.0
 
 
-def _content(width: float, height: float, parts: Sequence[Part], fit: float = 1.0) -> str:
-    """A page's content: the scene's px mapped onto the page's pt, `fit` as large, down the
-    page as the scene runs, with SVG's miter limit, then what the page draws."""
-    scale = SCALE * fit
-    head = f"{number(scale, 6)} 0 0 {number(-scale, 6)} 0 {number(height * scale)} cm 4 M\n"
+def _content(sheet: _Sheet, parts: Sequence[Part]) -> str:
+    """A page's content: the scene's px mapped onto the page's pt at the sheet's scale, down
+    the page as the scene runs, with SVG's miter limit, then what the page draws."""
+    scale = sheet.scale
+    head = f"{number(scale, 6)} 0 0 {number(-scale, 6)} 0 {number(sheet.top)} cm 4 M\n"
     drawn = (
         part.font.shown(part.glyphs, part.size) + "\n" if isinstance(part, _Shown) else part
         for part in parts

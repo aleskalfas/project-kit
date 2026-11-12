@@ -11,9 +11,12 @@ Held here:
   one the capability reads or writes;
 - **it matches the check**: every label the loop names is one `checks.md` holds, each with
   what to do, and every link it gives leads to a heading;
-- **what it says is what happens**: in a project with no location, the deck and the figure
-  `piece.md` writes, and the local component `build-loop.md` writes, render and pass the
-  check, and a render passes over a mistyped key that the check reports.
+- **what it says is what happens**: the command `piece.md` runs stamps the `piece.yaml` it
+  shows. In a project with no location, the deck and the figure `piece.md` stamps and fills,
+  and the local component `build-loop.md` writes, render and pass the check, and a render
+  passes over a mistyped key that the check reports. The brief `piece.md` writes holds its
+  schema, names only what the deck holds, and fails the check once the deck renames a page
+  it names.
 
 The commands run in the test's own process (`tests/in_process.py`).
 """
@@ -22,6 +25,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -34,9 +38,10 @@ from project_kit.document_parts import heading_slug
 from tests.in_process import load, run_main
 from tests.visual_communication_project import CAPABILITY, CONFIG, SCHEMAS, importable, project
 
-add, render, check, svg, seam, files, reading = load(
+add, new, render, check, svg, seam, files, reading = load(
     "visual-communication",
     "add.py",
+    "new.py",
     "render.py",
     "check.py",
     "plugins.svg",
@@ -235,7 +240,7 @@ def test_each_label_the_loop_names_is_one_the_check_reports_with_what_to_do() ->
 def test_each_table_of_labels_follows_a_link_to_checks_md() -> None:
     by_finding = _by_finding()
     tables = re.findall(r"^(.*)\n\n\| Label \|", by_finding, re.MULTILINE)
-    assert len(tables) == 3
+    assert len(tables) == 4
     for lead in tables:
         assert "(../../checks.md#" in lead, lead
 
@@ -271,27 +276,33 @@ def _add_as_written(root: Path) -> None:
         assert added.returncode == 0, added.stderr
 
 
-def _write_piece(root: Path, piece: str, content: str) -> Path:
-    folder = root / FOLDER
-    folder.mkdir(parents=True, exist_ok=True)
-    (folder / "piece.yaml").write_text(piece, encoding="utf-8")
+def _new_as_written(root: Path, *, figure: bool = False) -> Path:
+    """`pkit visual new` as `piece.md`'s step 3 runs it, or with the top and the export it
+    names for the figure; the piece's folder."""
+    text = PIECE_MD.read_text(encoding="utf-8")
+    (line,) = (
+        found["block"]
+        for found in _PLAIN_FENCE.finditer(text)
+        if found["block"].startswith("pkit visual new ")
+    )
+    if figure:
+        assert "stamped with `--top foundations/figure` and `--export svg`" in text
+        line = line.replace("--top foundations/deck", "--top foundations/figure")
+        line = line.replace("--export pdf", "--export svg")
+    stamped = run_main(new, *shlex.split(line)[3:], cwd=root)
+    assert stamped.returncode == 0, stamped.stderr
+    return root / FOLDER
+
+
+def _write_piece(root: Path, written: str, content: str | None = None) -> Path:
+    """The `written` piece, `deck` or `figure`, stamped as `piece.md` stamps it, its content
+    `content`, or the one `piece.md` writes for it."""
+    deck, figure = _fences(PIECE_MD, "content")
+    folder = _new_as_written(root, figure=written == "figure")
+    if content is None:
+        content = figure if written == "figure" else deck
     (folder / "content.en.yaml").write_text(content, encoding="utf-8")
     return folder
-
-
-def _deck() -> tuple[str, str]:
-    (piece,) = _fences(PIECE_MD, "piece")
-    deck, _figure = _fences(PIECE_MD, "content")
-    return piece, deck
-
-
-def _figure() -> tuple[str, str]:
-    (piece,) = _fences(PIECE_MD, "piece")
-    _deck_content, figure = _fences(PIECE_MD, "content")
-    text = PIECE_MD.read_text(encoding="utf-8")
-    assert "`top: foundations/figure` and `exports: [svg]`" in text
-    piece = piece.replace("top: foundations/deck", "top: foundations/figure")
-    return piece.replace("exports: [pdf]", "exports: [svg]"), figure
 
 
 def _rendered_and_passed(root: Path) -> None:
@@ -303,18 +314,31 @@ def _rendered_and_passed(root: Path) -> None:
         assert checked.returncode == 0, checked.stdout
 
 
-@pytest.mark.parametrize("written", [_deck, _figure], ids=["deck", "figure"])
+def test_the_piece_yaml_piece_md_shows_is_the_one_its_command_stamps(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    _add_as_written(root)
+    (piece,) = _fences(PIECE_MD, "piece")
+    folder = _new_as_written(root)
+    assert (folder / "piece.yaml").read_text(encoding="utf-8") == piece
+    assert sorted(path.name for path in folder.iterdir()) == [
+        "brief.yaml",
+        "content.en.yaml",
+        "piece.yaml",
+    ]
+
+
+@pytest.mark.parametrize("written", ["deck", "figure"])
 def test_a_piece_written_by_piece_md_renders_and_passes_where_no_location_is(
-    tmp_path: Path, written: Any
+    tmp_path: Path, written: str
 ) -> None:
     root = project(tmp_path)
     assert not (root / CONFIG).exists()
     _add_as_written(root)
     assert "location: visual" in (root / CONFIG).read_text(encoding="utf-8")
-    piece, content = written()
-    assert files.shape_problems(YAML(typ="safe").load(piece), "piece") == []
-    assert "lock:" not in piece
-    folder = _write_piece(root, piece, content)
+    folder = _write_piece(root, written)
+    stamped = reading.read_yaml(folder / "piece.yaml")
+    assert files.shape_problems(stamped, "piece") == []
+    assert "lock" not in stamped
     _rendered_and_passed(root)
     assert set(reading.read_yaml(folder / "piece.yaml")["lock"]) == {
         "foundations",
@@ -328,7 +352,7 @@ def test_before_the_first_render_the_check_reports_no_lock_as_piece_md_says(
 ) -> None:
     root = project(tmp_path)
     _add_as_written(root)
-    _write_piece(root, *_deck())
+    _write_piece(root, "deck")
     checked = run_main(check, PIECE, cwd=root, env={"PKIT_COMMAND_DEADLINE": None})
     assert checked.returncode == 1
     assert "[lock-missing]" in checked.stdout
@@ -337,8 +361,8 @@ def test_before_the_first_render_the_check_reports_no_lock_as_piece_md_says(
 def test_the_local_component_of_the_loop_draws_and_passes(tmp_path: Path) -> None:
     root = project(tmp_path)
     _add_as_written(root)
-    piece, content = _deck()
-    folder = _write_piece(root, piece, content)
+    folder = _write_piece(root, "deck")
+    content = (folder / "content.en.yaml").read_text(encoding="utf-8")
     (component,) = _fences(LOOP_MD, "component")
     (folder / "components").mkdir()
     (folder / "components" / "note.yaml").write_text(component, encoding="utf-8")
@@ -353,11 +377,30 @@ def test_the_local_component_of_the_loop_draws_and_passes(tmp_path: Path) -> Non
     _rendered_and_passed(root)
 
 
+def test_the_brief_of_piece_md_holds_its_schema_and_names_what_its_deck_holds(
+    tmp_path: Path,
+) -> None:
+    (brief,) = _fences(PIECE_MD, "brief")
+    assert files.shape_problems(YAML(typ="safe").load(brief), "brief") == []
+    root = project(tmp_path)
+    _add_as_written(root)
+    folder = _write_piece(root, "deck")
+    content = (folder / "content.en.yaml").read_text(encoding="utf-8")
+    (folder / "brief.yaml").write_text(brief, encoding="utf-8")
+    _rendered_and_passed(root)
+    (folder / "content.en.yaml").write_text(
+        content.replace("id: parts", "id: three-parts"), encoding="utf-8"
+    )
+    checked = run_main(check, PIECE, cwd=root, env={"PKIT_COMMAND_DEADLINE": None})
+    assert checked.returncode == 1
+    assert f"{FOLDER}/brief.yaml#pages.parts  [brief-page]" in checked.stdout
+
+
 def test_a_render_passes_over_a_mistyped_key_and_the_check_reports_it(tmp_path: Path) -> None:
     root = project(tmp_path)
     _add_as_written(root)
-    piece, content = _deck()
-    _write_piece(root, piece, content.replace("head: Content", "heading: Content"))
+    deck, _figure = _fences(PIECE_MD, "content")
+    _write_piece(root, "deck", deck.replace("head: Content", "heading: Content"))
     rendered = run_main(render, PIECE, cwd=root)
     assert rendered.returncode == 0, rendered.stderr
     assert "heading" not in rendered.stdout

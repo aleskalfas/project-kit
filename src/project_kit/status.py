@@ -20,7 +20,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -221,8 +221,9 @@ def _report_workspace(target_root: Path) -> None:
 def _report_claude_adapter(target_root: Path) -> None:
     """Settings, then the skills and agents under `.claude/`, each listed under
     where pkit deployed it from, or as the project's own (#2085). Settings not
-    present, and no skill or agent deployed, name `pkit sync` (#2463)."""
-    from project_kit.agents import agent_locations
+    present, and no skill or agent deployed, name `pkit sync` (#2463). Beside the
+    skills, a warning of each deployed skill a personal skill hides (#3033)."""
+    from project_kit import agent_definitions
 
     click.echo()
     click.echo("  " + cli_render.style("heading", "Adapter: claude-code"))
@@ -238,16 +239,25 @@ def _report_claude_adapter(target_root: Path) -> None:
         value = f"not present (run '{_ADAPTER_REMEDY}')"
     click.echo(f"    {'settings.json':<18} {value}")
 
-    for line in _deployed_lines("skills", _deployed_skills(target_root), remedy=_ADAPTER_REMEDY):
-        click.echo(line)
-    # The remedy is named only where something ships an agent to deploy.
-    ships_agents = any(_count_artifacts(folder) for _, folder in agent_locations(target_root))
-    for line in _deployed_lines(
-        "agents",
-        _deployed_agents(target_root),
-        remedy=_ADAPTER_REMEDY if ships_agents else None,
+    skills = _deployed_skills(target_root)
+    for line in (
+        *_deployed_lines("skills", skills, remedy=_ADAPTER_REMEDY),
+        *_hidden_skill_lines(target_root, skills.names, _personal_skills_folder()),
     ):
         click.echo(line)
+    try:
+        picked = agent_definitions.answer(target_root)
+    except agent_definitions.Unreachable as exc:
+        click.echo(f"    {'agents':<18} cannot tell which definition is each agent: {exc.message}")
+    else:
+        # The remedy is named only where something ships an agent to deploy.
+        ships_agents = any(pick.agent is not None for pick in picked.picks.values())
+        for line in _deployed_lines(
+            "agents",
+            _deployed_agents(target_root, picked),
+            remedy=_ADAPTER_REMEDY if ships_agents else None,
+        ):
+            click.echo(line)
     for line in _rules_index_lines(target_root):
         click.echo(line)
 
@@ -287,17 +297,24 @@ class _Deployed:
 
     `by_owner` holds what pkit deployed, by where it was deployed from: `core`,
     `project` (the project namespace) or a capability's name — `core` and
-    `project` are reserved capability names, so the three never meet. `own` is
+    `project` are reserved capability names, so the three never meet. `names`
+    holds the name of each of those, in the order they were found. `own` is
     what the project added itself, which pkit does not deploy. `stale` is a
     deployed copy nothing ships any longer, which the next deploy removes.
+    `untold` is a deployed agent whose name the picker cannot tell, which the
+    deploy leaves as it is until the record is mended (ADR-087 point 4).
     """
 
     by_owner: dict[str, list[str]] = field(default_factory=dict[str, list[str]])
+    names: list[str] = field(default_factory=list[str])
     own: list[str] = field(default_factory=list[str])
     stale: list[str] = field(default_factory=list[str])
+    untold: list[str] = field(default_factory=list[str])
 
-    def add(self, owner: str, line: str) -> None:
-        self.by_owner.setdefault(owner, []).append(line)
+    def add(self, owner: str, name: str, shown: str | None = None) -> None:
+        """`name` deployed from `owner`, listed as `shown`, or as its name."""
+        self.by_owner.setdefault(owner, []).append(name if shown is None else shown)
+        self.names.append(name)
 
 
 def _deployed_skills(target_root: Path) -> _Deployed:
@@ -312,26 +329,29 @@ def _deployed_skills(target_root: Path) -> _Deployed:
         if owner is None:
             found.own.append(entry.name)
         else:
-            found.add(owner, f"{entry.name} -> {link}")
+            found.add(owner, entry.name, f"{entry.name} -> {link}")
     return found
 
 
-def _deployed_agents(target_root: Path) -> _Deployed:
-    """The agents `.claude/agents/` holds, each under the folder that deploys it.
+def _deployed_agents(target_root: Path, picked: Any) -> _Deployed:
+    """The agents `.claude/agents/` holds, each under the place of the definition
+    that is the agent of its name.
 
     Agents deploy as resolved copies, not symlinks, so the deploy-time marker
     the adapter writes into the front matter (`# managed-by: project-kit`)
     tells pkit's copy from the project's own — the guard the deploy primitive
-    itself uses. A marked copy belongs to the first folder shipping its name,
-    in the deploy's order (`agents.agent_locations`).
+    itself uses. A marked copy belongs to the place of its name's agent, as the
+    picker answers it in *picked* (ADR-087), and a name with no agent is one the
+    next deploy removes. A name the picker cannot tell is listed apart, since
+    the deploy changes nothing for it.
     """
-    from project_kit.agents import agent_locations, carries_deploy_mark, find_agent_file
+    from project_kit import agent_definitions
+    from project_kit.agents import carries_deploy_mark
 
     found = _Deployed()
     agents_dir = target_root / ".claude" / "agents"
     if not agents_dir.is_dir():
         return found
-    locations = agent_locations(target_root)
     for entry in sorted(agents_dir.iterdir()):
         if not (entry.is_file() and entry.suffix == ".md"):
             continue
@@ -339,13 +359,13 @@ def _deployed_agents(target_root: Path) -> _Deployed:
         if not carries_deploy_mark(entry):
             found.own.append(name)
             continue
-        owner = next(
-            (ns for ns, folder in locations if find_agent_file(folder, name) is not None), None
-        )
-        if owner is None:
+        pick = picked.picks.get(name)
+        if pick is not None and pick.untold is not None:
+            found.untold.append(name)
+        elif pick is None or pick.agent is None:
             found.stale.append(name)
         else:
-            found.add(owner, name)
+            found.add(agent_definitions.place_owner(pick.agent.place), name)
     return found
 
 
@@ -370,6 +390,14 @@ def _deployed_lines(label: str, deployed: _Deployed, *, remedy: str | None) -> l
             (
                 f"{len(deployed.stale)} no longer shipped, which the next `pkit sync` removes:",
                 deployed.stale,
+            )
+        )
+    if deployed.untold:
+        groups.append(
+            (
+                f"{len(deployed.untold)} whose agent cannot be told, left as they are "
+                "(see `pkit validate`):",
+                deployed.untold,
             )
         )
     lines: list[str] = []
@@ -407,6 +435,47 @@ def _skill_owner(link: str) -> str | None:
             return owner
         return None
     return None
+
+
+def _personal_skills_folder() -> Path | None:
+    """Claude Code's personal skills folder, `~/.claude/skills/`, whose skill runs
+    in place of the project's of the same name; None where no home folder is found."""
+    try:
+        return Path.home() / ".claude" / "skills"
+    except RuntimeError:
+        return None
+
+
+def _hidden_skill_lines(target_root: Path, deployed: list[str], personal: Path | None) -> list[str]:
+    """A warning of each deployed skill that a personal skill of the same name hides:
+    a folder of that name in `personal`, which Claude Code runs instead.
+
+    Reads names only, asking whether each deployed name is a folder there, and follows
+    a link in place of that folder or of `personal` itself. A folder that is the
+    deployed skill's own, as where the project's root is the home folder, hides
+    nothing. Says nothing where `personal` is missing or hides no deployed skill.
+    """
+    if personal is None:
+        return []
+    project = target_root / ".claude" / "skills"
+    hidden: list[Path] = []
+    for name in deployed:
+        entry = personal / name
+        try:
+            if entry.is_dir() and entry.resolve() != (project / name).resolve():
+                hidden.append(entry)
+        except (OSError, RuntimeError):  # unreadable, or a link loop before Python 3.13
+            continue
+    if not hidden:
+        return []
+    head = (
+        f"⚠ {len(hidden)} hidden by a personal skill of the same name, "
+        "which Claude Code runs instead:"
+    )
+    return [
+        f"    {'hidden skills':<18} {cli_render.style('warn', head)}",
+        *(f"{_LIST_INDENT}{entry.name}, by {entry}" for entry in hidden),
+    ]
 
 
 def _report_capabilities(target_root: Path, source_kit: Path) -> None:

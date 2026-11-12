@@ -160,6 +160,7 @@ friction:
     - .pkit/adapters/claude-code/*.sh
     - .pkit/adapters/claude-code/harness-support.yaml
     - .pkit/adapters/claude-code/permission-enforcement.yaml
+    - .pkit/adapters/claude-code/tool-access.json
     - .pkit/adapters/claude-code/settings/**
   # Left out of anchoring and of the measures (COR-050 point 7).
   exclude:

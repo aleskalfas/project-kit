@@ -8,7 +8,7 @@ with the library's previous release, every refusal before any write. Run in this
   refusal, a component no piece places and a picture file nothing names among them.
 - **A library the capability ships,** with `--shipped`, on a repository and a history the
   tests build where the capability is authored, the methodology's source: each refusal of
-  DEC-013 point 1, in the order of its Implications; a release that writes exactly the
+  DEC-013 point 1, in the order the release takes them; a release that writes exactly the
   released place, the record and the changeset; and a base and a library built on it
   released in one change. The capability's own checks (#2605) pass on the tree each
   release writes.

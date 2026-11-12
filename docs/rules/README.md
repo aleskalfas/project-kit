@@ -180,7 +180,7 @@ Run `pkit sync` in each clone after you pull a change. It puts in place what the
 - **When it stops.** Where your `pkit` is at another version than your project records, sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
 - **What you keep.** Keep `CLAUDE.md` and the index out of Claude Code's `claudeMdExcludes`. Where a session starts below the project's root, approve Claude Code's prompt for the files `CLAUDE.md` includes. Otherwise those sessions load no rules ([the adapter's README, "Harness support"](../../.pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml)).
 
-Below, a hand edit has taken the index's line out of `CLAUDE.md`. `pkit validate` reports that sessions load no capability's rules. `pkit sync --dry-run` names the script that merges `CLAUDE.md`, and the sync puts the line back:
+Below, a hand edit has taken the index's line out of `CLAUDE.md`. `pkit validate` reports that sessions load no capability's rules. It reports a `CLAUDE.md` without the methodology's line the same way, since sessions there load none of the methodology's rules. `pkit sync --dry-run` names the script that merges `CLAUDE.md`, and the sync puts the line back:
 
 ```console
 $ grep -v capabilities.md CLAUDE.md > CLAUDE.new && mv CLAUDE.new CLAUDE.md
@@ -196,9 +196,6 @@ $ grep @.pkit CLAUDE.md
 @.pkit/rules/capabilities.md
 @.pkit/rules/project.md
 ```
-
-> [!WARNING]
-> `pkit validate` checks only the index's line, so a `CLAUDE.md` without the methodology's line passes it.
 
 ## Add your own rules
 

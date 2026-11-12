@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  RS-GRAPHIC-007 also accepts, on a page whose point is an order, a list
+  given an order's colour steps with no item naming a concept, and `GRAPHIC`
+  moves to 1.1.0. The rule only loosens, so no pin moves. The steps are
+  decided by DEC-032 (#2896), accepted with the edits its Implications name
+  to accepted records: a brand gives two ends and a text for each mode, and
+  the engine spreads them evenly over a list's places. No role, schema,
+  check or renderer changes yet: the foundations, the engine, the starter
+  and the neutral brand change in the Tasks under #2882, each with its own
+  changeset.

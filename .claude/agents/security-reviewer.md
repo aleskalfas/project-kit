@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:software-engineering
+# pkit-digest: sha256:0981b922a04d73fc40aef8b044ec81b15d03019c3d54f6229821ce24f8287e0e
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: security-reviewer
 description: Security specialist of the software-engineering code-review panel. 
   Reviews a PR diff for security defects — auth flaws, secrets passed in argv, 

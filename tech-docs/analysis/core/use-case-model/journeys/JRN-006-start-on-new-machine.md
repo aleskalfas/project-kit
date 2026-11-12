@@ -19,8 +19,10 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/install.py
         - src/project_kit/upgrade.py
+        - .pkit/cli/install-pkit.sh
       record:
         - PRJ-004
+        - ADR-090
         - COR-059#2
         - COR-059#5
         - ADR-065#7
@@ -47,9 +49,12 @@ pkit:
 
 1. [UC-048](../use-cases/050-adopt/UC-048-install-cli.md) — Put the system's CLI on my machine at a release
    - **Needs from [UC-008](../use-cases/040-release/UC-008-release-backbone.md) (outside this journey):** the [release tag](../../glossary.md#term-release-tag--release-tag) on the [distribution](../../glossary.md#term-distribution--distribution)'s repository, and the tag `latest` at the highest [release](../../glossary.md#term-release--release)'s commit ([PRJ-004](../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)). A CLI installed from a branch or from main's latest commit has a [version](../../glossary.md#term-version--version) that vouches for no content ([ADR-065 point 12](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#12-a-version-identifies-content-only-for-a-tagged-install)).
+   - **Needs from [UC-049](../use-cases/050-adopt/UC-049-install-system.md) (outside this journey):** where the script `.pkit/cli/install-pkit.sh` installs the CLI (UC-048 variant 1d), the [system](../../glossary.md#term-system--system) committed for the team at a release that carries the script. A clone with no committed `.pkit/` holds no script ([ADR-009 point 3](../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)). Nor does a clone at a release before the script ([ADR-090 point 3](../../../../architecture/decisions/ADR-090-self-fetch-over-https.md#3-an-install-script-in-the-cli-area-installs-a-fresh-clones-pkit)).
 2. [UC-050](../use-cases/050-adopt/UC-050-ready-fresh-clone.md) — Get a fresh clone ready to work with one sync
-   - **Needs from step 1 (UC-048):** the CLI, at the release the [project](../../glossary.md#term-project--project) records. Where the CLI is at another release, and the project pins none, [sync](../../glossary.md#term-sync--sync) stops and writes nothing. Its message names the remedy for the state it finds (ADR-065 points [7](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#7-syncs-guard-stops-a-command-that-would-propagate-under-another-version) and [8](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds)). The documented command that puts the CLI on a machine names `latest`, so a project that records an older release meets this stop.
-   - **Needs from [UC-049](../use-cases/050-adopt/UC-049-install-system.md) (outside this journey):** the [system](../../glossary.md#term-system--system), committed for the team. Where the adopter keeps the system out of the shared repository, a clone holds no `.pkit/`. Sync then refuses, and names `pkit init` ([ADR-009 point 3](../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)).
+   - **Needs from step 1 (UC-048):** the CLI, at the release the [project](../../glossary.md#term-project--project) records. Where the CLI is at another release, and the project pins none, [sync](../../glossary.md#term-sync--sync) stops and writes nothing. Its message names the remedy for the state it finds (ADR-065 points [7](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#7-syncs-guard-stops-a-command-that-would-propagate-under-another-version) and [8](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds)).
+     - **The documented command** that puts the CLI on a machine names `latest`, so a project that records an older release meets this stop.
+     - **The script `.pkit/cli/install-pkit.sh`** installs the project's own release, so a clone whose CLI it installed meets no stop for another release ([ADR-090 point 4](../../../../architecture/decisions/ADR-090-self-fetch-over-https.md#4-it-installs-the-projects-version-never-latest)).
+   - **Needs from UC-049 (outside this journey):** the system, committed for the team. Where the adopter keeps the system out of the shared repository, a clone holds no `.pkit/`. Sync then refuses, and names `pkit init` (ADR-009 point 3).
    - **Needs from [UC-052](../use-cases/050-adopt/UC-052-run-at-pin.md) (outside this journey):** the project's committed [version pin](../../glossary.md#term-version-pin--version-pin), where it has one. The [router](../../glossary.md#term-router--router) then runs sync at the pinned release through `uvx`, whatever release the CLI from step 1 runs ([ADR-039 point 2](../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#2-project-pins-a-version--me--re-exec-uvx-project-kitpin)). Where `uvx` cannot fetch that release, the system warns and runs the installed CLI, whose sync stops if its release differs (ADR-065 point 8).
 
 **Variants:**

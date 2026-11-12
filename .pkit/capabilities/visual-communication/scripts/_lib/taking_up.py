@@ -11,8 +11,9 @@ point 8, DEC-017 points 1, 3, 5 and 8).
   the folders of the files handed out and of a current copy. A renderer that draws into a
   lasting medium keeps a record of what it last drew (DEC-005 point 11). No such renderer
   ships, so no piece holds one yet, and the change that builds one adds it here. Every other
-  file of the folder, as git sees it, is copied as it lies: the content, the local components,
-  and each produced picture with its record. A fingerprint names a piece's file by its path
+  file of the folder, as git sees it, is copied as it lies: the content, the brief, which no
+  command changes (DEC-029 point 4), the local components, and each produced picture with its
+  record. A fingerprint names a piece's file by its path
   within the piece's folder, so the copy makes nothing stale.
 - **The new piece's own file** (`_piece_file`): the final piece's, with `state: draft`,
   `pinned: true` and the lock of the version handed out, read from its fingerprint as marking
@@ -43,7 +44,6 @@ from _lib import copies, current_copy, exports, fingerprint, location, records
 from _lib import pipeline as pl
 from _lib.files import Change, FileError, refuse_links
 from _lib.fingerprint import COPY_PLACE, CURRENT_COPY, HANDED_OUT
-from _lib.names import is_name
 
 #: What only the final piece's past holds, at the top of its folder, which a copy leaves out
 #: (DEC-017 point 8): its record of exports, its findings record, and the folders of the
@@ -79,7 +79,7 @@ def plan(piece: pl.Piece, name: str) -> Planned:
     """The copy of `piece`, read from its own file alone, as the new piece `name`, every file
     it reads and writes checked. Raises Refused, naming what stops it, so `write` refuses
     nothing."""
-    target = _target(piece, name)
+    target = pl.new_piece_folder(piece.root, piece.location, name)
     number = _handed_out(piece)
     version = _version(piece, number)
     lock = _lock(piece, version)
@@ -111,21 +111,6 @@ def report(planned: Planned) -> list[str]:
         f"taken up: `{planned.name}`, a draft copied from `{piece.name}` with the lock of version "
         f"{number} pinned, in {planned.rel}: commit its folder. `{piece.name}` stays as it was",
     ]
-
-
-def _target(piece: pl.Piece, name: str) -> Path:
-    """The new piece's folder. Raises Refused where `name` is not a piece's name, or anything
-    lies there already."""
-    if not is_name(name):
-        raise pl.Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
-    rel = f"{piece.location}/{pl.PIECES}/{name}"
-    target = piece.root / rel
-    if target.exists() or target.is_symlink():
-        raise pl.Refused(
-            f"{rel} lies in the location already, so the name `{name}` is taken: name the new "
-            f"piece another"
-        )
-    return target
 
 
 def _handed_out(piece: pl.Piece) -> int:

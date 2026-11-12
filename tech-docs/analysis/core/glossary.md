@@ -2134,7 +2134,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no [surface](#term-surface--surface) ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
-- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and [range](#term-range--range) edits are still checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and [range](#term-range--range) edits are still checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **Cross-repository guard:** a check against writing in another repository. It shares only the word.
 
 ## TERM-collection-file — collection file
@@ -3043,7 +3043,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **Change:** the unit of work a pull request carries. Where the [project](#term-project--project) allows it, a [change](#term-change--change) may land as a direct commit instead ([COR-009 point 5](../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced)).
 - **Target:** the branch a pull request merges into, which CI names as the checks' [base](#term-base--base).
-- **Release pull request:** the pull request that carries one [release step](#term-release-step--release-step)'s writes ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release pull request:** the pull request that carries one [release step](#term-release-step--release-step)'s writes ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 
 ## TERM-query-command — query command
 
@@ -3065,7 +3065,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 **Distinctions:**
 
-- **Floor:** the lowest [version](#term-version--version) a range admits, its `>=X.Y.Z`. At a [release step](#term-release-step--release-step), a floor rises only where a [changeset](#term-changeset--changeset) declares that the [component](#term-component--component) needs a newer version ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **Floor:** the lowest [version](#term-version--version) a range admits, its `>=X.Y.Z`. At a [release step](#term-release-step--release-step), a floor rises only where a [changeset](#term-changeset--changeset) declares that the [component](#term-component--component) needs a newer version ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **Upper bound:** the version a range stops below, its `<A.B.C`. A release step widens an upper bound on the backbone with no declaration. It widens an upper bound on another capability only on a changeset's declaration (PRJ-002 D4).
 - **A component's version:** the one number the component carries in its `package.yaml`, as the backbone carries its own in `.pkit/VERSION`. A range names versions of what the component depends on ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [COR-030](../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - **Harness version bound:** the [harness](#term-harness--harness) versions that an [adapter](#term-adapter--adapter)'s [support declaration](#term-support-declaration--support-declaration) holds for. It is never widened automatically, only by an author who tested the claim ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
@@ -3094,9 +3094,9 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 **Distinctions:**
 
 - **Release step:** the procedure that makes a release from the pending [changesets](#term-changeset--changeset). To release a component is to run the [release step](#term-release-step--release-step) for that component's changesets.
-- **Changeset:** a [change](#term-change--change)'s declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 [D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr) and [D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Changeset:** a [change](#term-change--change)'s declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 [D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr) and [D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 - **A release step that moves no backbone:** writes new versions of components and makes no release of its own. Those versions reach a CLI installed from a tag with the next release ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
-- **A component's release:** [PRJ-002](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)'s and PRJ-004's name for one new version of one component ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)). The analysis calls it the component's new version.
+- **A component's release:** [PRJ-002](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)'s and PRJ-004's name for one new version of one component ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)). The analysis calls it the component's new version.
 - **An externally-sourced component's version:** written in the component's own [source repository](#term-source-repository--source-repository), and reached by a [project](#term-project--project)'s transition of that component ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
 - **Release tag:** the annotated tag `v<version>` on the commit that lands a release's versions. Each release gets one, and a release step that moves only components gets none (PRJ-004).
@@ -3112,7 +3112,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Pull request:** a proposal to land one [change](#term-change--change). A release pull request closes no issue, so `pkit pull-request land` refuses it, and `pkit release merge` lands it.
-- **Release step:** the procedure whose writes the release pull request carries ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release step:** the procedure whose writes the release pull request carries ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 - **Release tag:** what the commit a release pull request lands gets, where the [release step](#term-release-step--release-step) moved the [backbone](#term-backbone--backbone) ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 
 ## TERM-release-step — release step
@@ -3125,7 +3125,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **Release:** the set of [versions](#term-version--version) a release step makes when it moves the [backbone](#term-backbone--backbone). A release step that moves only [components](#term-component--component) makes none of its own ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **Changeset:** what a branch writes instead of a version number, declaring its [change](#term-change--change) for the release step ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes onto the [default branch](#term-default-branch--default-branch) ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes onto the [default branch](#term-default-branch--default-branch) ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 
 ## TERM-release-tag — release tag
 
@@ -3365,7 +3365,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 **Distinctions:**
 
 - **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository ([ADR-034 point 1](../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
-- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
+- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of a comparison, never the root (ADR-034 point 1). Beside the cross-repository guard, `pkit init` and `pkit sync` compare the session anchor with the root they wrote to, and warn where the two differ.
 - **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 
 ## TERM-settled-break — settled break
@@ -3448,7 +3448,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Surface change:** an alteration of the surface, which a change declares in a changeset ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
 - **Declared surface:** the paths a [component](#term-component--component) or the [project](#term-project--project) names as what descriptions ought to cover ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)). It shares only the word. A passage that says a component declares its surface, or that speaks of uncovered surface, means these paths.
 - **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a component's surface. An edit to one only suggests a [surface change](#term-surface-change--surface-change) ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
-- **The surface check:** the changeset guard's check that a change names each component it touches. The `skip-changeset` label skips it, and leaves floors, bounds and [range](#term-range--range) edits checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **The surface check:** the changeset guard's check that a change names each component it touches. The `skip-changeset` label skips it, and leaves floors, bounds and [range](#term-range--range) edits checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **To surface:** the plain verb, as when ambiguities surface in a draft. It shares only the word.
 
 ## TERM-surface-change — surface change

@@ -22,21 +22,30 @@ and the record that sets it), the segment, and whether the later number allows i
 **What it compares,** kind by kind, as `files.md`, "What a release compares", lists it:
 
 - *any library:* its kind, and the major of each library it builds on (DEC-003 point 6);
-- *components:* each component the earlier version marks stable or deprecated, its fields,
-  options, states, exposed parts, ends, lists and layouts with their slots, and whether a
-  top asks for a height (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8). An
+- *components,* a component library's or a brand's: each component the earlier version
+  marks stable or deprecated, its fields, options, states, exposed parts, ends, lists and
+  layouts with their slots, whether a top asks for a height, and a top's physical size
+  (DEC-003 points 6 and 7, DEC-009 to DEC-012, DEC-022 point 8, DEC-034 point 3). An
   experimental component may change in any release, so only its arrival is named, as for
-  any new component;
+  any new component. A drawing carries no status, so it is passed over, its look and its
+  parts, and so are a drawing new and one removed, a base's that begins to serve a top
+  among them. One the earlier version promises, which the later declares a drawing,
+  breaks, as one removed does, and a drawing that ceases to be one is new (DEC-034 point 8);
+- *a component's tokens:* those of each component the earlier version marks stable or
+  deprecated, as its component promises them (DEC-035 point 6): a token removed, of
+  another type, or whose chain of defaults no longer ends at a shared role where it did,
+  breaks; a new one is an addition, whatever its chain ends at. A brand's own components'
+  tokens are read from their files, since no scope reads them (DEC-035 point 7);
 - *a library's own roles:* those its stable and deprecated components read, directly or
-  through a default, and a new one such a component reads (DEC-008 point 7);
+  through a default, a token's default among them, and a new one such a component reads
+  (DEC-008 point 7, DEC-035 point 4);
 - *pairs:* every pair a library declares, whatever reads it (DEC-008 point 7);
 - *the foundations:* their shared roles and the top groups they lie in, axes and colour
   families, whatever reads them (DEC-004 point 5);
 - *a brand:* the token paths it exports, a shared picture role among them only where it
   gives it a value (DEC-025 point 4), its axes and modes, every shared value axis whole
-  and each size it gives (DEC-021 point 2), and the roles it opens to a brand built on it
-  (DEC-004 point 5). The component tokens it exports join them with the
-  Task that builds them (#2573).
+  and each size it gives (DEC-021 point 2), the component tokens it gives values among its
+  token paths, and the roles it opens to a brand built on it (DEC-004 point 5).
 
 **What a field's schema breaks.** A field changes what it means where what content gave it
 may no longer be taken: it no longer takes a type, a value or a count of items it took, a
@@ -46,6 +55,7 @@ change of its schema, such as its description, is neither a break nor an additio
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -59,6 +69,10 @@ from _lib.libraries import FOUNDATIONS, Library, Version
 PROMISED = ("stable", "deprecated")
 
 MAJOR, MINOR, PATCH = "major", "minor", "patch"
+
+#: How far a side of a physical size, written in whole millimetres, may lie from the length
+#: it rounds (DEC-034 point 3).
+MM_ROUNDING = 0.5
 
 
 class ComparisonError(Exception):
@@ -152,6 +166,7 @@ def compare(earlier: FullRead, later: FullRead) -> Comparison:
                 _own_roles(earlier, later, found)
             _pairs(earlier, later, found)
         elif kind == "brand":
+            _components(earlier, later, found)
             _brand(earlier, later, found)
     return Comparison(
         earlier.name, earlier.version, later.version, tuple(found.breaks), tuple(found.additions)
@@ -189,12 +204,19 @@ def _status(read: FullRead, name: str) -> Any:
     return read.data[name].get("status")
 
 
+def _is_drawing(read: FullRead, name: str) -> bool:
+    """Whether the component `name` of the version is a drawing: it declares `draws`
+    (DEC-034 point 1)."""
+    return read.components[name].draws is not None
+
+
 def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
     """Each component the earlier version marks stable or deprecated, against the later
-    version; and each component new in the later version."""
+    version; and each component new in the later version. A drawing promises nothing, so
+    neither version's drawings are compared or named (DEC-034 point 8)."""
     for name in sorted(earlier.components):
         status = _status(earlier, name)
-        if status not in PROMISED:
+        if _is_drawing(earlier, name) or status not in PROMISED:
             continue
         use = f"{earlier.name}/{name}"
         if name in later.unread:
@@ -204,6 +226,9 @@ def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
         if name not in later.components:
             record = "DEC-003 points 6 and 7" if status == "stable" else "DEC-003 point 7"
             found.broken(f"`{use}`", f"is removed, where it was {status}", record)
+            continue
+        if _is_drawing(later, name):
+            found.broken(f"`{use}`", f"is a drawing, where it was {status}", "DEC-034 point 8")
             continue
         if _status(later, name) not in PROMISED:
             found.broken(
@@ -219,8 +244,16 @@ def _components(earlier: FullRead, later: FullRead, found: _Found) -> None:
             later.data[name],
             found,
         )
-    for name in sorted(set(later.components) - set(earlier.components) - set(earlier.unread)):
-        found.added(f"`{later.name}/{name}`", "is new", "DEC-003 point 1")
+        _tokens(f"`{use}`", name, earlier, later, found)
+    for name in sorted(set(later.components) - set(earlier.unread)):
+        if _is_drawing(later, name):
+            continue
+        if name not in earlier.components:
+            found.added(f"`{later.name}/{name}`", "is new", "DEC-003 point 1")
+        elif _is_drawing(earlier, name):
+            found.added(
+                f"`{later.name}/{name}`", "is new, where it was a drawing", "DEC-034 point 8"
+            )
 
 
 def _component(
@@ -253,6 +286,48 @@ def _component(
     _lists(where, earlier.list_fields, later.list_fields, earlier.fields, later.fields, found)
     if earlier.top:
         _layouts(where, earlier, later, data_e, data_l, found)
+
+
+def _tokens_of(read: FullRead, component: str) -> dict[str, tokens.ComponentToken]:
+    """The component tokens the component `component` of the version declares, by path: as
+    the scope reads them, or, in a brand, whose own components' tokens no scope reads
+    (DEC-035 point 7), as its file declares them."""
+    assert read.scope is not None and read.library is not None
+    if read.library.kind == "brand":
+        declared, _ = tokens.read_component_tokens(read.library.folder, name=read.name)
+        return {path: token for path, token in declared.items() if token.component == component}
+    return {
+        path: token
+        for path, token in read.scope.tokens.items()
+        if token.component == component and read.scope.owner[path] == read.name
+    }
+
+
+def _tokens(where: str, name: str, earlier: FullRead, later: FullRead, found: _Found) -> None:
+    """A compared component's tokens, as it promises them (DEC-035 point 6): a token
+    removed, of another type, or whose chain of defaults no longer ends at a shared role
+    where it did, breaks; a new token is an addition, whatever its chain ends at. Any other
+    change, such as a default pointed at another role, is neither."""
+    assert earlier.scope is not None and later.scope is not None
+    tokens_e, tokens_l = _tokens_of(earlier, name), _tokens_of(later, name)
+    for path, token in sorted(tokens_e.items()):
+        at = f"{where}, token `{path}`"
+        now = tokens_l.get(path)
+        if now is None:
+            found.broken(at, "is removed", "DEC-003 point 6, DEC-035 point 6")
+            continue
+        if now.type != token.type:
+            found.broken(
+                at,
+                f"is of type `{now.type}`, where it was `{token.type}`",
+                "DEC-003 point 6, DEC-035 point 6",
+            )
+        if _token_ends_shared(earlier.scope, token) and not _token_ends_shared(later.scope, now):
+            found.broken(
+                at, "no longer ends its chain of defaults at a shared role", "DEC-035 point 6"
+            )
+    for path in sorted(set(tokens_l) - set(tokens_e)):
+        found.added(f"{where}, token `{path}`", "is new", "DEC-035 point 6")
 
 
 def _required(data: Mapping[str, Any]) -> set[str]:
@@ -567,10 +642,11 @@ def _layouts(
     found: _Found,
 ) -> None:
     """A top's layouts and their slots (DEC-003 point 6, DEC-009 point 7), whether its
-    layouts are its pages' forms (DEC-010 point 7), and whether it asks for a height, which
-    every page's size follows (DEC-022 point 8). A layout's height, said, changed or
-    dropped, breaks nothing: a top that asks for no height needs one in each of its
-    layouts, which validation holds to, and a page under a top that asks for one gets it."""
+    layouts are its pages' forms (DEC-010 point 7), its physical size (`_physical_size`),
+    and whether it asks for a height, by a formula or through that size, which every page's
+    size follows (DEC-022 point 8). A layout's height, said, changed or dropped, breaks
+    nothing: a top that asks for no height needs one in each of its layouts, which
+    validation holds to, and a page under a top that asks for one gets it."""
     if later.top and earlier.forms != later.forms:
         what = (
             "makes its layouts its pages' forms"
@@ -579,13 +655,14 @@ def _layouts(
         )
         found.broken(where, what, "DEC-010 point 7")
         return
-    if later.top and ("height" in earlier.preferred) != ("height" in later.preferred):
-        what = (
-            "comes to ask for a height"
-            if "height" in later.preferred
-            else "ceases to ask for a height"
-        )
-        found.broken(where, what, "DEC-022 point 8")
+    if later.top and not _physical_size(where, earlier, later, found):
+        if earlier.asks_for("height") != later.asks_for("height"):
+            what = (
+                "comes to ask for a height"
+                if later.asks_for("height")
+                else "ceases to ask for a height"
+            )
+            found.broken(where, what, "DEC-022 point 8")
     layouts_e, layouts_l = _layouts_of(data_e), _layouts_of(data_l)
     _named(where, "layout", layouts_e, layouts_l, "DEC-003 point 6", "DEC-009 point 7", found)
     forms_e, forms_l = layout.page_forms(data_e), layout.page_forms(data_l)
@@ -614,6 +691,55 @@ def _layouts(
                         else "ceases to hold pages"
                     )
                     found.broken(f"{at}, slot `{slot}`", what, "DEC-003 point 6")
+
+
+def _physical_size(
+    where: str, earlier: layout.Component, later: layout.Component, found: _Found
+) -> bool:
+    """A top's physical size (DEC-034 point 3): one it comes to declare, ceases to, or whose
+    proportion changes breaks, since every page's height follows it. A size changed in the
+    same proportion (`_same_proportion`) is a change of how its pages look, and breaks
+    nothing: each page draws as before, only larger or smaller in print. Gives whether it
+    found a break, so a change of the height the top asks for is not reported twice."""
+    size_e, size_l = earlier.physical_size, later.physical_size
+    if size_e is None and size_l is None:
+        return False
+    if size_e is None or size_l is None:
+        what = "comes to declare" if size_e is None else "ceases to declare"
+        found.broken(where, f"{what} a physical size", "DEC-034 point 3")
+        return True
+    if not _same_proportion(size_e, size_l):
+        found.broken(
+            where,
+            f"changes its physical size's proportion, from {_mm(size_e)} to {_mm(size_l)}",
+            "DEC-034 point 3",
+        )
+        return True
+    return False
+
+
+def _same_proportion(earlier: tuple[float, float], later: tuple[float, float]) -> bool:
+    """Whether two physical sizes have one proportion within the rounding of whole
+    millimetres: where one, scaled to the other's width, gives the other's height, each side
+    of each size taken as any length within `MM_ROUNDING` of it. So A2 after A1, 420 by 594
+    mm after 594 by 841 mm, keeps the proportion, though their sides, rounded, differ in it."""
+    least_e, most_e = _proportions(earlier)
+    least_l, most_l = _proportions(later)
+    return least_e <= most_l and least_l <= most_e
+
+
+def _proportions(size: tuple[float, float]) -> tuple[float, float]:
+    """The least and the greatest proportion, height over width, of a size whose sides each
+    lie within `MM_ROUNDING` of those it names."""
+    width, height = size
+    least = max(height - MM_ROUNDING, 0.0) / (width + MM_ROUNDING)
+    most = math.inf if width <= MM_ROUNDING else (height + MM_ROUNDING) / (width - MM_ROUNDING)
+    return least, most
+
+
+def _mm(size: tuple[float, float]) -> str:
+    """A physical size, as a message names it."""
+    return f"{size[0]} by {size[1]} mm"
 
 
 def _layouts_of(data: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -660,14 +786,15 @@ def _leaves(value: Any) -> list[Any]:
 
 def _promised(read: FullRead) -> set[str]:
     """The library's own roles its stable and deprecated components read, directly or
-    through a default (DEC-008 point 7)."""
+    through a default, the default of each token such a component declares among them
+    (DEC-008 point 7, DEC-035 point 4)."""
     scope = read.scope
     assert scope is not None
     found: set[str] = set()
     for name, component in read.components.items():
         if _status(read, name) not in PROMISED:
             continue
-        for path in _roles_read(component):
+        for path in sorted(_roles_read(component) | set(_tokens_of(read, name))):
             step: str | None = path
             while step is not None and step not in found and scope.owner.get(step) == read.name:
                 found.add(step)
@@ -687,6 +814,13 @@ def _ends_shared(scope: tokens.Scope, path: str) -> bool:
     return False
 
 
+def _token_ends_shared(scope: tokens.Scope, token: tokens.ComponentToken) -> bool:
+    """Whether a component token's chain of defaults ends at a shared role: followed from
+    the token where the scope holds it, and else, as for a brand's own component, from the
+    role its default aliases."""
+    return _ends_shared(scope, token.path if token.path in scope.roles else token.default)
+
+
 def _own_roles(earlier: FullRead, later: FullRead, found: _Found) -> None:
     """A library's own roles (DEC-003 point 6, DEC-008 point 7). One its stable or deprecated
     components read breaks where it is removed, changes type, or no longer ends its chain of
@@ -695,10 +829,14 @@ def _own_roles(earlier: FullRead, later: FullRead, found: _Found) -> None:
     scope_e, scope_l = earlier.scope, later.scope
     assert scope_e is not None and scope_l is not None
     own_e = {
-        path: role for path, role in scope_e.roles.items() if scope_e.owner[path] == earlier.name
+        path: role
+        for path, role in scope_e.roles.items()
+        if scope_e.owner[path] == earlier.name and path not in scope_e.tokens
     }
     own_l = {
-        path: role for path, role in scope_l.roles.items() if scope_l.owner[path] == later.name
+        path: role
+        for path, role in scope_l.roles.items()
+        if scope_l.owner[path] == later.name and path not in scope_l.tokens
     }
     promised_e, promised_l = _promised(earlier), _promised(later)
     for path, role in sorted(own_e.items()):
@@ -773,10 +911,12 @@ def _pairs(earlier: FullRead, later: FullRead, found: _Found) -> None:
 
 
 def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
-    """The foundations' shared roles, axes and colour families, whatever reads them (DEC-003
-    point 6, DEC-004 point 5). A new top group of the shared roles breaks, whatever its
-    roles carry, since no library takes its name (DEC-004 point 7, DEC-025 point 10). A new
-    picture role is an addition, since no brand owes it a value (DEC-025 point 4)."""
+    """The foundations' shared roles, axes, colour families and shapes, whatever reads them
+    (DEC-003 point 6, DEC-004 point 5, DEC-036 point 7). A new top group of the shared roles
+    breaks, whatever its roles carry, since no library takes its name (DEC-004 point 7,
+    DEC-025 point 10). A new picture role is an addition, since no brand owes it a value
+    (DEC-025 point 4). A shape removed, or renamed, breaks, as a notation names it; a new one
+    is an addition, and one whose outline is redrawn changes only how a piece looks."""
     assert earlier.scope is not None and later.scope is not None
     declared_e, declared_l = earlier.scope.foundations, later.scope.foundations
     for path, role in sorted(declared_e.roles.items()):
@@ -826,6 +966,10 @@ def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
         )
     for name in sorted(set(declared_l.families) - set(declared_e.families)):
         found.added(f"colour family `{name}`", "is new", "DEC-003 point 1")
+    for name in sorted(set(declared_e.shapes) - set(declared_l.shapes)):
+        found.broken(f"shape `{name}`", "is removed", "DEC-036 point 7")
+    for name in sorted(set(declared_l.shapes) - set(declared_e.shapes)):
+        found.added(f"shape `{name}`", "is new", "DEC-036 point 7")
 
 
 def _axes(

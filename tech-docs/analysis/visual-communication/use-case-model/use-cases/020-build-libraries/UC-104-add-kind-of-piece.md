@@ -49,6 +49,7 @@ pkit:
 **Variants:**
 
 - **2a.** A brand the project uses is one another project shares, so the project's copy is never edited. The developer builds a brand on it that adds the new layouts ([UC-106](UC-106-build-brand-on-brand.md)), or asks its library owner to add them.
+
 - **4a.** The brand lacks a layout the new kind names, or draws it with other content slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
 
 **Postconditions:** Pieces of the new kind are made and drawn like any other, and the capability's own files are as they were.

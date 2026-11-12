@@ -25,12 +25,14 @@ This module is the one home of both answers:
 - **Whether a host file holds a line** (`holds_line`): a trimmed line of its own,
   a CRLF ending read as `\\n`, outside fenced code. The adapter's merge primitive
   tests its copy of the line by the same definition, and one set of test cases
-  holds the two to it (ADR-076 point 2).
+  holds the two to it (ADR-076 point 2). Where a line stands only in code
+  (`only_in_code`) is read as the merge primitive reads it before it refuses.
 - **The check** (`check_delivery`), part of validation's `rule-sets` member:
-  `loaded-rules-undelivered` where the index is in the checkout and does not carry
-  each registered capability's loaded file as it is, or the host file lacks the
-  line, and a warning for each registered adapter that declares no delivery
-  (ADR-076 point 5).
+  `loaded-rules-undelivered` where the host file is in the checkout and does not
+  hold core's include (ADR-083), where the index is in the checkout and does not
+  carry each registered capability's loaded file as it is, or the host file lacks
+  the index's line, and a warning for each registered adapter that declares no
+  delivery (ADR-076 point 5).
 - **An import token in a loaded set** (`import_token_findings`): a token outside
   code that opens with the prefix a registered adapter's `entry:` declares, which
   the harness would read as an import of its own (ADR-076 point 1).
@@ -221,7 +223,8 @@ class DeliveryForm:
     @property
     def core_line(self) -> str:
         """The same form's line for core's loaded file: the host's include of core's rules,
-        after which the merge keeps the index's line."""
+        which the check holds the host file to, and after which the merge keeps the index's
+        line (ADR-083 point 6)."""
         return self._line_to(str(lrs.BACKBONE_LOADED_FILE))
 
     def _line_to(self, path: str) -> str:
@@ -410,6 +413,32 @@ def holds_line(text: str, line: str) -> bool:
     return False
 
 
+def only_in_code(text: str, token: str) -> bool:
+    """Whether `token` appears in `text`, and only inside fenced code or a code span: the
+    test by which the merge primitive refuses to insert anything where core's include sits
+    only in code (ADR-076 point 3), read as the primitive reads it.
+
+    On a line that opens or closes a fence, or inside one, the token is in code. On any
+    other line, each occurrence with an odd number of backticks before it on its line is
+    in a code span, and each other occurrence is outside code. A CRLF ending is read as
+    `\\n`."""
+    in_code = outside_code = False
+    for candidate, outside in document_parts.lines_outside_fences(universal_newlines(text)):
+        if token not in candidate:
+            continue
+        if not outside:
+            in_code = True
+            continue
+        at = candidate.find(token)
+        while at >= 0:
+            if candidate.count("`", 0, at) % 2:
+                in_code = True
+            else:
+                outside_code = True
+            at = candidate.find(token, at + len(token))
+    return in_code and not outside_code
+
+
 # --- the check (ADR-076 point 5) ---------------------------------------------------------
 
 
@@ -433,6 +462,9 @@ def check_delivery(target_root: Path) -> Delivery:
 
     - a registered adapter without `loaded_rules:` is a warning naming it and each
       capability that ships a loaded set: its harness's sessions load none of them
+    - a host file in the checkout that does not hold core's include, the adapter's
+      `line:` read for core's loaded file, fails wherever it is, whether or not the
+      index is there (ADR-083)
     - adapters whose entries differ fail, and the index is compared with nothing
     - an index that is not in the checkout is a summary line: its sessions load no
       capability's rules, and the next sync renders it
@@ -441,9 +473,9 @@ def check_delivery(target_root: Path) -> Delivery:
       `\\n`, an entry for a capability no longer registered among the differences; an
       entry naming a loaded file the checkout does not hold; and a host file that does
       not hold its line (`holds_line`)
-    - a host file the checkout does not hold at all is a summary line, as the index's
-      absence is: its sessions load no layer's rules through it, core's included, so
-      no capability's delivery is out of step with core's there
+    - a host file the checkout does not hold at all is a summary line on every path, as
+      the index's absence is: its sessions load no layer's rules through it, core's
+      included, so no layer's delivery is out of step there (ADR-083 point 5)
     """
     loaded = loaded_files(target_root)
     capabilities = [f.owner for f in capability_files(loaded)]
@@ -456,15 +488,18 @@ def check_delivery(target_root: Path) -> Delivery:
                 f".pkit/adapters/{adapter}/package.yaml",
                 f"adapter {adapter} declares no `{LOADED_RULES_KEY}:`, so it delivers no "
                 f"capability's rules, and its harness's sessions load none of them "
-                f"(capabilities that ship a loaded set: {shipping}; COR-070 point 6).",
+                f"(capabilities that ship a loaded set: {shipping}; COR-070 point 6). Nor is "
+                f"core's include checked for its harness (ADR-083 point 5).",
                 validators.Severity.WARNING,
                 DeliveryKind.UNDECLARED.value,
             )
         )
+    findings.extend(_core_include_findings(target_root, deliveries))
+    absent = _absent_hosts(target_root, deliveries)
     if deliveries.differing:
         findings.append(_undelivered(str(INDEX_FILE), differing_message(deliveries)))
         return Delivery(
-            (f"capabilities' rules index {INDEX_FILE}: not compared.",), tuple(findings)
+            (f"capabilities' rules index {INDEX_FILE}: not compared.", *absent), tuple(findings)
         )
     path = target_root / INDEX_FILE
     if not os.path.lexists(path):
@@ -472,6 +507,7 @@ def check_delivery(target_root: Path) -> Delivery:
             (
                 f"no capabilities' rules index here ({INDEX_FILE}): this checkout's sessions "
                 f"load no capability's rules; `pkit sync` renders it.",
+                *absent,
             ),
             tuple(findings),
         )
@@ -500,33 +536,34 @@ def check_delivery(target_root: Path) -> Delivery:
                         f"capability's install, brings it.",
                     )
                 )
-    absent: list[str] = []
     for each in deliveries.forms:
-        host = target_root / each.host
         line = each.rendered_line
-        if not os.path.lexists(host):
-            absent.append(each.host)
+        present, text = _read_host(target_root, each.host)
+        if not present:
             continue
-        try:
-            text = host.read_bytes().decode("utf-8") if host.is_file() else None
-        except (OSError, UnicodeDecodeError):
-            text = None
         if text is not None and holds_line(text, line):
             continue
         findings.append(_undelivered(each.host, _host_lacks(each, line, text)))
     names = ", ".join(capabilities) if capabilities and form is not None else ""
     count = len(capabilities) if form is not None else 0
     hosts = ", ".join(f"{f.host} ({f.adapter})" for f in deliveries.forms) or "no host file"
-    summary = [
+    summary = (
         f"capabilities' rules index {INDEX_FILE}: {count} capability file(s)"
         f"{f' ({names})' if names else ''}, reached from {hosts}."
-    ]
-    summary.extend(
+    )
+    return Delivery((summary, *absent), tuple(findings))
+
+
+def _absent_hosts(target_root: Path, deliveries: Deliveries) -> tuple[str, ...]:
+    """A summary line for each declared host file the checkout does not hold, once each
+    (ADR-083 point 5)."""
+    hosts = dict.fromkeys(form.host for form in deliveries.forms)
+    return tuple(
         f"{host} is not in this checkout, so its sessions load no layer's rules through it, "
         f"core's included; the next `pkit sync` writes it."
-        for host in absent
+        for host in hosts
+        if not os.path.lexists(target_root / host)
     )
-    return Delivery(tuple(summary), tuple(findings))
 
 
 def _differs(actual: str | None, expected: str, adapters: str) -> str:
@@ -556,14 +593,69 @@ def _differs(actual: str | None, expected: str, adapters: str) -> str:
     )
 
 
+def _read_host(target_root: Path, host_file: str) -> tuple[bool, str | None]:
+    """Whether the checkout holds an adapter's host file, and its text: None where it is
+    there and is no file that can be read, such as a folder.
+
+    A byte that is not UTF-8 is kept as an escape, never refused, so every line reads as the
+    merge primitive reads it, byte by byte (ADR-083 point 2)."""
+    host = target_root / host_file
+    if not os.path.lexists(host):
+        return False, None
+    try:
+        if not host.is_file():
+            return True, None
+        return True, host.read_bytes().decode("utf-8", errors="surrogateescape")
+    except OSError:
+        return True, None
+
+
+def _core_include_findings(target_root: Path, deliveries: Deliveries) -> list[validators.Finding]:
+    """A finding for each declared host file in the checkout that does not hold core's
+    include (ADR-083 points 1 and 5), one for each host file and line, naming every adapter
+    that declares them. A host file the checkout does not hold is no finding."""
+    adapters: dict[tuple[str, str], list[str]] = {}
+    for form in deliveries.forms:
+        adapters.setdefault((form.host, form.core_line), []).append(form.adapter)
+    found: list[validators.Finding] = []
+    for (host, line), names in adapters.items():
+        present, text = _read_host(target_root, host)
+        if not present or (text is not None and holds_line(text, line)):
+            continue
+        found.append(_undelivered(host, _host_lacks_core(host, ", ".join(names), line, text)))
+    return found
+
+
+def _host_lacks_core(host: str, adapters: str, line: str, text: str | None) -> str:
+    core = lrs.BACKBONE_LOADED_FILE
+    if text is None:
+        where = f"{host} is no file that can be read, so nothing in it reaches core's rules, {core}"
+        mend = f"Make it a file that holds the line `{line}`."
+    elif only_in_code(text, line):
+        where = (
+            f"{host} writes the line `{line}` that includes core's rules, {core}, only in fenced "
+            f"code or a code span, where the harness imports nothing"
+        )
+        mend = (
+            "The merge inserts nothing while it sits there, so `pkit sync` does not mend it: "
+            "move the include out of the code."
+        )
+    else:
+        where = f"{host} does not hold the line `{line}` that includes core's rules, {core}"
+        mend = "The next `pkit sync` inserts it."
+    return (
+        f"{where}, so a session may load none of core's rules ({adapters}; ADR-083 point 1). {mend}"
+    )
+
+
 def _host_lacks(form: DeliveryForm, line: str, text: str | None) -> str:
     if text is None:
-        where = f"{form.host} cannot be read as text, so nothing reaches {INDEX_FILE}"
+        where = f"{form.host} is no file that can be read, so nothing reaches {INDEX_FILE}"
     else:
         where = f"{form.host} does not hold the line `{line}` that reaches {INDEX_FILE}"
     mend = "The next `pkit sync` inserts it."
     core = form.core_line
-    if text is not None and core in text and not holds_line(text, core):
+    if text is not None and only_in_code(text, core):
         mend = (
             f"Its include of core's rules, `{core}`, sits only in fenced code or a code "
             f"span, where the harness imports nothing, so the merge inserts nothing: move "

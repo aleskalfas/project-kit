@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Deploy .pkit/agents/{core,project}/<name>/<name>.md as resolved copies
-# under .claude/agents/<name>.md so Claude Code can load them.
+# Deploy each agent's definition as a resolved copy under
+# .claude/agents/<name>.md so Claude Code can load it.
 #
 # Part of the Claude Code adapter (.pkit/adapters/claude-code/) per
 # COR-005's adapter pattern. Sibling to deploy-skills.sh; differs in
@@ -16,18 +16,20 @@
 #      agent at `.claude/agents/<name>.md`, not a per-agent directory.
 #
 # Behavior:
-# - Name collision: the project's agent wins, then an installed capability's
-#   (the first by name), then core's (the agents README, "Name-collision
-#   precedence"; COR-026). Each run names each suspension it applies
-#   (COR-074): a `suspended` line for each agent of an installed capability or
-#   core that a file of the project's replaces — its own agent of that name,
-#   deployed or skipped, or a file at the agent's place without the deploy's
-#   mark — naming both files, and a closing note with their count.
+# - Which definition of a name is the agent is the agents area's picker's
+#   answer (.pkit/agents/definition_source.py; COR-013 point 8, ADR-087), which
+#   the resolver's `--plan` entry writes, a line for each name some place ships.
+#   The project's definition wins, then an installed capability's (the one the
+#   project chose, else the first by name, by code points, so every locale
+#   takes the same one), then core's. This script keeps no order of its own.
 # - Overlay placeholders (`<category-name>`) are resolved from
 #   `overlay.yaml`'s top-level categories, with per-agent values in
 #   `overrides.<name>` taking precedence per COR-013.
 # - Idempotent: if the resolved content matches the destination,
 #   reports "exists"; otherwise overwrites.
+# - The mark: each copy's front matter opens with the mark line, then the
+#   definition it was written from (its place), the digest of the text read and
+#   the tool access read from it (ADR-087 point 4). The resolver writes them.
 # - Unresolved overlay placeholder in a *hard* channel (a category an agent
 #   references through a list key or `reads.paths` / `reads.records` but the
 #   project's overlay.yaml doesn't define) → skipped loudly with remediation,
@@ -46,17 +48,25 @@
 # - Every resolved body ends with the adapter's workspace sentence (#2026):
 #   the session scratch directory the harness's environment note names is
 #   replaced by `.agent-workspace/`. The resolver adds it.
-# - A listed agent whose canonical source doesn't resolve (e.g. a folder
-#   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
-#   loudly rather than aborting the run (#537).
-# - Tagged status lines: created, updated, exists, skipped, removed, suspended.
-#
-# Stale-removal pass (now that the marker convention exists): after the
-# deploy pass, a `.claude/agents/<name>.md` that carries our marker but whose
-# source no longer ships is stale kit output — removed. Adopter-authored
-# agents (no marker) and currently-shipped agents are never touched. To KEEP a
-# no-longer-shipped agent, strip its marker line: it then reads as adopter
-# content and is preserved (the same guard that protects authored agents).
+# - The agent's tool access is written from the agents area's reader
+#   (.pkit/agents/tool_access.py): a grant as `tools`, a withheld list as
+#   Claude Code's `disallowedTools` (ADR-085, ADR-086).
+# - A refused agent stays the agent, and no other definition stands in
+#   (COR-013 point 8). Refused for its tool access, its earlier copy is
+#   removed. Refused for another cause, the earlier copy written from the same
+#   definition stays only where the tool access its mark records gives nothing
+#   the current text's does not, and the deploy says it is not of the current
+#   text; otherwise it is removed. A winning place holding both layouts of a
+#   name has no one current text, so its earlier copy is removed.
+# - Every marked copy that is not the agent's goes: one written from another
+#   definition, or of a name with no agent or that no place ships.
+# - A name whose records the picker cannot read is told in an `error` line,
+#   and nothing is written or removed for it; the run still exits 0, so the
+#   lifecycle command that ran it goes on, and `pkit validate` holds the error.
+# - A file with no mark is never written over. Where it takes a name a place
+#   ships, the harness may run it in the agent's place, and the run says so.
+# - Tagged status lines: created, updated, exists, skipped, removed, kept,
+#   warning, error.
 #
 # Deferred:
 # - Disable mechanism (adopter wants a kit agent not deployed) — same
@@ -67,101 +77,60 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 KIT_AGENTS="$ROOT/.pkit/agents"
-KIT_CAPABILITIES="$ROOT/.pkit/capabilities"
 CLAUDE_AGENTS="$ROOT/.claude/agents"
 OVERLAY="$KIT_AGENTS/project/overlay.yaml"
+RESOLVER="$SCRIPT_DIR/_resolve_agent.py"
 
-# Marker inserted as a YAML comment inside each resolved agent's
-# frontmatter. The kit uses it to tell its own deployed copies from
-# adopter-authored agents that happen to share a name (see deploy_one's
-# user-content guard). YAML comments are ignored by every frontmatter
-# parser, including Claude Code's, so the marker is invisible at load
-# time but trivial to grep for here.
+# The mark the resolver writes as each copy's first front-matter line. The kit
+# uses it to tell its own deployed copies from adopter-authored agents that
+# happen to share a name. YAML comments are ignored by every frontmatter
+# parser, including Claude Code's, so the mark is invisible at load time but
+# trivial to grep for here. `_resolve_agent.py` holds the same value; a test
+# holds the two equal.
 MARKER="# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync"
+# The line beside the mark naming the definition a copy was written from.
+MARK_DEFINITION="# pkit-definition: "
+
+# The resolver's exit statuses (`_resolve_agent.py`): refused for a cause other
+# than its tool access, refused for its tool access, refused where the earlier
+# copy may stay, and cannot tell.
+REFUSED=1
+TOOL_ACCESS_REFUSED=3
+KEEP_EARLIER=4
+CANNOT_TELL=5
 
 mkdir -p "$CLAUDE_AGENTS"
 
 status() { printf "  %-10s %s\n" "$1" "$2"; }
 
-# The agent's canonical file in one agents folder, flat form preferred over
-# folder form per COR-015's atomic-is-flat bias; returns 1 when there is none.
-source_in() {
-    local dir="$1"
-    local name="$2"
-    if [ -f "$dir/$name.md" ]; then
-        echo "$dir/$name.md"
-    elif [ -f "$dir/$name/$name.md" ]; then
-        echo "$dir/$name/$name.md"
-    else
-        return 1
+# A path under the project root, as the root-relative path a person types.
+relative() { printf "%s" "${1#"$ROOT"/}"; }
+
+# A place in words: the project, core, or capability <name>.
+describe_place() {
+    case "$1" in
+        capability:*) printf "capability %s" "${1#capability:}" ;;
+        project) printf "the project" ;;
+        *) printf "%s" "$1" ;;
+    esac
+}
+
+# True when the file's first five lines carry the mark.
+carries_marker() { head -n 5 "$1" | grep -qF "$MARKER"; }
+
+# The place the mark of the copy at $1 records it was written from; empty for
+# a copy whose mark records none.
+recorded_definition() {
+    head -n 5 "$1" | sed -n "s/^${MARK_DEFINITION}//p" | head -n 1
+}
+
+# Remove the marked copy of agent $1, naming why ($2). Adopter content stays.
+remove_copy() {
+    local dest="$CLAUDE_AGENTS/$1.md"
+    if [ -e "$dest" ] && carries_marker "$dest"; then
+        rm -f "$dest"
+        status "removed" ".claude/agents/$1.md ($2)"
     fi
-}
-
-# Resolve which agent source file to use, by name-collision precedence (the
-# agents README, "Name-collision precedence"): project, then an installed
-# capability (the first by name), then core. A capability's agent is the
-# discipline's specialisation of the core default (COR-026), so it wins over
-# core; the project keeps final authority over both.
-source_for() {
-    local name="$1"
-    local dir
-    for dir in "$KIT_AGENTS/project" "$KIT_CAPABILITIES"/*/agents "$KIT_AGENTS/core"; do
-        source_in "$dir" "$name" && return 0
-    done
-    return 1
-}
-
-# Name each suspension the deploy applies (COR-074): one `suspended` line for
-# each agent of NAME that an installed capability or core ships, naming HOLDER,
-# the file of the project's that takes the name in its place. Nothing when
-# HOLDER is empty. Each run names it again, for as long as it holds. Counts the
-# lines in `suspended`.
-report_suspensions() {
-    local name="$1"
-    local holder="$2"
-    local dir shadowed
-    [ -n "$holder" ] || return 0
-    for dir in "$KIT_CAPABILITIES"/*/agents "$KIT_AGENTS/core"; do
-        shadowed="$(source_in "$dir" "$name")" || continue
-        status "suspended" "${shadowed#"$ROOT"/} (replaced by $holder)"
-        suspended=$((suspended + 1))
-    done
-}
-
-# Deduped list of agent names across core, project, and capability
-# namespaces, in either flat or folder form (per COR-015 / COR-017).
-list_kit_names() {
-    {
-        local ns entry name
-        for ns in core project; do
-            [ -d "$KIT_AGENTS/$ns" ] || continue
-            for entry in "$KIT_AGENTS/$ns"/*; do
-                [ -e "$entry" ] || continue
-                name="$(basename "$entry")"
-                if [ -f "$entry" ] && [[ "$name" == *.md ]]; then
-                    echo "${name%.md}"
-                elif [ -d "$entry" ]; then
-                    echo "$name"
-                fi
-            done
-        done
-        # Installed capabilities: walk each capability's agents/ directory.
-        if [ -d "$KIT_CAPABILITIES" ]; then
-            local cap
-            for cap in "$KIT_CAPABILITIES"/*; do
-                [ -d "$cap/agents" ] || continue
-                for entry in "$cap/agents"/*; do
-                    [ -e "$entry" ] || continue
-                    name="$(basename "$entry")"
-                    if [ -f "$entry" ] && [[ "$name" == *.md ]]; then
-                        echo "${name%.md}"
-                    elif [ -d "$entry" ]; then
-                        echo "$name"
-                    fi
-                done
-            done
-        fi
-    } | sort -u
 }
 
 # Resolve placeholders in the source file using the overlay, write to stdout.
@@ -169,55 +138,65 @@ list_kit_names() {
 # metadata; uv installs `ruamel.yaml` transparently on first invocation,
 # regardless of whether the adopter's tree has a host pyproject.toml).
 resolve_agent() {
-    local source_file="$1"
-    local agent_name="$2"
-    local overlay_file="$3"
-    "$SCRIPT_DIR/_resolve_agent.py" "$source_file" "$agent_name" "$overlay_file"
+    "$RESOLVER" "$@"
 }
 
+# Deploy the agent $1, whose definition $2 ships at $4, where $3 places ship
+# the name.
 deploy_one() {
-    local name="$1"
-    local source_file
-    # Guard the resolution: source_for returns 1 when a name resolves to no
-    # canonical file (e.g. a composite agent folder mid-build with no
-    # <name>/<name>.md), and under `set -e` an unguarded command
-    # substitution would abort the whole run on that benign non-zero — with
-    # no diagnostic and no `Done.` (#537). Capture-or-empty, then branch.
-    source_file="$(source_for "$name")" || source_file=""
-    if [ -z "$source_file" ]; then
-        # Listed (a folder exists) but no canonical file resolved. Skip THIS
-        # agent loudly with remediation and deploy the rest — one half-built
-        # incubated agent must not brick a whole-project sync/upgrade. Mirrors
-        # the unresolved-overlay-category skip below.
-        status "skipped" "$name — agent folder agents/$name/ has no canonical agents/$name/$name.md (COR-015)."
-        printf "  %s\n" "         Add the file:  create .pkit/agents/<ns>/$name/$name.md"
-        unresolved=$((unresolved + 1))
-        return 0
-    fi
+    local name="$1" place="$2" shipped="$3" source_file="$4"
     local dest="$CLAUDE_AGENTS/$name.md"
 
-    # The file of the project's that takes the name, if any (COR-074): a file
-    # at the agent's place without the deploy's mark, or else the project's own
-    # agent, whether this run deploys it or skips it. Named after the line that
-    # reports the agent.
-    local holder=""
-    if [ -e "$dest" ] && ! head -n 5 "$dest" | grep -qF "$MARKER"; then
-        holder=".claude/agents/$name.md, a file the deploy did not make"
-    elif [[ "$source_file" == "$KIT_AGENTS/project/"* ]]; then
-        holder="${source_file#"$ROOT"/}"
+    # The copy deployed before is the agent's where its mark records the agent's
+    # place, or, recording none, where one place alone ships the name (ADR-087
+    # point 4). Only the agent's may stay on a refusal for another cause.
+    local earlier=()
+    if [ -e "$dest" ]; then
+        local recorded
+        recorded="$(recorded_definition "$dest")"
+        if { [ -n "$recorded" ] && [ "$recorded" = "$place" ]; } \
+            || { [ -z "$recorded" ] && [ "$shipped" = "1" ]; }; then
+            earlier=(--earlier "$dest")
+        fi
     fi
 
-    local tmpfile tmperr
+    local tmpfile tmperr resolve_status
     tmpfile="$(mktemp)"
     tmperr="$(mktemp)"
-    if ! resolve_agent "$source_file" "$name" "$OVERLAY" >"$tmpfile" 2>"$tmperr"; then
-        # An unresolved overlay category is an adopter-config gap (a category
-        # this agent references but the project's overlay.yaml doesn't define
-        # — common when a kit agent like `architect` is newer than the
-        # adopter's overlay). It is NON-FATAL: skip this one agent loudly with
-        # remediation, deploy the rest, and don't abort the whole sync/upgrade
-        # over an unrelated capability. The deploy is idempotent — once the
-        # overlay defines the category, the next sync deploys the agent.
+    resolve_status=0
+    resolve_agent "$source_file" "$name" "$OVERLAY" --mark "$place" \
+        ${earlier[@]+"${earlier[@]}"} >"$tmpfile" 2>"$tmperr" || resolve_status=$?
+    if [ "$resolve_status" -eq "$CANNOT_TELL" ]; then
+        # A module or the adapter's declaration the resolution needs cannot be
+        # read: change nothing for the name (COR-013 point 8).
+        status "error" "$name — $(head -n 1 "$tmperr"); its deployed copy is left as it is."
+        while IFS= read -r line; do
+            printf "  %s\n" "         $line"
+        done < <(tail -n +2 "$tmperr")
+        rm -f "$tmpfile" "$tmperr"
+        untold=$((untold + 1))
+        return 0
+    fi
+    if [ "$resolve_status" -eq "$TOOL_ACCESS_REFUSED" ]; then
+        # Refused for its tool access (COR-013 point 7, ADR-086 point 3): not
+        # deployed, and the copy deployed before is removed, since it may give
+        # tools the definition no longer gives.
+        status "skipped" "$name — $(head -n 1 "$tmperr")."
+        remove_copy "$name" "the copy deployed before its tool access was refused"
+        printf "  %s\n" "         Mend its tool access in $(relative "$source_file"), then rerun the deploy."
+        rm -f "$tmpfile" "$tmperr"
+        refused=$((refused + 1))
+        return 0
+    fi
+    if [ "$resolve_status" -ne 0 ]; then
+        # Refused for another cause, such as an unresolved overlay category — an
+        # adopter-config gap (a category this agent references but the project's
+        # overlay.yaml doesn't define, common when a kit agent like `architect`
+        # is newer than the adopter's overlay). It is NON-FATAL: skip this one
+        # agent loudly with remediation, deploy the rest, and don't abort the
+        # whole sync/upgrade over an unrelated capability. The deploy is
+        # idempotent — once the overlay defines the category, the next sync
+        # deploys the agent.
         #
         # The resolver's stderr is "reason on line 1, optional remediation
         # after". When it supplies remediation of its own, print that verbatim:
@@ -242,9 +221,15 @@ deploy_one() {
             printf "  %s\n"    "          paths in overlay.yaml, then \`pkit sync\`)"
             adoptable=$((adoptable + 1))
         fi
+        if [ "$resolve_status" -eq "$KEEP_EARLIER" ]; then
+            # The earlier copy gives no tool the current text does not, so it
+            # stays, and runs (COR-013 point 8).
+            status "kept" ".claude/agents/$name.md — written from an earlier text of its definition, so it is not of the current text; it gives no tool the current text does not"
+        else
+            remove_copy "$name" "its definition's current text is refused, and the copy deployed before gives a tool it does not, or records none"
+        fi
         rm -f "$tmpfile" "$tmperr"
         unresolved=$((unresolved + 1))
-        report_suspensions "$name" "$holder"
         return 0
     fi
     # The agent resolved, but the resolver may still have something to report —
@@ -255,26 +240,6 @@ deploy_one() {
         status "warning" "$name — ${warning#warning: }"
     done < <(grep '^warning: ' "$tmperr" || true)
     rm -f "$tmperr"
-
-    # Insert the marker as line 2, right after the opening `---`. Frontmatter
-    # parsers tolerate YAML comments here; the kit reads the marker to
-    # tell its own files apart from adopter-authored agents that happen
-    # to share a name.
-    awk -v marker="$MARKER" 'NR==1 {print; print marker; next} {print}' "$tmpfile" > "$tmpfile.marked"
-    mv "$tmpfile.marked" "$tmpfile"
-
-    # Adopter-content guard: if the destination exists and DOESN'T carry
-    # the marker, treat it as adopter-authored OR as a pre-marker kit
-    # deploy. Either way, skip without writing — silently overwriting
-    # user agents that share a name with a kit agent was a real bug.
-    # The two recovery paths are: (a) rename your agent to keep both,
-    # (b) delete this file to let the kit re-deploy its marked version.
-    if [ -e "$dest" ] && ! head -n 5 "$dest" | grep -qF "$MARKER"; then
-        status "skipped" ".claude/agents/$name.md (no kit marker — adopter content, or a copy from before the marker: it is STALE against agents/$name.md; to regenerate it from source, delete it and rerun this script)"
-        rm -f "$tmpfile"
-        report_suspensions "$name" "$holder"
-        return 0
-    fi
 
     if [ -e "$dest" ]; then
         if cmp -s "$tmpfile" "$dest"; then
@@ -290,37 +255,77 @@ deploy_one() {
         status "created" ".claude/agents/$name.md"
     fi
     rm -f "$tmpfile"
-    report_suspensions "$name" "$holder"
 }
 
-# Pass: deploy every kit agent. An agent with an unresolved overlay category
-# is skipped (counted in `unresolved`) rather than aborting the run — see
-# deploy_one. Of those, the ones whose remedy is `pkit agents adopt` are counted
-# in `adoptable`, so the closing note names `adopt` only when it serves one.
-# `exit_code` is reserved for genuinely catastrophic failures.
+# The plan: which definition of each name some place ships is the agent, as the
+# picker answers it. Where the picker cannot be reached, nothing is decided, so
+# nothing is written or removed.
 exit_code=0
 unresolved=0
 adoptable=0
-suspended=0
-while IFS= read -r name; do
-    [ -n "$name" ] || continue
-    deploy_one "$name" || exit_code=$?
-done < <(list_kit_names)
+refused=0
+doubled=0
+untold=0
+plan_file="$(mktemp)"
+plan_err="$(mktemp)"
+plan_status=0
+resolve_agent --plan >"$plan_file" 2>"$plan_err" || plan_status=$?
+if [ "$plan_status" -ne 0 ]; then
+    status "error" "cannot tell which definition of any agent is the agent: $(head -n 1 "$plan_err")"
+    while IFS= read -r line; do
+        printf "  %s\n" "         $line"
+    done < <(tail -n +2 "$plan_err")
+    rm -f "$plan_file" "$plan_err"
+    echo "Done. Nothing was deployed or removed."
+    exit 0
+fi
+rm -f "$plan_err"
 
-# Stale-removal pass: drop deployed agents that carry our marker but are no
-# longer in the shipped set. Marker-less files (adopter content) are left
-# untouched — strip the marker to keep a no-longer-shipped agent.
-pruned=0
-shipped="$(list_kit_names)"
+# Pass: each name some place ships. A skip never aborts the run — see
+# deploy_one. `exit_code` is reserved for genuinely catastrophic failures.
+shipped_names=""
+while IFS=$'\t' read -r kind name first second third; do
+    [ -n "$name" ] || continue
+    shipped_names="$shipped_names$name"$'\n'
+    dest="$CLAUDE_AGENTS/$name.md"
+    # A file without the mark is never written over: it is the project's own,
+    # or a copy from before the mark. The harness may run it in the agent's place.
+    if [ -e "$dest" ] && ! carries_marker "$dest"; then
+        status "skipped" ".claude/agents/$name.md carries no deploy mark, so the deploy leaves it; the harness may run it in place of the agent $name a place ships (to have the deploy write its copy, delete it and rerun this script)"
+        continue
+    fi
+    case "$kind" in
+        agent)
+            deploy_one "$name" "$first" "$third" "$second" || exit_code=$?
+            ;;
+        refused)
+            status "skipped" "$name — $second."
+            remove_copy "$name" "its definition is refused, and has no one current text"
+            doubled=$((doubled + 1))
+            ;;
+        none)
+            status "skipped" "$name — no agent: $first."
+            remove_copy "$name" "$name has no agent"
+            ;;
+        untold)
+            status "error" "$name — $first; nothing is written or removed for it."
+            untold=$((untold + 1))
+            ;;
+    esac
+done <"$plan_file"
+rm -f "$plan_file"
+
+# Stale-removal pass: drop deployed copies that carry the mark, of a name no
+# place ships any longer. Marked-less files (adopter content) are left
+# untouched — strip the mark to keep a no-longer-shipped agent.
 if [ -d "$CLAUDE_AGENTS" ]; then
     for dep in "$CLAUDE_AGENTS"/*.md; do
         [ -e "$dep" ] || continue
         dep_name="$(basename "$dep" .md)"
-        head -n 5 "$dep" | grep -qF "$MARKER" || continue        # not ours → leave
-        if ! grep -qxF "$dep_name" <<<"$shipped"; then
+        carries_marker "$dep" || continue        # not ours → leave
+        if ! grep -qxF "$dep_name" <<<"$shipped_names"; then
             rm -f "$dep"
             status "removed" ".claude/agents/$dep_name.md (stale — no longer shipped)"
-            pruned=$((pruned + 1))
         fi
     done
 fi
@@ -336,8 +341,13 @@ if [ "$unresolved" -gt 0 ]; then
         echo "        → Set the paths in overlay.yaml, or stub them: pkit agents reconcile --write; then pkit sync"
     fi
 fi
-if [ "$suspended" -gt 0 ]; then
-    echo "  note: $suspended shipped agent(s) suspended — a file of the project's takes each one's name, so no session reaches it."
-    echo "        → To deploy one again, rename or remove the file its line names as replacing it, then run pkit sync."
+if [ "$refused" -gt 0 ]; then
+    echo "  note: $refused agent(s) refused for their tool access, and not deployed; each cause is printed above."
+fi
+if [ "$doubled" -gt 0 ]; then
+    echo "  note: $doubled agent(s) refused, and not deployed: the place that wins ships two texts of each."
+fi
+if [ "$untold" -gt 0 ]; then
+    echo "  note: $untold agent(s) left as they were: what decides them cannot be read; each cause is printed above."
 fi
 exit $exit_code

@@ -15,6 +15,9 @@ from project_kit import capabilities as caps
 from project_kit.cli import main
 from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED, ORIGIN_INCUBATED_IN_REPO
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
+
+READER = Path(__file__).resolve().parents[1] / ".pkit" / "agents" / "tool_access.py"
 
 
 @pytest.fixture
@@ -26,6 +29,10 @@ def kit_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # Root-walk install marker (#656): find_target_root only accepts a .pkit/
     # ancestor that carries manifest.yaml (or decisions/).
     (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    # The reader of an agent's tool access, as sync copies it (ADR-086 point 1), and
+    # the picker of an agent's definition with the reader of the records (ADR-087).
+    shutil.copy2(READER, agents_dir / "tool_access.py")
+    stage_picker(tmp_path / ".pkit")
     monkeypatch.chdir(tmp_path)
     return tmp_path
 

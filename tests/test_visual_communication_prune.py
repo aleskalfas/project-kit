@@ -28,6 +28,7 @@ from tests.test_visual_communication_pipeline import (
 )
 from tests.visual_communication_project import (
     CONFIG,
+    RECORDED_DEFAULT,
     add_library,
     bound,
     importable,
@@ -337,8 +338,7 @@ def test_a_run_consented_up_front_removes_each_version_with_its_entry_from_the_w
     assert done.returncode == 0, done.stderr
     assert done.stdout.splitlines() == [
         *BEHIND_LIST,
-        f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; to "
-        f"move the work, move the folder and change the `location:` line there",
+        RECORDED_DEFAULT,
         f"removed tests@1.1.0: {TESTS}/1.1.0, and its entry in {LIST}",
         f"removed tests@1.0.0: {TESTS}/1.0.0, and its entry in {LIST}",
         script.LEFT,
