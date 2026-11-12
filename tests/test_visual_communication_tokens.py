@@ -459,7 +459,9 @@ def test_a_brand_built_on_another_reads_over_its_base(edition: Any) -> None:
     assert edition.findings == ()
     assert edition.open == ("accent",)
     assert edition.opened == {"accent"}
-    assert edition.base.opened == {"accent", "space.1", "space.2", "space.3", "space.4"}
+    # The base opens the group `space`, so each of its roles, those of a run's sign and ground
+    # among them (DEC-036 point 3).
+    assert edition.base.opened == {"accent", "space.1", "space.2", "space.3", "space.4", *MARKS}
     assert edition.axes == edition.base.axes
     assert edition.roles == edition.base.roles
 
@@ -671,10 +673,14 @@ DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop"
 RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
 
 #: The shared roles the foundations being built add to their release 1.0.0, each with the role
-#: its default aliases (DEC-022 points 3 and 5).
+#: its default aliases (DEC-022 points 3 and 5, DEC-036 point 3, DEC-004 point 7).
 SITE = tokens.Role("size.site", "dimension", "size.slide")
 LINE = tokens.Role("size.line", "dimension", "size.figure")
-ADDED = {"size.site": SITE, "size.line": LINE}
+MARKS = {
+    path: tokens.Role(path, "dimension", "space.1")
+    for path in ("space.sign-gap", "space.ground-room", "space.ground-corner")
+}
+ADDED = {"size.site": SITE, "size.line": LINE, **MARKS}
 
 PHONE = "tokens/phone.tokens.json"
 
@@ -689,13 +695,14 @@ def released() -> Any:
     return tokens.read_declarations(RELEASED_FOUNDATIONS / "roles.yaml")
 
 
-def test_the_foundations_being_built_add_the_size_axis_device_and_two_roles_alone(
+def test_the_foundations_being_built_add_the_size_axis_device_and_their_roles_alone(
     foundations: Any, released: Any
 ) -> None:
     """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
-    (DEC-021 point 1). `size.site`, a dimension whose default is `size.slide` (DEC-022
-    point 3), and `size.line`, the length of a line, whose default is `size.figure` (DEC-022
-    point 5). Every other declaration is their release 1.0.0's."""
+    (DEC-021 point 1). `size.site`, a dimension whose default is `size.slide` (DEC-004
+    point 7), `size.line`, the length of a line, whose default is `size.figure` (DEC-022
+    point 5), and the lengths of a run's sign and ground, each of whose defaults is
+    `space.1` (DEC-036 point 3). Every other declaration is their release 1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
@@ -767,7 +774,9 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     foundations being built each keeps the axes, the keys and every value it has on their
     release 1.0.0, and a piece cannot name `device` in either (DEC-021 point 2). It gains
     the roles the foundations add, each at the value of the role its default aliases: the
-    site at its slide's width, a line at its figure's (DEC-022 points 3 and 5)."""
+    site at its slide's width, a line at its figure's (DEC-022 points 3 and 5, DEC-004
+    point 7), and a run's sign's and ground's lengths at its smallest space (DEC-036 point
+    3)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings
@@ -1170,6 +1179,64 @@ def test_a_token_under_a_library_the_brand_does_not_name_stays_private_and_asks_
     assert finding.who == "the owner of the brand test-brand"
     assert brand.resolve("test-parts.ink", {}) == brand.resolve("text-primary", {})
     assert tokens.read_brand(folder, tokens.read_declarations(ROLES)).findings == ()
+
+
+#: A component library whose version declares neither an own role nor a component token.
+PLAIN = "test-plain"
+
+
+def plain_scope(tmp_path: Path) -> Any:
+    """The scope of the foundations and of a version of `test-plain`, which holds no
+    `roles.yaml`, and one component that declares no `tokens`."""
+    folder = tmp_path / PLAIN / "1.0.0"
+    library = bound(
+        "library",
+        name=PLAIN,
+        version="1.0.0",
+        kind="components",
+        **{"needs-release": "0.1.0", "builds-on": [{"name": "foundations", "major": 1}]},
+    )
+    write(folder / "library.yaml", yaml_text(library))
+    write(folder / "components" / "sign.yaml", yaml_text(bound("component", about="A sign.")))
+    return tokens.read_scope({"foundations": FOUNDATIONS, PLAIN: folder})
+
+
+def naming_plain(tmp_path: Path, major: int = 1) -> Path:
+    """A copy of the test brand that names `test-plain` by `major` among the libraries it
+    builds on."""
+    folder = brand_copy(tmp_path)
+    replace_in(
+        folder / "library.yaml",
+        "  - {name: foundations, major: 1}\n",
+        f"  - {{name: foundations, major: 1}}\n  - {{name: {PLAIN}, major: {major}}}\n",
+    )
+    return folder
+
+
+@pytest.mark.parametrize(("major", "named"), [(1, True), (2, False)])
+def test_a_library_that_declares_neither_roles_nor_tokens_is_named_by_its_major(
+    tmp_path: Path, major: int, named: bool
+) -> None:
+    """The scope holds the library all the same, so a brand that names it by the major its
+    version fits names it, and draws its tops (DEC-009 point 3)."""
+    scope = plain_scope(tmp_path)
+    declared = scope.libraries[PLAIN]
+    assert (declared.label, declared.roles, declared.tokens) == (f"{PLAIN}@1.0.0", {}, {})
+    assert scope.findings_of(PLAIN) == []
+    brand = tokens.read_brand(naming_plain(tmp_path, major), scope)
+    assert (PLAIN in brand.named) is named
+    assert brand.findings == ()
+
+
+def test_a_token_under_a_named_library_that_declares_no_role_is_a_finding(
+    tmp_path: Path,
+) -> None:
+    """The library has none of the roles the token would give a value (DEC-008 point 4)."""
+    folder = naming_plain(tmp_path)
+    given = {PLAIN: {"$type": "color", "ink": {"$value": "{scheme.ink}"}}}
+    edit_json(folder / BASE, lambda data: data.update(given))
+    (finding,) = tokens.read_brand(folder, plain_scope(tmp_path)).findings
+    assert (finding.code, finding.where) == ("library-token", f"{PLAIN}.ink")
 
 
 def test_an_alias_to_a_role_of_a_library_the_brand_does_not_name_fails(

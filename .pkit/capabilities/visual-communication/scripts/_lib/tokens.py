@@ -1,12 +1,14 @@
 """Brands: their design tokens and Resolver document in the DTCG format 2025.10, the
-foundations' declarations of the shared roles, axes, colour families and pairs (DEC-004),
+foundations' declarations of the shared roles, axes, colour families, shapes and pairs
+(DEC-004, DEC-036 point 1),
 the own roles of the component libraries resolved with a brand (DEC-008), and the
 component tokens of their components (DEC-035).
 
 **The foundations' declarations** (`roles.yaml`, format `roles`) name each shared role with
 its type, and a default that aliases an older role where it has one; each shared axis with
 its kind, its modes and its default; the colour families, each a mapping of its members to
-colour roles; and the pairs of colour roles that must contrast, at WCAG's levels. A shared
+colour roles; the shapes a notation maps a concept to, each an outline by its name
+(`outlines`); and the pairs of colour roles that must contrast, at WCAG's levels. A shared
 role carries no value, so it is no DTCG token. A role of the type `picture` takes a picture
 file of the brand as its value; it carries no default, and no brand owes it a value
 (DEC-025 point 4).
@@ -16,8 +18,8 @@ than the foundations, `read_own_roles`) lie under a group of its name, none unde
 of component tokens (DEC-004 point 7). Each has a type, and may carry a default: an alias
 to another of its own roles, or to a role of a library it builds on, the shared roles
 included, of the same type, never to a value or a component token (DEC-008 point 3). Its
-pairs each name one of its own roles. It declares no axes, no colour families and no
-picture role, which the foundations' alone are. What is wrong in it never refuses it: it
+pairs each name one of its own roles. It declares no axes, no colour families, no shapes
+and no picture role, which the foundations' alone are. What is wrong in it never refuses it: it
 is kept as its findings, each naming its version, and a role or a pair that cannot be
 read is left out.
 
@@ -40,7 +42,9 @@ role of another type or of a library it does not build on, a default that leads 
 or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
 falls on no pair the foundations, the library or a library it builds on declares at a
 level as strict fails; a role whose chain of defaults does not end at a shared role is
-stated as a fact. A role's type reads from the scope with no brand.
+stated as a fact. A role's type reads from the scope with no brand. It holds each
+component library, one that declares neither an own role nor a component token among them,
+since a brand that names a library draws its tops too (DEC-009 point 3).
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -179,6 +183,7 @@ from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS, LibraryError, read_library
 from _lib.names import COMPONENT, is_name, is_segment, is_token_path
+from _lib.outlines import Outline, read_outline
 from _lib.reading import ReadError, read_json, read_yaml
 
 #: The capability's extension key in DTCG files (DEC-004 point 1).
@@ -346,8 +351,8 @@ class GivenPicture:
 @dataclass(frozen=True)
 class Declarations:
     """A library's declarations, its `roles.yaml`: the foundations' shared roles, axes,
-    colour families and pairs (DEC-004), or a component library's own roles and pairs
-    (DEC-008 point 8).
+    colour families, shapes and pairs (DEC-004, DEC-036 point 1), or a component library's
+    own roles and pairs (DEC-008 point 8).
 
     - `label`: `<name>@<version>` of the library they lie in, and `file` the file as
       findings name it.
@@ -365,6 +370,7 @@ class Declarations:
     axes: dict[str, Axis]
     families: dict[str, dict[str, str]]
     pairs: tuple[Pair, ...]
+    shapes: dict[str, Outline] = field(default_factory=dict)
     label: str = ""
     file: str = ""
     own: str = ""
@@ -400,16 +406,27 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
     roles = _read_roles(data.get("roles"), problems)
     axes = _read_axes(data.get("axes", {}), problems)
     families = _read_families(data.get("families", {}), roles, problems)
+    shapes = _read_shapes(data.get("shapes", {}), problems)
     pairs = _read_pairs(data.get("pairs", []), roles, problems)
     if problems.found:
         raise TokenError(problems.found)
     return Declarations(
-        roles=roles, axes=axes, families=families, pairs=pairs, label=library, file=file
+        roles=roles,
+        axes=axes,
+        families=families,
+        pairs=pairs,
+        shapes=shapes,
+        label=library,
+        file=file,
     )
 
 
 #: What a library other than the foundations does not declare, with what it is for.
-_FOUNDATIONS_ONLY = {"axes": "the shared axes", "families": "the colour families"}
+_FOUNDATIONS_ONLY = {
+    "axes": "the shared axes",
+    "families": "the colour families",
+    "shapes": "the shapes",
+}
 
 
 def read_own_roles(
@@ -423,7 +440,7 @@ def read_own_roles(
     """The own roles and pairs of the component library `name`, in the `roles.yaml` at
     `path` (DEC-004 point 7, DEC-008 point 8): each role under the group of its name, none
     under the group of component tokens, and each pair naming one of them. It declares no
-    axes and no colour families: the foundations' alone are. `library` and `shown` are as
+    axes, no colour families and no shapes: the foundations' alone are. `library` and `shown` are as
     for `read_declarations`, and `builds_on` names the libraries it builds on.
 
     Never raises: what is wrong is kept as the declarations' `findings`, and a role or a
@@ -689,6 +706,29 @@ def _read_families(
     return families
 
 
+def _read_shapes(raw: Any, problems: _Problems) -> dict[str, Outline]:
+    """The shapes `raw` declares, each an outline by its name (DEC-036 point 1)."""
+    if not isinstance(raw, Mapping):
+        problems.add("shapes-shape", "`shapes` is not a mapping of shapes", "shapes")
+        return {}
+    shapes: dict[str, Outline] = {}
+    for name, spec in raw.items():
+        where = f"shapes.{name}"
+        if not is_name(name):
+            problems.add(
+                "shape-shape",
+                f"`{name}` is not a shape's name of lower-case words joined by hyphens",
+                where,
+            )
+            continue
+        outline = read_outline(spec)
+        if isinstance(outline, str):
+            problems.add("shape-shape", f"the shape `{name}` {outline}", where)
+            continue
+        shapes[name] = outline
+    return shapes
+
+
 def _read_pairs(
     raw: Any, roles: Mapping[str, Role], problems: _Problems, own: str = ""
 ) -> tuple[Pair, ...]:
@@ -738,10 +778,11 @@ class Scope:
     of its components, one version of each, as their declarations give them. A role's type
     reads from it with no brand.
 
-    - `foundations`: the foundations' declarations; `axes`, `families` and `top_groups`
-      are theirs.
+    - `foundations`: the foundations' declarations; `axes`, `families`, `shapes` and
+      `top_groups` are theirs.
     - `libraries`: each component library's declarations of its own roles and of its
-      components' tokens, by its name. The foundations' lie among them where the scope
+      components' tokens, by its name, a library that declares neither among them, so a
+      brand names it (DEC-009 point 3). The foundations' lie among them where the scope
       holds their version, with their components' tokens and no role, since their roles
       are shared (DEC-035 points 1 and 7).
     - `roles`: every role, by its token path, each component token among them; `owner`,
@@ -766,7 +807,7 @@ class Scope:
         self.libraries = {declared.own: declared for declared in libraries if declared.own}
         if foundations.label:
             self.libraries[FOUNDATIONS] = replace(
-                foundations, roles={}, axes={}, families={}, pairs=()
+                foundations, roles={}, axes={}, families={}, pairs=(), shapes={}
             )
         self.roles: dict[str, Role] = dict(foundations.roles)
         self.owner: dict[str, str] = dict.fromkeys(foundations.roles, "")
@@ -801,6 +842,10 @@ class Scope:
     @property
     def families(self) -> dict[str, dict[str, str]]:
         return self.foundations.families
+
+    @property
+    def shapes(self) -> dict[str, Outline]:
+        return self.foundations.shapes
 
     @property
     def top_groups(self) -> tuple[str, ...]:
@@ -1033,13 +1078,15 @@ class Scope:
 
 def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scope:
     """The scope of the library versions whose folders `folders` gives, by name: the
-    foundations' declarations and the component tokens their components declare, and of
-    each other library of kind `components`, the own roles its `roles.yaml` declares
-    (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1),
-    where it has either. A library whose `library.yaml` cannot be read adds nothing, its
-    own check reporting it. Where `folders` holds no foundations, as for a library that
-    builds on none, the scope holds no shared role. Findings name files relative to `root`
-    when given. Raises TokenError for the foundations' declarations."""
+    foundations' declarations and the component tokens their components declare, and each
+    other library of kind `components`, with the own roles its `roles.yaml` declares
+    (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1). A
+    library that declares neither lies in the scope all the same, with none, since a brand
+    that names it draws its tops (DEC-009 point 3). A library whose `library.yaml` cannot
+    be read adds nothing, its own check reporting it. Where `folders` holds no foundations,
+    as for a library that builds on none, the scope holds no shared role. Findings name
+    files relative to `root` when given. Raises TokenError for the foundations'
+    declarations."""
 
     def shown(path: Path) -> str:
         return path.relative_to(root).as_posix() if root is not None else path.as_posix()
@@ -1055,8 +1102,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
         foundations = replace(foundations, tokens=tokens, findings=problems)
     own = []
     for name, folder in sorted(folders.items()):
-        path = folder / "roles.yaml"
-        if name == FOUNDATIONS or not (path.is_file() or (folder / COMPONENTS).is_dir()):
+        if name == FOUNDATIONS:
             continue
         try:
             library = read_library(folder)
@@ -1068,6 +1114,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
         tokens, problems = read_component_tokens(
             folder, name=library.name, library=library.label, root=root
         )
+        path = folder / "roles.yaml"
         if path.is_file():
             declared = read_own_roles(
                 path,
@@ -1076,7 +1123,7 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
                 shown=shown(path),
                 builds_on=builds_on,
             )
-        elif tokens or problems:
+        else:
             declared = Declarations(
                 roles={},
                 axes={},
@@ -1086,8 +1133,6 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
                 own=library.name,
                 builds_on=tuple(builds_on),
             )
-        else:
-            continue
         own.append(replace(declared, tokens=tokens, findings=(*declared.findings, *problems)))
     return Scope(foundations, own)
 
@@ -1154,7 +1199,8 @@ class Brand:
       it varies it or not, and each shared size axis it or its base gives, with the modes
       given (DEC-021 point 2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
-      their version fits, whose roles it reaches (DEC-008 point 4).
+      their version fits, whose roles it reaches (DEC-008 point 4) and whose tops it draws
+      (DEC-009 point 3).
     - `roles`: the token paths it exports, in path order: the shared roles, each shared
       picture role only where it or its base gives it a value (DEC-025 point 4), and each
       role of a library it names that it or its base gives a value (DEC-008 point 5).

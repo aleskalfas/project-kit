@@ -3464,6 +3464,48 @@ def test_at_a_terminal_an_override_replaces_the_projects_artefact(
     assert "skipped" not in record.backend_state
 
 
+def test_at_a_terminal_an_override_of_another_capabilitys_agent_records_the_choice(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Against an agent an incubated capability ships, override removes nothing and
+    records the project's choice of the moving capability for the name, in step 2
+    (COR-017, ADR-065 point 6)."""
+    from ruamel.yaml import YAML
+
+    from project_kit import agent_definitions
+    from project_kit import capabilities as caps
+
+    _install_trial(installed_target, tmp_path, "0.1.0")
+    homegrown = installed_target / ".pkit" / "capabilities" / "homegrown"
+    (homegrown / "agents").mkdir(parents=True)
+    (homegrown / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: homegrown\n"
+        '  version: 0.1.0\ndescription: Test.\nrequires_backbone: ">=0.0.0"\n',
+        encoding="utf-8",
+    )
+    theirs = homegrown / "agents" / "clash.md"
+    theirs.write_text("---\nname: clash\ndescription: Homegrown.\n---\n", encoding="utf-8")
+    caps._register_in_backbone_manifest(installed_target, "homegrown")
+    caps.set_capability_origin(installed_target, "homegrown", "incubated-in-repo")
+    source = _real_source_copy(tmp_path)
+    _use_source(monkeypatch, source)
+    cap = _stage_trial(source, "0.2.0")
+    (cap / "agents").mkdir()
+    (cap / "agents" / "clash.md").write_text(
+        "---\nname: clash\ndescription: Trial's.\n---\n", encoding="utf-8"
+    )
+
+    result = _upgrade_at_a_terminal(monkeypatch, "override\n")
+
+    assert result.exit_code == 0, result.output
+    assert "records the project's choice of capability trial for agent clash" in result.output
+    assert theirs.is_file()
+    manifest = (installed_target / ".pkit" / "manifest.yaml").read_text(encoding="utf-8")
+    assert YAML(typ="safe").load(manifest)["agent_choices"] == {"clash": "trial"}
+    pick = agent_definitions.answer(installed_target).picks["clash"]
+    assert pick.agent.place == "capability:trial"
+
+
 def test_the_dry_run_lists_each_components_migrations_and_each_collision(
     installed_target: Path,
     tmp_path: Path,

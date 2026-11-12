@@ -421,7 +421,7 @@
       "pattern": "^="
     },
     "chooser": {
-      "description": "What a switch chooses by: an option of words, a field of runs where a text's style or fill switches, or a size axis a piece can name by its marked name, `:<axis>`, which the switch names the default mode of (DEC-021 point 3); or, in a drawing of a layout, `:as`, whose values are `page`, the default, and `part` (DEC-034 point 7).",
+      "description": "What a switch chooses by: an option of words, a field of runs where a text's style, fill, sign or ground switches, or a size axis a piece can name by its marked name, `:<axis>`, which the switch names the default mode of (DEC-021 point 3); or, in a drawing of a layout, `:as`, whose values are `page`, the default, and `part` (DEC-034 point 7).",
       "anyOf": [
         {
           "$ref": "defs.schema.json#/$defs/name"
@@ -483,7 +483,7 @@
       ]
     },
     "paint-switch": {
-      "description": "A switch of paints: `by` names an option of words, or, for a text's `fill`, the field of runs the text shows, whose paint each run then takes by its style (DEC-012 point 2); a word's paint may be null.",
+      "description": "A switch of paints: `by` names an option of words, or, for a text's `fill` or `ground`, the field of runs the text shows, whose paint each run then takes by its style (DEC-012 point 2, DEC-036 point 3); a word's paint may be null.",
       "type": "object",
       "required": [
         "by"
@@ -507,6 +507,37 @@
             "type": "null"
           }
         ]
+      }
+    },
+    "yes-or-no": {
+      "description": "`true` or `false`; or a switch of them on an option of words, or, for a text's `sign`, on the field of runs the text shows, whose each run then takes the one its style chooses (DEC-036 point 3).",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/yes-or-no-switch"
+        }
+      ]
+    },
+    "yes-or-no-switch": {
+      "description": "A switch of `true` and `false` on an option of words, or on the field of runs a text shows.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words, or the field of runs, the value switches on, or the size axis, by its marked name.",
+          "$ref": "#/$defs/chooser"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/yes-or-no"
       }
     },
     "role-value": {
@@ -1180,7 +1211,7 @@
       }
     },
     "text": {
-      "description": "A text's properties: the field or the fact of its export it shows, one of the two, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses.",
+      "description": "A text's properties: the field or the fact of its export it shows, one of the two, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses. Such a text alone may take `sign` and `ground`, which may switch on the run styles too (DEC-036 point 3).",
       "type": "object",
       "required": [
         "style"
@@ -1220,6 +1251,14 @@
         },
         "text-anchor": {
           "$ref": "#/$defs/text-anchor-value"
+        },
+        "sign": {
+          "description": "Whether a run that names a concept with a sign draws it before its first character that is no space or line feed, in the run's paint (DEC-036 point 3). Only a text that shows a field of runs takes it.",
+          "$ref": "#/$defs/yes-or-no"
+        },
+        "ground": {
+          "description": "The paint drawn behind a run, its sign included, or none where a switch's branch is null (DEC-036 point 3). Only a text that shows a field of runs takes it.",
+          "$ref": "#/$defs/paint"
         }
       }
     },
@@ -1289,6 +1328,22 @@
           ]
         }
       ]
+    },
+    "sign": {
+      "description": "A sign's properties, by SVG's names: it is painted as a box is (DEC-036 point 2).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
     },
     "operator": {
       "description": "How a list's items are arranged along a row or a column, by CSS flexible layout's names.",
@@ -1498,6 +1553,36 @@
         }
       }
     },
+    "sign-part": {
+      "description": "A sign: the sign of the concept whose colour family its instance takes, fitted into its frame by its square, and not drawn, at zero size, where there is none (DEC-036 point 2).",
+      "type": "object",
+      "required": [
+        "sign",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sign": {
+          "$ref": "#/$defs/sign"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
     "use-part": {
       "description": "A component this one places.",
       "type": "object",
@@ -1626,7 +1711,7 @@
       }
     },
     "part": {
-      "description": "A part: exactly one of a primitive (`box ellipse text line image`) or a placing (`use slot repeat`), with its place, its size and `when`.",
+      "description": "A part: exactly one of a primitive (`box ellipse text line image sign`) or a placing (`use slot repeat`), with its place, its size and `when`.",
       "type": "object",
       "oneOf": [
         {
@@ -1652,6 +1737,11 @@
         {
           "required": [
             "image"
+          ]
+        },
+        {
+          "required": [
+            "sign"
           ]
         },
         {
@@ -1719,6 +1809,16 @@
           },
           "then": {
             "$ref": "#/$defs/image-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "sign"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/sign-part"
           }
         },
         {

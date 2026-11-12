@@ -70,7 +70,9 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     remedy, when the running pkit is not the release the project records, when
     the last upgrade is incomplete, or when the pin is newer than this pkit.
     Nothing overrides it. Then the self-host branch in the methodology's
-    source, and elsewhere the propagation step and the derivable state.
+    source, and elsewhere the propagation step and the derivable state. Either
+    ends with a warning where this session's project folder is not the root
+    (`install.warn_if_session_elsewhere`).
     """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
@@ -92,6 +94,7 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     # the marker test (`router.is_source_checkout`) instead.
     if install.is_self_host(target_root, source_kit):
         run_self_host(target_root, source_kit, dry_run=dry_run)
+        install.warn_if_session_elsewhere(target_root, command="sync")
         return
 
     # Sync's test has said no, but the markers may still call the target the
@@ -110,10 +113,15 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
 
     # Every capability's record is read before anything is copied (ADR-065
     # point 2): its version falls back to the installed `package.yaml`, which the
-    # capability's copy replaces.
+    # capability's copy replaces. Its skips are read by the lifecycle's reader
+    # loaded from this release, which the guard has held at the release the
+    # project records, so a sync restores a reader the project's tree lacks
+    # (ADR-087 point 2).
     from project_kit import capabilities as caps
 
-    plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
+    plans = plan_capabilities(
+        target_root, source_kit, caps.read_capability_records(target_root, release=source_kit)
+    )
     copied = [plan for plan in plans if plan.disposition == COPY]
     # Each loaded set is read before the step copies its new version, and what it newly
     # binds is said after (ADR-076 point 6).
@@ -131,6 +139,7 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
 
     if not ctx.dry_run:
         _hint_settings_consolidation(target_root)
+    install.warn_if_session_elsewhere(target_root, command="sync")
 
 
 def run_self_host(target_root: Path, source_kit: Path, *, dry_run: bool) -> None:
@@ -379,8 +388,9 @@ def plan_capabilities(
     """Each registered capability's disposition, in registry order (ADR-065 point 1).
 
     *records* holds each capability's record, read before propagation
-    (`capabilities.read_capability_records`). The checks run in this order,
-    the first that holds deciding:
+    (`capabilities.read_capability_records`). One it lacks is read here, by the
+    lifecycle's reader loaded from *source_kit* (ADR-087 point 2). The checks run
+    in this order, the first that holds deciding:
 
     - incubated: the project's own, never reconciled with the bundle (COR-031)
     - externally sourced: never read as shipped; its fetch brings it to its pin
@@ -412,7 +422,9 @@ def plan_capabilities(
         if entry.origin != ORIGIN_KIT_SHIPPED:
             plans.append(CapabilityPlan(entry.name, EXTERNAL))
             continue
-        record = records.get(entry.name) or caps.read_capability_record(target_root, entry.name)
+        record = records.get(entry.name) or caps.read_capability_record(
+            target_root, entry.name, release=source_kit
+        )
         source = caps.find_capability_in_source(source_kit, entry.name)
         if source is None:
             # Its record too: a transition moves its manifest from the root.

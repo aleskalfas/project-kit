@@ -45,7 +45,8 @@ calls no outside program and reaches no service. Writing a page file takes no br
   gets (DEC-005 point 5) comes with a later version.
 - `marks`: the attribute that marks each thing the file holds (`MARKS`), so the viewing
   step reads the words the renderer writes. A page and a text hold their trace id. A shape
-  keeps the canvas's `data-id`, so a text takes a mark of its own.
+  keeps the canvas's `data-id`, so a text takes a mark of its own. A run's sign is marked
+  within its span (DEC-036 point 3).
 
 Standard library only: the check and the viewing step read it without importing the
 renderer.
@@ -72,6 +73,7 @@ MARKS = {
     "line": "data-line",
     "strut": "data-strut",
     "span": "data-span",
+    "sign": "data-sign",
 }
 
 #: The format of the renderer that holds several modes in one file, and its signal pairs.
@@ -91,8 +93,8 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.4.0",
-    "seam": 6,
+    "version": "1.6.0",
+    "seam": 8,
     "module": "html",
     "about": (
         "A page file for each language and each key over the size axes, holding the modes a "
@@ -166,5 +168,9 @@ DECLARATION = {
             DRAWS,
         ),
         "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
+        "path": dict.fromkeys(
+            (*_FRAME, "d", "fill-rule", "fill", "stroke", "stroke-width"),
+            DRAWS,
+        ),
     },
 }

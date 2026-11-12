@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:software-analysis
+# pkit-digest: sha256:4c53fedc1e398b0d3c687647d84d3b6bf29d71e030d8ab60fa614d3dae46e1fc
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: analysis-resolver
 description: Revalidation agent of the software-analysis capability, and the 
   fixer of each of its artefact types. For each analysis artefact the friction 

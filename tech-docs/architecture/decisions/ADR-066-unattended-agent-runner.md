@@ -237,8 +237,7 @@ DEC-056 point 5 makes a fixer start no other agent. A run could start one in two
 Two kinds of run take the runner's unconfined form. They are the review command's runs, and a drift command's run that a person started at a terminal and watches (DEC-056 point 5). Each such run:
 - works in the folder its caller names, under the person's and the project's settings there
 - starts in the mode those settings or the harness choose, which may approve calls no rule allows
-- runs the agent the harness finds by its name in that folder, as a session started there would
-- is passed `-p`, `--agent`, and `--effort` where one is set
+- is passed `-p`, and `--effort` where one is set. For a name some place of the methodology ships, the runner passes the agent's definition as the confined form resolves it, under a name unique to the run, so the harness loads that agent and no other copy of the name. For a name no place ships, such as a reviewer the project wrote straight into the harness's own folder, it passes `--agent` and the harness loads it by name ([ADR-087](ADR-087-agent-definition-picker.md) point 3).
 
 **The review command's runs** work in the person's checkout. Moving the review command onto the runner keeps what its reviewers may do. What changes around them:
 - A project whose registered adapters have no runner loses its reviews, as a project without `claude` loses them today.

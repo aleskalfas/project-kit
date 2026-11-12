@@ -1,9 +1,13 @@
 """The SVG renderer (visual-communication DEC-005 points 4, 5, 9 and 10): what it declares,
 what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.1.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.3.0. A change that
 gives another output for the same scene and values raises the version, and changes them
-with it (DEC-005 point 9). Version 1.1.0 came with seam 5, which hands the renderer the
+with it (DEC-005 point 9). Version 1.3.0 came to draw a run's sign and ground, at seam 8
+(DEC-036 point 3): a scene of neither draws as 1.2.0 drew it, but for the renderer's version
+it names. Version 1.2.0 came to draw the path, a concept's sign, at seam 7
+(DEC-036 point 1): a scene of no path draws as 1.1.0 drew it, but for the renderer's version
+it names. Version 1.1.0 came with seam 5, which hands the renderer the
 picture each image shows, a PNG or a JPEG, whatever its source (DEC-025 point 7): a scene
 of no picture draws as 1.0.1 drew it, but for the renderer's version it names. The font a
 text embeds is pinned by the characters its subset holds, not by its bytes, which are
@@ -76,7 +80,7 @@ def scene(*children: dict[str, Any], width: float = 200, height: float = 100) ->
         "lock": {"foundations": "1.0.0"},
         "language": "en",
         "size-key": "default",
-        "seam": 6,
+        "seam": 8,
         "pages": ["figure"],
         "children": [page],
     }
@@ -91,7 +95,7 @@ def draw(drawn: dict[str, Any], *, key: str = "default", pictures: Any = None) -
 HEAD = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" '
     'data-piece="flow" data-page="figure" data-language="en" data-key="default" '
-    'data-renderer="svg 1.1.0">'
+    'data-renderer="svg 1.3.0">'
 )
 
 SHAPES = scene(
@@ -467,7 +471,7 @@ def test_a_picture_is_handed_by_the_images_trace_id_not_by_its_name() -> None:
 def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
     drawn = draw(
         scene(
-            element("path", "figure/arrow", x=0, y=0, width=10, height=10),
+            element("polygon", "figure/arrow", x=0, y=0, width=10, height=10),
             element("box", "figure/odd", x=0, y=0, width=10, height=10, fill="no-such-role"),
             element("image", "figure/missing", x=0, y=0, width=10, height=10, output="square"),
         )
@@ -477,7 +481,7 @@ def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
             "plugin": "svg",
             "what": "figure/arrow",
             "did": "refused",
-            "why": "the svg renderer draws no `path`",
+            "why": "the svg renderer draws no `polygon`",
         },
         {
             "plugin": "svg",
@@ -536,29 +540,30 @@ def test_a_colour_rounds_half_up_and_keeps_its_alpha() -> None:
 
 def test_it_draws_every_primitive_it_declares_and_declares_every_one_it_draws() -> None:
     declared = set(svg_declaration.DECLARATION["draws"])
-    assert declared == {"group", "box", "ellipse", "line", "text", "image"}
-    drawn_by = {name[1:] for name in vars(canvas.Canvas) if name[1:] in declared | {"path"}}
+    assert declared == {"group", "box", "ellipse", "line", "text", "image", "path"}
+    drawn_by = {name[1:] for name in vars(canvas.Canvas) if name[1:] in declared}
     assert drawn_by == declared
 
 
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("svg", seam.RENDERER) == svg_declaration.DECLARATION
     assert svg.NAME == "svg"
-    assert svg.VERSION == "1.1.0"
+    assert svg.VERSION == "1.3.0"
 
 
 #: Each plugin the capability ships, with its own version.
-SHIPPED = {"svg": "1.1.0", "pdf": "1.3.0", "html": "1.4.0", "css": "1.0.0", "json": "1.0.0"}
+SHIPPED = {"svg": "1.3.0", "pdf": "1.5.0", "html": "1.6.0", "css": "1.0.0", "json": "1.0.0"}
 
 
 def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:
-    """The seam's version rose to 6 for the physical size of the piece's top, which the
-    scene's root holds (DEC-034 point 3). The PDF renderer came to map each page onto it, so
-    its version rose; the SVG and HTML renderers draw as before, and the code writers read no
-    scene, so theirs stand. The HTML renderer's 1.4.0 came with print, at seam 5 (DEC-026)."""
-    assert seam.SEAM_VERSION == 6
+    """The seam's version rose to 8 for a run's sign and ground, which a scene's line holds
+    with the run's piece (DEC-036 points 3 and 7), and to 7 for the path, a concept's sign the
+    engine mapped into its frame (DEC-036 points 1 and 7). Each renderer came to draw them, so
+    its version rose; the code writers read no scene, so theirs stand. It rose to 6 for the
+    physical size of the piece's top, which the scene's root holds (DEC-034 point 3)."""
+    assert seam.SEAM_VERSION == 8
     declared = {name: seam.declaration(name) for name in SHIPPED}
-    assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 6)
+    assert {name: each["seam"] for name, each in declared.items()} == dict.fromkeys(SHIPPED, 8)
     assert {name: each["version"] for name, each in declared.items()} == SHIPPED
     assert set(SHIPPED) <= set(seam.names())
 

@@ -1031,10 +1031,12 @@ def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_
     tmp_path: Path,
 ) -> None:
     """The version being built of the foundations, compared with their release 1.0.0, adds
-    the shared size axis `device`, the top `site` and its role `size.site`, and the length
-    of a line, `size.line`, and changes nothing else. No brand can hold an axis of its own
-    yet, so a new shared axis is an addition (DEC-021 point 9, DEC-004 point 5), as are a
-    new component and a new role with a default (DEC-003 point 1, DEC-022 point 8)."""
+    the shared size axis `device`, the top `site` and its role `size.site`, the length of a
+    line, `size.line`, the shapes a notation maps a concept to, and the lengths of a run's
+    sign and ground, and changes nothing else. No brand can hold an axis of its own yet, so a
+    new shared axis is an addition (DEC-021 point 9, DEC-004 point 5), as are a new
+    component, a new role with a default (DEC-003 point 1, DEC-022 point 8, DEC-036 point 3)
+    and a new shape (DEC-036 point 7)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -1047,7 +1049,16 @@ def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_
         "`foundations/site`: is new (DEC-003 point 1)",
         "shared role `size.line`: is new, with a default (DEC-004 point 5)",
         "shared role `size.site`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.ground-corner`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.ground-room`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.sign-gap`: is new, with a default (DEC-004 point 5)",
         "shared axis `device`: is new (DEC-004 point 5)",
+        "shape `circle`: is new (DEC-036 point 7)",
+        "shape `diamond`: is new (DEC-036 point 7)",
+        "shape `hexagon`: is new (DEC-036 point 7)",
+        "shape `square`: is new (DEC-036 point 7)",
+        "shape `star`: is new (DEC-036 point 7)",
+        "shape `triangle`: is new (DEC-036 point 7)",
     ]
     assert found.segment == "minor"
 
@@ -1063,6 +1074,20 @@ def axis(name: str) -> Callable[[Any], Any]:
 def dim(data: Any) -> None:
     """A third mode of the colour scheme."""
     axis("colour-scheme")(data)["modes"].append("dim")
+
+
+#: A shape's outline: a square in its square.
+SQUARE = {"d": "M 3 3 H 21 V 21 H 3 Z", "fill-rule": "nonzero", "square": 24}
+
+
+def shaped(*names: str) -> Change:
+    """The foundations declaring the shapes `names`, each a square's outline."""
+    return lambda data: data.update(shapes={name: dict(SQUARE) for name in names})
+
+
+def redrawn(data: Any) -> None:
+    """The foundations declaring the shape `square`, its outline drawn again within it."""
+    data["shapes"] = {"square": {**SQUARE, "d": "M 2 2 H 22 V 22 H 2 Z"}}
 
 
 FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]] = {
@@ -1170,6 +1195,24 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
         ["colour family `red`: is removed (DEC-003 point 6)"],
         None,
     ),
+    "a shape removed": (
+        shaped("square"),
+        shaped("square", "star"),
+        ["shape `star`: is removed (DEC-036 point 7)"],
+        None,
+    ),
+    "a shape renamed": (
+        shaped("box"),
+        shaped("square"),
+        ["shape `square`: is removed (DEC-036 point 7)"],
+        "shape `box`: is new (DEC-036 point 7)",
+    ),
+    "a new shape": (
+        shaped("square", "star"),
+        shaped("square"),
+        [],
+        "shape `star`: is new (DEC-036 point 7)",
+    ),
     "a new picture role": (
         lambda d: roles(d).update({"picture.mark": {"type": "picture"}}),
         None,
@@ -1197,6 +1240,14 @@ def test_each_change_of_the_foundations_is_named_whatever_reads_it(
     assert said(found.breaks) == breaks
     if addition is not None:
         assert addition in said(found.additions)
+
+
+def test_a_shape_s_outline_drawn_again_changes_only_how_a_piece_looks(tmp_path: Path) -> None:
+    """A shape's outline redrawn within what its name says breaks nothing and adds nothing
+    (DEC-036 point 7)."""
+    found = compared_foundations(tmp_path, redrawn, shaped("square"))
+
+    assert (said(found.breaks), said(found.additions)) == ([], [])
 
 
 def test_a_new_top_group_of_the_shared_roles_breaks_the_foundations_whatever_its_roles_carry(

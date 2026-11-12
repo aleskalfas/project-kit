@@ -18,7 +18,9 @@ pkit:
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
         - .pkit/agents/tool_access.py
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+        - .pkit/agents/definition_source.py
+        - .pkit/cli/install-pkit.sh
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks, working-run-probe]
@@ -40,7 +42,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── merge-claude-md.sh                 # ensures root CLAUDE.md loads every layer's rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
-├── undeploy-capability.sh             # removes one capability's deployed skills and agents from .claude/
+├── undeploy-capability.sh             # removes one capability's deployed skills from .claude/
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, tool access, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
@@ -48,7 +50,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 ├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
-└── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start
+└── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start, and the install script where no pkit is on the PATH
 ```
 
 ### `settings/`
@@ -111,7 +113,11 @@ A listed skill whose canonical file doesn't resolve — most commonly a composit
 
 Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.md` — copies, not symlinks, because the source carries overlay placeholders the deploy substitutes (the agents README, "Deploy mechanics"). `_resolve_agent.py` resolves one agent: it substitutes the `<category>` placeholders from `.pkit/agents/project/overlay.yaml` and carries the agent's execution policy into the deployed front matter. The resolver ends the agent's body with the workspace sentence (*The agent workspace* below).
 
-**Name collisions.** When more than one location ships an agent of one name, the project's is deployed, else an installed capability's (the first by capability name), else core's — a capability's agent is the discipline's specialisation of a core default ([COR-026](../../decisions/core/COR-026-agent-placement-by-discipline.md)). The agents README, "Name-collision precedence", states the rule and the collisions between capabilities.
+**Which definition is the agent** ([ADR-087](../../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md)). The deploy keeps no order of its own. The resolver's `--plan` entry asks the agents area's picker, `.pkit/agents/definition_source.py`, which definition of each name is the agent, and the deploy writes that one: the project's, else an installed capability's, the one the project chose, else the first by name in code-point order, else core's. The agents README, "Name-collision precedence", states the rules.
+
+**The mark.** Each copy's front matter opens with the deploy's mark line, then the definition the copy was written from (`# pkit-definition:`), the digest of the text read (`# pkit-digest:`) and the tool access read from it (`# pkit-tool-access:`). The deploy removes every marked copy that is not the agent's: one written from another definition, or of a name with no agent or that no place ships. So once a capability is unregistered, the next deploy removes its copies and writes the definition that now wins for each name. A name whose records the picker cannot read is told in an `error` line, and the deploy writes and removes nothing for it, and still exits 0, so the lifecycle command goes on and `pkit validate` holds the error. A file without the mark is never written over; where it takes a name a place ships, the harness may run it in the agent's place, and the run says so.
+
+**A refused agent stays the agent.** No other definition stands in for it (COR-013 point 8). Refused for a cause other than its tool access, such as an overlay category the project has not set or a front matter that names another agent, the copy written before from the same definition stays only where the tool access its mark records gives nothing the current text's does not, and the deploy says it is not of the current text. Otherwise that copy is removed, and so is the copy of a place that holds both layouts of the name.
 
 **Model and effort** (#1047). Claude Code reads a `model:` and an `effort:` key from an agent definition's front matter (verified against Claude Code 2.1.283: `effort` takes `low`, `medium`, `high`, `xhigh`, `max`, or an integer; `model` takes `inherit`, an alias or a full model name). The resolver writes both under those names, taking each from the overlay's `overrides.<agent>.model` / `.effort` when set, else from the agent's front matter. It writes **nothing** for an absent or `inherit` value — so a shipped agent that sets neither deploys exactly as before, and the harness default applies: a dispatched agent inherits its caller's model and effort. A value outside the accepted set (the named effort levels only; the integer form is not part of the methodology's vocabulary) is not written: the agent still deploys, inherits, and the run prints a `warning` line naming the value. The accepted values, the precedence and the `pkit agents` report are specified in the agents README, "Model and effort".
 
@@ -124,7 +130,7 @@ Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.m
 - **A tool's name in a form Claude Code does not take,** by the declaration's `name_forms`. A built-in tool's name starts with a capital letter and holds only letters and digits, such as `Read`. An MCP server's is `mcp__<server>`, and one of its tools' `mcp__<server>__<tool>`, with no argument after it.
 - **`disallowedTools` beside `withheld`.** The definition names the tools it is withheld in `withheld` alone.
 
-A refused agent is not deployed. The deploy prints it `skipped`, with the cause. Where the copy an earlier deploy wrote carries the mark, it removes that copy, prints it `removed`, and says to mend the definition and run the deploy again, since the copy may give tools the definition no longer gives (COR-013 point 7). The run ends with the count refused. A file at the copy's path without the mark is the project's, and is left as it is. Where the tree holds no reader, or the adapter no declaration of tool access the reader reads, the deploy skips the agent, keeps its earlier copy, and says to run `pkit sync`.
+An agent refused for its tool access is not deployed. The deploy prints it `skipped`, with the cause. Where the copy an earlier deploy wrote carries the mark, it removes that copy, prints it `removed`, and says to mend the definition and run the deploy again, since the copy may give tools the definition no longer gives (COR-013 point 7). The run ends with the count refused. A file at the copy's path without the mark is the project's, and is left as it is. Where the tree holds no reader, or the adapter no declaration of tool access the reader reads, the deploy skips the agent, keeps its earlier copy, and says to run `pkit sync`.
 
 **A tool's name alone, denied in a project's settings,** such as `"deny": ["WebFetch"]` in `.claude/settings.json`, removes that tool from every session, and so from every agent, whatever its tool access. A per-agent difference is made in the agent's tool access, never in the project's denies ([ADR-004](../../../tech-docs/architecture/decisions/ADR-004-autonomy-intent-confinement.md) point 1).
 
@@ -134,14 +140,13 @@ A refused agent is not deployed. The deploy prints it `skipped`, with the cause.
 
 ### `undeploy-capability.sh`
 
-`undeploy-capability.sh <capability-name>` removes one capability's deployed skills and agents from `.claude/` — the inverse of the two deploy scripts above, for that capability alone. The lifecycle runs it when it unregisters a capability whose subtree stays on disk (an incubated capability's uninstall, or any capability's in the methodology's source repository): the deploy scripts drop what they deployed only once its source file is gone, and here it is not. The lifecycle passes the capability's name and knows nothing of `.claude/` (the adapters README, "Primitives the lifecycle calls").
+`undeploy-capability.sh <capability-name>` removes one capability's deployed skills from `.claude/` — the inverse of `deploy-skills.sh`, for that capability alone. The lifecycle runs it when it unregisters a capability whose subtree stays on disk (an incubated capability's uninstall, or any capability's in the methodology's source repository). `deploy-skills.sh` drops those skills as well, since it deploys only a registered capability's skills ("Stale removal" under `deploy-skills.sh` above). Skills keep this step until [project-kit#2956](https://github.com/aleskalfas/project-kit/issues/2956) decides their rules, as the Implications of [ADR-087](../../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md) say. The lifecycle passes the capability's name and knows nothing of `.claude/` (the adapters README, "Primitives the lifecycle calls").
 
-It removes only what the deploy scripts created for the capability, recognised by the mark each leaves:
+It removes a skill only: a `.claude/skills/<skill>/` whose `SKILL.md` is the relative symlink `deploy-skills.sh` writes into `.pkit/capabilities/<name>/`. Every symlink in that folder pointing into the capability goes, and the folder goes once empty; an adopter's file left in it keeps the folder (a `kept` line says so).
 
-- **a skill** — a `.claude/skills/<skill>/` whose `SKILL.md` is the relative symlink `deploy-skills.sh` writes into `.pkit/capabilities/<name>/`. Every symlink in that folder pointing into the capability goes, and the folder goes once empty; an adopter's file left in it keeps the folder (a `kept` line says so).
-- **an agent** — a `.claude/agents/<agent>.md` carrying `deploy-agents.sh`'s marker, for an agent the capability ships in its `agents/` folder (flat or folder form). A copy is kept when a project agent of the same name exists: project agents outrank every other source (the agents README, "Name-collision precedence"), so the copy is the project's.
+It removes no agent ([ADR-087](../../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md) point 4). The picker counts a capability's definitions only while the component registry records the capability, so the agents' deploy the lifecycle runs after the uninstall removes the capability's copies, and writes the definition that now wins for each name core or another capability ships ("Which definition is the agent" under `deploy-agents.sh` above).
 
-Adopter content — a file that is not such a symlink, a symlink pointing anywhere else, an agent without the marker — and the capability's own subtree are never touched. The script removes what exists for the capability whatever its registration, so it runs the same before or after the unregister; it is idempotent (`Done. Nothing deployed for capability <name>.` on a second run) and exits 2 on anything but one capability name. Status lines: `removed`, `kept`.
+Adopter content — a file that is not such a symlink, a symlink pointing anywhere else — every agent and the capability's own subtree are never touched. The script removes what exists for the capability whatever its registration, so it runs the same before or after the unregister; it is idempotent (`Done. Nothing deployed for capability <name>.` on a second run) and exits 2 on anything but one capability name. Status lines: `removed`, `kept`.
 
 ### The agent runner (`run-agent.py`)
 
@@ -155,7 +160,9 @@ It runs under the system `python3` with the standard library only, as the permis
 
 #### The unconfined form
 
-- It refuses the run when `claude` is not on `PATH`, or when the agent is not deployed. Deployed means `.claude/agents/<agent>.md` exists in the run's folder or a folder above it, or in the person's own agents folder (`$CLAUDE_CONFIG_DIR/agents`, else `~/.claude/agents`).
+- It refuses the run when `claude` is not on `PATH`.
+- **For a name some place of the methodology ships,** it asks the agents area's picker, through the deploy's resolver beside it (`--pick`), which definition is the agent, in the project's tree the runner lies in ([ADR-087](../../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md) point 3). It passes that definition as the confined form checks it ("The agent's definition" below), with `--agents`, under a name unique to the run, so the harness runs that agent and no other copy of the name. It refuses the run where the confined form refuses the definition, and where the picker cannot tell which definition is the agent, or the name has none.
+- **For a name no place ships,** it refuses the run when the agent is not deployed, and passes the name alone. Deployed means `.claude/agents/<agent>.md` exists in the run's folder or a folder above it, or in the person's own agents folder (`$CLAUDE_CONFIG_DIR/agents`, else `~/.claude/agents`). So an agent the project wrote straight into the harness's folder still runs.
 - It starts `claude` in the run's folder, in a session of its own, and writes the brief to its standard input. So no word of the brief is read as a flag.
 - The harness gets the runner's environment, less the backbone's own variables for its run of the runner (`PKIT_COMMAND_DEADLINE`, `PKIT_COMMAND_STRAYS`, `PKIT_RUN_CACHE`), and with the marker set.
 - It starts the `claude` it found on `PATH`, made absolute. So a relative `PATH` entry never runs a `claude` that the run's folder holds.
@@ -166,10 +173,11 @@ It runs under the system `python3` with the standard library only, as the permis
 | Flag | Passed |
 |---|---|
 | `-p` | always |
-| `--agent <agent>` | always |
+| `--agents <definition>` | for a name some place ships: the agent's checked definition, under the run's name |
+| `--agent <agent>` | always: the run's name, or the agent's name for one no place ships |
 | `--effort <level>` | where the run sets an effort |
 
-None of them approves a call by itself. `--agent` makes the agent's definition the session's agent, so a field that definition carries, such as a permission mode, hooks or MCP servers, applies as in any session started with it. The unconfined form checks no definition. Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir`, `--settings`, `--agents` and `--mcp-config`.
+None of them approves a call by itself. `--agent` makes the agent's definition the session's agent. A definition passed with `--agents` carries only the fields the confined form passes, so none can bring a permission mode, hooks or MCP servers. A definition loaded by name, for a name no place ships, is checked by nothing, so a field it carries, such as a permission mode, hooks or MCP servers, applies as in any session started with it. Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir`, `--settings` and `--mcp-config`.
 
 **What the unconfined form leaves open.** The run takes the person's and the project's settings in its folder, as a session started there would. It starts in the mode those settings or the harness choose, and the runner passes no settings of its own. So a run may write in the folder, or wherever those settings let it, and may start in a mode that approves calls no rule allows (ADR-066 point 11). The hook judges a run's calls as it judges a person's session. `--agent` does not change the `agent` key the hook reads, so which subject it judges there is not yet known ([the permissions README, "Default-agent subject resolution"](../../permissions/README.md#default-agent-subject-resolution)).
 
@@ -213,7 +221,7 @@ Claude Code matches the path of a tool that reads only against `Read(...)` rules
 
 **The agent's definition** (ADR-066 point 3). The runner always passes the definition itself, with `--agents`.
 
-- **The file the deploy picks.** The runner looks in the working copy as `deploy-agents.sh` does: the project's agent, then an installed capability's (the first by name), then core's, each flat form before folder form. A file that leads outside the working copy is refused.
+- **The file the deploy picks.** The runner asks the agents area's picker, through the resolver's `--pick` entry, which definition is the agent in the working copy, as `deploy-agents.sh` does (ADR-087 point 2). It refuses where the picker cannot tell, where the name has no agent or none, and where the agent is refused before its text is read, such as a place holding both layouts of the name. A file that leads outside the working copy is refused.
 - **As the deploy resolves it.** The resolver beside the runner, `_resolve_agent.py`, resolves the file against the working copy's overlay. It applies the overlay, carries the model and the effort, and names each storyboard by its path from the clone's root.
 - **Refused where the deploy would not carry it.** The run is refused where the resolver fails, and where it warns that it drops the model or the effort. Any other warning refuses too, except the one for an optional read set with no value: nobody watches the run to read it.
 - **Only the methodology's shape.** Every front-matter field must be `name`, `description`, `tools`, `withheld`, `model`, `effort`, or a field of the reference graph: `reads`, `owns`, `needs`, `answers`, `gates`, `storyboards` and `composes`. A field outside that shape, such as `hooks`, `mcpServers`, `permissionMode`, `memory`, `skills`, `isolation` or Claude Code's own `disallowedTools`, refuses the run rather than being trimmed. A test holds the set to the backbone's own (`refs.DEFINITION_FIELDS`).
@@ -463,6 +471,16 @@ The harness-neutral contract is the permissions README's (*The agent workspace*:
 
 **What stays as it was.** The permission hook's ask on an `Edit` or `Write` outside the repository is unchanged. Such a write that the sentence did not stop meets that ask, never a silent allow. No allow rule names the scratch directory (ADR-060, "Alternatives considered").
 
+### Where no `pkit` is on the `PATH`
+
+The start hook adds one line to its context where no `pkit` command is on the `PATH` it runs with ([#3005](https://github.com/aleskalfas/project-kit/issues/3005)):
+
+> No `pkit` command is on the `PATH`: run `sh .pkit/cli/install-pkit.sh` at the project's root to install this project's version.
+
+The line names the install script, which installs the version the project pins or records ([ADR-090](../../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md) point 4). The CLI reference's ["Installing pkit on PATH"](../../cli/README.md#installing-pkit-on-path) <!-- unanchored: named as the section that says how to run the script, whose form rests on ADR-090 point 3, which the page anchors --> says how to run it. The hook names the script and never runs it, as no hook does (ADR-090 point 3).
+
+Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches each session and each subagent at its start, as the workspace sentence does, and no confined run, which loads no project settings.
+
 ### Harness support (`harness-support.yaml`)
 
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
@@ -486,7 +504,7 @@ The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primi
 2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md`, then `@.pkit/rules/capabilities.md`, so the kit-shipped hard rules and tool-hygiene conventions, and each installed capability's rules, load into the agent. Idempotent; never clobbers adopter content.
 3. **Skills.** Run `.pkit/adapters/claude-code/deploy-skills.sh`. Creates the `.claude/skills/` symlinks (tracked in git per the project's `.gitignore`, so a fresh clone has the same environment).
 4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
-5. **Undeploy one capability.** Not a setup step: `pkit capabilities uninstall` runs `.pkit/adapters/claude-code/undeploy-capability.sh <name>` where the capability's files stay. Running it by hand is safe, but a capability still registered is deployed again by the next sync.
+5. **Undeploy one capability's skills.** Not a setup step: `pkit capabilities uninstall` runs `.pkit/adapters/claude-code/undeploy-capability.sh <name>` where the capability's files stay, and the agents' deploy after it removes the capability's agents. Running it by hand is safe, but a capability still registered is deployed again by the next sync.
 6. **Permission enforcement (opt-in).** Run `pkit permissions enable` to register the PreToolUse hook; `pkit permissions disable` to remove it. See *Live permission enforcement* above.
 
 ### What the merge keeps under `permissions`

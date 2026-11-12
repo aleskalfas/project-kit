@@ -22,6 +22,8 @@ from pathlib import Path
 import pytest
 from scripts import check_deployed_agents as cda
 
+from tests.agent_definitions_support import stage_picker
+
 REPO = Path(__file__).resolve().parents[1]
 ADAPTER = REPO / ".pkit" / "adapters" / "claude-code"
 OWNERSHIP = REPO / ".pkit" / "lifecycle" / "ownership.py"
@@ -66,6 +68,7 @@ def repo(tmp_path: Path) -> Path:
     shutil.copy2(OWNERSHIP, tmp_path / ".pkit" / "lifecycle" / "ownership.py")
     (tmp_path / ".pkit" / "agents").mkdir()
     shutil.copy2(READER, tmp_path / ".pkit" / "agents" / "tool_access.py")
+    stage_picker(tmp_path / ".pkit")
     _write_source(tmp_path, "Says one thing.")
     _deploy(tmp_path)
     _git(tmp_path, "init", "-q")

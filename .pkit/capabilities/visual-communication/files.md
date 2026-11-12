@@ -35,6 +35,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
@@ -151,7 +152,6 @@ pkit:
         - visual-communication:DEC-021#1
         - visual-communication:DEC-021#2
         - visual-communication:DEC-022#1
-        - visual-communication:DEC-022#2
         - visual-communication:DEC-022#3
         - visual-communication:DEC-022#8
         - visual-communication:DEC-025#1
@@ -174,6 +174,10 @@ pkit:
         - visual-communication:DEC-035#4
         - visual-communication:DEC-035#6
         - visual-communication:DEC-035#7
+        - visual-communication:DEC-036#1
+        - visual-communication:DEC-036#2
+        - visual-communication:DEC-036#3
+        - visual-communication:DEC-036#7
 ---
 
 # The files of the visual work
@@ -743,28 +747,31 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`. It carries 1.1.0, since it adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, and the roles `size.site` and `size.line`. These are additions, which need a minor ([What a release compares](#what-a-release-compares)). It is not released yet, so only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`. It carries 1.1.0, since it adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. These are additions, which need a minor ([What a release compares](#what-a-release-compares)). It is not released yet, so only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
-- `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
+- `roles.yaml`, the shared roles, axes, colour families, shapes and contrast pairs that every library shares (DEC-004 points 2, 7 and 8, DEC-036 point 1);
 - `components/figure.yaml`, the top component `figure`, for a figure in a documentation page;
 - `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names;
 - `components/site.yaml`, the top component `site`, for a web page or a portal of several: each of its `pages` is a web page, in its layout `standard`, or drawn by the component it names (DEC-022 point 1).
 
-A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge (DEC-022 point 2).
+A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge and its content keeps from it. A component that sets no inset touches the edge.
 
-- **The header and the footer** are the site's own fields, each optional, each the component the content places there. Every page drawn in a layout takes them, so each is written once in each language. A page drawn by its own component takes neither.
+- **The header and the footer** are the site's own fields, each optional, each the component the content places there. Every page drawn in a layout takes them, so each is written once in each language, under one lock. A page drawn by its own component takes neither.
+- **Any component.** The header, the footer and `main` each take any component: the starter's, a brand's own or a local one. So the site needs no library beneath it.
 - **Its size.** The site asks for its width alone, `=@size.site`, so every page is as wide as the brand's site at the size it is drawn at. Each page is as tall as its content, and the site as tall as its tallest page (DEC-022 point 3).
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value (DEC-022 point 3). `size.line` is the length of a line of text at most. Its default, `{size.figure}`, caps a line at a figure's width where a brand gives it no value. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value, so no released brand owes it one (DEC-004 point 7). `size.line` is the length of a line of text at most. Its default, `{size.figure}`, caps a line at a figure's width where a brand gives it no value. `space.sign-gap` is the gap between a run's sign and its first character, `space.ground-room` the room a run's ground leaves at each end of its span, and `space.ground-corner` the radius of the ground's corners there (DEC-036 point 3; [Text](components.md#text)). Each defaults to `{space.1}`, so no released brand owes them a value. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 
+They declare six shapes: `circle`, `square`, `triangle`, `diamond`, `hexagon` and `star`. Each is an outline in a square 24 long on a side, filled by the nonzero rule, with room around it inside its square ([Signs](#signs)). A notation maps a concept to one by its name, as the concept's sign where it holds no icon for it (DEC-036 point 1).
+
 ### `roles.yaml`
 
-A library's `roles.yaml` declares its roles. The foundations declare the *shared roles*, which every library shares, with the axes, the colour families and the pairs. Another library of components may declare roles of its own. From the foundations, trimmed:
+A library's `roles.yaml` declares its roles. The foundations declare the *shared roles*, which every library shares, with the axes, the colour families, the shapes and the pairs. Another library of components may declare roles of its own. From the foundations, trimmed:
 
 ```yaml
 pkit_schema: visual-communication:roles
@@ -782,6 +789,11 @@ axes:
   device: {kind: size, modes: [desktop, tablet, phone], default: desktop}
 families:
   blue: {fill: family.blue.fill, line: family.blue.line, text: family.blue.text}
+shapes:
+  square:
+    d: M 3 3 H 21 V 21 H 3 Z
+    fill-rule: nonzero
+    square: 24
 pairs:
   - {text: text-primary, under: background, level: text}
   - {text: family.blue.text, under: family.blue.fill, level: text}
@@ -790,6 +802,7 @@ pairs:
 - **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number`, `typography` or `picture`. A role carries no value: a brand gives it one. A role of the type `picture` takes a picture file of the brand as its value ([Picture roles](#picture-roles)). Only the foundations declare one, with no default, and no brand owes it a value (DEC-025 point 4). A role may carry a `default`, `{<role>}`, which it takes wherever no brand gives it a value. A shared role's default aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
 - **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them. The foundations alone declare axes.
 - **`families`** maps each colour family to its members, each naming a colour role. A notation maps a concept to a family by its name ([Notations](#notations)). The foundations alone declare families.
+- **`shapes`** maps each shape, by its name, to its outline ([Signs](#signs)). A notation maps a concept to a shape by its name (DEC-036 point 1). The foundations alone declare shapes. A shape that is no outline is refused, and stops the brand, as a family that names no colour role does (*Brands, tokens and contrast* in *What the check reports*).
 - **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*Brands, tokens and contrast* in *What the check reports*).
 
 The capability reads the `roles.yaml` of the foundations, and of each other library of kind `components` it resolves with them: each library a piece's lock or a declaration of written code names, and each library a version checked alone is resolved with (*What each run judges* in *What the check reports*). A brand's `roles.yaml` is not read: format 1 has no brand's own roles.
@@ -813,7 +826,7 @@ pairs:
 - **A default lies below every brand's value** (DEC-008 point 1). The capability merges a brand's sources over the defaults, then resolves the aliases, so a default follows the value the brand gives the role it aliases. `test-parts.note` takes the brand's `text-primary` through `test-parts.ink`, wherever the brand gives neither its own value. A component token's default lies there too ([Tokens](components.md#tokens)): in each combination of modes, under the base's tokens and the brand's own sources, and the aliases are resolved after the merge.
 - **A role with no default** takes a value only from a brand, as `test-parts.warning` does. A role whose chain of defaults ends at one, rather than at a shared role, has no value under a brand that gives none along it. Only a role whose chain ends at a shared role draws under every brand.
 - **Each pair names one of its own roles.** At its defaults, each of the library's own roles replaced by the role its default aliases, a pair falls on one that the foundations, the library or a library it builds on declares, in either order, at a level that needs as much contrast or more (DEC-008 point 6). `test-parts.ink` on `test-parts.paper` falls on the foundations' `text-primary` on `background`. Under a brand, a library's pair is measured only where the brand's values reach it: a value the brand gives a library's role along either role's chain of defaults. It is then measured in every combination where both roles have a value.
-- **It declares no `axes`, no `families` and no picture role,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
+- **It declares no `axes`, no `families`, no `shapes` and no picture role,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
 
 ### What a release compares
 
@@ -843,6 +856,7 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
 - **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
 - **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition, and so is a new picture role, which no brand owes a value. A new top group of the shared roles breaks, even where each of its roles carries a default. No library takes its name (DEC-004 point 7), so it fails a library already named so (DEC-025 point 10).
 - **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new axis, mode, colour family or member is an addition.
+- **The foundations' shapes,** whatever reads them (DEC-036 point 7). A shape removed breaks, since a notation names it, and so a shape renamed breaks too. A new shape is an addition. A shape's outline drawn again, within what its name says, changes only how a piece looks, and is neither.
 - **A brand's exported names** (DEC-004 point 5): its token paths, the component tokens it gives values among them, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition. So a size a brand comes to give is an addition, and one it ceases to give breaks. So is a logo, since a brand exports a picture role only where it gives it a value ([Picture roles](#picture-roles)).
 
 Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made, and the release refuses.
@@ -1022,7 +1036,7 @@ The capability ships `neutral`, a brand to start from, so a project can draw bef
 
 ## Notations
 
-A *notation* is a library of kind `notation`: the concepts of one subject, each mapped to a colour family the foundations declare (DEC-004 point 10). It maps a concept to a family, never to a value, so each brand colours the concept its own way. Its version folder holds its `library.yaml`, which builds on the foundations, and its `notation.yaml`. The test notation, `test-notation`, names the parts of a system.
+A *notation* is a library of kind `notation`: the concepts of one subject, each mapped to a colour family the foundations declare (DEC-004 point 10). It maps a concept to a family, never to a value, so each brand colours the concept its own way. It may give a concept a *sign* too, which shows the concept beside its colour (DEC-036 point 1). Its version folder holds its `library.yaml`, which builds on the foundations, and its `notation.yaml`. The test notation, `test-notation`, names the parts of a system.
 
 No notation ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
@@ -1034,14 +1048,33 @@ The test notation's:
 pkit_schema: visual-communication:notation
 schema_version: 1
 concepts:
-  person: {colour: purple}
+  person:
+    colour: purple
+    icon:
+      d: M 12 2 A 5 5 0 1 1 12 12 A 5 5 0 1 1 12 2 Z M 3 22 C 3 17 7 14 12 14 C 17 14 21 17 21 22 Z
+      fill-rule: nonzero
+      square: 24
   service: {colour: blue}
   store: {colour: green}
 ```
 
 - **`concepts`** maps each concept, by its name, to `{colour: <family>}`, one of the colour families of the foundations the piece locks ([The foundations](#the-foundations)). It holds at least one concept. A concept that maps to a value, to a role or to a family the foundations do not declare is refused (*What the check reports*).
+- **`icon`**, beside a concept's `colour`, is the concept's icon, an outline the notation holds ([Signs](#signs)).
+- **`shape`**, beside it, maps the concept to a shape the foundations declare, by its name ([The foundations](#the-foundations)).
+- **A concept's sign** is its icon, or its shape where it holds no icon. A concept that holds neither has no sign. An icon that is no outline, or a shape the foundations do not declare, is refused (*What the check reports*): the concept keeps its colour family, and has no sign.
 
 How a piece names the notations it uses is under [`piece.yaml`](#pieceyaml), how its lock takes them under [The lock](#the-lock), and how its content names a concept under [Content files](#content-files) and [Shapes](#shapes).
+
+### Signs
+
+A *sign* is one outline, the same form for an icon and for a shape (DEC-036 point 1):
+
+- **`d`** is the outline's path, in SVG's path data. Every command of it is read, absolute or relative: moves, lines, curves, arcs and closes. It starts with a move.
+- **`fill-rule`** is the rule that fills it, `nonzero` or `evenodd`, as SVG names them.
+- **`square`** is the side of the square its numbers lie within, a number above zero.
+- **Its numbers are lengths within its square,** so no brand gives a sign a value, and a sign reads the same under every brand. Only its paints follow the brand.
+- **One colour.** A sign is filled and stroked as the part that draws it is painted, so an icon holds one colour and no shading. An icon drawn as strokes, as many icon sets are, is turned into outlines first.
+- **How a component draws it** is under *Primitives* in *Components*, where a sign part draws its instance's concept's sign.
 
 ## Keys of combinations
 

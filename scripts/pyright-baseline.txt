@@ -3,9 +3,9 @@
 # line, fails the gate. `uv run python scripts/pyright_ratchet.py lower` lowers counts and
 # never raises one; a raise is a hand edit, for moved code or an upgrade only, with its
 # reason in the pull request (CONTRIBUTING.md, "Running checks").
-src/project_kit/agents_overlay.py reportUnknownArgumentType 11
-src/project_kit/agents_overlay.py reportUnknownMemberType 11
-src/project_kit/agents_overlay.py reportUnknownVariableType 20
+src/project_kit/agents_overlay.py reportUnknownArgumentType 9
+src/project_kit/agents_overlay.py reportUnknownMemberType 10
+src/project_kit/agents_overlay.py reportUnknownVariableType 16
 src/project_kit/agents_overlay.py reportUnusedVariable 1
 src/project_kit/backbone_schemas.py reportAttributeAccessIssue 6
 src/project_kit/backbone_schemas.py reportMissingTypeArgument 1

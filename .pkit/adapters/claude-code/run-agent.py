@@ -18,12 +18,21 @@ carries any other key is refused, never run without it.
 is in its own environment, empty included, and sets `PKIT_AGENT_RUN=1` in the
 harness's environment, so every process of a run inherits it.
 
-**The unconfined form.** The runner refuses when `claude` is not on the path,
-or when the agent is not deployed. It starts `claude -p --agent <agent>`, with
-`--effort <level>` where one is set, in the request's folder. The run takes the
-person's and the project's settings there, as a session started in that folder
-would. The harness gets the runner's environment, less the backbone's
-variables for its run of this runner (`RUN_VARIABLES`).
+**The unconfined form** (ADR-066 point 10, ADR-087 point 3). The runner
+refuses when `claude` is not on the path. For a name some place of the
+methodology ships, it asks the agents area's picker, through the deploy's
+resolver beside it, which definition is the agent, in the project's tree it lies
+in. It passes that definition as the confined form resolves it, under a name
+unique to the run (`--agents`, `--agent`), so the harness loads that agent and no
+other copy of the name, and it refuses where the confined form refuses the
+definition. For a name no place ships, it refuses when the agent is not
+deployed, and starts `claude -p --agent <agent>`, which loads an agent the
+project wrote straight into the harness's own folder. Either way `--effort
+<level>` is passed where one is set, and the harness starts in the request's
+folder. The run takes the person's and the project's settings there, as a
+session started in that folder would. The harness gets the runner's
+environment, less the backbone's variables for its run of this runner
+(`RUN_VARIABLES`).
 
 **The confined form** (ADR-066 points 2 to 6 and 9). Before the harness starts,
 the runner refuses, naming the cause, when the harness's version lies outside
@@ -98,8 +107,10 @@ CONFINED_KEYS = frozenset(
 CONFINED_FOLDERS = ("working_copy", "workspace", "temp", "pkit_folder", "project_root")
 
 #: The closed set of flags of the unconfined form (ADR-066 point 4), each with
-#: whether it takes a value. No member approves a call by itself.
-FLAGS = {"-p": False, "--agent": True, "--effort": True}
+#: whether it takes a value. No member approves a call by itself. `--agents`
+#: passes the agent's checked definition, for a name some place ships (ADR-087
+#: point 3).
+FLAGS = {"-p": False, "--agents": True, "--agent": True, "--effort": True}
 
 #: A confined run's tools (ADR-066 point 4): reading, searching, writing new
 #: files and the shell.
@@ -252,6 +263,11 @@ RESOLVER = "_resolve_agent.py"
 #: `tools` and `withheld`, which the runner reads and then writes in Claude
 #: Code's (ADR-086 point 4).
 METHODOLOGY_KEYS_FLAG = "--methodology-keys"
+
+#: The resolver's entry that answers which definition of a name is the agent, as
+#: the agents area's picker answers it (ADR-087 point 2): the runner has no YAML
+#: library, and the picker's reader of the records needs one.
+PICK_FLAG = "--pick"
 
 #: The agents area's reader of an agent's tool access, in the working copy
 #: (ADR-086 point 1), and the functions the runner calls in it.
@@ -957,21 +973,52 @@ def confined_environment(
 # --- the agent's definition ------------------------------------------------------------
 
 
-def agent_source(working_copy: Path, agent: str) -> Path | None:
-    """The agent's file in the working copy, as the deploy picks it among
-    agents of one name: the project's, then an installed capability's (the
-    first by name), then core's, each flat before folder form."""
-    pkit = working_copy / ".pkit"
-    capabilities = pkit / "capabilities"
-    folders = [pkit / "agents" / "project"]
-    if capabilities.is_dir():
-        folders += [entry / "agents" for entry in sorted(capabilities.iterdir())]
-    folders.append(pkit / "agents" / "core")
-    for folder in folders:
-        for candidate in (folder / f"{agent}.md", folder / agent / f"{agent}.md"):
-            if candidate.is_file():
-                return candidate
-    return None
+def picked_source(
+    resolver: Path, tree: Path, agent: str, env: dict[str, str], timeout: float = RESOLVE_SECONDS
+) -> Path | None:
+    """The file of the agent's definition in *tree*, as the agents area's picker
+    answers it through the deploy's resolver (ADR-087 point 2); None where no
+    place of the methodology ships the name. Refuses where the picker cannot tell
+    which definition is the agent, where none of its definitions counts, where
+    the one that is the agent is refused before its text is read, or where the
+    resolver gives no answer the runner reads."""
+    try:
+        done = subprocess.run(
+            [str(resolver), PICK_FLAG, agent],
+            cwd=str(tree),
+            env={key: value for key, value in env.items() if key not in RUN_VARIABLES},
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=max(timeout, 1),
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise Refused(f"the deploy's pick of the agent's definition could not run: {exc}") from None
+    try:
+        picked = json.loads(done.stdout.decode("utf-8", errors="replace"))
+    except ValueError:
+        picked = None
+    if done.returncode != 0 or not isinstance(picked, dict):
+        errors = done.stderr.decode("utf-8", errors="replace")
+        first = next((line for line in errors.splitlines() if line.strip()), "")
+        raise Refused(
+            "the deploy's resolver gave no answer which definition of the agent is the agent: "
+            + (first.strip() or f"it exited with {done.returncode}")
+        )
+    if picked.get("shipped") is False:
+        return None
+    for key, says in (
+        ("untold", "the runner cannot tell which definition of {agent} is the agent: {why}"),
+        ("none", "{agent} has no agent: {why}"),
+        ("refused", "the definition that is the agent {agent} is refused: {why}"),
+    ):
+        why = picked.get(key)
+        if isinstance(why, str):
+            raise Refused(says.format(agent=agent, why=why))
+    source = picked.get("agent")
+    if not isinstance(source, str) or not source:
+        raise Refused("the deploy's resolver named no file of the agent's definition")
+    return Path(source)
 
 
 def _unreadable(field: str, why: str) -> Refused:
@@ -1234,19 +1281,34 @@ def checked_definition(
     timeout: float = RESOLVE_SECONDS,
 ) -> dict[str, Any]:
     """The agent's definition as a confined run passes it (ADR-066 point 3):
-    the deploy's resolution of the file the deploy picks, checked against the
-    methodology's shape. It holds the description, the body as the prompt, the
-    tool access in Claude Code's key (ADR-085 point 1), the model and the
-    effort, the caller's effort over the definition's. The other fields of the
-    shape are read and never passed. The tool access is the reader's answer,
-    refused where the reader or the adapter refuses it (ADR-086)."""
-    source = agent_source(working_copy, agent)
+    the deploy's resolution of the file the agents area's picker names (ADR-087
+    point 2), checked against the methodology's shape. It holds the description,
+    the body as the prompt, the tool access in Claude Code's key (ADR-085 point
+    1), the model and the effort, the caller's effort over the definition's. The
+    other fields of the shape are read and never passed. The tool access is the
+    reader's answer, refused where the reader or the adapter refuses it
+    (ADR-086)."""
+    source = picked_source(resolver, working_copy, agent, env, timeout)
     if source is None:
         raise Refused(
-            f"the working copy holds no definition of {agent} that the deploy would pick: no "
-            f"{agent}.md or {agent}/{agent}.md in .pkit/agents/project, a capability's agents "
-            "folder or .pkit/agents/core"
+            f"the working copy holds no definition of {agent}: no place of the methodology "
+            "ships the name, in .pkit/agents/project, an installed capability's agents folder "
+            "or .pkit/agents/core"
         )
+    return checked_source(working_copy, source, agent, effort, resolver, env, timeout)
+
+
+def checked_source(
+    working_copy: Path,
+    source: Path,
+    agent: str,
+    effort: str | None,
+    resolver: Path,
+    env: dict[str, str],
+    timeout: float = RESOLVE_SECONDS,
+) -> dict[str, Any]:
+    """The definition at *source*, the agent's, checked as `checked_definition`
+    checks it."""
     if not _inside(source, working_copy):
         raise Refused(f"the agent's file {source} leads outside the working copy")
     overlay = working_copy / ".pkit" / "agents" / "project" / "overlay.yaml"
@@ -1291,10 +1353,16 @@ def checked_definition(
 # --- the command line --------------------------------------------------------------------
 
 
-def command(harness: str, agent: str, effort: str | None) -> list[str]:
+def command(
+    harness: str, agent: str, effort: str | None, definition: dict[str, Any] | None = None
+) -> list[str]:
     """The unconfined form's command line: the closed set's flags, and nothing
-    else."""
-    argv = [harness, "-p", "--agent", agent]
+    else. With *definition*, the agent's checked definition passed under *agent*,
+    a name unique to the run (ADR-087 point 3)."""
+    argv = [harness, "-p"]
+    if definition is not None:
+        argv += ["--agents", json.dumps({agent: definition})]
+    argv += ["--agent", agent]
     if effort is not None:
         argv += ["--effort", effort]
     check_flags(argv)
@@ -1483,17 +1551,50 @@ def agent_file(agent: str, folder: Path, env: dict[str, str]) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
+def unconfined_command(
+    harness: str, agent: str, folder: Path, effort: str | None, env: dict[str, str], deadline: float
+) -> list[str]:
+    """The unconfined form's command line for *agent* (ADR-087 point 3).
+
+    For a name some place of the methodology ships, the definition the agents
+    area's picker names in the project's tree this runner lies in, checked as a
+    confined run checks it, under a name unique to the run. For a name no place
+    ships, the agent by name, which the harness loads where it finds it; refused
+    where it finds none.
+    """
+    tree = ADAPTER_FOLDER.parents[2]
+    resolver = ADAPTER_FOLDER / RESOLVER
+    source = picked_source(
+        resolver, tree, agent, env, min(RESOLVE_SECONDS, deadline - time.monotonic())
+    )
+    if source is None:
+        if agent_file(agent, folder, env) is None:
+            raise Refused(
+                f"the agent {agent} is not deployed: no .claude/agents/{agent}.md in {folder} "
+                "or a folder above it, nor in the person's own agents folder"
+            )
+        return command(harness, agent, effort)
+    definition = checked_source(
+        tree,
+        source,
+        agent,
+        effort,
+        resolver,
+        env,
+        min(RESOLVE_SECONDS, deadline - time.monotonic()),
+    )
+    return command(harness, RUN_AGENT_PREFIX + secrets.token_hex(8), effort, definition)
+
+
 def run_unconfined(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
-    """Run an unconfined request, and answer how it ended."""
+    """Run an unconfined request, and answer how it ended. The limit counts from
+    here, so the pick and the check of the definition count against it."""
+    deadline = time.monotonic() + request["limit_seconds"]
     harness = find_harness(env)
     folder = Path(request["folder"])
-    agent = request["agent"]
-    if agent_file(agent, folder, env) is None:
-        raise Refused(
-            f"the agent {agent} is not deployed: no .claude/agents/{agent}.md in {folder} "
-            "or a folder above it, nor in the person's own agents folder"
-        )
-    argv = command(harness, agent, request.get("effort"))
+    argv = unconfined_command(
+        harness, request["agent"], folder, request.get("effort"), env, deadline
+    )
     try:
         process = subprocess.Popen(
             argv,
@@ -1510,7 +1611,8 @@ def run_unconfined(request: dict[str, Any], env: dict[str, str]) -> dict[str, An
     limit = request["limit_seconds"]
     try:
         raw_out, raw_err = process.communicate(
-            request["brief"].encode("utf-8", errors="replace"), timeout=limit
+            request["brief"].encode("utf-8", errors="replace"),
+            timeout=max(deadline - time.monotonic(), 0.001),
         )
     except subprocess.TimeoutExpired:
         end_harness(process)

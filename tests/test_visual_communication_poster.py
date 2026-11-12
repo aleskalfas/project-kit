@@ -7,10 +7,11 @@ DEC-002 point 1 places it.
 
 The project's own work is the committed fixture `tests/fixtures/visual-communication/poster/`,
 laid out as it lies in the location: the component library `test-print`, which holds the
-poster, a page alone printed at A1; the test brand's drawing of the poster's one layout; and
-`conference`, a poster under the test brand. A location holds it beside the foundations
-being built and the test brand that gives sizes, the project's own brand, whose
-`library.yaml` the project makes name `test-print`. The commands run in this process.
+poster, a page alone printed at A1, and declares neither an own role nor a component token;
+the test brand's drawing of the poster's one layout; and `conference`, a poster under the
+test brand. A location holds it beside the foundations being built and the test brand that
+gives sizes, the project's own brand, whose `library.yaml` the project makes name
+`test-print`. The commands run in this process.
 """
 
 from __future__ import annotations

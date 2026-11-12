@@ -4,8 +4,9 @@ language and set of combinations that share one (visual-communication DEC-005 po
 and 10, DEC-018 points 1 and 4).
 
 - **What it draws** is its declaration (`svg_declaration.py`): every primitive of format
-  1's scene but the path. It draws only what it declares, so the losses the capability
-  reads from the declaration before it runs are the ones it makes.
+  1's scene, the path a concept's sign is among them (DEC-036 point 1). It draws only what
+  it declares, so the losses the capability reads from the declaration before it runs are
+  the ones it makes.
 - **How it draws** is the canvas's (`_lib/canvas.py`), with nothing replaced: a picture is
   embedded whole, as PNG or JPEG data, so it keeps the colour profile it carries.
 - **One call for each file.** In the format `svg`, `render` is handed one key, with its

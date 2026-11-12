@@ -350,8 +350,14 @@ def on_each_foundations(
 
 
 #: The shared roles the foundations being built add to their release 1.0.0, each by the role
-#: its default aliases (DEC-022 point 3, DEC-004 point 7).
-ADDED_ROLES = {"size.site": "size.slide", "size.line": "size.figure"}
+#: its default aliases (DEC-004 point 7, DEC-036 point 3).
+ADDED_ROLES = {
+    "size.site": "size.slide",
+    "size.line": "size.figure",
+    "space.sign-gap": "space.1",
+    "space.ground-room": "space.1",
+    "space.ground-corner": "space.1",
+}
 
 
 def names_a_size(folder: Path) -> bool:
@@ -380,12 +386,13 @@ def as_released(values: Mapping[str, Any], given: Collection[str] = ()) -> dict[
 def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The foundations being built add the size axis `device` and the roles `size.site` and
-    `size.line` to their release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021
-    points 2 and 9, DEC-022 point 3). So each reference piece that names no size draws on
-    them as on that release, byte for byte: each preview, but for the foundations' version
-    they name, and its values, but for the roles they add. A web part's piece names the
-    sizes, which that release does not declare."""
+    """The foundations being built add the size axis `device` and the roles `size.site`,
+    `size.line` and those of a run's sign and ground to their release 1.0.0, and the test
+    brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022 point 3, DEC-036 point 3).
+    So each reference piece that names no size draws on them as on that release, byte for
+    byte: each preview, but for the foundations' version they name, and its values, but for
+    the roles they add. A web part's piece names the sizes, which that release does not
+    declare."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)

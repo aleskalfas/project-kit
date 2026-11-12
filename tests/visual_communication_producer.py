@@ -43,7 +43,7 @@ DECLARATION: dict[str, Any] = {
     "name": NAME,
     "kind": "producer",
     "version": VERSION,
-    "seam": 6,
+    "seam": 8,
     "inputs": {
         "type": "object",
         "description": "What the square is painted with.",

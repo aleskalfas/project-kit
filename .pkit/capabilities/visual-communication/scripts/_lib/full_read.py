@@ -201,7 +201,9 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
             found.extend(exc.findings)
     found.extend(ctx.findings)
     if library.kind == "notation":
-        notation = notations.read_notation(library.folder, scope.families, root=held.root)
+        notation = notations.read_notation(
+            library.folder, scope.families, shapes=scope.shapes, root=held.root
+        )
         found.extend(notation.findings)
     found.extend(_picture_findings(held, library, reader))
     return FullRead(

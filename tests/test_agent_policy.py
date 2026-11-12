@@ -19,6 +19,7 @@ from project_kit import agents_overlay as ao
 from project_kit import refs
 from project_kit.cli import main
 from project_kit.validators import Severity
+from tests.agent_definitions_support import stage_picker
 
 # --- the vocabulary -----------------------------------------------------------
 
@@ -121,6 +122,9 @@ def kit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             (root / ".pkit" / area / ns).mkdir(parents=True)
     # Root-walk install marker (#656).
     (root / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    # The picker of an agent's definition and the reader of the records, as sync
+    # copies them (ADR-087 point 2).
+    stage_picker(root / ".pkit")
     monkeypatch.chdir(root)
     return root
 

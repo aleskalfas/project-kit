@@ -64,6 +64,7 @@ from _lib.fingerprint import COPY_PLACE
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, LibraryError, Misfit, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
+from _lib.outlines import Outline
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.scene import SceneResult, compute_scene
@@ -435,7 +436,10 @@ class Project:
         )
         self.notations = {
             name: notations.read_notation(
-                self.version_folder(name), self.foundations.families, root=self.root
+                self.version_folder(name),
+                self.foundations.families,
+                shapes=self.foundations.shapes,
+                root=self.root,
             )
             for name in piece.notations
         }
@@ -927,6 +931,26 @@ class ProjectEnv:
         return dict(self._project.foundations.families[name])
 
     def concept(self, name: str) -> str | None:
+        notation, concept = self._notation(name)
+        try:
+            return notation.family(concept)
+        except KeyError:
+            raise UnknownConcept(
+                name, f"the notation {notation.label} holds no concept `{concept}`"
+            ) from None
+
+    def sign(self, name: str) -> Outline | None:
+        notation, concept = self._notation(name)
+        try:
+            return notation.sign(concept)
+        except KeyError:
+            raise UnknownConcept(
+                name, f"the notation {notation.label} holds no concept `{concept}`"
+            ) from None
+
+    def _notation(self, name: str) -> tuple[notations.Notation, str]:
+        """The notation of the concept `name` and the concept's name within it. Raises
+        UnknownConcept where the piece names no such notation."""
         named, _, concept = name.partition("/")
         notation = self._project.notations.get(named)
         if notation is None:
@@ -935,12 +959,7 @@ class ProjectEnv:
                 f"the concept `{name}` comes from `{named}`, a notation the piece does not name "
                 f"under `notations`",
             )
-        try:
-            return notation.family(concept)
-        except KeyError:
-            raise UnknownConcept(
-                name, f"the notation {notation.label} holds no concept `{concept}`"
-            ) from None
+        return notation, concept
 
     def library_version(self, library: str) -> str:
         return self._project.lock[library]
@@ -1057,6 +1076,10 @@ class LibraryEnv:
 
     def concept(self, name: str) -> str | None:
         raise UnknownConcept(name, "no piece names a notation where a library is checked alone")
+
+    def sign(self, name: str) -> Outline | None:
+        self.concept(name)  # raises, as for every concept here
+        return None
 
     def library_version(self, library: str) -> str:
         return str(self._versions[library].version)
@@ -1563,6 +1586,10 @@ class _FitEnv:
 
     def concept(self, name: str) -> str | None:
         raise UnknownConcept(name, "no notation stands behind the fit of versions")
+
+    def sign(self, name: str) -> Outline | None:
+        self.concept(name)  # raises, as for every concept here
+        return None
 
     def library_version(self, library: str) -> str:
         return str(self._versions[library].version)

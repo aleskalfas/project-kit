@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:project-management
+# pkit-digest: sha256:d1cab7f07c178c769706229e7d217efbb1015bab8209401fb7635e50dc20de72
+# pkit-tool-access: withheld: ["Monitor", "PowerShell", "RemoteTrigger", "Workflow", "SendMessage", "ListAgents"]
 name: project-manager
 description: Project-management agent that files, validates, and transitions 
   GitHub issues per the methodology installed by the project-management 

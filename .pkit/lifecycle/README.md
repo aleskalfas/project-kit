@@ -8,6 +8,8 @@ pkit:
       path:
         - .pkit/lifecycle/ownership.py
         - .pkit/agents/tool_access.py
+        - .pkit/lifecycle/capability_records.py
+        - .pkit/agents/definition_source.py
         - .pkit/lifecycle/templates/README.md
         - src/project_kit/__init__.py
         - src/project_kit/lifecycle_ownership.py
@@ -38,7 +40,7 @@ pkit:
         - .pkit/schemas/backbone/config.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - .pkit/schemas/backbone/rule-set.schema.json
-      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1"]
+      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1", "ADR-087#1", "ADR-087#2", "ADR-088#7"]
       artefact:
         - .pkit/lifecycle/manifest.md
         - .pkit/lifecycle/component-registry.md
@@ -111,11 +113,13 @@ The lifecycle keeps a project's state in these places under `.pkit/`:
 
 ```
 .pkit/
-├── manifest.yaml                                    ← backbone manifest (recorded version + component registry)
+├── manifest.yaml                                    ← backbone manifest (recorded version + component registry + the project's agent choices)
 ├── agents/
-│   └── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
+│   ├── tool_access.py                               ← the reader of an agent's tool access, propagated as ownership.py is (the agents README, "Tool access")
+│   └── definition_source.py                         ← the picker of which definition of each name is the agent, propagated as ownership.py is (the agents README, "Name-collision precedence")
 ├── lifecycle/
-│   └── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
+│   ├── ownership.py                                 ← the ownership predicates (see "Reconciling derivable state")
+│   └── capability_records.py                        ← the reader of the registry, each capability's skips and the agent choices, propagated as ownership.py is (component-registry.md)
 ├── migrations/
 │   └── backbone/
 │       └── <major>.<minor>.0/
@@ -381,7 +385,7 @@ It answers a **second, narrower** question beside it: `is_adopter_owned_by_tier(
 
 It lives here rather than in the CLI package for the reason for the permission decision core: an adapter's deploy primitive runs **in the adopter's tree**, where the globally-installed `pkit` runtime is not importable. Propagated in-tree code is the only home both the CLI and a propagated adapter script can reach, so the area is propagated and the module ships with it. Dependency direction is inward — the CLI imports it, each adapter imports it, and it imports neither.
 
-`is_sync_managed`'s first consumer is the agent-overlay write-authority check: a *write-carrying* overlay category may not name sync-managed content, which is the no-shared-files invariant applied at the agent surface. The module also declares that category set (`WRITE_CARRYING_CATEGORIES`), beside the predicate that guards it. Re-deriving either per adapter would fork the ownership rule and silently skip the check on the next harness, so a test fails any adapter script that carries a copy.
+`is_sync_managed`'s first consumer is the agent-overlay write-authority check, the no-shared-files invariant applied at the agent surface ([ADR-088](../../tech-docs/architecture/decisions/ADR-088-capability-default-write-paths.md) point 7). A grant in a category it binds may not reach sync-managed content, nor a registered externally-sourced capability's folder outside its `project/` tier. The module holds the test (`sync_managed_offences`) and the categories it binds (`bound_categories`): core's write-carrying set, `WRITE_CARRYING_CATEGORIES`, and each category a capability's agent owns. Re-deriving either per adapter would fork the ownership rule and silently skip the check on the next harness, so a test fails any adapter script that carries a copy.
 
 `is_adopter_owned_by_tier`'s consumers are the packaging build hook (`hatch_build.py`) and the test that holds it honest — plus one expression of the rule that deliberately does not call it: the sdist's `withhold` globs, a build-hook option in `pyproject.toml` that mirrors the same cases by hand. The hook could apply the predicate to the sdist as well; it does not, so that the sdist's filter stays independent of the wheel's and the test comparing the two artifacts can catch a hole in the predicate. That copy is the one to check first when the two distributions disagree. The wheel bundles the methodology tree by force-include, and hatchling's `exclude` cannot filter force-included paths — so the manifest carried its own idea of which paths were adopter-owned, **disagreed with this module, and nothing could notice**: 51 adopter-owned files shipped, including git-ignored runtime state that made the artifact depend on the build machine. Deriving the boundary from this predicate is what closes that, and it is the same lesson one altitude down — a second copy of an ownership rule forks silently.
 

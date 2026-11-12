@@ -3,7 +3,7 @@ and combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10, DE
 point 7).
 
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
-  1's scene, the image among them. It draws only what it declares, so the losses the
+  1's scene, the image and the path among them. It draws only what it declares, so the losses the
   capability reads from the declaration before it runs are the ones it makes.
 - **Pages.** Each page of the scene, in the scene's order, is a page of the file. Where the
   scene's root holds the physical size of the piece's top, every page is that size, at 72
@@ -32,12 +32,21 @@ point 7).
   its run's font, size and paint (DEC-012). Each span is shaped again with HarfBuzz from
   the committed file, in pieces of one font each, as the engine shaped it (DEC-005 point
   4), and its glyphs are placed at the advances shaped.
+- **A run's sign and ground** (DEC-036 point 3) take the room the engine gave them beside
+  the span's text, which the line's width, its anchor and each span after them count. Each
+  piece of a ground is drawn behind the text in its role, its corners rounded where the
+  ground starts and ends and square where a line breaks it, and each sign is its outline,
+  moved to its square, filled by its rule in its run's paint. A sign that holds no such
+  outline is refused, and left out.
 - **A line**, or a tie's connector through each of its points, is stroked as the SVG
   renderer strokes it; an arrowhead is the triangle it draws, five strokes long, its tip
   at the line's end, in the line's stroke. A line that holds neither its ends nor its
   points is refused, and left out.
 - **Shapes.** A box's stroke lies inside its frame. Rounded corners and ellipses are cubic
-  Bézier curves.
+  Bézier curves. A path, such as a concept's sign, is drawn from the outline the engine
+  mapped into its frame, its moves, lines, cubic curves and closes, filled by its rule,
+  nonzero or even-odd, its stroke on its outline. A path that holds no such outline is
+  refused, and left out.
 - **A picture** is drawn from the file its image shows in the combination drawn
   (`seam.Shown`), whatever its source, and from nothing else (DEC-025 point 7). It is
   drawn whole, centred, as large as its frame allows, as the scene's `xMidYMid meet` says
@@ -67,6 +76,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,7 +87,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 from _lib import pictures, png
-from _lib.canvas import shows, unshown
+from _lib.canvas import Placed, ground_path, marked, placed, room, shows, unshown
 from _lib.plugins import seam
 from _lib.plugins.pdf_declaration import DECLARATION
 
@@ -626,9 +636,12 @@ class _Document:
         name = self._opacities.setdefault(mark, f"A{len(self._opacities)}")
         return f"/{name} gs"
 
-    def _shape(self, element: Mapping[str, Any], path: str | None) -> list[Part]:
-        """A closed shape filled and stroked as its paints say; nothing where it takes
-        neither, or has no `path` since it has no size, its paints still read."""
+    def _shape(
+        self, element: Mapping[str, Any], path: str | None, *, even_odd: bool = False
+    ) -> list[Part]:
+        """A closed shape filled and stroked as its paints say, its fill by the even-odd rule
+        where `even_odd`, else by the nonzero; nothing where it takes neither, or has no
+        `path` since it has no size, its paints still read."""
         fill = self._paint(element, "fill")
         stroke = self._paint(element, "stroke")
         width = float(element.get("stroke-width", 1))
@@ -644,6 +657,8 @@ class _Document:
             ops += [self._opacity("CA", stroke[1])] if stroke[1] < 1 else []
             ops += [f"{stroke[0]} RG", f"{number(width)} w"]
         paint = "B" if fill and stroke else "f" if fill else "S"
+        if fill and even_odd:
+            paint += "*"
         return [f"{' '.join(ops)}\n{path}{paint}\nQ\n"]
 
     def _box(self, element: Mapping[str, Any]) -> list[Part]:
@@ -660,6 +675,20 @@ class _Document:
         rx, ry = float(element["width"]) / 2, float(element["height"]) / 2
         cx, cy = float(element["x"]) + rx, float(element["y"]) + ry
         return self._shape(element, _ellipse(cx, cy, rx, ry) if rx > 0 and ry > 0 else None)
+
+    def _path(self, element: Mapping[str, Any]) -> list[Part]:
+        """A path, such as a concept's sign (DEC-036 point 1): the outline the engine mapped
+        into its frame, filled by its rule. A path that holds no outline of moves, lines,
+        cubic curves and closes is refused, as an element the renderer does not draw is."""
+        path = _outline(element.get("d"))
+        if path is None:
+            self._lose(
+                element["id"],
+                seam.REFUSED,
+                "the path holds no outline, `d`, of moves, lines, cubic curves and closes",
+            )
+            return []
+        return self._shape(element, path, even_odd=element.get("fill-rule") == "evenodd")
 
     def _line(self, element: Mapping[str, Any]) -> list[Part]:
         """A line, or a tie's connector through each of its points, stroked, with an
@@ -747,31 +776,70 @@ class _Document:
         step = float(element["line-height"])
         paragraphs = element.get("paragraphs") or [[{}]]
         parts: list[Part] = []
+        marks: list[Part] = []
         look = _Look()
         for index, line in enumerate(element.get("lines", [])):
             runs = paragraphs[line.get("paragraph", 0)]
-            pieces = []
-            for span in line.get("spans", []):
-                run = runs[span["run"]]
-                pieces += [
+            spans = [(span, runs[span["run"]]) for span in line.get("spans", [])]
+            shaped = [
+                [
                     (run, face, font, glyphs)
                     for face, font, glyphs in self._pieces(element, run, span["text"])
                 ]
-            total = sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for span, run in spans
+            ]
+            widths = [
+                sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for pieces in shaped
+            ]
+            total = sum(widths) + sum(room(span) for span, _ in spans)
             pen = at - {"middle": total / 2, "end": total}.get(anchor, 0.0)
             baseline = y + float(line["baseline"]) + index * step
-            for run, face, font, glyphs in pieces:
-                # A piece with no font is left out, and keeps its place in the line.
-                if font is not None:
-                    size = float(run.get("font-size", 0))
-                    paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
-                    parts.append(look.change(self, font, size, paint))
-                    parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
-                    parts.append(_Shown(font, glyphs, size))
-                pen += _advance(face, glyphs, run)
+            where = placed(spans, pen, widths) if marked(line) else None
+            if where is not None:
+                marks += self._marks(element, baseline - float(line["baseline"]), where)
+            for place, pieces in enumerate(shaped):
+                if where is not None:
+                    pen = where.starts[place]
+                for run, face, font, glyphs in pieces:
+                    # A piece with no font is left out, and keeps its place in the line.
+                    if font is not None:
+                        size = float(run.get("font-size", 0))
+                        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+                        parts.append(look.change(self, font, size, paint))
+                        parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
+                        parts.append(_Shown(font, glyphs, size))
+                    pen += _advance(face, glyphs, run)
         if not any(isinstance(part, _Shown) for part in parts):
-            return []
-        return ["q BT\n", *parts, "ET Q\n"]
+            return marks
+        return [*marks, "q BT\n", *parts, "ET Q\n"]
+
+    def _marks(self, element: Mapping[str, Any], top: float, where: Placed) -> list[Part]:
+        """The grounds and the signs of a line whose top lies at `top`, drawn before its
+        text, so behind it (DEC-036 point 3): each piece of a ground in its role, its corners
+        rounded where the ground starts and ends, and each sign its outline, moved to its
+        square, filled by its rule in its run's paint."""
+        drawn: list[Part] = []
+        for piece in where.grounds:
+            if piece.role is not None:
+                ground = {"id": element["id"], "fill": piece.role}
+                drawn += self._shape(ground, _outline(ground_path(piece, top)))
+        for left, span, run in where.signs:
+            sign = span["sign"]
+            outline = _outline(sign["d"])
+            if outline is None:
+                self._lose(
+                    element["id"],
+                    seam.REFUSED,
+                    "a run's sign holds no outline, `d`, of moves, lines, cubic curves and closes",
+                )
+                continue
+            filled = {"id": element["id"], "fill": run.get("fill")}
+            shape = self._shape(filled, outline, even_odd=sign.get("fill-rule") == "evenodd")
+            if shape:
+                moved = f"q 1 0 0 1 {_point(left, top + float(sign['top']))} cm\n"
+                drawn += [moved, *shape, "Q\n"]
+        return drawn
 
     def _pieces(
         self, element: Mapping[str, Any], run: Mapping[str, Any], text: str
@@ -934,6 +1002,37 @@ def _rectangle(x: float, y: float, width: float, height: float, rx: float) -> st
         f"{_point(x, y + down)} l\n"
         f"{_point(x, y + ky)} {_point(x + kx, y)} {_point(x + across, y)} c\nh\n"
     )
+
+
+#: The commands of a path's outline as the engine writes it, each with the operator that
+#: draws it and how many numbers it takes.
+_OUTLINE = {"M": ("m", 2), "L": ("l", 2), "C": ("c", 6), "Z": ("h", 0)}
+
+
+def _outline(data: Any) -> str | None:
+    """The path of a path's outline, `data`, as the engine writes it: absolute moves, lines,
+    cubic curves and closes, each a letter and its numbers, a move first. None where `data`
+    is no such outline."""
+    words = data.split() if isinstance(data, str) else []
+    if not words or words[0] != "M":
+        return None
+    drawn: list[str] = []
+    at = 0
+    while at < len(words):
+        if words[at] not in _OUTLINE:
+            return None
+        operator, count = _OUTLINE[words[at]]
+        given = words[at + 1 : at + 1 + count]
+        try:
+            numbers = [float(word) for word in given]
+        except ValueError:
+            return None
+        if len(numbers) != count or not all(math.isfinite(n) for n in numbers):
+            return None
+        points = [_point(numbers[i], numbers[i + 1]) for i in range(0, count, 2)]
+        drawn.append(" ".join([*points, operator]) + "\n")
+        at += 1 + count
+    return "".join(drawn)
 
 
 def _ellipse(cx: float, cy: float, rx: float, ry: float) -> str:

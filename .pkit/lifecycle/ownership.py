@@ -17,7 +17,11 @@ the ADR-051 write-authority guard. The name invited the other reading and cost
 a misfiled report (#823), so read the question, not the identifier. The two are
 deliberately distinct: the first additionally depends on capability
 *registration* and treats everything outside `.pkit/` as not-its, so a caller
-asking about tier must not read it off it. A third, *does this path arrive
+asking about tier must not read it off it. The guard itself asks a wider
+question built on the first, *does this grant reach what sync overwrites?*
+(:func:`grant_reaches`), and this module also says which categories it binds
+(:func:`bound_categories`), so a resolver passes a category and asks (ADR-088
+point 7). A third, *does this path arrive
 here as a synced copy?* (:func:`is_synced_copy`), is the one documentation
 places ask; it asks a capability's origin, then builds on the first. Each
 answer has exactly one definition here; what matters is that no consumer
@@ -53,6 +57,7 @@ scanning) and deliberately ignores capability origin.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 # Capability origin (COR-031), duplicated from the lifecycle vocabulary as plain
@@ -68,8 +73,8 @@ ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"  # COR-041: pulled whole, at a 
 # enumerate. Three properties follow from that, and every consumer reads them
 # from here:
 #
-#   1. Entries are checked against `is_sync_managed` — the no-shared-files
-#      invariant at the agent surface (ADR-051 Decision point 2).
+#   1. Entries are checked against `grant_reaches` — the no-shared-files
+#      invariant at the agent surface (ADR-051 Decision point 2, ADR-088 point 7).
 #   2. The category has **no conventional default**: core cannot guess an
 #      adopter's layout, so `pkit agents adopt` cannot serve it and the honest
 #      remediation is `pkit agents reconcile --write` (ADR-051 Implications).
@@ -82,11 +87,23 @@ ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"  # COR-041: pulled whole, at a 
 # citing a write-carrying category some other record introduced is a review-time
 # red flag. Adopter-defined categories are not listed here and stay the
 # adopter's to share across their own agents.
+#
+# Point 7's test binds these and, beside them, every category in the `owns` of
+# an agent a capability ships (`bound_categories`, ADR-088 point 7).
 WRITE_CARRYING_CATEGORIES: frozenset[str] = frozenset(
     {
         "process-authoring-targets",  # ADR-051 — the `process-author` agent's teeth
     }
 )
+
+# The mark of a category a capability declares: its name, then this, then a word
+# of its own (COR-073 point 1). No component's name and no category of core's or
+# a project's holds it, so the dot alone tells a capability's category apart.
+CAPABILITY_CATEGORY_SEPARATOR = "."
+
+# The characters that make an overlay entry a glob. Point 7's test reads a glob as
+# the folder that holds its first glob character (ADR-088 point 7).
+_GLOB_CHARACTERS = "*?["
 
 # Overlay categories that have a conventional folder, the ones `pkit agents
 # adopt` can fill: it creates the folder and records it (COR-049 point 4). The
@@ -377,15 +394,74 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
 
 
 def sync_managed_offences(target_root: Path | str, category: str, values: list[str]) -> list[str]:
-    """The entries of *category* that resolve into sync-managed content.
+    """The entries of *category* that reach what sync overwrites (ADR-088 point 7).
 
-    Empty for a category that is not write-carrying: the constraint exists to
-    protect *write* authority, and an agent legitimately *reads* kit-shipped
+    A resolver passes the category and its values, and asks: this module alone
+    decides whether the test binds the category (`bound_categories`) and which
+    entries it refuses (`grant_reaches`), so no adapter derives either. Empty for
+    a category the test does not bind: an agent legitimately *reads* kit-shipped
     paths through a read-carrying category.
     """
-    if category not in WRITE_CARRYING_CATEGORIES:
+    if category not in bound_categories(target_root):
         return []
-    return [v for v in values if is_sync_managed(target_root, v)]
+    return [v for v in values if grant_reaches(target_root, v)]
+
+
+def bound_categories(target_root: Path | str) -> frozenset[str]:
+    """The categories point 7's test binds, in any channel of any definition.
+
+    Core's write-carrying categories, and each category in the `owns` of an agent
+    a capability ships, whatever the capability's origin, declared or not
+    (COR-073 point 2). The capability's definition decides it, so a project's
+    definition of the same name, which wins at the deploy, is bound as well, as
+    is any other definition that names the category.
+    """
+    return WRITE_CARRYING_CATEGORIES | capability_agent_categories(target_root)
+
+
+def capability_agent_categories(target_root: Path | str) -> frozenset[str]:
+    """Each category a `<category>` placeholder names in the `owns` of an agent a
+    capability ships, read from every capability folder in the tree.
+
+    An agent is found as the deploy finds it: `agents/<name>.md`, or
+    `agents/<name>/<name>.md`. A definition that does not read names nothing.
+    """
+    caps = Path(target_root) / ".pkit" / "capabilities"
+    if not caps.is_dir():
+        return frozenset()
+    found: set[str] = set()
+    for capability in sorted(p for p in caps.iterdir() if p.is_dir()):
+        agents = capability / "agents"
+        if not agents.is_dir():
+            continue
+        for entry in sorted(agents.iterdir()):
+            source = entry / f"{entry.name}.md" if entry.is_dir() else entry
+            if source.suffix == ".md" and source.is_file():
+                found |= _owned_categories(source)
+    return frozenset(found)
+
+
+def grant_reaches(target_root: Path | str, raw_path: str) -> bool:
+    """True when the grant *raw_path* reaches what sync overwrites (ADR-088 point 7).
+
+    A grant may not reach content :func:`is_sync_managed` counts as the
+    methodology's, nor a registered externally-sourced capability's folder
+    outside its `project/` (COR-041). *Reach* means that either path holds the
+    other, as the exactly-one-owner check reads overlap (ADR-051 point 3): a
+    grant of `.pkit/` or of the repository's root lets the agent write every
+    file below it. A glob is read as the folder that holds its first glob
+    character. An entry that is empty, or lies outside the repository, reaches
+    nothing of the methodology's.
+    """
+    root = Path(target_root)
+    parts = _grant_parts(root, raw_path)
+    if parts is None:
+        return False
+    if _holds_sync_managed(parts):
+        return True
+    if is_sync_managed(root, "/".join(parts)):
+        return True
+    return _reaches_externally_sourced(root, parts)
 
 
 # --- synced copies -----------------------------------------------------------
@@ -485,13 +561,11 @@ def rejection_message(category: str, offences: list[str]) -> list[str]:
     """
     listed = ", ".join(offences)
     return [
-        f"category <{category}> names sync-managed path(s): {listed}",
-        f"<{category}> grants write authority, so it may name only paths "
-        f"`pkit sync` does not overwrite.",
-        "Fix: point the category at your own definition files and predicate-script",
-        "     locations — an incubated capability's subtree, or the `project/` tree",
-        "     inside a kit-shipped one — in .pkit/agents/project/overlay.yaml,",
-        "     then re-run `pkit sync`.",
+        f"category <{category}> names path(s) that reach sync-managed content: {listed}",
+        f"<{category}> grants write authority, so no path in it may lie in, or hold, what "
+        "`pkit sync` overwrites, nor a capability pulled from an external source.",
+        "Fix: list in its place the files and folders the agent writes, in",
+        "     .pkit/agents/project/overlay.yaml, then re-run `pkit sync`.",
     ]
 
 
@@ -500,11 +574,21 @@ def undefined_category_remediation(category: str) -> list[str] | None:
 
     None means "this category has a conventional folder; the generic
     `pkit agents adopt` advice applies". Any other category has no folder for
-    `adopt` to create, so the lines name what works instead (#2469). For a
-    write-carrying category that is structural — core cannot enumerate the
-    adopter's paths (ADR-051 Implications) — and `reconcile --write` fills it
-    with an empty list; for the rest, the project sets the paths itself.
+    `adopt` to create, so the lines name what works instead (#2469). A
+    capability's category, told by its dot alone, is filled by the commands that
+    write its default (ADR-088 point 6). For a write-carrying category that is
+    structural — core cannot enumerate the adopter's paths (ADR-051
+    Implications) — and `reconcile --write` fills it with an empty list; for the
+    rest, the project sets the paths itself.
     """
+    if CAPABILITY_CATEGORY_SEPARATOR in category:
+        return [
+            f"<{category}> is a capability's category: its install writes the default the",
+            "capability declares for it, and so do the fill commands.",
+            "Fix: run `pkit agents reconcile` to see what it would write, then",
+            "     `pkit agents reconcile --write` or `pkit agents adopt <agent>`,",
+            "     then re-run `pkit sync`.",
+        ]
     if category in WRITE_CARRYING_CATEGORIES:
         return [
             f"`pkit agents adopt` cannot serve <{category}> — it names paths only you",
@@ -529,9 +613,18 @@ def undefined_category_remediation(category: str) -> list[str] | None:
 def _relative_posix(root: Path, raw_path: str) -> str | None:
     """Normalise an overlay entry to a root-relative POSIX path, or None.
 
-    None when the entry is empty or resolves outside *root* — in either case
-    there is nothing in the kit tree for sync to manage.
+    None when the entry is empty, names the root itself, or resolves outside
+    *root* — in each case there is no content of the kit tree it names.
     """
+    parts = _normalised_parts(root, raw_path)
+    if not parts:
+        return None
+    return "/".join(parts)
+
+
+def _normalised_parts(root: Path, raw_path: str) -> list[str] | None:
+    """An overlay entry as root-relative path components: `[]` for the root itself,
+    None when the entry is empty or resolves outside *root*."""
     text = raw_path.strip()
     if not text:
         return None
@@ -554,9 +647,80 @@ def _relative_posix(root: Path, raw_path: str) -> str | None:
             parts.pop()
             continue
         parts.append(part)
-    if not parts:
+    return parts
+
+
+def _grant_parts(root: Path, raw_path: str) -> list[str] | None:
+    """A grant as root-relative path components, a glob read as the folder that
+    holds its first glob character: `[]` for the root, None for an empty entry or
+    one outside the repository."""
+    text = raw_path.strip()
+    if not text:
         return None
-    return "/".join(parts)
+    first = min((i for i in (text.find(c) for c in _GLOB_CHARACTERS) if i >= 0), default=-1)
+    if first >= 0:
+        head = text[:first]
+        folder = head if head.endswith("/") else head.rpartition("/")[0]
+        text = folder or "."
+    return _normalised_parts(root, text)
+
+
+def _holds_sync_managed(parts: list[str]) -> bool:
+    """True when the path *parts* names strictly holds what sync overwrites.
+
+    Only the repository's root and `.pkit/` do. Every core area under `.pkit/` is
+    the methodology's, so both always hold some of it. Below them, a path
+    :func:`is_sync_managed` answers False for never holds one it answers True for:
+    the adopter's tier, its files and an unmanaged capability's subtree hold only
+    content of the same owner. A test walks this tree to keep that so.
+    """
+    return parts in ([], [".pkit"])
+
+
+def _reaches_externally_sourced(root: Path, parts: list[str]) -> bool:
+    """True when *parts* lies in, or holds, a registered externally-sourced
+    capability's folder outside its `project/` (COR-041)."""
+    if len(parts) >= 3:
+        return _is_externally_sourced(root, "/".join(parts))
+    if parts not in ([], [".pkit"], [".pkit", "capabilities"]):
+        return False
+    return ORIGIN_EXTERNALLY_SOURCED in _registered_capability_origins(root).values()
+
+
+# The front matter of an agent definition: the YAML between its opening `---`
+# lines, as the deploy reads it.
+_FRONT_MATTER = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
+
+# Each definition's `owns` placeholders, keyed by its path and the stat that read
+# it: a deploy asks once per placeholder, and a file read once need not be parsed
+# again until it changes.
+_OWNS_CACHE: dict[tuple[str, int, int], frozenset[str]] = {}
+
+
+def _owned_categories(source: Path) -> frozenset[str]:
+    """The categories `<category>` placeholders name in a definition's `owns`."""
+    try:
+        stat = source.stat()
+    except OSError:
+        return frozenset()
+    key = (str(source), stat.st_mtime_ns, stat.st_size)
+    if key in _OWNS_CACHE:
+        return _OWNS_CACHE[key]
+    found: frozenset[str] = frozenset()
+    try:
+        match = _FRONT_MATTER.match(source.read_text(encoding="utf-8"))
+        front = _load_yaml(match.group(1)) if match else None
+    except Exception:
+        front = None
+    owns = front.get("owns") if isinstance(front, dict) else None
+    if isinstance(owns, list):
+        found = frozenset(
+            item[1:-1]
+            for item in owns
+            if isinstance(item, str) and item.startswith("<") and item.endswith(">")
+        )
+    _OWNS_CACHE[key] = found
+    return found
 
 
 def _capability_path_is_sync_managed(root: Path, parts: list[str]) -> bool:
@@ -589,22 +753,34 @@ def _registered_capability_origin(root: Path, name: str) -> str | None:
     An unreadable manifest yields `kit-shipped` for every capability — the
     conservative direction, matching this module's bias.
     """
+    origins = _registered_capability_origins(root)
+    if origins is _UNREADABLE:
+        return ORIGIN_KIT_SHIPPED
+    return origins.get(name)
+
+
+# What `_registered_capability_origins` answers for a manifest that does not read.
+_UNREADABLE: dict[str, str] = {}
+
+
+def _registered_capability_origins(root: Path) -> dict[str, str]:
+    """Each registered capability's recorded origin, by name: empty where no
+    manifest is, and `_UNREADABLE`, itself empty, where one does not read."""
     manifest = root / ".pkit" / "manifest.yaml"
     if not manifest.is_file():
-        return None
+        return {}
     try:
         data = _load_yaml(manifest.read_text(encoding="utf-8")) or {}
     except Exception:
-        return ORIGIN_KIT_SHIPPED
+        return _UNREADABLE
     if not isinstance(data, dict):
-        return ORIGIN_KIT_SHIPPED
+        return _UNREADABLE
     components = data.get("components") or []
     if not isinstance(components, list):
-        return ORIGIN_KIT_SHIPPED
+        return _UNREADABLE
+    origins: dict[str, str] = {}
     for entry in components:
-        if not isinstance(entry, dict):
+        if not isinstance(entry, dict) or entry.get("kind") != "capability":
             continue
-        if entry.get("kind") != "capability" or str(entry.get("name", "")) != name:
-            continue
-        return str(entry.get("origin", ORIGIN_KIT_SHIPPED))
-    return None
+        origins.setdefault(str(entry.get("name", "")), str(entry.get("origin", ORIGIN_KIT_SHIPPED)))
+    return origins

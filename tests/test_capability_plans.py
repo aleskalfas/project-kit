@@ -30,6 +30,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 from tests.test_loaded_rules import loaded_set
 
 DOCS = "pkit::documentation"
@@ -66,6 +67,7 @@ def kit_source(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.Mon
     (source / "VERSION").write_text(
         f"{read_kit_version(install.find_source_kit())}\n", encoding="utf-8"
     )
+    stage_picker(source)
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: source)
     monkeypatch.setattr(status_mod, "find_source_kit", lambda: source)
     return source

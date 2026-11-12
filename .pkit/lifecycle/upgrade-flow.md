@@ -129,6 +129,7 @@ A name the capability's installed copy holds, or its manifest records as skipped
 - **The flow is COR-017's install-time flow.** Where a person can answer, with standard input and standard output both terminals, the upgrade asks for each collision:
   - **skip:** the copy leaves the capability's artefact out. Its manifest records the skip in step 2, before the copy, so an interrupted upgrade does not ask again.
   - **override:** the capability's artefact replaces the project's, which git keeps. The project's is removed in step 2, before the copy. So an interrupted upgrade finds the name in the capability's installed copy, and does not ask again. Nothing is recorded.
+  - **override of another capability's agent:** it removes nothing. Step 2 records the capability being moved as the project's choice for the agent's name, in place of any earlier choice (COR-017). The backbone manifest keeps it, under `agent_choices`.
   - **inspect:** shows the diff and asks again.
 - **With nobody to answer,** the upgrade refuses before it writes anything. It names two ways on: run it again at a terminal, or rename the project's artefact.
 - **No capability is held back,** so the project stays at one release (COR-059 point 7).

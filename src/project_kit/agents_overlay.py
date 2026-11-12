@@ -18,11 +18,12 @@ This is a *backbone* read of *backbone-defined* artifacts: the agent
 frontmatter format and the `<category>` placeholder convention are fixed by
 COR-013 and shared across adapters. Only the *substitution + write* of a
 resolved agent into a harness location is adapter-specific (the claude-code
-adapter's `deploy-agents.sh` / `_resolve_agent.py`). This module reproduces the
-adapter's *discovery* (which files are agents, with what precedence) and
-*reference-detection* (which frontmatter keys may carry placeholders) — the
-latter pinned to the adapter by a guard test (`tests/test_agents_overlay.py`).
-It never writes a resolved agent; deployment stays the adapter's job.
+adapter's `deploy-agents.sh` / `_resolve_agent.py`). Which definition of a name
+is the agent, it asks the picker the deploy asks (`agent_definitions`, ADR-087).
+It reproduces the adapter's *reference-detection* (which frontmatter keys may
+carry placeholders), pinned to the adapter by a guard test
+(`tests/test_agents_overlay.py`). It never writes a resolved agent; deployment
+stays the adapter's job.
 
 It also owns the backbone's single *value*-resolution helper
 (:func:`load_overlay_values` + :func:`expand_placeholders`) — the same
@@ -39,7 +40,17 @@ apart, and ``pkit agents`` reports each agent's effective setting, resolved by
 The deploy ignores an override for an agent no source ships, and one naming a
 category the agent's definition does not reference. :func:`unknown_overrides`
 finds each from the same resolution, and ``pkit agents`` and the reference
-graph's validation warn of it (#2468).
+graph's validation warn of it (#2468), as of a dotted category no installed
+capability declares (:func:`undeclared_capability_categories`).
+
+A capability's write categories (COR-073, ADR-088) are filled here too: the fill
+commands, `reconcile --write` and `adopt`, write the default a capability's
+query answers where the project set no value, and `reconcile` alone moves a
+value still as written to a newer answer. :func:`plan_defaults` decides each
+category's outcome for every writer, the capability's install among them, and
+the status report shows a written value its query now answers otherwise
+(:func:`written_defaults_drift`). The written line and the query live in
+:mod:`project_kit.write_categories`.
 """
 
 from __future__ import annotations
@@ -51,12 +62,20 @@ import subprocess
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, cli_render, docs_roots, lifecycle_ownership, project_config
+from project_kit import (
+    agent_definitions,
+    agent_policy,
+    cli_render,
+    docs_roots,
+    lifecycle_ownership,
+    project_config,
+)
+from project_kit import write_categories as wcat
 
 # Conventional default paths for well-known overlay categories, relative to
 # the project root, **under the default documentation root** — the fallback
@@ -139,63 +158,24 @@ class AgentOverlayStatus:
         return not (set(self.missing) - set(self.optional))
 
 
-# --- discovery (mirrors deploy-agents.sh list_kit_names + source_for) --------
+# --- discovery (the picker's answer, ADR-087) ----------------------------------
 
 
-def _agent_names_in(dir_: Path) -> list[str]:
-    if not dir_.is_dir():
-        return []
-    names: list[str] = []
-    for entry in sorted(dir_.iterdir()):
-        if entry.is_file() and entry.suffix == ".md":
-            names.append(entry.stem)
-        elif entry.is_dir():
-            names.append(entry.name)
-    return names
+def discover_kit_agents(
+    target_root: Path, *, release: Path | None = None
+) -> dict[str, tuple[str, Path]]:
+    """Return ``{name: (place, file)}`` for each name whose agent has one text.
 
-
-def _source_in(dir_: Path, name: str) -> Path | None:
-    """Flat form preferred over folder form (COR-015 atomic-is-flat)."""
-    flat = dir_ / f"{name}.md"
-    if flat.is_file():
-        return flat
-    folder = dir_ / name / f"{name}.md"
-    if folder.is_file():
-        return folder
-    return None
-
-
-def discover_kit_agents(target_root: Path) -> dict[str, tuple[str, Path]]:
-    """Return ``{name: (namespace, source_path)}`` for every kit-shipped agent.
-
-    Precedence mirrors the adapter's ``source_for`` (the agents README,
-    "Name-collision precedence"): project, then installed capabilities by
-    name, then core — flat over folder within each location.
+    Which definition of a name is the agent is the picker's to say
+    (`agent_definitions`, ADR-087): the place is ``project``, ``core`` or
+    ``capability:<name>``, as the picker writes it. A name whose agent is
+    refused for holding both layouts, one with no agent, and one the picker
+    cannot tell are left out, and the validator reports each. *release* is the
+    `.pkit/` tree of the release a command that changes which capabilities are
+    installed brings, which the picker is loaded from (ADR-087 point 2). Raises
+    `agent_definitions.Unreachable` where the picker cannot be reached.
     """
-    agents_root = target_root / ".pkit" / "agents"
-    caps_root = target_root / ".pkit" / "capabilities"
-    capabilities = sorted(caps_root.iterdir()) if caps_root.is_dir() else []
-
-    # Every location agents ship from, in precedence order.
-    locations: list[tuple[str, Path]] = [
-        ("project", agents_root / "project"),
-        *((f"capability:{cap.name}", cap / "agents") for cap in capabilities),
-        ("core", agents_root / "core"),
-    ]
-
-    # Collect candidate names across all locations (deduped by precedence below).
-    names: set[str] = set()
-    for _, folder in locations:
-        names.update(_agent_names_in(folder))
-
-    resolved: dict[str, tuple[str, Path]] = {}
-    for name in sorted(names):
-        for namespace, folder in locations:
-            src = _source_in(folder, name)
-            if src is not None:
-                resolved[name] = (namespace, src)
-                break
-    return resolved
+    return agent_definitions.agents(agent_definitions.answer(target_root, release=release))
 
 
 # --- reference-detection (mirrors _resolve_agent.py) -------------------------
@@ -332,9 +312,14 @@ def load_overlay_values(target_root: Path) -> OverlayValues:
     path = _overlay_path(target_root)
     if not path.is_file() or path.stat().st_size == 0:
         return OverlayValues(defaults={}, overrides={})
-    data = _yaml.load(path.read_text(encoding="utf-8")) or {}
+    return overlay_values_of(_yaml.load(path.read_text(encoding="utf-8")) or {})
+
+
+def overlay_values_of(data: object) -> OverlayValues:
+    """The category values of a parsed overlay, as `load_overlay_values` reads them."""
     if not isinstance(data, dict):
         return OverlayValues(defaults={}, overrides={})
+    data = cast("dict[Any, Any]", data)
     overrides_raw = data.get("overrides") or {}
     overrides: dict[str, dict[str, Any]] = {}
     policy: dict[str, dict[str, Any]] = {}
@@ -448,24 +433,252 @@ def unknown_overrides(target_root: Path) -> list[UnknownOverride]:
     """Each entry under ``overrides:`` that resolves nothing, sorted by key (#2468).
 
     Read from the same resolution the deploy applies: the overlay as
-    :func:`load_overlay_values` reads it, and the definition that deploys under
-    each name (:func:`discover_kit_agents`). A block for an agent no source ships
-    is one finding, whatever keys it holds, ``model`` and ``effort`` among them. In
-    a known agent's block, each category key its definition does not reference is
-    one. The policy keys are no categories, so they are never one of those.
+    :func:`load_overlay_values` reads it, and the picker's answer of which
+    definition is the agent of each name (ADR-087). A block for an agent no source
+    ships is one finding, whatever keys it holds, ``model`` and ``effort`` among
+    them. In the block of an agent with one text, each category key its definition
+    does not reference is one. The policy keys are no categories, so they are never
+    one of those. A name some place ships whose agent has no one text is left to
+    the validator's own finding.
     """
     values = load_overlay_values(target_root)
-    shipped = discover_kit_agents(target_root)
+    picked = agent_definitions.answer(target_root)
+    agents = agent_definitions.agents(picked)
     found: list[UnknownOverride] = []
     for agent in sorted(set(values.overrides) | set(values.policy)):
-        if agent not in shipped:
+        if agent not in picked.picks:
             found.append(UnknownOverride(agent=agent))
             continue
-        _ns, src = shipped[agent]
+        if agent not in agents:
+            continue
+        _ns, src = agents[agent]
         referenced = agent_referenced_categories(src)
         source = src.relative_to(target_root).as_posix()
         for category in sorted(set(values.overrides.get(agent, {})) - referenced):
             found.append(UnknownOverride(agent=agent, category=category, source=source))
+    return found
+
+
+@dataclass(frozen=True)
+class UndeclaredCategory:
+    """A dotted category of the overlay that no installed capability declares
+    (ADR-088 point 1), such as one an uninstall left behind."""
+
+    key: str  # the overlay key: `<category>` or `overrides.<agent>.<category>`
+    category: str
+
+
+def undeclared_capability_categories(target_root: Path) -> list[UndeclaredCategory]:
+    """Each dotted category of the overlay, at the top level or in an override,
+    that no installed capability declares. A dotted name is a capability's alone
+    (COR-073 point 1), so nothing deploys from it until a capability declares it
+    again. Warned of where an unknown override is, failing nothing."""
+    declared = {category.name for category in wcat.installed(target_root)}
+    values = load_overlay_values(target_root)
+    found = [
+        UndeclaredCategory(key=category, category=category)
+        for category in sorted(values.defaults)
+        if wcat.SEPARATOR in category and category not in declared
+    ]
+    for agent in sorted(values.overrides):
+        found += [
+            UndeclaredCategory(key=f"overrides.{agent}.{category}", category=category)
+            for category in sorted(values.overrides[agent])
+            if wcat.SEPARATOR in category and category not in declared
+        ]
+    return found
+
+
+# --- a capability's defaults (COR-073, ADR-088 points 3 to 6) ----------------
+#
+# A writer of a default plans each write category against the overlay as it
+# stands, with the writes it planned before (`plan_defaults`), then makes the
+# writes and moves it chose (`apply_defaults`). Install, `reconcile`, `adopt` and
+# the status report share the plan; each decides which of its writes to make.
+
+#: A category the writer may write, and its answer, which passes.
+WRITE = "write"
+#: A line still as written, whose query now answers otherwise, and passes.
+MOVE = "move"
+#: A line still as written, whose query answers its value.
+CURRENT = "current"
+#: A line still as written, which this writer does not move.
+WRITTEN = "written"
+#: A value the project set, which no writer writes.
+KEPT = "kept"
+#: An answer one of whose paths the writer's check refuses.
+REFUSED = "refused"
+#: A query that gave no answer.
+NO_ANSWER = "no-answer"
+
+
+@dataclass(frozen=True)
+class DefaultOutcome:
+    """What a writer found for one write category."""
+
+    category: wcat.WriteCategory
+    kind: str
+    paths: tuple[str, ...] = ()  # the answer, for a write, move, current or refused answer
+    written: tuple[str, ...] = ()  # the value still as written, where there is one
+    reason: str = ""  # why the answer was refused, or the query gave none
+    note: str = ""  # the note the query gave
+    over_content: tuple[str, ...] = ()  # the paths of a write or move that hold content
+
+    @property
+    def changes(self) -> bool:
+        """Whether the outcome writes a line: a write or a move."""
+        return self.kind in (WRITE, MOVE)
+
+
+def plan_defaults(
+    target_root: Path,
+    categories: Iterable[wcat.WriteCategory],
+    document: wcat.OverlayDocument,
+    *,
+    moves: bool,
+    release: Path | None = None,
+) -> list[DefaultOutcome]:
+    """Each category's outcome, in order, against *document* and the writes planned
+    before it. *moves* asks the query of a line still as written too, as only
+    `reconcile` and the status report do (ADR-088 point 6). *document* is left as
+    it was. *release* is the `.pkit/` tree install loads the picker from, which
+    names the other agents whose grants a default may not overlap (ADR-087 point
+    2). Raises `wcat.OverlayDoesNotRead` where the overlay does not parse, and
+    `agent_definitions.Unreachable` where the picker cannot be reached."""
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    scratch = wcat.OverlayDocument(document.text)
+    scratch.data()
+    outcomes: list[DefaultOutcome] = []
+    for category in categories:
+        found = scratch.still_as_written(category.name)
+        written = tuple(found) if found is not None else ()
+        if found is None and scratch.gives_value(category.name, category.owner):
+            outcomes.append(DefaultOutcome(category, KEPT))
+            continue
+        if found is not None and not moves:
+            outcomes.append(DefaultOutcome(category, WRITTEN, written=written))
+            continue
+        answer = wcat.ask(target_root, category)
+        if isinstance(answer, wcat.NoAnswer):
+            outcomes.append(
+                DefaultOutcome(category, NO_ANSWER, written=written, reason=answer.reason)
+            )
+            continue
+        if found is not None and list(answer.paths) == found:
+            outcomes.append(
+                DefaultOutcome(category, CURRENT, answer.paths, written, note=answer.note)
+            )
+            continue
+        others = _other_grants(target_root, scratch, category, release=release)
+        reason = wcat.refusal(target_root, category, answer.paths, others, ownership)
+        if reason is None:
+            try:
+                if found is None:
+                    scratch.write(category.name, answer.paths)
+                else:
+                    scratch.move(category.name, answer.paths)
+            except wcat.OverlayDoesNotRead as exc:
+                reason = str(exc)
+        if reason is not None:
+            outcomes.append(
+                DefaultOutcome(category, REFUSED, answer.paths, written, reason, answer.note)
+            )
+            continue
+        outcomes.append(
+            DefaultOutcome(
+                category,
+                WRITE if found is None else MOVE,
+                answer.paths,
+                written,
+                note=answer.note,
+                over_content=tuple(p for p in answer.paths if wcat.holds_content(target_root, p)),
+            )
+        )
+    return outcomes
+
+
+def apply_defaults(document: wcat.OverlayDocument, outcomes: Iterable[DefaultOutcome]) -> None:
+    """Make the write or move of each outcome in *document*, in order."""
+    for outcome in outcomes:
+        if outcome.kind == WRITE:
+            document.write(outcome.category.name, outcome.paths)
+        elif outcome.kind == MOVE:
+            document.move(outcome.category.name, outcome.paths)
+
+
+def _other_grants(
+    target_root: Path,
+    document: wcat.OverlayDocument,
+    category: wcat.WriteCategory,
+    *,
+    release: Path | None = None,
+) -> list[tuple[str, str]]:
+    """Each `(agent, normalised path)` an agent other than *category*'s owner owns,
+    resolved from *document*: the overlay as it stands, with the writes made
+    earlier in the run. The category's own value leaves the comparison, since
+    the write replaces it. The agents are the picker's, loaded from *release*
+    where given (ADR-087 point 2)."""
+    values = overlay_values_of(document.data())
+    found: list[tuple[str, str]] = []
+    for name, (_ns, source) in sorted(discover_kit_agents(target_root, release=release).items()):
+        if name == category.owner:
+            continue
+        owns = agent_front_matter(source).get("owns")
+        if not isinstance(owns, list):
+            continue
+        entries, _undefined = expand_placeholders(
+            cast("list[object]", owns), agent_name=name, overlay=values
+        )
+        for entry in entries:
+            path = wcat.normalised(entry.value)
+            if entry.category != category.name and path:
+                found.append((name, path))
+    return found
+
+
+def listed(paths: Iterable[str]) -> str:
+    """Paths as a line shows them: `a/, b/`, or `[]` for none."""
+    shown = ", ".join(paths)
+    return shown or "[]"
+
+
+def default_lines(outcome: DefaultOutcome, reaching: Iterable[str] = ()) -> list[str]:
+    """The lines a writer shows for one outcome, indented under its heading."""
+    name = outcome.category.name
+    if outcome.kind == WRITE:
+        lines = [category_location_line(name, listed(outcome.paths), reaching)]
+    elif outcome.kind == MOVE:
+        lines = [f"  {name}: {listed(outcome.written)} → {listed(outcome.paths)}"]
+    else:
+        lines = [f"  {name}: {outcome.reason}"]
+    if outcome.note:
+        lines.append(f"    ({outcome.note})")
+    if outcome.over_content:
+        lines.append(f"    holds content already: {listed(outcome.over_content)}")
+    return lines
+
+
+def written_defaults_drift(target_root: Path) -> list[DefaultOutcome]:
+    """Each line still as written whose query now answers otherwise, or gives no
+    answer: the status report's view (ADR-088 point 6). Writes nothing."""
+    path = _overlay_path(target_root)
+    if not path.is_file():
+        return []
+    document = wcat.OverlayDocument(path.read_text(encoding="utf-8"))
+    found: list[DefaultOutcome] = []
+    for category in wcat.installed(target_root):
+        written = document.still_as_written(category.name)
+        if written is None:
+            continue
+        answer = wcat.ask(target_root, category)
+        if isinstance(answer, wcat.NoAnswer):
+            found.append(
+                DefaultOutcome(category, NO_ANSWER, written=tuple(written), reason=answer.reason)
+            )
+        elif list(answer.paths) != written:
+            found.append(
+                DefaultOutcome(category, MOVE, answer.paths, tuple(written), note=answer.note)
+            )
     return found
 
 
@@ -561,6 +774,43 @@ def render_status(target_root: Path) -> str:
                 f"{OVERLAY_PATH.as_posix()}",
             }
         )
+    # Each dotted category no installed capability declares (ADR-088 point 1): a
+    # warning, where the unknown overrides are.
+    undeclared = undeclared_capability_categories(target_root)
+    if undeclared:
+        tables.append(
+            {
+                "rows": [
+                    {"category": f"⚠ {u.key}", "reason": "no installed capability declares it"}
+                    for u in undeclared
+                ],
+                "columns": ["category", "reason"],
+                "header": "UNDECLARED CAPABILITY CATEGORIES",
+                "gloss": "a dotted category is a capability's alone; remove each from "
+                f"{OVERLAY_PATH.as_posix()}, or install the capability that declares it",
+            }
+        )
+    # Each line still as written whose default now answers otherwise, or not at all
+    # (ADR-088 point 6). Asked afresh; nothing is written.
+    drift = written_defaults_drift(target_root)
+    if drift:
+        tables.append(
+            {
+                "rows": [
+                    {
+                        "category": d.category.name,
+                        "written": listed(d.written),
+                        "default now": listed(d.paths) if d.kind == MOVE else "(no answer)",
+                        "why": d.reason or d.note,
+                    }
+                    for d in drift
+                ],
+                "columns": ["category", "written", "default now", "why"],
+                "header": "WRITTEN DEFAULTS",
+                "gloss": "still as written; `pkit agents reconcile` shows the move, "
+                "`--write` makes it",
+            }
+        )
     sections = [cli_render.section(**table) for table in tables]
     # Undefined *optional* categories (ADR-052): patterns-only reads no agent
     # references hard. Their absence never skips an agent — surface them as a
@@ -586,10 +836,15 @@ def render_status(target_root: Path) -> str:
         # So the lead line names `adopt` only for the agents it serves (#2469).
         conventional = conventional_category_defaults(target_root)
         write_carrying_set = write_carrying_categories(target_root)
+        # `adopt` also writes each capability's default its agent owns (ADR-088 point 6).
+        owned_defaults = {(c.owner, c.name) for c in wcat.installed(target_root)}
         adoptable = [
             s.name
             for s in skipped
-            if all(c in conventional for c in set(s.missing) - set(s.optional))
+            if all(
+                c in conventional or (s.name, c) in owned_defaults
+                for c in set(s.missing) - set(s.optional)
+            )
         ]
         warn_lines: list[str] = []
         if adoptable:
@@ -599,9 +854,20 @@ def render_status(target_root: Path) -> str:
                 "Custom doc layout:            "
                 "pkit agents reconcile --write → set paths → pkit sync"
             )
+        # A capability's category: its default is written by the fill commands.
+        defaults = sorted({name for _owner, name in owned_defaults} & set(missing))
+        if defaults:
+            warn_lines.append(
+                f"A capability's default ({', '.join(defaults)}): `pkit agents reconcile` shows "
+                f"it, `--write` or `pkit agents adopt <agent>` writes it, then `pkit sync`."
+            )
         # A category with no conventional folder, and not write-carrying, is the
         # project's to locate: `adopt` has no folder to create for it.
-        no_folder = [c for c in missing if c not in conventional and c not in write_carrying_set]
+        no_folder = [
+            c
+            for c in missing
+            if c not in conventional and c not in write_carrying_set and c not in defaults
+        ]
         if no_folder:
             warn_lines.append(
                 f"No conventional folder ({', '.join(no_folder)}): set the paths in overlay.yaml, "
@@ -656,7 +922,13 @@ def render_status(target_root: Path) -> str:
 def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str]:
     """Surface referenced-but-undefined categories into the overlay.
 
-    Six states per referenced category:
+    A write category an installed capability declares comes first (ADR-088 point
+    6): each one no value is set for, or whose line is still as written, is
+    asked of its query, and the preview shows each write, each move, each refused
+    answer and each query with no answer; ``write`` makes the writes and moves
+    (`_reconcile_defaults`). Such a category takes none of the states below.
+
+    Six states per other referenced category:
 
     - **missing + write-carrying** (ADR-051): the category grants write
       authority over paths only the adopter can enumerate, so it has no
@@ -713,7 +985,17 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
             "`pkit agents reconcile` to see each category the seed does not define, then "
             "`--write` to record them.\n"
         )
-    missing = missing_categories(target_root)
+    # A write category comes first among the states (ADR-088 point 6): each one
+    # point 4 lets a writer write, or still as written, is asked of its query.
+    categories = wcat.installed(target_root)
+    lines: list[str] = []
+    to_add: list[str] = []
+    if categories:
+        defaults, lines = _reconcile_defaults(target_root, path, categories, write=write)
+        to_add += defaults
+    declared = {category.name for category in categories}
+
+    missing = [c for c in missing_categories(target_root) if c not in declared]
     existing = path.read_text(encoding="utf-8")
 
     def _is_defined(cat: str) -> bool:
@@ -762,10 +1044,9 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
     # the adopter to uncomment + fill paths before sync will deploy the agent.
     commented_stubs = [c for c in missing if _is_commented_stub(c)]
 
-    lines: list[str] = []
-    to_add: list[str] = []
-
     if empty_fill:
+        if lines:
+            lines.append("")
         to_add += empty_fill
         verb = "would fill" if not write else "filled"
         lines.append(
@@ -941,13 +1222,61 @@ def reconcile_overlay(target_root: Path, *, write: bool) -> tuple[list[str], str
                 "uncomment + set real paths in overlay.yaml, then `pkit sync`."
             )
 
-    if not to_add and not commented_stubs:
+    if not lines:
         # Every referenced category is fully defined — nothing left to do.
         return [], cli_render.style(
             "strong", "overlay is complete — every referenced category is defined."
         )
 
     return to_add, "\n".join(lines) + "\n"
+
+
+def _reconcile_defaults(
+    target_root: Path, path: Path, categories: list[wcat.WriteCategory], *, write: bool
+) -> tuple[list[str], list[str]]:
+    """`reconcile`'s writes and moves of a capability's defaults (ADR-088 point 6).
+
+    Shows each write as `category = paths` with the agents that reach it, each
+    move from the value written to the new answer, and each refused answer and
+    each query with no answer, with why. With *write*, makes each write and move
+    it shows: `--write` is the consent, over content too (COR-049 point 5).
+    Provisions nothing. Returns the categories it wrote or moved, and its lines.
+    """
+    document = wcat.OverlayDocument(path.read_text(encoding="utf-8"))
+    try:
+        outcomes = plan_defaults(target_root, categories, document, moves=True)
+    except wcat.OverlayDoesNotRead as exc:
+        return [], [f"the overlay does not read, so no default is written: {exc}"]
+    reaching = agents_reaching(target_root)
+    groups = (
+        (WRITE, "would write", "wrote", "capability default(s) into the overlay:"),
+        (MOVE, "would move", "moved", "written default(s) to its query's newer answer:"),
+        (REFUSED, "refused", "refused", "answer(s), writing nothing for each:"),
+        (NO_ANSWER, "no answer from", "no answer from", "default query(ies):"),
+    )
+    lines: list[str] = []
+    for kind, dry, done, what in groups:
+        shown = [o for o in outcomes if o.kind == kind]
+        if not shown:
+            continue
+        if lines:
+            lines.append("")
+        lines.append(cli_render.style("strong", f"{done if write else dry} {len(shown)} {what}"))
+        for outcome in shown:
+            lines += default_lines(outcome, reaching.get(outcome.category.name, ()))
+    changed = [o for o in outcomes if o.changes]
+    if changed:
+        lines.append("")
+        if write:
+            apply_defaults(document, changed)
+            path.write_text(document.text, encoding="utf-8")
+            lines.append(
+                f"written in {OVERLAY_PATH.as_posix()}; edit a value and it is the project's. "
+                "Run `pkit sync` to deploy the agent(s)."
+            )
+        else:
+            lines.append("(dry-run — re-run with `--write` to write these entries.)")
+    return [o.category.name for o in changed], lines
 
 
 # Seed README content written into a newly-created conventional dir by `adopt`.
@@ -1093,6 +1422,13 @@ def adopt_agent(
     idempotent), and returns a result with empty *dirs_created* and
     *categories_wired*.
 
+    A write category a capability declares with the agent as its owner (ADR-088
+    point 6) takes no folder: where no value is set, the query's answer is
+    written, or the empty list for a category with no default, and over a path
+    that holds content the same consent is taken. A value already set, or still
+    as written, is left as it is. An answer refused, or a query with no answer,
+    refuses the run before anything is written.
+
     Raises :class:`click.ClickException` when the agent is unknown, or when a
     category it still needs has no conventional default (so no canonical dir can
     be created — the adopter must set the path via ``reconcile``). For a
@@ -1125,14 +1461,38 @@ def adopt_agent(
     def _is_defined(cat: str) -> bool:
         return bool(re.search(rf"(?m)^\s*{re.escape(cat)}\s*:", existing))
 
+    # The write categories the agent owns (ADR-088 point 6): each one point 4 lets
+    # a writer write gets its query's answer, or `[]`; none is moved, and no folder
+    # is created for one. Whether one has a value is read from the parsed overlay.
+    document = wcat.OverlayDocument(existing)
+    owned = [c for c in wcat.installed(target_root) if c.owner == agent_name]
+    try:
+        defaults = plan_defaults(target_root, owned, document, moves=False)
+    except wcat.OverlayDoesNotRead as exc:
+        raise click.ClickException(f"the overlay at {path} does not read: {exc}") from exc
+    unanswered = [o for o in defaults if o.kind in (REFUSED, NO_ANSWER)]
+    if unanswered:
+        raise click.ClickException(
+            f"agent {agent_name!r}: no default can be written for "
+            + "; ".join(f"{o.category.name} ({o.reason})" for o in unanswered)
+            + ". Nothing was written. Set the paths in the overlay yourself, or fix the "
+            "capability's query and adopt again."
+        )
+    owned_names = {c.name for c in owned}
+
     # Determine which categories need action. An optional read (ADR-052) with no
     # conventional default is not a prerequisite — the agent deploys without it —
     # so it is set aside rather than refused; one *with* a default is wired as usual.
     _hard, optional = agent_category_roles(src)
     conventional = conventional_category_defaults(target_root)
-    optional_unset = [c for c in sorted(optional) if not _is_defined(c) and c not in conventional]
-    undefined = [c for c in sorted(referenced) if not _is_defined(c) and c not in optional_unset]
-    already_set = [c for c in sorted(referenced) if _is_defined(c)]
+    others = sorted(referenced - owned_names)
+    optional_unset = [
+        c for c in sorted(optional - owned_names) if not _is_defined(c) and c not in conventional
+    ]
+    undefined = [c for c in others if not _is_defined(c) and c not in optional_unset]
+    already_set = [c for c in others if _is_defined(c)] + [
+        o.category.name for o in defaults if not o.changes
+    ]
 
     # --- Check the categories still needing action for a conventional default ---
     # Judged over `undefined`, not everything referenced: an agent whose
@@ -1167,8 +1527,13 @@ def adopt_agent(
     overlay_additions = [(cat, conventional[cat]) for cat in undefined]  # guarded above
     absent = {cat for cat, conv_path in overlay_additions if not (target_root / conv_path).is_dir()}
     held = [(c, p) for c, p in overlay_additions if holds_entries(target_root / p)]
-    if held:
-        rest = [pair for pair in overlay_additions if pair not in held]
+    writes = [o for o in defaults if o.changes]
+    held_writes = [(o.category.name, listed(o.paths)) for o in writes if o.over_content]
+    if held or held_writes:
+        rest = [pair for pair in overlay_additions if pair not in held] + [
+            (o.category.name, listed(o.paths)) for o in writes if not o.over_content
+        ]
+        held = held + held_writes
         recording_consent(
             target_root,
             held,
@@ -1194,10 +1559,18 @@ def adopt_agent(
             readme.write_text(readme_content, encoding="utf-8")
         (dirs_created if cat in absent else dirs_seeded).append(conv_path)
 
-    # 2. Record each chosen location in the overlay (COR-049 point 5), with consent
-    #    given above where a dir already held documents; the rest takes none beyond
-    #    running the command.
+    # 2. Write each default the agent owns, then record each chosen location in the
+    #    overlay (COR-049 point 5), with consent given above where a path already
+    #    held content; the rest takes none beyond running the command.
     notices: list[str] = []
+    if writes:
+        apply_defaults(document, writes)
+        path.write_text(document.text, encoding="utf-8")
+        notices += [
+            f"wrote {o.category.name} = {listed(o.paths)} in {OVERLAY_PATH.as_posix()}, the "
+            "capability's default; edit it and the value is the project's."
+            for o in writes
+        ]
     for cat, conv_path in overlay_additions:
         if docs_roots.record_location(
             target_root, docs_roots.BACKBONE, cat, conv_path, by="pkit agents adopt"
@@ -1212,7 +1585,8 @@ def adopt_agent(
     return AdoptResult(
         agent=agent_name,
         dirs_created=tuple(dirs_created),
-        categories_wired=tuple(cat for cat, _path in overlay_additions),
+        categories_wired=tuple(cat for cat, _path in overlay_additions)
+        + tuple(o.category.name for o in writes),
         categories_already_set=tuple(already_set),
         deployed=deployed,
         categories_optional_unset=tuple(optional_unset),

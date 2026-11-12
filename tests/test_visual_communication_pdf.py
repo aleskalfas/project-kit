@@ -1,7 +1,7 @@
 """The PDF renderer (visual-communication DEC-005 points 4, 5, 9 and 10, DEC-006 point 7,
 DEC-025 points 5 to 7): what it declares, what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.3.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.5.0. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). Version 1.1.0 came to draw every image, from the picture it is
 handed, whatever its source: a scene of no picture draws as 1.0.0 drew it, but for the
@@ -9,7 +9,11 @@ renderer's version it names. Version 1.2.0 came to draw a page past the largest 
 PDF holds smaller, to fit (DEC-022 point 7): every other page draws as 1.1.0 drew it, but for
 the renderer's version the file names. Version 1.3.0 came to draw each page of a scene whose
 root holds a physical size at that size (DEC-034 point 3): a scene with none draws as 1.2.0
-drew it, but for the renderer's version the file names. A page's content is pinned whole.
+drew it, but for the renderer's version the file names. Version 1.4.0 came to draw the path,
+a concept's sign, at seam 7 (DEC-036 point 1): a scene of no path draws as 1.3.0 drew it, but
+for the renderer's version the file names. Version 1.5.0 came to draw a run's sign and
+ground, at seam 8 (DEC-036 point 3): a scene of neither draws as 1.4.0 drew it, but for the
+renderer's version the file names. A page's content is pinned whole.
 An embedded font is pinned by the glyphs its subset holds and the characters its map gives
 them, not by its bytes, which are fontTools'. A picture is pinned by its image's dictionary
 and its data: a JPEG's own bytes, a PNG's image data as the file holds it, or what the
@@ -1000,7 +1004,7 @@ def test_the_file_names_its_language_and_its_renderer() -> None:
     root = int(re.findall(r"/Root (\d+) 0 R", file.trailer)[0])
     assert file.value(root) == "<< /Type /Catalog /Pages 2 0 R /Lang (en) >>"
     info = int(re.findall(r"/Info (\d+) 0 R", file.trailer)[0])
-    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.3.0) >>"
+    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.5.0) >>"
 
 
 # --- the same bytes -----------------------------------------------------------------------------
@@ -1072,7 +1076,7 @@ def test_every_family_a_run_draws_in_is_named_as_itself() -> None:
 def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
     drawn = draw(
         scene(
-            element("path", "figure/arrow", x=0, y=0, width=10, height=10),
+            element("polygon", "figure/arrow", x=0, y=0, width=10, height=10),
             element("box", "figure/odd", x=0, y=0, width=10, height=10, fill="no-such-role"),
             element("image", "figure/picture", x=0, y=0, width=10, height=10, output="square"),
         )
@@ -1083,7 +1087,7 @@ def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
             "plugin": "pdf",
             "what": "figure/arrow",
             "did": "refused",
-            "why": "the pdf renderer draws no `path`",
+            "why": "the pdf renderer draws no `polygon`",
         },
         {
             "plugin": "pdf",
@@ -1190,9 +1194,8 @@ def test_text_in_a_family_with_no_outlines_is_a_loss_left_out_in_its_place(
 
 def test_it_draws_every_primitive_it_declares_and_declares_every_one_it_draws() -> None:
     declared = set(pdf_declaration.DECLARATION["draws"])
-    assert declared == {"group", "box", "ellipse", "line", "text", "image"}
-    kinds = declared | {"path"}
-    drawn_by = {name[1:] for name in vars(pdf._Document) if name[1:] in kinds}
+    assert declared == {"group", "box", "ellipse", "line", "text", "image", "path"}
+    drawn_by = {name[1:] for name in vars(pdf._Document) if name[1:] in declared}
     assert drawn_by == declared
 
 
@@ -1208,7 +1211,7 @@ def test_it_declares_each_property_of_an_image_of_every_source_as_the_svg_render
 def test_it_is_shipped_through_the_seam_as_plain_data_at_the_seams_version() -> None:
     declared = seam.declaration("pdf", seam.RENDERER)
     assert declared == pdf_declaration.DECLARATION
-    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.3.0", seam.SEAM_VERSION)
+    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.5.0", seam.SEAM_VERSION)
     assert (declared["programs"], declared["services"], declared["profile"]) == ([], [], "default")
     assert declared["unit"] == {"scene": "px", "page": "pt", "scale": 0.75}
     assert declared["physical-size"] == {"page": True, "maps": True}

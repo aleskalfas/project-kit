@@ -26,6 +26,7 @@ pkit:
         - src/project_kit/treecopy.py
         - src/project_kit/provisioning.py
         - src/project_kit/workspace.py
+        - src/project_kit/session_guard.py
         - .pkit/adapters/claude-code/merge-settings.sh
         - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
@@ -96,6 +97,7 @@ pkit:
 - **3e.** The router could not fetch the project's version pin, and runs the installed CLI instead (UC-052). The system stops only where its check finds another version, naming the remedies of the fallback ([ADR-065 point 8](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds)).
 - **4a.** A [capability](../../../glossary.md#term-capability--capability) the project records is shipped newer, older or not at all, or has no recorded version. The system copies none of these, and reports each ([ADR-065 point 1](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#1-syncs-propagation-step-has-two-callers)).
 - **4b.** A folder of the project's own sits at `.pkit/lifecycle/`, where the core [area](../../../glossary.md#term-area--area) of that name would be copied. The system stops before it writes, and names how to move the project's area ([ADR-065 point 13](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#13-a-transition-and-sync-stop-on-a-clash-of-area-names-and-no-core-area-but-rule-sets-is-added-until-1600)).
+- **6a.** The [session anchor](../../../glossary.md#term-session-anchor--session-anchor) is not the clone's root, as where the clone lies in a folder below the session anchor. The system then warns that the [harness](../../../glossary.md#term-harness--harness) will not load what [sync](../../../glossary.md#term-sync--sync) wrote until a session starts at the root. On the path of 3a, it warns the same.
 
 **Postconditions:** The clone holds the [system](../../../glossary.md#term-system--system) at the [release](../../../glossary.md#term-release--release) the [project](../../../glossary.md#term-project--project) records, and no [recorded version](../../../glossary.md#term-recorded-version--recorded-version) moved. In the clone:
 
