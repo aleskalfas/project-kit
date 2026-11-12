@@ -443,7 +443,7 @@ The scaffold's guidance captures two footguns:
 
 ## The rules of an agent run
 
-A command that starts agents with nobody watching may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is one such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
+A command that starts agents nobody can answer during their runs may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is one such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
 
 **In the model, a run's rules are denies,** for every subject, `all`. One rule denies every call that none of the privileges the run needs recognizes. The run's other rules are a floor of denies. A deny prevails over every allow, the shared baseline's included, so a run may do only what the first deny leaves open, whatever else allows.
 
