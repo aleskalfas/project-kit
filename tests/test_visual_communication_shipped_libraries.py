@@ -55,6 +55,7 @@ import pytest
 from tests.in_process import load
 from tests.visual_communication_project import (
     CAPABILITY,
+    RELEASED_FOUNDATIONS,
     REPO,
     TEST_PICTURES,
     bound,
@@ -658,11 +659,13 @@ def test_a_folder_that_releases_nothing_passes_every_check(tmp_path: Path) -> No
 
 
 def test_a_released_version_as_its_record_keeps_it_passes(tmp_path: Path) -> None:
-    """Released as the release writes it, naming the capability's current version. Where
-    the capability's own folder releases that number too, the two are one content, and a
-    version that differed from it would be reported as `copy-hash-differs`."""
+    """Released as the release writes it, naming the release the capability's own
+    foundations 1.0.0 names, which no later version of the capability changes. The two are
+    then one content, whatever version the capability is at, and a version that differed
+    from it would be reported as `copy-hash-differs`."""
     folder = capability(tmp_path)
-    release(folder, needs=shipped.current_version())
+    needs = libraries.read_library(RELEASED_FOUNDATIONS).needs_release
+    release(folder, needs=".".join(map(str, needs)))
 
     [library] = shipped.read(folder)
     [released] = library.released
@@ -674,6 +677,25 @@ def test_a_released_version_as_its_record_keeps_it_passes(tmp_path: Path) -> Non
     assert released_outcome(tmp_path / "1", folder) == Outcome()
     assert together_outcome(tmp_path / "2", folder) == Outcome()
     assert numbers_outcome(folder) == Outcome()
+
+
+def test_a_released_version_that_differs_from_the_one_the_capability_ships_is_reported(
+    tmp_path: Path,
+) -> None:
+    """Released naming another release than the capability's own foundations 1.0.0 names,
+    so two contents carry one released number."""
+    folder = capability(tmp_path)
+    release(folder)
+
+    outcome = together_outcome(tmp_path, folder)
+
+    assert outcome.failures == []
+    [reported] = outcome.reported
+    assert reported.startswith(
+        "`copy-hash-differs` (attention) at "
+        "visual/libraries/libraries.yaml#libraries.foundations.versions.1.0.0.hash: "
+    )
+    assert reported.endswith("two contents carry one released number")
 
 
 def test_a_released_file_changed_fails(tmp_path: Path) -> None:
