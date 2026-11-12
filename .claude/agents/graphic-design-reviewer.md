@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:a1784533acb7d12c441f06ff3d0e8a99368b16a5a1ab7663eea9c35b77eb7cc6
+# pkit-digest: sha256:e38101f6c24428f489656b854ef7f7ec606b59c22d0f578f8f16cb8ab3f412b4
 # pkit-tool-access: tools: ["Read", "Glob", "Grep"]
 name: graphic-design-reviewer
 description: Reads the images `pkit visual look` draws of a piece, through the 
@@ -48,6 +48,7 @@ reads:
     - .pkit/capabilities/visual-communication/components.md
     - .pkit/capabilities/visual-communication/files.md
     - .pkit/capabilities/visual-communication/design-knowledge/
+    - .pkit/capabilities/visual-communication/rule-sets/
   records:
     - COR-013
     - COR-026
@@ -116,7 +117,7 @@ Read all of these, and judge a page by its image above all:
 - **The piece,** its folder under the location's `pieces/`: `piece.yaml`, the content of each language, any component of its own, and `findings.yaml`, which holds what the check found.
 - **The brand** the piece names, under the location's `libraries/`: its tokens say which family each typography role takes.
 - **The brief,** `brief.yaml` in the piece's folder, where the piece keeps one ([visual-communication:DEC-029-piece-brief] point 1). It has a part for the whole piece, and a part for each page it speaks of, keyed by the page's id. Each part holds relations, goals and reasons. A page's part holds a takeaway only where the page has no lead. A piece of one page keeps all of it in the part for the whole piece. Where the piece has no brief, you have none to judge against: say so.
-- **The rule sets.** Read each rule from the file of the set that holds it, never from this body or from memory. Read the rule sets the capability ships, in its `rule-sets/` folder, but the one loaded into sessions, whose front matter says `loaded: true`, which binds a session's work, not a piece (COR-070). Read also each rule set of the project's own that inherits one of them, as `visual-communication:<SET>@<major>` in its `inherits`. The project's sets lie in `rule-sets/` under its internal documentation root.
+- **The rule sets.** Read each rule from the file of the set that holds it, never from this body or from memory. Read the rule sets the capability ships, in `.pkit/capabilities/visual-communication/rule-sets/`, but the set loaded into sessions: that set binds a session's work, not a piece (COR-070), and its front matter says `loaded: true`. Read also each rule set of the project's own that inherits one of them, as `visual-communication:<SET>@<major>` in its `inherits`. The project's sets lie in `rule-sets/` under its internal documentation root.
 - **The design knowledge,** in the capability's `design-knowledge/` folder. Read its index, `README.md`, first. Then read each topic it points you to for the pages you were asked about, or every topic where you were asked to review the whole piece. It teaches how to look and judge, and holds no rule, no value and no threshold. So no finding rests on it but a note of taste.
 - **The sources of its facts.** Where the piece shows a fact of the repository, such as a count or a file a command's output was kept in, read the source the piece names.
 
