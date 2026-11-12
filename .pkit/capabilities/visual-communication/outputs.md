@@ -139,6 +139,7 @@ pkit:
         - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
         - visual-communication:DEC-036#1
+        - visual-communication:DEC-036#2
         - visual-communication:DEC-036#4
         - visual-communication:DEC-036#7
       artefact:

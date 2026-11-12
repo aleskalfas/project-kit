@@ -175,6 +175,7 @@ pkit:
         - visual-communication:DEC-035#6
         - visual-communication:DEC-035#7
         - visual-communication:DEC-036#1
+        - visual-communication:DEC-036#2
         - visual-communication:DEC-036#7
 ---
 

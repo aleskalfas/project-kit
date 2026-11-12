@@ -27,6 +27,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
