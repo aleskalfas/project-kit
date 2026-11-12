@@ -178,6 +178,7 @@ pkit:
         - visual-communication:DEC-036#2
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#7
+        - visual-communication:DEC-036#8
 ---
 
 # The files of the visual work
@@ -802,7 +803,7 @@ pairs:
 - **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number`, `typography` or `picture`. A role carries no value: a brand gives it one. A role of the type `picture` takes a picture file of the brand as its value ([Picture roles](#picture-roles)). Only the foundations declare one, with no default, and no brand owes it a value (DEC-025 point 4). A role may carry a `default`, `{<role>}`, which it takes wherever no brand gives it a value. A shared role's default aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
 - **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them. The foundations alone declare axes.
 - **`families`** maps each colour family to its members, each naming a colour role. A notation maps a concept to a family by its name ([Notations](#notations)). The foundations alone declare families.
-- **`shapes`** maps each shape, by its name, to its outline ([Signs](#signs)). A notation maps a concept to a shape by its name (DEC-036 point 1). The foundations alone declare shapes. A shape that is no outline is refused, and stops the brand, as a family that names no colour role does (*Brands, tokens and contrast* in *What the check reports*).
+- **`shapes`** maps each shape, by its name, to its outline ([Signs](#signs)). A notation maps a concept to a shape by its name (DEC-036 point 1). The foundations alone declare shapes. A shape that is no outline is refused, and stops the brand, as a family that names no colour role does (*Brands, tokens and contrast* in *What the check reports*). One that is no closed outline within its square fails, and stops nothing, since it still draws (DEC-036 point 8).
 - **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*Brands, tokens and contrast* in *What the check reports*).
 
 The capability reads the `roles.yaml` of the foundations, and of each other library of kind `components` it resolves with them: each library a piece's lock or a declaration of written code names, and each library a version checked alone is resolved with (*What each run judges* in *What the check reports*). A brand's `roles.yaml` is not read: format 1 has no brand's own roles.
@@ -1061,7 +1062,7 @@ concepts:
 - **`concepts`** maps each concept, by its name, to `{colour: <family>}`, one of the colour families of the foundations the piece locks ([The foundations](#the-foundations)). It holds at least one concept. A concept that maps to a value, to a role or to a family the foundations do not declare is refused (*What the check reports*).
 - **`icon`**, beside a concept's `colour`, is the concept's icon, an outline the notation holds ([Signs](#signs)).
 - **`shape`**, beside it, maps the concept to a shape the foundations declare, by its name ([The foundations](#the-foundations)).
-- **A concept's sign** is its icon, or its shape where it holds no icon. A concept that holds neither has no sign. An icon that is no outline, or a shape the foundations do not declare, is refused (*What the check reports*): the concept keeps its colour family, and has no sign.
+- **A concept's sign** is its icon, or its shape where it holds no icon. A concept that holds neither has no sign, and asks the notation's owner for attention, since a piece then tells it apart by its colour alone (DEC-036 point 8). An icon that is no outline, or a shape the foundations do not declare, is refused (*What the check reports*): the concept keeps its colour family, and has no sign. An icon that is no closed outline within its square fails, and the concept keeps it as its sign.
 
 How a piece names the notations it uses is under [`piece.yaml`](#pieceyaml), how its lock takes them under [The lock](#the-lock), and how its content names a concept under [Content files](#content-files) and [Shapes](#shapes).
 
@@ -1072,6 +1073,7 @@ A *sign* is one outline, the same form for an icon and for a shape (DEC-036 poin
 - **`d`** is the outline's path, in SVG's path data. Every command of it is read, absolute or relative: moves, lines, curves, arcs and closes. It starts with a move.
 - **`fill-rule`** is the rule that fills it, `nonzero` or `evenodd`, as SVG names them.
 - **`square`** is the side of the square its numbers lie within, a number above zero.
+- **Closed, within its square.** Each part of its path that draws ends with a close, `Z`, and every point it draws lies within its square, a curve's whole sweep included. A sign that does not fails where it lies, in its notation or in the foundations (`sign-outline`; DEC-036 point 8).
 - **Its numbers are lengths within its square,** so no brand gives a sign a value, and a sign reads the same under every brand. Only its paints follow the brand.
 - **One colour.** A sign is filled and stroked as the part that draws it is painted, so an icon holds one colour and no shading. An icon drawn as strokes, as many icon sets are, is turned into outlines first.
 - **How a component draws it** is under *Primitives* in *Components*, where a sign part draws its instance's concept's sign.

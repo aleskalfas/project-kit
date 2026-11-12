@@ -12,8 +12,13 @@ command of SVG's path data, absolute or relative, and holds it as the absolute m
 lines, cubic curves and closes it draws: a quadratic curve becomes the cubic it is, and an
 arc the cubics that draw it, at most a quarter turn each. `Outline.mapped` fits it into a
 frame by its square, whole, centred and as large as the frame allows (DEC-025 point 6), as
-the path the scene holds, in the scene's one unit. Whether an outline closes and lies within
-its square is the checks' to judge, not the reader's.
+the path the scene holds, in the scene's one unit.
+
+Whether an outline closes and lies within its square is the checks' to judge, not the
+reader's (DEC-036 point 8): `Outline.fault` says why one does not. Each part of its path
+that draws ends with a close, and every point it draws, a curve's whole sweep included,
+lies within its square. `Outline.form` is what two outlines are compared by: fitted into
+one square, two that draw alike are one outline, whatever their squares.
 
 Knows nothing of files, notations, the foundations or the scene.
 """
@@ -40,6 +45,18 @@ PLACES = 2
 #: and its end, or `Z` with none, every point absolute within the outline's square.
 Segment = tuple[str, tuple[float, ...]]
 
+#: How far an outline may reach past its square, as a share of the square's side: no more
+#: than turning an arc into cubic curves adds, or a number's last digit.
+STRAY = 0.001
+
+#: The side of the square two outlines are fitted into to be compared (`Outline.form`).
+FORM = 100.0
+
+#: The finding on an icon or a shape that is no closed outline within its square, wherever
+#: it lies, and its fix (DEC-036 point 8).
+SIGN_OUTLINE = "sign-outline"
+CLOSE_IT = "draw it as outlines, each closed with `Z`, within its square"
+
 
 @dataclass(frozen=True)
 class Outline:
@@ -61,6 +78,29 @@ class Outline:
             for index, value in enumerate(points):
                 words.append(_number(value * scale + (top if index % 2 else left)))
         return " ".join(words)
+
+    def form(self) -> str:
+        """What the outline draws, apart from its square: its rule and its path fitted into
+        a square `FORM` a side. Two outlines of one form are one outline (DEC-036 point
+        8)."""
+        return f"{self.fill_rule} {self.mapped(0.0, 0.0, FORM, FORM)}"
+
+    def fault(self) -> str | None:
+        """Why the outline is no closed outline within its square, or None: a part of its
+        path that draws and ends with no close, `Z`, or a point it draws outside its square,
+        by more than `STRAY` (DEC-036 point 8)."""
+        opened = _opened(self.segments)
+        if opened:
+            return f"does not close its part {opened}: it ends with no `Z`"
+        left, top, right, bottom = _extent(self.segments)
+        reach = self.square * STRAY
+        if left < -reach or top < -reach or max(right, bottom) > self.square + reach:
+            across = f"{_number(left)} to {_number(right)} across"
+            down = f"{_number(top)} to {_number(bottom)} down"
+            return (
+                f"reaches outside its square of {_number(self.square)}: it spans {across}, {down}"
+            )
+        return None
 
 
 def read_outline(raw: object) -> Outline | str:
@@ -331,3 +371,60 @@ def _arc(
 def _angle(ux: float, uy: float, vx: float, vy: float) -> float:
     """The signed angle from the vector `u` to `v`, in radians."""
     return math.atan2(ux * vy - uy * vx, ux * vx + uy * vy)
+
+
+# --- judging an outline -------------------------------------------------------------------------
+
+
+def _opened(segments: tuple[Segment, ...]) -> int:
+    """The place, from 1, of the first part of a path that draws a line or a curve and ends
+    with no close; 0 where every such part closes. A part starts at each move, and one that
+    only moves draws nothing."""
+    place, draws, closed = 0, False, True
+    for command, _ in segments:
+        if command == "M":
+            if draws and not closed:
+                return place
+            place, draws, closed = place + 1, False, True
+        elif command == "Z":
+            closed = True
+        else:
+            draws, closed = True, False
+    return place if draws and not closed else 0
+
+
+def _extent(segments: tuple[Segment, ...]) -> tuple[float, float, float, float]:
+    """The least and the greatest x and y a path draws: left, top, right, bottom. A cubic
+    curve's sweep counts where it turns between its ends, not its control points."""
+    xs: list[float] = []
+    ys: list[float] = []
+    x = y = start_x = start_y = 0.0
+    for command, points in segments:
+        if command == "Z":
+            x, y = start_x, start_y
+            continue
+        if command == "C":
+            xs.extend(_turns(x, *points[0::2]))
+            ys.extend(_turns(y, *points[1::2]))
+        x, y = points[-2], points[-1]
+        if command == "M":
+            start_x, start_y = x, y
+        xs.append(x)
+        ys.append(y)
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _turns(p0: float, p1: float, p2: float, p3: float) -> list[float]:
+    """Where a cubic curve from `p0` to `p3` along one axis turns, strictly between its
+    ends: its value at each root of its derivative there."""
+    a, b, c = -p0 + 3 * p1 - 3 * p2 + p3, 2 * (p0 - 2 * p1 + p2), p1 - p0
+    if abs(a) < 1e-12:
+        roots = [-c / b] if abs(b) >= 1e-12 else []
+    else:
+        found = b * b - 4 * a * c
+        roots = [(-b + sign * math.sqrt(found)) / (2 * a) for sign in (1, -1)] if found >= 0 else []
+    return [
+        (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t**2 * p2 + t**3 * p3
+        for t in roots
+        if 0 < t < 1
+    ]

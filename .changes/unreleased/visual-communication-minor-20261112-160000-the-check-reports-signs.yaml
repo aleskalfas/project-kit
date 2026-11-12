@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The check reports a sign that cannot hold and a concept left to its colour
+  (#3047, visual-communication DEC-036 point 8). An icon in a notation, or a
+  shape in the foundations, that is no closed outline within its square fails
+  where it lies (`sign-outline`), and still draws. A sign part's path, and a
+  run's sign where it lies on other fills than its text, fails where none of
+  its paints reaches the contrast WCAG asks of other marks against the fill
+  under it (`contrast-drawn`); one over a picture is not measured. The check
+  asks for attention, never failing, on a concept that maps no sign
+  (`concept-unsigned`, in the notation); on an instance or a run painted from
+  its concept's family with no sign drawn, once for each version of the
+  component that draws it so, naming its owner (`sign-missing` and
+  `run-sign-missing`); and on two concepts whose signs are one outline, once
+  in each language of a piece (`sign-shared`).
