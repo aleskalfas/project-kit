@@ -2,11 +2,13 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 
 # The reference renders of the header (DEC-007 point 3): each word of each of its options,
-# with links and without, in English and in German, whose compound words stress its text,
-# at each size the test brand gives. Pinned with the test brand and the starter, so only a
-# person moves what they draw.
+# with links and without, and with a concept's sign before its title, in English and in
+# German, whose compound words stress its text, at each size the test brand gives. Pinned
+# with the test brand, the starter and the test notation, so only a person moves what they
+# draw.
 top: foundations/site
 brand: test-brand
+notations: [test-notation]
 languages: [en, de]
 audience: The starter's owner, who reviews the header against its job and its form.
 shown: In the capability's tests, as the reference renders of the header.
@@ -22,3 +24,4 @@ lock:
   foundations: 1.1.0
   starter: 1.1.0
   test-brand: 1.1.0
+  test-notation: 1.0.0

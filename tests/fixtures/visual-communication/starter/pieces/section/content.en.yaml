@@ -33,3 +33,15 @@ pages:
       text: >-
         A section that names no picture holds its words alone, at the start of the page,
         whichever side it gives.
+
+  - id: sign
+    layout: standard
+    main:
+      use: starter/section
+      fill: tint
+      concept: test-notation/person
+      head: Written by a person
+      text: >-
+        A section whose concept has a sign stands it before its head, in the family's
+        text, so its colour is never the only thing that says what it is.
+      picture: window.png

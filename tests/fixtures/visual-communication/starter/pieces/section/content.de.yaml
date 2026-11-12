@@ -33,3 +33,15 @@ pages:
       text: >-
         Ein Abschnitt ohne Bild hält seine Worte allein, am Anfang der Seite, welche Seite
         er auch angibt.
+
+  - id: sign
+    layout: standard
+    main:
+      use: starter/section
+      fill: tint
+      concept: test-notation/person
+      head: Von einer Benutzerin geschrieben
+      text: >-
+        Ein Abschnitt, dessen Begriff ein Zeichen hat, stellt es vor seine Überschrift, in
+        der Textfarbe der Familie, sodass nie die Farbe allein sagt, was er ist.
+      picture: window.png

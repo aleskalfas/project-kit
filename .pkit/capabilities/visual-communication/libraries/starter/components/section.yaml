@@ -6,11 +6,12 @@ status: experimental
 # System's media block, a picture beside a text.
 about: >-
   One part of a page: a head and a text beside a picture file the content names, each
-  where the content gives it. On a wide page the text and the picture stand side by side,
-  the picture to the right of the text or to its left; on a tablet and a phone, the
-  picture stands under the text, across the whole width. A line of its text runs no longer
-  than the brand's length of a line. It fills the width it is given, and sets its own
-  inset, so a tinted section's fill reaches the page's edge.
+  where the content gives it, the head after its concept's sign where it has one. On a
+  wide page the text and the picture stand side by side, the picture to the right of the
+  text or to its left; on a tablet and a phone, the picture stands under the text, across
+  the whole width. A line of its text runs no longer than the brand's length of a line.
+  It fills the width it is given, and sets its own inset, so a tinted section's fill
+  reaches the page's edge.
 
 fields:
   type: object
@@ -46,8 +47,13 @@ values:
   # On a wide page the picture takes what the text leaves, less the space between them.
   rest: "=inner - measure"
   between: "=min(@starter.margin, rest)"
-  # How tall the head and the text are together, and the row they share with the picture.
-  words: "=head.height + min(head.height, text.height, @starter.gap) + text.height"
+  # The head's row holds the sign and, after it, the head, which is as wide as the text
+  # less the sign and the gap after it, where the sign is drawn.
+  heading: "=max(sign.height, head.height)"
+  room: "=sign.width + min(sign.width, @space.sign-gap)"
+  # How tall the head's row and the text are together, and the row they share with the
+  # picture.
+  words: "=heading + min(heading, text.height, @starter.gap) + text.height"
   band: "=max(words, picture.height)"
   # Where the text and the picture start across, and how wide the picture is.
   text-x:
@@ -78,17 +84,27 @@ parts:
     box: {fill: {by: fill, plain: background, tint: ":colour.fill"}}
     width: "=:width"
     height: "=:height"
-  # Each of the head and the text keeps a gap from what stands above it only where both
-  # are drawn: a part not drawn has no height.
+  # The concept's sign, before the head, centred on the head's row, no wider than the
+  # text. It takes the family's text, so it shows the concept's colour on the section's
+  # fill, plain or tinted. A section whose family comes from no concept with a sign draws
+  # none, and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=text-x"
+    y: "=head-y + (heading - sign.height) / 2"
+    width: "=min(@starter.sign, measure)"
+    height: "=min(@starter.sign, measure)"
+  # Each of the head's row and the text keeps a gap from what stands above it only where
+  # both are drawn: a part not drawn has no height.
   head:
     when: head
     text:
       content: head
       style: starter.type.head
       fill: {by: fill, plain: text-primary, tint: ":colour.text"}
-    x: "=text-x"
-    y: "=head-y"
-    width: "=measure"
+    x: "=text-x + room"
+    y: "=head-y + (heading - head.height) / 2"
+    width: "=measure - room"
   text:
     when: text
     text:
@@ -96,7 +112,7 @@ parts:
       style: type.body
       fill: {by: fill, plain: text-primary, tint: ":colour.text"}
     x: "=text-x"
-    y: "=head.bottom + min(head.height, text.height, @starter.gap)"
+    y: "=head-y + heading + min(heading, text.height, @starter.gap)"
     width: "=measure"
   # The picture keeps its proportions: as wide as it is given, and as tall as that makes it.
   # With no picture named, it is not drawn.

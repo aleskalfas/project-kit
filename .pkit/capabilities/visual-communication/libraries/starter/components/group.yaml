@@ -7,9 +7,9 @@ status: experimental
 about: >-
   One group of items that belong together: a box with rounded corners on its colour
   family's fill, which holds a head, a tag and the group's items, one under another, the
-  head and the tag where the content gives them. Its items stand in a column, each as
-  wide as the group, drawn by the card. It is as wide as it is given, and as tall as what
-  it holds.
+  head and the tag where the content gives them. Where its concept has a sign, the sign
+  stands at the end of its head's row. Its items stand in a column, each as wide as the
+  group, drawn by the card. It is as wide as it is given, and as tall as what it holds.
 
 fields:
   type: object
@@ -41,6 +41,10 @@ colour: neutral
 values:
   # Where what the group holds starts, inside its edge, and how wide it is.
   inner: "=:width - 2 * @starter.inset"
+  # The head's row holds the head and, at its end, the sign, with a gap between them where
+  # the sign is drawn. What stands under the row starts under the taller of the two.
+  heading: "=max(head.height, sign.height)"
+  under: "=@starter.inset + heading"
 
 parts:
   box:
@@ -51,6 +55,15 @@ parts:
       rx: "=@starter.corner"
     width: "=:width"
     height: "=:height"
+  # The concept's sign, at the end of the head's row, as a card draws its own, in the
+  # family's text. A group whose family comes from no concept with a sign draws none, and
+  # the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=:width - @starter.inset - sign.width"
+    y: "=@starter.inset + (heading - sign.height) / 2"
+    width: "=@starter.sign"
+    height: "=@starter.sign"
   # The head is the family's text on the family's fill, a pair the foundations declare.
   # Each of the head, the tag and the items keeps a gap from what stands above it only
   # where both are drawn: a part not drawn has no height.
@@ -62,18 +75,18 @@ parts:
       fill: ":colour.text"
     x: "=@starter.inset"
     y: "=@starter.inset"
-    width: "=inner"
+    width: "=inner - sign.width - min(sign.width, @space.2)"
   tag:
     when: tag
     use: starter/tag
     fields: {label: tag}
     x: "=@starter.inset"
-    y: "=head.bottom + min(head.height, tag.height, @space.2)"
+    y: "=under + min(heading, tag.height, @space.2)"
   items:
     repeat: items
     draw: starter/card
     x: "=@starter.inset"
-    y: "=tag.bottom + min(max(head.height, tag.height), @starter.gap)"
+    y: "=tag.bottom + min(max(heading, tag.height), @starter.gap)"
     width: "=inner"
     column: {gap: "=@starter.gap", align-items: stretch}
 

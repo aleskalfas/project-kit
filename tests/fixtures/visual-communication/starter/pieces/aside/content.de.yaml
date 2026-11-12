@@ -39,3 +39,7 @@ slides:
           text: Sein Codeblock behält eine eigene Familie.
         - id: text
           text: Ein Text allein, ohne etwas darüber.
+        - id: person
+          concept: test-notation/person
+          head: Eine Benutzerin
+          text: Das Zeichen beendet die Überschriftenzeile.
