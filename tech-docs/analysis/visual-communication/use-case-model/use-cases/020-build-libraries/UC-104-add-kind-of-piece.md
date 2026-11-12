@@ -6,10 +6,6 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
-shortfalls:
-  - at: "4a"
-    issue: "#2573"
-    record: visual-communication:DEC-001#5
 pkit:
   friction:
     anchors:
@@ -55,9 +51,6 @@ pkit:
 - **2a.** A brand the project uses is one another project shares, so the project's copy is never edited. The developer builds a brand on it that adds the new layouts ([UC-106](UC-106-build-brand-on-brand.md)), or asks its library owner to add them.
 
 - **4a.** The brand lacks a layout the new kind names, or draws it with other content slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
-
-> [!WARNING]
-> **Not built yet:** the system names no layout a brand lacks. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
 
 **Postconditions:** Pieces of the new kind are made and drawn like any other, and the capability's own files are as they were.
 
