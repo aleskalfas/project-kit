@@ -1,0 +1,15 @@
+component: backbone
+kind: none
+body: >
+  The adapters README, `.pkit/adapters/README.md`, becomes a reference for
+  the AI agent, linking its new guide at `latest` (#2474). It keeps the
+  layout, the shipped adapter, the primitives the lifecycle calls, what an
+  adapter declares as data, how a capability's rules reach a session, the
+  agent runner and the harness requirements. The layout now names each
+  declaration and the settings pair, and says what sync copies of an
+  adapter. How the index is rendered, how a skill and an agent definition
+  are deployed, and what the backbone does around a confined run are left
+  to the rules, skills, agents and CLI references, which it links. Why
+  adapters exist, and the steps for adding a harness, move to the guide,
+  and the old address of "Adding a new harness" stays. No command, path or
+  format changes, so no surface moves.
