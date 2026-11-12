@@ -221,6 +221,7 @@ def _with_adapter(proj: Path) -> Path:
     (proj / ".pkit").mkdir(parents=True, exist_ok=True)
     (proj / ".pkit" / "manifest.yaml").write_text(
         "components:\n  - kind: adapter\n    name: claude-code\n"
+        "    manifest: .pkit/adapters/claude-code/project/manifest.yaml\n"
     )
     core = proj / ".pkit" / "adapters" / "claude-code" / "settings" / "core"
     core.mkdir(parents=True, exist_ok=True)
@@ -398,6 +399,99 @@ def test_apply_reports_out_of_harness_gap(tmp_path, monkeypatch):
     assert "out-of-harness gap" in out
     assert "enforced at runtime" in out  # pm's vcs (per-agent bash)
     assert "not natively enforceable" in out  # network-egress (enforcement: none)
+
+
+# ---- the gap report reads each registered adapter's declaration (#3059) -----
+
+_CLAUDE_CODE_GAP = "⚠ not natively enforceable (declare + enforce out-of-harness): network-egress"
+
+# A second harness whose gaps differ from Claude Code's.
+_OTHER_DECLARATION = (
+    "schema_version: 1\n"
+    "adapter: other-harness\n"
+    "dimensions:\n"
+    "  tool-gating: {layer: frontmatter, enforcement: native}\n"
+    "  filesystem-confinement: {layer: out-of-harness, enforcement: none}\n"
+    "  network-egress: {layer: out-of-harness, enforcement: none}\n"
+)
+
+
+def _register(proj: Path, adapters: dict[str, str | None]) -> Path:
+    """Register each adapter in the backbone manifest, in order, and give it a
+    folder holding `permission-enforcement.yaml` with the text given; None
+    leaves the folder without one."""
+    entries = "".join(
+        f"  - kind: adapter\n    name: {name}\n"
+        f"    manifest: .pkit/adapters/{name}/project/manifest.yaml\n"
+        for name in adapters
+    )
+    (proj / ".pkit" / "manifest.yaml").write_text(
+        f"backbone_version: 0.0.0\ncomponents:\n{entries}"
+    )
+    for name, text in adapters.items():
+        folder = proj / ".pkit" / "adapters" / name
+        folder.mkdir(parents=True, exist_ok=True)
+        if text is not None:
+            (folder / "permission-enforcement.yaml").write_text(text)
+    return proj
+
+
+def _claude_code_declaration() -> str:
+    return (REPO / ".pkit" / "adapters" / "claude-code" / "permission-enforcement.yaml").read_text()
+
+
+def test_diff_with_only_claude_code_reports_its_gap_as_before(tmp_path, monkeypatch):
+    proj = _register(_setup(tmp_path), {"claude-code": _claude_code_declaration()})
+    lines = _run(proj, monkeypatch, "diff").splitlines()
+    assert _CLAUDE_CODE_GAP in lines
+    assert not any("claude-code" in line for line in lines)
+
+
+def test_diff_names_each_adapters_own_gaps(tmp_path, monkeypatch):
+    proj = _register(
+        _setup(tmp_path),
+        {"claude-code": _claude_code_declaration(), "other-harness": _OTHER_DECLARATION},
+    )
+    lines = _run(proj, monkeypatch, "diff").splitlines()
+    assert (
+        "⚠ not natively enforceable by claude-code (declare + enforce out-of-harness): "
+        "network-egress"
+    ) in lines
+    assert (
+        "⚠ not natively enforceable by other-harness (declare + enforce out-of-harness): "
+        "filesystem-confinement, network-egress"
+    ) in lines
+    assert _CLAUDE_CODE_GAP not in lines
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [None, "schema_version: 1\nadapter: bare\ndimensions: {}\n"],
+    ids=["no-declaration", "no-dimension"],
+)
+def test_diff_names_an_adapter_that_declares_nothing(tmp_path, monkeypatch, declaration):
+    proj = _register(
+        _setup(tmp_path), {"claude-code": _claude_code_declaration(), "bare": declaration}
+    )
+    lines = _run(proj, monkeypatch, "diff").splitlines()
+    assert (
+        "⚠ bare declares nothing (no dimension in its permission-enforcement.yaml): "
+        "none is known to be enforced"
+    ) in lines
+    assert not any("enforceable by bare" in line for line in lines)
+    assert any("enforceable by claude-code" in line for line in lines)
+
+
+def test_diff_names_a_lone_adapter_that_declares_nothing(tmp_path, monkeypatch):
+    # Registered with no folder at all: nothing on disk declares for it.
+    proj = _setup(tmp_path)
+    (proj / ".pkit" / "manifest.yaml").write_text(
+        "backbone_version: 0.0.0\ncomponents:\n  - kind: adapter\n    name: bare\n"
+        "    manifest: .pkit/adapters/bare/project/manifest.yaml\n"
+    )
+    out = _run(proj, monkeypatch, "diff")
+    assert "⚠ bare declares nothing" in out
+    assert "not natively enforceable" not in out
 
 
 def test_apply_refused_without_adapter(tmp_path, monkeypatch):

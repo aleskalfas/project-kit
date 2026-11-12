@@ -1032,10 +1032,11 @@ def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_
 ) -> None:
     """The version being built of the foundations, compared with their release 1.0.0, adds
     the shared size axis `device`, the top `site` and its role `size.site`, the length of a
-    line, `size.line`, and the shapes a notation maps a concept to, and changes nothing
-    else. No brand can hold an axis of its own yet, so a new shared axis is an addition
-    (DEC-021 point 9, DEC-004 point 5), as are a new component, a new role with a default
-    (DEC-003 point 1, DEC-022 point 8) and a new shape (DEC-036 point 7)."""
+    line, `size.line`, the shapes a notation maps a concept to, and the lengths of a run's
+    sign and ground, and changes nothing else. No brand can hold an axis of its own yet, so a
+    new shared axis is an addition (DEC-021 point 9, DEC-004 point 5), as are a new
+    component, a new role with a default (DEC-003 point 1, DEC-022 point 8, DEC-036 point 3)
+    and a new shape (DEC-036 point 7)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -1048,6 +1049,9 @@ def test_the_foundations_being_built_add_the_size_axis_device_the_site_and_need_
         "`foundations/site`: is new (DEC-003 point 1)",
         "shared role `size.line`: is new, with a default (DEC-004 point 5)",
         "shared role `size.site`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.ground-corner`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.ground-room`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.sign-gap`: is new, with a default (DEC-004 point 5)",
         "shared axis `device`: is new (DEC-004 point 5)",
         "shape `circle`: is new (DEC-036 point 7)",
         "shape `diamond`: is new (DEC-036 point 7)",

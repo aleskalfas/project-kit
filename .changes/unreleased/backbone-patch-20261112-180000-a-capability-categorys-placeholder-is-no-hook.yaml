@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit refs validate`, and the `refs` member of `pkit validate`, no longer read
+  the placeholder of a capability's category, such as
+  `<visual-communication.work>`, as a hook in an agent's or a skill's body
+  (#2971). A capability names its categories with a dot (COR-073 point 1), so an
+  agent that cited its own grant was reported for a hook it does not declare.

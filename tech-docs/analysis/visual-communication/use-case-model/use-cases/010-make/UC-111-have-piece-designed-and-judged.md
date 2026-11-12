@@ -6,15 +6,12 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
-shortfalls:
-  - at: 2
-    issue: "#2584"
-    record: visual-communication:DEC-001#1
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-designer.md
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/skills/visual-author/build-loop.md
@@ -29,6 +26,8 @@ pkit:
         - visual-communication:DEC-028#3
         - visual-communication:DEC-028#4
         - visual-communication:DEC-028#5
+        - visual-communication:DEC-030#2
+        - visual-communication:DEC-030#3
         - COR-017
 ---
 
@@ -51,10 +50,7 @@ pkit:
 **Main path:**
 
 1. The developer asks the AI agent for a piece. The developer says who the piece is for, where it is shown, and whether it explains.
-2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks.
-
-> [!WARNING]
-> **Not built yet:** no agent or skill of the capability designs a piece by such rules. [DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for) decides that the capability carries its view of good visual communication as rules, with agents that make and review pieces, and #2584 tracks the agents.
+2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks. It writes what each page must show into the piece's brief, and the reason for each choice of its design.
 
 3. The system renders the piece, and draws each of its pages as an image, with `pkit visual render` and `pkit visual look`.
 4. A reviewer reads the drawn pages, and reports each break of a rule as a finding that names the rule and the page.
@@ -85,6 +81,7 @@ What the developer needs here that no accepted record decides yet:
 - **The goal:** the maintainer decided on 31 October, in planning the capability (#2423), that these rules are no project's taste but known principles of good design. In his words as the planning recorded them, nobody wants the opposite, and no adopter should have to write them again. So the capability ships them, each with its source, and adopters add their own on top. The goal rests on the capability carrying its view of good visual communication as rules a reviewer judges ([DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for)).
 - **The steps and the guarantees:**
   - **Step 1:** a piece declares who it is for, where it is shown and whether it explains ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+  - **Step 2:** the capability's designer turns a piece's brief into a piece. It writes the brief's goals and relations from what whoever asked for the piece says, and shows them to that person before it designs against them. It writes a reason for each choice as it designs ([DEC-030 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-030-design-agents.md#2-the-designer-turns-a-brief-into-a-piece)). It names the content's structure before it chooses a form, and makes its choices in the order of the brief's aspects ([DEC-030 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-030-design-agents.md#3-the-designers-method)). The agent is `graphic-designer` (`.pkit/capabilities/visual-communication/agents/graphic-designer.md`).
   - **Steps 2 and 4:** the capability carries its view of good visual communication as rules a reviewer judges, and agents that make, review and translate pieces ([DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for)). Two rule sets hold the rules: `COMM` on what a piece says, and `GRAPHIC` on how it looks ([DEC-028 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-028-principles-of-visual-communication.md#2-two-sets-by-the-kind-of-failure)). Each rule says apart what the content's text shows and what only the drawn page shows ([DEC-028 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-028-principles-of-visual-communication.md#4-each-rule-says-apart-what-the-text-shows-and-what-the-drawing-shows)). Until a piece's content is an artefact, the rules bind on no piece, and guide whoever designs or judges it ([DEC-028 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-028-principles-of-visual-communication.md#5-where-the-rules-bind-and-how-they-guide-meanwhile)). The reviewer reports a break of a rule as a rule finding, which cites the rule and names the page ([DEC-015 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#7-the-reviewers-first-form)).
   - **Step 3:** the viewing step draws what a renderer drew for each page as an image ([DEC-015 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#1-the-viewing-step-draws-a-renderers-output-and-adds-nothing-to-the-seam)), under the lock a render wrote ([DEC-015 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#4-it-reads-under-the-lock-and-writes-nothing-committed)).
   - **Step 5, variant 4a and the guarantees:** the reviewer advises, reads images and stops where the harness reads none, and says which pages it looked at (DEC-015 point 7).
