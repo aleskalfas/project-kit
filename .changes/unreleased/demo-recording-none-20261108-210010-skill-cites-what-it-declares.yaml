@@ -1,7 +1,0 @@
-component: demo-recording
-kind: none
-body: >
-  Only the `demo-recording` skill's wording moves (#2471). Its body now names
-  in full the `record-config` schema and the capability README, which its
-  front matter declares, so the reference graph finds them cited. No step,
-  command or file of the capability changes, so no surface moves.

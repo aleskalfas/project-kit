@@ -4,7 +4,7 @@ component:
   name: software-analysis
   version: 1.0.0
 description: Software analysis — actors, use cases, journeys, glossary, domain-model views and requirements kept as anchored artefacts and kept true by revalidation as the software changes.
-requires_backbone: ">=2.0.0,<2.2.0"
+requires_backbone: ">=2.0.0,<2.3.0"
 # The review contribution (`review-contributions.yaml`, DEC-001 point 10) names
 # project-management's floor on ruled artefacts, which an older release
 # refuses. So an installed project-management must have the floor, and the
