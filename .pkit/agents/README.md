@@ -293,6 +293,7 @@ Commands an agent returns are run by one of these:
   - a cited point its record does not hold
   - a cited operational rule that is missing or retired
   - an unknown override in the overlay ("Adopter overlay" below)
+  - a dotted category in the overlay that no installed capability declares ("Adopter overlay" below)
   - a key in an agent's definition that is none of the definition's fields ("Frontmatter schema" above)
 
 **What the backward check leaves out.** It is meant for reads whose place an overlay can move, so three kinds of path in a body need no declaration:
@@ -434,7 +435,7 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 
 #### `pkit agents`
 
-`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It warns of each unknown override too ("Adopter overlay" above). It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
+`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It warns of each unknown override too, and, in an `UNDECLARED CAPABILITY CATEGORIES` section, of each dotted category no installed capability declares ("Adopter overlay" above). It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
 
 It also asks the query of each line still as written ("A capability's write categories" above). Where the answer differs, it shows the line, the answer and `pkit agents reconcile`. Where there is no answer, it says why.
 
