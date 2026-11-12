@@ -695,6 +695,7 @@ def test_each_fixer_starts_with_its_brief_its_folder_and_the_bounds(drift, tmp_p
 
 
 _DEFINITION = Path(".claude/agents/living-docs.md")
+_LOCAL_SETTINGS = Path(".claude/settings.local.json")
 
 
 def _watched(
@@ -706,6 +707,8 @@ def _watched(
     in_checkout: str | None = None,
     ships: bool = False,
     manifest: bool = True,
+    local: str | None = None,
+    local_at_commit: str | None = None,
 ):
     """`run_watched` with a stub copy and a stub of the backbone's unconfined
     run: the copy is a folder of `tmp_path`, and `write(workspace, files_to)`
@@ -713,7 +716,9 @@ def _watched(
     definition the commit holds, and `in_checkout` the one the person's
     checkout holds, each None for none. `ships` puts the fixer's definition in
     a capability's agents folder at the commit, and `manifest` the backbone's
-    manifest, which makes the copy a project's root."""
+    manifest, which makes the copy a project's root. `local` is the person's
+    local settings in the checkout, and `local_at_commit` a file the commit
+    holds at their path, each None for none."""
     import contextlib
 
     copy = tmp_path / "copy"
@@ -722,6 +727,9 @@ def _watched(
     if in_checkout is not None:
         (checkout / _DEFINITION).parent.mkdir(parents=True)
         (checkout / _DEFINITION).write_text(in_checkout)
+    if local is not None:
+        (checkout / _LOCAL_SETTINGS).parent.mkdir(parents=True, exist_ok=True)
+        (checkout / _LOCAL_SETTINGS).write_text(local)
     started: list[dict[str, Any]] = []
 
     @contextlib.contextmanager
@@ -737,6 +745,9 @@ def _watched(
             shipped = copy / ".pkit/capabilities/living-docs/agents/living-docs/living-docs.md"
             shipped.parent.mkdir(parents=True)
             shipped.write_text("the shipped definition")
+        if local_at_commit is not None:
+            (copy / _LOCAL_SETTINGS).parent.mkdir(parents=True, exist_ok=True)
+            (copy / _LOCAL_SETTINGS).write_text(local_at_commit)
         try:
             yield copy
         finally:
@@ -746,7 +757,9 @@ def _watched(
 
     def run_agent(agent, brief, **kw):
         deployed = (copy / _DEFINITION).read_text() if (copy / _DEFINITION).is_file() else None
-        started.append({"agent": agent, "brief": brief, "deployed": deployed, **kw})
+        settings = copy / _LOCAL_SETTINGS
+        local = settings.read_text() if settings.is_file() else None
+        started.append({"agent": agent, "brief": brief, "deployed": deployed, "local": local, **kw})
         workspace = copy / ".agent-workspace" / "fix-drift"
         if write is not None:
             write(workspace, files)
@@ -822,6 +835,68 @@ def test_a_shipped_fixer_in_a_clone_that_is_no_project_needs_its_copy(drift, tmp
     )
     assert started == [] and run.ending == "refused"
     assert "deploys no definition of it" in run.reason
+
+
+def test_a_watched_run_takes_the_person_s_local_settings_from_the_checkout(drift, tmp_path) -> None:
+    """The person's local settings are theirs, not the project's, so the clone
+    takes them from the checkout (ADR-066 point 10), and every other file from
+    the commit: the definition the checkout holds does not run."""
+    run, started, _, _ = _watched(
+        drift, tmp_path, local='{"sandbox": {"allowUnsandboxedCommands": false}}', in_checkout="x"
+    )
+    [call] = started
+    assert call["local"] == '{"sandbox": {"allowUnsandboxedCommands": false}}'
+    assert call["deployed"] == "the commit's definition"
+    assert run.ending == "finished"
+    # With none in the checkout, the clone holds none.
+    without = tmp_path / "without"
+    without.mkdir()
+    [call] = _watched(drift, without)[1]
+    assert call["local"] is None
+
+
+def test_local_settings_the_commit_holds_stay_the_commit_s(drift, tmp_path) -> None:
+    """A file the commit holds at the local settings' path is the project's."""
+    _, started, _, _ = _watched(drift, tmp_path, local="the checkout's", local_at_commit="ours")
+    [call] = started
+    assert call["local"] == "ours"
+
+
+def test_a_link_on_the_way_to_the_local_settings_refuses_a_watched_run(drift, tmp_path) -> None:
+    import contextlib
+
+    copy = tmp_path / "copy"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    checkout = tmp_path / "repo"
+    (checkout / _LOCAL_SETTINGS).parent.mkdir(parents=True)
+    (checkout / _LOCAL_SETTINGS).write_text("{}")
+
+    @contextlib.contextmanager
+    def copy_at(repo_root, commit):
+        copy.mkdir()
+        (copy / ".pkit").mkdir()
+        (copy / ".pkit" / "manifest.yaml").write_text("schema_version: 1\n")
+        shipped = copy / ".pkit/capabilities/living-docs/agents/living-docs/living-docs.md"
+        shipped.parent.mkdir(parents=True)
+        shipped.write_text("the shipped definition")
+        (copy / ".claude").symlink_to(elsewhere)
+        yield copy
+
+    files = tmp_path / "files"
+    files.mkdir()
+    run = drift.run_watched(
+        "living-docs",
+        "brief",
+        commit="a" * 40,
+        files_to=files,
+        limit_seconds=60,
+        repo_root=checkout,
+        copy=copy_at,
+        start=lambda *a, **kw: pytest.fail("no run starts past a link the commit holds"),
+    )
+    assert run.ending == "refused" and "`.claude/settings.local.json`" in run.reason
+    assert list(elsewhere.iterdir()) == []
 
 
 def test_a_name_is_shipped_where_a_place_of_the_methodology_holds_it(drift, tmp_path) -> None:

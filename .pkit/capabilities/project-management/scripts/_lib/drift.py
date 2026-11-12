@@ -115,6 +115,10 @@ DEPLOYED = (".claude", "agents")
 #: point 1).
 MANIFEST = (".pkit", "manifest.yaml")
 
+#: The person's local settings for a checkout, kept out of git (ADR-029 point
+#: 1), which a watched run's clone takes from the checkout (ADR-066 point 10).
+LOCAL_SETTINGS = (".claude", "settings.local.json")
+
 #: The bounds (DEC-056 point 4), each set as the review command sets its own:
 #: a flag, else a variable, else the default.
 CAP_ENV = "PKIT_DRIFT_CAP"
@@ -1205,7 +1209,9 @@ def run_watched(
     is the commit's: the backbone runs the runner the clone registers, which
     picks a shipped agent's definition in the clone, and the harness finds any
     other in the copy the commit deploys. For a name no place ships, a commit
-    that deploys none refuses the run (`definition_at_commit`).
+    that deploys none refuses the run (`definition_at_commit`). The person's
+    local settings, the one file the clone takes from the checkout, are copied
+    in before the run starts (`copy_local_settings`).
 
     The drift command names the run's folders in the brief itself, since the
     backbone fills a brief's markers only for a confined run. Once the run
@@ -1221,6 +1227,8 @@ def run_watched(
             if isinstance(workspace, agent_runs.AgentRun):
                 return workspace
             refusal = definition_at_commit(working_copy, agent)
+            if refusal is None:
+                refusal = copy_local_settings(repo_root, working_copy)
             if refusal is not None:
                 return refusal
             run = start(
@@ -1322,6 +1330,45 @@ def definition_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun 
             reason=f"no place of the methodology ships {agent}, and the commit deploys no "
             f"definition of it at `{shown}`, so a watched run would run one that may not "
             "have merged",
+        )
+    return None
+
+
+def copy_local_settings(checkout: Path, working_copy: Path) -> agent_runs.AgentRun | None:
+    """Copy the checkout's local settings into a watched run's clone, where the
+    checkout has them; None where copied or nothing is to copy, else the
+    refused run.
+
+    The file holds the person's per-machine settings (ADR-029 point 1): the
+    seal of the retry outside the sandbox (ADR-028), their own denies of
+    credential reads, and on macOS the exclusion of `pkit` and `uv` from the
+    sandbox (ADR-027 condition 4). It is the person's, not the project's, so
+    the clone takes it from the checkout, as it takes every other file from
+    the commit (ADR-066 point 10). A file the commit holds at that path is the
+    project's, and stays as the commit has it. A link on the way refuses the
+    run, so the copy writes nothing outside the clone."""
+    source = checkout.joinpath(*LOCAL_SETTINGS)
+    if not source.is_file():
+        return None
+    folder = working_copy / LOCAL_SETTINGS[0]
+    target = folder / LOCAL_SETTINGS[1]
+    shown = Path(*LOCAL_SETTINGS).as_posix()
+    if folder.is_symlink() or target.is_symlink():
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED, reason=f"the commit holds a symbolic link on the way to `{shown}`"
+        )
+    if os.path.lexists(target):
+        return None
+    try:
+        held = source.read_bytes()
+        folder.mkdir(mode=0o700, exist_ok=True)
+        with os.fdopen(os.open(target, _NEW_FILE_FLAGS, 0o600), "wb") as written:
+            written.write(held)
+    except OSError as exc:
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"your local settings, `{shown}`, cannot be copied into the run's clone: "
+            f"{exc.strerror or exc}",
         )
     return None
 
