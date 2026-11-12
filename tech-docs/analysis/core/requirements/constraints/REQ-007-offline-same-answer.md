@@ -4,8 +4,8 @@ title: A query command is offline, read-only and deterministic
 status: active
 statement: A query command needs no network, changes nothing in the project and is deterministic.
 measure: Once the checkout is provisioned, a query command gives a result with the network cut off, and leaves each tracked file as it was. Run twice over the same state of the repository, and the same anchor where it resolves one, it prints the same output.
-applies-to: Every query command a component registers to resolve an anchor, fill a data point, join validation or answer the default paths of a capability. It holds whichever command of the backbone runs it.
-obligation: v1:sha256:eb7ff132f3a76628887786fc6492a5ce7c1e38ec0504d10fcc667c614749132f
+applies-to: Every query command a component registers to resolve an anchor, fill a data point, join validation or answer the default paths of a capability. The constraint holds whichever command of the backbone runs the query.
+obligation: v1:sha256:48a3653432acd364a89fab6527f37f086096eca03ecf5a3b952f016de75acdd3
 actors:
   - ACT-ci-pipeline
   - ACT-developer
@@ -46,6 +46,6 @@ Nothing holds a running command to the obligations. No layer stops its use of th
 
 Each such command is code a [component](../../glossary.md#term-component--component) ships, which the [backbone](../../glossary.md#term-backbone--backbone) runs but cannot confine. So the backbone requires the component to declare the obligations, and trusts the declaration ([ADR-057 point 4](../../../../architecture/decisions/ADR-057-backbone-engines-and-command-limits.md#4-what-nothing-here-confines-stated)).
 
-The obligations exist so that a check gives the same result wherever and whenever it runs (COR-050 point 2). Once its checkout is provisioned, the CI pipeline runs the checks offline. A developer who runs them before pushing gets the result the CI pipeline will.
+The obligations exist so that a check gives the same result wherever and whenever it runs (COR-050 point 2). Once its checkout is provisioned, the CI pipeline runs the checks offline. A developer who runs them before pushing gets the result the CI pipeline will. A command that writes a capability's default asks its query afresh, so the same state of the repository writes the same default anywhere.
 
-A command that writes a capability's default asks its query afresh, so the same state of the repository writes the same default anywhere. The backbone cannot enforce the obligations, so they are a constraint it takes as given, unlike the time bound of [REQ-006](../quality/REQ-006-command-time-bound.md), which it enforces.
+The backbone cannot enforce the obligations, so they are a constraint it takes as given, unlike the time bound of [REQ-006](../quality/REQ-006-command-time-bound.md), which it enforces.
