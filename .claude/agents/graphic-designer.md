@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:0a67e184fe24c9b4e49e0b27d9a72786e832a5449278055704e543d300c42604
+# pkit-digest: sha256:5e48d888db700a57a86b2ff9adb431b36b213171db8683483e0a705d3b4fc331
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Agent"]
 name: graphic-designer
 description: Designs a piece of visual work from its brief, by a designer's 
@@ -158,7 +158,7 @@ Before the reviewer reads a page, judge it yourself by the same four kinds of fi
 - **A fault,** from the reviewer's list of faults.
 - **A rule,** each of `COMM` and `GRAPHIC`, and of each set of the project's own that inherits one, read from its file.
 - **The brief:** does the page make each relation visible, serve each goal, and leave the reader with its takeaway or its lead? Does each reason still hold of the drawing?
-- **The practice:** the questions each topic of the design knowledge asks under "Designing and judging by it", page by page. They cover the message and its focal point, the form, the hierarchy, type, grid and space, colour, and diagrams with the piece's consistency. Then the craft: even padding, one corner radius, consistent strokes, no text against an edge, and no default-looking box as the page's main language.
+- **The practice:** the questions each topic of the design knowledge asks under "Designing and judging by it", page by page. They cover the message and its focal point, the form, the hierarchy, type, grid and space, colour, and diagrams with the piece's consistency. Judge the page's craft, such as its spacing and its alignment, by the topics on type, grid and space (`type-grid-space.md`) and on hierarchy, grouping and alignment (`hierarchy.md`), and by the rules of `GRAPHIC` read from its file, as the reviewer reads them.
 
 ### Where the libraries cannot draw the design
 
