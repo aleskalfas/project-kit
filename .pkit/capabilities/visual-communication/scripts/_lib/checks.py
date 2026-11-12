@@ -2,7 +2,7 @@
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
 points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
-and 5, DEC-019 point 8).
+and 5, DEC-019 point 8, DEC-030 point 5).
 
 **File-level findings, every run:**
 
@@ -10,6 +10,10 @@ and 5, DEC-019 point 8).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
+- without a piece named, the designer's grant, read from the agents overlay as the deploy
+  reads it, against the location the configuration records: a path inside the
+  methodology's folder fails, and so does a grant that does not cover the location
+  (`grant_findings`, DEC-030 point 5);
 - the library folder and its list (`libraries.Held.findings`), and each copy of a library
   the capability ships against what the installed capability ships under its number
   (`copies.compare`, DEC-013 point 6);
@@ -145,6 +149,7 @@ from _lib import (
     exports,
     fingerprint,
     framing,
+    grant,
     keys,
     layout,
     location,
@@ -239,6 +244,9 @@ COPY_LET_THROUGH = "current-copy-let-through"
 COPY_DIFFERING = "current-copy-differing"
 COPY_STANDING = "current-copy-standing"
 
+#: The finding on the designer's grant against the recorded location (DEC-030 point 5).
+GRANT = "grant"
+
 #: The findings on formats a piece cannot take (DEC-018 points 2 and 4): two that write files
 #: of one name, and a format of switching files whose file cannot hold the piece's modes.
 EXPORTS_SAME_NAME = "exports-same-name"
@@ -293,9 +301,11 @@ def deadline_from(environ: Mapping[str, str]) -> float | None:
 
 
 def check(root: Path, *, only: str | None = None, deadline: float | None = None) -> Report:
-    """The check of the project at `root`: every piece, or the piece `only`."""
+    """The check of the project at `root`: every piece, or the piece `only`. The
+    configuration is judged in every run, and the designer's grant in every run without a
+    piece named."""
     found: list[Finding] = []
-    config = _config_findings(root)
+    config = _config_findings(root) + (grant_findings(root) if only is None else [])
     try:
         where = location.for_reading(root)
     except location.LocationRefused as exc:
@@ -341,6 +351,57 @@ def _binding(data: Any, kind: str) -> str | None:
     if isinstance(data, Mapping) and data.get("pkit_schema") == schema_of(kind):
         return None
     return binding_problem(data, kind)
+
+
+def grant_findings(root: Path) -> list[Finding]:
+    """The designer's grant, read from the agents overlay as the deploy reads it, against
+    the location the configuration records (DEC-030 point 5). Each fails, where the project
+    corrects it in its overlay: a path inside the methodology's folder, and a grant none of
+    whose paths covers the recorded location. A grant that names no path, an empty one
+    included, fails nothing, and with no location recorded there is none to cover. An
+    overlay that cannot be read fails, since the check owes an answer it cannot give."""
+    try:
+        given = grant.granted(root)
+    except (ReadError, OSError) as exc:
+        said = f"the agents overlay cannot be read, so the designer's grant is not checked: {exc}"
+        return [Finding(GRANT, FAILS, said, file=grant.OVERLAY, fix="mend the file")]
+    if given is None or not given.paths:
+        return []
+    try:
+        recorded = location.configured(root)
+    except location.LocationRefused:
+        recorded = None  # the check reports it as `location`
+    at = {path: grant.relative(root, path) for path in given.paths}
+    found: list[Finding] = []
+    inside = {path for path, rel in at.items() if rel and grant.in_methodology(rel)}
+    if inside:
+        said = (
+            f"the designer's grant names {_shown(inside)}, inside the methodology's folder "
+            f"`{grant.METHODOLOGY}/`, where the visual work never lies"
+        )
+        fix = f"take {_shown(inside)} out of {given.line}"
+        found.append(Finding(GRANT, FAILS, said, file=grant.OVERLAY, where=given.key, fix=fix))
+    if recorded is not None and not any(rel and grant.covers(rel, recorded) for rel in at.values()):
+        said = (
+            f"the designer's grant names {_shown(set(given.paths))}, which does not cover the "
+            f"location `{recorded}` the configuration records, so the designer cannot write "
+            f"the visual work"
+        )
+        fix = _grant_fix(given, recorded)
+        found.append(Finding(GRANT, FAILS, said, file=grant.OVERLAY, where=given.key, fix=fix))
+    return found
+
+
+def _grant_fix(given: grant.Grant, recorded: str) -> str:
+    """What moves the designer's grant to the recorded location: for the top-level line,
+    the command that moves it while it stays as written (COR-073 point 5), else an edit."""
+    edit = f"name `{recorded}/` there, or `[]` to switch the designer off"
+    if given.overridden:
+        return f"in {given.line}, {edit}"
+    return (
+        f"run `pkit agents reconcile --write`, which moves {given.line} to `{recorded}/` while "
+        f"it stays as pkit wrote it; otherwise {edit}"
+    )
 
 
 class _Run:
