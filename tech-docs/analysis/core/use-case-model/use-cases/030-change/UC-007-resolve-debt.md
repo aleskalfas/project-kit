@@ -54,6 +54,7 @@ pkit:
         - ADR-034#1
         - ADR-055#5
         - ADR-066#1
+        - ADR-066#10
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
@@ -116,7 +117,7 @@ pkit:
 - **1b.** An [anchor](../../../glossary.md#term-anchor--anchor)'s [query command](../../../glossary.md#term-query-command--query-command) gives no result, or no installed [component](../../../glossary.md#term-component--component) registers the anchor's kind. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
 - **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors ([REQ-020](../../../requirements/functional/030-change/REQ-020-dead-anchor-error.md)). The path goes on at step 2.
 - **3a.** An installed [capability](../../../glossary.md#term-capability--capability) ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). The path goes on at step 4.
-- **3b.** An agent that an installed capability ships for the artefact's type proposed the [answer](../../../glossary.md#term-answer--answer) before the developer reached the [debt](../../../glossary.md#term-debt--debt). A person started it at a terminal and watched it, and it ran through the [backbone](../../../glossary.md#term-backbone--backbone)'s run command, `pkit agents run`:
+- **3b.** An agent that an installed capability ships for the artefact's type proposed the [answer](../../../glossary.md#term-answer--answer) before the developer reached the [debt](../../../glossary.md#term-debt--debt). A person started it at a terminal and watched it, and it ran through the [backbone](../../../glossary.md#term-backbone--backbone)'s run command, `pkit agents run` ([ADR-066 point 10](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md#10-what-a-run-in-the-unconfined-form-gets)):
   - The command starts the runner the [adapter](../../../glossary.md#term-adapter--adapter) registers, in a clone of the repository at a pinned commit ([ADR-066 point 1](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md#1-the-runner-is-a-command-the-adapter-registers-and-the-backbone-runs-it)).
   - At its entry, the command checks that the repository it would write in is the session's own. With nobody to ask, the command refuses another ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
