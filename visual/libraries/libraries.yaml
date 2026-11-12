@@ -161,6 +161,8 @@ libraries:
               version: 1.0.0
               path: tokens/palette.tokens.json
               sha256: 1c7c09942b89937709875c44cfc3b088706bfb69817843a8149b7492d921b782
+      1.1.0:
+        released: false
   pkit:
     source:
       kind: project

@@ -1,0 +1,145 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# How capabilities are wired through roles, for the connect page. The starter's network
+# sets its columns equal and centres each on its height, so it can neither give the slots
+# the width their words need, nor stand the capability that opens them in their frame,
+# nor stand evidence under it: this piece draws its own.
+#
+# The capabilities that fill slots stand in a column on the left, each as tall as two
+# thirds of the two slots its ties reach, so its first tie runs level into the first slot
+# and the last filler's last tie level into the last slot. The two ties between run with
+# two corners each, apart from each other, and none crosses another.
+status: experimental
+about: >-
+  How capabilities connect through roles: on the right, the frame of the role that opens
+  slots, its slots one under another and under them the capability that plays it, with a
+  note beside it; on the left, the two capabilities that fill slots; and each fill as a tie
+  from a capability to a slot. Under the frame stands the evidence, such as what a command
+  prints, and under the fillers what follows for a project.
+
+fields:
+  type: object
+  required: [fillers, slots, opener, ties]
+  properties:
+    fillers:
+      type: array
+      minItems: 2
+      maxItems: 2
+      description: The two capabilities that fill slots, top first, each drawn by `capability`.
+      items: {type: object}
+    slots:
+      type: array
+      minItems: 2
+      description: The slots the role opens, top first, each drawn by `slot`.
+      items: {type: object}
+    opener:
+      type: array
+      minItems: 1
+      maxItems: 1
+      description: The capability that plays the role that opens the slots, drawn by `capability`.
+      items: {type: object}
+    opens:
+      type: string
+      description: >-
+        A note beside the capability that opens the slots, a line for each of its lines,
+        such as pkit's name for the role it plays and how many slots it opens. A name as
+        pkit prints it is a run of the code's type, `code`.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, code]
+    ties:
+      type: array
+      description: Each fill, from the capability that fills to the slot it fills, by their key paths.
+      items: {type: object}
+    tie:
+      type: object
+      description: The component that draws each tie that names none, with words for its options.
+    gains:
+      type: string
+      description: >-
+        What follows for a project, under the fillers: a head in the strong type, then its
+        lines, a command among them in the code's type.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, strong, code]
+    evidence:
+      type: object
+      description: What shows the same wiring, under the frame, as the component placed in it.
+
+lists:
+  ties: {component: tie, ends: [from, to]}
+
+values:
+  # A capability's block takes a third of the width, less a gap; the frame seven twelfths;
+  # the lane between them holds the ties' corners.
+  block-width: "=:width / 3 - @space.3"
+  frame-width: "=:width * 7 / 12"
+  frame-x: "=:width - frame-width"
+  # What the frame holds stands this far in from its edges, and its slots this far apart.
+  tray: "=@space.2"
+
+parts:
+  # The role's frame lies on the surface, with no edge: an edge legible on a projector
+  # would cross the arrowheads in the tray and vie with the slots' outlines, so the frame
+  # holds its parts by its ground and by its narrow tray.
+  frame:
+    box: {fill: surface, rx: "=@space.1"}
+    x: "=frame-x"
+    width: "=frame-width"
+    height: "=opener.bottom + tray"
+  slots:
+    repeat: slots
+    draw: piece/slot
+    x: "=frame-x + tray"
+    y: "=tray"
+    width: "=frame-width - 2 * tray"
+    column: {gap: "=tray", align-items: stretch}
+  opener:
+    repeat: opener
+    draw: piece/capability
+    x: "=frame-x + tray"
+    y: "=slots.bottom + tray"
+    width: "=block-width"
+    column: {align-items: stretch}
+  # The note ends on the block's last line, so each of its lines stands beside a line of
+  # the block.
+  opens:
+    when: opens
+    text:
+      content: opens
+      style: {by: opens, plain: type.body, code: type.code}
+      fill: text-secondary
+    x: "=opener.right + @space.3"
+    y: "=opener.bottom - @space.1 - opens.height"
+  # A tie leaves a block at a third of its height and at two thirds, so the first block's
+  # first third lies on the first slot's middle, and the gap brings the last block's last
+  # third onto the last slot's middle. Every block holds two lines, so each is as tall as
+  # the opener's.
+  fillers:
+    repeat: fillers
+    draw: piece/capability
+    y: "=slots:first.middle - opener.height / 3"
+    width: "=block-width"
+    column:
+      gap: "=slots:last.middle - slots:first.middle - 4 * opener.height / 3"
+      align-items: stretch
+  evidence:
+    slot: evidence
+    x: "=frame-x"
+    y: "=frame.bottom + @space.3"
+    width: "=frame-width"
+  # Its last line stands level with the evidence's last line, where the column leaves
+  # room, so the two columns end together.
+  gains:
+    when: gains
+    text:
+      content: gains
+      style: {by: gains, plain: type.body, strong: type.strong, code: type.code}
+      fill: text-primary
+    y: "=max(fillers.bottom + @space.4, evidence.bottom - @starter.inset - gains.height)"
+    width: "=frame-x - @space.4"
+  ties:
+    repeat: ties
+    draw: starter/connector
+
+preferred:
+  height: "=max(evidence.bottom, gains.bottom)"

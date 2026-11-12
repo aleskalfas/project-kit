@@ -125,56 +125,40 @@ slides:
 
   - id: connect
     layout: slide
-    title: Jak capabilities spolupracují
-    lead: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.
+    title: Jak capability spolupracují
+    lead: "Capability se propojují přes role: která něco potřebuje, otevře slot, kterákoli jiná ho vyplní."
     visual:
-      use: starter/panels
-      panels:
-        - id: network
-          use: starter/network
-          span: wide
-          item: {use: starter/card, fill: tint}
-          tie: {use: starter/connector, concept: pkit/core}
-          left:
-            - {id: living-docs, concept: pkit/capability, head: living-docs, tag: "pkit::documentation", text: dokumenty na míru čtenáři}
-            - {id: software-analysis, concept: pkit/capability, head: software-analysis, tag: "pkit::analysis", text: co musí software umět}
-          right:
-            - id: slots
-              use: starter/groups
-              groups:
-                - id: project-management
-                  concept: pkit/capability
-                  head: project-management
-                  tag: plays pkit::work-tracking
-                  items:
-                    - {id: doc-check, text: "dokumenty, které změna upraví"}
-                    - {id: fixers, text: který agent opraví dokument}
-                    - {id: use-cases, text: případy užití k plánování}
-          ties:
-            - {id: docs-doc-check, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[doc-check]"}}
-            - {id: docs-fixers, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
-            - {id: analysis-fixers, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
-            - {id: analysis-use-cases, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[use-cases]"}}
-        - id: status
-          use: starter/code
-          head: Co vypíše pkit status
-          text: [
-            {text: "$ ", style: prompt}, {text: "pkit", style: command}, " status\n",
-            "  Connections\n",
-            "    roles   3 named: 3 active, 0 in conflict\n",
-            {text: "      pkit::analysis      → ", concept: pkit/core}, {text: "software-analysis\n", concept: pkit/capability},
-            {text: "      pkit::documentation → ", concept: pkit/core}, {text: "living-docs\n", concept: pkit/capability},
-            {text: "      pkit::work-tracking → ", concept: pkit/core}, {text: "project-management\n", concept: pkit/capability},
-            "    points  6 defined: 2 unfilled\n",
-            {text: "    pkit::work-tracking:fixers\n", concept: pkit/core},
-            "      data v1 · project-management — filled\n",
-            "      bound  ", {text: "software-analysis", concept: pkit/capability}, " (contributes)\n",
-            "      bound  ", {text: "living-docs", concept: pkit/capability}, " (contributes)"]
-      under:
-        use: starter/list
-        items:
-          - {id: swap, text: Capability vyměníte za jinou ve stejné roli.}
-          - {id: only-what-you-need, text: "Instalujete jen to, co potřebujete."}
-          - {id: wiring, text: pkit validate zapojení zkontroluje.}
-    limit: Každou roli zatím hraje jen jedna capability. Výměna je tedy navržená, ale ještě nevyzkoušená.
-    footer: "V project-kitu: 3 role, každou hraje jedna capability. Ze 6 slotů jsou 4 vyplněné."
+      use: piece/wiring
+      fillers:
+        - id: living-docs
+          concept: pkit/capability
+          role: "role: údržba dokumentace"
+          name: [{text: "capability: ", style: kind}, {text: living-docs, style: name}]
+        - id: software-analysis
+          concept: pkit/capability
+          role: "role: analýza softwaru"
+          name: [{text: "capability: ", style: kind}, {text: software-analysis, style: name}]
+      slots:
+        - {id: doc-check, name: doc-check, text: které dokumenty změna musí upravit}
+        - {id: fixers, name: fixers, text: který agent opraví dokument, fill: tint, concept: pkit/proof}
+        - {id: use-cases, name: use-cases, text: případy užití k plánování}
+      opener:
+        - id: project-management
+          concept: pkit/capability
+          role: "role: sledování práce"
+          name: [{text: "capability: ", style: kind}, {text: project-management, style: name}]
+      opens: [{text: "pkit::work-tracking", style: code}, "\notevírá 3 sloty"]
+      tie: {use: starter/connector, route: corners, override: {line: text-secondary}}
+      ties:
+        - {id: living-docs-doc-check, from: {item: "fillers[living-docs]"}, to: {item: "slots[doc-check]"}}
+        - {id: living-docs-fixers, from: {item: "fillers[living-docs]"}, to: {item: "slots[fixers]"}}
+        - {id: software-analysis-fixers, from: {item: "fillers[software-analysis]"}, to: {item: "slots[fixers]"}}
+        - {id: software-analysis-use-cases, from: {item: "fillers[software-analysis]"}, to: {item: "slots[use-cases]"}}
+      gains: [{text: "Co vám to dá\n", style: strong}, "Capability vyměníte za jinou ve stejné roli.\nInstalujete jen to, co potřebujete.\n", {text: "pkit validate", style: code}, " zapojení zkontroluje."]
+      evidence:
+        use: starter/code
+        text: [
+          {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # z pkit status\n", style: comment},
+          "    bound    software-analysis (contributes)\n",
+          "    bound    living-docs (contributes)"]
+    footer: "V project-kitu: každou ze 3 rolí zatím hraje jedna capability, výměna je tedy navržená, ne vyzkoušená."

@@ -26,3 +26,14 @@ concepts:
   decision: {colour: green, shape: diamond}
   rule: {colour: orange, shape: square}
   skill: {colour: red, shape: star}
+  # What proves a page's lead: the one part of the drawing a reader checks the claim
+  # against, and the same words where pkit prints them. Its sign is a tick, the mark of a
+  # thing checked, drawn in the drawing's part and before the words pkit prints, so the two
+  # stay joined where the colours are the reader's. It shares green with `decision`, which
+  # no page that marks proof shows.
+  proof:
+    colour: green
+    icon:
+      d: M 9.5 19.5 L 2.5 12.5 L 5.3 9.7 L 9.5 13.9 L 18.7 4.7 L 21.5 7.5 Z
+      fill-rule: nonzero
+      square: 24

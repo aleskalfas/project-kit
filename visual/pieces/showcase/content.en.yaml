@@ -128,55 +128,50 @@ slides:
   - id: connect
     layout: slide
     title: How capabilities work together
-    lead: A capability never names another, only a role. One that needs something opens a slot, and any other can fill it.
+    lead: "Capabilities meet through roles: one that needs something opens a slot any other can fill."
+    # Each capability is one block, the role it plays on its first line, by its job in
+    # plain words. The slots are those pkit::work-tracking opens, in the frame of
+    # project-management, which plays it now; every tie ends at a slot, never at
+    # project-management. pkit's name for that role stands beside its block, since the
+    # status output names it. The wiring is project-kit's, as each capability's
+    # package.yaml declares it and pkit status prints it, cut to the slots of one role and
+    # to the fills of the two other capabilities: project-management fills doc-check
+    # itself, which the page leaves out.
     visual:
-      use: starter/panels
-      panels:
-        - id: network
-          use: starter/network
-          span: wide
-          item: {use: starter/card, fill: tint}
-          tie: {use: starter/connector, concept: pkit/core}
-          left:
-            - {id: living-docs, concept: pkit/capability, head: living-docs, tag: "pkit::documentation", text: docs for each reader}
-            - {id: software-analysis, concept: pkit/capability, head: software-analysis, tag: "pkit::analysis", text: what the software must do}
-          right:
-            - id: slots
-              use: starter/groups
-              groups:
-                - id: project-management
-                  concept: pkit/capability
-                  head: project-management
-                  tag: plays pkit::work-tracking
-                  items:
-                    - {id: doc-check, text: the docs a change must update}
-                    - {id: fixers, text: which agent fixes each doc}
-                    - {id: use-cases, text: the use cases to plan from}
-          ties:
-            - {id: docs-doc-check, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[doc-check]"}}
-            - {id: docs-fixers, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
-            - {id: analysis-fixers, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
-            - {id: analysis-use-cases, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[use-cases]"}}
-        - id: status
-          use: starter/code
-          head: What pkit status shows
-          text: [
-            {text: "$ ", style: prompt}, {text: "pkit", style: command}, " status\n",
-            "  Connections\n",
-            "    roles   3 named: 3 active, 0 in conflict\n",
-            {text: "      pkit::analysis      → ", concept: pkit/core}, {text: "software-analysis\n", concept: pkit/capability},
-            {text: "      pkit::documentation → ", concept: pkit/core}, {text: "living-docs\n", concept: pkit/capability},
-            {text: "      pkit::work-tracking → ", concept: pkit/core}, {text: "project-management\n", concept: pkit/capability},
-            "    points  6 defined: 2 unfilled\n",
-            {text: "    pkit::work-tracking:fixers\n", concept: pkit/core},
-            "      data v1 · project-management — filled\n",
-            "      bound  ", {text: "software-analysis", concept: pkit/capability}, " (contributes)\n",
-            "      bound  ", {text: "living-docs", concept: pkit/capability}, " (contributes)"]
-      under:
-        use: starter/list
-        items:
-          - {id: swap, text: Swap a capability for one in the same role.}
-          - {id: only-what-you-need, text: Install only what you need.}
-          - {id: wiring, text: pkit validate checks the wiring.}
-    limit: Each role has one capability so far, so swapping one for another is designed, not yet shown.
-    footer: "In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled."
+      use: piece/wiring
+      fillers:
+        - id: living-docs
+          concept: pkit/capability
+          role: "role: keeping the docs"
+          name: [{text: "capability: ", style: kind}, {text: living-docs, style: name}]
+        - id: software-analysis
+          concept: pkit/capability
+          role: "role: analysing the software"
+          name: [{text: "capability: ", style: kind}, {text: software-analysis, style: name}]
+      slots:
+        - {id: doc-check, name: doc-check, text: the docs a change must update}
+        - {id: fixers, name: fixers, text: which agent fixes each doc, fill: tint, concept: pkit/proof}
+        - {id: use-cases, name: use-cases, text: the use cases to plan from}
+      opener:
+        - id: project-management
+          concept: pkit/capability
+          role: "role: tracking the work"
+          name: [{text: "capability: ", style: kind}, {text: project-management, style: name}]
+      opens: [{text: "pkit::work-tracking", style: code}, "\nopens 3 slots"]
+      tie: {use: starter/connector, route: corners, override: {line: text-secondary}}
+      ties:
+        - {id: living-docs-doc-check, from: {item: "fillers[living-docs]"}, to: {item: "slots[doc-check]"}}
+        - {id: living-docs-fixers, from: {item: "fillers[living-docs]"}, to: {item: "slots[fixers]"}}
+        - {id: software-analysis-fixers, from: {item: "fillers[software-analysis]"}, to: {item: "slots[fixers]"}}
+        - {id: software-analysis-use-cases, from: {item: "fillers[software-analysis]"}, to: {item: "slots[use-cases]"}}
+      gains: [{text: "What it gives you\n", style: strong}, "Swap a capability for one in the same role.\nInstall only what you need.\n", {text: "pkit validate", style: code}, " checks the wiring."]
+      # What pkit status printed in project-kit, cut by whole lines to the slot fixers and
+      # the two capabilities bound to it. The bound lines hang under the slot's line, as pkit
+      # prints them, by fewer spaces, and clear of the sign that opens the slot's line.
+      evidence:
+        use: starter/code
+        text: [
+          {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # from pkit status\n", style: comment},
+          "    bound    software-analysis (contributes)\n",
+          "    bound    living-docs (contributes)"]
+    footer: "In project-kit: each of the 3 roles has one capability so far, so a swap is designed, not yet shown."

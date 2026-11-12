@@ -8,18 +8,24 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 829a8655330f1836e84d9e1736ac8829237901f5d3aab9fd8cd80b48c735b022
+  value: a2f07a9184cc4f379397a81ad6f26b36dba4807abe073e28fc4a4136b29a21df
   inputs:
+    - file: components/capability.yaml
+      sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
+    - file: components/slot.yaml
+      sha256: 58af48501e010b442380fae830e76dcaef4c748fed26239931d77d8683b9d62a
+    - file: components/wiring.yaml
+      sha256: 01315e792846339dc88b27eaefd72ada03ef68f29cac6422b864eaff999d66ec
     - file: content.cs.yaml
-      sha256: 000b05c235c2092f51297d5091da93e3edd8d80120bbeca8a7bc1e6be80961f0
+      sha256: 0ee406c7c024ecc6f045b997144bac9767d7326e8d441b0f1ea81ccece4e3e79
     - file: content.en.yaml
-      sha256: 7b7210398125f908e0ebf903afbd4c3b4a2c4682e096edd158b7f34e9a5f3b5b
+      sha256: 0f50b37ca61fd90eb1a3158e993c2e477d79969e3b239552aa9882f13c7e5469
     - file: piece.yaml
-      sha256: 27aabc0866f6b1725f9108a683bfca4b1eef098fcadce9cf0674c78fa282ba61
+      sha256: 7d934ccb653455d5fad6ec709b54dafb82d9b80c3cf010967eb651dd284155a1
     - library: foundations
       version: 1.1.0
       path: components/deck.yaml
-      sha256: ca873f7ffebd71d2d91aae6c98feae0838c17bd0696927ba0753b6e00fe48c1e
+      sha256: e6e21ae70cee4abd54e0122e1e161b7c6225a4bec1798ade5847cfb2fedfca57
     - library: foundations
       version: 1.1.0
       path: components/figure.yaml
@@ -35,51 +41,63 @@ key:
     - library: foundations
       version: 1.1.0
       path: roles.yaml
-      sha256: 4b56d8f38100d1c8af0ada43a12e7a69a127b3438841eeab3c76d7c6e152793b
+      sha256: 5c3b630db1003fa945b4830dedf17d1eeb711e19a79d7456abb6705c7061ec08
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: fonts/LICENSE-Source-Code-Pro.txt
       sha256: 1036668c56392d012c81aa1c84cd8aacea3e767c52190f789d14857b3d0a5765
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: fonts/LICENSE-Source-Sans-Pro.txt
       sha256: 653aaf9819e33cf1e2b3523c5d4d6c3dae925d770cb4563030f96655321ca2e9
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: fonts/SourceCodePro-Regular.ttf
       sha256: f144137f557805c7327fc4b14d1d730f6e1822e0124170251ff1bcd723a693f1
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: fonts/SourceSansPro-Regular.otf
       sha256: 6b096b47206d8f78a2c49af2f2ae46b35d93b0e3cf105a9febef59144aa2eae2
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: fonts/SourceSansPro-Semibold.otf
       sha256: ee3ba5c88400b22b880d85202ce82143dc5e19861bf7880b7f4c32d4263e96d5
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: library.yaml
-      sha256: ad60b9ab10c1f568c1344041461a62efc635ddd4b36081d67f02cf3aab3e793e
+      sha256: f5d31a7f46e55253df6eb265f99a4ef71349196fa63df5f11308f643829c60c6
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: neutral.resolver.json
-      sha256: 9ec655e88f85b6ece8593816112656266c41bb9e74699981d04944bbb5e8b915
+      sha256: c525ca751d872eada9edd46e2ffee1788deeb7e00128ffc9e4cc9528e03e1cce
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: tokens/base.tokens.json
-      sha256: 5ea3f8571dfb8050b947079651d1530843a412a7861b2a4fa1e6cfba4f5f2798
+      sha256: d9fc7dd03131b4b884a719889402b55ac50163801ab41b8c75e0651040604aab
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: tokens/dark.tokens.json
       sha256: 288184af74169ab9fc00dc25c1b61ecdbc01c5a3b7029a2fccff180c89e45996
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: tokens/high-contrast.tokens.json
       sha256: babc4ab4183caa0266b9811c1a69583d70f15f25ddd0c2d1bfbb894f52983799
     - library: neutral
-      version: 1.0.0
+      version: 1.1.0
       path: tokens/palette.tokens.json
       sha256: 1c7c09942b89937709875c44cfc3b088706bfb69817843a8149b7492d921b782
+    - library: neutral
+      version: 1.1.0
+      path: tokens/phone.tokens.json
+      sha256: 4078142648a9122a40d6d94484e072b80e2785d3520f6cfed122e3263aa81417
+    - library: neutral
+      version: 1.1.0
+      path: tokens/projector.tokens.json
+      sha256: 0b1a08589259140b9596eb3b3ac36a028e449d122c51b5855c8c210e8151fb37
+    - library: neutral
+      version: 1.1.0
+      path: tokens/tablet.tokens.json
+      sha256: 655b8f44e09a51750d5cca02dbc0639b3eced7925c7ca1e87f6d7d3a0ae6496f
     - library: pkit
       version: 1.0.0
       path: library.yaml
@@ -87,7 +105,7 @@ key:
     - library: pkit
       version: 1.0.0
       path: notation.yaml
-      sha256: faf4fd6c11e892f244050108425f273b8ef712ca71d26fbe2e8d20a8b9f7c97c
+      sha256: 827cf3018d7fafc3341621d526ae410531ec2df5e4edd7969d1616a27d309665
     - library: starter
       version: 1.1.0
       path: README.md
@@ -193,6 +211,88 @@ key:
       path: roles.yaml
       sha256: 23ca8760b401f5649dc9a0da9ba42b6769a65a6c652534cb9c0799fab8e08405
 findings:
+  - code: gets-less
+    level: fails
+    message: deck/slides[fits]/visual gets 356.0 px of height and asks for 479.99
+    file: content.cs.yaml
+    where: deck/slides[fits]/visual
+  - code: gets-less
+    level: fails
+    message: deck/slides[fits]/visual/notes[carried-out] gets 149.33 px of height and asks for 192.0
+    file: content.cs.yaml
+    where: deck/slides[fits]/visual/notes[carried-out]
+  - code: gets-less
+    level: fails
+    message: deck/slides[fits]/visual/notes[checked] gets 149.33 px of height and asks for 192.0
+    file: content.cs.yaml
+    where: deck/slides[fits]/visual/notes[checked]
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual gets 356.0 px of height and asks for 507.99
+    file: content.cs.yaml
+    where: deck/slides[install]/visual
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual/panels#1/panels#1 gets 568.0 px of width and asks for 824.0
+    file: content.cs.yaml
+    where: deck/slides[install]/visual/panels#1/panels#1
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual/panels#2/panels#1 gets 568.0 px of width and asks for 836.8
+    file: content.cs.yaml
+    where: deck/slides[install]/visual/panels#2/panels#1
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual/panels#2/under gets 568.0 px of width and asks for 621.86
+    file: content.cs.yaml
+    where: deck/slides[install]/visual/panels#2/under
+  - code: gets-less
+    level: fails
+    message: deck/slides[permissions]/visual gets 260.0 px of height and asks for 479.99
+    file: content.cs.yaml
+    where: deck/slides[permissions]/visual
+  - code: gets-less
+    level: fails
+    message: deck/slides[fits]/visual gets 394.0 px of height and asks for 479.99
+    file: content.en.yaml
+    where: deck/slides[fits]/visual
+  - code: gets-less
+    level: fails
+    message: deck/slides[fits]/visual/notes[carried-out] gets 149.33 px of height and asks for 192.0
+    file: content.en.yaml
+    where: deck/slides[fits]/visual/notes[carried-out]
+  - code: gets-less
+    level: fails
+    message: deck/slides[fits]/visual/notes[checked] gets 149.33 px of height and asks for 192.0
+    file: content.en.yaml
+    where: deck/slides[fits]/visual/notes[checked]
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual gets 356.0 px of height and asks for 507.99
+    file: content.en.yaml
+    where: deck/slides[install]/visual
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual/panels#1/panels#1 gets 568.0 px of width and asks for 824.0
+    file: content.en.yaml
+    where: deck/slides[install]/visual/panels#1/panels#1
+  - code: gets-less
+    level: fails
+    message: deck/slides[install]/visual/panels#2/panels#1 gets 568.0 px of width and asks for 836.4
+    file: content.en.yaml
+    where: deck/slides[install]/visual/panels#2/panels#1
+  - code: gets-less
+    level: fails
+    message: deck/slides[permissions]/visual gets 260.0 px of height and asks for 447.99
+    file: content.en.yaml
+    where: deck/slides[permissions]/visual
+  - code: size-width
+    level: attention
+    message: '`device.projector`: the top is 1280 px wide, as at the default size: the brand neutral@1.1.0 gives its width no other value at this size, so its shape follows the size and its width does not'
+    file: piece.yaml
+    where: brand
+    fix: draw the piece in a brand that gives the top's width at each size it names, or ask the brand's owner to; where the piece means one width at every size, leave it
+    who: the piece's author
   - code: component-experimental
     level: fact
     message: 'the piece uses `foundations/deck`, which is experimental: its library may still change it in any release'
@@ -200,14 +300,19 @@ findings:
     where: deck
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/network`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `piece/wiring`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[connect]/visual/panels[network]
+    where: deck/slides[connect]/visual
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/list`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `piece/capability`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[connect]/visual/under
+    where: deck/slides[connect]/visual/opener[project-management]
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `piece/slot`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[connect]/visual/slots[doc-check]
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/layers`, which is experimental: its library may still change it in any release'

@@ -1,0 +1,237 @@
+pkit_schema: visual-communication:brief
+schema_version: 1
+
+pages:
+  # The slide states its point in its lead, so its part holds no takeaway.
+  connect:
+    relations:
+      - text: >-
+          Capabilities are wired only through a role. Each link from a capability that
+          fills a slot ends at a slot of the role pkit::work-tracking, not at
+          project-management, which is shown as the capability that plays that role now.
+          So a reader sees that another capability in the same role would keep every link.
+        relates:
+          - visual.fillers
+          - visual.ties
+          - visual.slots
+          - visual.opener[project-management]
+      - text: >-
+          The slots belong to the side that needs something. The three slots are opened
+          by the capability that plays pkit::work-tracking, and read as its parts, not as
+          things of their own.
+        relates:
+          - visual.slots
+          - visual.opener[project-management]
+      - text: >-
+          Filling runs one way, from the capability that fills to the slot it fills. Any
+          capability may fill a slot: one slot takes more than one filler, as fixers takes
+          both, and one capability fills more than one slot.
+        relates:
+          - visual.ties
+          - visual.fillers
+          - visual.slots
+      - text: >-
+          The status output is the evidence for what the diagram shows, not a second
+          point: the slot fixers of pkit::work-tracking with the same two capabilities
+          bound to it, as pkit reports them in project-kit.
+        relates:
+          - visual.slots[fixers]
+          - visual.fillers
+          - visual.evidence
+    goals:
+      - >-
+        A developer who has never used pkit can say how one capability gets what it
+        needs from another: the one that needs it opens a slot under its role, and any
+        other fills that slot, naming only the role.
+      - >-
+        They can tell a role from a capability at first sight. A role is a job, such as
+        tracking the work; a capability is a package they install, such as
+        project-management, which does that job now. Each label says which of the two it
+        names, and the role's job reads in plain words, not only as pkit's id for it.
+      - >-
+        They know what each slot asks for without knowing its name: doc-check, the
+        documents a change must update; fixers, which agent mends each kind of document
+        a merge left out of date; use-cases, the use cases to plan work from. The slot's
+        name stays, as the label pkit prints.
+      - >-
+        They can say what follows for their own project: they install only the
+        capabilities they need, and a capability can be swapped for another that plays
+        the same role without changing those connected to it.
+      - >-
+        Projected, the point reads at a glance while the speaker talks. On the PDF and
+        the web page, a reader can follow each link from the capability that fills to the
+        slot it fills, and find the same wiring in what pkit status shows.
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          Three roles, each played now by one capability. pkit::work-tracking, played by
+          project-management, opens three slots. living-docs fills doc-check and fixers,
+          and software-analysis fills fixers and use-cases, as each capability's
+          package.yaml declares it and pkit status prints it in project-kit. So the content
+          is a network of fills, each from a capability to a slot, inside a containment:
+          the slots belong to the role that opens them. project-management also fills
+          doc-check itself, with its own mapping; the page leaves that fill out, since it
+          is no meeting of two capabilities, the page's point.
+        principle:
+          name: A graphic is objects in a structured space, contained in one another or linked by a connector
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual
+        text: >-
+          The role that opens slots is a frame, holding its slots one under another and,
+          under them, the capability that plays the role. The capabilities that fill slots
+          stand in a column to the left, and each fill is an arrow from one of them to a
+          slot. The frame says that the slots are the role's, so an arrow says only who
+          fills what, and it ends at a slot, never at project-management. Three other
+          forms were weighed. The last round's nested frames, a purple frame for each role
+          around an orange block for its capability, told the two apart in three channels,
+          but spent the page's hues on kinds, so nothing was left to lead the eye to the
+          slot that proves the lead. A matrix of capabilities against slots shows who fills
+          what, but neither which way filling runs nor that the slots are one role's. The
+          starter's network centres equal columns, so the frame could neither take the
+          width its slots' words need nor hold its capability under its slots, nor stand
+          the evidence under itself. The starter's card lies on its family's pale fill, so
+          it could not draw a capability as the page's one solid shape, and it sets a head
+          over a text, so it could not stand a slot's name in a column of its own, with
+          what each slot asks for starting on one edge. So the page draws the frame, the
+          blocks and the slots with components of its own, from the brand's roles alone,
+          and the arrows and the terminal with the starter's.
+        principle:
+          name: A closed outline reads as a thing, a shape inside another as a part of it, and a line between two as a relation
+          source: Colin Ware, Information Visualization, Perception for Design
+      - aspect: form
+        about: visual.fillers
+        text: >-
+          Every capability, whether it fills a slot or opens one, is the same block, so a
+          reader learns it once and reads three of a kind. Its first line names the role
+          it plays by its job in plain words, such as tracking the work, and its second
+          the capability, each opened by the word for what it names, so the label says
+          which is which without colour. pkit's name for a role stands once on the page,
+          beside the block that opens the slots, since the status output under the frame
+          names that role and no other. So the note's two lines stand beside the block's
+          two: pkit's name for the role beside the role, and that it opens 3 slots beside
+          the capability that opens them. The blocks of the roles that fill hold no such
+          name, which nothing on the page would join.
+        principle:
+          name: One design learned once, and a reader never left to wonder whether two looks mean the same thing
+          source: Edward Tufte, Envisioning Information, small multiples; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
+      - aspect: form
+        about: visual.ties
+        text: >-
+          The arrows run with square corners, and none crosses another. Each block's two
+          arrows leave it at a third and at two thirds of its height, so the upper block's
+          first arrow runs level into doc-check and the lower block's last arrow level into
+          use-cases, and the two arrows into fixers each turn twice in the lane between,
+          one from above and one from below, apart from each other until they land. Two
+          arrows end on fixers and two leave each block, so a reader sees both that a slot
+          takes more than one filler and that a capability fills more than one slot.
+        principle:
+          name: Crossings cost a reader the most, and fewer bends help
+          source: Helen Purchase, Which Aesthetic Has the Greatest Effect on Human Understanding?
+      - aspect: form
+        about: visual.slots
+        text: >-
+          Each slot says what it asks for in plain words beside its name, so a reader who
+          has never seen pkit knows what each is for, and still meets the name pkit
+          prints. The words are short enough that every slot holds one line in both
+          languages: fixers reads which agent fixes each doc, the brief's words cut to
+          what one line holds.
+        principle:
+          name: Words that cue what is essential, and nothing extraneous
+          source: Richard Mayer, Multimedia Learning, the signalling and coherence principles
+      - aspect: form
+        about: visual.evidence
+        text: >-
+          The evidence is what pkit status printed in project-kit, cut by whole lines to
+          the slot fixers and the two capabilities bound to it, the bound lines hanging
+          under the slot's line as pkit prints them. The page holds three lines under the
+          frame, so the terminal
+          opens on pkit's output rather than on the command, and a comment on its first
+          line names the command, as the install page's comments say what its tree shows.
+          It stands right under the frame whose slot it reports, so the reader finds the
+          drawing's two arrows into fixers in pkit's own words.
+        principle:
+          name: A headline asserts, and the body is its evidence
+          source: Michael Alley, The Craft of Scientific Presentations
+      - aspect: form
+        about: footer
+        text: >-
+          The limit of the page's claim is a fact of project-kit, that each of its 3 roles
+          has one capability so far, so a swap is designed and not yet shown. The page
+          states it once, in its source line, rather than in the deck's limit line as well,
+          and gives that line's room to the picture.
+        principle:
+          name: Leave out what repeats; every mark earns its ink
+          source: Edward Tufte, The Visual Display of Quantitative Information
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          Under the title and the lead, the three capability blocks are seen first, the
+          page's only solid shapes, since capabilities are what the title and the lead are
+          about, and they read as one kind, seen together. Then comes the slot fixers, the
+          one shape in the page's bright hue, with two arrows running into it. The other
+          slots follow, outlined on the background, then the arrows. The frame of the role
+          and the terminal are quiet grounds, and what it gives you and the source line
+          come last. Inside each slot, what it
+          asks for steps back in the secondary text behind its name, and inside each block
+          the word for what a line names stays regular, so the names read first.
+        principle:
+          name: A mark that differs in one feature pops out; emphasise by de-emphasising what competes
+          source: Colin Ware, Information Visualization, Perception for Design; Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          The page takes the brand's projector type, read from across a room: the body at
+          24 px, the code a step under it, the lead at 30. pkit's names, a slot's and the
+          opening role's, are set in the code type, as pkit prints them, so the terminal's
+          words look like the drawing's. A role's job is set in the body type, as the plain
+          words it is. A capability's name is set in the strong type, the one bold level
+          under the lead, and the head of what it gives you takes it too. A command inside
+          a line of what it gives you keeps the code type.
+        principle:
+          name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
+          source: Robert Bringhurst, The Elements of Typographic Style; Robin Williams, The Non-Designer's Design Book
+      - aspect: colour
+        about: visual
+        text: >-
+          The page has one bright hue, and it marks the proof: the slot fixers takes the
+          notation's proof, its fill, its outline and its name in green, and so does the
+          slot's name in the line pkit prints for it, so the eye joins the drawing to its
+          evidence. Each capability keeps the colour family and the sign the notation
+          gives its concept, as it does wherever the project draws one: its block takes
+          the family's text colour, deep orange in light and pale in dark, and its words
+          and its hexagon the family's fill, the pair the brand keeps legible, turned over.
+          So a block stays the darkest shape in light and the lightest in dark, and its
+          hue stays deep and quiet beside the green. A plain slot's outline takes the
+          secondary text, which holds 3:1 on the background, and the arrows take it too,
+          so they step back behind the blocks. The proof is told without its colour by the
+          word fixers in both places, by the two arrows that land on it, and by the
+          notation's sign for proof, a tick, which ends the slot's row as a card's sign
+          ends its head's row on the first page, and opens the slot's line in pkit's
+          output, as a sign stands before pkit's files on the install page, so pkit's
+          printed name stays whole. So the two places still meet where the colours are the
+          reader's. A capability is told without its colour by its hexagon and the word
+          capability.
+        principle:
+          name: Colour used sparingly draws attention, and never the only signal; the same meaning looks the same everywhere
+          source: Cole Nussbaumer Knaflic, Storytelling with Data; W3C, WCAG 2, success criteria 1.4.1 and 1.4.11; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
+      - aspect: space
+        about: visual
+        text: >-
+          The frame holds its slots and its capability by its ground and by space: the
+          brand's second step in, and its slots stand the same step apart; the terminal
+          stands the third step under the frame, further than anything inside it, so it
+          reads as the frame's report and not as one more row. A slot holds its words the third step in, as a block
+          does, so the slots' names and the opening capability's lines start on one edge.
+          The blocks are a slot and a half tall, so the upper block's top meets the first
+          slot's top and the lower block's foot the last slot's foot, and the two stand the
+          third step apart. The last line of what it gives you stands level with the
+          terminal's last line, so the two columns end together. The frame takes no edge:
+          one that a projector keeps would have to hold 3:1, as a slot's outline does, and
+          would then cross the arrowheads in the tray and vie with the slots it holds. So
+          where a projector washes its ground out, the narrow tray and the wider space to
+          the terminal still group the slots with their capability.
+        principle:
+          name: Space inside a group smaller than between groups, and few alignment edges shared across the page
+          source: Robin Williams, The Non-Designer's Design Book; Josef Müller-Brockmann, Grid Systems in Graphic Design
