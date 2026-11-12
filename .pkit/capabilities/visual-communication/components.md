@@ -126,7 +126,7 @@ pkit:
 
 A *component* is data that says how a piece's content is arranged and drawn: the fields it takes, its options, and its parts, each placed by formulas. The *engine* is the capability's code that computes a *scene* from a piece's content and the components that draw it. It knows no component by name (DEC-001 point 4). Where a component's file lies, in a library or in a piece, is in [What the location holds](files.md#what-the-location-holds).
 
-The examples come from the foundations' `figure`, which ships, and from `tests`, a component library the capability's own tests draw with. No project locks `tests`.
+The examples come from the foundations' `figure`, which ships, and from `tests`, a component library the capability's own tests draw with, except where an example says it is written for this page. No project locks `tests`.
 
 <!-- pkit:contents -->
 - [Patterns, blocks and top components](#patterns-blocks-and-top-components)
@@ -365,7 +365,7 @@ parts:
     width: "=:width"
 ```
 
-A text that names the services of a system, each in its concept's colour on its family's fill, with its sign before it:
+Written for this page, a text that names the services of a system, each in its concept's colour on its family's fill, with its sign before it:
 
 ```yaml
 says:
