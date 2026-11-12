@@ -1195,8 +1195,10 @@ def run_watched(
     session started in the clone may write (`WATCHED_WORKSPACE`). A commit that
     holds anything at the workspace's first folder refuses the run, and the
     workspace is made as folders of its own. The agent's definition that runs
-    is the one the commit deploys, and a commit that deploys none refuses the
-    run (`deployed_at_commit`).
+    is the commit's: the backbone runs the runner the clone registers, which
+    picks a shipped agent's definition in the clone, and the harness finds any
+    other in the copy the commit deploys. A commit that deploys none refuses
+    the run (`deployed_at_commit`).
 
     The drift command names the run's folders in the brief itself, since the
     backbone fills a brief's markers only for a confined run. Once the run

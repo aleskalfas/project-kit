@@ -2,6 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Changed
+  requires_backbone: release
 body: >
   A fixer starts only when you run `pkit pm fix-drift` at a terminal, and
   you watch it (DEC-056 points 3 and 5). The command tells you started it
@@ -10,8 +11,10 @@ body: >
   unconfined form, as `review-pr` runs its reviewers: in a clone of the
   default branch's commit made for that fixer, with a git folder of its own
   and no remote, under your settings and the project's, and Ctrl-C stops the
-  run. The fixer that runs is the one the commit deploys, so where your
-  project keeps its deployed agents out of git, its run is refused. The
+  run. The fixer that runs is the commit's: the backbone runs the runner the
+  clone registers, which picks a shipped fixer's definition there, so this
+  needs the backbone this release ships. Where your project keeps its
+  deployed agents out of git, the run is refused. The
   command copies each fixer's workspace
   into the queue with the guards of the backbone's copy, and sets its files
   aside where they hold a link or a special file, or where the fixer wrote

@@ -8,6 +8,9 @@
 - the run reaches the harness through the claude-code adapter's runner: the
   closed set of flags, the brief on standard input, the folder, and none of the
   backbone's run variables;
+- a run whose folder is a project's root, such as a clone at a commit, runs the
+  runner that project registers, so a shipped agent's definition is that
+  project's;
 - the runner's answer is read strictly: another version, a finished run with no
   exit, or a runner that exits without an answer is a run with no answer, and
   one that cannot start did not start;
@@ -402,6 +405,65 @@ def test_the_harness_exit_is_the_runs(
     run = run_agent(root, _request(root))
     assert (run.ending, run.exit_code) == (agent_runs.FINISHED, 3)
     assert not run.succeeded
+
+
+# A project's definition of an agent it ships, in the methodology's shape, whose
+# instructions say whose definition it is.
+_SHIPPED_AGENT = """---
+name: {name}
+description: A fixer of pages.
+tools: [Read, Grep, Glob]
+---
+
+{says}
+"""
+
+
+def _ship_agent(root: Path, name: str, says: str) -> None:
+    source = root / ".pkit" / "agents" / "project" / name / f"{name}.md"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(_SHIPPED_AGENT.format(name=name, says=says), encoding="utf-8")
+
+
+def _passed_instructions(record: Path) -> str:
+    """The instructions of the definition the runner passed the harness, as the
+    deploy resolves them: the file's, then what the overlay adds."""
+    argv = json.loads(record.read_text(encoding="utf-8"))["argv"]
+    [definition] = json.loads(argv[argv.index("--agents") + 1]).values()
+    return definition["prompt"]
+
+
+def test_a_run_in_a_clone_runs_the_clones_definition_of_a_shipped_agent(
+    make_adopter_repo: MakeAdopterRepo,
+    harness_bin: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A drift command's watched fixer runs in a clone at the pinned commit, and
+    the definition that runs is the commit's, never an edit in the person's
+    checkout that has not merged (DEC-056 point 3). So the backbone runs the
+    runner the clone registers, from the clone's root, which picks and checks
+    the definition there, as a confined run's does (ADR-066 point 3). A review's
+    run, in the person's checkout, keeps the checkout's."""
+    fixer = "page-fixer"
+    checkout = make_adopter_repo(root=tmp_path / "checkout").root
+    clone = make_adopter_repo(root=tmp_path / "clone", chdir=False).root
+    at_commit, unmerged = "The commit's instructions.", "The checkout's instructions."
+    _ship_agent(checkout, fixer, unmerged)
+    _ship_agent(clone, fixer, at_commit)
+    _script(harness_bin / "claude", _RECORDING_HARNESS)
+    record = tmp_path / "record.json"
+    monkeypatch.setenv("HARNESS_RECORD", str(record))
+
+    run = run_agent(checkout, _request(clone, agent=fixer))
+    assert (run.ending, run.exit_code) == (agent_runs.FINISHED, 0), run.reason
+    passed = _passed_instructions(record)
+    assert passed.lstrip().startswith(at_commit) and unmerged not in passed
+
+    run = run_agent(checkout, _request(checkout, agent=fixer))
+    assert (run.ending, run.exit_code) == (agent_runs.FINISHED, 0), run.reason
+    passed = _passed_instructions(record)
+    assert passed.lstrip().startswith(unmerged) and at_commit not in passed
 
 
 # --- reading the runner's answer -------------------------------------------------

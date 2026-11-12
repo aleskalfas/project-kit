@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit agents run --folder <dir>`, where `<dir>` is a project's root, holding
+  `.pkit/manifest.yaml`, runs the runner that project's adapter registers, from
+  `<dir>`, rather than the runner of the project you run it in. So a drift
+  command's watched fixer, which runs in a clone of the default branch's
+  commit, gets that commit's definition of a shipped agent, and never an edit
+  in your checkout that has not merged (project-management DEC-056 point 3). A
+  run in your checkout, or in a folder that is no project's root, takes your
+  checkout's runner, as before. The CLI, adapters and lifecycle references say
+  so.
