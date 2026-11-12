@@ -30,7 +30,7 @@ pkit:
         - .pkit/lifecycle/capability_records.py
         - src/project_kit/agent_definitions.py
         - .pkit/rules/core.md
-      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-041, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, COR-073, ADR-051, ADR-052, "ADR-065#11", ADR-085, ADR-086, ADR-087, ADR-088]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-041, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, COR-073, COR-074, ADR-051, ADR-052, "ADR-065#11", ADR-085, ADR-086, ADR-087, ADR-088]
       artefact:
         - .pkit/agents/hooks.md#
         - .pkit/agents/storyboards.md#
@@ -537,9 +537,10 @@ Each adapter handles its own deploy (COR-005), and future adapters for other har
 
    So a check can say whether the copy that runs is of the current text.
 
-What it reports, a line for each definition, such as `created`, `updated`, `exists`, `skipped`, `removed` or `warning`:
+What it reports, a line for each definition, such as `created`, `updated`, `exists`, `skipped`, `removed`, `warning` or `suspended`:
 
-- **A file without the mark** at the copy's path is never written over, and is reported `skipped`. It is the project's own, or a copy from before the mark, and the harness may run it in the agent's place. To have the deploy write its own, delete the file and deploy again.
+- **A file without the mark** at the copy's path is never written over, and is reported `skipped`. It is the project's own, or a copy from before the mark, and the harness may run it in the agent's place. It keeps out each shipped definition of its name, which a `suspended` line names (below). To have the deploy write its own, delete the file and deploy again.
+- **A suspension** is named on each run, by a `suspended` line for each shipped definition a file of the project's keeps out ([COR-074](../decisions/core/COR-074-suspensions-named.md)). The line names both files, and the run ends with their count, as a report, not a warning. The project's file is its own definition of that name, which is the agent whether it deploys or is refused. A shipped definition the picker does not count, such as one the project skipped, is not named.
 - **A marked copy that is not the agent's** is removed, and named. To keep one, delete its mark line, and it reads as the project's. A marked copy is not the agent's where any of these holds:
   - it was written from another definition than the agent's
   - its name has no agent
