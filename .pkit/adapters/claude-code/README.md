@@ -20,7 +20,7 @@ pkit:
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/cli/install-pkit.sh
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks, working-run-probe]
@@ -105,6 +105,18 @@ Walks `.pkit/skills/{core,project}/` and creates relative symlinks at `.claude/s
 
 **Capability skills: registered capabilities only.** A capability's `skills/` folder deploys when the capability is registered in `.pkit/manifest.yaml`, not because its directory sits under `.pkit/capabilities/` — a capability unregistered in place (an incubated one, or one in the methodology's source repository) keeps its subtree on disk, and its skills must stop deploying all the same. On a name collision the project's skill wins, then core's, then a registered capability's (the first by name).
 
+**A suspension is named on each run** ([COR-074](../../decisions/core/COR-074-suspensions-named.md)). Where a file of the project's keeps out a skill that core or a registered capability ships, the run prints a `suspended` line for each shipped file it leaves out:
+
+```
+  suspended  .pkit/skills/core/decision-author.md (replaced by .pkit/skills/project/decision-author.md)
+  suspended  .pkit/skills/core/release-notes.md (replaced by .claude/skills/release-notes/SKILL.md, a file the deploy did not make)
+```
+
+- **A file the deploy did not make** at `.claude/skills/<name>/SKILL.md` keeps a shipped skill out too, and takes the same line, as the second shows. It is no suspension, since that place is the deploy's.
+- **The count:** the run ends with a note of how many shipped skills it suspended, and how to deploy one again.
+- **A report, not a warning:** the line asks for no mend, and the run still exits 0.
+- **Not a suspension:** core's skill over a capability's, which leaves out no file of the project's.
+
 **Stale removal.** Each run removes a deployed skill whose name no longer resolves — its source gone, or its capability no longer registered — so the deploy after an unregister drops that capability's skills. It also removes a deployed sub-procedure link the winning source no longer has. Only the deploy's own entries are removed — symlinks into `.pkit/skills/` or `.pkit/capabilities/`; a real file or directory, or a symlink pointing elsewhere, is adopter content and is left alone.
 
 A listed skill whose canonical file doesn't resolve — most commonly a composite skill folder mid-build (per COR-020): sub-procedures present but no `<name>/<name>.md` dispatcher yet — is **skipped loudly** (a `skipped` status line naming the skill and defect, plus a remediation hint), not treated as fatal. The rest of the skills deploy and the run exits 0 with an end-of-run summary. This is deliberate: one half-built incubated skill must never abort a whole-project `pkit sync`/`upgrade`. `deploy-agents.sh` applies the same degrade-loudly discipline to an agent folder with no canonical `<name>/<name>.md` (and to an overlay category left undefined in a **hard** channel — `owns`/`needs`/`answers`/`reads.paths`/`reads.records`; a category referenced *only* via `reads.patterns` is an optional read per [ADR-052](../../../tech-docs/architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md), whose absence drops the item and still deploys the agent; a *bare* optional key — present with no value — deploys the same way but prints a `warning` status line naming it).
@@ -114,6 +126,8 @@ A listed skill whose canonical file doesn't resolve — most commonly a composit
 Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.md` — copies, not symlinks, because the source carries overlay placeholders the deploy substitutes (the agents README, "Deploy mechanics"). `_resolve_agent.py` resolves one agent: it substitutes the `<category>` placeholders from `.pkit/agents/project/overlay.yaml` and carries the agent's execution policy into the deployed front matter. The resolver ends the agent's body with the workspace sentence (*The agent workspace* below).
 
 **Which definition is the agent** ([ADR-087](../../../tech-docs/architecture/decisions/ADR-087-agent-definition-picker.md)). The deploy keeps no order of its own. The resolver's `--plan` entry asks the agents area's picker, `.pkit/agents/definition_source.py`, which definition of each name is the agent, and the deploy writes that one: the project's, else an installed capability's, the one the project chose, else the first by name in code-point order, else core's. The agents README, "Name-collision precedence", states the rules.
+
+**A suspension is named on each run** ([COR-074](../../decisions/core/COR-074-suspensions-named.md)). Where a file of the project's keeps out a definition that core or an installed capability ships, each run prints a `suspended` line naming both files, and a closing count, as `deploy-skills.sh` does. The project's file is its own definition of that name, which is the agent whether the deploy writes it or refuses it. A `.claude/agents/<name>.md` without the deploy's mark keeps a shipped definition out too, and takes the same line. The deploy reads the shipped files from the resolver's plan, whose `definition` lines name each file of each definition that counts, so one the picker does not count, such as a capability's the project skipped, is not named.
 
 **The mark.** Each copy's front matter opens with the deploy's mark line, then the definition the copy was written from (`# pkit-definition:`), the digest of the text read (`# pkit-digest:`) and the tool access read from it (`# pkit-tool-access:`). The deploy removes every marked copy that is not the agent's: one written from another definition, or of a name with no agent or that no place ships. So once a capability is unregistered, the next deploy removes its copies and writes the definition that now wins for each name. A name whose records the picker cannot read is told in an `error` line, and the deploy writes and removes nothing for it, and still exits 0, so the lifecycle command goes on and `pkit validate` holds the error. A file without the mark is never written over; where it takes a name a place ships, the harness may run it in the agent's place, and the run says so.
 

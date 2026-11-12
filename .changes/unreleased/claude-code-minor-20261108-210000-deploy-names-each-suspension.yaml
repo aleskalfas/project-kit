@@ -1,0 +1,16 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The skills and agents deploys now name each suspension they apply (COR-074,
+  #2464). Where a file of your project's keeps out a skill or an agent
+  definition that core or a capability ships, every sync, upgrade and install
+  prints a `suspended` line naming the shipped file and yours, such as
+  `suspended  .pkit/skills/core/decision-author.md (replaced by
+  .pkit/skills/project/decision-author.md)`, and ends with how many it left
+  out. Your file is your own skill or agent of that name, or a file the deploy
+  did not make at its place under `.claude/`. So a core skill a release adds
+  under a name you already use is no longer kept out unseen. The line is a
+  report, not a warning: the run still exits 0, and nothing else it deploys
+  changes.

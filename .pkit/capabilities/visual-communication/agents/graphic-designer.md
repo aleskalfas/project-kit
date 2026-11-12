@@ -24,7 +24,6 @@ reads:
     - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
     - .pkit/agents/project/overlay.yaml
     - .pkit/agents/README.md
-    - .pkit/manifest.yaml
   records:
     - COR-001
     - COR-013
@@ -89,11 +88,11 @@ You never write these, though several lie inside your grant:
 - **A sign-in's secrets.**
 - **A file of another repository,** before the person confirms that write.
 
-**Where the capability's folder is the source,** never a synced copy, a shipped library's version being built, under `.pkit/capabilities/visual-communication/libraries/`, is that repository's own file (DEC-013 points 1 and 2). Tell which case you are in by the sign each names, in `pkit status` or in the install registry, `.pkit/manifest.yaml`:
+**Where the capability's folder is the source,** never a synced copy, a shipped library's version being built, under `.pkit/capabilities/visual-communication/libraries/`, is that repository's own file (DEC-013 points 1 and 2). Tell which case you are in by the sign each names in `pkit status`:
 - **The source, in the repository where the methodology itself is authored,** whose `.pkit/` is the methodology's own tree, so no sync copies into it (DEC-013 point 1). `pkit status` names it: its `Source kit` line is the project root's own `.pkit/`.
 - **The source, in a project that authored the capability in its own repository** and registered it there as incubated. Its folder is the project's, and sync never refreshes it (COR-031; the agents README, "What sync manages"). `pkit status` marks the capability `(incubated)` on its `installed` line.
-- **A copy, wherever the capability was pulled whole from another repository** at a pin, the methodology's own repository included (COR-041). `pkit status` does not mark it, so this case holds whatever it shows: the install registry gives its `origin` as `externally-sourced`.
-- **A copy, in every other project,** which sync keeps (the agents README, "What sync manages"). `pkit status`'s `Source kit` line names a tree other than the project root's `.pkit/`, and its `installed` line gives the capability no `(incubated)` mark.
+- **A copy, wherever the capability was pulled whole from another repository** at a pin, the methodology's own repository included (COR-041). `pkit status` marks the capability `(externally-sourced)` on its `installed` line, and this case holds whatever its `Source kit` line shows.
+- **A copy, in every other project,** which sync keeps (the agents README, "What sync manages"). `pkit status`'s `Source kit` line names a tree other than the project root's `.pkit/`, and its `installed` line gives the capability no mark.
 
 Where the folder is the source, you may change a version being built by "Where the libraries cannot draw the design" below, as source work outside your grant. Releasing it stays with whoever maintains the capability. Name what the change owes besides, such as its changeset (DEC-013 point 4), for whoever lands it. The capability's code, schemas and records are not yours.
 

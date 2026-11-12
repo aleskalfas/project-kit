@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit status` marks an installed capability pulled whole from another
+  repository `(externally-sourced)`, beside the `(incubated)` mark it gives one
+  the project authored, and `pkit capabilities list` names that origin in its
+  `origin` column, where it said `kit-shipped` (#3066). So each tells, with no
+  look at `.pkit/manifest.yaml`, whether a capability's folder is a copy or its
+  source (COR-031, COR-041). A kit-shipped and an incubated capability show as
+  before.

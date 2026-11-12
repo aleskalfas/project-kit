@@ -14,6 +14,7 @@ from project_kit import capabilities as caps
 from project_kit import install as install_mod
 from project_kit.cli import main
 from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     ComponentManifest,
@@ -4081,6 +4082,31 @@ def test_cli_list_shows_incubated_origin(kit_target: Path, kit_source: Path, mon
     assert result.exit_code == 0, result.output
     assert "homegrown" in result.output
     assert "incubated" in result.output
+
+
+def test_cli_list_marks_each_installed_capability_by_its_origin(
+    kit_target: Path, kit_source: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`capabilities list` marks an installed capability as `pkit status` does, and names
+    a kit-shipped one: one pulled from another repository is `externally-sourced`, never
+    `kit-shipped` (COR-041). One only available has no origin."""
+    _stage_capability_in_source(kit_source, "offered")
+    for name, origin in (
+        ("fetched", ORIGIN_EXTERNALLY_SOURCED),
+        ("mine", ORIGIN_INCUBATED_IN_REPO),
+        ("shipped", ORIGIN_KIT_SHIPPED),
+    ):
+        caps._register_in_backbone_manifest(kit_target, name, origin=origin)
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "list"])
+    assert result.exit_code == 0, result.output
+    rows = [line.split() for line in result.output.splitlines()]
+    assert ["fetched", "installed", "externally-sourced"] in rows
+    assert ["mine", "installed", "incubated"] in rows
+    assert ["shipped", "installed", "kit-shipped"] in rows
+    assert ["offered"] in rows
 
 
 def test_register_then_sync_leaves_incubated_capability_untouched(
