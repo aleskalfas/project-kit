@@ -20,6 +20,12 @@ read is kept apart (`unread`): content that names either takes its colour family
 named none, and no finding of its own, since the fault lies in the notation. A concept
 whose sign cannot be read keeps its colour family, and has no sign.
 
+The checks of signs read two more findings in it (DEC-036 point 8). An icon that is no
+closed outline within its square fails, and the concept keeps it as its sign, since it
+draws. A concept that maps no sign, neither an icon nor a shape, asks the notation's owner
+for attention, and never fails: a piece then tells it apart by its colour alone. A shape is
+judged where the foundations declare it.
+
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
 
@@ -30,9 +36,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from _lib.files import FileError, read_bound
-from _lib.findings import FAILS, Finding
+from _lib.findings import ATTENTION, FAILS, Finding
 from _lib.names import is_name
-from _lib.outlines import Outline, read_outline
+from _lib.outlines import CLOSE_IT, SIGN_OUTLINE, Outline, read_outline
 from _lib.reading import ReadError
 
 #: The kind of library a notation is.
@@ -43,6 +49,9 @@ FILE = "notation.yaml"
 
 #: What a concept maps to in format 1: its colour family, and its icon or a shape.
 CONCEPT_KEYS = frozenset({"colour", "icon", "shape"})
+
+#: The call for attention on a concept that maps no sign (DEC-036 point 8).
+CONCEPT_UNSIGNED = "concept-unsigned"
 
 
 @dataclass(frozen=True)
@@ -95,8 +104,11 @@ def read_notation(
     name, label = folder.parent.name, f"{folder.parent.name}@{folder.name}"
     shown = folder.relative_to(root).as_posix() + "/" if root is not None else ""
 
-    def finding(code: str, message: str, file: str, where: str = "") -> Finding:
-        return Finding(code, FAILS, message, file=f"{shown}{file}", where=where, library=label)
+    def finding(
+        code: str, message: str, file: str, where: str = "", level: str = FAILS, **more: str
+    ) -> Finding:
+        file = f"{shown}{file}"
+        return Finding(code, level, message, file=file, where=where, library=label, **more)
 
     def unreadable(code: str, message: str, file: str, where: str = "") -> Notation:
         found = finding(code, message, file, where)
@@ -134,11 +146,26 @@ def read_notation(
             continue
         concepts[concept] = spec["colour"]
         sign = _sign(concept, spec, shapes)
+        key = "icon" if "icon" in spec else "shape"
         if isinstance(sign, Outline):
             signs[concept] = sign
+            fault = sign.fault() if key == "icon" else None  # a shape, in the foundations
+            if fault is not None:
+                message = f"the icon of the concept `{concept}` {fault}"
+                where = f"concepts.{concept}.icon"
+                found.append(finding(SIGN_OUTLINE, message, FILE, where, fix=CLOSE_IT))
         elif sign is not None:
-            key = "icon" if "icon" in spec else "shape"
             found.append(finding("concept-shape", sign, FILE, f"concepts.{concept}.{key}"))
+        else:
+            message = (
+                f"the concept `{concept}` maps no sign, neither an `icon` nor a `shape`, so a "
+                "piece tells it apart by its colour alone"
+            )
+            fix = "give the concept an `icon`, or map it to a `shape` the foundations declare"
+            who = f"the owner of `{name}`"
+            where = f"concepts.{concept}"
+            unsigned = finding(CONCEPT_UNSIGNED, message, FILE, where, ATTENTION, fix=fix, who=who)
+            found.append(unsigned)
     return Notation(name, label, concepts, frozenset(unread), findings=tuple(found), signs=signs)
 
 

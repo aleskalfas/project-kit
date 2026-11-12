@@ -183,7 +183,7 @@ from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS, LibraryError, read_library
 from _lib.names import COMPONENT, is_name, is_segment, is_token_path
-from _lib.outlines import Outline, read_outline
+from _lib.outlines import CLOSE_IT, SIGN_OUTLINE, Outline, read_outline
 from _lib.reading import ReadError, read_json, read_yaml
 
 #: The capability's extension key in DTCG files (DEC-004 point 1).
@@ -362,8 +362,9 @@ class Declarations:
     - `tokens`: the component tokens its components declare, by token path (DEC-035
       points 1 and 2), the foundations' components among them.
     - `findings`: what is wrong in a library's own roles, or in its components' tokens,
-      that leaves the rest usable. The foundations' declarations hold only the findings
-      of their components' tokens: what is wrong in their `roles.yaml` refuses them.
+      that leaves the rest usable. The foundations' declarations hold only a shape that
+      is no closed outline within its square, and the findings of their components'
+      tokens: anything else wrong in their `roles.yaml` refuses them.
     """
 
     roles: dict[str, Role]
@@ -396,7 +397,9 @@ class Declarations:
 def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Declarations:
     """The foundations' declarations in the `roles.yaml` at `path`. `library` is
     `<name>@<version>` of the library they lie in, and `shown` the file's path as findings
-    name it. Raises TokenError."""
+    name it. Raises TokenError. A shape that is no closed outline within its square is a
+    finding they hold, which refuses nothing, since the shape still draws (DEC-036 point
+    8)."""
     file = shown or path.as_posix()
     problems = _Problems(file, library)
     try:
@@ -410,6 +413,14 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
     pairs = _read_pairs(data.get("pairs", []), roles, problems)
     if problems.found:
         raise TokenError(problems.found)
+    unclosed = tuple(
+        replace(
+            problems.finding(SIGN_OUTLINE, f"the shape `{name}` {fault}", f"shapes.{name}"),
+            fix=CLOSE_IT,
+        )
+        for name, shape in shapes.items()
+        if (fault := shape.fault()) is not None
+    )
     return Declarations(
         roles=roles,
         axes=axes,
@@ -418,6 +429,7 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
         shapes=shapes,
         label=library,
         file=file,
+        findings=unclosed,
     )
 
 
@@ -1099,7 +1111,9 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
         tokens, problems = read_component_tokens(
             folders[FOUNDATIONS], name=FOUNDATIONS, library=label, root=root
         )
-        foundations = replace(foundations, tokens=tokens, findings=problems)
+        foundations = replace(
+            foundations, tokens=tokens, findings=(*foundations.findings, *problems)
+        )
     own = []
     for name, folder in sorted(folders.items()):
         if name == FOUNDATIONS:

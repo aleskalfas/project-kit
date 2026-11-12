@@ -221,7 +221,9 @@ def test_a_concept_s_sign_is_its_icon_else_its_shape_and_none_where_it_maps_neit
         plain={"colour": "blue"},
     )
 
-    assert read.findings == ()
+    assert [(f.code, f.level, f.where) for f in read.findings] == [
+        ("concept-unsigned", "attention", "concepts.plain")
+    ]
     ring = outlines.read_outline(RING)
     assert read.sign("user") == ring
     assert read.sign("store") == DECLARED["square"]

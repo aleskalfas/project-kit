@@ -2841,7 +2841,9 @@ class TextRun:
     chooses, the concept it names, its colour family, and where each comes from: its
     text, its word and its family. `place` is its key path in the content file, where it
     has one, else its text's trace. `outline` is the sign of the concept it names, where
-    the piece's notations hold the concept and give it one (DEC-036 point 3)."""
+    the piece's notations hold the concept and give it one (DEC-036 point 3).
+    `own_family` says it takes its family from that concept, where no state replaces it
+    (DEC-012 point 3)."""
 
     text: str
     word: str | None
@@ -2853,6 +2855,7 @@ class TextRun:
     word_source: str
     place: str
     outline: Outline | None = None
+    own_family: bool = False
 
 
 @dataclass
@@ -3022,8 +3025,12 @@ class Instance:
             self._read_options()
         # The concept whose colour family it takes, by its name, and where it comes from: its
         # own, or the one of the instance it sits in where it takes its family from that.
+        # `named_by` is the instance that names that concept, and `coloured_by` the one
+        # whose concept gives it its family where no state replaces it (DEC-036 point 8).
         self.concept: str | None = None
         self.concept_source = ""
+        self.named_by: Instance | None = None
+        self.coloured_by: Instance | None = None
         self.family, self.family_source = self._colour(place_colour)
         self._read_overrides()
         for name, each in component.parts.items():
@@ -3143,11 +3150,12 @@ class Instance:
         """The instance's colour family (DEC-001 point 6): its concept's, else its place's
         default in a list, else its component's, else its container's; then its state's.
         Sets the concept it takes its family from, which its state leaves (DEC-036 point
-        2)."""
+        2), and the instances that name that concept and colour it."""
         concept = self._concept()
         if concept is not None:
             family, source = concept, self.source_of_field("concept")
             self.concept, self.concept_source = self.given["concept"], source
+            self.named_by = self.coloured_by = self
         elif place is not None:
             family, source = place
         elif self.component.colour:
@@ -3155,6 +3163,7 @@ class Instance:
         elif self.parent is not None:
             family, source = self.parent.family, self.parent.family_source
             self.concept, self.concept_source = self.parent.concept, self.parent.concept_source
+            self.named_by, self.coloured_by = self.parent.named_by, self.parent.coloured_by
         else:
             family, source = None, ""
         state = self.given.get("state")
@@ -3167,6 +3176,7 @@ class Instance:
                 )
             elif self.component.states[state]:
                 family, source = self.component.states[state], self.source_of_field("state")
+                self.coloured_by = None
         return family, source
 
     def _concept(self) -> str | None:
@@ -3425,17 +3435,17 @@ class Instance:
             at = f"{path}#{place}" if path is not None else trace
         word_source = f"{source}.style" if named else f"default:{self.component.use}"
         family, family_source = self.family, self.family_source
-        outline = None
+        outline, own = None, False
         if concept is not None:
             found = self._run_concept(content, concept, at, trace)
             state = self.given.get("state")
             stated = isinstance(state, str) and bool(self.component.states.get(state))
             if found is not None and not stated:
-                family, family_source = found, f"{source}.concept"
+                family, family_source, own = found, f"{source}.concept", True
             if found is not None:
                 outline = self.ctx.sign(concept)  # a state changes the paint, never the sign
         return TextRun(
-            text, word, style, concept, family, family_source, source, word_source, at, outline
+            text, word, style, concept, family, family_source, source, word_source, at, outline, own
         )
 
     def _run_concept(self, content: str, raw: Any, at: str, trace: str) -> str | None:
@@ -4805,6 +4815,17 @@ class Instance:
             raise self._fail("no-colour", message, where)
         return members[member], family_source or source
 
+    def from_family(self, name: str, prop: str, run: TextRun | None = None) -> bool:
+        """Whether the part `name` paints `prop` from a colour family, a text's for `run`
+        by the run's word: by `:colour.<member>`, where no `override` points the part at a
+        role (DEC-001 point 6, DEC-012 point 3)."""
+        part = self.nodes[name].part
+        if name in self.overrides and OVERRIDDEN.get(part.kind) == prop:
+            return False
+        word = run.word if run is not None else None
+        _, value, _ = self.pick(f"parts.{name}.{part.kind}.{prop}", part.props.get(prop), word)
+        return isinstance(value, str) and value.startswith(FAMILY)
+
     def unpainted(self, name: str, run: TextRun) -> str | None:
         """Why a run that names a concept shows it in no colour, where it does: the
         `override` its part is pointed by, or its style, which its part paints with a role
@@ -4814,9 +4835,7 @@ class Instance:
             return None
         if name in self.overrides:
             return f"the `override` of its part `{name}`"
-        part = self.nodes[name].part
-        _, value, _ = self.pick(f"parts.{name}.text.fill", part.props.get("fill"), run.word)
-        if isinstance(value, str) and value.startswith(FAMILY):
+        if self.from_family(name, "fill", run):
             return None
         return f"its style `{run.word}`" if run.word is not None else "its part's paint"
 
