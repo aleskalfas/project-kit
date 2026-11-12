@@ -102,6 +102,7 @@ pkit:
         - visual-communication:DEC-035#5
         - visual-communication:DEC-036#1
         - visual-communication:DEC-036#2
+        - visual-communication:DEC-036#3
         - visual-communication:DEC-036#5
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
@@ -224,7 +225,7 @@ A *field of runs* is a field of text whose content may give it as *runs*: spans 
 
 - **The mark** `x-pkit-runs` lists the words of the field's *run styles*, such as `[command, prompt, comment]`. Each word is a name, never `by`, and appears once. The first is the default: a run that names no style takes it, and so does a field given as text. Another field may declare other words.
 - **Only on a field of text.** The mark lies on one of the component's own fields, or on a slot of a layout that is a page's form ([Layouts](#layouts)), never on a schema within a field, such as a list's items, nor on the schema of all the fields. No `$ref` leads to a marked schema. The field's `type` is `string` and no other, and it holds no `enum`, `const` or `$ref`.
-- **Shown by a text part alone.** A text part of the component shows the field, and a `when` may read whether it is filled. No other part reads it: no `slot` places it, no `image` names it, and no `use` part passes it on, for now. At least one text part of a field of more than one word chooses its role, its paint or both by the words ([Switches](#switches)).
+- **Shown by a text part alone.** A text part of the component shows the field, and a `when` may read whether it is filled. No other part reads it: no `slot` places it, no `image` names it, and no `use` part passes it on, for now. At least one text part of a field of more than one word chooses by the words its role, its paint, whether a run draws its sign, its ground, or several of these ([Switches](#switches)).
 
 ### Options
 
@@ -348,7 +349,7 @@ values:
 - **The default is named, and takes what is left out.** The switch names `page`, the default, and `part` takes that branch where the switch leaves it out.
 - **What is refused,** at any depth: a switch on `:as` in a component that is no drawing of a layout, a branch that is no value of it, and a switch with no branch for `page`.
 
-**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. A brand's drawing need not, and its switch may leave a word out, as a switch on an option may. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
+**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style`, `fill`, `sign` and `ground` take one: each run of the text then takes the typography role, the paint, the sign and the ground its style chooses (DEC-012 point 2, DEC-036 point 3). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. A brand's drawing need not, and its switch may leave a word out, as a switch on an option may. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
 
 ```yaml
 fields:
@@ -362,6 +363,18 @@ parts:
       style: {by: line, command: type.heading, prompt: type.body, comment: type.body}
       fill: {by: line, command: text-primary, prompt: accent, comment: text-secondary}
     width: "=:width"
+```
+
+A text that names the services of a system, each in its concept's colour on its family's fill, with its sign before it:
+
+```yaml
+says:
+  text:
+    content: says
+    style: type.body
+    fill: {by: says, plain: text-primary, named: ":colour.text"}
+    sign: {by: says, plain: false, named: true}
+    ground: {by: says, plain: null, named: ":colour.fill"}
 ```
 
 ### Lists
@@ -601,13 +614,13 @@ A primitive's properties lie in its own mapping, under SVG's names.
 |---|---|---|
 | `box` | `fill`, `stroke`, `stroke-width`, `rx` | a rectangle in its frame |
 | `ellipse` | `fill`, `stroke`, `stroke-width` | an ellipse in its frame |
-| `text` | `content` or `fact` (one of the two required), `style` (required), `fill`, `text-anchor` | the text of a field or of a fact of its export, in lines, each run in its own role and paint |
+| `text` | `content` or `fact` (one of the two required), `style` (required), `fill`, `sign`, `ground`, `text-anchor` | the text of a field or of a fact of its export, in lines, each run in its own role and paint, with its sign and its ground |
 | `line` | `stroke` (required), `stroke-width`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends |
 | `image` | `produced`, `content`, `file` or `role` (exactly one required) | the picture of a produced output of the piece, a picture file, or the file the brand gives a picture role |
 | `sign` | `fill`, `stroke`, `stroke-width` | the sign of the concept whose colour family its instance takes |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
-- **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
+- **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Such a text alone takes `sign` and `ground`, each a value or a switch on the run styles (DEC-036 point 3). `sign`, `true` or `false`, the default, says whether a run that names a concept with a sign draws it before its text, in the run's paint. `ground`, a paint or `null`, the default, paints a ground behind the run, and is the fill the run is measured against. A text that takes neither draws every run as before. Their lengths come from the foundations' roles `space.sign-gap`, `space.ground-room` and `space.ground-corner` ([The foundations](files.md#the-foundations)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them. A connector's frame holds every point of its route.
 - **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke.
 - **An image** names exactly one of four properties, each a source of its picture (DEC-025 point 1):
@@ -797,8 +810,8 @@ A `path`, which a sign part draws, adds these (DEC-036 point 1):
 A `text` adds the rest of what [Text](#text) describes:
 
 - **The text's own:** `text-anchor`, `line-height`, the greatest among the typography roles its runs take, `text`, its runs' texts joined, and `measured-height`, the number of its lines times its line height, with `overflow: true` where it overflows.
-- **`paragraphs`:** the text split at its line feeds, each paragraph a list of its runs' parts. A run that goes on past a line feed is a run of each paragraph it reaches. Each holds its `text`, its paint `fill`, its typography role `style`, its `font-family`, `font-size` and `font-weight`, the `fonts` that measured it, each family's file and its sha256, how it was `measured`, and the `sources` of each. A text of one run holds one run in each paragraph.
-- **`lines`:** each line's `text`, its drawn `width`, its `baseline` below the line's top, its `paragraph`, from 0, and its `spans`, each the part of one run on it: the run's place among its paragraph's runs, from 0, its text and its width.
+- **`paragraphs`:** the text split at its line feeds, each paragraph a list of its runs' parts. A run that goes on past a line feed is a run of each paragraph it reaches. Each holds its `text`, its paint `fill`, `sign: true` where it draws its concept's sign, its `ground`, a role, where it takes one, its typography role `style`, its `font-family`, `font-size` and `font-weight`, the `fonts` that measured it, each family's file and its sha256, how it was `measured`, and the `sources` of each. A text of one run holds one run in each paragraph.
+- **`lines`:** each line's `text`, its drawn `width`, its `baseline` below the line's top, its `paragraph`, from 0, and its `spans`, each the part of one run on it: the run's place among its paragraph's runs, from 0, its text and its width. A span before which the run's sign lies holds `sign`: its concept's outline as `d`, mapped into a square as wide as the run's font size, its `fill-rule`, that `size`, its `top` below the line's top, and the `gap` after it. A span the run's ground lies behind holds `ground`: its `top` below the line's top and its `height`, which hold the span's letters and its sign, its corners' `rx`, and the room at its `start` or its `end` where the ground starts or ends on that span. The line's `width` holds the signs, their gaps and the grounds' room beside its spans' widths.
 
 An `image` adds `preserveAspectRatio` (`xMidYMid meet`), and what it shows (DEC-025 point 7):
 
@@ -856,7 +869,7 @@ Each drawn property names its source in `sources`:
 - **Several families.** The first family measures each character it has, the next the rest, and so on.
 - **One file a family.** A family's one file measures the text, whatever its weight. A brand that gives a weight a family of its own, as the test brand's heading is, has that weight measured and drawn from its own file.
 - **Refused before layout.** A family with no committed file, a file the engine cannot measure from, or a character no family measures refuses the scene. The message names it.
-- **Shaped from the file.** Each piece of a run in one family is shaped with HarfBuzz, with the font's default features. A line's width is the sum of its advances, each at its own run's font size. Spaces at its end do not count.
+- **Shaped from the file.** Each piece of a run in one family is shaped with HarfBuzz, with the font's default features. A line's width is the sum of its advances, each at its own run's font size, and of the signs, their gaps and the grounds' room it holds. Spaces at its end do not count.
 - **The line height** is the font size times `lineHeight`. A text takes the greatest line height among the roles its runs take, so its lines lie evenly, and **the measured height** is the number of lines times that line height.
 - **The baseline** of each line lies below the line's top. Where the line's runs take one role, the space above and below its letters is split evenly, from the first family's metrics, as a text of one run is placed. Where they take several, it is split evenly around the greatest ascent and the greatest descent among their first families, so the line's runs stand on one baseline.
 
@@ -865,6 +878,8 @@ Each drawn property names its source in `sources`:
 - **Paragraphs.** The text is split into paragraphs at its line feeds. A run whose text holds a line feed goes on into the next paragraph. With no width, each paragraph is one line.
 - **A width:** the engine breaks each paragraph where Unicode's line-breaking rules (UAX #14) allow it and the language's own rules do not forbid it. It fills each line with as much as fits in the width less 2 % of the font size, and places the line in the whole width. So a renderer's slightly different metrics move no word. A text of several runs takes the margin at the greatest font size among the roles its runs take (DEC-005 point 4, DEC-012 point 4).
 - **Across runs.** The engine finds where a paragraph may break in its whole text, whichever runs hold it, and measures each part of a line in its own run's role. So a word whose letters lie in two runs stays one word.
+- **A run's sign** is a square as wide as the run's font size, centred on its letters, with the gap `space.sign-gap` gives after it. It lies before the run's first character that is no space or line feed, on that character's line, and the engine measures it within the line with that character, so no line breaks between the two (DEC-036 point 3). Runs next to each other in one paragraph that name one concept and draw its sign draw one sign, before the first.
+- **A run's ground** lies behind each piece of the run on each line it spans, its sign included, and leaves out the spaces at the run's two ends. Where it starts and where it ends, it takes the room `space.ground-room` gives within the line, and corners of the radius `space.ground-corner` gives. Where a line breaks it, it is square. Runs next to each other in one paragraph that take one ground take it once, with room at its two ends alone.
 - **The language's rules** are read by the primary subtag of the scene's language. In Czech, `cs`, a one-letter word never ends a line: it moves to the next line with the word after it, whichever runs hold them. Other languages follow Unicode's rules alone.
 - **A word wider than its line** may break after a `/` in it. A word still wider stays whole, and the text overflows: it holds `overflow: true`, and the check reports it.
 - **Never shrunk.** The engine never makes text smaller to fit, and never hyphenates.
