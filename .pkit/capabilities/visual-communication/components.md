@@ -14,6 +14,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
@@ -57,6 +58,7 @@ pkit:
         - visual-communication:DEC-009#4
         - visual-communication:DEC-009#5
         - visual-communication:DEC-009#6
+        - visual-communication:DEC-009#9
         - visual-communication:DEC-010#1
         - visual-communication:DEC-010#2
         - visual-communication:DEC-010#3
@@ -72,6 +74,7 @@ pkit:
         - visual-communication:DEC-012#2
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
+        - visual-communication:DEC-014#1
         - visual-communication:DEC-016#5
         - visual-communication:DEC-017#3
         - visual-communication:DEC-021#5
@@ -91,11 +94,15 @@ pkit:
         - visual-communication:DEC-034#6
         - visual-communication:DEC-034#7
         - visual-communication:DEC-034#8
+        - visual-communication:DEC-034#10
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
         - visual-communication:DEC-035#3
         - visual-communication:DEC-035#4
         - visual-communication:DEC-035#5
+        - visual-communication:DEC-036#1
+        - visual-communication:DEC-036#2
+        - visual-communication:DEC-036#5
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -111,6 +118,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#fonts
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
+        - .pkit/capabilities/visual-communication/files.md#signs
 ---
 
 # Components
@@ -241,7 +249,7 @@ An option takes a value from what the component declares, never a free number or
 - **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the `colour` of the `repeat` part that draws it as an item, else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
 - **A run's family.** A run of a field of runs that names a concept takes that concept's family, before its instance's own. A run that names none takes its instance's family. A state with a `colour` replaces the family of each run of the instance too, a run's concept included (DEC-012 point 3).
 - **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to, or, for a run, of the run's family. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
-- **The content's `override: {<part>: <role>}`** points one part's paint at another role, never at a component token: the `fill` of a box, an ellipse or a text, every run of the text included, the `stroke` of a line.
+- **The content's `override: {<part>: <role>}`** points one part's paint at another role, never at a component token: the `fill` of a box, an ellipse, a sign or a text, every run of the text included, the `stroke` of a line.
 - **A run's concept shows** where its paint reads the run's family. A run painted with a role, by its style or by an `override`, shows its concept in no colour, and is reported.
 - **Run styles that read a family** are painted from it only where their text lies on that family's own fill, the starter's included. The foundations promise a family's `text` on its `fill` alone, and declare no member of a family promised on the shared surfaces ([The foundations](files.md#the-foundations)). Elsewhere, the contrast as drawn alone guards the colour a run's concept gives it (*checks*).
 
@@ -277,6 +285,7 @@ parts:
 | `text` | `x y width` | |
 | `line` | `x1 y1 x2 y2`, or `connect` | all four, or `connect` alone |
 | `image` | `x y width height` | `width` |
+| `sign` | `x y width height` | `width height` |
 | `use` | `x y width height fields options` | |
 | `slot` | `x y width height` | |
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
@@ -310,7 +319,7 @@ A text part may show a fact of the export it is drawn for, where it would show a
 
 ### Switches
 
-A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. In a brand's drawing a switch may leave a word of its top's option out: the drawing then does not take that word ([A brand's drawing](#a-brands-drawing)). A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
 
 **A switch on a size,** `{by: ":<axis>", <mode>: <value>, ...}`, chooses by the mode of a size axis. It names the axis after `:`, as a formula reads `:width`. It serves wherever a switch on an option does, and as a `when` ([Parts](#parts)). `tests/steps` could space its steps closer on a phone:
 
@@ -339,7 +348,7 @@ values:
 - **The default is named, and takes what is left out.** The switch names `page`, the default, and `part` takes that branch where the switch leaves it out.
 - **What is refused,** at any depth: a switch on `:as` in a component that is no drawing of a layout, a branch that is no value of it, and a switch with no branch for `page`.
 
-**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
+**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. A brand's drawing need not, and its switch may leave a word out, as a switch on an option may. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
 
 ```yaml
 fields:
@@ -482,11 +491,14 @@ A brand may hold a drawing of its own of a layout of a top, as a component of th
 - **What it holds.** Its `about`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)), and carries no `status` ([A component's file](#a-components-file)).
 - **The sizes it writes** (DEC-034 point 2). A drawing of a page's form writes its page's height alone, `preferred: {height: <formula>}`, as the layout's own drawing does. It must write it where the top asks for no height, and may where the top asks for one, by a formula or through its [physical size](#a-physical-size). It writes no width, since a page gets the top's. A drawing of a top whose one layout is the whole top writes its own `preferred`, whole: the top's parts are that layout's drawing, so the size the top asks for is its drawing's. Where that top declares a physical size, the drawing writes no height: the engine sets it from the width the drawing asks for, in the size's proportion, and a height the drawing writes is refused and not read.
 - **What shows a field is named after it** (DEC-034 point 5). Each field it shows is shown by a part named after the field, and a part named after a field shows that field. A part *shows* a field where it places the field's component, draws its text or the picture it names, or repeats over it. A field shown only through a component it places by `use`, which shows it one level down, breaks the rule.
-- **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).
+- **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. It takes no word that a switch of it leaves out, the default word of an option included, and no run of a field it passes on, so it then takes the field's text alone (DEC-012 point 2). A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).
 - **Where it does not fit,** the top's own drawing draws that instance, whole, in every language and at every key, and the piece states it ([Checks](checks.md)). The engine places the piece in each language and at each key before it draws any scene, so a preview of one language at one size is drawn by the drawing chosen for the whole piece.
 - **Along a chain of brands** (DEC-009 point 4). A brand *serves* a top where it holds a drawing of one of the top's layouts, or holds the top itself. Under a brand built on a base, the brand nearest the root that serves a top keeps its form: its drawings draw, and the top's own drawing draws each layout it leaves. A brand built on it draws none of that top, and each piece under it states each drawing of it that draws nothing ([Checks](checks.md)). A brand built on a base that serves no layout of a top draws the top by its own drawings.
 - **A top a brand holds** is drawn by its own drawing alone (DEC-034 point 4). The holding brand serves it so, and lacks none of its layouts, and each brand built on it keeps that form. No brand declares a drawing of it. Under a brand that is neither the holding brand nor built on it, it is drawn by its own drawing in that brand's values, and the check asks the piece's author to look ([Checks](checks.md)).
-- **Where it draws nothing.** Two drawings of one layout in one brand draw neither, and a drawing of a top whose library its own brand does not name draws nothing (DEC-009 points 2 and 3). Nor does a drawing of a top a brand nearer the root serves, or of a top a brand holds. The test brand's drawing of the deck's cover, trimmed to its title:
+- **Where it draws nothing.** Two drawings of one layout in one brand draw neither, and a drawing of a top whose library its own brand does not name draws nothing (DEC-009 points 2 and 3). Nor does a drawing of a top a brand nearer the root serves, or of a top a brand holds.
+- **What the check judges of it** (DEC-009 point 9). Each finding on a drawing lies in its brand's version, judged where the brand is checked alone, over its base and against the newest version the project holds of each major the brand names, and where a release reads the version. A drawing fails where it takes a field, an option or a word its top does not declare, where it is one of two drawings of a layout, and where its top's library is one its brand does not name. In a released version, each asks the brand's owner for attention instead (DEC-034 point 10). What it does not take of what its top declares asks the brand's owner for attention, and never fails, and so does a drawing of a top a brand nearer the root serves, to take it out (DEC-034 point 8). The version states each top the brand serves, with the layouts it leaves to the top's own drawing ([Checks](checks.md)). A piece states each instance the top's own drawing draws in its place.
+
+The test brand's drawing of the deck's cover, trimmed to its title:
 
 ```yaml
 draws: {top: foundations/deck, layout: cover}
@@ -579,7 +591,7 @@ It finds these when it computes the scene: a division by zero, `:index` or `:cou
 
 ## Layout operators and drawing primitives
 
-The engine knows the five primitives, the two ways to place a component, the one way to repeat one and the connector tool, below. It has no other primitive and no other layout operator.
+The engine knows the six primitives, the two ways to place a component, the one way to repeat one and the connector tool, below. It has no other primitive and no other layout operator.
 
 ### Primitives
 
@@ -592,6 +604,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 | `text` | `content` or `fact` (one of the two required), `style` (required), `fill`, `text-anchor` | the text of a field or of a fact of its export, in lines, each run in its own role and paint |
 | `line` | `stroke` (required), `stroke-width`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends |
 | `image` | `produced`, `content`, `file` or `role` (exactly one required) | the picture of a produced output of the piece, a picture file, or the file the brand gives a picture role |
+| `sign` | `fill`, `stroke`, `stroke-width` | the sign of the concept whose colour family its instance takes |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
 - **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
@@ -607,6 +620,11 @@ A primitive's properties lie in its own mapping, under SVG's names.
 - **A picture role the brand gives no file** is not drawn, and the part has zero size at its place. No piece takes a finding for it, since no brand owes one.
 - **A `role` that names no picture role** is refused in the component, whether it names no role or a role of another type.
 - **Another file at a size** takes a part for each file, each with a `when` by the size ([Switches](#switches)).
+- **A sign** draws the sign of a concept, its icon or else its shape ([Signs](files.md#signs)): the concept its instance names, or, where the instance takes its family from the instance it sits in, that instance's concept (DEC-036 point 2). So it says what the colour says. A family the instance takes from its list's `colour`, its component's `colour` or a state names no concept.
+- **A sign's frame.** It needs a `width` and a `height`. Its sign is drawn whole, centred and as large as its frame allows, by its square, so every sign takes the same room in a frame of any proportion (DEC-036 point 1). Its stroke lies on its outline.
+- **A sign's paints** are a box's: `fill`, `stroke` and `stroke-width`. `:colour.<member>` reads the instance's family, and an `override` reaches its fill. A state that changes the family changes the sign's paint, never its sign.
+- **A sign not drawn.** Where the instance takes its family from no concept, its concept has no sign, or its notation cannot read the concept, the part is not drawn, and has zero size at its place, with no finding. A concept the piece's notations do not hold is reported once, for the instance ([Values, states and colour](#values-states-and-colour)).
+- **A sign's place in what a reader's tools read.** It takes none, as no box or line does (DEC-036 point 5). The words that give its concept are the content's, such as the instance's text.
 
 ### Placing a component: `use` and `slot`
 
@@ -761,13 +779,20 @@ Which text fills `version` and `date`:
 
 ### What a scene holds
 
-The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages`, `physical-size` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, by a formula or through its physical size, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. `physical-size` holds the physical size of the piece's top, `{width, height}` in millimetres as the top declares it, or `null` where it declares none, and every page of the scene takes it ([A physical size](#a-physical-size)). Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
+The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages`, `physical-size` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, by a formula or through its physical size, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. `physical-size` holds the physical size of the piece's top, `{width, height}` in millimetres as the top declares it, or `null` where it declares none, and every page of the scene takes it ([A physical size](#a-physical-size)). Each element holds its `type`, `group`, a primitive's kind, or `path` for a sign, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
 A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
 - **`points`:** where its route turns, every point of it, its ends first and last. A connector whose route does not turn holds no `points`, and keeps its ends as `x1 y1 x2 y2`.
 - **`attached`:** for each end, `start` and `end`, the trace id of the element it meets, with the `side` it meets, or the image part with the `point` it ends at.
 - **Its ends' sources:** the end fields that name them, such as `content:body.links[plan-build].from`.
+
+A `path`, which a sign part draws, adds these (DEC-036 point 1):
+
+- **`d`:** its concept's sign, mapped into its frame by the engine, in SVG's path data. It holds absolute moves, lines, cubic curves and closes, `M`, `L`, `C` and `Z`, its numbers in its parent's frame, as a line's ends are, rounded to 1/100 px. A quadratic curve is the cubic it is, and an arc the cubics that draw it, each a quarter of a turn at most. So a renderer knows no sign by name, and reads no other command.
+- **`fill-rule`:** `nonzero` or `evenodd`, as the sign names it.
+- **Its paints and stroke width,** as a box's.
+- **The sources** of `d` and `fill-rule` name the field that names the concept, such as `content:body.items[store].concept`.
 
 A `text` adds the rest of what [Text](#text) describes:
 

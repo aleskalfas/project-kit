@@ -9,7 +9,7 @@ other-actors:
 after:
   - [UC-014, UC-049]
   - [UC-014, UC-019, UC-049]
-  - [UC-022, UC-049]
+  - [UC-022, UC-023, UC-049]
   - [UC-022]
 requirements:
   - REQ-002
@@ -37,13 +37,17 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/adapters/claude-code/tool-access.json
         - .pkit/agents/README.md
+        - .pkit/agents/definition_source.py
         - .pkit/agents/tool_access.py
+        - .pkit/lifecycle/capability_records.py
         - .pkit/lifecycle/ownership.py
         - .pkit/permissions/decide.py
       record:
         - COR-013#1
         - COR-013#5
         - COR-013#7
+        - COR-013#8
+        - COR-017
         - COR-026
         - COR-028#1
         - ADR-004#1
@@ -54,6 +58,9 @@ pkit:
         - ADR-066
         - ADR-085
         - ADR-086
+        - ADR-087
+        - ADR-088#5
+        - ADR-088#7
       artefact:
         - ACT-ai-agent
         - ACT-operator
@@ -80,7 +87,7 @@ pkit:
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 - **From UC-014, [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) deploys [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where that harness reads them.
-- **From [UC-022](UC-022-add-own-additions.md) or UC-049:** The [overlay](../../../glossary.md#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the [overlay categories](../../../glossary.md#term-overlay-category--overlay-category) it sets. First [install](../../../glossary.md#term-install--install) seeds the overlay with a value for each category the methodology's own agent definitions name (`install.py`). So those agent definitions deploy before the adopter names a path.
+- **From [UC-022](UC-022-add-own-additions.md), [UC-023](UC-023-add-or-remove-capability.md) or UC-049:** The [overlay](../../../glossary.md#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, holds a path for each [overlay category](../../../glossary.md#term-overlay-category--overlay-category) it sets. First [install](../../../glossary.md#term-install--install) seeds the overlay with a value for each category the methodology's own agent definitions name (`install.py`). A [capability](../../../glossary.md#term-capability--capability)'s install writes the default it declares for each category its agent definitions write ([ADR-088 point 5](../../../../../architecture/decisions/ADR-088-capability-default-write-paths.md#5-install-provisions-the-query-writes-the-defaults-then-deploys)). So those agent definitions deploy before the adopter names a path.
 - **From UC-022:** The project's own grants lie beside the methodology's.
 
 **Assumptions:**
@@ -103,7 +110,7 @@ pkit:
 
 3. The system checks that the running CLI is at the [version](../../../glossary.md#term-version--version) the [project](../../../glossary.md#term-project--project) records, and that no [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).
 4. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s deploy scripts (`.pkit/adapters/README.md`). The fourth, `deploy-agents.sh`, deploys each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) where its [harness](../../../glossary.md#term-harness--harness) reads it ([COR-013 point 1](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#1-the-agents-area)).
-5. Where several sources ship an agent definition of one name, the adapter deploys the project's. Otherwise it deploys the one of the [capability](../../../glossary.md#term-capability--capability) whose name sorts first, and else the core's ([COR-026](../../../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md) and `.pkit/agents/README.md`).
+5. Where several sources ship an agent definition of one name, the adapter deploys the project's ([COR-013 point 8](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#8-which-definition-of-a-name-is-the-agent)). Otherwise it deploys an installed [capability](../../../glossary.md#term-capability--capability)'s, and else the core's ([COR-026](../../../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md)). Between two capabilities, it deploys the one the project chose for the name, else the first by code points ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and `.pkit/agents/definition_source.py`).
 6. The adapter replaces each [placeholder](../../../glossary.md#term-placeholder--placeholder) `<category>` in the agent definition's front matter with the paths the [overlay](../../../glossary.md#term-overlay--overlay) gives that [overlay category](../../../glossary.md#term-overlay-category--overlay-category). A value under `overrides.<name>` replaces the top-level one for that agent definition, and is never merged with it ([COR-013 point 5](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)).
 7. The adapter carries the agent definition's model and its effort into what it deploys, each from the overlay's override, or else from the front matter. It writes none whose value is `inherit` or absent (`agent_policy.py`). It writes the agent definition's `tools:` or `withheld:` list in the harness's own key, as the agents [area](../../../glossary.md#term-area--area)'s reader reads the list ([ADR-086](../../../../../architecture/decisions/ADR-086-tool-access-reader.md) and `.pkit/agents/tool_access.py`).
 8. The adapter writes the deployed agent definition with its own [deploy mark](../../../glossary.md#term-deploy-mark--deploy-mark), so a later run tells its own files from the adopter's (`.pkit/adapters/README.md`).
@@ -117,16 +124,18 @@ pkit:
 - **1b.** The operator passes `--dry-run`. The [system](../../../glossary.md#term-system--system) names each script it would run with `would run`, runs none of them, and deploys nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)). The use case ends.
 - **1c.** The adopter installs the system with `pkit init`. Step 8 of [UC-049](../050-adopt/UC-049-install-system.md) runs the same deploy scripts, and the path goes on at step 4.
 - **3a.** The [project](../../../glossary.md#term-project--project) is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. [Sync](../../../glossary.md#term-sync--sync) stops before it writes, names the remedy, and the use case ends ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).
-- **6a.** The overlay leaves unset a category that the agent definition names under `owns`, `needs`, `answers`, `reads.paths` or `reads.records`. The [adapter](../../../glossary.md#term-adapter--adapter) skips that agent definition and deploys the rest ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)). It names `pkit agents adopt <name>` where each unset overlay category has a conventional folder, and otherwise it names setting the paths in the overlay or `pkit agents reconcile --write` (`.pkit/lifecycle/ownership.py`). A copy deployed earlier stays as it was, and the use case ends for that agent definition.
+- **5a.** The system cannot read what decides the name, such as the [manifest](../../../glossary.md#term-manifest--manifest)'s list of installed [capabilities](../../../glossary.md#term-capability--capability). The [adapter](../../../glossary.md#term-adapter--adapter) writes and removes nothing for that name, names the cause in an `error` line, and deploys the rest. `pkit validate` reports the name until the record reads ([ADR-087 point 4](../../../../../architecture/decisions/ADR-087-agent-definition-picker.md#4-what-the-deploy-writes-and-removes)).
+- **6a.** The overlay leaves unset a category that the agent definition names under `owns`, `needs`, `answers`, `reads.paths` or `reads.records`. The adapter skips that agent definition and deploys the rest ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)). It names `pkit agents adopt <name>` where each unset overlay category has a conventional folder, and otherwise it names setting the paths in the overlay or `pkit agents reconcile --write` (`.pkit/lifecycle/ownership.py`). No other agent definition of the name is deployed instead of it, and the use case ends for that agent definition ([COR-013 point 8](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#8-which-definition-of-a-name-is-the-agent)).
+  - **The copy deployed earlier** from that agent definition stays only where it gives no tool the current text does not give. The adapter then says it is not of the current text, and otherwise removes it.
 - **6b.** The overlay leaves unset a category that the agent definition reads only through `reads.patterns`. The adapter drops that item, and deploys the agent definition without it ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
-- **6c.** A category that carries writes names a path that sync manages. The adapter skips the agent definition, saying that the category names sync-managed paths, so no agent owns a path that sync writes over (`.pkit/lifecycle/ownership.py`).
+- **6c.** A category that carries writes, or one a capability's agent definition owns, names a path in what sync manages. A path that holds such content counts too, and so does one in a capability's folder pulled from another repository. The adapter skips the agent definition, and names the path and its category (`.pkit/lifecycle/ownership.py`). So no agent owns a path that sync writes over ([ADR-088 point 7](../../../../../architecture/decisions/ADR-088-capability-default-write-paths.md#7-the-deploy-checks-every-category-a-capabilitys-agent-names-with-one-test)).
 - **7a.** The model or the effort is a value the [harness](../../../glossary.md#term-harness--harness) does not accept. The adapter carries no value for it, so the agent takes the harness's default, and the system reports a `warning` line naming the value (`agent_policy.py`).
 - **7b.** The agent definition names both a `tools:` and a `withheld:` list, or withholds a tool the harness cannot withhold. The adapter skips that agent definition and names the cause. The adapter removes the copy it deployed earlier, since that copy may give tools the agent definition no longer gives ([COR-013 point 7](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#7-an-agents-tool-access) and [ADR-086](../../../../../architecture/decisions/ADR-086-tool-access-reader.md)). The use case ends for that agent definition.
 - **8a.** A file without the [deploy mark](../../../glossary.md#term-deploy-mark--deploy-mark) stands where the adapter would deploy, such as an agent definition the adopter wrote there. The adapter leaves the file untouched, and reports it `skipped`.
-- **8b.** A deployed agent definition carries the deploy mark, and no source ships its agent definition any more. The adapter removes it, and reports it `removed`.
+- **8b.** A deployed agent definition carries the deploy mark, and is not the agent's. It was deployed from another source than the one step 5 names, or no source ships its name any more. The adapter removes it, and reports it `removed`. So once a capability is uninstalled, its copies go, and the source that now wins is deployed.
 - **11a.** The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is not registered. Only the `tools:` or `withheld:` list and the harness's own settings apply. Those settings are one set for the whole session, never one for each agent ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
 - **11b.** The harness names no agent in the call, as for the main session. The [permission code](../../../glossary.md#term-permission-code--permission-code) takes the default agent from the `agent` key of Claude Code's `.claude/settings.json`, the one harness's settings it reads. With none, the [grant subject](../../../glossary.md#term-grant-subject--grant-subject) is `operator` (`decide.py`).
-- **11c.** An installed [capability](../../../glossary.md#term-capability--capability) contributes a deny [grant](../../../glossary.md#term-grant--grant) for the agent in a grants file of its own. The deny holds for that agent, whatever its other grants allow ([ADR-016](../../../../../architecture/decisions/ADR-016-capability-contributed-intent-grants.md) and [REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
+- **11c.** An installed capability contributes a deny [grant](../../../glossary.md#term-grant--grant) for the agent in a grants file of its own. The deny holds for that agent, whatever its other grants allow ([ADR-016](../../../../../architecture/decisions/ADR-016-capability-contributed-intent-grants.md) and [REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
 
 **Postconditions:** The [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it, with the [project](../../../glossary.md#term-project--project)'s paths in place of the [placeholders](../../../glossary.md#term-placeholder--placeholder) of its front matter. Where the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, each of the agent's tool calls is decided under its own grants and those to `all`.
 

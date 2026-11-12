@@ -91,8 +91,8 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.4.0",
-    "seam": 6,
+    "version": "1.5.0",
+    "seam": 7,
     "module": "html",
     "about": (
         "A page file for each language and each key over the size axes, holding the modes a "
@@ -166,5 +166,9 @@ DECLARATION = {
             DRAWS,
         ),
         "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
+        "path": dict.fromkeys(
+            (*_FRAME, "d", "fill-rule", "fill", "stroke", "stroke-width"),
+            DRAWS,
+        ),
     },
 }

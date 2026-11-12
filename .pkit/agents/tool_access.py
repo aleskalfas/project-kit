@@ -16,9 +16,10 @@ no entries, and a value written any other way is refused.
 **What it answers.** `tool_access` gives the definition's form and its
 entries, each with any argument it carries, or raises `Refused` naming why
 the definition is refused. `holds` and `lacks` answer the two readings of
-ADR-085 point 2. A function keeps its name and its answer: one whose answer
-changes takes a new name, so an older caller never reads a newer answer as
-its own (ADR-086 point 5).
+ADR-085 point 2, and `gives_nothing_more` whether one tool access gives no
+tool another does not (ADR-087 point 4). A function keeps its name and its
+answer: one whose answer changes takes a new name, so an older caller never
+reads a newer answer as its own (ADR-086 point 5).
 
 **What an adapter declares.** Which tools a harness has, the forms its names
 take, which withheld entries it can enforce, and its own keys. This module
@@ -223,6 +224,39 @@ def lacks(access: Access, tool: str) -> bool:
     gives every tool it does not name, so it never shows that an agent lacks one.
     """
     return access.form == GRANT and not access.names(tool)
+
+
+def gives_nothing_more(earlier: Access, current: Access) -> bool:
+    """Whether *earlier* gives no tool that *current* does not give.
+
+    The question a deploy asks before it keeps a copy written from an earlier text
+    of the agent's definition, while the current text is refused for a cause other
+    than its tool access (COR-013 point 8, ADR-087 point 4). Each entry is read
+    whole with its argument: one without an argument covers its tool whole, and one
+    with an argument covers only itself. So a current entry with an argument never
+    covers an earlier one without it. Where a withheld list meets a grant, a granted
+    entry and a withheld one of the same tool are read as overlapping, whatever
+    their arguments.
+    """
+    if current.form is None:
+        return True
+    if current.form == GRANT:
+        return earlier.form == GRANT and all(
+            _covered(entry, current.entries) for entry in earlier.entries
+        )
+    if earlier.form is None:
+        return not current.entries
+    if earlier.form == WITHHOLD:
+        return all(_covered(entry, earlier.entries) for entry in current.entries)
+    withheld = {entry.tool for entry in current.entries}
+    return not any(entry.tool in withheld for entry in earlier.entries)
+
+
+def _covered(entry: Entry, entries: tuple[Entry, ...]) -> bool:
+    """Whether *entries* name *entry* whole, or its tool with no argument."""
+    return any(
+        other == entry or (other.tool == entry.tool and other.argument is None) for other in entries
+    )
 
 
 # --- an adapter's declaration (ADR-086 point 4) ----------------------------------------

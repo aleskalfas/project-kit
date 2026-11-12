@@ -3,7 +3,7 @@ and combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10, DE
 point 7).
 
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
-  1's scene, the image among them. It draws only what it declares, so the losses the
+  1's scene, the image and the path among them. It draws only what it declares, so the losses the
   capability reads from the declaration before it runs are the ones it makes.
 - **Pages.** Each page of the scene, in the scene's order, is a page of the file. Where the
   scene's root holds the physical size of the piece's top, every page is that size, at 72
@@ -37,7 +37,10 @@ point 7).
   at the line's end, in the line's stroke. A line that holds neither its ends nor its
   points is refused, and left out.
 - **Shapes.** A box's stroke lies inside its frame. Rounded corners and ellipses are cubic
-  Bézier curves.
+  Bézier curves. A path, such as a concept's sign, is drawn from the outline the engine
+  mapped into its frame, its moves, lines, cubic curves and closes, filled by its rule,
+  nonzero or even-odd, its stroke on its outline. A path that holds no such outline is
+  refused, and left out.
 - **A picture** is drawn from the file its image shows in the combination drawn
   (`seam.Shown`), whatever its source, and from nothing else (DEC-025 point 7). It is
   drawn whole, centred, as large as its frame allows, as the scene's `xMidYMid meet` says
@@ -67,6 +70,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -626,9 +630,12 @@ class _Document:
         name = self._opacities.setdefault(mark, f"A{len(self._opacities)}")
         return f"/{name} gs"
 
-    def _shape(self, element: Mapping[str, Any], path: str | None) -> list[Part]:
-        """A closed shape filled and stroked as its paints say; nothing where it takes
-        neither, or has no `path` since it has no size, its paints still read."""
+    def _shape(
+        self, element: Mapping[str, Any], path: str | None, *, even_odd: bool = False
+    ) -> list[Part]:
+        """A closed shape filled and stroked as its paints say, its fill by the even-odd rule
+        where `even_odd`, else by the nonzero; nothing where it takes neither, or has no
+        `path` since it has no size, its paints still read."""
         fill = self._paint(element, "fill")
         stroke = self._paint(element, "stroke")
         width = float(element.get("stroke-width", 1))
@@ -644,6 +651,8 @@ class _Document:
             ops += [self._opacity("CA", stroke[1])] if stroke[1] < 1 else []
             ops += [f"{stroke[0]} RG", f"{number(width)} w"]
         paint = "B" if fill and stroke else "f" if fill else "S"
+        if fill and even_odd:
+            paint += "*"
         return [f"{' '.join(ops)}\n{path}{paint}\nQ\n"]
 
     def _box(self, element: Mapping[str, Any]) -> list[Part]:
@@ -660,6 +669,20 @@ class _Document:
         rx, ry = float(element["width"]) / 2, float(element["height"]) / 2
         cx, cy = float(element["x"]) + rx, float(element["y"]) + ry
         return self._shape(element, _ellipse(cx, cy, rx, ry) if rx > 0 and ry > 0 else None)
+
+    def _path(self, element: Mapping[str, Any]) -> list[Part]:
+        """A path, such as a concept's sign (DEC-036 point 1): the outline the engine mapped
+        into its frame, filled by its rule. A path that holds no outline of moves, lines,
+        cubic curves and closes is refused, as an element the renderer does not draw is."""
+        path = _outline(element.get("d"))
+        if path is None:
+            self._lose(
+                element["id"],
+                seam.REFUSED,
+                "the path holds no outline, `d`, of moves, lines, cubic curves and closes",
+            )
+            return []
+        return self._shape(element, path, even_odd=element.get("fill-rule") == "evenodd")
 
     def _line(self, element: Mapping[str, Any]) -> list[Part]:
         """A line, or a tie's connector through each of its points, stroked, with an
@@ -934,6 +957,37 @@ def _rectangle(x: float, y: float, width: float, height: float, rx: float) -> st
         f"{_point(x, y + down)} l\n"
         f"{_point(x, y + ky)} {_point(x + kx, y)} {_point(x + across, y)} c\nh\n"
     )
+
+
+#: The commands of a path's outline as the engine writes it, each with the operator that
+#: draws it and how many numbers it takes.
+_OUTLINE = {"M": ("m", 2), "L": ("l", 2), "C": ("c", 6), "Z": ("h", 0)}
+
+
+def _outline(data: Any) -> str | None:
+    """The path of a path's outline, `data`, as the engine writes it: absolute moves, lines,
+    cubic curves and closes, each a letter and its numbers, a move first. None where `data`
+    is no such outline."""
+    words = data.split() if isinstance(data, str) else []
+    if not words or words[0] != "M":
+        return None
+    drawn: list[str] = []
+    at = 0
+    while at < len(words):
+        if words[at] not in _OUTLINE:
+            return None
+        operator, count = _OUTLINE[words[at]]
+        given = words[at + 1 : at + 1 + count]
+        try:
+            numbers = [float(word) for word in given]
+        except ValueError:
+            return None
+        if len(numbers) != count or not all(math.isfinite(n) for n in numbers):
+            return None
+        points = [_point(numbers[i], numbers[i + 1]) for i in range(0, count, 2)]
+        drawn.append(" ".join([*points, operator]) + "\n")
+        at += 1 + count
+    return "".join(drawn)
 
 
 def _ellipse(cx: float, cy: float, rx: float, ry: float) -> str:

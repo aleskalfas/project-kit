@@ -5,18 +5,13 @@ schema_version: 1
 # asks for its width alone, and the engine sets its height in the size's proportion. Each
 # part that shows a field is named after it (point 5).
 #
-# Its paper is a component token, which a brand that names the library may restyle (DEC-035
-# point 1). The token also puts the library in the scope a brand's naming is read from: a
-# library that declares neither an own role nor a component token is one no brand names
-# today, so a brand's drawing of its top would draw nothing.
+# Its library declares neither an own role nor a component token, and a brand that names
+# the library still draws the poster by the brand's drawing of it (DEC-009 point 3).
 status: experimental
 about: >-
   A poster for a conference, one page alone printed at A1: what it announces, and when and
   where, below it. Its width comes from the brand's figure width, its height from its
   physical size.
-
-tokens:
-  paper: {type: color, default: '{background}'}
 
 fields:
   type: object
@@ -44,7 +39,7 @@ values:
 
 parts:
   background:
-    box: {fill: component.test-print.poster.paper}
+    box: {fill: background}
     width: "=:width"
     height: "=:height"
   title:

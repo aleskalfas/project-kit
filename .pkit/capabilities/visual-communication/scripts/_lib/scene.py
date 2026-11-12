@@ -5,8 +5,8 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   parent, in px, rounded to 1/100 px half away from zero (`formula.rounded`). A group
   says which component drew it, with its library's version and its options; a page's
   group says it is a page. Draw order is the tree's order.
-- **Primitives at the leaves:** `box`, `ellipse`, `text`, `line` and `image`, their
-  properties under SVG's names. Colours stay role names; a renderer takes their values
+- **Primitives at the leaves:** `box`, `ellipse`, `text`, `line`, `image` and `path`,
+  their properties under SVG's names. Colours stay role names; a renderer takes their values
   from the document of resolved values, so one scene serves every mode of the value axes.
 - **A text** holds its text, its line height, the greatest among the typography roles
   its runs take, its paragraphs of runs, its lines and its measured height. Each run
@@ -26,6 +26,14 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   combination, whatever its source, never the scene's names. One of a picture role the brand
   gives no file at the scene's key is not drawn, and the result names it by its trace id
   (`SceneResult.unvalued`), so a move onto that brand can name it (DEC-025 point 8).
+- **A path** is what a sign part draws (DEC-036 points 1 and 2): its concept's sign, an
+  outline the engine mapped into the path's frame, `d`, in SVG's path data, and the rule
+  that fills it, `fill-rule`. Its outline is fitted by its square, whole, centred and as
+  large as the frame allows, and its numbers lie in its parent's frame, as a line's ends
+  do, rounded as every length is, as absolute moves, lines, cubic curves and closes
+  (`outlines`). Both name the concept as their source, the field that names it. It is
+  painted as a box is, with `fill`, `stroke` and `stroke-width`. A renderer knows no sign
+  by name, and a path holds no text, so it takes no place in what a reader's tools read.
 - **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
   and `marker-end`, where it draws one. A tie's connector also holds, where its route
   turns, every point of it, `points`, its ends first and last, and `attached`: for each
@@ -103,6 +111,9 @@ ENGINE = "engine"
 
 #: A line's arrowheads, each drawn where it is not `none`.
 MARKERS = ("marker-start", "marker-end")
+
+#: The type of element each kind of part draws, where it is not the kind's own name.
+DRAWN_AS = {"repeat": "group", "sign": "path"}
 
 
 def length(value: float) -> float:
@@ -368,7 +379,7 @@ class _Emitter:
             places = (self._source(instance, node, "x"), self._source(instance, node, "y"))
             sizes = (self._source(instance, node, "width"), self._source(instance, node, "height"))
             return self.group(node.child, (place[0], place[1]), places, sizes)
-        element = Element("group" if kind == "repeat" else kind, f"{instance.trace}/{name}")
+        element = Element(DRAWN_AS.get(kind, kind), f"{instance.trace}/{name}")
         self._frame(element, instance, node)
         if kind == "repeat":
             self._items(element, instance, node)
@@ -378,6 +389,8 @@ class _Emitter:
             self._text(element, instance, node)
         elif kind == "image":
             self._image(element, instance, node)
+        elif kind == "sign":
+            self._path(element, instance, node)
         else:
             self._shape(element, instance, node)
         return element
@@ -406,6 +419,19 @@ class _Emitter:
     def _shape(self, element: Element, instance: Instance, node: Node) -> None:
         self._paints(element, instance, node, ("fill", "stroke"))
         self._lengths(element, instance, node, ("stroke-width", "rx"))
+
+    def _path(self, element: Element, instance: Instance, node: Node) -> None:
+        """A sign's path (DEC-036 points 1 and 2): its outline mapped into the frame the
+        scene holds, with the rule that fills it, each from the concept that names it, and
+        painted as a box is. It is drawn only where it has an outline."""
+        outline = node.outline
+        if outline is None:
+            return
+        x, y, width, height = (float(element.properties[k]) for k in ("x", "y", "width", "height"))
+        element.set("d", outline.mapped(x, y, width, height), instance.concept_source)
+        element.set("fill-rule", outline.fill_rule, instance.concept_source)
+        self._paints(element, instance, node, ("fill", "stroke"))
+        self._lengths(element, instance, node, ("stroke-width",))
 
     def _line(self, element: Element, instance: Instance, node: Node) -> None:
         name, spec = node.part.name, node.part.spec

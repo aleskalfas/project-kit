@@ -911,10 +911,12 @@ def _pairs(earlier: FullRead, later: FullRead, found: _Found) -> None:
 
 
 def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
-    """The foundations' shared roles, axes and colour families, whatever reads them (DEC-003
-    point 6, DEC-004 point 5). A new top group of the shared roles breaks, whatever its
-    roles carry, since no library takes its name (DEC-004 point 7, DEC-025 point 10). A new
-    picture role is an addition, since no brand owes it a value (DEC-025 point 4)."""
+    """The foundations' shared roles, axes, colour families and shapes, whatever reads them
+    (DEC-003 point 6, DEC-004 point 5, DEC-036 point 7). A new top group of the shared roles
+    breaks, whatever its roles carry, since no library takes its name (DEC-004 point 7,
+    DEC-025 point 10). A new picture role is an addition, since no brand owes it a value
+    (DEC-025 point 4). A shape removed, or renamed, breaks, as a notation names it; a new one
+    is an addition, and one whose outline is redrawn changes only how a piece looks."""
     assert earlier.scope is not None and later.scope is not None
     declared_e, declared_l = earlier.scope.foundations, later.scope.foundations
     for path, role in sorted(declared_e.roles.items()):
@@ -964,6 +966,10 @@ def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
         )
     for name in sorted(set(declared_l.families) - set(declared_e.families)):
         found.added(f"colour family `{name}`", "is new", "DEC-003 point 1")
+    for name in sorted(set(declared_e.shapes) - set(declared_l.shapes)):
+        found.broken(f"shape `{name}`", "is removed", "DEC-036 point 7")
+    for name in sorted(set(declared_l.shapes) - set(declared_e.shapes)):
+        found.added(f"shape `{name}`", "is new", "DEC-036 point 7")
 
 
 def _axes(

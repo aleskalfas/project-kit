@@ -1290,6 +1290,22 @@
         }
       ]
     },
+    "sign": {
+      "description": "A sign's properties, by SVG's names: it is painted as a box is (DEC-036 point 2).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
     "operator": {
       "description": "How a list's items are arranged along a row or a column, by CSS flexible layout's names.",
       "type": "object",
@@ -1498,6 +1514,36 @@
         }
       }
     },
+    "sign-part": {
+      "description": "A sign: the sign of the concept whose colour family its instance takes, fitted into its frame by its square, and not drawn, at zero size, where there is none (DEC-036 point 2).",
+      "type": "object",
+      "required": [
+        "sign",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sign": {
+          "$ref": "#/$defs/sign"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
     "use-part": {
       "description": "A component this one places.",
       "type": "object",
@@ -1626,7 +1672,7 @@
       }
     },
     "part": {
-      "description": "A part: exactly one of a primitive (`box ellipse text line image`) or a placing (`use slot repeat`), with its place, its size and `when`.",
+      "description": "A part: exactly one of a primitive (`box ellipse text line image sign`) or a placing (`use slot repeat`), with its place, its size and `when`.",
       "type": "object",
       "oneOf": [
         {
@@ -1652,6 +1698,11 @@
         {
           "required": [
             "image"
+          ]
+        },
+        {
+          "required": [
+            "sign"
           ]
         },
         {
@@ -1719,6 +1770,16 @@
           },
           "then": {
             "$ref": "#/$defs/image-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "sign"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/sign-part"
           }
         },
         {

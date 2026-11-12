@@ -1,20 +1,24 @@
-"""Notations: the concepts of one subject, each mapped to a colour family
-(visual-communication DEC-004 points 10 and 11).
+"""Notations: the concepts of one subject, each mapped to a colour family and a sign
+(visual-communication DEC-004 points 10 and 11, DEC-036 point 1).
 
 A *notation* is a library version of kind `notation`. Beside its `library.yaml`, its
 `notation.yaml` (format `notation`) maps each concept of its subject, by its name, to
 `{colour: <family>}`: a colour family the foundations declare, never a value, so each brand
-colours a concept its own way. A piece names the notations it uses under `notations`, and
-its content names a concept read with its notation's name, `concept: <notation>/<concept>`,
-as `use` names a component read with its library's.
+colours a concept its own way. A concept may also hold its `icon`, an outline
+(`outlines`), or map to a `shape` the foundations declare, by its name. Its *sign*, which
+shows it beside its colour, is its icon, or else its shape. A piece names the notations it
+uses under `notations`, and its content names a concept read with its notation's name,
+`concept: <notation>/<concept>`, as `use` names a component read with its library's.
 
-`read_notation` reads one notation version against the foundations' colour families. What
-is wrong is a finding in that version, so its level is read where it lies (DEC-002 point
-7): a library that is no notation, a file that cannot be read, and a concept that does not
-map to a colour family the foundations declare, such as one that maps to a value. A
-notation whose files cannot be read holds no concept, and a concept that cannot be read is
-kept apart (`unread`): content that names either takes its colour family as if it named
-none, and no finding of its own, since the fault lies in the notation.
+`read_notation` reads one notation version against the foundations' colour families and
+shapes. What is wrong is a finding in that version, so its level is read where it lies
+(DEC-002 point 7): a library that is no notation, a file that cannot be read, a concept
+that does not map to a colour family the foundations declare, such as one that maps to a
+value, and a concept's icon that is no outline or shape the foundations do not declare. A
+notation whose files cannot be read holds no concept, and a concept whose colour cannot be
+read is kept apart (`unread`): content that names either takes its colour family as if it
+named none, and no finding of its own, since the fault lies in the notation. A concept
+whose sign cannot be read keeps its colour family, and has no sign.
 
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
@@ -22,12 +26,13 @@ Knows nothing of the working folder, pieces, the list or the configuration.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from _lib.files import FileError, read_bound
 from _lib.findings import FAILS, Finding
 from _lib.names import is_name
+from _lib.outlines import Outline, read_outline
 from _lib.reading import ReadError
 
 #: The kind of library a notation is.
@@ -36,8 +41,8 @@ KIND = "notation"
 #: A notation's file, within its version folder.
 FILE = "notation.yaml"
 
-#: What a concept maps to in format 1: its colour family alone.
-CONCEPT_KEYS = frozenset({"colour"})
+#: What a concept maps to in format 1: its colour family, and its icon or a shape.
+CONCEPT_KEYS = frozenset({"colour", "icon", "shape"})
 
 
 @dataclass(frozen=True)
@@ -49,6 +54,7 @@ class Notation:
     - `unread`: each concept it holds that cannot be read.
     - `readable`: false where its files cannot be read, so it holds no concept.
     - `findings`: what is wrong, each naming the version it lies in.
+    - `signs`: the sign of each concept that can be read and has one.
     """
 
     name: str
@@ -57,6 +63,7 @@ class Notation:
     unread: frozenset[str] = frozenset()
     readable: bool = True
     findings: tuple[Finding, ...] = ()
+    signs: Mapping[str, Outline] = field(default_factory=dict)
 
     def family(self, concept: str) -> str | None:
         """The colour family `concept` maps to; None where the notation, or the concept in
@@ -65,12 +72,26 @@ class Notation:
             return None
         return self.concepts[concept]
 
+    def sign(self, concept: str) -> Outline | None:
+        """The sign of `concept`, its icon or else its shape; None where it has neither, or
+        the notation, or the concept in it, cannot be read. Raises KeyError where it holds
+        no such concept."""
+        if self.family(concept) is None:
+            return None
+        return self.signs.get(concept)
 
-def read_notation(folder: Path, families: Collection[str], *, root: Path | None = None) -> Notation:
+
+def read_notation(
+    folder: Path,
+    families: Collection[str],
+    *,
+    shapes: Mapping[str, Outline],
+    root: Path | None = None,
+) -> Notation:
     """The notation whose version folder is `folder`, `<name>/<version>/`, read against the
-    colour families the foundations declare. Findings name its files relative to `root`
-    when given, else to the version folder. Never raises: what cannot be read is a
-    finding."""
+    colour families and the shapes the foundations declare. Findings name its files
+    relative to `root` when given, else to the version folder. Never raises: what cannot be
+    read is a finding."""
     name, label = folder.parent.name, f"{folder.parent.name}@{folder.name}"
     shown = folder.relative_to(root).as_posix() + "/" if root is not None else ""
 
@@ -103,15 +124,22 @@ def read_notation(folder: Path, families: Collection[str], *, root: Path | None 
         return unreadable("notation-unreadable", message, FILE, "concepts")
     concepts: dict[str, str] = {}
     unread: set[str] = set()
+    signs: dict[str, Outline] = {}
     found: list[Finding] = []
     for concept, spec in raw.items():
         problem = _concept_problem(concept, spec, families)
-        if problem is None:
-            concepts[concept] = spec["colour"]
-        else:
+        if problem is not None:
             unread.add(str(concept))
             found.append(finding("concept-shape", problem, FILE, f"concepts.{concept}"))
-    return Notation(name, label, concepts, frozenset(unread), findings=tuple(found))
+            continue
+        concepts[concept] = spec["colour"]
+        sign = _sign(concept, spec, shapes)
+        if isinstance(sign, Outline):
+            signs[concept] = sign
+        elif sign is not None:
+            key = "icon" if "icon" in spec else "shape"
+            found.append(finding("concept-shape", sign, FILE, f"concepts.{concept}.{key}"))
+    return Notation(name, label, concepts, frozenset(unread), findings=tuple(found), signs=signs)
 
 
 def _said(error: Exception, folder: Path, file: str) -> str:
@@ -127,12 +155,14 @@ def _concept_problem(concept: object, spec: object, families: Collection[str]) -
         return f"`{concept}` is not a concept's name of lower-case words joined by hyphens"
     if (
         not isinstance(spec, Mapping)
-        or set(spec) != CONCEPT_KEYS
+        or "colour" not in spec
+        or not set(spec) <= CONCEPT_KEYS
         or not isinstance(spec["colour"], str)
     ):
         return (
-            f"the concept `{concept}` is not `{{colour: <family>}}`: a concept maps to a colour "
-            f"family the foundations declare, never to a value"
+            f"the concept `{concept}` is not `{{colour: <family>}}`, with its `icon` or a "
+            f"`shape` beside: a concept maps to a colour family the foundations declare, "
+            f"never to a value"
         )
     family = spec["colour"]
     if not is_name(family):
@@ -147,3 +177,24 @@ def _concept_problem(concept: object, spec: object, families: Collection[str]) -
             f"foundations declare: {declared}"
         )
     return None
+
+
+def _sign(
+    concept: str, spec: Mapping[str, object], shapes: Mapping[str, Outline]
+) -> Outline | str | None:
+    """The sign of a concept read, its icon or else its shape (DEC-036 point 1); why it
+    cannot be read; or None where the concept maps neither. An icon that cannot be read
+    leaves the concept with no sign, its shape unread."""
+    if "icon" in spec:
+        icon = read_outline(spec["icon"])
+        return icon if isinstance(icon, Outline) else f"the icon of the concept `{concept}` {icon}"
+    if "shape" not in spec:
+        return None
+    shape = spec["shape"]
+    if isinstance(shape, str) and shape in shapes:
+        return shapes[shape]
+    declared = ", ".join(f"`{name}`" for name in shapes) or "none"
+    return (
+        f"the concept `{concept}` maps to the shape `{shape}`, which the foundations do not "
+        f"declare: {declared}"
+    )

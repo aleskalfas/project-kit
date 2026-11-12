@@ -58,6 +58,7 @@ pkit:
         - .pkit/lifecycle/manifest.md#a-data-points-question
         - .pkit/lifecycle/migrations.md#what-ships-a-migration
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
+        - .pkit/agents/README.md#a-capabilitys-write-categories
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#installing-pkit-on-path
@@ -369,6 +370,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
      - an upgrade's migrations
      - the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant))
      - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
+     - the defaults a capability declares for its agents' writes, in the agents overlay ([the agents README](.pkit/agents/README.md#a-capabilitys-write-categories))
 
      A name collision, or a capability's question, waits for your answer ([the lifecycle reference](.pkit/lifecycle/upgrade-flow.md#a-new-collision), and [on questions](.pkit/lifecycle/manifest.md#a-data-points-question)).
 4. **[Versioned, upgrades in one command](#the-methodology-upgrades-like-a-dependency).** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached. The project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).

@@ -10,9 +10,10 @@ from typing import Any
 import click
 import pytest
 
-from project_kit import install, router, sync
+from project_kit import install, router, session_guard, sync
 from project_kit.manifest import read_backbone_manifest, read_kit_version, write_backbone_manifest
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 
 # The backbone version an installed fixture records: the real source kit's. A
 # fake source a capability test stages carries it too, since sync refuses a
@@ -84,6 +85,57 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     assert called["workspace"] == 1
     # And provisioning (#1092): it readies the checkout for an offline validate.
     assert called["provision"] == 1
+
+
+_SESSION_WARNING = "⚠ WARNING: this session's project folder"
+
+
+def test_sync_warns_last_where_the_session_started_elsewhere(
+    installed_target: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repository cloned into a folder below the session's: the harness loads
+    nothing sync writes there until a session starts at the root (#3005)."""
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(installed_target.parent))
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    warning = out.partition(_SESSION_WARNING)[2]
+    assert warning and "`pkit sync`" in warning
+    assert out.rstrip().endswith(f"until a session starts at {installed_target}.")
+
+
+@pytest.mark.parametrize("anchor", ["root", None])
+def test_sync_does_not_warn_at_the_root_or_outside_any_session(
+    installed_target: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    anchor: str | None,
+) -> None:
+    if anchor == "root":
+        monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(installed_target))
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    assert "Sync complete." in out
+    assert _SESSION_WARNING not in out
+
+
+def test_self_host_sync_warns_where_the_session_started_elsewhere(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The self-host branch writes the harness's files too, so it warns the same."""
+    source_repo = install.find_source_kit().parent
+    monkeypatch.chdir(source_repo)
+    monkeypatch.setattr(sync, "regenerate_derivable_state", lambda _ctx: None)
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(tmp_path))
+
+    sync.run_sync(source_repo)
+
+    out = capsys.readouterr().out
+    assert "Self-host sync complete" in out
+    assert out.rstrip().endswith(f"until a session starts at {source_repo}.")
 
 
 def test_sync_renders_runtime_ignore_on_normal_path(installed_target: Path) -> None:
@@ -522,8 +574,9 @@ def _stage_capability_in_source(
 
     Mirrors the layout `pkit capabilities install` expects in source:
     package.yaml + skills/ + decisions/. Also stamps a VERSION, at the version
-    the installed fixture records so sync's guard lets it run, and the
-    decisions/ scaffold the source-kit-missing guard reads.
+    the installed fixture records so sync's guard lets it run, the
+    decisions/ scaffold the source-kit-missing guard reads, and the picker with
+    the records' reader, which sync loads from its source (ADR-087 point 2).
 
     ``version`` sets the capability's package.yaml version, letting a test
     stage a source that is older / equal / newer than an installed copy —
@@ -538,6 +591,7 @@ def _stage_capability_in_source(
         version_file.write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     # Sync's _refuse_if_source_kit_missing equivalent wants decisions/.
     (source_kit / "decisions").mkdir(parents=True, exist_ok=True)
+    stage_picker(source_kit)
     (cap_dir / "package.yaml").write_text(
         f"""component:
   kind: capability
@@ -637,6 +691,7 @@ def test_sync_warns_when_capability_no_longer_in_source(
     # equivalent doesn't trip and sync's guard reads the recorded version.
     (fake_source_b / "decisions").mkdir()
     (fake_source_b / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source_b)
 
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
@@ -944,9 +999,9 @@ def test_sync_reads_every_record_before_it_copies_anything(
         caps._copy_capability_tree,
     )
 
-    def _read(target_root: Path, name: str) -> caps.CapabilityRecord:
+    def _read(target_root: Path, name: str, **kwargs: Any) -> caps.CapabilityRecord:
         events.append(f"read {name}")
-        return read(target_root, name)
+        return read(target_root, name, **kwargs)
 
     def _copy_area(*args: Any, **kwargs: Any) -> None:
         events.append("copy")
@@ -966,6 +1021,22 @@ def test_sync_reads_every_record_before_it_copies_anything(
     assert events.count("copy capability") == 2
     first_copy = events.index("copy")
     assert all(event.startswith("copy") for event in events[first_copy:]), events
+
+
+def test_sync_restores_the_records_reader_a_projects_tree_lacks(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Sync reads the records through the reader its own release brings, so a project
+    whose tree lacks the reader syncs, and the sync copies the reader back (ADR-087
+    points 2 and 5)."""
+    root = make_adopter_repo(capabilities=("evidence",)).root
+    reader = Path("lifecycle") / "capability_records.py"
+    (root / ".pkit" / reader).unlink()
+
+    sync.run_sync(root)
+
+    shipped = install.find_source_kit() / reader
+    assert (root / ".pkit" / reader).read_bytes() == shipped.read_bytes()
 
 
 def test_sync_reads_the_installed_package_when_no_manifest_records_a_version(
@@ -1135,6 +1206,7 @@ def test_sync_skips_source_reconciliation_for_incubated_capability(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1168,6 +1240,7 @@ def test_sync_still_registers_incubated_capability_after_run(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1240,6 +1313,7 @@ def test_sync_dry_run_does_not_refresh_incubated_capability(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 

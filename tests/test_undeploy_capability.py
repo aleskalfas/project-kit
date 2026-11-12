@@ -1,12 +1,13 @@
 """Integration tests for `.pkit/adapters/claude-code/undeploy-capability.sh`.
 
-The primitive removes one capability's deployed skills and agents from
-`.claude/` — what the deploy primitives created for it, recognised by the mark
-each leaves — and nothing else. Skills are deployed by the real
+The primitive removes one capability's deployed skills from `.claude/` — what
+`deploy-skills.sh` created for it, recognised by its links — and nothing else.
+It removes no agent: once the capability is unregistered, the agents deploy
+removes its copies (ADR-087 point 4). Skills are deployed by the real
 `deploy-skills.sh`, which deploys only the capabilities the backbone manifest
 registers, so a test registers each capability whose skills it deploys; agents
 are staged as the resolved copies `deploy-agents.sh` writes, carrying its marker
-(read from that script, so the two cannot drift apart unnoticed).
+(read from that script).
 """
 
 from __future__ import annotations
@@ -110,11 +111,6 @@ def _skill(root: Path, name: str) -> Path:
     return root / ".claude" / "skills" / name
 
 
-def test_the_marker_is_deploy_agents_own() -> None:
-    """The primitive recognises deploy-agents.sh's copies by the very marker it writes."""
-    assert _marker_of(UNDEPLOY_SCRIPT) == MARKER
-
-
 def test_removes_exactly_the_capabilitys_deployed_skills(mock_kit: Path) -> None:
     """Flat and composite skills of the capability go; another capability's, a core
     skill and a capability whose name only shares a prefix stay."""
@@ -167,36 +163,23 @@ def test_leaves_adopter_content_among_the_skills(mock_kit: Path) -> None:
     assert "kept       .claude/skills/home-folder/" in result.stdout
 
 
-def test_removes_exactly_the_capabilitys_deployed_agents(mock_kit: Path) -> None:
-    """Marked copies of the capability's flat and folder agents go; another
-    capability's, an unmarked adopter file of the same name, and the copy of a
-    project agent of the same name — project outranks every source — all stay."""
+def test_removes_no_agent(mock_kit: Path) -> None:
+    """Marked copies of the capability's flat and folder agents stay, as does every
+    other copy: the agents deploy removes them once the capability is unregistered
+    (ADR-087 point 4)."""
     home = _cap(mock_kit, "homegrown")
     _cap_agent(home, "home-flat")
     _cap_agent(home, "home-folder", folder=True)
-    _cap_agent(home, "adopters-own")
-    _cap_agent(home, "shadowed")
-    _cap_agent(_cap(mock_kit, "other"), "other-agent")
-    project_agent = mock_kit / ".pkit" / "agents" / "project" / "shadowed"
-    project_agent.mkdir()
-    (project_agent / "shadowed.md").write_text("# s\n", encoding="utf-8")
     flat = _deployed_agent(mock_kit, "home-flat")
     folder = _deployed_agent(mock_kit, "home-folder")
     adopters_own = _deployed_agent(mock_kit, "adopters-own", marked=False)
-    shadowed = _deployed_agent(mock_kit, "shadowed")
-    other = _deployed_agent(mock_kit, "other-agent")
 
     result = _undeploy(mock_kit, "homegrown")
 
     assert result.returncode == 0, result.stderr
-    assert not flat.exists()
-    assert not folder.exists()
-    assert "removed    .claude/agents/home-flat.md (capability homegrown)" in result.stdout
-    assert adopters_own.is_file()
-    assert shadowed.is_file()
-    assert "kept       .claude/agents/shadowed.md" in result.stdout
-    assert other.is_file()
-    assert (home / "agents" / "home-flat.md").is_file()
+    assert flat.is_file() and folder.is_file() and adopters_own.is_file()
+    assert ".claude/agents" not in result.stdout
+    assert "Nothing deployed for capability homegrown." in result.stdout
 
 
 def test_is_idempotent(mock_kit: Path) -> None:

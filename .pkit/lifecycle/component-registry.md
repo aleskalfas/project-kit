@@ -15,7 +15,10 @@ pkit:
         - src/project_kit/capability_plans.py
         - src/project_kit/point_questions.py
         - src/project_kit/connections.py
-      record: [COR-001, COR-005, COR-007, COR-010, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11"]
+        - .pkit/lifecycle/capability_records.py
+        - .pkit/agents/definition_source.py
+        - .pkit/adapters/claude-code/undeploy-capability.sh
+      record: [COR-001, COR-005, COR-007, COR-010, COR-013, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11", ADR-087, "ADR-088#5"]
       artefact:
         - .pkit/lifecycle/manifest.md#discovery-what-a-capability-would-connect-to
         - .pkit/lifecycle/manifest.md#a-data-points-question
@@ -36,6 +39,21 @@ The backbone manifest's `components` list is the canonical install record. The o
 - **Its entry:** it appends a `{kind, name, origin: incubated-in-repo, manifest}` entry.
 - **No copy:** it copies no subtree, and writes no per-component manifest, since the tree is the adopter's (COR-031 D2 and D3).
 - **Deploy and dependency gating:** deploy primitives and dependency gating run as for install (COR-031 D1). Only source reconciliation differs (the lifecycle README, "The incubated-origin skip-branch (COR-031 D1)").
+
+**The project's choices between capabilities** (COR-017) sit beside the registry, in the backbone manifest's `agent_choices`. It maps an agent's name to the capability chosen for it, one for each name.
+
+```yaml
+agent_choices:
+  coordinator: project-management
+```
+
+- **Who reads them:** the lifecycle's reader of capability records, `.pkit/lifecycle/capability_records.py`, which reads the registry and each capability's skips too. The agents area's picker reads all three through it to name which definition of each name is the agent (the agents README, "Name-collision precedence").
+- **What does not read:** a file that does not read is answered as unreadable, never as recording nothing. A backbone manifest that does not parse leaves the registry and the choices unreadable. An `agent_choices` that is not that mapping leaves only the choices unreadable.
+- **Who writes them:** an `override` against another capability's agent at an install's, an upgrade's or a transition's collision prompt, and `pkit agents choose <agent> <capability>`. The command refuses a choice that would decide nothing, one that names any of these:
+  - a capability that is not installed
+  - one that ships no agent of that name
+  - one whose definition of the name the project skipped
+- **Why there:** a mapping kept once for each name cannot disagree with itself, and the write that unregisters a capability drops its choices in the same file. The shell parsers of the registry read only list entries that name a kind, so none mistakes a choice for a capability.
 
 **Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant. For a **capability**, whether the capability's *subtree* is also deleted is origin-dependent. A kit-shipped copy is deleted, an incubated (adopter-authored) subtree is kept unless explicitly purged (COR-031 D4, see "Uninstall: origin-aware removal" below).
 
@@ -67,7 +85,9 @@ The backbone manifest's `components` list is the canonical install record. The o
    - **The ranges declared on it.** Its version must fall within each range an installed capability declares for it, whether that entry is required or optional. Outside one, warn, naming each such dependent and its range, and refuse unless `--force` is given. Under `--force` the warning is still printed and the install proceeds, as an upgrade of a dependency does ([`upgrade-flow.md`, "Per-component upgrade"](upgrade-flow.md#per-component-upgrade) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). The check is the upgrade's own, with the same range comparison.
 4. **Mandatory process connections (COR-053 point 6).** Every `depends-on` entry the capability marks mandatory must find its upstream, at an equal interface version where it names one. Refuse, one line per unmet mark with its reason ([`upgrade-flow.md`, "Mandatory process connections"](upgrade-flow.md#mandatory-process-connections-cor-053-point-6) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). Never install anything automatically.
 5. **Rule-set names (COR-051 point 3).** No rule set the capability ships may take a name that a project rule set already declares. A set's name is in each of its rule ids, so the clash could not be undone once installed. Refuse, one line per clash, naming the set, the capability's file and the project's.
-6. **Naming collision detection.** The new capability's skills and agents must not collide with names already installed. Interactive resolution is available.
+6. **Naming collision detection.** The new capability's skills and agents must not collide with names already installed, and interactive resolution is available.
+   - **An agent's collisions:** an agent collides with each definition of its name that counts, the project's, another installed capability's or core's. The agents area's picker answers which count, loaded from the release the command brings.
+   - **An `override`** removes only the project's own artefact. Against another capability's agent it records the project's choice of the new capability for the name, and removes nothing. Against core's it removes nothing, since a capability's definition wins over core's (COR-013 point 8).
 
 **The declared project rule set.** After the copy and the registration, install creates the one project rule set the capability declares ([COR-017](../decisions/core/COR-017-capability-pattern.md)), once for this install. Running install is the consent. One computation decides it, which the reading command `pkit capabilities project-rule-set` gives too ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run), "The seams back").
 
@@ -84,6 +104,8 @@ The backbone manifest's `components` list is the canonical install record. The o
   - It reads the plan through `pkit capabilities project-rule-set <name> --json`.
   - It writes the `text` given, where `creates` is `true` and the file is still missing.
   - It never fails the upgrade when the answer cannot be read. It warns, and names the command.
+
+**The defaults its write categories declare.** Before the deploy, install writes each default the capability's write categories declare into the agents overlay. Register and install in the methodology's source write them too. What it writes, and when it asks, is in [the agents README, "A capability's write categories"](../agents/README.md#a-capabilitys-write-categories) <!-- unanchored: points the reader on to the page that says how a default is written, a pointer and no statement of it -->.
 
 **The questions its points declare.** Install ends, after the deploy, with the questions of the points the capability defines and of the points its contributions reach ([COR-061](../decisions/core/COR-061-point-questions.md)). They are asked where a person can answer, and printed otherwise ([`manifest.md`, "A data point's question"](manifest.md#a-data-points-question)).
 
@@ -135,9 +157,9 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
 
 - **`kit-shipped`** — the subtree is a disposable copy of kit source. Uninstall deletes the subtree, removes the registry entry, and re-runs deploy (deploy's stale-removal pass then drops the harness symlinks, since the source is gone). Unchanged from before.
 - **`incubated-in-repo`:** the subtree is the adopter's *only* copy of authored work. So uninstall unregisters in place. It removes the registry entry and drops the capability's deployed harness skills and agents. It leaves the authored subtree on disk, and the CLI reports "unregistered in place; your authored files are kept at `<path>`".
-  - **The undeploy primitive:** a re-run of deploy would not drop the agents. The agents deploy keys its stale-removal on whether the *source file* still exists, and here it does. The skills deploy reads the registry, and would drop the skills. So the lifecycle runs each installed adapter's undeploy primitive, `undeploy-capability.sh <name>`, found by name as the deploy primitives are.
-  - **What each side does:** the adapter removes what it deployed for that capability (the adapters README, "Primitives the lifecycle calls"). The lifecycle names the capability and carries no harness path.
-  - **An adapter with no undeploy primitive** is named in a `warning` line, since its harness still carries the capability. It is never skipped silently.
+  - **The undeploy primitive, for skills:** the lifecycle runs each installed adapter's undeploy primitive, `undeploy-capability.sh <name>`, found by name as the deploy primitives are. The skills deploy reads the registry, and would drop the skills too. Skills keep this step until their own rules are decided. The primitive removes no agent: the agents deploy does that.
+  - **What each side does:** the adapter removes the skills it deployed for that capability (the adapters README, "Primitives the lifecycle calls"). The lifecycle names the capability and carries no harness path.
+  - **An adapter with no undeploy primitive** is named in a `warning` line, since its harness may still carry the capability's skills. It is never skipped silently.
   - **The order:** the undeploy runs before the registry entry is removed. So a failing adapter leaves the capability registered, and the uninstall can run again.
   - **`--purge`:** deleting an incubated capability's files is a separate, explicit opt-in. `--purge` confirms first, honouring the pause-before-destructive-ops discipline, and `--yes` skips the prompt for non-interactive use. The default never deletes incubated files.
 - **The methodology's source repository, run by its own code:** whatever the origin, the subtree is never deleted. It is unregistered in place as an incubated one is, the adapters' undeploy primitives included.
@@ -146,3 +168,5 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - **`--purge`** is refused there. A capability leaves the source through git.
   - **No caller deletes the source:** the guard sits in the uninstall function every caller goes through, which resolves the running code's tree itself.
   - **Run by other code,** uninstall refuses there before anything else, as install, upgrade and register do.
+
+**Whatever the origin,** the write that removes the registry entry drops the project's choices of the capability in the same file. Once the capability is unregistered, none of its definitions counts. So the next agents deploy removes each copy written from them, and writes the agent of each name (the agents README, "Deploy mechanics"). A deploy that fails after the registry write leaves those copies until the next sync's deploy.

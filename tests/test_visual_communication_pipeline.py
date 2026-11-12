@@ -941,6 +941,51 @@ def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes
     }
 
 
+def test_a_node_shows_the_sign_of_the_concept_whose_colour_it_takes(tmp_path: Path) -> None:
+    """A node's sign part draws the sign of the concept whose family it takes: the person's
+    icon, which the test notation holds, and the store's shape, which the foundations
+    declare, beside the family its state gives (DEC-036 points 1 and 2). The API takes the
+    pattern's family, and the queue its state's, so neither draws one. Each node is 226 px
+    wide, so its sign's frame lies 202 px from its left, 16 px a side."""
+    root = system_project(tmp_path)
+    folder = root / "visual" / "pieces" / "system"
+    sign = {"fill": ":colour.line"}
+    corner = {"x": "=:width - 3 * @space.2", "y": "=@space.2", "width": "=2 * @space.2"}
+    parts = {**NODE["parts"], "sign": {"sign": sign, **corner, "height": "=2 * @space.2"}}
+    write(folder / "components" / "node.yaml", yaml_text({**NODE, "parts": parts}))
+    square = {"d": "M 3 3 H 21 V 21 H 3 Z", "fill-rule": "nonzero", "square": 24}
+    roles = root / "visual" / "libraries" / "foundations" / "1.0.0" / "roles.yaml"
+    write(roles, yaml_text({**reading.read_yaml(roles), "shapes": {"square": square}}))
+    notation = root / "visual" / "libraries" / "test-notation" / "1.0.0" / "notation.yaml"
+    concepts = reading.read_yaml(notation)["concepts"]
+    concepts["store"] = {"colour": "green", "shape": "square"}
+    write(notation, yaml_text(bound("notation", concepts=concepts)))
+    piece = pl.read_piece(root, "visual", "system")
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
+
+    assert result.findings == []
+    drawn = {}
+    for node in NODES:
+        found = result.scene.find(f"figure/body/items[{node['id']}]/sign")
+        if found is not None:
+            assert found.type == "path"
+            drawn[node["id"]] = (
+                found.properties["d"].split(" C ")[0],
+                found.properties["fill"],
+                found.sources["d"],
+            )
+    assert drawn == {
+        "user": ("M 210 9.33", "family.purple.line", "content:body.items[user].concept"),
+        "store": (
+            "M 204 10 L 216 10 L 216 22 L 204 22 Z",
+            "family.red.line",
+            "content:body.items[store].concept",
+        ),
+    }
+
+
 # --- the findings record's key and the YAML a command writes ------------------------------------
 
 

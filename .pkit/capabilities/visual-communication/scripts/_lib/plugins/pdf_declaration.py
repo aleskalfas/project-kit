@@ -5,8 +5,8 @@ The PDF renderer writes one file for each language and combination of modes, its
 order, so it draws, and only draws: it updates nothing in place and reads nothing back. A
 primitive or a property it does not name here is a loss the capability knows before it
 runs: a primitive it refuses, a property it leaves out. It draws every primitive of format
-1's scene, the image of every source among them, in the default font profile, from the
-brand's committed font files, calls no outside program and reaches no service.
+1's scene, the image of every source and the path among them, in the default font profile,
+from the brand's committed font files, calls no outside program and reaches no service.
 
 - `unit`: how it maps the scene's unit onto a page with no physical size (DEC-001 point 2).
   Each px of the scene is 0.75 pt of the page, CSS's 96 px to the inch.
@@ -35,8 +35,8 @@ IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library
 DECLARATION = {
     "name": "pdf",
     "kind": "renderer",
-    "version": "1.3.0",
-    "seam": 6,
+    "version": "1.4.0",
+    "seam": 7,
     "module": "pdf",
     "about": "A PDF file for each language and combination of modes, its pages in order.",
     "profile": "default",
@@ -82,5 +82,9 @@ DECLARATION = {
             DRAWS,
         ),
         "image": dict.fromkeys((*_FRAME, *IMAGE), DRAWS),
+        "path": dict.fromkeys(
+            (*_FRAME, "d", "fill-rule", "fill", "stroke", "stroke-width"),
+            DRAWS,
+        ),
     },
 }

@@ -48,6 +48,10 @@ says what it draws.
   and names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a
   marker the page defines once for each colour a line draws one in. A line that holds
   neither its ends nor its points is refused, and left out.
+- **A path**, such as a concept's sign, is a `<path>` of the outline the engine mapped into
+  its frame, `d` as the scene holds it, filled by its rule, `fill-rule`, written only where
+  it is `evenodd`, since SVG's default is the other. Its stroke lies on its outline, as
+  SVG strokes a path. A path that holds no outline is refused, and left out.
 - **A picture** is embedded whole, as the picture its image shows in the combination drawn
   (`seam.Shown`), whatever its source: PNG data for a PNG and JPEG data for a JPEG, its bytes
   as they are, so a colour profile it carries stays with it (DEC-025 points 5 and 7). An
@@ -348,6 +352,26 @@ class Canvas:
             ]
         )
         return f"<ellipse {attributes}/>"
+
+    def _path(self, element: Mapping[str, Any]) -> str:
+        """A path, such as a concept's sign (DEC-036 point 1): the outline the engine mapped
+        into its frame, filled by its rule. A path that holds no outline is refused, as an
+        element the renderer does not draw is."""
+        outline = element.get("d")
+        if not isinstance(outline, str) or not outline:
+            self._lose(element["id"], seam.REFUSED, "the path holds no outline, `d`")
+            return ""
+        rule = element.get("fill-rule")
+        attributes = attribute_text(
+            [
+                ("data-id", element["id"]),
+                ("d", outline),
+                ("fill-rule", rule if rule == "evenodd" else None),
+                *self._paint(element, "fill"),
+                *self._stroke(element),
+            ]
+        )
+        return f"<path {attributes}/>"
 
     def _line(self, element: Mapping[str, Any]) -> str:
         """A line, or a tie's connector: a `<polyline>` through its points where its route

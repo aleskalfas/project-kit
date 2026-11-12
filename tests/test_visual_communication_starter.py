@@ -350,7 +350,7 @@ def on_each_foundations(
 
 
 #: The shared roles the foundations being built add to their release 1.0.0, each by the role
-#: its default aliases (DEC-022 point 3, DEC-004 point 7).
+#: its default aliases (DEC-004 point 7).
 ADDED_ROLES = {"size.site": "size.slide", "size.line": "size.figure"}
 
 

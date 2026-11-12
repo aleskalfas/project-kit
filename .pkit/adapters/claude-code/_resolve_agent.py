@@ -16,8 +16,9 @@ Writes the resolved agent file content to stdout (frontmatter with
 placeholders substituted + original body). Exits non-zero with a clear
 error message if a placeholder references a category the overlay does
 not define *through a hard channel* (any list key or `reads.paths` /
-`reads.records`), or if a *write-carrying* category names sync-managed
-content (the no-shared-files invariant at the agent surface, per ADR-051).
+`reads.records`), or if a category the ownership check binds names a path that
+reaches what sync overwrites (the no-shared-files invariant at the agent
+surface, per ADR-051 and ADR-088 point 7).
 A category referenced *only* through `reads.patterns` is an **optional
 read** (ADR-052): undefined, its item is dropped and the resolver still
 exits 0 so the agent deploys as a generalist. A *bare* optional key (present,
@@ -53,18 +54,45 @@ enforce or translate, by the adapter's declaration of tool access
 (`tool-access.json`, which the reader applies), is refused before anything
 else, with exit status 3 (`TOOL_ACCESS_REFUSED`): the deploy then removes the
 copy it deployed before, since that copy may give tools the definition no
-longer gives (COR-013 point 7). Where the reader or the declaration cannot be
-read, the agent is not resolved, with exit status 1, and its earlier copy
-stays.
+longer gives (COR-013 point 7).
 
-The sync-managed check above is one this script *applies* but does not
-*define*. The sync-managed predicate and the write-carrying category registry live
-once, in the lifecycle layer's propagated `.pkit/lifecycle/ownership.py`,
-and this resolver imports them (ADR-051 Decision point 3): re-deriving
-the tier-ownership map per adapter would fork the predicate and silently
-skip the check on the next harness. The import is the ADR-003 pattern —
-a propagated in-tree module both the global `pkit` runtime and this
-script can load.
+Refused for another cause, such as an overlay category the project has not set
+or a front matter that gives the agent another name than its file's (COR-013
+point 8), it exits with status 1 (`REFUSED`). Given `--earlier <copy>`, the
+copy the deploy wrote before from the same definition, it exits instead with
+status 4 (`KEEP_EARLIER`) where the tool access that copy's mark records gives
+nothing the current text's does not, each entry read whole with its argument
+(ADR-087 point 4): the deploy then keeps that copy and says it is not of the
+current text. Where the reader, the declaration, the ownership module or the
+picker cannot be read, it cannot tell, and exits with status 5
+(`CANNOT_TELL`): the deploy changes nothing for that name.
+
+Given `--mark <place>`, as the deploy gives it, it writes the deploy's mark as
+the front matter's first lines: the mark itself, then the definition the copy
+is written from (its place, COR-013 point 8), the digest of the text it read, as
+the agents area's picker computes it, and the tool access the reader read from
+that text, in the methodology's keys (ADR-087 point 4).
+
+Two other entries ask the agents area's picker, `.pkit/agents/definition_source.py`,
+which definition of a name is the agent (COR-013 point 8, ADR-087 point 2):
+
+- `--plan` writes, a line for each name some place ships, what the deploy does
+  with it, tab-separated: `agent`, `refused`, `none` or `untold`, then the name
+  and what that needs (`plan`). Where the picker cannot be reached, it exits
+  with status 5 and writes nothing to standard output.
+- `--pick <name>`, the agent runner's entry, writes one JSON document naming the
+  file of the name's agent, or whether no place ships the name, or why it has no
+  agent the runner may run (`pick_answer`).
+
+The ownership check above is one this script *applies* but does not
+*define*. The test of what a grant may not reach, and which categories it
+binds, live once, in the lifecycle layer's propagated
+`.pkit/lifecycle/ownership.py`: this resolver passes each category with its
+values and asks (ADR-051 Decision point 3, ADR-088 point 7). Re-deriving the
+tier-ownership map, or which categories are a capability's, per adapter would
+fork the rule and silently skip the check on the next harness. The import is
+the ADR-003 pattern — a propagated in-tree module both the global `pkit`
+runtime and this script can load.
 
 Self-contained: PEP 723 inline metadata declares the `ruamel.yaml`
 dependency, so `uv run --script` installs it transparently on first
@@ -75,6 +103,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import re
 import sys
 from pathlib import Path
@@ -91,13 +120,44 @@ TARGET_ROOT = Path(__file__).resolve().parents[3]
 TOOL_ACCESS_READER = TARGET_ROOT / ".pkit" / "agents" / "tool_access.py"
 ADAPTER_FOLDER = Path(__file__).resolve().parent
 
+# The agents area's picker of which definition of a name is the agent (ADR-087
+# point 2), which loads the lifecycle's reader of the records from this tree.
+PICKER = TARGET_ROOT / ".pkit" / "agents" / "definition_source.py"
+
 # The flag the agent runner passes: keep the methodology's keys of tool access.
 METHODOLOGY_KEYS_FLAG = "--methodology-keys"
 
-# The exit status of a definition refused for its tool access. `deploy-agents.sh`
-# reads it to remove the copy it deployed before (COR-013 point 7); every other
-# failure leaves that copy.
+# The deploy's flags: write the mark, naming the place the definition is shipped
+# from, and the copy the deploy wrote before from that definition.
+MARK_FLAG = "--mark"
+EARLIER_FLAG = "--earlier"
+
+# The two entries that ask the picker: the deploy's plan, and the runner's pick.
+PLAN_FLAG = "--plan"
+PICK_FLAG = "--pick"
+
+# The exit statuses `deploy-agents.sh` reads (ADR-087 point 4): refused for a cause
+# other than the tool access, so the copy deployed before goes; refused for the tool
+# access, so it goes too (COR-013 point 7); refused for another cause, where that
+# copy gives nothing the current text does not, so it stays; and cannot tell, so
+# nothing changes for the name.
+REFUSED = 1
 TOOL_ACCESS_REFUSED = 3
+KEEP_EARLIER = 4
+CANNOT_TELL = 5
+
+# The deploy's mark, and the three lines beside it (ADR-087 point 4). The mark is
+# the front matter's first line, which other parts and shipped migrations match;
+# `deploy-agents.sh` holds the same value, and a test holds the two equal. YAML
+# comments, so no harness reads them as keys.
+MARKER = "# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync"
+MARK_DEFINITION = "# pkit-definition: "
+MARK_DIGEST = "# pkit-digest: "
+MARK_TOOL_ACCESS = "# pkit-tool-access: "
+# What the tool-access line records for a definition that names neither form.
+NO_FORM = "none"
+# How many lines of a copy the mark and its three lines lie within.
+MARK_LINES = 5
 
 # The frontmatter keys whose list items may carry `<category>` placeholders,
 # split by *channel* per ADR-052. The backbone scanner (`agents_overlay.py`)
@@ -161,6 +221,24 @@ WORKSPACE_NOTE = (
 WARNING_PREFIX = "warning: "
 
 
+class Refusal(Exception):
+    """The definition is refused for a cause other than its tool access.
+
+    `lines` are the reason, then any remediation. `access` is the current text's
+    tool access, where it was read before the refusal.
+    """
+
+    def __init__(self, lines: list[str], access=None) -> None:
+        super().__init__(lines[0])
+        self.lines = lines
+        self.access = access
+
+
+class CannotTell(Exception):
+    """A module or a declaration the resolution needs cannot be read; the message
+    says which, and the fix."""
+
+
 def load_module(path: Path, name: str) -> ModuleType:
     """The module at *path*, loaded from its file, writing no bytecode beside it.
 
@@ -206,7 +284,7 @@ def load_ownership():
 
     Raises when the module is absent; the caller turns that into a loud skip.
     Degrading is not an option: the module is also what says *which* categories
-    are write-carrying, so without it the resolver cannot tell a checked grant
+    the check binds, so without it the resolver cannot tell a checked grant
     from an unchecked one — and deploying an unchecked grant is the outcome
     ADR-051 exists to prevent.
     """
@@ -300,21 +378,55 @@ def end_with_workspace_note(body: str) -> str:
     return f"{body.rstrip()}\n\n{WORKSPACE_NOTE}\n"
 
 
-def main(argv: list[str]) -> int:
-    args = argv[1:]
-    methodology_keys = METHODOLOGY_KEYS_FLAG in args
-    if methodology_keys:
-        args.remove(METHODOLOGY_KEYS_FLAG)
-    if len(args) != 3:
-        print(
-            "usage: _resolve_agent.py <source_file> <agent_name> <overlay_file> "
-            f"[{METHODOLOGY_KEYS_FLAG}]",
-            file=sys.stderr,
-        )
-        return 2
+class ToolAccessRefused(Exception):
+    """The definition is refused for its tool access; the message says why."""
 
-    source_file, agent_name, overlay_file = args
 
+def tool_access_line(access) -> str:
+    """The tool access *access* as the mark records it: the methodology's key and
+    its entries, each whole and quoted, or `none` for a definition naming neither."""
+    if access.form is None:
+        return NO_FORM
+    entries = ", ".join(json.dumps(str(entry), ensure_ascii=False) for entry in access.entries)
+    return f"{access.form}: [{entries}]"
+
+
+def recorded_tool_access(copy: Path, reader: ModuleType):
+    """The tool access the mark of the copy at *copy* records, or None where it
+    records none or cannot be read: such a copy is not kept on a refusal."""
+    try:
+        with copy.open(encoding="utf-8") as handle:
+            head = [handle.readline().rstrip("\n") for _ in range(MARK_LINES)]
+    except (OSError, UnicodeDecodeError):
+        return None
+    if MARKER not in head:
+        return None
+    line = next((line for line in head if line.startswith(MARK_TOOL_ACCESS)), None)
+    if line is None:
+        return None
+    recorded = line[len(MARK_TOOL_ACCESS) :].strip()
+    if recorded == NO_FORM:
+        return reader.Access(None)
+    try:
+        return reader.tool_access(f"---\n{recorded}\n---\n")
+    except reader.Refused:
+        return None
+
+
+def resolve(
+    source_file: str,
+    agent_name: str,
+    overlay_file: str,
+    *,
+    methodology_keys: bool,
+    mark: str | None,
+) -> str:
+    """The resolved text of the agent *agent_name* from *source_file*.
+
+    Raises `ToolAccessRefused` for a definition refused for its tool access,
+    `Refusal` for one refused for another cause, and `CannotTell` where a module or
+    the adapter's declaration it needs cannot be read.
+    """
     yaml = YAML()
     yaml.preserve_quotes = True
     yaml.indent(mapping=2, sequence=4, offset=2)
@@ -334,7 +446,7 @@ def main(argv: list[str]) -> int:
         key: agent_overrides.pop(key) for key in POLICY_KEYS if key in agent_overrides
     }
 
-    def resolve(category: str):
+    def resolve_category(category: str):
         if category in agent_overrides:
             return agent_overrides[category]
         if category in defaults:
@@ -344,18 +456,14 @@ def main(argv: list[str]) -> int:
     def is_bare(category: str) -> bool:
         """The key is present but carries no value (``cat:`` alone).
 
-        ``resolve`` returns None for both a bare and an absent key; only a bare
-        one is a half-finished edit by the adopter, worth telling them about.
+        ``resolve_category`` returns None for both a bare and an absent key; only a
+        bare one is a half-finished edit by the adopter, worth telling them about.
         """
-        return (category in agent_overrides or category in defaults) and resolve(category) is None
+        return (category in agent_overrides or category in defaults) and resolve_category(
+            category
+        ) is None
 
     content = Path(source_file).read_text(encoding="utf-8")
-    match = re.match(r"^---\n(.*?\n)---\n(.*)$", content, re.DOTALL)
-    if not match:
-        print(f"{source_file}: agent file has no frontmatter", file=sys.stderr)
-        return 1
-    fm_yaml = match.group(1)
-    body = match.group(2)
 
     # The tool access first, so a definition refused for it is refused whatever
     # else it gets wrong, and the deploy removes its earlier copy (ADR-086 point 3).
@@ -367,13 +475,11 @@ def main(argv: list[str]) -> int:
         bad_declaration = reader.BadDeclaration
         harness_refusal = reader.harness_refusal
     except Exception as exc:
-        print(
+        raise CannotTell(
             f"{agent_name}: cannot read the agent's tool access: no reader at "
             f".pkit/agents/tool_access.py, or none this resolver can call ({exc}).\n"
-            "Fix: run `pkit sync`, which copies the reader and this resolver together.",
-            file=sys.stderr,
-        )
-        return 1
+            "Fix: run `pkit sync`, which copies the reader and this resolver together."
+        ) from None
     try:
         declaration = read_declaration(ADAPTER_FOLDER)
     except bad_declaration as exc:
@@ -381,29 +487,42 @@ def main(argv: list[str]) -> int:
     else:
         cause = "is not there"
     if declaration is None:
-        print(
+        raise CannotTell(
             f"{agent_name}: cannot check the agent's tool access: the adapter's declaration of "
             f"tool access, {declaration_path(ADAPTER_FOLDER).relative_to(TARGET_ROOT)}, "
-            f"{cause}.\nFix: run `pkit sync`, which copies it with this resolver.",
-            file=sys.stderr,
+            f"{cause}.\nFix: run `pkit sync`, which copies it with this resolver."
         )
-        return 1
     try:
         access = read_tool_access(content)
     except reader.Refused as exc:
-        print(f"{agent_name}: its tool access is refused: {exc}", file=sys.stderr)
-        return TOOL_ACCESS_REFUSED
+        raise ToolAccessRefused(f"{agent_name}: its tool access is refused: {exc}") from None
 
+    match = re.match(r"^---\n(.*?\n)---\n(.*)$", content, re.DOTALL)
+    if not match:
+        raise Refusal([f"{agent_name}: agent file has no frontmatter"], access)
+    fm_yaml = match.group(1)
+    body = match.group(2)
     fm_data = yaml.load(io.StringIO(fm_yaml)) or {}
 
     problem = harness_refusal(access, list(fm_data), declaration)
     if problem is not None:
-        print(
+        raise ToolAccessRefused(
             f"{agent_name}: its tool access is refused, since {declaration.harness} cannot "
-            f"enforce or translate it: {problem}",
-            file=sys.stderr,
+            f"enforce or translate it: {problem}"
         )
-        return TOOL_ACCESS_REFUSED
+
+    # An agent's name is its file's name, and a definition whose front matter gives
+    # another is refused (COR-013 point 8).
+    written = fm_data.get("name")
+    if written is not None and str(written) != agent_name:
+        raise Refusal(
+            [
+                f"{agent_name}: its front matter names the agent {written!r}, not {agent_name!r}, "
+                "the name of its file (COR-013 point 8)",
+                f"Fix: write `name: {agent_name}`, or rename the file to the name it gives.",
+            ],
+            access,
+        )
 
     def _placeholder_cats(items: object) -> list[str]:
         cats: list[str] = []
@@ -436,19 +555,17 @@ def main(argv: list[str]) -> int:
 
         Lazy so an agent with no placeholders at all needs nothing from the
         lifecycle tree; from the first placeholder onwards the module is required,
-        because it is what says whether that category is write-carrying.
+        because it is what says whether the check binds that category.
         """
         if not ownership_cache:
             try:
                 ownership_cache.append(load_ownership())
             except Exception as exc:
-                print(
+                raise CannotTell(
                     f"{agent_name}: cannot load .pkit/lifecycle/ownership.py "
                     f"({exc}) — overlay categories cannot be validated.\n"
-                    f"Fix: run `pkit sync` to propagate the lifecycle layer.",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
+                    f"Fix: run `pkit sync` to propagate the lifecycle layer."
+                ) from None
         return ownership_cache[0]
 
     def warn(message: str):
@@ -457,8 +574,7 @@ def main(argv: list[str]) -> int:
         print(f"{WARNING_PREFIX}{message}", file=sys.stderr)
 
     def fail(reason_lines: list[str]):
-        print("\n".join([f"{agent_name}: {reason_lines[0]}", *reason_lines[1:]]), file=sys.stderr)
-        sys.exit(1)
+        raise Refusal([f"{agent_name}: {reason_lines[0]}", *reason_lines[1:]], access)
 
     def expand_list(items: list, *, optional: bool = False):
         out: list = []
@@ -466,7 +582,7 @@ def main(argv: list[str]) -> int:
             if isinstance(item, str) and item.startswith("<") and item.endswith(">"):
                 cat = item[1:-1]
                 own = ownership()
-                resolved = resolve(cat)
+                resolved = resolve_category(cat)
                 if resolved is None:
                     # An *optional read* (a `reads.patterns` category not also
                     # hard-referenced elsewhere) tolerates absence: drop the item
@@ -492,7 +608,7 @@ def main(argv: list[str]) -> int:
                     # Implications, #2469): the first one with remediation of
                     # its own gives it, else the deploy's generic `adopt` advice
                     # applies.
-                    undefined = [c for c in hard_order if resolve(c) is None]
+                    undefined = [c for c in hard_order if resolve_category(c) is None]
                     if len(undefined) > 1:
                         named = ", ".join(f"<{c}>" for c in undefined)
                         reason = f"categories {named} referenced but not defined"
@@ -537,8 +653,188 @@ def main(argv: list[str]) -> int:
 
     out = io.StringIO()
     yaml.dump(fm_data, out)
-    sys.stdout.write(f"---\n{out.getvalue()}---\n{body}")
+    marked = ""
+    if mark is not None:
+        marked = "".join(
+            f"{line}\n"
+            for line in (
+                MARKER,
+                f"{MARK_DEFINITION}{mark}",
+                f"{MARK_DIGEST}{picker().digest(Path(source_file))}",
+                f"{MARK_TOOL_ACCESS}{tool_access_line(access)}",
+            )
+        )
+    return f"---\n{marked}{out.getvalue()}---\n{body}"
+
+
+def picker() -> ModuleType:
+    """The agents area's picker in this tree, or `CannotTell` naming why it cannot be
+    loaded."""
+    try:
+        module = load_module(PICKER, "pkit_agents_definition_source")
+    except Exception as exc:
+        raise CannotTell(
+            f"cannot tell which definition of an agent is the agent: no picker at "
+            f".pkit/agents/definition_source.py this resolver can load ({exc}).\n"
+            "Fix: run `pkit sync`, which copies the picker and this resolver together."
+        ) from None
+    if not callable(getattr(module, "pick", None)) or not callable(getattr(module, "digest", None)):
+        raise CannotTell(
+            "the picker at .pkit/agents/definition_source.py has no `pick` or `digest`, "
+            "which this resolver calls.\nFix: run `pkit sync`."
+        )
+    return module
+
+
+def the_answer():
+    """The picker's answer for this tree, or `CannotTell` naming why there is none."""
+    module = picker()
+    try:
+        return module.pick(TARGET_ROOT)
+    except module.RecordsUnreachable as exc:
+        raise CannotTell(
+            f"cannot tell which definition of an agent is the agent: {exc}.\n"
+            "Fix: run `pkit sync`, which copies the lifecycle's reader with the picker."
+        ) from None
+
+
+def _field(text: str) -> str:
+    """*text* as one tab-separated field: no tab or line break inside it."""
+    return " ".join(text.split()) or "-"
+
+
+def plan() -> int:
+    """Write the deploy's plan: a tab-separated line for each name some place ships.
+
+    - `agent`, the name, its place, its canonical file and how many places ship it:
+      the definition the deploy resolves.
+    - `refused`, the name, its place, why, and how many places ship it: an agent whose
+      place holds both layouts, which the deploy does not resolve.
+    - `none`, the name and why: no definition of it counts.
+    - `untold`, the name and why: the records that decide it cannot be read.
+    """
+    try:
+        answer = the_answer()
+    except CannotTell as exc:
+        print(str(exc), file=sys.stderr)
+        return CANNOT_TELL
+    for name, decided in answer.picks.items():
+        shipped = str(len(decided.definitions))
+        if decided.untold is not None:
+            fields = ["untold", name, decided.untold]
+        elif decided.agent is None:
+            fields = ["none", name, decided.none or "no definition of it counts"]
+        elif decided.refused is not None:
+            fields = ["refused", name, decided.agent.place, decided.refused, shipped]
+        else:
+            fields = ["agent", name, decided.agent.place, str(decided.file), shipped]
+        print("\t".join(_field(field) for field in fields))
     return 0
+
+
+def pick_answer(name: str) -> dict:
+    """The runner's answer for the agent *name*, as one JSON document's fields.
+
+    `shipped` is False where no place ships the name. Otherwise it holds `agent`,
+    the file of the definition the runner resolves, and its `place`, or one of
+    `refused`, `none` and `untold`, saying why there is none to run.
+    """
+    try:
+        answer = the_answer()
+    except CannotTell as exc:
+        return {"name": name, "shipped": True, "untold": str(exc).splitlines()[0]}
+    decided = answer.picks.get(name)
+    if decided is None:
+        return {"name": name, "shipped": False}
+    if decided.untold is not None:
+        return {"name": name, "shipped": True, "untold": decided.untold}
+    if decided.agent is None:
+        return {"name": name, "shipped": True, "none": decided.none}
+    if decided.refused is not None:
+        return {"name": name, "shipped": True, "refused": decided.refused}
+    return {
+        "name": name,
+        "shipped": True,
+        "agent": str(decided.file),
+        "place": decided.agent.place,
+    }
+
+
+def _option(args: list[str], flag: str) -> str | None:
+    """The value after *flag* in *args*, both removed; None where *flag* is absent."""
+    if flag not in args:
+        return None
+    index = args.index(flag)
+    if index + 1 >= len(args):
+        raise ValueError(f"{flag} takes a value")
+    value = args[index + 1]
+    del args[index : index + 2]
+    return value
+
+
+def main(argv: list[str]) -> int:
+    args = argv[1:]
+    if args == [PLAN_FLAG]:
+        return plan()
+    if len(args) == 2 and args[0] == PICK_FLAG:
+        print(json.dumps(pick_answer(args[1])))
+        return 0
+    methodology_keys = METHODOLOGY_KEYS_FLAG in args
+    if methodology_keys:
+        args.remove(METHODOLOGY_KEYS_FLAG)
+    try:
+        mark = _option(args, MARK_FLAG)
+        earlier = _option(args, EARLIER_FLAG)
+    except ValueError:
+        args = []
+        mark = earlier = None
+    if len(args) != 3:
+        print(
+            "usage: _resolve_agent.py <source_file> <agent_name> <overlay_file> "
+            f"[{METHODOLOGY_KEYS_FLAG}] [{MARK_FLAG} <place>] [{EARLIER_FLAG} <copy>]\n"
+            f"       _resolve_agent.py {PLAN_FLAG}\n"
+            f"       _resolve_agent.py {PICK_FLAG} <agent_name>",
+            file=sys.stderr,
+        )
+        return 2
+
+    source_file, agent_name, overlay_file = args
+    try:
+        text = resolve(
+            source_file,
+            agent_name,
+            overlay_file,
+            methodology_keys=methodology_keys,
+            mark=mark,
+        )
+    except ToolAccessRefused as exc:
+        print(str(exc), file=sys.stderr)
+        return TOOL_ACCESS_REFUSED
+    except CannotTell as exc:
+        print(str(exc), file=sys.stderr)
+        return CANNOT_TELL
+    except Refusal as refusal:
+        print("\n".join(refusal.lines), file=sys.stderr)
+        if earlier is not None and refusal.access is not None and keeps(earlier, refusal.access):
+            return KEEP_EARLIER
+        return REFUSED
+    sys.stdout.write(text)
+    return 0
+
+
+def keeps(earlier: str, access) -> bool:
+    """Whether the copy at *earlier*, written from the agent's definition before, may
+    stay while its current text is refused for a cause other than its tool access:
+    only where the tool access its mark records gives nothing *access* does not
+    (COR-013 point 8, ADR-087 point 4). A copy whose mark records none is not kept."""
+    try:
+        reader = load_module(TOOL_ACCESS_READER, "pkit_agents_tool_access")
+    except Exception:
+        return False
+    recorded = recorded_tool_access(Path(earlier), reader)
+    if recorded is None or not callable(getattr(reader, "gives_nothing_more", None)):
+        return False
+    return reader.gives_nothing_more(recorded, access)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:living-docs
+# pkit-digest: sha256:bfde18656808bc0e1ac0a613c208ad15bce54458ed63eb91ad3086b05a4ebdbd
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: living-docs
 description: Living-documentation agent of the living-docs capability — 
   proposes, never applies. For a stale or deferred page it reads the friction 

@@ -14,7 +14,9 @@ command's loader of the reader (COR-013 point 7, ADR-085, ADR-086).
   Code does not take, and Claude Code's own key beside `withheld`;
 - the command loads the reader from the tree, names which side is behind where it cannot,
   and writes no bytecode, and it names each registered adapter that deploys agents;
-- the reader runs under the system's Python 3.9, standard library only.
+- the reader runs under the system's Python 3.9, standard library only;
+- whether an earlier text's tool access gives nothing the current text's does not,
+  each entry read whole with its argument (ADR-087 point 4).
 """
 
 from __future__ import annotations
@@ -586,3 +588,37 @@ def test_the_reader_loads_from_its_file_under_the_system_python(tmp_path: Path) 
         "disallowedTools",
         "`withheld` names `Wrokflow`",
     ]
+
+
+# --- an earlier text's tool access against the current one (ADR-087 point 4) ---------------
+
+
+@pytest.mark.parametrize(
+    ("earlier", "current", "kept"),
+    [
+        ("tools: [Read, Grep]\n", "tools: [Read, Grep, Glob]\n", True),
+        ("tools: [Read, Grep]\n", "tools: [Read]\n", False),
+        ("tools: ['Bash(git log:*)']\n", "tools: [Bash]\n", True),
+        ("tools: [Bash]\n", "tools: ['Bash(git log:*)']\n", False),
+        ("tools: [Read]\n", "", True),
+        ("", "tools: [Read]\n", False),
+        ("withheld: [Workflow, Monitor]\n", "withheld: [Workflow]\n", True),
+        ("withheld: [Workflow]\n", "withheld: [Workflow, Monitor]\n", False),
+        ("withheld: [Bash]\n", "withheld: ['Bash(rm:*)']\n", True),
+        ("withheld: ['Bash(rm:*)']\n", "withheld: [Bash]\n", False),
+        ("tools: [Read]\n", "withheld: [Workflow]\n", True),
+        ("tools: [Read, Workflow]\n", "withheld: [Workflow]\n", False),
+        ("tools: ['Bash(git log:*)']\n", "withheld: ['Bash(rm:*)']\n", False),
+        ("", "withheld: []\n", True),
+        ("", "withheld: [Workflow]\n", False),
+        ("withheld: [Workflow]\n", "tools: [Read]\n", False),
+    ],
+)
+def test_an_earlier_access_is_kept_only_where_it_gives_nothing_more(
+    reader: ModuleType, earlier: str, current: str, kept: bool
+) -> None:
+    """An entry with an argument never covers one without it, and a grant meeting a
+    withheld list overlaps on a tool whatever the arguments."""
+    before = reader.tool_access(_definition(earlier))
+    now = reader.tool_access(_definition(current))
+    assert reader.gives_nothing_more(before, now) is kept

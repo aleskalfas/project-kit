@@ -6,10 +6,6 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
-shortfalls:
-  - at: 7
-    issue: "#2573"
-    record: visual-communication:DEC-001#5
 pkit:
   friction:
     anchors:
@@ -52,9 +48,6 @@ pkit:
 5. For each axis, the developer says whether its modes alter only colours and pictures, or any value, such as sizes, spacing and fonts.
 6. The developer adds how the brand draws each layout of each kind of piece it serves.
 7. The system checks that the brand draws each layout of each kind of piece it serves, with the content slots that kind names.
-
-> [!WARNING]
-> **Not built yet:** the system makes no such check. [DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) decides that what a brand lacks, such as a layout it does not draw, is reported, and #2573 tracks it.
 
 **Variants:**
 
