@@ -25,6 +25,14 @@ it draws.
   built on it, and no drawing of it draws, which the check fails. Under any other brand it
   is drawn by its own drawing too, and the check asks the piece's author for attention
   (DEC-034 point 4).
+- **The brand checked alone** (DEC-009 point 9, DEC-011 point 8, DEC-012 point 8, DEC-034
+  points 8 and 10). A drawing that takes a field, an option or a word its top does not
+  declare, of a top whose library the brand does not name, or one of two drawings of a
+  layout, fails; so does one whose list of ties is drawn by default by a component that
+  takes no ends or declares an end field's name. What a drawing does not take of what its
+  top declares, and a drawing of a top its base serves, ask the brand's owner for
+  attention; and the version states each top it serves, with the layouts it leaves. In a
+  released version each failure asks for attention instead, and a release reads them all.
 
 The engine's rules are drawn from components written as mappings in memory (`FakeEnv`);
 the deck under the test brand from a project in a temporary folder, its drawing of the
@@ -55,7 +63,7 @@ from tests.visual_communication_project import (
 )
 from tests.visual_engine import COMPONENTS, FakeEnv, block, codes, draw, layout, top
 
-pl, checks, reading, findings, files, libraries, full_read = load(
+pl, checks, reading, findings, files, libraries, full_read, fingerprint = load(
     "visual-communication",
     "pipeline",
     "checks",
@@ -64,6 +72,7 @@ pl, checks, reading, findings, files, libraries, full_read = load(
     "files",
     "libraries",
     "full_read",
+    "fingerprint",
 )
 
 #: The test brand that gives the sizes of `device`, built on the foundations being built.
@@ -728,6 +737,154 @@ def test_a_drawing_takes_each_part_its_top_exposes_where_a_component_places_the_
     assert alone == {}
 
 
+# --- the engine: what a drawing takes that its top does not declare, and what it leaves ------
+
+
+def read(drawing: dict[str, Any], lab: dict[str, Any] | None = None, **more: Any) -> Any:
+    """`drawing`, a brand's drawing of `lab/top`'s layout `frame`, as the engine reads it
+    against `lab`, `lab_top()` by default."""
+    env = FakeEnv(components={"lab/top": lab or lab_top(), "brand/look": drawing, **more})
+    component = layout.Context(env, "en").component("brand/look")
+    assert component is not None
+    return component
+
+
+def painted(fill: Any) -> dict[str, Any]:
+    """The caption's text part, painted by `fill`."""
+    return {**CAPTION, "text": {**CAPTION["text"], "fill": fill}}
+
+
+def test_a_drawing_that_takes_a_field_its_top_does_not_declare_fails() -> None:
+    extra = {**CAPTION, "text": {**CAPTION["text"], "content": "subtitle"}, "when": "subtitle"}
+    found = issues(look({"caption": CAPTION, "note": CAPTION, "extra": extra}))
+    assert ("component-shape", "parts.extra.text.content") in found
+    assert ("component-shape", "parts.extra.when") in found
+
+
+@pytest.mark.parametrize(
+    ("caption", "where"),
+    [
+        ({**CAPTION, "when": {"size": ["big"]}}, "parts.caption.when"),
+        ({**CAPTION, "when": {"tone": ["huge"]}}, "parts.caption.when"),
+        (
+            painted({"by": "tone", "plain": "text-primary", "huge": "accent"}),
+            "parts.caption.text.fill",
+        ),
+    ],
+)
+def test_a_drawing_that_reads_an_option_or_a_word_its_top_does_not_declare_fails(
+    caption: dict[str, Any], where: str
+) -> None:
+    drawing = read(look({"caption": caption}), lab_top(options=TONE))
+    assert ("component-shape", where) in [(code, at) for code, at, _ in drawing.issues]
+
+
+def test_a_switch_of_a_drawing_that_leaves_a_word_out_does_not_fail_and_the_word_is_not_taken() -> (
+    None
+):
+    """The drawing does not take the word it leaves out, so an instance that gives it, the
+    default word included, is drawn by the top's own drawing (DEC-009 points 6 and 9)."""
+    toned = lab_top(options=TONE)
+    plain_only = look({"caption": painted({"by": "tone", "plain": "text-primary"})})
+    drawing = read(plain_only, toned)
+    assert drawing.issues == []
+    assert ("parts.caption.text.fill", "the word `loud` of the option `tone`") in drawing.untaken()
+    _, found = placed(plain_only, {"caption": "A.", "tone": "loud"}, top=toned)
+    assert found == {"top": "`brand/look` does not take the word `loud` of the option `tone`"}
+    assert placed(plain_only, {"caption": "A."}, top=toned)[1] == {}
+    loud_only = look({"caption": painted({"by": "tone", "loud": "accent"})})
+    _, found = placed(loud_only, {"caption": "A."}, top=toned)
+    assert found == {"top": "`brand/look` does not take the word `plain` of the option `tone`"}
+
+
+def test_what_a_drawing_does_not_take_of_what_its_top_declares() -> None:
+    """A field it shows by no part, each word of an option it reads nowhere, and a part its
+    top exposes that it does not; never a state, since every drawing takes each."""
+    lab = lab_top(options=TONE, exposes=["caption"], states={"done": {"colour": "accent"}})
+    assert read(look({"caption": CAPTION}), lab).untaken() == [
+        ("parts", "the field `note`"),
+        ("parts", "the word `plain` of the option `tone`"),
+        ("parts", "the word `loud` of the option `tone`"),
+        ("exposes", "the exposed part `caption`"),
+    ]
+    top_itself = layout.Context(FakeEnv(components={"lab/top": lab}), "en").component("lab/top")
+    assert top_itself is not None and top_itself.untaken() == []
+
+
+def runs_top() -> dict[str, Any]:
+    """`lab/top` whose one field, `note`, takes runs in two words, shown by its text part
+    that chooses by them."""
+    return top({"note": CHOOSING}, fields={"note": RUNS})
+
+
+def chooses(**words: str) -> dict[str, Any]:
+    """The text part that shows `note`, its typography role chosen by `words` of its runs."""
+    return {**CHOOSING, "text": {**CHOOSING["text"], "style": {"by": "note", **words}}}
+
+
+def test_a_text_part_that_chooses_by_a_word_the_tops_field_does_not_declare_fails() -> None:
+    word = chooses(plain="type.body", strong="type.heading", loud="type.heading")
+    drawing = read(look({"note": word}), runs_top())
+    assert [(code, where) for code, where, _ in drawing.issues] == [
+        ("component-shape", "parts.note.text.style")
+    ]
+    assert "names loud, which the top does not declare for it" in drawing.issues[0][2]
+
+
+def test_a_drawing_that_chooses_by_a_runs_style_elsewhere_fails() -> None:
+    fill = {"by": "note", "plain": "surface", "strong": "accent"}
+    mark = {"box": {"fill": fill}, "width": "=:width", "height": "=@space.1"}
+    drawing = read(look({"note": CHOOSING, "mark": mark}), runs_top())
+    assert ("component-shape", "parts.mark.box.fill") in [
+        (code, where) for code, where, _ in drawing.issues
+    ]
+
+
+def test_a_text_part_that_leaves_a_word_of_its_runs_out_asks_for_no_fix_and_does_not_take_it() -> (
+    None
+):
+    plain_only, lab = look({"note": chooses(plain="type.body")}), runs_top()
+    drawing = read(plain_only, lab)
+    assert drawing.issues == []
+    assert drawing.untaken() == [
+        ("parts.note.text.style", "the word `strong` of the runs of `note`")
+    ]
+    strong = {"note": [{"text": "Bold", "style": "strong"}]}
+    _, found = placed(plain_only, strong, top=lab)
+    assert found == {"top": "`brand/look` does not take the word `strong` of the runs of `note`"}
+    assert placed(plain_only, {"note": [{"text": "Plain"}]}, top=lab)[1] == {}
+
+
+def test_a_text_part_that_chooses_by_no_word_of_its_runs_takes_the_first_alone() -> None:
+    fixed = look({"note": {**CAPTION, "text": {**CAPTION["text"], "content": "note"}}})
+    drawing = read(fixed, runs_top())
+    assert drawing.issues == []
+    assert drawing.untaken() == [("parts", "the word `strong` of the runs of `note`")]
+
+
+def test_a_drawing_that_passes_a_field_of_runs_on_takes_its_text_alone() -> None:
+    """It asks for no fix in the drawing's file, and takes none of the field's runs
+    (DEC-012 points 2 and 8)."""
+    label = block(
+        {"text": {**CAPTION, "text": {**CAPTION["text"], "content": "text"}}},
+        fields={"text": {"type": "string"}},
+    )
+    passing = look({"note": CHOOSING, "band": {"use": "lab/label", "fields": {"text": "note"}}})
+    lab = runs_top()
+    drawing = read(passing, lab, **{"lab/label": label})
+    assert drawing.issues == []
+    assert drawing.untaken() == [
+        ("parts.band.fields.text", "the runs of `note`, since it passes them on")
+    ]
+    runs = {"note": [{"text": "Bold", "style": "strong"}]}
+    _, found = placed(passing, runs, top=lab, **{"lab/label": label})
+    assert found == {
+        "top": "`brand/look` does not take the runs of `note`, which it passes on "
+        "and shows as text alone"
+    }
+    assert placed(passing, {"note": "Text."}, top=lab, **{"lab/label": label})[1] == {}
+
+
 # --- placing a drawing -------------------------------------------------------------------------
 
 
@@ -846,8 +1003,8 @@ def test_where_a_base_serves_a_top_the_brand_built_on_it_draws_none_of_it_and_th
     [(_, result)] = scenes(root)
     assert group(result, COVER)["component"] == "test-brand/cover"
     assert group(result, "deck/slides[first]")["component"] == "foundations/deck"
-    found = stated(root, checks.DRAWING_BASE_SERVES)
-    assert [(f.file, f.where, level) for f, level in found] == [(PIECE_FILE, "lock", "fact")] * 2
+    found = [(f, level) for f, level in stated(root, layout.DRAWING_BASE_SERVES) if level == "fact"]
+    assert [(f.file, f.where) for f, _ in found] == [(PIECE_FILE, "lock")] * 2
     assert [f.message for f, _ in found] == [
         f"the drawing `test-edition/{name}` draws nothing under this lock: test-brand@1.1.0, "
         "which its brand builds on, serves `foundations/deck`, and keeps its form"
@@ -858,7 +1015,7 @@ def test_where_a_base_serves_a_top_the_brand_built_on_it_draws_none_of_it_and_th
 def test_a_brand_with_no_base_keeps_its_own_drawings(tmp_path: Path) -> None:
     root = deck(tmp_path)
     assert project_of(root).kept == {}
-    assert stated(root, checks.DRAWING_BASE_SERVES) == []
+    assert stated(root, layout.DRAWING_BASE_SERVES) == []
 
 
 # --- a top a brand holds -----------------------------------------------------------------------
@@ -919,7 +1076,7 @@ def test_a_top_a_brand_holds_is_drawn_by_its_own_drawing_under_it_and_a_brand_bu
     assert group(result, "poster")["component"] == "test-brand/poster"
     assert group(result, "poster/title")["text"] == "Come along"
     found = {finding.code for finding, _ in checks.check(root).judged}
-    assert not found & {checks.TOP_OF_OTHER_BRAND, checks.DRAWING_BASE_SERVES}
+    assert not found & {checks.TOP_OF_OTHER_BRAND, layout.DRAWING_BASE_SERVES}
     assert misfits(result) == []
 
 
@@ -936,6 +1093,9 @@ def test_no_drawing_of_a_top_a_brand_holds_draws_and_the_check_fails_it(
     [(finding, level)] = stated(root, layout.DRAWING_HELD_TOP)
     assert (level, finding.file, finding.where) == ("fails", f"{into}/look.yaml", "draws")
     assert "a top the brand test-brand@1.1.0 holds" in finding.message
+    # It takes no other finding of a drawing that draws nothing, nor of what it lacks.
+    others = (layout.DRAWING_BASE_SERVES, layout.DRAWING_UNNAMED, layout.DRAWING_LACKS)
+    assert [f for f, _ in checks.check(root).judged if f.code in others] == []
     # A release reads it as the check alone does.
     name, version = into.split("/")[2:4]
     read = full_read.read(libraries.Held(root, "visual"), name, libraries.Version.parse(version))
@@ -988,3 +1148,219 @@ def test_a_top_a_brand_holds_under_another_brand_asks_its_author_for_attention(
         "piece's brand test-brand@1.1.0 is neither that brand nor built on it: the top is "
         "drawn by its own drawing, in the values of test-brand@1.1.0"
     )
+
+
+# --- the brand checked alone -------------------------------------------------------------------
+
+
+#: The test brand's version, its folder, and the file of its drawing of the deck's cover.
+BRAND = "test-brand@1.1.0"
+BRAND_FOLDER = "visual/libraries/test-brand/1.1.0"
+COVER_FILE = f"{BRAND_COMPONENTS}/cover.yaml"
+
+
+def alone(root: Path, *codes_of: str) -> list[tuple[str, str, str, str]]:
+    """Each finding the check makes of one of `codes_of`: its code, its level where it lies,
+    its file and where in it."""
+    return [
+        (finding.code, level, finding.file, finding.where)
+        for finding, level in checks.check(root).judged
+        if finding.code in codes_of
+    ]
+
+
+def messages(root: Path, code: str) -> list[str]:
+    return [finding.message for finding, _ in checks.check(root).judged if finding.code == code]
+
+
+def read_in_full(root: Path, name: str = "test-brand", version: str = "1.1.0") -> Any:
+    return full_read.read(libraries.Held(root, "visual"), name, libraries.Version.parse(version))
+
+
+def test_the_brands_version_states_each_top_it_serves_with_the_layouts_it_leaves(
+    tmp_path: Path,
+) -> None:
+    root = deck(tmp_path)
+    assert alone(root, layout.BRAND_SERVES) == [
+        (layout.BRAND_SERVES, "fact", f"{BRAND_FOLDER}/library.yaml", "")
+    ]
+    assert messages(root, layout.BRAND_SERVES) == [
+        f"{BRAND} serves `foundations/deck`: it draws `cover`, and leaves `slide` to the top's "
+        "own drawing"
+    ]
+    # It takes all the cover gives, so nothing asks for attention.
+    assert alone(root, layout.DRAWING_LACKS) == []
+    assert [f.code for f in read_in_full(root).findings if f.code == layout.BRAND_SERVES] == [
+        layout.BRAND_SERVES
+    ]
+
+
+def test_a_brand_that_draws_no_layout_states_no_top_it_serves(tmp_path: Path) -> None:
+    root = deck(tmp_path)
+    (root / COVER_FILE).unlink()
+    assert alone(root, layout.BRAND_SERVES) == []
+
+
+def test_a_brand_that_holds_a_top_states_that_it_serves_it_by_its_own_drawing(
+    tmp_path: Path,
+) -> None:
+    root = poster_piece(tmp_path, holder="test-brand", brand="test-brand")
+    assert messages(root, layout.BRAND_SERVES) == [
+        f"{BRAND} serves `test-brand/poster`, a top it holds, and the top's own drawing draws "
+        "each of its layouts"
+    ]
+
+
+def test_what_a_drawing_does_not_take_asks_the_brands_owner_for_attention(
+    tmp_path: Path,
+) -> None:
+    """The drawing leaves the cover's link out: an instance that gives it is drawn by the
+    deck's own drawing, so the brand's owner is asked, and nothing fails (DEC-009 point 9)."""
+    root = deck(tmp_path, drawing=without_link())
+    assert alone(root, layout.DRAWING_LACKS) == [
+        (layout.DRAWING_LACKS, "attention", COVER_FILE, "parts")
+    ]
+    [(finding, _)] = stated(root, layout.DRAWING_LACKS)
+    assert finding.message == (
+        "test-brand/cover: does not take the field `link`, of what `foundations/deck` gives "
+        "`cover`: the top's own drawing draws each instance that gives it"
+    )
+    assert finding.who == "the owner of `test-brand`"
+
+
+def test_a_drawing_of_a_top_whose_library_the_brand_does_not_name_fails_once(
+    tmp_path: Path,
+) -> None:
+    """No version the brand is checked with holds the top, so the finding takes the place
+    of the one that says it draws no layout of a top (DEC-009 points 3 and 9)."""
+    root = deck(tmp_path)
+    hold(root, cover(draws={"top": "lab/top", "layout": "frame"}), "lab")
+    file = f"{BRAND_COMPONENTS}/lab.yaml"
+    assert alone(root, layout.DRAWING_UNNAMED) == [(layout.DRAWING_UNNAMED, "fails", file, "draws")]
+    assert ("fails", file, "draws") not in judged(root, layout.DRAWING_SHAPE)
+    [message] = messages(root, layout.DRAWING_UNNAMED)
+    assert "test-brand@1.1.0 does not name `lab` among the libraries it builds on" in message
+    codes_read = [f.code for f in read_in_full(root).findings if f.file == file]
+    assert codes_read == [layout.DRAWING_UNNAMED]
+
+
+def test_two_drawings_of_one_layout_fail_in_the_brands_version(tmp_path: Path) -> None:
+    root = deck(tmp_path)
+    hold(root, cover(), "second-cover")
+    second = f"{BRAND_COMPONENTS}/second-cover.yaml"
+    assert sorted(alone(root, layout.DRAWING_TWICE)) == [
+        (layout.DRAWING_TWICE, "fails", COVER_FILE, "draws"),
+        (layout.DRAWING_TWICE, "fails", second, "draws"),
+    ]
+    assert alone(root, layout.DRAWING_LACKS) == []
+    assert messages(root, layout.BRAND_SERVES) == [
+        f"{BRAND} serves `foundations/deck`: it draws none of its layouts, and leaves `cover`, "
+        "`slide` to the top's own drawing"
+    ]
+    twice = [f.file for f in read_in_full(root).findings if f.code == layout.DRAWING_TWICE]
+    assert sorted(twice) == [COVER_FILE, second]
+
+
+def test_a_drawing_of_a_top_its_base_serves_asks_the_brands_owner_to_remove_it(
+    tmp_path: Path,
+) -> None:
+    """The test brand draws the cover, so it serves the deck, and the edition's cover draws
+    nothing: it never fails, and the edition states no top it serves (DEC-034 point 8)."""
+    root = chain(tmp_path)
+    hold(root, cover())
+    hold(root, cover(), into=EDITION_COMPONENTS)
+    edition_cover = f"{EDITION_COMPONENTS}/cover.yaml"
+    assert (
+        layout.DRAWING_BASE_SERVES,
+        "attention",
+        edition_cover,
+        "draws",
+    ) in alone(root, layout.DRAWING_BASE_SERVES)
+    [finding] = [f for f, _ in stated(root, layout.DRAWING_BASE_SERVES) if f.file == edition_cover]
+    assert finding.message == (
+        "test-edition/cover: draws `cover` of `foundations/deck`, which test-brand@1.1.0, a "
+        "brand test-edition@1.0.0 builds on, serves: the brand nearest the root that serves a "
+        "top keeps its form, so the drawing draws nothing"
+    )
+    assert finding.who == "the owner of `test-edition`"
+    assert [f.file for f, _ in stated(root, layout.BRAND_SERVES)] == [
+        f"{BRAND_FOLDER}/library.yaml"
+    ]
+    assert [f for f, _ in stated(root, layout.DRAWING_LACKS) if f.file == edition_cover] == []
+
+
+def released(root: Path, name: str, version: str) -> None:
+    """The list marks the version of `name` released, with the fingerprint of its folder as
+    it is."""
+    path = root / "visual" / "libraries" / "libraries.yaml"
+    listed = dict(reading.read_yaml(path)["libraries"])
+    folder = root / "visual" / "libraries" / name / version
+    paths = sorted(path for path in folder.rglob("*") if path.is_file())
+    inputs = fingerprint.library_version_inputs(
+        library=name, version=version, folder=folder, files=paths
+    )
+    entry = {"released": True, "hash": fingerprint.fingerprint(inputs)}
+    listed[name] = {**listed[name], "versions": {version: entry}}
+    write_list(root, listed)
+
+
+def test_in_a_released_brand_a_drawing_that_would_fail_asks_its_owner_for_attention(
+    tmp_path: Path,
+) -> None:
+    """Only the brand's owner corrects a released version, in a new release (DEC-034 point
+    10, DEC-002 point 7)."""
+    root = deck(tmp_path)
+    hold(root, cover(draws={"top": "lab/top", "layout": "frame"}), "lab")
+    released(root, "test-brand", "1.1.0")
+    [(finding, level)] = stated(root, layout.DRAWING_UNNAMED)
+    assert level == "attention"
+    assert finding.who == "the owner of `test-brand`, who corrects it in a new release"
+
+
+#: A top of the foundations' copy whose one layout is the whole top, with a list of ties
+#: between the items of its list of steps (DEC-011 point 5); a card and a tie that takes
+#: ends, its own drawing's defaults; and a component that takes no ends and declares a field
+#: named after an end field.
+NET = bound(
+    "component",
+    **top(
+        {
+            "steps": {"repeat": "steps", "draw": "foundations/card", "row": {"gap": "=@space.4"}},
+            "links": {"repeat": "links", "draw": "foundations/arrow"},
+        },
+        fields={"steps": LISTED, "links": LISTED},
+        lists={"links": {"ends": ["from", "to"]}},
+    ),
+)
+NET_PARTS = {
+    "card": bound("component", **CARD),
+    "arrow": bound("component", **ARROW),
+    "plain": bound(
+        "component", **block({"b": CARD["parts"]["b"]}, fields={"from": {"type": "string"}})
+    ),
+}
+
+
+def test_a_drawing_whose_list_of_ties_is_drawn_by_default_by_no_tie_fails_at_its_part(
+    tmp_path: Path,
+) -> None:
+    """The drawing chose the list's default component alone, so each clash with the top's
+    end fields lies at its part's `draw` (DEC-011 point 8)."""
+    root = deck(tmp_path)
+    built = project_of(root).lock["foundations"]
+    folder = root / "visual/libraries/foundations" / str(built) / "components"
+    for name, data in {"net": NET, **NET_PARTS}.items():
+        write(folder / f"{name}.yaml", yaml_text(data))
+    links = {"repeat": "links", "draw": "foundations/plain"}
+    web = bound(
+        "component",
+        about="A drawing of the net whose ties no tie draws.",
+        draws={"top": "foundations/net", "layout": "frame"},
+        parts={"steps": NET["parts"]["steps"], "links": links},
+        preferred={"width": "=@space.4 * 10", "height": "=@space.4"},
+    )
+    hold(root, web, "web")
+    file = f"{BRAND_COMPONENTS}/web.yaml"
+    found = alone(root, "tie-default", "end-clash")
+    assert ("tie-default", "fails", file, "parts.links.draw") in found
+    assert ("end-clash", "fails", file, "parts.links.draw") in found

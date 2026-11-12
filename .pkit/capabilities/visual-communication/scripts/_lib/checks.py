@@ -700,8 +700,9 @@ class _Run:
                     root=self.root,
                     locked=folders,
                 )
-                # Each component it holds is judged as a component library's is, and a
-                # drawing as a drawing (DEC-034 points 1 and 10).
+                # Each component it holds is judged as a component library's is, a drawing
+                # as a drawing, and the forms it draws over its base (DEC-009 point 9,
+                # DEC-034 points 1 and 10).
                 env = pl.LibraryEnv(chosen, scope)
                 # What the version alone states, which no piece's lock reads (DEC-025 point 9).
                 found = [
@@ -709,7 +710,7 @@ class _Run:
                     *brand.facts,
                     *default_clashes(self.held, library, env),
                     *unread_tokens(self.held, library, env),
-                    *drawing_findings(self.held, library, env),
+                    *drawing_findings(self.held, library, env, brand),
                 ]
             else:
                 found = []
@@ -831,10 +832,12 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
     declares as a field or an option is read by neither (`arrangement-clash`, `end-clash`;
     DEC-010 points 2 and 9, DEC-011 point 8). A list of ties whose default component takes
     no ends draws no tie by default (`tie-default`, DEC-011 points 1 and 8). The pattern
-    chose both, so each is the pattern's to mend, in its file. Each component of the version
-    is read through `env`, which reads the default component from the versions the library
-    is checked alone with. A component that cannot be read, and a default that names none,
-    are the scene's to report."""
+    chose both, so each is the pattern's to mend, in its file. A brand's drawing declares no
+    list's fields, its top's to declare, and chose only the default component, so a clash
+    in it lies at the part's `draw` (DEC-011 point 8). Each component of the version is read
+    through `env`, which reads the default component from the versions the library is
+    checked alone with. A component that cannot be read, and a default that names none, are
+    the scene's to report."""
     ctx = layout.Context(env, "")
     found = []
     for path in held.files(library.name, library.version):
@@ -850,6 +853,9 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                 code, FAILS, message, file=file, where=where, fix=fix, library=library.label
             )
 
+        # What a brand's drawing chose of a list is its default component alone.
+        drawing = component.draws is not None
+        other = "draw the list with another component, in a version of its own"
         for at, part, listed, draw, drawn, declared in _list_defaults(ctx, component):
             for name in declared.arrangement:
                 what = _declared_as(drawn, name)
@@ -857,12 +863,13 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                     found.append(
                         fails(
                             "arrangement-clash",
-                            f"{at}lists.{listed}.arrangement.{name}",
+                            f"{at}parts.{part}.draw"
+                            if drawing
+                            else f"{at}lists.{listed}.arrangement.{name}",
                             f"`{name}` is an arrangement field of `{listed}`, and `{draw}`, which "
                             f"draws its items by default, declares it as {what}: neither reads "
                             "it on an item",
-                            "rename the arrangement field, or draw the list with another "
-                            "component, in a version of its own",
+                            other if drawing else f"rename the arrangement field, or {other}",
                         )
                     )
             if declared.ends is None:
@@ -883,18 +890,19 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                     found.append(
                         fails(
                             "end-clash",
-                            f"{at}lists.{listed}.ends",
+                            f"{at}parts.{part}.draw" if drawing else f"{at}lists.{listed}.ends",
                             f"`{name}` is an end field of `{listed}`, and `{draw}`, which draws "
                             f"its ties by default, declares it as {what}: neither reads it, so "
                             "no tie it draws has that end",
-                            "rename the end field, or draw the list with another component, "
-                            "in a version of its own",
+                            other if drawing else f"rename the end field, or {other}",
                         )
                     )
     return found
 
 
-def drawing_findings(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
+def drawing_findings(
+    held: Held, library: Library, env: pl.LibraryEnv, brand: tokens.Brand | None = None
+) -> list[Finding]:
     """What the version alone shows of the drawings among its components (DEC-034 points 1,
     2, 5 and 10), each component read through `env`. A component of a library that is no
     brand that declares `draws` fails, since only a brand's component draws a layout. A
@@ -902,10 +910,12 @@ def drawing_findings(held: Held, library: Library, env: pl.LibraryEnv) -> list[F
     checked alone with, and each finding the engine makes of it fails in its file: a key of
     what the content gives, a top or a layout there is none of, a size it may not write, a
     field it shows by no part named after it, and a token of its top it reads. So does one
-    whose top a brand holds (`pipeline.held_top_findings`, DEC-034 point 4). A top's own
-    drawing that shows a field by no part named after it asks the top's owner for
-    attention, and never fails (`layout.own_drawing_findings`). A component that cannot be
-    read is the scene's to report."""
+    whose top a brand holds (`pipeline.held_top_findings`, DEC-034 point 4). Given `brand`,
+    the version read over its base, what it shows of the forms it draws is judged too
+    (`pipeline.brand_findings`, DEC-009 point 9). A top's own drawing that shows a field by
+    no part named after it asks the top's owner for attention, and never fails
+    (`layout.own_drawing_findings`). A component that cannot be read is the scene's to
+    report."""
     ctx = layout.Context(env, "")
     found: list[Finding] = []
     drawings: dict[str, str] = {}
@@ -929,6 +939,9 @@ def drawing_findings(held: Held, library: Library, env: pl.LibraryEnv) -> list[F
                 found.extend(
                     layout.own_drawing_findings(component, file=file, library=library.label)
                 )
+    if brand is not None:
+        shown = f"{library.folder.relative_to(held.root).as_posix()}/"
+        found.extend(pl.brand_findings(brand, ctx, env, shown=shown))
     for finding in ctx.findings:
         use = finding.extra.get("component")
         if isinstance(use, str) and use in drawings and finding.library == library.label:
@@ -2639,11 +2652,10 @@ def _widths(project: pl.Project, results: Sequence[tuple[str, SceneResult]]) -> 
     ]
 
 
-#: The fact a piece states for each drawing of its brand's chain that draws nothing, since a
-#: brand nearer the root serves its top (DEC-009 points 4 and 9, DEC-034 point 8); and the
-#: call for attention on a piece whose top a brand holds, drawn under a brand that is
-#: neither that brand nor built on it (DEC-034 point 4).
-DRAWING_BASE_SERVES = "drawing-base-serves"
+#: The call for attention on a piece whose top a brand holds, drawn under a brand that is
+#: neither that brand nor built on it (DEC-034 point 4). The fact a piece states for each
+#: drawing of its brand's chain that draws nothing, since a brand nearer the root serves its
+#: top, is `layout.DRAWING_BASE_SERVES` (DEC-009 points 4 and 9, DEC-034 point 8).
 TOP_OF_OTHER_BRAND = "top-of-other-brand"
 
 
@@ -2656,7 +2668,7 @@ def _brand_forms(project: pl.Project) -> list[Finding]:
     holding brand's form, in its own brand's values (DEC-034 point 4)."""
     found = [
         Finding(
-            DRAWING_BASE_SERVES,
+            layout.DRAWING_BASE_SERVES,
             FACT,
             f"the drawing `{use}` draws nothing under this lock: {kept.by}, which its brand "
             f"builds on, serves `{kept.top}`, and keeps its form",

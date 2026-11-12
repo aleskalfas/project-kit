@@ -59,7 +59,7 @@ from _lib import copies, keys, layout, notations, pictures, records, tokens, val
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding
-from _lib.findings import Finding
+from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.fingerprint import COPY_PLACE
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, LibraryError, Misfit, Version
 from _lib.location import files as listed_files
@@ -631,7 +631,20 @@ def _served(brand: tokens.Brand) -> tuple[dict[tuple[str, str], list[str]], list
     """What the brand's own version holds of the tops it serves: each drawing, by its use
     under the top and the layout its `draws` names, of a top whose library the brand names
     (DEC-009 point 3); and each top it holds, by its use (DEC-034 point 4)."""
+    declared, held = _declared(brand)
     drawings: dict[tuple[str, str], list[str]] = {}
+    for use, (top, drawn) in declared.items():
+        if top.split("/")[0] in brand.named:
+            drawings.setdefault((top, drawn), []).append(use)
+    return drawings, held
+
+
+def _declared(brand: tokens.Brand) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """What the brand's own version declares of the tops it draws, each component by its
+    use, in the order of its file's name: each drawing whose `draws` names a top and a
+    layout, with them; and each top it holds (DEC-034 points 1 and 4). A file that cannot
+    be read declares nothing."""
+    drawings: dict[str, tuple[str, str]] = {}
     held: list[str] = []
     for path in sorted((brand.folder / COMPONENTS).glob("*.yaml")):
         data, _ = read_component(path)
@@ -639,8 +652,8 @@ def _served(brand: tokens.Brand) -> tuple[dict[tuple[str, str], list[str]], list
         draws = data.get(layout.DRAWS) if data is not None else None
         top = draws.get("top") if isinstance(draws, Mapping) else None
         drawn = draws.get("layout") if isinstance(draws, Mapping) else None
-        if isinstance(top, str) and isinstance(drawn, str) and top.split("/")[0] in brand.named:
-            drawings.setdefault((top, drawn), []).append(use)
+        if isinstance(top, str) and isinstance(drawn, str):
+            drawings[use] = (top, drawn)
         elif _is_top(data):
             held.append(use)
     return drawings, held
@@ -1073,6 +1086,177 @@ def held_top_findings(
             component.use, component.draws, holder, file=file, library=library
         )
     ]
+
+
+def brand_findings(
+    brand: tokens.Brand, ctx: layout.Context, env: LibraryEnv, *, shown: str
+) -> list[Finding]:
+    """What the brand's version, checked alone over its base, shows of the forms it draws
+    (DEC-009 points 2, 3, 4 and 9, DEC-034 points 4, 8 and 10), each drawing read through
+    `ctx`, a context of the engine over `env`. Each lies in the version, whose folder,
+    relative to the project root, is `shown`.
+
+    - **Fails:** a drawing of a top whose library the brand does not name, and that is no
+      brand's among the versions read (`drawing-unnamed`). Where no version read holds the
+      top, it takes the place of the engine's finding that the drawing draws no layout of a
+      top. And each of two drawings or more of one layout (`drawing-twice`).
+    - **Asks the brand's owner for attention, never failing:** a drawing of a top that a
+      brand nearer the root of its chain serves, to remove it (`drawing-base-serves`); and
+      each thing a drawing that draws does not take of what its top declares
+      (`drawing-lacks`, `layout.Component.untaken`).
+    - **States a fact:** each top the brand serves, with the layouts it leaves to the top's
+      own drawing (`brand-serves`): a top whose library it names, of which it holds a
+      drawing, where no brand nearer the root serves it; and a top it holds, whose own
+      drawing draws each of its layouts.
+
+    A drawing that fails as one that draws nothing, of a top a brand holds
+    (`held_top_findings`), of no layout of a top, unnamed or twice, takes none of the
+    others. A file that cannot be read is the engine's to report."""
+    label, who = brand.label, f"the owner of `{brand.name}`"
+    declared, held = _declared(brand)
+    kept = brand_drawings(brand).kept
+    found: list[Finding] = []
+    nothing: set[str] = set()
+    drawings: dict[str, layout.Component] = {}
+
+    def at(use: str, code: str, level: str, message: str, where: str, fix: str) -> Finding:
+        file = f"{shown}{COMPONENTS}/{use.partition('/')[2]}.yaml"
+        return Finding(
+            code,
+            level,
+            f"{use}: {message}",
+            file=file,
+            where=where,
+            fix=fix,
+            library=label,
+            who="" if level == FAILS else who,
+        )
+
+    for use, (top, drawn) in declared.items():
+        drawing = ctx.component(use)
+        if drawing is None or held_top_findings(drawing, env, file="", library=label):
+            nothing.add(use)
+            continue
+        drawings[use] = drawing
+        library = top.partition("/")[0]
+        if library not in brand.named and env.brand_of(top) is None:
+            nothing.add(use)
+            ctx.take_back(layout.DRAWING_SHAPE, layout.DRAWS, use)
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_UNNAMED,
+                    FAILS,
+                    f"draws `{drawn}` of `{top}`, and {label} does not name `{library}` among "
+                    "the libraries it builds on: a brand draws a layout only of a top whose "
+                    "library it names, so the drawing draws nothing",
+                    layout.DRAWS,
+                    f"name `{library}` by its major under `builds-on`, or take the drawing "
+                    "out, in a version of its own",
+                )
+            )
+        elif any(
+            (code, where) == (layout.DRAWING_SHAPE, layout.DRAWS)
+            for code, where, _ in drawing.issues
+        ):
+            nothing.add(use)
+    by_layout: dict[tuple[str, str], list[str]] = {}
+    for use, key in declared.items():
+        if use not in nothing:
+            by_layout.setdefault(key, []).append(use)
+    for (top, drawn), uses in by_layout.items():
+        for use in uses if len(uses) > 1 else ():
+            others = ", ".join(f"`{other}`" for other in uses if other != use)
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_TWICE,
+                    FAILS,
+                    f"draws `{drawn}` of `{top}`, and so does {others}: a brand holds one "
+                    "drawing of a layout, so none of them draws, and the top's own drawing does",
+                    layout.DRAWS,
+                    "take each drawing of the layout but one out, in a version of its own",
+                )
+            )
+            nothing.add(use)
+    for use, (top, drawn) in declared.items():
+        if use in nothing:
+            continue
+        if use in kept:
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_BASE_SERVES,
+                    ATTENTION,
+                    f"draws `{drawn}` of `{top}`, which {kept[use].by}, a brand {label} builds "
+                    "on, serves: the brand nearest the root that serves a top keeps its form, "
+                    "so the drawing draws nothing",
+                    layout.DRAWS,
+                    "take the drawing out, in a version of its own",
+                )
+            )
+            continue
+        for where, what in drawings[use].untaken():
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_LACKS,
+                    ATTENTION,
+                    f"does not take {what}, of what `{top}` gives `{drawn}`: the top's own "
+                    "drawing draws each instance that gives it",
+                    where,
+                    "take it in the drawing, in a version of its own, or leave such an "
+                    "instance to the top's own drawing",
+                )
+            )
+    return [*found, *_serves(brand, ctx, declared, held, kept, nothing, shown=shown)]
+
+
+def _serves(
+    brand: tokens.Brand,
+    ctx: layout.Context,
+    declared: Mapping[str, tuple[str, str]],
+    held: Sequence[str],
+    kept: Mapping[str, Kept],
+    nothing: set[str],
+    *,
+    shown: str,
+) -> list[Finding]:
+    """The fact the brand's version states of each top it serves (`brand_findings`): the
+    layouts it draws, by a drawing that draws, and those it leaves to the top's own
+    drawing, in the order the top declares them."""
+    drawn: dict[str, set[str]] = {}
+    for use, (top, name) in declared.items():
+        if top.partition("/")[0] not in brand.named or use in kept:
+            continue
+        component = ctx.component(top)
+        if component is None or not component.top or component.draws is not None:
+            continue
+        layouts = drawn.setdefault(top, set())
+        if use not in nothing:
+            layouts.add(name)
+    found = []
+    for top in sorted({*drawn, *held}):
+        said = f"{brand.label} serves `{top}`"
+        if top in held:
+            said += ", a top it holds, and the top's own drawing draws each of its layouts"
+        else:
+            component = ctx.component(top)
+            layouts = component.data.get(layout.LAYOUTS) if component is not None else None
+            names = [str(name) for name in (layouts if isinstance(layouts, Mapping) else {})]
+            own = ", ".join(f"`{name}`" for name in names if name in drawn[top])
+            left = ", ".join(f"`{name}`" for name in names if name not in drawn[top])
+            if not left:
+                said += f": it draws each of its layouts, {own}"
+            else:
+                said += f": it draws {own or 'none of its layouts'}, and leaves {left} to the "
+                said += "top's own drawing"
+        found.append(
+            Finding(
+                layout.BRAND_SERVES, FACT, said, file=f"{shown}library.yaml", library=brand.label
+            )
+        )
+    return found
 
 
 class _Missing(Exception):
