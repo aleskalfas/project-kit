@@ -398,5 +398,19 @@
         "lineHeight": 1.5
       }
     }
+  },
+  "component": {
+    "$description": "The tokens of the components of the libraries the brand names: at a desktop, the deck's title and lead take the shared types it drew them in before.",
+    "foundations": {
+      "deck": {
+        "$type": "typography",
+        "title": {
+          "$value": "{type.heading}"
+        },
+        "lead": {
+          "$value": "{type.body}"
+        }
+      }
+    }
   }
 }
