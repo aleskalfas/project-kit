@@ -577,7 +577,9 @@ def _stops_on_signal() -> Generator[None]:
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
     default=None,
     help="The folder an unconfined run runs in. The run takes the person's and the project's "
-    "settings there, as a session started in it would.",
+    "settings there, as a session started in it would. The folder also chooses the runner: "
+    "where it is a project's root, the runner that project registers, run from it; else the "
+    "runner of the project the command runs in.",
 )
 @click.option(
     "--commit",

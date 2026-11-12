@@ -10,5 +10,5 @@ body: >
   commit, gets that commit's definition of a shipped agent, and never an edit
   in your checkout that has not merged (project-management DEC-056 point 3). A
   run in your checkout, or in a folder that is no project's root, takes your
-  checkout's runner, as before. The CLI, adapters and lifecycle references say
-  so.
+  checkout's runner, as before. The CLI, adapters and lifecycle references,
+  and `--folder`'s help, say so.
