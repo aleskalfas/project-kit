@@ -70,7 +70,9 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     remedy, when the running pkit is not the release the project records, when
     the last upgrade is incomplete, or when the pin is newer than this pkit.
     Nothing overrides it. Then the self-host branch in the methodology's
-    source, and elsewhere the propagation step and the derivable state.
+    source, and elsewhere the propagation step and the derivable state. Either
+    ends with a warning where this session's project folder is not the root
+    (`install.warn_if_session_elsewhere`).
     """
     if not (target_root / ".pkit").is_dir():
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
@@ -92,6 +94,7 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     # the marker test (`router.is_source_checkout`) instead.
     if install.is_self_host(target_root, source_kit):
         run_self_host(target_root, source_kit, dry_run=dry_run)
+        install.warn_if_session_elsewhere(target_root, command="sync")
         return
 
     # Sync's test has said no, but the markers may still call the target the
@@ -131,6 +134,7 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
 
     if not ctx.dry_run:
         _hint_settings_consolidation(target_root)
+    install.warn_if_session_elsewhere(target_root, command="sync")
 
 
 def run_self_host(target_root: Path, source_kit: Path, *, dry_run: bool) -> None:

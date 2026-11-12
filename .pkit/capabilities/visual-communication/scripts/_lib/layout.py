@@ -206,7 +206,7 @@ from __future__ import annotations
 import itertools
 import math
 import re
-from collections.abc import Callable, Collection, Iterator, Mapping
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, TypeVar
 
@@ -341,6 +341,18 @@ DRAWING_HELD_TOP = "drawing-held-top"
 #: The fact a piece states for each instance its top's own drawing draws, since the brand's
 #: drawing does not fit it (DEC-034 point 6, DEC-009 point 9).
 DRAWING_MISFIT = "drawing-misfit"
+
+#: What a brand's version checked alone shows of the forms it draws (DEC-009 points 2, 3, 4
+#: and 9, DEC-034 point 8): a drawing of a top whose library the brand does not name; two
+#: drawings of one layout; a drawing of a top a brand nearer the root of its chain serves,
+#: which a piece under the brand also states; what a drawing does not take of what its top
+#: declares; and each top the brand serves, with the layouts it leaves to the top's own
+#: drawing.
+DRAWING_UNNAMED = "drawing-unnamed"
+DRAWING_TWICE = "drawing-twice"
+DRAWING_BASE_SERVES = "drawing-base-serves"
+DRAWING_LACKS = "drawing-lacks"
+BRAND_SERVES = "brand-serves"
 
 #: The findings on a component's reading of component tokens (DEC-035 points 3, 5 and 9): a
 #: token it reads and does not declare, a token in a piece's own component, and a token
@@ -914,6 +926,12 @@ class Component:
         self.top_exposes: tuple[str, ...] = ()
         # Each option a switch or a `when` of it reads, with the words it reads.
         self.option_reads: dict[str, set[str]] = {}
+        # In a brand's drawing, each option or field of runs a switch of it reads, with each
+        # word a switch on it leaves out, by the key path of the first such switch; and each
+        # field of runs a part passes on, by the key path where it does (DEC-009 point 9,
+        # DEC-012 point 8). Each asks the brand's owner for attention, never failing.
+        self.switch_gaps: dict[str, dict[str, str]] = {}
+        self.runs_passed: dict[str, str] = {}
         # The one layout of a top whose one layout is the whole top.
         self._whole: str | None = None
         self.issues: list[tuple[str, str, str]] = []
@@ -1019,6 +1037,69 @@ class Component:
                     "trace id under every drawing",
                 )
             )
+        return found
+
+    def takes_word(self, option: str, word: str) -> bool:
+        """Whether this brand's drawing takes the word `word` of the option `option`: a
+        switch or a `when` of it reads the word, and no switch on the option leaves it out
+        (DEC-009 point 6)."""
+        return word in self.option_reads.get(option, ()) and word not in self.switch_gaps.get(
+            option, {}
+        )
+
+    def run_words(self, name: str) -> tuple[str, ...]:
+        """The words of the field of runs `name` this brand's drawing takes (DEC-012 point
+        2): those a text part that shows the field chooses by, each a switch on it leaves
+        out but; the first alone where none chooses by them; and none where a part passes
+        the field on, so it then takes only text."""
+        words = self.runs.get(name, ())
+        if name in self.runs_passed:
+            return ()
+        if name not in self.chosen_by:
+            return words[:1]
+        gaps = self.switch_gaps.get(name, {})
+        return tuple(word for word in words if word not in gaps)
+
+    def untaken(self) -> list[tuple[str, str]]:
+        """What this brand's drawing does not take of what its top declares, each as the
+        key path in its file that it lies at and what it is, in words (DEC-009 points 5 and
+        9, DEC-012 points 2 and 8): a field no part shows or passes on, at `parts`; a word of
+        an option it does not take (`takes_word`), at the first switch that leaves it out,
+        else at `parts`; a field of runs it passes on, at the part that does; a word of a
+        field of runs it does not take (`run_words`), at the first switch that leaves it
+        out, else at `parts`; and a part its top exposes that it does not, at `exposes`. It
+        takes every state, since a state gives its colour by the top's states. An instance
+        that gives what it does not take is drawn by the top's own drawing
+        (`Instance.misfit`). Nothing, for any other component."""
+        if self.draws is None:
+            return []
+        found: list[tuple[str, str]] = []
+        shown = self.shown
+        for name in self.fields:
+            if name not in shown:
+                found.append(("parts", f"the field `{name}`"))
+        for name, option in self.options.items():
+            gaps = self.switch_gaps.get(name, {})
+            for word in option.words:
+                if not self.takes_word(name, word):
+                    what = f"the word `{word}` of the option `{name}`"
+                    found.append((gaps.get(word, "parts"), what))
+        for name, words in self.runs.items():
+            if name not in shown:
+                continue
+            if name in self.runs_passed:
+                found.append(
+                    (self.runs_passed[name], f"the runs of `{name}`, since it passes them on")
+                )
+                continue
+            gaps, taken = self.switch_gaps.get(name, {}), self.run_words(name)
+            for word in words:
+                if word not in taken:
+                    where = gaps.get(word, "parts")
+                    found.append((where, f"the word `{word}` of the runs of `{name}`"))
+        for name in self.top_exposes:
+            if name not in self.exposes:
+                found.append(("exposes", f"the exposed part `{name}`"))
         return found
 
     def drawn_data(
@@ -1449,6 +1530,10 @@ class Component:
             for theirs, ours in bound.items():
                 if not _is_field(ours, self.fields):
                     self._shape(f"{where}.fields.{theirs}", f"passes no field `{ours}` of its own")
+                elif ours in self.runs and self.draws is not None:
+                    # A brand's drawing that passes it on takes none of its runs, which asks
+                    # the brand's owner for attention (DEC-012 points 2 and 8).
+                    self.runs_passed.setdefault(ours, f"{where}.fields.{theirs}")
                 elif ours in self.runs:
                     self._shape(
                         f"{where}.fields.{theirs}",
@@ -1929,7 +2014,10 @@ class Component:
         """Checks a value, or each branch of its switch; `nothing` lets a branch be null.
         A switch names an option of words, or, where `runs` names the field of runs a text
         part shows, that field's run styles: a text part's role and paint alone choose by
-        them (DEC-012 point 2)."""
+        them (DEC-012 point 2). It names each of their words and no other. In a brand's
+        drawing, a word it leaves out is one the drawing does not take, which asks the
+        brand's owner for attention and never fails (`switch_gaps`, DEC-009 point 9, DEC-012
+        point 8); a word the top does not declare still fails."""
         if not (isinstance(value, Mapping) and SWITCH in value):
             check(where, value)
             return
@@ -1957,9 +2045,20 @@ class Component:
                 self._shape(where, f"switches on `{by}`, which is no option of words")
                 return
             words, named = option.words, f"`{option.name}`"
-            self.option_reads.setdefault(option.name, set()).update(words)
+            self.option_reads.setdefault(option.name, set()).update(w for w in words if w in value)
         branches = {key for key in value if key != SWITCH}
-        if branches != set(words):
+        if self.draws is not None:
+            for word in words:
+                if word not in branches:
+                    self.switch_gaps.setdefault(str(by), {}).setdefault(word, where)
+            others = sorted(map(str, branches - set(words)))
+            if others:
+                self._shape(
+                    where,
+                    f"the switch on {named} names {', '.join(others)}, which the top does not "
+                    f"declare for it: its words are {', '.join(words)}",
+                )
+        elif branches != set(words):
             self._shape(
                 where,
                 f"the switch on {named} names {', '.join(sorted(map(str, branches)))}, not each "
@@ -2393,6 +2492,16 @@ class Context:
             self._seen.add(key)
             self.findings.append(finding)
 
+    def take_back(self, code: str, where: str, use: str) -> None:
+        """Takes back each finding of `code` at `where` in the component `use`, where a
+        finding that names the fault's cause takes its place, so one fault has one
+        finding."""
+        self.findings = [
+            finding
+            for finding in self.findings
+            if (finding.code, finding.where, finding.extra.get("component")) != (code, where, use)
+        ]
+
     def attempt(self, compute: Callable[[], T], default: T) -> T:
         """A value, or `default` where it cannot be computed, its finding recorded."""
         try:
@@ -2742,6 +2851,13 @@ def _run_text(run: Any) -> str:
     """The text a run holds: the run itself, or its `text`; empty where it holds none."""
     text = run.get("text") if isinstance(run, Mapping) else run
     return text if isinstance(text, str) else ""
+
+
+def _run_style(run: Any, words: Sequence[str]) -> str:
+    """The word of its field's `words` a run is set in, as it is drawn: its `style` where
+    the field declares it, else the first word (DEC-012 point 2)."""
+    style = run.get("style") if isinstance(run, Mapping) else None
+    return style if isinstance(style, str) and style in words else words[0]
 
 
 @dataclass(frozen=True)
@@ -3706,13 +3822,16 @@ class Instance:
 
         - a field that a part of it shows, or passes on to a component it places;
         - the word the content chose of an option, where a switch or a `when` of it reads
-          that word;
+          that word, and no switch on the option leaves it out; and any word of the option,
+          the default included, where a switch on it leaves that word out
+          (`Component.takes_word`);
         - a part the content's `override` points at another role, where it paints that part;
         - each part its top exposes, where another component places the top, and so may
           read it;
         - a run's word of a field of runs, where a text part that shows the field chooses
-          by its words, and the first word alone where none does; and the runs of none,
-          where it passes the field on alone (DEC-012 point 2);
+          by its words and no switch on them leaves it out, and the first word alone where
+          none chooses; and the runs of none, where it passes the field on
+          (`Component.run_words`, DEC-012 point 2);
         - each end of the ties it draws, found under it (DEC-011 point 5).
 
         A state gives the instance its colour by the top's own states, so every drawing
@@ -3731,8 +3850,11 @@ class Instance:
                 return f"the field `{name}`"
         for name, source in sorted(self.option_sources.items()):
             word = self.options.get(name)
-            taken = component.option_reads.get(name, set())
-            if source.startswith(CONTENT) and isinstance(word, str) and word not in taken:
+            if not isinstance(word, str):
+                continue
+            left_out = word in component.switch_gaps.get(name, {})
+            chosen = source.startswith(CONTENT)
+            if left_out or (chosen and not component.takes_word(name, word)):
                 return f"the word `{word}` of the option `{name}`"
         override = self.given.get("override")
         for name in override if isinstance(override, Mapping) else {}:
@@ -3746,13 +3868,18 @@ class Instance:
         texts = {part.shows for part in component.parts.values() if part.kind == "text"}
         for name, words in component.runs.items():
             runs = self.given.get(name)
-            if not isinstance(runs, list) or not runs:
+            if isinstance(runs, list) and runs:
+                if name not in texts or name in component.runs_passed:
+                    return f"the runs of `{name}`, which it passes on and shows as text alone"
+                styles = [_run_style(run, words) for run in runs]
+            elif isinstance(runs, str) and runs and name not in component.runs_passed:
+                # Text is one run in the first style.
+                styles = list(words[:1])
+            else:
                 continue
-            if name not in texts:
-                return f"the runs of `{name}`, which it passes on and shows as text alone"
-            for run in runs:
-                word = run.get("style") if isinstance(run, Mapping) else None
-                if word in words[1:] and name not in component.chosen_by:
+            taken = component.run_words(name)
+            for word in styles:
+                if word in words and word not in taken:
                     return f"the word `{word}` of the runs of `{name}`"
         if self.left_out:
             return f"an end of the tie `{self.left_out[0].trace}`"

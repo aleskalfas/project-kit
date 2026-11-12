@@ -152,7 +152,6 @@ pkit:
         - visual-communication:DEC-021#1
         - visual-communication:DEC-021#2
         - visual-communication:DEC-022#1
-        - visual-communication:DEC-022#2
         - visual-communication:DEC-022#3
         - visual-communication:DEC-022#8
         - visual-communication:DEC-025#1
@@ -754,14 +753,15 @@ The capability ships the foundations' released version 1.0.0 at `.pkit/capabilit
 - `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names;
 - `components/site.yaml`, the top component `site`, for a web page or a portal of several: each of its `pages` is a web page, in its layout `standard`, or drawn by the component it names (DEC-022 point 1).
 
-A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge (DEC-022 point 2).
+A site of one page is a single web page. The layout `standard` has one slot, `main`. Its page lays the site's `header`, its `main` part and the site's `footer` one under another, each the page's whole width, on the page's background. Each part sets its own inset, so a colour it paints reaches the page's edge and its content keeps from it. A component that sets no inset touches the edge.
 
-- **The header and the footer** are the site's own fields, each optional, each the component the content places there. Every page drawn in a layout takes them, so each is written once in each language. A page drawn by its own component takes neither.
+- **The header and the footer** are the site's own fields, each optional, each the component the content places there. Every page drawn in a layout takes them, so each is written once in each language, under one lock. A page drawn by its own component takes neither.
+- **Any component.** The header, the footer and `main` each take any component: the starter's, a brand's own or a local one. So the site needs no library beneath it.
 - **Its size.** The site asks for its width alone, `=@size.site`, so every page is as wide as the brand's site at the size it is drawn at. Each page is as tall as its content, and the site as tall as its tallest page (DEC-022 point 3).
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value (DEC-022 point 3). `size.line` is the length of a line of text at most. Its default, `{size.figure}`, caps a line at a figure's width where a brand gives it no value. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure`, `size.slide`, a slide's width, and `size.site`, the width of a site's pages. Its default, `{size.slide}`, draws a site as wide as a slide where a brand gives it no value, so no released brand owes it one (DEC-004 point 7). `size.line` is the length of a line of text at most. Its default, `{size.figure}`, caps a line at a figure's width where a brand gives it no value. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code. The one picture role is `picture.logo`, the brand's logo, which no brand owes a value ([Picture roles](#picture-roles)).
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 

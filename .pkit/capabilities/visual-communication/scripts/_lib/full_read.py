@@ -24,7 +24,8 @@ those build on (`libraries.newest_of_majors`).
   (`layout.own_drawing_findings`, DEC-034 points 1, 4, 5 and 10). A brand's components are
   read as a component library's are, and the brand over its base,
   its tokens and its fonts opened as the engine opens them, with the facts its version
-  states (`tokens.Brand.facts`). A notation against the
+  states (`tokens.Brand.facts`) and what it shows of the forms it draws
+  (`pipeline.brand_findings`, DEC-009 point 9). A notation against the
   foundations' colour families. Each picture file the version holds in `pictures/`, read
   as the engine reads it (`pictures.Folder.read`, DEC-025 point 9), whether or not anything
   names it, and each name an image of its components gives by `file`, found there as the
@@ -160,11 +161,11 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
     brand = None
     shown = f"{library.folder.relative_to(held.root).as_posix()}/"
     reader = pictures.Folder(library.folder, shown, label, label)
+    env = pl.LibraryEnv(chosen, scope)
+    # A switch or a `when` by a size reads the foundations' size axes; nothing is placed, so
+    # no mode is read (DEC-021 point 7).
+    ctx = layout.Context(env, "", sizes=layout.Sizes(pl.size_axes(scope.axes)))
     if library.kind in ("components", "brand"):
-        env = pl.LibraryEnv(chosen, scope)
-        # A switch or a `when` by a size reads the foundations' size axes; nothing is placed,
-        # so no mode is read (DEC-021 point 7).
-        ctx = layout.Context(env, "", sizes=layout.Sizes(pl.size_axes(scope.axes)))
         for path in held.files(name, version):
             if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
                 continue
@@ -185,7 +186,6 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
                 found.extend(pl.held_top_findings(component, env, file=file, library=label))
             if component.top:
                 found.extend(layout.own_drawing_findings(component, file=file, library=label))
-        found.extend(ctx.findings)
         found.extend(_named_findings(reader, components, shown))
     if library.kind == "brand":
         fonts = held.root / held.location / pl.FONTS
@@ -194,9 +194,13 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
                 library.folder, scope, fonts=fonts, root=held.root, locked=folders
             )
             found.extend((*brand.findings, *brand.facts))
+            # The forms it draws, over its base, as its check alone judges them (DEC-009
+            # point 9), before the engine's findings, of which they may take one back.
+            found.extend(pl.brand_findings(brand, ctx, env, shown=shown))
         except tokens.TokenError as exc:
             found.extend(exc.findings)
-    elif library.kind == "notation":
+    found.extend(ctx.findings)
+    if library.kind == "notation":
         notation = notations.read_notation(
             library.folder, scope.families, shapes=scope.shapes, root=held.root
         )

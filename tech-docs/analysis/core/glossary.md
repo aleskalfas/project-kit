@@ -3365,7 +3365,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 **Distinctions:**
 
 - **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository ([ADR-034 point 1](../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
-- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
+- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of a comparison, never the root (ADR-034 point 1). Beside the cross-repository guard, `pkit init` and `pkit sync` compare the session anchor with the root they wrote to, and warn where the two differ.
 - **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 
 ## TERM-settled-break — settled break

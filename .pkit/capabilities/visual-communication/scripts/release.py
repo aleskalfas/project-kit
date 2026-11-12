@@ -155,7 +155,8 @@ def _read_in_full(
     other finding is printed."""
     read = full_read.read(held, name, version)
     found = list(read.findings)
-    if read.library is not None and read.scope is not None and read.library.kind == "components":
+    kinds = ("components", "brand")
+    if read.library is not None and read.scope is not None and read.library.kind in kinds:
         env = pl.LibraryEnv(read.versions, read.scope)
         found.extend(checks.default_clashes(held, read.library, env))
     _judge(read.label, [(finding, finding.level) for finding in found], "read in full", shown)

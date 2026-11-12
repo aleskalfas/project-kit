@@ -25,7 +25,7 @@ from typing import Any
 
 import click
 
-from project_kit import project_config, treecopy, workspace
+from project_kit import project_config, session_guard, treecopy, workspace
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
@@ -714,6 +714,7 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     provision_query_commands(ctx)
     _record_install_completion(ctx)
     _print_next_steps(ctx, settings_backed_up=settings_backed_up, pkit_found=pkit_on_path())
+    warn_if_session_elsewhere(target_root, command="init")
 
 
 def ensure_agent_workspace(ctx: InstallContext) -> None:
@@ -1458,7 +1459,9 @@ def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_fou
     Each step is a title and its further lines. The install of pkit is left out
     where a `pkit` is installed on the PATH already (*pkit_found*), and the settings
     backup is named only where `init` made one (*settings_backed_up*). No step
-    names a capability's configuration, since first install installs none.
+    names a capability's configuration, since first install installs none. The
+    last step is a new session at the project's root, which loads what `init`
+    wrote (#3005).
     """
     steps: list[tuple[str, list[str]]] = []
     if not pkit_found:
@@ -1525,6 +1528,17 @@ def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_fou
             ["     hasn't adopted it — run `pkit visibility private` (per ADR-009)."],
         )
     )
+    steps.append(
+        (
+            "Start a new session at the project's root:",
+            [
+                "",
+                f"       {ctx.target_root}",
+                "",
+                "     A new session loads the settings, agents and rules init wrote.",
+            ],
+        )
+    )
 
     click.echo()
     click.echo("Install complete. Recommended next steps:")
@@ -1533,6 +1547,28 @@ def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_fou
         click.echo(f"  {number}. {title}")
         for line in lines:
             click.echo(line)
+
+
+def warn_if_session_elsewhere(target_root: Path, *, command: str) -> None:
+    """Warn where this session's project folder is not *target_root* (#3005).
+
+    The harness loads a project's settings, agents and rules in a session
+    started at the project's root, the folder it names the session's anchor
+    (`session_guard`). A repository cloned into a folder below the one the
+    session started in is the case this names. Outside any session, where no
+    anchor is set, and in a session started at the root, it says nothing.
+    Called by `init` and `sync`, under `--dry-run` too, so it speaks of what
+    they write.
+    """
+    anchor = session_guard.session_anchor()
+    if anchor is None or _same_folder(Path(anchor), target_root):
+        return
+    click.echo()
+    click.echo(
+        f"⚠ WARNING: this session's project folder is {anchor}, not {target_root}.\n"
+        f"       The harness will not load the settings, agents and rules `pkit {command}`\n"
+        f"       writes there until a session starts at {target_root}."
+    )
 
 
 # --- Filesystem primitives (each respects ctx.dry_run) -------------------
