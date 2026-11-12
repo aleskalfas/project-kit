@@ -1642,7 +1642,8 @@ def test_a_concept_that_maps_to_a_value_or_no_declared_family_fails_in_the_notat
         (
             "concept-shape",
             f"{NOTATION}/notation.yaml#concepts.service",
-            f"the concept `service` is not `{{colour: <family>}}`: {never}",
+            f"the concept `service` is not `{{colour: <family>}}`, with its `icon` or a "
+            f"`shape` beside: {never}",
         ),
         (
             "concept-shape",

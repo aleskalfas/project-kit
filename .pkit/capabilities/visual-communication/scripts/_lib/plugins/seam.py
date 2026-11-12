@@ -35,8 +35,9 @@ from typing import Any
 #: in each combination, a PNG or a JPEG, by the image's trace id (`Shown`,
 #: visual-communication DEC-025 point 7). 6 since the scene's root holds the physical size of
 #: the piece's top, which a renderer whose format has a physical page maps each page onto
-#: (visual-communication DEC-034 point 3).
-SEAM_VERSION = 6
+#: (visual-communication DEC-034 point 3). 7 since a scene holds a path, a concept's sign the
+#: engine mapped into its frame (visual-communication DEC-036 points 1 and 7).
+SEAM_VERSION = 7
 
 RENDERER = "renderer"
 PRODUCER = "producer"

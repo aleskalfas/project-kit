@@ -26,7 +26,7 @@ DECLARATION = {
     "name": "json",
     "kind": "code-writer",
     "version": "1.0.0",
-    "seam": 6,
+    "seam": 7,
     "module": "json",
     "forms": [1, 2],
     "kinds": {

@@ -144,7 +144,7 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
     drawn = previews(root)
     assert sorted(drawn) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
     light = drawn["flow.en.default.svg"]
-    assert 'data-key="default"' in light and 'data-renderer="svg 1.1.0"' in light
+    assert 'data-key="default"' in light and 'data-renderer="svg 1.2.0"' in light
     assert '<image data-id="figure/body/steps[note]/pictures[square]/image"' in light
     assert ">Here</tspan>" in light and ">The flow.</tspan>" in light
     assert '@font-face{font-family:"Source Sans Pro"' in light

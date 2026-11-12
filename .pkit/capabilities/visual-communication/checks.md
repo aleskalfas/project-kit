@@ -27,6 +27,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
@@ -117,6 +118,8 @@ pkit:
         - visual-communication:DEC-035#7
         - visual-communication:DEC-035#8
         - visual-communication:DEC-035#9
+        - visual-communication:DEC-036#1
+        - visual-communication:DEC-036#8
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -151,6 +154,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#notations
+        - .pkit/capabilities/visual-communication/files.md#signs
         - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#picture-roles
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
@@ -358,8 +362,8 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 
 | Label | What it means | Level |
 |---|---|---|
-| `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, a component token, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
-| `roles-declaration` | A library other than the foundations declares `axes` or `families`, which are the foundations' alone. It is not read. | fails |
+| `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `shapes-shape`, `shape-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families, shapes or pairs is not of its shape. A shape is not of its shape where its name is no name, or its outline is not `{d, fill-rule, square}`, path data SVG reads, filled by `nonzero` or `evenodd`, within a square of a positive side. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, a component token, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
+| `roles-declaration` | A library other than the foundations declares `axes`, `families` or `shapes`, which are the foundations' alone. It is not read. | fails |
 | `role-picture` | A library other than the foundations declares a role of the type `picture`. Only the foundations declare a picture role (DEC-025 point 4). The role is not read. | fails |
 | `role-default`, `default-dangling`, `default-loop` | A library's own role, or a component token, has a default that is no alias, or that aliases a component token, a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). The role takes no default. A component token is `role-default` too where it carries no default. Where it carries none, or one that is no alias, the token is left out instead, found in its component's file at `#tokens.<name>`. | fails |
 | `component-token-shape` | A component's `tokens` is not a mapping, or a token's name is not of the name shape, its declaration is not a mapping or holds a key other than `type` and `default`, or its type is no role's type, or `picture` ([tokens](components.md#tokens)). A declaration with no default, or with a default that is no alias, is `role-default` instead. The token is left out. | fails |
@@ -412,13 +416,13 @@ Each finding lies in the piece or the version that holds the picture. One in a v
 
 ### Notations
 
-The check reads each notation a piece names, once for each notation version and foundations version, against the colour families of the foundations the piece locks ([notations](files.md#notations)). Each of these findings names the version it lies in. It asks for attention where the project does not correct the version, and fails otherwise ([Severities](#severities)). None stops the piece, and content that names a concept the notation cannot read takes no finding of its own.
+The check reads each notation a piece names, once for each notation version and foundations version, against the colour families and the shapes of the foundations the piece locks ([notations](files.md#notations)). Each of these findings names the version it lies in. It asks for attention where the project does not correct the version, and fails otherwise ([Severities](#severities)). None stops the piece, and content that names a concept the notation cannot read takes no finding of its own.
 
 | Label | What it means | Where it points |
 |---|---|---|
 | `notation-kind` | A library the piece names under `notations` is not of kind `notation`. | `<version>/library.yaml#kind` |
 | `notation-unreadable` | The notation's `library.yaml` or `notation.yaml` cannot be read, or is missing, or its `concepts` is not a mapping. The check leaves it out where a `file-unreadable` or `binding` finding names the file. | the file, or `<version>/notation.yaml#concepts` |
-| `concept-shape` | A concept's name is not a name, or the concept does not map to `{colour: <family>}` with a family the foundations declare: it maps to a value, to a role, or to a family they do not declare. | `<version>/notation.yaml#concepts.<concept>` |
+| `concept-shape` | A concept's name is not a name, or the concept does not map to `{colour: <family>}` with a family the foundations declare: it maps to a value, to a role, or to a family they do not declare. Or its sign cannot be read ([Signs](files.md#signs)): its `icon` is not an outline as a shape's is, or it maps to a `shape` the foundations do not declare. Such a concept keeps its colour family, and has no sign. | `<version>/notation.yaml#concepts.<concept>`, or, for its sign, `#concepts.<concept>.icon` or `#concepts.<concept>.shape` |
 
 ### Scenes
 
