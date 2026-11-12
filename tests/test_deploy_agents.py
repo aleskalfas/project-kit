@@ -578,6 +578,8 @@ _CAPABILITY_CATEGORY = "drawing.work"
 
 
 def _capability_designer(root: Path) -> None:
+    """The capability `drawing`, registered so its definitions count (COR-017),
+    shipping `designer`, which owns `drawing.work`."""
     cap_dir = root / ".pkit" / "capabilities" / "drawing"
     (cap_dir / "agents").mkdir(parents=True, exist_ok=True)
     (cap_dir / "package.yaml").write_text(
@@ -588,6 +590,7 @@ def _capability_designer(root: Path) -> None:
         "---\n\n# Designer\n",
         encoding="utf-8",
     )
+    _register(root, "drawing")
 
 
 @pytest.mark.parametrize("grant", [".pkit/agents/core/", ".pkit/", "."])
@@ -607,6 +610,7 @@ def test_deploy_refuses_a_capability_agent_a_grant_reaching_managed_content(
 def test_deploy_refuses_a_capability_agent_an_externally_sourced_copy(mock_kit: Path) -> None:
     _capability_designer(mock_kit)
     _register_capability(mock_kit, "pulled", origin="externally-sourced")
+    _register(mock_kit, "drawing")  # the line above rewrites the registry
     _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: [".pkit/capabilities/pulled/scripts/"]\n')
 
     result = _run_deploy(mock_kit)
