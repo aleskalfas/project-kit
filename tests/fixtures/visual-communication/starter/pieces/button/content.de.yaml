@@ -11,3 +11,13 @@ pages:
       buttons:
         - {id: send, label: Absenden}
         - {id: draft, state: disabled, label: Als Entwurf speichern}
+
+  - id: signs
+    layout: standard
+    main:
+      use: starter/form
+      fields:
+        - {id: question, label: Ihre Frage, value: Wer pflegt die Regeln?}
+      buttons:
+        - {id: ask, concept: test-notation/person, label: Eine Benutzerin fragen}
+        - {id: wait, concept: test-notation/person, state: disabled, label: Warten}

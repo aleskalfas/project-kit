@@ -606,10 +606,12 @@ def renders(drawn: Any) -> Iterator[tuple[str, str, Any]]:
 
 
 def as_released_location(root: Path) -> Path:
-    """The starter's reference location, with the foundations' release 1.0.0, the test brand
-    that gives sizes, and a figure, each piece locked at the versions being built."""
+    """The starter's reference location, with the foundations' release 1.0.0 and the
+    starter's newest release, the test brand that gives sizes, and a figure, each piece
+    locked at the versions being built."""
     starter.reference_location(root)
     hold_shipped(root, "foundations", being_built=False)
+    hold_shipped(root, "starter", being_built=False)
     built = {name: hold_shipped(root, name).version for name in ("foundations", "starter")}
     write_piece(
         root,
@@ -624,15 +626,23 @@ def as_released_location(root: Path) -> Path:
 def test_the_deck_and_the_figure_draw_as_before_in_every_renderer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """On the foundations being built as on their release 1.0.0, and under the test brand
-    that gives sizes as under its version that gives none, a piece that names no size draws
+    """Under the test brand that gives sizes as under its version that gives none, and on
+    the foundations being built as on their release 1.0.0, a piece that names no size draws
     byte for byte the same, in each renderer (DEC-022 point 3, DEC-021 point 2): the deck of
     the card's reference piece, in two languages and four combinations, and a figure. The
-    starter's and the neutral brand's tests draw every reference piece so in SVG."""
+    starter being built reads the foundations' gap after a sign, which their release lacks,
+    so the two foundations draw the starter's newest release. The starter's and the neutral
+    brand's tests draw every reference piece so in SVG."""
     importable(monkeypatch, svg, pdf, html)
     root = as_released_location(project(tmp_path))
+    release = starter.STARTER_RELEASE.version
     for name in ("card", "figure"):
         drawn = list(renders(project_of(root, name)))
         assert drawn, name
-        assert list(renders(project_of(root, name, foundations="1.0.0"))) == drawn, name
         assert list(renders(project_of(root, name, **{"test-brand": "1.1.0"}))) == drawn, name
+        on_release = list(renders(project_of(root, name, starter=release)))
+        assert on_release, name
+        assert (
+            list(renders(project_of(root, name, foundations="1.0.0", starter=release)))
+            == on_release
+        ), name

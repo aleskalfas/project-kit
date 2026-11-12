@@ -6,7 +6,8 @@ status: experimental
 # System's header and its service navigation, and the U.S. Web Design System's header.
 about: >-
   Whose site a page belongs to: the brand's logo, where the brand gives one, the site's
-  title, and the navigation to the site's other pages, where the content gives its links.
+  title, after its concept's sign where it has one, and the navigation to the site's other
+  pages, where the content gives its links.
   On a desktop they stand in one row, the navigation at its end, and the title on one
   line. On a tablet and a phone the navigation moves under the title, and the title takes
   the whole row, broken to its width. It fills the width it is given, and sets its own
@@ -39,14 +40,17 @@ values:
   margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
   inner: "=:width - margin - margin"
   top: "=@starter.inset"
-  # Where the title starts: beside the logo, or at the inset where the brand gives none.
+  # Where the sign starts: beside the logo, or at the inset where the brand gives none. The
+  # title starts after the sign, or where the sign would start where it draws none.
   start: "=logo.right + min(logo.width, @starter.gap)"
-  # How tall the row is that the logo and the title share, and the navigation on a desktop.
+  words: "=sign.right + min(sign.width, @space.sign-gap)"
+  # How tall the row is that the logo, the sign and the title share, and the navigation on
+  # a desktop.
   band:
     by: ":device"
-    desktop: "=max(logo.height, title.height, navigation.height)"
-    tablet: "=max(logo.height, title-narrow.height)"
-    phone: "=max(logo.height, title-narrow.height)"
+    desktop: "=max(logo.height, sign.height, title.height, navigation.height)"
+    tablet: "=max(logo.height, sign.height, title-narrow.height)"
+    phone: "=max(logo.height, sign.height, title-narrow.height)"
 
 parts:
   box:
@@ -65,6 +69,16 @@ parts:
     x: "=margin"
     y: "=top + (band - logo.height) / 2"
     width: "=min(@starter.logo, inner)"
+  # The concept's sign, before the title, as a tag's stands before its label, no wider than
+  # the room inside the insets. It takes the family's text, so it shows the concept's
+  # colour on the band's fill, plain or tinted. A header whose family comes from no
+  # concept with a sign draws none, and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=start"
+    y: "=top + (band - sign.height) / 2"
+    width: "=min(@starter.sign, inner)"
+    height: "=min(@starter.sign, inner)"
   # The title on one line beside the navigation on a desktop; on a tablet and a phone,
   # broken to the whole row.
   title:
@@ -73,7 +87,7 @@ parts:
       content: title
       style: starter.type.head
       fill: {by: fill, plain: text-primary, tint: ":colour.text"}
-    x: "=start"
+    x: "=words"
     y: "=top + (band - title.height) / 2"
   title-narrow:
     when: {by: ":device", desktop: false, tablet: true, phone: true}
@@ -81,9 +95,9 @@ parts:
       content: title
       style: starter.type.head
       fill: {by: fill, plain: text-primary, tint: ":colour.text"}
-    x: "=start"
+    x: "=words"
     y: "=top + (band - title-narrow.height) / 2"
-    width: "=:width - margin - start"
+    width: "=:width - margin - words"
   # On a desktop the navigation takes the room the title leaves, its links at its end; its
   # own inset keeps them from the title and from the edge. On a tablet and a phone it moves
   # under the title, across the whole width: its links stand in a row on a tablet, and in

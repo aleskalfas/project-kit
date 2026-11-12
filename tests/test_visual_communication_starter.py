@@ -14,7 +14,11 @@ no part passes a field of runs on (DEC-012 point 8); a pattern placed inside ano
 within it with no overflow; a panel's span gives its share of the row (DEC-010 point 4);
 the panels of a row end on one edge where one holds panels of its own; a code block's
 lines stand as written; and a row of cards keeps its heads at one height, whichever bar
-each has, each clear of a top bar.
+each has, each clear of a top bar. Each component that paints from its family places one
+sign part, which its reference renders draw within it and clear of its words, a
+connector's halfway along its line; a run painted from its family draws its concept's
+sign; and a legend's entries draw their concepts' families and signs beside the labels
+content gives (DEC-036 points 2, 3 and 6).
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 one for each component, drawn in English and in German. Run in this process
@@ -299,7 +303,8 @@ def resolved(projects: Mapping[str, Any]) -> dict[str, tuple[dict[str, Any], lis
 
 def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> None:
     """Each piece locks a version of the starter the capability ships: the components of its
-    release 1.0.0 that, and the web parts the version being built, which adds them."""
+    release 1.0.0 that, and the web parts and the legend the version being built, which adds
+    them."""
     shipped = {taken("starter").version, taken("starter", being_built=True).version}
     assert sorted(path.name for path in PIECES.iterdir()) == sorted(COMPONENTS)
     for folder in PIECES.iterdir():
@@ -319,26 +324,44 @@ def previews(drawn: Any) -> dict[str, str]:
     return found
 
 
+#: The starter's newest release, which the comparison of the foundations draws each piece
+#: with, on both of their versions: the version being built reads roles their release does
+#: not declare, such as the gap after a run's sign (DEC-036 point 3).
+STARTER_RELEASE = taken("starter")
+
+
+def on_the_starter_release(name: str) -> bool:
+    """Whether the starter's newest release holds the component `name`, whose reference piece
+    the comparison of the foundations then draws."""
+    return (STARTER_RELEASE.folder / "components" / f"{name}.yaml").is_file()
+
+
 def on_each_foundations(
     root: Path, released: str = "1.0.0", brand: Mapping[str, str] | None = None
 ) -> dict[str, dict[str, Any]]:
-    """Each piece of the location at `root` drawn on the foundations being built and on their
-    release `released`, both of which the location holds: by the foundations' version, each
-    piece's document of values and its previews, by the piece's name. Each piece's lock
-    names the version being built. On the release, the lock names `brand`'s version of each
-    library it names instead: a brand's release, which a brand being built on the
+    """Each piece of the location at `root` whose component the starter's newest release
+    holds, drawn with that release on the foundations being built and on their release
+    `released`, each of which the location holds: by the foundations' version, each piece's
+    document of values and its previews, by the piece's name. Each piece's lock names the
+    versions being built. On the foundations' release, the lock names `brand`'s version of
+    each library it names instead: a brand's release, which a brand being built on the
     foundations being built follows. What names the version drawn on is left out: the lock
     the document of values holds, and the version a preview's trace gives each component of
     the foundations."""
     built = taken("foundations", being_built=True).version
+    starter = STARTER_RELEASE.version
     held = pl.Held(root, "visual")
     drawn: dict[str, dict[str, Any]] = {released: {}, built: {}}
-    locks = {released: {**(brand or {}), "foundations": released}, built: {"foundations": built}}
+    locks = {
+        released: {**(brand or {}), "foundations": released, "starter": starter},
+        built: {"foundations": built, "starter": starter},
+    }
     for folder in sorted((root / "visual" / "pieces").iterdir()):
         piece = pl.read_piece(root, "visual", folder.name)
         assert piece.lock["foundations"] == built
-        if names_a_size(folder):
+        if not on_the_starter_release(folder.name):
             continue
+        assert not names_a_size(folder), folder.name
         for version, pieces in drawn.items():
             on = pl.Project(piece, {**piece.lock, **locks[version]}, held)
             values = {field: value for field, value in on.values().items() if field != "lock"}
@@ -369,6 +392,9 @@ def names_a_size(folder: Path) -> bool:
 
 #: The reference pieces that name no size, by name.
 UNSIZED = [folder.name for folder in sorted(PIECES.iterdir()) if not names_a_size(folder)]
+#: The reference pieces the comparison of the foundations draws, by name: those of the
+#: components the starter's newest release holds.
+ON_THE_RELEASE = [name for name in sorted(COMPONENTS) if on_the_starter_release(name)]
 
 
 def as_released(values: Mapping[str, Any], given: Collection[str] = ()) -> dict[str, Any]:
@@ -389,16 +415,18 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     """The foundations being built add the size axis `device` and the roles `size.site`,
     `size.line` and those of a run's sign and ground to their release 1.0.0, and the test
     brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022 point 3, DEC-036 point 3).
-    So each reference piece that names no size draws on them as on that release, byte for
-    byte: each preview, but for the foundations' version they name, and its values, but for
-    the roles they add. A web part's piece names the sizes, which that release does not
-    declare."""
+    So each reference piece of a component the starter's release holds, drawn with that
+    release, draws on them as on their release, byte for byte: each preview, but for the
+    foundations' version they name, and its values, but for the roles they add. The
+    starter being built reads roles their release does not declare, and its web parts name
+    the sizes, which that release does not declare either."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)
+    hold_shipped(root, "starter", being_built=False)
     drawn = on_each_foundations(root)
     released, built = drawn.values()
-    assert sorted(built) == sorted(UNSIZED)
+    assert sorted(built) == ON_THE_RELEASE
     for name, (values, files) in built.items():
         assert files, name
         assert (as_released(values), files) == released[name], name
@@ -407,18 +435,13 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
 #: The labels of the calls for attention on concepts' signs (DEC-036 point 8).
 SIGN_LABELS = ("concept-unsigned", "sign-missing", "run-sign-missing", "sign-shared")
 
-#: What the reference pieces ask for attention on their concepts' signs, until the starter's
-#: components draw them (DEC-036 point 8), in the order the check reports it: the test
-#: notation's two concepts that map no sign, and each starter component that paints the test
-#: notation's person by its colour alone, once in each piece that draws it so. Each is its
-#: level, its label, its library, its file within the library's version and where.
+#: What the reference pieces ask for attention on their concepts' signs (DEC-036 point 8), in
+#: the order the check reports it: the test notation's two concepts that map no sign. Each
+#: starter component draws the sign of a concept that has one, so none asks for more. Each is
+#: its level, its label, its library, its file within the library's version and where.
 UNSIGNED = [
     ("attention", "concept-unsigned", "test-notation", "notation.yaml", "concepts.service"),
     ("attention", "concept-unsigned", "test-notation", "notation.yaml", "concepts.store"),
-    ("attention", "sign-missing", "starter", "components/card.yaml", "parts"),
-    ("attention", "sign-missing", "starter", "components/group.yaml", "parts"),
-    ("attention", "sign-missing", "starter", "components/card.yaml", "parts"),
-    ("attention", "sign-missing", "starter", "components/tag.yaml", "parts"),
 ]
 
 
@@ -437,8 +460,8 @@ def on_signs(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str, str
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
     """The test brand's newest version, the one the check of a version alone reads (DEC-019),
     states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
-    point 9): a header draws with no logo. Beside it, the pieces ask for attention where
-    their concepts' signs are not drawn."""
+    point 9): a header draws with no logo. Beside it, the pieces ask for attention on the
+    concepts that map no sign."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
@@ -1204,3 +1227,206 @@ def test_a_bar_thicker_than_the_inset_stays_clear_of_every_head_at_one_height(
         assert_heads_stand_at_one_height(scene)
         gaps = list(gaps_below_top_bars(scene))
         assert gaps and min(gaps) >= space_2(projects["card"]) - EPSILON
+
+
+# --- signs and the legend ----------------------------------------------------------------------
+
+
+def family_paints(component: Mapping[str, Any]) -> list[str]:
+    """The parts of a component, other than a sign part, that paint from its colour family."""
+    return [
+        name
+        for name, part in component["parts"].items()
+        if "sign" not in part and any(str(paint).startswith(":colour.") for paint in paints(part))
+    ]
+
+
+def sign_parts(component: Mapping[str, Any]) -> list[str]:
+    return [name for name, part in component["parts"].items() if "sign" in part]
+
+
+#: The components that paint a part from their colour family, each of which draws its
+#: concept's sign (DEC-036 point 2).
+SIGNED = sorted(name for name, component in COMPONENTS.items() if family_paints(component))
+
+
+@pytest.mark.parametrize("name", sorted(COMPONENTS))
+def test_a_component_that_paints_from_its_family_places_one_sign_part(name: str) -> None:
+    """A starter component whose parts paint from its instance's family takes one sign part,
+    painted in the family's text, the member a brand makes legible (DEC-036 point 2). A
+    component that paints nothing from a family takes none."""
+    component = COMPONENTS[name]
+    signs = sign_parts(component)
+    if not family_paints(component):
+        assert signs == [], name
+        return
+    assert len(signs) == 1, (name, signs)
+    assert component["parts"][signs[0]]["sign"] == {"fill": ":colour.text"}, name
+
+
+@pytest.mark.parametrize("name", sorted(COMPONENTS))
+def test_a_run_painted_from_its_family_draws_its_concepts_sign(name: str) -> None:
+    """A text part that paints a run's style from the run's family chooses the run's sign for
+    that style, so a run that names a concept with a sign shows it beside its colour; a style
+    painted with a shared role chooses none (DEC-036 point 3)."""
+    component = COMPONENTS[name]
+    for field, words in run_words(component).items():
+        for part in component["parts"].values():
+            text = part.get("text") or {}
+            if text.get("content") != field:
+                continue
+            fill, sign = text["fill"], text.get("sign", False)
+            by_word = isinstance(fill, Mapping) and fill.get("by") == field
+            for word in words:
+                painted = fill[word] if by_word else fill
+                chosen = sign[word] if isinstance(sign, Mapping) else sign
+                from_family = any(str(leaf).startswith(":colour.") for leaf in leaves(painted))
+                assert chosen is from_family, (name, field, word)
+
+
+def drawn_signs(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> Iterator[tuple[str, Mapping[str, Any], Mapping[str, Any], dict[str, Any]]]:
+    """Each sign a starter component draws in the scenes of `language`: the piece, the
+    component's element, the sign's element, and the frame on its page of each element of
+    that page, by trace id."""
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for page in [each for each in elements(scene) if each.get("page")]:
+            placed = {str(element["id"]): frame for element, frame in frames(page)}
+            drawn = by_id(page)
+            for trace_id, element in drawn.items():
+                owner = drawn.get(trace_id.rpartition("/")[0], {})
+                if element["type"] == "path" and str(owner.get("component", "")).startswith(
+                    "starter/"
+                ):
+                    yield piece, owner, element, placed
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_each_sign_part_is_drawn_in_the_reference_renders(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """Each component that places a sign part draws it in its reference renders, for the
+    test notation's person, whose concept has a sign (DEC-007 point 3)."""
+    drawn = {
+        str(owner["component"]).removeprefix("starter/")
+        for _, owner, _, _ in drawn_signs(scenes, language)
+    }
+    assert drawn == set(SIGNED)
+
+
+def overlaps(one: tuple[float, ...], other: tuple[float, ...]) -> bool:
+    return (
+        one[0] < other[2] - EPSILON
+        and other[0] < one[2] - EPSILON
+        and one[1] < other[3] - EPSILON
+        and other[1] < one[3] - EPSILON
+    )
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_sign_lies_within_its_component_clear_of_the_words_it_holds(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """A block's or a web part's sign stands inside it, and no text or component it holds
+    lies over the sign, whether it has a head or not. A connector's sign is below."""
+    checked = 0
+    for piece, owner, sign, placed in drawn_signs(scenes, language):
+        if owner["component"] == "starter/connector":
+            continue
+        frame = placed[str(sign["id"])]
+        assert within(frame, placed[str(owner["id"])]), (piece, sign["id"])
+        for child in owner.get("children", []):
+            if child["type"] in ("text", "group") and child is not sign:
+                assert not overlaps(frame, placed[str(child["id"])]), (piece, child["id"])
+        checked += 1
+    assert checked > 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_connectors_sign_stands_on_its_line_halfway_along_it(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """The sign's centre is the middle of the line's frame, which lies on the route, with
+    corners and without."""
+    checked = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for page in [each for each in elements(scene) if each.get("page")]:
+            placed = {str(element["id"]): frame for element, frame in frames(page)}
+            for line, route, _ in connector_lines(page):
+                owner = str(line["id"]).rpartition("/")[0]
+                sign = placed.get(f"{owner}/sign")
+                if sign is None:
+                    continue
+                middle = ((sign[0] + sign[2]) / 2, (sign[1] + sign[3]) / 2)
+                frame = placed[str(line["id"])]
+                assert middle == pytest.approx(
+                    ((frame[0] + frame[2]) / 2, (frame[1] + frame[3]) / 2), abs=ROUNDING
+                ), (piece, owner)
+                assert any(
+                    on_stretch(middle, start, end) for start, end in itertools.pairwise(route)
+                ), (piece, owner)
+                checked += 1
+    assert checked >= 2
+
+
+def on_stretch(point: Point, start: Point, end: Point) -> bool:
+    """Whether `point` lies on the straight stretch from `start` to `end`."""
+    (x, y), (x1, y1), (x2, y2) = point, start, end
+    across = (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1)
+    length = math.hypot(x2 - x1, y2 - y1)
+    if length == 0 or abs(across) / length > ROUNDING:
+        return False
+    return min(x1, x2) - ROUNDING <= x <= max(x1, x2) + ROUNDING and (
+        min(y1, y2) - ROUNDING <= y <= max(y1, y2) + ROUNDING
+    )
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_run_that_names_a_concept_with_a_sign_starts_with_it_in_a_card_and_a_code_block(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """A run of a card's text, and a plain run of a code block's, that names the test
+    notation's person draws its sign before its text (DEC-036 point 3)."""
+    for piece in ("card", "code"):
+        signed = [
+            span
+            for element in elements(scenes[(piece, language)])
+            for line in element.get("lines", [])
+            for span in line["spans"]
+            if "sign" in span
+        ]
+        assert signed, piece
+
+
+#: The test notation's concepts, each with its colour family and whether it has a sign.
+NOTATION = {
+    name: (concept["colour"], "icon" in concept or "shape" in concept)
+    for name, concept in read(TEST_NOTATION / "notation.yaml")["concepts"].items()
+}
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_legends_entries_draw_their_concepts_family_and_sign_beside_the_label_content_gives(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """Each entry of the legend under the cards is a tag on its concept's family's fill, with
+    its concept's sign where the concept has one, and the label its content gives in the
+    language (DEC-036 point 6)."""
+    content = read(PIECES / "legend" / f"content.{language}.yaml")
+    drawn = by_id(scenes[("legend", language)])
+    legend = "deck/slides[under]/visual/under"
+    entries = content_at(content, legend)["entries"]
+    assert drawn[legend]["component"] == "starter/legend"
+    for entry in entries:
+        family, has_sign = NOTATION[entry["concept"].removeprefix("test-notation/")]
+        held = f"{legend}/entries[{entry['id']}]"
+        assert drawn[held]["component"] == "starter/tag"
+        assert drawn[f"{held}/box"]["fill"] == f"family.{family}.fill"
+        assert drawn[f"{held}/label"]["text"] == entry["label"]
+        assert (f"{held}/sign" in drawn) is has_sign, entry["id"]
+    assert any(NOTATION[e["concept"].removeprefix("test-notation/")][1] for e in entries)

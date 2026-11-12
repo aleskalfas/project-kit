@@ -8,8 +8,9 @@ about: >-
   One field of a form: its label, then a box with rounded corners that holds the text the
   content gives it, then a note under the box where the content gives one, such as a hint
   or what is wrong with the answer. The box is painted in its colour family: its fill, an
-  edge in the family's text, and the text on that fill. It is as wide as it is given, and
-  as tall as what it holds. A field in error takes the red family.
+  edge in the family's text, and the text on that fill. Where its concept has a sign, the
+  sign stands in the box, before the text. It is as wide as it is given, and as tall as
+  what it holds. A field in error takes the red family.
 
 fields:
   type: object
@@ -36,9 +37,11 @@ states:
   error: {colour: red}
 
 values:
-  # How far the text keeps inside the box, and how wide it is.
+  # How far the text keeps inside the box, and how wide it is, beside the sign and the gap
+  # after it where the sign is drawn.
   pad: "=@space.2"
-  inner: "=:width - pad - pad"
+  start: "=pad + sign.width + min(sign.width, @space.sign-gap)"
+  inner: "=:width - start - pad"
 
 parts:
   label:
@@ -54,12 +57,22 @@ parts:
       rx: "=@starter.corner"
     y: "=label.bottom + @space.1"
     width: "=:width"
-    height: "=max(value.height, @space.4 - @space.2) + pad + pad"
+    height: "=max(value.height, sign.height, @space.4 - @space.2) + pad + pad"
+  # The concept's sign, in the box before the text, as a text input's leading icon
+  # stands, no wider than the field. It takes the family's text, as the box's edge does,
+  # and a state changes its paint, never its sign. A field whose family comes from no
+  # concept with a sign draws none, and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=pad"
+    y: "=box.y + (box.height - sign.height) / 2"
+    width: "=min(@starter.sign, :width)"
+    height: "=min(@starter.sign, :width)"
   # The text is the family's text on the family's fill, a pair the foundations declare.
   value:
     when: value
     text: {content: value, style: type.body, fill: ":colour.text"}
-    x: "=pad"
+    x: "=start"
     y: "=box.y + (box.height - value.height) / 2"
     width: "=inner"
   note:

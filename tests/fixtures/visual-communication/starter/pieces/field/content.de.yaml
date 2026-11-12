@@ -18,5 +18,9 @@ pages:
         - id: about
           label: Was geprüft werden soll
           note: Ein Entscheidungsprotokoll, eine Seite oder ein Bild.
+        - id: owner
+          concept: test-notation/person
+          label: Wer es pflegt
+          value: Ada Lovelace
       buttons:
         - {id: send, label: Absenden}
