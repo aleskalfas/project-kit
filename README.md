@@ -73,6 +73,7 @@ pkit:
         - docs/decisions/README.md#why-they-exist
         - docs/schemas/README.md#why-they-exist
         - docs/process/README.md#why-they-exist
+        - docs/adapters/README.md#why-they-exist
         - docs/010-nobody-at-the-terminal.md#
         - .pkit/capabilities/project-management/README.md#
         - .pkit/capabilities/software-engineering/README.md#
@@ -436,6 +437,7 @@ The friction check asks nothing of your documents until you declare where they l
 - **Decision records, explained:** [`docs/decisions/README.md`](docs/decisions/README.md) — why to keep your decisions as records a person accepts, and how to record, accept and refine one.
 - **Schemas, explained:** [`docs/schemas/README.md`](docs/schemas/README.md) — why your configuration, your rule sets and your capability's data are checked against schemas, and how to declare, write and check each.
 - **Processes, explained:** [`docs/process/README.md`](docs/process/README.md) — why to give your capability a process the engine runs and checks, and how to author one, connect it and write its checks.
+- **Adapters, explained:** [`docs/adapters/README.md`](docs/adapters/README.md) — why each AI harness's ties live in an adapter, and how to adapt the system to another harness.
 - **Running with nobody at the terminal:** [`docs/010-nobody-at-the-terminal.md`](docs/010-nobody-at-the-terminal.md) — pkit's behaviour there, an agent host's setup, and the limits pkit accepts.
 - **Adopting / navigating the methodology:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
