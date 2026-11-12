@@ -7740,7 +7740,7 @@ def install_capability_cmd(
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
     _echo_capability_bound(target_root, name, None, capability_source.path)
     # The defaults its write categories declare, before the deploy (ADR-088 point 5).
-    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7793,7 +7793,7 @@ def _install_capability_in_source(
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
     _echo_capability_bound(target_root, name, None, capability_source.path)
-    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
@@ -7801,7 +7801,7 @@ def _install_capability_in_source(
 
 
 def _write_declared_defaults(
-    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool
+    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool, release: Path
 ) -> None:
     """Provision the capability's default queries, then write each default its write
     categories declare into the agents overlay, before the deploy (ADR-088 point 5).
@@ -7814,9 +7814,12 @@ def _write_declared_defaults(
     left undefined and the fill commands named. A query with no answer, or an
     answer refused, leaves its category undefined, saying why. Install never fails
     on a default. A dry run asks no query and provisions nothing: it lists each
-    category's state. A missing overlay gets no default."""
+    category's state. A missing overlay gets no default. The other agents whose
+    grants a default may not overlap are the picker's, loaded from *release*, the
+    `.pkit/` tree the command brings (ADR-087 point 2); a picker it cannot reach
+    leaves every category undefined, saying why."""
+    from project_kit import agent_definitions, provisioning, upgrade
     from project_kit import agents_overlay as ao
-    from project_kit import provisioning, upgrade
     from project_kit import write_categories as wcat
     from project_kit.command_runner import registered_commands, resolve_command
 
@@ -7851,9 +7854,15 @@ def _write_declared_defaults(
             click.echo(f"  {verb:<12} {detail}")
     # Step 5: the defaults.
     try:
-        outcomes = ao.plan_defaults(target_root, categories, document, moves=False)
+        outcomes = ao.plan_defaults(target_root, categories, document, moves=False, release=release)
     except wcat.OverlayDoesNotRead as exc:
         click.echo(f"  {'skipped':<12} the capability's defaults: the overlay does not read: {exc}")
+        return
+    except agent_definitions.Unreachable as exc:
+        click.echo(
+            f"  {'skipped':<12} the capability's defaults, left undefined: {exc.message}. "
+            f"Then run {fill}."
+        )
         return
     held = [o for o in outcomes if o.kind == ao.WRITE and o.over_content]
     taken = [o for o in outcomes if o.kind == ao.WRITE and not o.over_content]
@@ -8212,7 +8221,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
         )
     )
     _echo_capability_bound(target_root, name, None, capability_source.path)
-    _write_declared_defaults(target_root, capability_source, dry_run=dry_run)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the

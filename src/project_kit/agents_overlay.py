@@ -161,17 +161,21 @@ class AgentOverlayStatus:
 # --- discovery (the picker's answer, ADR-087) ----------------------------------
 
 
-def discover_kit_agents(target_root: Path) -> dict[str, tuple[str, Path]]:
+def discover_kit_agents(
+    target_root: Path, *, release: Path | None = None
+) -> dict[str, tuple[str, Path]]:
     """Return ``{name: (place, file)}`` for each name whose agent has one text.
 
     Which definition of a name is the agent is the picker's to say
     (`agent_definitions`, ADR-087): the place is ``project``, ``core`` or
     ``capability:<name>``, as the picker writes it. A name whose agent is
     refused for holding both layouts, one with no agent, and one the picker
-    cannot tell are left out, and the validator reports each. Raises
+    cannot tell are left out, and the validator reports each. *release* is the
+    `.pkit/` tree of the release a command that changes which capabilities are
+    installed brings, which the picker is loaded from (ADR-087 point 2). Raises
     `agent_definitions.Unreachable` where the picker cannot be reached.
     """
-    return agent_definitions.agents(agent_definitions.answer(target_root))
+    return agent_definitions.agents(agent_definitions.answer(target_root, release=release))
 
 
 # --- reference-detection (mirrors _resolve_agent.py) -------------------------
@@ -532,11 +536,15 @@ def plan_defaults(
     document: wcat.OverlayDocument,
     *,
     moves: bool,
+    release: Path | None = None,
 ) -> list[DefaultOutcome]:
     """Each category's outcome, in order, against *document* and the writes planned
     before it. *moves* asks the query of a line still as written too, as only
     `reconcile` and the status report do (ADR-088 point 6). *document* is left as
-    it was. Raises `wcat.OverlayDoesNotRead` where the overlay does not parse."""
+    it was. *release* is the `.pkit/` tree install loads the picker from, which
+    names the other agents whose grants a default may not overlap (ADR-087 point
+    2). Raises `wcat.OverlayDoesNotRead` where the overlay does not parse, and
+    `agent_definitions.Unreachable` where the picker cannot be reached."""
     ownership = lifecycle_ownership.load_ownership(target_root)
     scratch = wcat.OverlayDocument(document.text)
     scratch.data()
@@ -561,7 +569,7 @@ def plan_defaults(
                 DefaultOutcome(category, CURRENT, answer.paths, written, note=answer.note)
             )
             continue
-        others = _other_grants(target_root, scratch, category)
+        others = _other_grants(target_root, scratch, category, release=release)
         reason = wcat.refusal(target_root, category, answer.paths, others, ownership)
         if reason is None:
             try:
@@ -599,15 +607,20 @@ def apply_defaults(document: wcat.OverlayDocument, outcomes: Iterable[DefaultOut
 
 
 def _other_grants(
-    target_root: Path, document: wcat.OverlayDocument, category: wcat.WriteCategory
+    target_root: Path,
+    document: wcat.OverlayDocument,
+    category: wcat.WriteCategory,
+    *,
+    release: Path | None = None,
 ) -> list[tuple[str, str]]:
     """Each `(agent, normalised path)` an agent other than *category*'s owner owns,
     resolved from *document*: the overlay as it stands, with the writes made
     earlier in the run. The category's own value leaves the comparison, since
-    the write replaces it."""
+    the write replaces it. The agents are the picker's, loaded from *release*
+    where given (ADR-087 point 2)."""
     values = overlay_values_of(document.data())
     found: list[tuple[str, str]] = []
-    for name, (_ns, source) in sorted(discover_kit_agents(target_root).items()):
+    for name, (_ns, source) in sorted(discover_kit_agents(target_root, release=release).items()):
         if name == category.owner:
             continue
         owns = agent_front_matter(source).get("owns")

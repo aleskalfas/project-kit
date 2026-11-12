@@ -4884,6 +4884,50 @@ def test_install_leaves_a_category_with_no_answer_undefined(
     assert "drawing.work" not in _agents_overlay(kit_target)
 
 
+def test_install_asks_the_releases_picker_for_the_other_agents(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The agents whose grants a default may not overlap are named by the picker
+    of the release install brings, so a project whose tree lacks the picker still
+    gets the default (ADR-087 point 2, ADR-088 point 5)."""
+    for module in (
+        Path("agents") / "definition_source.py",
+        Path("lifecycle") / "capability_records.py",
+    ):
+        (kit_target / ".pkit" / module).unlink()
+    _stage_drawing(kit_source)
+    _answering(monkeypatch, "visual/")
+    _terminal(monkeypatch, False)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert _WRITTEN in _agents_overlay(kit_target)
+
+
+def test_install_leaves_the_defaults_undefined_where_no_picker_answers(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Install never fails on a default: a picker it cannot reach leaves the
+    category undefined, says why and names the fill commands (ADR-088 point 5)."""
+    from project_kit import agent_definitions
+    from project_kit import agents_overlay as ao
+
+    def _unreachable(_root: Path, *, release: Path | None = None) -> dict[str, object]:
+        raise agent_definitions.Unreachable("the picker is not there")
+
+    _stage_drawing(kit_source)
+    _answering(monkeypatch, "visual/")
+    monkeypatch.setattr(ao, "discover_kit_agents", _unreachable)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert "the capability's defaults, left undefined: the picker is not there." in result.output
+    assert "pkit agents reconcile --write" in result.output
+    assert "drawing.work" not in _agents_overlay(kit_target)
+
+
 def test_install_dry_run_asks_no_query_and_lists_each_state(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
