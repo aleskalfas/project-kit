@@ -138,6 +138,9 @@ pkit:
         - visual-communication:DEC-033
         - visual-communication:DEC-034#3
         - visual-communication:DEC-035#3
+        - visual-communication:DEC-036#1
+        - visual-communication:DEC-036#4
+        - visual-communication:DEC-036#7
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -188,9 +191,9 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 
 Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
-- the `svg` renderer, at version 1.1.0, which draws the formats `svg` and `svg-modes`
-- the `pdf` renderer, at version 1.3.0
-- the `html` renderer, at version 1.4.0
+- the `svg` renderer, at version 1.2.0, which draws the formats `svg` and `svg-modes`
+- the `pdf` renderer, at version 1.4.0
+- the `html` renderer, at version 1.5.0
 - the `css` code writer, at version 1.0.0
 - the `json` code writer, at version 1.0.0
 
@@ -203,7 +206,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
-- **The seam's version** is 6. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). Version 5 hands a renderer, for each language and combination it draws, the picture each image shows there, by the image's trace id: the file and its kind, a PNG or a JPEG (DEC-025 point 7). It is handed one for every source of an image, and reads nothing else for a picture. Version 6 hands a renderer the physical size of the piece's top on the scene's root ([What a scene holds](components.md#what-a-scene-holds)). What a producer and a code writer are handed and return is as version 1 had it, the document of values apart.
+- **The seam's version** is 7. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). Version 4 hands a renderer of a format that holds modes every key of one file in one call ([Modes](#modes)). Version 5 hands a renderer, for each language and combination it draws, the picture each image shows there, by the image's trace id: the file and its kind, a PNG or a JPEG (DEC-025 point 7). It is handed one for every source of an image, and reads nothing else for a picture. Version 6 hands a renderer the physical size of the piece's top on the scene's root ([What a scene holds](components.md#what-a-scene-holds)). Version 7 hands it a path, the outline of a concept's sign, mapped into its frame (DEC-036 point 1). What a producer and a code writer are handed and return is as version 1 had it, the document of values apart.
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **What rose with modes.** The seam rose to 4, and every plugin's declaration names it, the code writers' included. No output of the SVG and PDF renderers or the code writers changes, so their versions stay. The HTML renderer rose to 1.1.0, since its file now holds modes.
 - **What rose with picture files.** The seam rose to 5, and every plugin's declaration names it. The SVG renderer rose to 1.1.0, and the HTML renderer to 1.2.0, since each draws a picture file and a JPEG. The PDF renderer rose to 1.1.0 when it came to draw every image. The code writers draw nothing new, so their versions stay.
@@ -212,6 +215,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **What rose with fixed pages.** The scene's root came to say whether its pages are fixed pages ([What a scene holds](components.md#what-a-scene-holds)). The HTML renderer rose to 1.3.0, since it shows fixed pages each inside a keyline, on a backdrop ([Fixed pages](#fixed-pages)). A renderer that does not read the fact draws every page as before, so the seam stayed at 5, and no other plugin's version rose.
 - **What rose with print.** The HTML renderer rose to 1.4.0, since its file prints each page as [Printing](#printing) says. It read nothing new from the scene, so the seam stayed at 5, and no other plugin's version rose.
 - **What rose with a physical size.** The scene's root came to hold the physical size of the piece's top. A renderer that did not read it would draw a printed page at a wrong size with no error, so the seam rose to 6, and every plugin's declaration names it. The PDF renderer rose to 1.3.0, since it draws each page at that size ([The PDF renderer](#the-pdf-renderer)). A scene with none draws as before. The SVG and HTML renderers draw as before, and the code writers read no scene, so their versions stay.
+- **What rose with signs.** A scene came to hold a path, which a sign part draws, so the seam rose to 7, and every plugin's declaration names it (DEC-036 point 7). The SVG renderer rose to 1.2.0, the PDF renderer to 1.4.0 and the HTML renderer to 1.5.0, since each draws a path. A scene with no path draws as before. The code writers read no scene, so their versions stay.
 - **The document of values** that producers and code writers read has its own version, 2 ([The hand-over](#the-hand-over)). Version 2 holds the file a brand gives each picture role, and version 1 held none.
 - **What rose with picture roles.** The document rose to 2, and the seam stayed at 5. A brand with no picture role gets the same code, so the code writers' versions stay. Each renderer draws a picture role's file as it draws any picture it is handed, so the renderers' versions stay too.
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes forms 1 and 2, each that version of the document of values ([The JSON code writer](#the-json-code-writer)).
@@ -248,10 +252,10 @@ An entry matches a loss by its `plugin` and its `what` alone, whatever its `key`
 
 The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files. Each is a *one-key file*, the file of one combination, which a key names. In the format `svg-modes` it draws a *switching file* instead, which holds several combinations and follows the reader's mode ([The switching file](#the-switching-file)).
 
-- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
+- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>`, an image as `<image>` and a path as `<path>`, its outline as `d`, with `fill-rule` where its rule is `evenodd`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as `#rrggbb`, with a `fill-opacity` or `stroke-opacity` where the colour is translucent.
-- **Shapes and text.** A box's stroke lies inside its frame. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
+- **Shapes and text.** A box's stroke lies inside its frame, and a path's on its outline. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
 - **Pictures.** Each picture is embedded whole, as the data of its kind: a PNG as PNG data, a JPEG as JPEG data. A colour profile it carries stays with it (DEC-025 point 5). A produced picture draws the variant that serves the combination drawn ([Variants](#variants)), and a picture role the file the brand gives it there ([Primitives](components.md#primitives)). A picture file draws itself.
 - **Fonts.** Each font the page draws in, for each family and weight a run is drawn in, is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
 - **A physical size.** An SVG file is a picture, drawn at the size whatever shows it gives, so its format has no physical page. Its declaration says so under `physical-size`, and it draws a top with a physical size as any other, losing nothing (DEC-034 point 3).
@@ -287,12 +291,12 @@ A *switching file* is one SVG file that holds several combinations of modes, and
 
 ### What the SVG renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
+Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports four losses of its own. Two are `left-out`:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
 - **an image** with no picture for the combination drawn: a produced picture with no variant for it, or a picture file that is missing or cannot be read. The message says which.
 
-The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
+Two are `refused`, and left out of the file: a line that holds neither its ends nor its points, and a path that holds no outline, `d`. Every line of a scene the engine computes holds its ends, and every path its outline ([What a scene holds](components.md#what-a-scene-holds)).
 
 In a [switching file](#the-switching-file) of several keys, a fill, a stroke or an image lost in one key alone names that key (`key` in [The loss report](#the-loss-report)). A role with no colour in one key paints nothing there, and an image with no picture in one key shows none there.
 
@@ -302,7 +306,7 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 
 - **Pages.** Where the scene's root holds the physical size of the piece's top ([A physical size](components.md#a-physical-size)), every page is that size, at 72 pt to 25.4 mm, and is drawn by one scale: the page's width in pt over its width in px (DEC-034 point 3). The page's height follows its width in that proportion, so the scale fits it too. So the page's width, a brand's value, sets how large the brand's type prints: a poster 640 px wide at A1, 594 by 841 mm, is drawn at about 2.63 pt to a px. Elsewhere a page is as large as its frame, each px of the scene 0.75 pt of the page, CSS's 96 px to the inch. The renderer's declaration states that mapping as its `unit` (DEC-001 point 2), and says under `physical-size` that its format has a physical page and that it maps a top's physical size onto it.
 - **The largest page.** A PDF reader holds a page of at most 14,400 pt on a side, which is 19,200 px at 0.75 pt to a px, or 5,080 mm. A larger page, such as a phone's page of a long site, is drawn smaller to fit. It keeps its proportions, and its long side is 14,400 pt. The renderer reports it ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
-- **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
+- **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A path is drawn through its outline's moves, lines and curves, filled by its rule, nonzero or even-odd, with its stroke on its outline. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
 - **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each keeps a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
@@ -325,19 +329,20 @@ The file is PDF 1.7. In the later version that tags it, three of the cases DEC-0
 
 Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive and property a scene of format 1 holds, the image among them, so this finds no loss in format 1.
 
-While it draws, the renderer reports five losses of its own:
+While it draws, the renderer reports six losses of its own:
 
 - **a page** larger than a PDF reader holds, `approximated`, under the page's trace id. It is drawn smaller, to fit.
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
 - **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
 - **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
+- **a path** that holds no outline, `d`, of moves, lines, cubic curves and closes, `refused`, and left out of the file.
 - **an image** with no picture for the combination drawn, `left-out`, as for the SVG renderer. So is a picture the renderer cannot read or decode, such as a PNG whose image data is damaged, or one that would take more than 128 MiB decoded. The message says which.
 
 ## The HTML renderer
 
 The `html` renderer draws a scene as one *page file*: the scene's pages in one web document. [Modes](#modes) says which keys a file serves, and how it holds their modes. Writing it takes no browser. It draws the exports a piece declares as `html` ([Exports](#exports)); previews stay SVG. The viewing step draws its pages through a browser ([The HTML renderer's pages](#the-html-renderers-pages)).
 
-- **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
+- **A page** is real text over shapes. Each text of the scene is HTML text. Boxes, ellipses, lines, paths and pictures lie in SVG *layers*, each written as the SVG renderer writes it ([The SVG renderer](#the-svg-renderer)).
 - **The draw order.** The file keeps the scene's order. Each run of shapes between two texts is one layer, the size of the page, so a later shape lies over an earlier text. A layer takes no pointer, so the text under it can still be selected.
 - **Text.** A text is one element at its frame: its left, top and width. Each line is a child of it, placed alone at the baseline the engine gave it, and never wraps. A line's alignment in the frame is the text's anchor. Each run on a line is a span in its own font, size and paint. Spans follow each other at the browser's own widths.
 - **Size.** Every length on a page is a share of the page's width, written in `cqw`, so a page scales with no script. In a narrower window a page shrinks and keeps its proportions. In a wider one it keeps its own size, and no rule of the file clips a text.
@@ -363,7 +368,7 @@ A page file holds each mode a reader's signal names, such as `prefers-color-sche
 - **No control and no script.** Nothing in the page switches a mode, so a renderer adds no words and no focus stop.
 - **One mode alone.** A piece of one mode gives a file of one key, under no signal's rule. So dark alone draws dark for every reader. An axis with no mode named stays at its default.
 - **Its schemes.** CSS `color-scheme` names the scheme of each mode paired with `prefers-color-scheme`, so the browser's own ground follows the mode. A file with no such mode names none.
-- **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade. Around fixed pages, the backdrop and each page take `Canvas`, and the keyline `CanvasText` ([Fixed pages](#fixed-pages)).
+- **Forced colours.** Under a reader's forced colours, lines, strokes and arrowheads take the reader's text colour, `CanvasText`. A fill opaque in every key takes the reader's background colour, `Canvas`, with a 1 px edge in `CanvasText`. A translucent fill stays as drawn, so a line over it may fade. A sign's path takes what any shape takes, by the same rules, so its outline stays where colours no longer part concepts (DEC-036 point 4). Around fixed pages, the backdrop and each page take `Canvas`, and the keyline `CanvasText` ([Fixed pages](#fixed-pages)).
 - **Pictures.** A produced picture draws the first key's variant, and a picture role the first key's file ([What the HTML renderer loses](#what-the-html-renderer-loses)). A picture file is the same in every key, so it draws as it is.
 
 ### Fixed pages
@@ -411,7 +416,7 @@ The file carries no alternative text, no reading order and no structure such as 
 
 ### What the HTML renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer. While it draws, the renderer reports that renderer's three losses, under its own name ([What the SVG renderer loses](#what-the-svg-renderer-loses)). A run whose role has no colour is written `transparent`. It never takes the browser's own colour.
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer. While it draws, the renderer reports that renderer's four losses, under its own name ([What the SVG renderer loses](#what-the-svg-renderer-loses)). A run whose role has no colour is written `transparent`. It never takes the browser's own colour.
 
 In a file of several keys, these losses lie in one key alone (`key` in [The loss report](#the-loss-report)):
 

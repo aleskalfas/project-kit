@@ -90,8 +90,9 @@ DEC-012).
 
 **A part** is one of:
 
-- a primitive, `box`, `ellipse`, `text`, `line` or `image`, whose own mapping holds its
-  properties under SVG's names: `fill`, `stroke`, `stroke-width`, `rx`, `text-anchor`;
+- a primitive, `box`, `ellipse`, `text`, `line`, `image` or `sign`, whose own mapping
+  holds its properties under SVG's names: `fill`, `stroke`, `stroke-width`, `rx`,
+  `text-anchor`;
   a text's `content` (a field), or `fact` (a fact of its export, one of `FACTS`, which
   takes no switch), and `style` (a typography role); an image's source, exactly one of
   `produced` (a field naming a produced output), `content` (a field whose text is the bare
@@ -119,6 +120,13 @@ DEC-012).
   the items' default family. A part over a list of ties takes neither `row` nor
   `column`: each tie is drawn in the part's whole frame, by default the component's, and
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
+
+**A sign** draws the sign of the concept whose colour family its instance takes: the
+concept the instance names, or, where it takes its family from the instance it sits in,
+that instance's (DEC-036 point 2). It is painted as a box is, with `fill`, `stroke` and
+`stroke-width`, and an `override` reaches its fill. Where the instance takes its family
+from no concept, or the concept has no sign, it is not drawn, at zero size. A state that
+changes the family changes the paint alone, never the sign.
 
 **An image** shows a produced output, its variants by key and its exposed points; or a
 picture file, found by its bare name and read through the environment, which judges it
@@ -208,10 +216,11 @@ from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, Unva
 from _lib.findings import ATTENTION, FAILS, Finding
 from _lib.findings import FACT as STATED
 from _lib.keys import AxisLike, key_order
+from _lib.outlines import Outline
 from _lib.pictures import Judged, Picture
 from _lib.text import Broken, Faces, Run, Style, break_runs
 
-PRIMITIVES = ("box", "ellipse", "text", "line", "image")
+PRIMITIVES = ("box", "ellipse", "text", "line", "image", "sign")
 PLACING = ("use", "slot", "repeat")
 KINDS = PRIMITIVES + PLACING
 
@@ -222,6 +231,7 @@ PART_KEYS: Mapping[str, tuple[str, ...]] = {
     "text": ("x", "y", "width"),
     "line": ("x1", "y1", "x2", "y2", "connect"),
     "image": ("x", "y", "width", "height"),
+    "sign": ("x", "y", "width", "height"),
     "use": ("x", "y", "width", "height", "fields", "options"),
     "slot": ("x", "y", "width", "height"),
     "repeat": ("x", "y", "width", "height", "draw", "colour", "row", "column"),
@@ -237,6 +247,7 @@ REQUIRED: Mapping[str, tuple[str, ...]] = {
     "ellipse": ("width", "height"),
     "line": ("x1", "y1", "x2", "y2"),
     "image": ("width",),
+    "sign": ("width", "height"),
     "repeat": ("draw",),
 }
 
@@ -250,6 +261,7 @@ PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "text": ("content", "fact", "style", "fill", "text-anchor"),
     "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
     "image": ("produced", "content", "file", "role"),
+    "sign": ("fill", "stroke", "stroke-width"),
 }
 REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "text": ("style",),
@@ -262,7 +274,7 @@ REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
 IMAGE_SOURCES = ("produced", "content", "file", "role")
 
 #: The paint content's `override` points at another role, by kind of part.
-OVERRIDDEN = {"box": "fill", "ellipse": "fill", "text": "fill", "line": "stroke"}
+OVERRIDDEN = {"box": "fill", "ellipse": "fill", "text": "fill", "line": "stroke", "sign": "fill"}
 
 PAINTS = ("fill", "stroke")
 LENGTHS = ("stroke-width", "rx")
@@ -2140,7 +2152,7 @@ class Component:
             return (
                 f"reads `{ref}` with no item of `{first.name}`: name `:first`, `:last` or `[<id>]`"
             )
-        if part.kind in ("box", "ellipse", "text", "line") and len(ref.steps) > 1:
+        if part.kind in ("box", "ellipse", "text", "line", "sign") and len(ref.steps) > 1:
             return f"reads `{ref}`: the {part.kind} `{first.name}` exposes nothing"
         if part.kind == "image" and len(ref.steps) > 2:
             return f"reads `{ref}`: a point has no parts"
@@ -2347,6 +2359,7 @@ class Context:
         self._pictured: dict[str, Picture | None | Exception] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
         self._concepts: dict[str, str | UnknownConcept | None] = {}
+        self._signs: dict[str, Outline | None] = {}
 
     def fact(self, word: str) -> str:
         """The text of the fact `word`, one of `FACTS`."""
@@ -2617,6 +2630,13 @@ class Context:
             raise UnknownConcept(found.concept, found.why)
         return found
 
+    def sign(self, name: str) -> Outline | None:
+        """The sign of a concept `concept` has read, `<notation>/<concept>` (DEC-036 point
+        1); `None` where it has none."""
+        if name not in self._signs:
+            self._signs[name] = self.env.sign(name)
+        return self._signs[name]
+
     def role_dimension(self, path: str) -> tuple[int | None, str | None]:
         """A role's dimension in a formula, or why it has none."""
         try:
@@ -2695,6 +2715,8 @@ class Node:
     # An image of a picture role the brand gives no file at the scene's key, which is not
     # drawn: the role, so a move onto that brand can name it (DEC-025 point 8).
     unvalued: str = ""
+    # A sign: the outline of its instance's concept's sign (DEC-036 point 2).
+    outline: Outline | None = None
 
     @property
     def line_height(self) -> float:
@@ -2827,6 +2849,10 @@ class Instance:
             self.options, self.option_sources = dict(parent.options), dict(parent.option_sources)
         else:
             self._read_options()
+        # The concept whose colour family it takes, by its name, and where it comes from: its
+        # own, or the one of the instance it sits in where it takes its family from that.
+        self.concept: str | None = None
+        self.concept_source = ""
         self.family, self.family_source = self._colour(place_colour)
         self._read_overrides()
         for name, each in component.parts.items():
@@ -2944,16 +2970,20 @@ class Instance:
 
     def _colour(self, place: tuple[str, str] | None) -> tuple[str | None, str]:
         """The instance's colour family (DEC-001 point 6): its concept's, else its place's
-        default in a list, else its component's, else its container's; then its state's."""
+        default in a list, else its component's, else its container's; then its state's.
+        Sets the concept it takes its family from, which its state leaves (DEC-036 point
+        2)."""
         concept = self._concept()
         if concept is not None:
             family, source = concept, self.source_of_field("concept")
+            self.concept, self.concept_source = self.given["concept"], source
         elif place is not None:
             family, source = place
         elif self.component.colour:
             family, source = self.component.colour, f"default:{self.component.use}"
         elif self.parent is not None:
             family, source = self.parent.family, self.parent.family_source
+            self.concept, self.concept_source = self.parent.concept, self.parent.concept_source
         else:
             family, source = None, ""
         state = self.given.get("state")
@@ -3080,6 +3110,7 @@ class Instance:
             build = {
                 "text": self._build_text,
                 "image": self._build_image,
+                "sign": self._build_sign,
                 "use": self._build_use,
                 "slot": self._build_slot,
                 "repeat": self._build_items,
@@ -3292,6 +3323,14 @@ class Instance:
             self._show_role(node, trace)
         else:
             node.present = False
+
+    def _build_sign(self, node: Node, trace: str) -> None:
+        """The outline a sign part draws: the sign of the concept whose colour family the
+        instance takes (DEC-036 point 2). Where it takes its family from no concept, or the
+        concept has no sign, the part is not drawn, at zero size, with no finding."""
+        if self.concept is not None:
+            node.outline = self.ctx.sign(self.concept)
+        node.present = node.outline is not None
 
     def _show_role(self, node: Node, trace: str) -> None:
         """The file the brand gives the picture role the image's `role` names, at the scene's

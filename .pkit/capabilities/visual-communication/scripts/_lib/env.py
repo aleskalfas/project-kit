@@ -2,9 +2,9 @@
 
 The engine (`formula`, `layout`, `text`, `scene`) knows nothing of the working folder,
 pieces, the library list or the configuration. It reads every component, role, colour
-family, concept, font, produced picture, picture file and picture role through an `Env`,
-which the pipeline builds from the project's files, and which the engine's tests stand in
-for with an in-memory one.
+family, concept, concept's sign, font, produced picture, picture file and picture role
+through an `Env`, which the pipeline builds from the project's files, and which the
+engine's tests stand in for with an in-memory one.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from _lib.outlines import Outline
 from _lib.pictures import Judged, Picture
 
 
@@ -142,6 +143,12 @@ class Env(Protocol):
         in it, cannot be read, which is a finding in the notation. Raises `UnknownConcept`,
         a `KeyError`, where the piece names no such notation, or its notation holds no such
         concept."""
+        ...
+
+    def sign(self, name: str) -> Outline | None:
+        """The sign of a concept, by its name as `concept` reads it: its icon, or else its
+        shape (DEC-036 point 1); None where it maps neither, or its notation, or the concept
+        in it, cannot be read. Raises `UnknownConcept` as `concept` does."""
         ...
 
     def library_version(self, library: str) -> str:
