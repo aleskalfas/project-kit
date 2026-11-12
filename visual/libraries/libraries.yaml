@@ -33,6 +33,8 @@ libraries:
               version: 1.0.0
               path: roles.yaml
               sha256: 8c5c29cd8d9797a7527fb2979fc830415c14f09bfa9ed47f96bceeb6d609d92a
+      1.1.0:
+        released: false
   starter:
     source:
       kind: shipped
@@ -101,6 +103,8 @@ libraries:
               version: 1.0.0
               path: roles.yaml
               sha256: 79b92318a8086e32ea86f9eea75a246b9283357324492d2cd7a89f6ff9c6c4a0
+      1.1.0:
+        released: false
   neutral:
     source:
       kind: shipped
