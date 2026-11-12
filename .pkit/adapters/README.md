@@ -206,8 +206,8 @@ A command that starts an agent nobody can answer during its run never calls a ha
 
 The request then takes one of two forms:
 
-- **Unconfined,** the form of the review command's runs, and of a drift command's run a person watches: `folder`, an absolute path, where the run runs under the person's and the project's settings.
-- **Confined,** the form a drift command's run nobody watches takes where the harness holds it: no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone.
+- **Unconfined,** the form of the review command's runs, and of a drift command's run a person watches. It holds `folder`, an absolute path, where the run runs under the person's and the project's settings.
+- **Confined,** the form a drift command's run nobody watches takes where the harness holds it. It has no `folder`, and holds `confined`, an object the backbone fills in once it has made the run's clone.
 
 A confined request's `confined` holds these keys:
 
