@@ -118,6 +118,7 @@ pkit:
         - visual-communication:DEC-035#8
         - visual-communication:DEC-035#9
       artefact:
+        - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
         - .pkit/capabilities/visual-communication/components.md#errors
