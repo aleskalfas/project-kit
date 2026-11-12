@@ -1,7 +1,0 @@
-component: evidence
-kind: none
-body: >
-  Only the `evidence` skill's wording moves (#2471). Its body now cites the
-  capability README, which its front matter declares, for the shape a new
-  scope's `evidence.yaml` starts in, so the reference graph finds it cited.
-  No step, command or file of the capability changes, so no surface moves.

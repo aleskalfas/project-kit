@@ -1,8 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-018 decides how a published figure follows the reader's light or dark
-  mode in a documentation page: one file in a format of its own, the same bytes
-  in its numbered version, and where the pair of a mode and the reader's signal
-  lies (#2700). The record designs ahead: the format lands in a later pull
-  request, so no surface moves yet.

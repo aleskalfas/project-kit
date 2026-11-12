@@ -1,8 +1,0 @@
-component: doc-examples
-kind: none
-body: >
-  Only the wording of DEC-001's Implications moves (#2415). They name
-  living-docs' page on pages, `pages.md`, as where living-docs names this
-  capability beside a project's own runner, where they named living-docs'
-  README, which #2397 split into a reference and pages beside it. What the
-  record decides is unchanged, so no surface moves.
