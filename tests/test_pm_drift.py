@@ -704,12 +704,16 @@ def _watched(
     *,
     at_commit: str | None = "the commit's definition",
     in_checkout: str | None = None,
+    ships: bool = False,
+    manifest: bool = True,
 ):
     """`run_watched` with a stub copy and a stub of the backbone's unconfined
     run: the copy is a folder of `tmp_path`, and `write(workspace, files_to)`
     stands in for what the fixer writes. `at_commit` is the deployed
     definition the commit holds, and `in_checkout` the one the person's
-    checkout holds, each None for none."""
+    checkout holds, each None for none. `ships` puts the fixer's definition in
+    a capability's agents folder at the commit, and `manifest` the backbone's
+    manifest, which makes the copy a project's root."""
     import contextlib
 
     copy = tmp_path / "copy"
@@ -726,6 +730,13 @@ def _watched(
         if at_commit is not None:
             (copy / _DEFINITION).parent.mkdir(parents=True)
             (copy / _DEFINITION).write_text(at_commit)
+        if manifest:
+            (copy / ".pkit").mkdir()
+            (copy / ".pkit" / "manifest.yaml").write_text("schema_version: 1\n")
+        if ships:
+            shipped = copy / ".pkit/capabilities/living-docs/agents/living-docs/living-docs.md"
+            shipped.parent.mkdir(parents=True)
+            shipped.write_text("the shipped definition")
         try:
             yield copy
         finally:
@@ -734,9 +745,8 @@ def _watched(
             shutil.rmtree(copy)
 
     def run_agent(agent, brief, **kw):
-        started.append(
-            {"agent": agent, "brief": brief, "deployed": (copy / _DEFINITION).read_text(), **kw}
-        )
+        deployed = (copy / _DEFINITION).read_text() if (copy / _DEFINITION).is_file() else None
+        started.append({"agent": agent, "brief": brief, "deployed": deployed, **kw})
         workspace = copy / ".agent-workspace" / "fix-drift"
         if write is not None:
             write(workspace, files)
@@ -781,12 +791,58 @@ def test_a_watched_fixer_runs_unconfined_in_a_working_copy_of_its_own(drift, tmp
 
 def test_where_the_commit_deploys_no_definition_no_watched_run_starts(drift, tmp_path) -> None:
     """A project that keeps its deployed definitions out of git has none at the
-    commit. The harness in the clone would find the person's own, which may not
-    have merged, so the run is refused (DEC-056 point 3)."""
+    commit. For a name no place of the methodology ships, the harness in the
+    clone would find the person's own, which may not have merged, so the run
+    is refused (DEC-056 point 3)."""
     run, started, files, _ = _watched(drift, tmp_path, at_commit=None, in_checkout="unmerged")
     assert started == [] and run.ending == "refused"
-    assert "deploys no definition of living-docs" in run.reason
+    assert "no place of the methodology ships living-docs" in run.reason
+    assert "deploys no definition of it" in run.reason
     assert list(files.iterdir()) == []
+
+
+def test_a_shipped_fixer_runs_watched_where_the_commit_deploys_no_copy(drift, tmp_path) -> None:
+    """For a name some place ships, the runner the clone registers passes the
+    definition it picks in the clone itself (ADR-066 point 10), so the run
+    needs no deployed copy and starts."""
+    run, started, _, copy = _watched(
+        drift, tmp_path, at_commit=None, in_checkout="unmerged", ships=True
+    )
+    [call] = started
+    assert call["folder"] == copy and call["deployed"] is None
+    assert run.ending == "finished"
+
+
+def test_a_shipped_fixer_in_a_clone_that_is_no_project_needs_its_copy(drift, tmp_path) -> None:
+    """A clone that holds no backbone manifest is no project's root, so the
+    backbone would run the person's own runner, which picks in the checkout.
+    The commit must then deploy the definition, as for a name no place ships."""
+    run, started, _, _ = _watched(
+        drift, tmp_path, at_commit=None, in_checkout="unmerged", ships=True, manifest=False
+    )
+    assert started == [] and run.ending == "refused"
+    assert "deploys no definition of it" in run.reason
+
+
+def test_a_name_is_shipped_where_a_place_of_the_methodology_holds_it(drift, tmp_path) -> None:
+    """The places and layouts the agents area's picker reads: the project's
+    agents folder, core's, and each capability's, as a file or a folder of its
+    own. A folder or a name that starts with a dot is no place's."""
+    agents = drift.agent_files
+    pkit = tmp_path / ".pkit"
+    for path in (
+        pkit / "agents/project/mine.md",
+        pkit / "agents/core/critic/critic.md",
+        pkit / "capabilities/living-docs/agents/living-docs/living-docs.md",
+        pkit / "capabilities/.hidden/agents/hidden.md",
+        pkit / "agents/project/.dotted.md",
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("---\n---\n")
+    for name in ("mine", "critic", "living-docs"):
+        assert agents.agent_is_shipped(tmp_path, name), name
+    for name in ("hidden", ".dotted", "deployed-only", "", "../agents/project/mine"):
+        assert not agents.agent_is_shipped(tmp_path, name), name
 
 
 def test_a_watched_runs_link_sets_its_files_aside(drift, tmp_path) -> None:

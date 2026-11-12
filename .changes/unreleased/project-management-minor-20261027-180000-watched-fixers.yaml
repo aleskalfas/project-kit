@@ -14,8 +14,9 @@ body: >
   run. The fixer that runs is the commit's: the backbone runs the runner the
   clone registers, which picks a shipped fixer's definition there, so this
   needs the backbone this release ships. Where your project keeps its
-  deployed agents out of git, the run is refused. The
-  command copies each fixer's workspace
+  deployed agents out of git, the run of a fixer that no place of the
+  methodology ships, such as one your project wrote straight into the
+  harness's own folder, is refused. The command copies each fixer's workspace
   into the queue with the guards of the backbone's copy, and sets its files
   aside where they hold a link or a special file, or where the fixer wrote
   into the queue itself. With nobody at a terminal, as in the project manager's

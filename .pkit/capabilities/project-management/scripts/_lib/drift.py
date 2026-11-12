@@ -60,6 +60,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, BinaryIO
 
 from _lib import agent_runs, backbone, default_branch, fixers
+from _lib import agents as agent_files
 
 #: The command, and the run whose rules confine each fixer (ADR-066 point 5).
 VERB = fixers.DRIFT_VERB
@@ -108,6 +109,11 @@ _NTFS_GIT = re.compile(r"(?:\.git|git~1)[. ]*(?:[:\\].*)?", re.DOTALL)
 
 #: Where a session started in a folder finds an agent's deployed definition.
 DEPLOYED = (".claude", "agents")
+
+#: The backbone's manifest: a folder that holds it is a project's root, so the
+#: backbone runs the runner that project registers for a run there (ADR-066
+#: point 1).
+MANIFEST = (".pkit", "manifest.yaml")
 
 #: The bounds (DEC-056 point 4), each set as the review command sets its own:
 #: a flag, else a variable, else the default.
@@ -367,7 +373,8 @@ def read_at(
     otherwise, since a project that keeps them out of git has none at the
     commit. The runner checks the definition at the commit again, as the
     deploy resolves it, before a confined run starts (ADR-066 point 3). A
-    watched run is refused where the commit deploys none (`deployed_at_commit`)."""
+    watched run of a name no place of the methodology ships is refused where
+    the commit deploys none (`definition_at_commit`)."""
 
     def at_copy(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         return run(list(argv), **{**kwargs, "cwd": str(copy)})
@@ -1197,8 +1204,8 @@ def run_watched(
     workspace is made as folders of its own. The agent's definition that runs
     is the commit's: the backbone runs the runner the clone registers, which
     picks a shipped agent's definition in the clone, and the harness finds any
-    other in the copy the commit deploys. A commit that deploys none refuses
-    the run (`deployed_at_commit`).
+    other in the copy the commit deploys. For a name no place ships, a commit
+    that deploys none refuses the run (`definition_at_commit`).
 
     The drift command names the run's folders in the brief itself, since the
     backbone fills a brief's markers only for a confined run. Once the run
@@ -1213,7 +1220,7 @@ def run_watched(
             workspace = make_watched_workspace(working_copy)
             if isinstance(workspace, agent_runs.AgentRun):
                 return workspace
-            refusal = deployed_at_commit(working_copy, agent)
+            refusal = definition_at_commit(working_copy, agent)
             if refusal is not None:
                 return refusal
             run = start(
@@ -1286,13 +1293,22 @@ def make_watched_workspace(working_copy: Path) -> Path | agent_runs.AgentRun:
     return workspace
 
 
-def deployed_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun | None:
-    """None where the commit deploys `agent`'s definition, as a file in
-    folders of their own, so the definition the harness finds in the clone is
-    the one at the commit; else the refused run (DEC-056 point 3). A project
-    that keeps its deployed definitions out of git has none at the commit,
-    and a watched run there would run a definition that may not have merged,
-    from the person's own agents folder."""
+def definition_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun | None:
+    """None where the definition a watched run of `agent` runs is the one at
+    the commit; else the refused run (DEC-056 point 3).
+
+    For a name some place of the methodology ships, in a clone that is a
+    project's root, the backbone runs the runner the clone registers, and that
+    runner passes the definition it picks in the clone itself (ADR-066 points 1
+    and 10). So the run needs no deployed copy. For any other name, the harness
+    loads the agent by its name, so the commit must deploy it, as a file in
+    folders of their own, where the harness finds it in the clone. A project
+    that keeps its deployed definitions out of git has none at the commit, and
+    the harness would find the person's own, which may not have merged."""
+    if working_copy.joinpath(*MANIFEST).is_file() and agent_files.agent_is_shipped(
+        working_copy, agent
+    ):
+        return None
     relative = Path(*DEPLOYED, f"{agent}.md")
     shown = relative.as_posix()
     held = (working_copy / DEPLOYED[0], working_copy.joinpath(*DEPLOYED), working_copy / relative)
@@ -1303,8 +1319,9 @@ def deployed_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun | 
     if not held[-1].is_file():
         return agent_runs.AgentRun(
             agent_runs.REFUSED,
-            reason=f"the commit deploys no definition of {agent} at `{shown}`, so a watched run "
-            "would run one that may not have merged",
+            reason=f"no place of the methodology ships {agent}, and the commit deploys no "
+            f"definition of it at `{shown}`, so a watched run would run one that may not "
+            "have merged",
         )
     return None
 
