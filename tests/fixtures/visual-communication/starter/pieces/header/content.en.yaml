@@ -30,3 +30,11 @@ pages:
     main:
       use: starter/header
       title: The rules a project keeps, and the tools that apply them
+
+  - id: sign
+    layout: standard
+    main:
+      use: starter/header
+      fill: tint
+      concept: test-notation/person
+      title: A person's notes

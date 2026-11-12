@@ -18,5 +18,9 @@ pages:
         - id: about
           label: What to review
           note: A record, a page or a picture.
+        - id: owner
+          concept: test-notation/person
+          label: Who keeps it
+          value: Ada Lovelace
       buttons:
         - {id: send, label: Send}

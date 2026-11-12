@@ -61,31 +61,35 @@ slides:
             head: Nechcete mít pkit v repozitáři?
             command: $ pkit visibility private
             text: pkit zůstane jen ve vašem klonu a git ho díky souboru exclude ignoruje. Nic z něj se necommitne, a agent ho přesto používá celý.
-        - use: starter/code
-          # Skutečný strom nového projektu, zkrácený na to, co se na slajd vejde. Dokud
-          # nepřijde legenda (project-kit#2576), poslední řádek říká, co která barva značí,
-          # i se značkou vedle ní. Každý soubor pkitu začíná ●, každý váš ○, takže se ty dva
-          # liší i bez barev, ve vynucených barvách nebo bez barevného vidění. Značka leží
-          # tady, v obsahu, protože notace dává konceptu jen barvu a kód ze starteru mu
-          # žádnou značku nekreslí (project-kit#2843).
-          text: [
-            {text: "$ ", style: prompt}, {text: "tree", style: command}, " -a -L 2 your-project\n",
-            "your-project/\n",
-            "├── .pkit/", {text: "                      # metodika\n", style: comment},
-            "│   ├── agents/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
-            "│   ├── decisions/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
-            "│   ├── permissions/ ", {text: "○ project/", concept: pkit/yours}, {text: " # co agenti smějí\n", style: comment},
-            "│   ├── rules/ ", {text: "● core.md", concept: pkit/core}, " ", {text: "○ project.md\n", concept: pkit/yours},
-            "│   ├── ", {text: "● schemas/", concept: pkit/core}, {text: "              # co čtou nástroje\n", style: comment},
-            "│   ├── ", {text: "○ scratchpad/", concept: pkit/yours}, {text: "           # vaše nedotažené nápady\n", style: comment},
-            "│   ├── skills/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
-            "│   ├── ", {text: "● …", concept: pkit/core}, {text: "                     # a další části pkitu\n", style: comment},
-            "│   └── ", {text: "● manifest.yaml", concept: pkit/core}, {text: "         # co je nainstalováno\n", style: comment},
-            "├── .claude/", {text: "                    # vaše nastavení Claude Code\n", style: comment},
-            "│   └── settings.json", {text: "           # ", style: comment}, {text: "○ vaše", concept: pkit/yours}, {text: ", ", style: comment}, {text: "● pkit", concept: pkit/core}, {text: " přidá svoje\n", style: comment},
-            "├── ", {text: "○ CLAUDE.md", concept: pkit/yours}, {text: "                 # načte pravidla\n", style: comment},
-            "└── ", {text: "○ src/", concept: pkit/yours}, {text: "                      # váš kód, pkit na něj nesahá\n", style: comment},
-            {text: "# ", style: comment}, {text: "● soubory pkitu", concept: pkit/core}, {text: ", každý upgrade je nahradí · ", style: comment}, {text: "○ vaše soubory", concept: pkit/yours}]
+        - use: starter/panels
+          panels:
+            - use: starter/code
+              # Skutečný strom nového projektu, zkrácený na to, co se na slajd vejde i s
+              # legendou pod ním: schémata pkitu zastupuje řádek s dalšími částmi pkitu. Každý
+              # soubor pkitu začíná znakem svého konceptu, plným kruhem, a každý váš
+              # prstencem, takže se ty dva liší i bez barev, ve vynucených barvách nebo bez
+              # barevného vidění. Legenda říká, co která barva a znak značí.
+              text: [
+                {text: "$ ", style: prompt}, {text: "tree", style: command}, " -a -L 2 your-project\n",
+                "your-project/\n",
+                "├── .pkit/", {text: "                      # metodika\n", style: comment},
+                "│   ├── agents/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
+                "│   ├── decisions/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
+                "│   ├── permissions/ ", {text: "project/", concept: pkit/yours}, {text: " # co agenti smějí\n", style: comment},
+                "│   ├── rules/ ", {text: "core.md", concept: pkit/core}, " ", {text: "project.md\n", concept: pkit/yours},
+                "│   ├── ", {text: "scratchpad/", concept: pkit/yours}, {text: "           # vaše nedotažené nápady\n", style: comment},
+                "│   ├── skills/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
+                "│   ├── ", {text: "…", concept: pkit/core}, {text: "                     # a další části pkitu\n", style: comment},
+                "│   └── ", {text: "manifest.yaml", concept: pkit/core}, {text: "         # co je nainstalováno\n", style: comment},
+                "├── .claude/", {text: "                    # vaše nastavení Claude Code\n", style: comment},
+                "│   └── settings.json", {text: "           # ", style: comment}, {text: "vaše", concept: pkit/yours}, {text: ", ", style: comment}, {text: "pkit", concept: pkit/core}, {text: " přidá svoje\n", style: comment},
+                "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "                 # načte pravidla\n", style: comment},
+                "└── ", {text: "src/", concept: pkit/yours}, {text: "                      # váš kód, pkit na něj nesahá", style: comment}]
+          under:
+            use: starter/legend
+            entries:
+              - {id: core, concept: pkit/core, label: "soubory pkitu, každý upgrade je nahradí"}
+              - {id: yours, concept: pkit/yours, label: vaše soubory}
     footer: pkit status ukáže, co pkit v projektu nastavil. Volitelné části, kterým pkit říká capabilities, přijdou později.
 
   - id: permissions

@@ -305,8 +305,8 @@ def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 
 def test_every_reference_render_passes_the_check_under_it(location: Path) -> None:
     """The brand's version states, once, that it gives `picture.logo` no value, and no
-    piece states it (DEC-025 point 9). Beside it, the pieces ask for attention where their
-    concepts' signs are not drawn, as under the test brand."""
+    piece states it (DEC-025 point 9). Beside it, the pieces ask for attention on the
+    concepts that map no sign, as under the test brand."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
@@ -326,21 +326,23 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
 ) -> None:
     """The neutral brand being built gives the sizes of the axis `device`, which the
     foundations being built add to their release 1.0.0, and a piece that names none is
-    drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece draws
-    under it on them as under the brand's release 1.0.0 on theirs, byte for byte: each
-    preview, but for the foundations' version they name, and its values, but for the role
-    `size.site` they add, which the brand gives as wide as its slide on a desktop,
-    `size.line`, which no piece that names no size reads, and those of a run's sign and
-    ground, at its smallest space. A web part's piece names the
-    sizes, which the foundations' release does not declare."""
+    drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece of a
+    component the starter's release holds, drawn with that release, draws under it on them
+    as under the brand's release 1.0.0 on theirs, byte for byte: each preview, but for the
+    foundations' version they name, and its values, but for the role `size.site` they add,
+    which the brand gives as wide as its slide on a desktop, `size.line`, which no piece
+    that names no size reads, and those of a run's sign and ground, at its smallest space.
+    The starter being built reads roles the foundations' release does not declare, and its
+    web parts name the sizes, which that release does not declare either."""
     importable(monkeypatch, starter.svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", being_built=False)
+    hold_shipped(root, "starter", being_built=False)
     released_brand = hold_shipped(root, "neutral", being_built=False).version
     assert released_brand != taken("neutral", being_built=True).version
     on_each = starter.on_each_foundations(root, brand={"neutral": released_brand})
     released, built = on_each.values()
-    assert sorted(built) == sorted(starter.UNSIZED)
+    assert sorted(built) == starter.ON_THE_RELEASE
     for name, (values, files) in built.items():
         assert files, name
         assert (starter.as_released(values, given=["size.line"]), files) == released[name], name

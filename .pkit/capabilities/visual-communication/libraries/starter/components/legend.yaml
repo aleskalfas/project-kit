@@ -1,0 +1,44 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# Where its form comes from (DEC-007 point 3): the legend of a chart, as Vega-Lite draws one
+# and IBM Carbon's data visualisation guides it, a mark in each colour beside the label that
+# says what the colour stands for.
+about: >-
+  What the colours and signs of a piece stand for: entries side by side in one row, each
+  naming a concept, so it shows that concept's colour family and sign beside its label.
+  Each entry is drawn by the tag, unless the content names another, and takes the size it
+  asks for. The content gives each label, in each language.
+
+fields:
+  type: object
+  required: [entries]
+  properties:
+    entries:
+      type: array
+      minItems: 1
+      description: >-
+        The entries, in their order, each naming a concept, with the fields of the
+        component that draws it, such as the label that says what the concept stands for.
+      items: {type: object}
+    entry:
+      type: object
+      description: >-
+        The component that draws each entry that names none, with words for its options:
+        the tag unless the content names another.
+
+lists:
+  entries: {component: entry}
+
+# Each entry takes the family and the sign of the concept it names, as any item does
+# (DEC-036 point 6), so the legend declares no colour of its own.
+parts:
+  entries:
+    repeat: entries
+    draw: starter/tag
+    row: {gap: "=@starter.gap", sizes: own, align-items: center}
+
+preferred:
+  width: "=entries.right"
+  height: "=entries.bottom"

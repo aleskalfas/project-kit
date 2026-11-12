@@ -14,7 +14,7 @@ state: draft
 modes:
   colour-scheme: [light, dark]
 lock:
-  foundations: 1.0.0
+  foundations: 1.1.0
   neutral: 1.0.0
   pkit: 1.0.0
-  starter: 1.0.0
+  starter: 1.1.0
