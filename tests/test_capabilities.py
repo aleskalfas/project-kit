@@ -4592,3 +4592,192 @@ def test_sync_never_seeds_and_never_clobbers(tmp_path: Path) -> None:
     assert (proj / "process" / "issue-lifecycle" / "7.journal.jsonl").is_file()
     assert not (proj / "process" / "issue-lifecycle" / "999.journal.jsonl").exists()
     assert not (proj / "process" / "issue-lifecycle" / "446.journal.jsonl").exists()
+
+
+# --- the defaults a capability's write categories declare (ADR-088 point 5) ----
+
+_DRAWING_PACKAGE = """schema_version: 1
+component:
+  kind: capability
+  name: drawing
+  version: 0.1.0
+description: Drawing.
+requires_backbone: ">=0.1.0,<99.0.0"
+commands:
+  default-work:
+    script: scripts/default-work.py
+    help: Where the designer works.
+    query-contract: true
+write_categories:
+  drawing.work:
+    owner: designer
+    default-query: default-work
+"""
+
+
+def _stage_drawing(root: Path) -> Path:
+    """The capability `drawing` under `root`'s `capabilities/`: `designer` owns
+    `drawing.work`, which the query `default-work` answers."""
+    cap_dir = _stage_capability_in_source(root, "drawing")
+    (cap_dir / "package.yaml").write_text(_DRAWING_PACKAGE, encoding="utf-8")
+    (cap_dir / "agents").mkdir()
+    (cap_dir / "agents" / "designer.md").write_text(
+        "---\nname: designer\ndescription: Draws.\nowns:\n  - <drawing.work>\n---\n# Designer\n",
+        encoding="utf-8",
+    )
+    (cap_dir / "scripts").mkdir()
+    (cap_dir / "scripts" / "default-work.py").write_text("print('{}')\n", encoding="utf-8")
+    return cap_dir
+
+
+def _answering(monkeypatch, *paths: str, asked: list[str] | None = None) -> None:
+    """The default query answers `paths`, read in this process, and notes each ask."""
+    from project_kit import write_categories as wcat
+
+    def _ask(_root: Path, category: wcat.WriteCategory) -> wcat.Answer:
+        if asked is not None:
+            asked.append(category.name)
+        return wcat.Answer(paths=paths)
+
+    monkeypatch.setattr(wcat, "ask", _ask)
+
+
+def _no_answer(monkeypatch) -> None:
+    from project_kit import write_categories as wcat
+
+    monkeypatch.setattr(wcat, "ask", lambda _root, _category: wcat.NoAnswer("it exited 3"))
+
+
+def _terminal(monkeypatch, at_one: bool) -> None:
+    from project_kit import upgrade
+
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: at_one)
+
+
+def _agents_overlay(root: Path) -> str:
+    return (root / ".pkit" / "agents" / "project" / "overlay.yaml").read_text(encoding="utf-8")
+
+
+def _deploy_agents_for_real(monkeypatch) -> None:
+    """Run the claude-code adapter's real `deploy-agents.sh` where the lifecycle deploys."""
+
+    def _run(script: Path, ctx: install_mod.InstallContext, *args: str) -> None:
+        if script.name == "deploy-agents.sh":
+            _RUN_ADAPTER_PRIMITIVE(script, ctx, *args)
+
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _run)
+
+
+_WRITTEN = 'drawing.work: ["visual/"]  # pkit-written: ["visual/"]'
+
+
+def test_install_writes_the_default_before_the_deploy(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The owner deploys on the answer install wrote, which it prints with its path."""
+    _stage_drawing(kit_source)
+    _answering(monkeypatch, "visual/")
+    _terminal(monkeypatch, False)
+    _deploy_agents_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert _WRITTEN in _agents_overlay(kit_target)
+    assert (
+        "wrote        drawing.work = visual/ in .pkit/agents/project/overlay.yaml; "
+        "edit it and the value is the project's." in result.output
+    )
+    deployed = (kit_target / ".claude" / "agents" / "designer.md").read_text(encoding="utf-8")
+    assert "visual/" in deployed
+    assert "<drawing.work>" not in deployed
+
+
+def test_install_keeps_a_value_the_project_set(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A category the overlay already gives a value is neither asked nor written."""
+    _stage_drawing(kit_source)
+    overlay = kit_target / ".pkit" / "agents" / "project" / "overlay.yaml"
+    overlay.write_text(overlay.read_text(encoding="utf-8") + "drawing.work: [mine/]\n")
+    asked: list[str] = []
+    _answering(monkeypatch, "visual/", asked=asked)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert asked == []
+    assert "pkit-written" not in _agents_overlay(kit_target)
+    assert "drawing.work: [mine/]" in _agents_overlay(kit_target)
+
+
+@pytest.mark.parametrize(
+    ("at_one", "answers", "written"),
+    [(True, "y\n", True), (True, "n\n", False), (False, "", False)],
+    ids=["agreed-at-a-terminal", "refused-at-a-terminal", "off-a-terminal"],
+)
+def test_install_over_content_asks_once_at_a_terminal(
+    kit_target: Path, kit_source: Path, monkeypatch, at_one: bool, answers: str, written: bool
+) -> None:
+    """Over content, a terminal is asked; a "no", or no terminal, leaves the category
+    undefined and names the fill commands, and install still succeeds."""
+    _stage_drawing(kit_source)
+    (kit_target / "visual").mkdir()
+    (kit_target / "visual" / "a.svg").write_text("<svg/>", encoding="utf-8")
+    _answering(monkeypatch, "visual/")
+    _terminal(monkeypatch, at_one)
+
+    result = _install(kit_source, monkeypatch, "drawing", answers)
+
+    assert result.exit_code == 0, result.output
+    assert ("already hold content" in result.output) is at_one
+    assert (_WRITTEN in _agents_overlay(kit_target)) is written
+    if not written:
+        assert "drawing.work" not in _agents_overlay(kit_target)
+        assert "pkit agents reconcile --write" in result.output
+
+
+def test_install_leaves_a_category_with_no_answer_undefined(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_drawing(kit_source)
+    _no_answer(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert "drawing.work, left undefined: it exited 3" in result.output
+    assert "drawing.work" not in _agents_overlay(kit_target)
+
+
+def test_install_dry_run_asks_no_query_and_lists_each_state(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_drawing(kit_source)
+    asked: list[str] = []
+    _answering(monkeypatch, "visual/", asked=asked)
+
+    result = _install(kit_source, monkeypatch, "drawing", "", "--dry-run")
+
+    assert result.exit_code == 0, result.output
+    assert asked == []
+    assert (
+        "drawing.work: to be written from its query once the capability is in place"
+        in result.output
+    )
+    assert "drawing.work" not in _agents_overlay(kit_target)
+
+
+def test_register_writes_the_default_in_place(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Registration in place writes the default as install does."""
+    _stage_drawing(kit_target / ".pkit")
+    _answering(monkeypatch, "visual/")
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "register", "drawing"])
+
+    assert result.exit_code == 0, result.output
+    assert _WRITTEN in _agents_overlay(kit_target)
