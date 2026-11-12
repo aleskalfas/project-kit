@@ -1,15 +1,16 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:e47d1ec2821b06285721fac1d80442d497d66db7e59e178fde6315253d8b572e
+# pkit-digest: sha256:ec708bbb165f358b9212651fe40164aec4d28190dbd75d5aff703fb5b805b65b
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Agent"]
 name: graphic-designer
 description: Designs a piece of visual work from its brief, naming the content's
   structure before it chooses a form and writing a reason for each choice into 
   the brief; invoke it to design or redesign a piece, to mend one after a 
   review, or to build a form, brand or notation the project's pieces need; it 
-  writes only within the location its overlay category 
-  `visual-communication.work` grants, renders, checks and looks only through the
+  writes within the location its overlay category `visual-communication.work` 
+  grants, and outside it only a shipped library's version being built where the 
+  capability's folder is the source, renders, checks and looks only through the 
   capability's commands, has `graphic-design-reviewer` read every page before it
   stops, and, in mending, asks the person only where a fix would change what the
   piece says, needs a write it may not make, or two rounds of mending did not 

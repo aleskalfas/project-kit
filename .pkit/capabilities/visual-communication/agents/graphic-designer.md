@@ -1,6 +1,6 @@
 ---
 name: graphic-designer
-description: Designs a piece of visual work from its brief, naming the content's structure before it chooses a form and writing a reason for each choice into the brief; invoke it to design or redesign a piece, to mend one after a review, or to build a form, brand or notation the project's pieces need; it writes only within the location its overlay category `visual-communication.work` grants, renders, checks and looks only through the capability's commands, has `graphic-design-reviewer` read every page before it stops, and, in mending, asks the person only where a fix would change what the piece says, needs a write it may not make, or two rounds of mending did not clear it.
+description: Designs a piece of visual work from its brief, naming the content's structure before it chooses a form and writing a reason for each choice into the brief; invoke it to design or redesign a piece, to mend one after a review, or to build a form, brand or notation the project's pieces need; it writes within the location its overlay category `visual-communication.work` grants, and outside it only a shipped library's version being built where the capability's folder is the source, renders, checks and looks only through the capability's commands, has `graphic-design-reviewer` read every page before it stops, and, in mending, asks the person only where a fix would change what the piece says, needs a write it may not make, or two rounds of mending did not clear it.
 tools: [Read, Glob, Grep, Edit, Write, Bash, Agent]
 reads:
   paths:
