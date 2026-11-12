@@ -1,9 +1,11 @@
 component: backbone
 kind: none
 body: >
-  Design-ahead: PRJ-016 and ADR-092 decide that a release candidate holds no
-  release back. Every final release, the one at a candidate's version
-  included, is the ordinary release PR from the default branch's head, and a
-  candidate's number counts every candidate cut. They partly supersede
-  PRJ-002 D5 and ADR-089's points 2, 3 and 9. It is record text only, and
-  nothing you run changes. The build for #2211 carries the real changesets.
+  Design-ahead: PRJ-016 and ADR-092 decide that a change that must be tested
+  before it ships is tested on its own branch before it merges. A candidate is
+  cut from that branch's head, a person withdraws a candidate with a tag, a
+  candidate's number counts every candidate cut, and every final release is
+  the ordinary release PR from the default branch's head. They partly
+  supersede PRJ-002 D3 and D5 and ADR-089's points 1, 2, 3, 8 and 9. It is
+  record text only, and nothing you run changes. The build for #2211 carries
+  the real changesets.
