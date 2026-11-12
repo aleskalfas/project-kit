@@ -45,6 +45,7 @@ from tests.visual_communication_project import (
     CAPABILITY,
     CONFIG,
     FOUNDATIONS,
+    RECORDED_DEFAULT,
     RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_PARTS,
@@ -77,10 +78,7 @@ script, libraries, reading, copies, shipped, before_after, exports, pl, svg, css
 
 LIST = "visual/libraries/libraries.yaml"
 COPY = "visual/libraries/foundations/1.0.0"
-LOCATION = (
-    f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-    f"to move the work, move the folder and change the `location:` line there"
-)
+LOCATION = RECORDED_DEFAULT
 #: The foundations, as the list names them once the command copied them from a capability
 #: that releases none.
 LISTED = {"source": {"kind": "shipped"}, "versions": {"1.0.0": {"released": False}}}

@@ -649,7 +649,8 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
 ) -> None:
     """The site places every web part, in its header, its main parts and its footer. Each
     brand draws it at each of its sizes with no finding, from the same content files, and it
-    passes the check with no finding but the brand's fact that it gives no logo."""
+    passes the check with no finding but the brand's fact that it gives no logo, beside the
+    reference pieces' calls for attention on their concepts' signs."""
     placed = {
         str(element.get("component", "")).removeprefix("starter/")
         for (name, _, _), scene in scenes.items()
@@ -664,7 +665,8 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     found = [
         (finding.code, finding.file)
         for finding, level in report.judged
-        if finding.code != "component-experimental"
+        if finding.code != "component-experimental" and finding.code not in starter.SIGN_LABELS
     ]
     assert [code for code, _ in found] == ["picture-role-unvalued"]
+    assert starter.on_signs(report.judged) == starter.UNSIGNED
     assert not report.failed()

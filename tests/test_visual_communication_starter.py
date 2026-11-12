@@ -27,7 +27,7 @@ import json
 import math
 import re
 import shutil
-from collections.abc import Collection, Iterator, Mapping, Sequence
+from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -404,19 +404,51 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
         assert (as_released(values), files) == released[name], name
 
 
+#: The labels of the calls for attention on concepts' signs (DEC-036 point 8).
+SIGN_LABELS = ("concept-unsigned", "sign-missing", "run-sign-missing", "sign-shared")
+
+#: What the reference pieces ask for attention on their concepts' signs, until the starter's
+#: components draw them (DEC-036 point 8), in the order the check reports it: the test
+#: notation's two concepts that map no sign, and each starter component that paints the test
+#: notation's person by its colour alone, once in each piece that draws it so. Each is its
+#: level, its label, its library, its file within the library's version and where.
+UNSIGNED = [
+    ("attention", "concept-unsigned", "test-notation", "notation.yaml", "concepts.service"),
+    ("attention", "concept-unsigned", "test-notation", "notation.yaml", "concepts.store"),
+    ("attention", "sign-missing", "starter", "components/card.yaml", "parts"),
+    ("attention", "sign-missing", "starter", "components/group.yaml", "parts"),
+    ("attention", "sign-missing", "starter", "components/card.yaml", "parts"),
+    ("attention", "sign-missing", "starter", "components/tag.yaml", "parts"),
+]
+
+
+def on_signs(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str, str, str]]:
+    """The calls for attention on concepts' signs among a check's findings, `judged`, as
+    `UNSIGNED` gives each."""
+    found = []
+    for finding, level in judged:
+        if finding.code in SIGN_LABELS:
+            name, _, version = finding.library.partition("@")
+            within = finding.file.partition(f"/{version}/")[2]
+            found.append((level, finding.code, name, within, finding.where))
+    return found
+
+
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
     """The test brand's newest version, the one the check of a version alone reads (DEC-019),
     states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
-    point 9): a header draws with no logo."""
+    point 9): a header draws with no logo. Beside it, the pieces ask for attention where
+    their concepts' signs are not drawn."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental"
+        if finding.code != "component-experimental" and finding.code not in SIGN_LABELS
     ]
     assert found == [
         ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
+    assert on_signs(report.judged) == UNSIGNED
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "

@@ -89,7 +89,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from _lib import formula as fm
-from _lib import names
+from _lib import names, signs
 from _lib.env import Env
 from _lib.findings import ATTENTION, FACT, Finding
 from _lib.layout import (
@@ -207,13 +207,16 @@ class SceneResult:
     the scene does not draw it, and a move onto that brand names it (DEC-025 point 8).
     `shared` holds, for each page of a top whose layouts are its pages' forms, the trace of
     each of its parts that draws a field of the top, which every such page draws alike
-    (`Instance.from_the_top`)."""
+    (`Instance.from_the_top`). `shown` holds each concept with a sign that an instance or a
+    run names, and whether only its colour tells it apart, which the checks of signs read
+    (`signs.shown`, DEC-036 point 8)."""
 
     scene: Scene
     findings: list[Finding]
     facts: dict[str, list[str]]
     unvalued: dict[str, str] = field(default_factory=dict)
     shared: dict[str, list[str]] = field(default_factory=dict)
+    shown: list[signs.Shown] = field(default_factory=list)
 
 
 def compute_scene(
@@ -261,7 +264,12 @@ def compute_scene(
     )
     shared = {page.trace: page.from_the_top() for page in (root.pages if root else [])}
     return SceneResult(
-        scene, list(ctx.findings), emitter.facts, unvalued=emitter.unvalued, shared=shared
+        scene,
+        list(ctx.findings),
+        emitter.facts,
+        unvalued=emitter.unvalued,
+        shared=shared,
+        shown=signs.shown(root) if root is not None else [],
     )
 
 

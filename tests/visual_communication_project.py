@@ -53,6 +53,18 @@ TEST_PICTURES = FIXTURES / "pictures"
 #: The capability's project configuration, relative to the project root.
 CONFIG = ".pkit/capabilities/visual-communication/project/config.yaml"
 
+#: The agents overlay, relative to the project root, where the designer's grant lies.
+OVERLAY = ".pkit/agents/project/overlay.yaml"
+
+#: What a command prints where it records the default location, the designer's grant set
+#: at the overlay's top level or not at all (DEC-030 point 5).
+RECORDED_DEFAULT = (
+    f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
+    "to move the work, move the folder, change the `location:` line there, and move the "
+    f"designer's grant, the `visual-communication.work:` line of {OVERLAY}, which "
+    "`pkit agents reconcile --write` moves while it stays as pkit wrote it"
+)
+
 
 def capability_version() -> str:
     """The capability's version, as its `package.yaml` carries it: the release a run

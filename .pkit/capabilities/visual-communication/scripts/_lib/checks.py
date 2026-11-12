@@ -2,7 +2,7 @@
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
 points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
-and 5, DEC-019 point 8).
+and 5, DEC-019 point 8, DEC-030 point 5).
 
 **File-level findings, every run:**
 
@@ -10,6 +10,10 @@ and 5, DEC-019 point 8).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
+- without a piece named, the designer's grant, read from the agents overlay as the deploy
+  reads it, against the location the configuration records: a path inside the
+  methodology's folder fails, and so does a grant that does not cover the location
+  (`grant_findings`, DEC-030 point 5);
 - the library folder and its list (`libraries.Held.findings`), and each copy of a library
   the capability ships against what the installed capability ships under its number
   (`copies.compare`, DEC-013 point 6);
@@ -32,16 +36,20 @@ and 5, DEC-019 point 8).
   DEC-010 point 9); the foundations' declarations are read, and their components' tokens
   judged as a library's. What it shows lies in the version; a version that names majors
   no versions fit, or one the project holds no version of, cannot be checked alone, which
-  is a finding. A check of one piece runs no such pass;
+  is a finding. A shape of the foundations that is no closed outline within its square
+  fails there (DEC-036 point 8). A check of one piece runs no such pass;
 - the libraries each piece locks, read under its lock: the own roles of each component
   library, and the brand, with its open roles, fonts and declared pairs. A fault the
   version shows alone too lies in the version, reported once; one only the lock's
   combination of versions shows lies at the piece's lock, and its level stands;
 - the name of each library a piece locks, against the top groups of the shared roles of
   the foundations it locks (DEC-004 points 7 and 11);
-- each notation a piece names, against the colour families of the foundations it locks:
-  a library that is no notation, a file that cannot be read, a concept that maps to no
-  colour family the foundations declare (DEC-004 points 10 and 11);
+- each notation a piece names, against the colour families and the shapes of the
+  foundations it locks: a library that is no notation, a file that cannot be read, a
+  concept that maps to no colour family the foundations declare, a sign that cannot be read
+  or an icon that is no closed outline within its square; and a concept that maps no sign,
+  which asks the notation's owner for attention (DEC-004 points 10 and 11, DEC-036 point
+  8);
 - the ids in each content file, a list of runs skipped, and each content file against the
   fields and options of the components it fills, each list of runs against the words of
   its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8);
@@ -58,8 +66,10 @@ it holds at: the engine's own (overflow, a component that gets less than it asks
 owners of a value, a loop, a missing exposed part or point, a page inside a page, a
 concept the piece's notations do not hold, a switch or a `when` by a size that reads no
 size axis a piece can name), a produced picture that is missing, contrast as drawn, a
-colour role the brand lacks, each loss of the renderers that draw the piece that nobody
-accepted, the components it uses that are experimental or deprecated, content drawn at
+text's and a sign's, a concept left to its colour and concepts of one sign, each of which
+asks for attention (`signs.findings`, DEC-036 point 8), a colour role the brand lacks,
+each loss of the renderers that draw the piece that nobody accepted, the components it
+uses that are experimental or deprecated, content drawn at
 one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7), and,
 for a piece that exports switching files, a page with no ground of its own in a
 combination its file holds, which asks for attention and never fails (`_no_ground`,
@@ -145,11 +155,13 @@ from _lib import (
     exports,
     fingerprint,
     framing,
+    grant,
     keys,
     layout,
     location,
     names,
     records,
+    signs,
     tokens,
 )
 from _lib import pipeline as pl
@@ -212,6 +224,11 @@ LARGE = 24.0
 LARGE_BOLD = 18.66
 BOLD = 700
 
+#: The finding on a text or a sign below the contrast it must reach as drawn, and the level
+#: a sign must reach, WCAG's for other marks (DEC-004 point 8, DEC-036 point 8).
+CONTRAST_DRAWN = "contrast-drawn"
+MARKS = "marks"
+
 #: The colour a text with no fill is drawn in.
 BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 
@@ -238,6 +255,9 @@ COPY_OVER_STALE = "current-copy-over-stale"
 COPY_LET_THROUGH = "current-copy-let-through"
 COPY_DIFFERING = "current-copy-differing"
 COPY_STANDING = "current-copy-standing"
+
+#: The finding on the designer's grant against the recorded location (DEC-030 point 5).
+GRANT = "grant"
 
 #: The findings on formats a piece cannot take (DEC-018 points 2 and 4): two that write files
 #: of one name, and a format of switching files whose file cannot hold the piece's modes.
@@ -293,9 +313,11 @@ def deadline_from(environ: Mapping[str, str]) -> float | None:
 
 
 def check(root: Path, *, only: str | None = None, deadline: float | None = None) -> Report:
-    """The check of the project at `root`: every piece, or the piece `only`."""
+    """The check of the project at `root`: every piece, or the piece `only`. The
+    configuration is judged in every run, and the designer's grant in every run without a
+    piece named."""
     found: list[Finding] = []
-    config = _config_findings(root)
+    config = _config_findings(root) + (grant_findings(root) if only is None else [])
     try:
         where = location.for_reading(root)
     except location.LocationRefused as exc:
@@ -341,6 +363,57 @@ def _binding(data: Any, kind: str) -> str | None:
     if isinstance(data, Mapping) and data.get("pkit_schema") == schema_of(kind):
         return None
     return binding_problem(data, kind)
+
+
+def grant_findings(root: Path) -> list[Finding]:
+    """The designer's grant, read from the agents overlay as the deploy reads it, against
+    the location the configuration records (DEC-030 point 5). Each fails, where the project
+    corrects it in its overlay: a path inside the methodology's folder, and a grant none of
+    whose paths covers the recorded location. A grant that names no path, an empty one
+    included, fails nothing, and with no location recorded there is none to cover. An
+    overlay that cannot be read fails, since the check owes an answer it cannot give."""
+    try:
+        given = grant.granted(root)
+    except (ReadError, OSError) as exc:
+        said = f"the agents overlay cannot be read, so the designer's grant is not checked: {exc}"
+        return [Finding(GRANT, FAILS, said, file=grant.OVERLAY, fix="mend the file")]
+    if given is None or not given.paths:
+        return []
+    try:
+        recorded = location.configured(root)
+    except location.LocationRefused:
+        recorded = None  # the check reports it as `location`
+    at = {path: grant.relative(root, path) for path in given.paths}
+    found: list[Finding] = []
+    inside = {path for path, rel in at.items() if rel and grant.in_methodology(rel)}
+    if inside:
+        said = (
+            f"the designer's grant names {_shown(inside)}, inside the methodology's folder "
+            f"`{grant.METHODOLOGY}/`, where the visual work never lies"
+        )
+        fix = f"take {_shown(inside)} out of {given.line}"
+        found.append(Finding(GRANT, FAILS, said, file=grant.OVERLAY, where=given.key, fix=fix))
+    if recorded is not None and not any(rel and grant.covers(rel, recorded) for rel in at.values()):
+        said = (
+            f"the designer's grant names {_shown(set(given.paths))}, which does not cover the "
+            f"location `{recorded}` the configuration records, so the designer cannot write "
+            f"the visual work"
+        )
+        fix = _grant_fix(given, recorded)
+        found.append(Finding(GRANT, FAILS, said, file=grant.OVERLAY, where=given.key, fix=fix))
+    return found
+
+
+def _grant_fix(given: grant.Grant, recorded: str) -> str:
+    """What moves the designer's grant to the recorded location: for the top-level line,
+    the command that moves it while it stays as written (COR-073 point 5), else an edit."""
+    edit = f"name `{recorded}/` there, or `[]` to switch the designer off"
+    if given.overridden:
+        return f"in {given.line}, {edit}"
+    return (
+        f"run `pkit agents reconcile --write`, which moves {given.line} to `{recorded}/` while "
+        f"it stays as pkit wrote it; otherwise {edit}"
+    )
 
 
 class _Run:
@@ -746,14 +819,18 @@ class _Run:
 
     def _notation_findings(self, project: pl.Project) -> None:
         """The findings of each notation the piece names, once for each version and
-        foundations: a notation is read against the colour families of the foundations the
-        piece locks (DEC-004 points 10 and 11). A file the binding pass already reports is
-        not reported again (one owner per finding, DEC-002 point 6)."""
+        foundations: a notation is read against the colour families and the shapes of the
+        foundations the piece locks (DEC-004 points 10 and 11, DEC-036 point 8). A finding
+        two foundations read alike, such as a concept that maps no sign, is reported once. A
+        file the binding pass already reports is not reported again (one owner per finding,
+        DEC-002 point 6)."""
         against = project.label(pl.FOUNDATIONS)
         for notation in project.notations.values():
             if f"{notation.label} {against}" not in self.notations:
                 self.notations.add(f"{notation.label} {against}")
-                self.found.extend(f for f in notation.findings if f.file not in self.unbound)
+                for finding in notation.findings:
+                    if finding.file not in self.unbound:
+                        self._once(finding)
 
     def _scenes(self, project: pl.Project, unmade: set[str]) -> None:
         piece = project.piece
@@ -2562,7 +2639,9 @@ def scene_findings(
     in what a field of the top draws, read alike on several pages, is reported once, naming
     its pages (`_once_on_pages`). A size at which the top is as wide as at the default asks
     for attention (`_widths`). What the piece states of the forms its brand's chain draws its
-    tops in is said once (`_brand_forms`)."""
+    tops in is said once (`_brand_forms`). The checks of signs read every scene at once: a
+    concept left to its colour, once for each version of the component that draws it so, and
+    concepts of one sign, once in each language (`signs.findings`, DEC-036 point 8)."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2603,7 +2682,9 @@ def scene_findings(
             else:
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
-    for finding in [*_widths(project, results), *_brand_forms(project)]:
+    shown = [(pl.content_file(language), result.shown) for language, result in results]
+    signed = [_placed(finding, "", project) for finding in signs.findings(shown)]
+    for finding in [*_widths(project, results), *_brand_forms(project), *signed]:
         unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
 
@@ -2928,12 +3009,15 @@ def _pages(scene: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 def drawn_contrast(
     scene: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]], keys: Sequence[str]
 ) -> list[Finding]:
-    """Each run of each text of a scene measured against the fill under it, in each
-    combination `keys` names, at WCAG's level for the run's size and weight, in the run's
-    own paint (DEC-004 point 8, DEC-012 point 3). The fill under a run's span of a line is
-    that of the last box or ellipse drawn before the text that holds the span's middle; a
-    translucent one is laid over the one under it. A text over a picture is not measured,
-    nor one with nothing under it."""
+    """Each run of each text of a scene, and each sign, measured against the fill under it,
+    in each combination `keys` names (DEC-004 point 8, DEC-012 point 3, DEC-036 point 8). A
+    run is measured at WCAG's level for its size and weight, in its own paint. A sign is
+    measured at WCAG's level for other marks: a sign part's path holds where its fill or its
+    stroke reaches it, and a run's sign in the run's paint (`_sign_contrast`). The fill
+    under a run's span of a line, or under a sign, is that of the last box or ellipse drawn
+    before it that holds the span's or the sign's middle; a translucent one is laid over the
+    one under it. A text or a sign over a picture is not measured, nor one with nothing
+    under it."""
     found = []
     for page in _pages(scene):
         painted: list[tuple[Mapping[str, Any], float, float]] = []
@@ -2943,6 +3027,8 @@ def drawn_contrast(
                 painted.append((element, x, y))
             elif kind == "text" and element.get("lines"):
                 found.extend(_text_contrast(element, x, y, painted, colours, keys))
+            elif kind == "path" and element.get("d"):
+                found.extend(_sign_contrast(element, x, y, painted, colours, keys))
     return found
 
 
@@ -2957,8 +3043,9 @@ def _text_contrast(
     left, width = x + float(text["x"]), float(text["width"])
     step = float(text["line-height"])
     paragraphs = text.get("paragraphs") or [[{}]]
-    # Each look of a run and the fills under its spans, in the order first met.
-    measured: list[tuple[Mapping[str, Any], list[str]]] = []
+    # Each look of a run and the fills under its spans, in the order first met, and each
+    # look of a run's sign where it lies on other fills than its span's text.
+    measured: list[tuple[Mapping[str, Any], list[str], bool]] = []
     looks: list[tuple[Any, ...]] = []
     for index, line in enumerate(text["lines"]):
         runs = paragraphs[line.get("paragraph", 0)] or [{}]
@@ -2966,30 +3053,41 @@ def _text_contrast(
         at = {"middle": left + (width - drawn) / 2, "end": left + width - drawn}.get(
             str(text.get("text-anchor")), left
         )
-        middle = y + float(text["y"]) + index * step + step / 2
+        top = y + float(text["y"]) + index * step
+        middle = top + step / 2
         # A line with no span is measured at its start, in its paragraph's first run.
         spans = line.get("spans") or [{"run": 0, "width": 0}]
         for span in spans:
             run = runs[int(span.get("run", 0))]
             span_width = float(span.get("width", 0))
             # A run's ground and sign take room beside its text, and the ground is the fill
-            # it is measured against (DEC-036 point 3).
+            # each is measured against (DEC-036 point 3).
             ground, sign = span.get("ground") or {}, span.get("sign")
             at += float(ground.get("start", 0))
-            at += float(sign["size"]) + float(sign["gap"]) if sign is not None else 0.0
+            marked: list[str] | None = None
+            if sign is not None:
+                size = float(sign["size"])
+                marked = _under((at + size / 2, top + float(sign["top"]) + size / 2), painted)
+                at += size + float(sign["gap"])
             stack = _under((at + span_width / 2, middle), painted)
             if ground and run.get("ground") is not None:
                 stack = [*(stack or []), str(run["ground"])]
+                if sign is not None:
+                    marked = [*(marked or []), str(run["ground"])]
             if stack is None:
                 return []  # over a picture: a reviewer judges it
             at += span_width + float(ground.get("end", 0))
             look = (run.get("fill"), run.get("font-size"), run.get("font-weight"), stack)
             if stack and look not in looks:
                 looks.append(look)
-                measured.append((run, stack))
+                measured.append((run, stack, False))
+            # A sign on the fills of its text is measured with it, at a level as strict.
+            if marked and marked != stack and (run.get("fill"), marked) not in looks:
+                looks.append((run.get("fill"), marked))
+                measured.append((run, marked, True))
     found = []
-    for run, stack in measured:
-        found.extend(_run_contrast(text, run, stack, colours, keys))
+    for run, stack, of_sign in measured:
+        found.extend(_run_contrast(text, run, stack, colours, keys, sign=of_sign))
     return found
 
 
@@ -2999,9 +3097,12 @@ def _run_contrast(
     stack: Sequence[str],
     colours: Mapping[str, Mapping[str, Any]],
     keys: Sequence[str],
+    *,
+    sign: bool = False,
 ) -> list[Finding]:
     """A run of a text measured against one stack of fills under it, in its own paint, at
-    WCAG's level for its size and weight."""
+    WCAG's level for its size and weight; or, where `sign`, the run's sign, at the level
+    for other marks (DEC-036 point 8)."""
     role = run.get("fill")
     if role is not None and role not in colours:
         return []  # a colour role the brand lacks is a finding of its own
@@ -3010,6 +3111,9 @@ def _run_contrast(
     size, weight = float(run.get("font-size", 0)), run.get("font-weight")
     bold = isinstance(weight, (int, float)) and weight >= BOLD
     level = "large-text" if size >= LARGE or (size >= LARGE_BOLD and bold) else "text"
+    what = f"a text of {size:g} px"
+    if sign:
+        level, what = MARKS, "the sign of a run"
     minimum = tokens.LEVELS[level]
     found = []
     for key in keys:
@@ -3021,16 +3125,66 @@ def _run_contrast(
         if ratio < minimum:
             found.append(
                 Finding(
-                    "contrast-drawn",
+                    CONTRAST_DRAWN,
                     FAILS,
                     f"`{role or 'black'}` on `{stack[-1]}` has the contrast {ratio:.2f} in "
-                    f"the combination `{key}`, below the {minimum} a text of {size:g} px "
-                    f"needs (`{level}`)",
+                    f"the combination `{key}`, below the {minimum} {what} needs (`{level}`)",
                     file=pl.PIECE_FILE,
                     where=str(text["id"]),
                     fix="change the colour roles of the text or of what lies under it, in "
                     "the component, its content's `override`, or the brand",
                 )
+            )
+    return found
+
+
+def _sign_contrast(
+    path: Mapping[str, Any],
+    x: float,
+    y: float,
+    painted: Sequence[tuple[Mapping[str, Any], float, float]],
+    colours: Mapping[str, Mapping[str, Any]],
+    keys: Sequence[str],
+) -> list[Finding]:
+    """A sign part's path measured against the fills under its middle, in each combination
+    `keys` names, at WCAG's level for other marks: it holds where its fill or its stroke
+    reaches that level (DEC-036 point 8). One that paints neither shows nothing, which
+    fails as well. One over a picture is not measured, nor one with nothing under it."""
+    width, height = float(path.get("width", 0)), float(path.get("height", 0))
+    middle = (x + float(path.get("x", 0)) + width / 2, y + float(path.get("y", 0)) + height / 2)
+    stack = _under(middle, painted)
+    if not stack or any(fill not in colours for fill in stack):
+        return []  # over a picture, over nothing, or over a colour the brand lacks
+    paints = [path.get("fill")]
+    if float(path.get("stroke-width", 1)) > 0:
+        paints.append(path.get("stroke"))
+    inks = [str(role) for role in paints if role is not None]
+    fix = (
+        "change the colour roles of the sign or of what lies under it, in the component, its "
+        "content's `override`, or the brand"
+    )
+    where = str(path["id"])
+    if not inks:
+        message = "the sign paints neither a fill nor a stroke, so it shows nothing"
+        return [Finding(CONTRAST_DRAWN, FAILS, message, file=pl.PIECE_FILE, where=where, fix=fix)]
+    if any(role not in colours for role in inks):
+        return []  # a colour role the brand lacks is a finding of its own
+    minimum, found = tokens.LEVELS[MARKS], []
+    for key in keys:
+        ground = _ground([colours[fill][key] for fill in stack])
+        if ground is None:
+            continue
+        ratios = [tokens.contrast_ratio(colours[role][key], ground) for role in inks]
+        if max(ratios) < minimum:
+            measured = " and ".join(
+                f"`{role}` ({ratio:.2f})" for role, ratio in zip(inks, ratios, strict=True)
+            )
+            message = (
+                f"the sign paints {measured} on `{stack[-1]}` in the combination `{key}`, and "
+                f"none reaches the {minimum} a sign needs (`{MARKS}`)"
+            )
+            found.append(
+                Finding(CONTRAST_DRAWN, FAILS, message, file=pl.PIECE_FILE, where=where, fix=fix)
             )
     return found
 
