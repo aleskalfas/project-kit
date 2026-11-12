@@ -10,7 +10,7 @@ from typing import Any
 import click
 import pytest
 
-from project_kit import install, router, sync
+from project_kit import install, router, session_guard, sync
 from project_kit.manifest import read_backbone_manifest, read_kit_version, write_backbone_manifest
 from tests.adopter_repo import MakeAdopterRepo
 from tests.agent_definitions_support import stage_picker
@@ -85,6 +85,57 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     assert called["workspace"] == 1
     # And provisioning (#1092): it readies the checkout for an offline validate.
     assert called["provision"] == 1
+
+
+_SESSION_WARNING = "⚠ WARNING: this session's project folder"
+
+
+def test_sync_warns_last_where_the_session_started_elsewhere(
+    installed_target: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repository cloned into a folder below the session's: the harness loads
+    nothing sync writes there until a session starts at the root (#3005)."""
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(installed_target.parent))
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    warning = out.partition(_SESSION_WARNING)[2]
+    assert warning and "`pkit sync`" in warning
+    assert out.rstrip().endswith(f"until a session starts at {installed_target}.")
+
+
+@pytest.mark.parametrize("anchor", ["root", None])
+def test_sync_does_not_warn_at_the_root_or_outside_any_session(
+    installed_target: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    anchor: str | None,
+) -> None:
+    if anchor == "root":
+        monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(installed_target))
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    assert "Sync complete." in out
+    assert _SESSION_WARNING not in out
+
+
+def test_self_host_sync_warns_where_the_session_started_elsewhere(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The self-host branch writes the harness's files too, so it warns the same."""
+    source_repo = install.find_source_kit().parent
+    monkeypatch.chdir(source_repo)
+    monkeypatch.setattr(sync, "regenerate_derivable_state", lambda _ctx: None)
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(tmp_path))
+
+    sync.run_sync(source_repo)
+
+    out = capsys.readouterr().out
+    assert "Self-host sync complete" in out
+    assert out.rstrip().endswith(f"until a session starts at {source_repo}.")
 
 
 def test_sync_renders_runtime_ignore_on_normal_path(installed_target: Path) -> None:

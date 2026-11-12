@@ -41,7 +41,7 @@ roles:
   size.figure: {type: dimension}
   size.slide: {type: dimension}
   # The width of a site's pages: a brand that gives it no value draws a site as wide as its
-  # slide (DEC-022 point 3).
+  # slide, since a desktop page fills a screen as a slide does (DEC-004 point 7).
   size.site: {type: dimension, default: '{size.slide}'}
   # The length of a line of text, at most, which a web part caps its text at: a brand that
   # gives it no value caps a line at its figure's width (DEC-008 point 2).

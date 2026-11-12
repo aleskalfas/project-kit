@@ -57,6 +57,7 @@ pkit:
         - visual-communication:DEC-009#4
         - visual-communication:DEC-009#5
         - visual-communication:DEC-009#6
+        - visual-communication:DEC-009#9
         - visual-communication:DEC-010#1
         - visual-communication:DEC-010#2
         - visual-communication:DEC-010#3
@@ -72,6 +73,7 @@ pkit:
         - visual-communication:DEC-012#2
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
+        - visual-communication:DEC-014#1
         - visual-communication:DEC-016#5
         - visual-communication:DEC-017#3
         - visual-communication:DEC-021#5
@@ -91,6 +93,7 @@ pkit:
         - visual-communication:DEC-034#6
         - visual-communication:DEC-034#7
         - visual-communication:DEC-034#8
+        - visual-communication:DEC-034#10
         - visual-communication:DEC-035#1
         - visual-communication:DEC-035#2
         - visual-communication:DEC-035#3
@@ -310,7 +313,7 @@ A text part may show a fact of the export it is drawn for, where it would show a
 
 ### Switches
 
-A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. In a brand's drawing a switch may leave a word of its top's option out: the drawing then does not take that word ([A brand's drawing](#a-brands-drawing)). A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
 
 **A switch on a size,** `{by: ":<axis>", <mode>: <value>, ...}`, chooses by the mode of a size axis. It names the axis after `:`, as a formula reads `:width`. It serves wherever a switch on an option does, and as a `when` ([Parts](#parts)). `tests/steps` could space its steps closer on a phone:
 
@@ -339,7 +342,7 @@ values:
 - **The default is named, and takes what is left out.** The switch names `page`, the default, and `part` takes that branch where the switch leaves it out.
 - **What is refused,** at any depth: a switch on `:as` in a component that is no drawing of a layout, a branch that is no value of it, and a switch with no branch for `page`.
 
-**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
+**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. A brand's drawing need not, and its switch may leave a word out, as a switch on an option may. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
 
 ```yaml
 fields:
@@ -482,11 +485,14 @@ A brand may hold a drawing of its own of a layout of a top, as a component of th
 - **What it holds.** Its `about`, its `parts`, its own `values`, its own `tokens`, the parts it `exposes`, by the names the top exposes them by, and the size it asks for. It reads none of the top's component tokens ([Tokens](#tokens)), and carries no `status` ([A component's file](#a-components-file)).
 - **The sizes it writes** (DEC-034 point 2). A drawing of a page's form writes its page's height alone, `preferred: {height: <formula>}`, as the layout's own drawing does. It must write it where the top asks for no height, and may where the top asks for one, by a formula or through its [physical size](#a-physical-size). It writes no width, since a page gets the top's. A drawing of a top whose one layout is the whole top writes its own `preferred`, whole: the top's parts are that layout's drawing, so the size the top asks for is its drawing's. Where that top declares a physical size, the drawing writes no height: the engine sets it from the width the drawing asks for, in the size's proportion, and a height the drawing writes is refused and not read.
 - **What shows a field is named after it** (DEC-034 point 5). Each field it shows is shown by a part named after the field, and a part named after a field shows that field. A part *shows* a field where it places the field's component, draws its text or the picture it names, or repeats over it. A field shown only through a component it places by `use`, which shows it one level down, breaks the rule.
-- **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).
+- **Where it fits.** It *takes* a field where a part of it shows the field, or passes it on, where the content gives it; a word the content chose for an option, where a switch or a `when` of it reads that word; a part the content's `override` points at another role, where it paints that part; each part the top exposes, where a component places the top; a run's word, where a text that shows the field chooses by the field's words, and the first word alone where none does; and each end of the ties it draws, where the end is found under it. It takes no word that a switch of it leaves out, the default word of an option included, and no run of a field it passes on, so it then takes the field's text alone (DEC-012 point 2). A part that a `when` leaves out at a key, such as one a size hides, takes nothing there. A drawing takes every state, since a state gives its colour by the top's states. It *fits* an instance where it takes all of it in every language the piece holds and at every key over the size axes the piece names (DEC-034 point 6).
 - **Where it does not fit,** the top's own drawing draws that instance, whole, in every language and at every key, and the piece states it ([Checks](checks.md)). The engine places the piece in each language and at each key before it draws any scene, so a preview of one language at one size is drawn by the drawing chosen for the whole piece.
 - **Along a chain of brands** (DEC-009 point 4). A brand *serves* a top where it holds a drawing of one of the top's layouts, or holds the top itself. Under a brand built on a base, the brand nearest the root that serves a top keeps its form: its drawings draw, and the top's own drawing draws each layout it leaves. A brand built on it draws none of that top, and each piece under it states each drawing of it that draws nothing ([Checks](checks.md)). A brand built on a base that serves no layout of a top draws the top by its own drawings.
 - **A top a brand holds** is drawn by its own drawing alone (DEC-034 point 4). The holding brand serves it so, and lacks none of its layouts, and each brand built on it keeps that form. No brand declares a drawing of it. Under a brand that is neither the holding brand nor built on it, it is drawn by its own drawing in that brand's values, and the check asks the piece's author to look ([Checks](checks.md)).
-- **Where it draws nothing.** Two drawings of one layout in one brand draw neither, and a drawing of a top whose library its own brand does not name draws nothing (DEC-009 points 2 and 3). Nor does a drawing of a top a brand nearer the root serves, or of a top a brand holds. The test brand's drawing of the deck's cover, trimmed to its title:
+- **Where it draws nothing.** Two drawings of one layout in one brand draw neither, and a drawing of a top whose library its own brand does not name draws nothing (DEC-009 points 2 and 3). Nor does a drawing of a top a brand nearer the root serves, or of a top a brand holds.
+- **What the check judges of it** (DEC-009 point 9). Each finding on a drawing lies in its brand's version, judged where the brand is checked alone, over its base and against the newest version the project holds of each major the brand names, and where a release reads the version. A drawing fails where it takes a field, an option or a word its top does not declare, where it is one of two drawings of a layout, and where its top's library is one its brand does not name. In a released version, each asks the brand's owner for attention instead (DEC-034 point 10). What it does not take of what its top declares asks the brand's owner for attention, and never fails, and so does a drawing of a top a brand nearer the root serves, to take it out (DEC-034 point 8). The version states each top the brand serves, with the layouts it leaves to the top's own drawing ([Checks](checks.md)). A piece states each instance the top's own drawing draws in its place.
+
+The test brand's drawing of the deck's cover, trimmed to its title:
 
 ```yaml
 draws: {top: foundations/deck, layout: cover}
