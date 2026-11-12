@@ -264,6 +264,7 @@ A start report that does not match the run's settings ends the run at once, as `
 
 **What a runner owes:**
 
+- **The definition it runs.** For a name some place ships, it runs the definition the agents area's picker names, and no other copy ([COR-013](../decisions/core/COR-013-agent-architecture.md) point 8). In the unconfined form too, it refuses a definition the confined form refuses. For a name no place ships, the unconfined form may have its harness load the agent by its name.
 - **No bypass.** It passes the harness only flags from a closed set, which its adapter's README lists. No member of the set approves a call, or loads configuration other than the run's own.
 - **The limit.** At `limit_seconds`, the runner ends the harness, and every process still descended from the harness, one in a session of its own included.
   - **What it misses:** a process that left that tree before the limit, as a daemon does. The adapter's README says so.

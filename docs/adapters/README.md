@@ -156,9 +156,9 @@ flowchart TD
   runner -->|starts| session
 ```
 
-- **The scripts.** The lifecycle runs each of four deploy scripts the adapter holds, in a fixed order, whenever the harness's side needs deploying again. A fifth takes back what the adapter deployed for one capability ([the reference, "Primitives the lifecycle calls"](../../.pkit/adapters/README.md#primitives-the-lifecycle-calls)).
+- **The scripts.** The lifecycle runs each of four deploy scripts the adapter holds, in a fixed order, whenever the harness's side needs deploying again. A fifth takes back the skills the adapter deployed for one capability ([the reference, "Primitives the lifecycle calls"](../../.pkit/adapters/README.md#primitives-the-lifecycle-calls)).
 - **The rules.** The merge keeps the lines that load the operational rules in the harness's instruction file. The adapter's `package.yaml` declares the form of the line that loads the capabilities' rules index ([the reference, "How a capability's rules reach a session"](../../.pkit/adapters/README.md#how-a-capabilitys-rules-reach-a-session)).
-- **Skills and agent definitions.** The deploys copy or link them where the harness reads them. An agent's tool access is written in the harness's keys ([the agents reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
+- **Skills and agent definitions.** The deploys copy or link them where the harness reads them. For each agent's name, the deploy writes only the definition the agents area's picker names, so uninstalling a capability takes back the agents it shipped. An agent's tool access is written in the harness's keys ([the agents reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
 - **The declarations.** Data files the backbone's commands read, running none of the adapter's code ([the reference, "What an adapter declares as data"](../../.pkit/adapters/README.md#what-an-adapter-declares-as-data)). They say these:
   - how far the harness meets each harness requirement
   - where the harness enforces each dimension of the permission model
@@ -178,7 +178,7 @@ Write the adapter in the methodology's source repository, through the `adapter-a
 The steps:
 
 1. **Stamp it.** Have your agent run the `adapter-author` skill, which runs `pkit new adapter <name>`. The stamp writes `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It writes no script and no settings, since those depend on the harness ([the CLI reference, `new adapter`](../../.pkit/cli/README.md#new-adapter-name)).
-2. **Write the scripts your harness needs,** with the Claude Code adapter's as the worked example ([its reference, "What this adapter ships"](../../.pkit/adapters/claude-code/README.md#what-this-adapter-ships)). The lifecycle skips each of the four deploy scripts your adapter does not hold. Where your adapter deploys anything for a capability, write `undeploy-capability.sh` too, or a capability's uninstall warns that the capability stays deployed in your harness. What the lifecycle relies on, for each script ([the reference, "Primitives the lifecycle calls"](../../.pkit/adapters/README.md#primitives-the-lifecycle-calls)):
+2. **Write the scripts your harness needs,** with the Claude Code adapter's as the worked example ([its reference, "What this adapter ships"](../../.pkit/adapters/claude-code/README.md#what-this-adapter-ships)). The lifecycle skips each of the four deploy scripts your adapter does not hold. Where your adapter deploys a capability's skills, write `undeploy-capability.sh` too, or a capability's uninstall warns that your harness may keep that capability's skills. What the lifecycle relies on, for each script ([the reference, "Primitives the lifecycle calls"](../../.pkit/adapters/README.md#primitives-the-lifecycle-calls)):
    - It runs as a program.
    - It changes nothing when run a second time.
    - It exits with a status other than 0 when it fails.
