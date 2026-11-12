@@ -39,7 +39,10 @@ What crosses the boundary is ADR-066 point 2's, in two forms:
 
 - **Unconfined:** the agent, the brief, the folder the run runs in, a
   wall-clock limit, and an effort level where one is set. The review
-  command's runs take this form (ADR-066 point 10).
+  command's runs take this form (ADR-066 point 10). A caller may also ask for
+  the person's local settings: the backbone then names the project root as
+  the checkout they come from, and the runner, which alone knows the file its
+  harness keeps them in, carries them into the folder (ADR-066 points 1 and 10).
 - **Confined:** the same without the folder, and in its place the commit, the
   command whose run rules hold the run (`<capability>:<command>`), and the
   folder the run's files go to. The backbone makes a clone at the commit,
@@ -128,9 +131,11 @@ ENDINGS = (*RUNNER_ENDINGS, NO_ANSWER)
 class Request:
     """What a caller passes for one run (ADR-066 point 2).
 
-    An unconfined run names its `folder`. A confined run names none, and names
-    instead the `commit`, the command whose run rules hold it (`rules_of`, as
-    `<capability>:<command>`) and the folder its files go to (`files_to`)."""
+    An unconfined run names its `folder`, and may name the checkout the
+    person's local settings are carried from into it (`local_settings_from`).
+    A confined run names neither, and names instead the `commit`, the command
+    whose run rules hold it (`rules_of`, as `<capability>:<command>`) and the
+    folder its files go to (`files_to`)."""
 
     agent: str
     brief: str
@@ -140,6 +145,7 @@ class Request:
     commit: str | None = None
     rules_of: str | None = None
     files_to: Path | None = None
+    local_settings_from: Path | None = None
 
     @property
     def confined(self) -> bool:
@@ -171,7 +177,14 @@ class Request:
                 )
             if not self.folder.is_absolute() or not self.folder.is_dir():
                 return f"the folder {self.folder} is not a directory"
+            source = self.local_settings_from
+            if source is not None and (not source.is_absolute() or not source.is_dir()):
+                return f"the checkout the local settings come from, {source}, is not a directory"
             return None
+        if self.local_settings_from is not None:
+            return (
+                "a confined run loads none of the person's settings, so it takes no local settings"
+            )
         return self._confined_problem(target_root)
 
     def _confined_problem(self, target_root: Path | None) -> str | None:
@@ -196,8 +209,11 @@ class Request:
 
     def as_json(self, confined: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """The request as the runner reads it on standard input: with the folder,
-        or, for a confined run, with the `confined` block in its place
-        (`agent_confinement.request_block`)."""
+        and the checkout the local settings come from where one is named, or,
+        for a confined run, with the `confined` block in their place
+        (`agent_confinement.request_block`). A request that asks for no local
+        settings carries no key for them, so a runner that predates the key
+        still runs it."""
         document: dict[str, Any] = {
             "schema_version": REQUEST_VERSION,
             "agent": self.agent,
@@ -205,6 +221,8 @@ class Request:
         }
         if confined is None:
             document["folder"] = str(self.folder)
+            if self.local_settings_from is not None:
+                document["local_settings_from"] = str(self.local_settings_from)
         document["limit_seconds"] = self.limit_seconds
         document["effort"] = self.effort
         if confined is not None:

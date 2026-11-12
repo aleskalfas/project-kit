@@ -113,11 +113,17 @@ def run_agent(
     folder: Path,
     limit_seconds: int,
     effort: str | None = None,
+    local_settings: bool = False,
 ) -> AgentRun:
     """Run agent `name` once on `brief`, in `folder`, within `limit_seconds`, at
-    `effort` where one is set. Never raises for what the run did: every ending
-    is in the answer. An interrupt stops the run, then propagates."""
+    `effort` where one is set. With `local_settings`, the runner first carries
+    the person's local settings into `folder` from the checkout `pkit` runs in
+    (ADR-066 point 10); which file holds them is the adapter's to know. Never
+    raises for what the run did: every ending is in the answer. An interrupt
+    stops the run, then propagates."""
     argv = [*ARGV, "--folder", str(folder), "--limit", str(limit_seconds)]
+    if local_settings:
+        argv.append("--local-settings")
     return _run(name, brief, argv, limit_seconds=limit_seconds, effort=effort)
 
 

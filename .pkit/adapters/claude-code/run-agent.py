@@ -10,9 +10,10 @@ and nowhere in a capability.
 **The request**, one JSON document on standard input: `schema_version` (1),
 `agent`, `brief`, `limit_seconds`, `effort` (a level or null), and either
 `folder` (the unconfined form, the review command's runs and a drift command's
-run a person watches, ADR-066 point 10) or `confined` (the confined form, which a
-drift command's run nobody watches takes where the harness holds it). A request that
-carries any other key is refused, never run without it.
+run a person watches, ADR-066 point 10) or `confined` (the confined form, which
+every fixer's run takes where the harness holds it). With `folder`, the request
+may carry `local_settings_from`, the person's checkout. A request that carries
+any other key is refused, never run without it.
 
 **The marker** (ADR-066 point 8). The runner refuses whenever `PKIT_AGENT_RUN`
 is in its own environment, empty included, and sets `PKIT_AGENT_RUN=1` in the
@@ -30,7 +31,9 @@ deployed, and starts `claude -p --agent <agent>`, which loads an agent the
 project wrote straight into the harness's own folder. Either way `--effort
 <level>` is passed where one is set, and the harness starts in the request's
 folder. The run takes the person's and the project's settings there, as a
-session started in that folder would. The harness gets the runner's
+session started in that folder would. Where the request names the person's
+checkout, the runner first carries their local settings from it into the
+folder (`carry_local_settings`, ADR-066 point 10). The harness gets the runner's
 environment, less the backbone's variables for its run of this runner
 (`RUN_VARIABLES`).
 
@@ -93,12 +96,25 @@ HARNESS = "claude"
 #: own environment, and sets it in the harness's. Nothing else sets or unsets it.
 MARKER = "PKIT_AGENT_RUN"
 
-#: The keys of an unconfined request. Any other key is refused.
-REQUEST_KEYS = frozenset({"schema_version", "agent", "brief", "folder", "limit_seconds", "effort"})
+#: The keys of an unconfined request, `local_settings_from` among them where
+#: the caller asks for the person's local settings. Any other key is refused.
+REQUEST_KEYS = frozenset(
+    {"schema_version", "agent", "brief", "folder", "local_settings_from", "limit_seconds", "effort"}
+)
 
-#: The keys of a confined request: the unconfined form's, without `folder`,
-#: with `confined`.
-CONFINED_REQUEST_KEYS = (REQUEST_KEYS - {"folder"}) | {"confined"}
+#: The keys of a confined request: the unconfined form's, without `folder` and
+#: `local_settings_from`, with `confined`.
+CONFINED_REQUEST_KEYS = (REQUEST_KEYS - {"folder", "local_settings_from"}) | {"confined"}
+
+#: Where Claude Code keeps the person's settings for one checkout, out of git
+#: (ADR-029 point 1): the file an unconfined run carries from the person's
+#: checkout into its folder where the request asks (ADR-066 point 10), and whose
+#: denies a confined run carries (ADR-066 point 3).
+LOCAL_SETTINGS = (".claude", "settings.local.json")
+
+#: How the runner writes the copy of the local settings: a new file, never
+#: through a link.
+NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
 
 #: The keys of a request's `confined` object, and the ones that name a folder.
 CONFINED_KEYS = frozenset(
@@ -529,6 +545,15 @@ def read_request(text: str) -> dict[str, Any]:
             or not Path(folder).is_dir()
         ):
             raise Refused(f"the folder {folder!r} is not a directory")
+        checkout = request.get("local_settings_from", "")
+        if "local_settings_from" in request and (
+            not isinstance(checkout, str)
+            or not Path(checkout).is_absolute()
+            or not Path(checkout).is_dir()
+        ):
+            raise Refused(
+                f"the checkout the local settings come from, {checkout!r}, is not a directory"
+            )
     limit = request.get("limit_seconds")
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= MAX_LIMIT_SECONDS:
         raise Refused(f"the limit {limit!r} is not from 1 to {MAX_LIMIT_SECONDS} seconds")
@@ -724,7 +749,7 @@ def left_out_settings(env: dict[str, str], working_copy: Path, project_root: Pat
         Path(config) / "settings.json",
         working_copy / ".claude" / "settings.json",
         project_root / ".claude" / "settings.json",
-        project_root / ".claude" / "settings.local.json",
+        project_root.joinpath(*LOCAL_SETTINGS),
     ]
 
 
@@ -1586,15 +1611,55 @@ def unconfined_command(
     return command(harness, RUN_AGENT_PREFIX + secrets.token_hex(8), effort, definition)
 
 
+def carry_local_settings(checkout: Path, folder: Path) -> None:
+    """Copy the person's local settings from `checkout` into the run's
+    `folder`, where the checkout has them and the folder is another (ADR-066
+    point 10). Raises `Refused` where a link lies on the way, or the copy
+    fails.
+
+    The file holds the person's settings for that machine (ADR-029 point 1):
+    the seal of the retry outside the sandbox (ADR-028), their own denies of
+    credential reads, and on macOS the exclusion of `pkit` and `uv` from the
+    sandbox (ADR-027 condition 4). A file the folder holds at that path stays
+    as the folder has it: in a clone at a commit, it is the project's. A link
+    on the way refuses the run, so the copy writes nothing outside the
+    folder. The file stays in the folder after the run, which its caller
+    owns."""
+    source = checkout.joinpath(*LOCAL_SETTINGS)
+    if _real(str(checkout)) == _real(str(folder)) or not source.is_file():
+        return
+    parent = folder / LOCAL_SETTINGS[0]
+    target = parent / LOCAL_SETTINGS[1]
+    shown = "/".join(LOCAL_SETTINGS)
+    if parent.is_symlink() or target.is_symlink():
+        raise Refused(f"the run's folder holds a symbolic link on the way to `{shown}`")
+    if os.path.lexists(target):
+        return
+    try:
+        held = source.read_bytes()
+        parent.mkdir(mode=0o700, exist_ok=True)
+        with os.fdopen(os.open(target, NEW_FILE_FLAGS, 0o600), "wb") as written:
+            written.write(held)
+    except OSError as exc:
+        raise Refused(
+            f"the local settings, `{shown}`, cannot be copied into the run's folder: "
+            f"{exc.strerror or exc}"
+        ) from None
+
+
 def run_unconfined(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
     """Run an unconfined request, and answer how it ended. The limit counts from
-    here, so the pick and the check of the definition count against it."""
+    here, so the pick and the check of the definition count against it. The
+    person's local settings are carried in last before the harness starts, so
+    a run refused before then writes nothing in its folder."""
     deadline = time.monotonic() + request["limit_seconds"]
     harness = find_harness(env)
     folder = Path(request["folder"])
     argv = unconfined_command(
         harness, request["agent"], folder, request.get("effort"), env, deadline
     )
+    if "local_settings_from" in request:
+        carry_local_settings(Path(request["local_settings_from"]), folder)
     try:
         process = subprocess.Popen(
             argv,

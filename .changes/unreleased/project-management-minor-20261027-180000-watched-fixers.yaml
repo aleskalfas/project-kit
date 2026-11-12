@@ -11,11 +11,15 @@ body: >
   unconfined form, as `review-pr` runs its reviewers: in a clone of the
   default branch's commit made for that fixer, with a git folder of its own
   and no remote, under your settings and the project's, and Ctrl-C stops the
-  run. Your checkout's `.claude/settings.local.json`, which holds your own
-  settings for that machine, is copied into the clone, and no other file of
-  your checkout reaches it. The fixer that runs is the commit's: the backbone runs the runner the
-  clone registers, which picks a shipped fixer's definition there, so this
-  needs the backbone this release ships. Where your project keeps its
+  run. Your checkout's local settings, which hold your own settings for that
+  machine, are copied into the clone, and no other file of your checkout
+  reaches it: the command asks for them with `pkit agents run
+  --local-settings`, and your adapter's runner, which knows the file, copies
+  it, such as Claude Code's `.claude/settings.local.json`. A runner that
+  does not take the option's request refuses the run, so the adapter must be
+  the one this release ships. The fixer that runs is the commit's: the
+  backbone runs the runner the clone registers, which picks a shipped fixer's
+  definition there. So this needs the backbone this release ships. Where your project keeps its
   deployed agents out of git, the run of a fixer that no place of the
   methodology ships, such as one your project wrote straight into the
   harness's own folder, is refused. The command copies each fixer's workspace

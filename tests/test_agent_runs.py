@@ -11,6 +11,9 @@
 - a run whose folder is a project's root, such as a clone at a commit, runs the
   runner that project registers, so a shipped agent's definition is that
   project's;
+- asked for the person's local settings, the request names the project the
+  command runs in as the checkout they come from, and a confined run takes
+  none;
 - the runner's answer is read strictly: another version, a finished run with no
   exit, or a runner that exits without an answer is a run with no answer, and
   one that cannot start did not start;
@@ -307,6 +310,11 @@ def test_the_copies_across_the_three_layers_agree() -> None:
         ({"effort": "bypass"}, "effort 'bypass'"),
         ({"commit": "0" * 40}, "never both"),
         ({"folder": None}, "all three"),
+        ({"local_settings_from": Path("relative")}, "the local settings come from"),
+        (
+            {"folder": None, "local_settings_from": Path("/"), "commit": "0" * 40},
+            "takes no local settings",
+        ),
     ],
 )
 def test_a_request_with_a_problem_is_refused_before_any_runner(
@@ -553,6 +561,34 @@ def test_the_request_reaches_the_runner_on_standard_input(
         "limit_seconds": 40,
         "effort": "high",
     }
+    # Asked for the person's local settings, the request names the checkout
+    # they come from; the runner knows which file holds them (ADR-066 point 1).
+    run_agent(root, _request(tmp_path, local_settings_from=root))
+    assert json.loads(seen.read_text(encoding="utf-8"))["local_settings_from"] == str(root)
+
+
+def test_the_local_settings_come_from_the_project_the_command_runs_in(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_adopter_repo().root
+    seen = tmp_path / "request.json"
+    _sole_runner(
+        root,
+        "import json, sys\n"
+        f"open({str(seen)!r}, 'w').write(sys.stdin.read())\n"
+        "print(json.dumps({'schema_version': 1, 'ending': 'finished', 'exit_code': 0}))\n",
+    )
+    folder = tmp_path / "clone"
+    folder.mkdir()
+    monkeypatch.chdir(root)
+    result = CliRunner().invoke(
+        main,
+        ["agents", "run", AGENT, "--folder", str(folder), "--local-settings", "--limit", "5"],
+        input="Go.",
+    )
+    assert result.exit_code == 0, result.output
+    request = json.loads(seen.read_text(encoding="utf-8"))
+    assert Path(request["local_settings_from"]).resolve() == root.resolve()
 
 
 def test_a_runner_that_exits_without_an_answer_is_no_answer(
@@ -703,6 +739,19 @@ def test_a_usage_error_exits_2(
     root = make_adopter_repo().root
     result = CliRunner().invoke(main, ["agents", "run", *args, "--folder", str(root)], input=brief)
     assert result.exit_code == 2, result.output
+
+
+def test_local_settings_go_only_with_a_folder(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    """A confined run loads none of the person's settings (ADR-066 point 3)."""
+    make_adopter_repo()
+    confined = ["--commit", "0" * 40, "--rules-of", "a:b", "--files-to", str(tmp_path)]
+    result = CliRunner().invoke(
+        main, ["agents", "run", AGENT, *confined, "--local-settings", "--limit", "5"], input="Go."
+    )
+    assert result.exit_code == 2, result.output
+    assert "--local-settings goes only with --folder" in result.output
 
 
 def test_sigterm_stops_the_runner_and_its_harness(
