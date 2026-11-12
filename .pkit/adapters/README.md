@@ -21,6 +21,7 @@ pkit:
         - src/project_kit/harness_support.py
         - src/project_kit/install.py
         - src/project_kit/loaded_rules.py
+        - src/project_kit/permissions.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
@@ -86,7 +87,7 @@ The scripts:
 Beside its scripts, an adapter states what its harness does in declarations: data files of fixed names in its folder. The backbone's commands read them and run none of the adapter's code:
 
 - **Its support declaration,** `harness-support.yaml`: how far its harness meets each harness requirement the core declares ("Harness requirements" below). It detects, and never drives what a command does (COR-047).
-- **Its enforcement declaration,** `permission-enforcement.yaml`: where its harness enforces each dimension of the permission model (COR-028 point 3), which `pkit permissions diff` reads.
+- **Its enforcement declaration,** `permission-enforcement.yaml`: where its harness enforces each dimension of the permission model (COR-028 point 3). `pkit permissions diff` reads the declaration of each adapter the backbone manifest registers, in that adapter's folder, and names each dimension one declares enforced `none`. Where more than one adapter is registered, it names each such dimension under its adapter's name. It names a registered adapter that has no declaration, or one that declares no dimension, as declaring nothing, never as enforcing every dimension.
 - **Its declaration of tool access,** `tool-access.json`: its harness's terms for an agent's tool access. An adapter that deploys agents declares it (below).
 
 How its harness reaches a capability's rules is a key of its `package.yaml`, `loaded_rules:` ("How a capability's rules reach a session" below).
@@ -205,7 +206,7 @@ So the report gives no `satisfied` result until a pass can read what the harness
 
 The layer **detects**; it does not alter the harness's configuration or duplicate a harness-owned value into methodology state. It runs on demand, never on a per-operation path. `pkit validate` checks each declaration against its schema, and warns on an answer to a requirement the core does not declare, one that was retired or is newer than this backbone. The code is `src/project_kit/harness_support.py`.
 
-**The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
+**The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads each registered adapter's ("What an adapter declares as data" above; [the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
 **Status.** The requirement set holds six entries:
 
