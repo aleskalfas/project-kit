@@ -20,8 +20,8 @@ A person started it when standard input and standard output are both
 terminals, the test the fixers question uses (`fixer_cli.at_a_terminal`). An
 agent's session, such as the project manager's after a merge, has no terminal,
 so no fixer starts there: the command lists what went stale, with the fixer
-that would take it, and the command a person runs at a terminal (DEC-056
-point 3). No flag stands in for the terminal, since an agent passes a flag as
+that would take it, and the command a person runs at a terminal (DEC-069
+point 1). No flag stands in for the terminal, since an agent passes a flag as
 easily as a person does.
 
 What a run does, in order (`_lib/drift.py` holds each step):
@@ -98,7 +98,8 @@ def _parser() -> argparse.ArgumentParser:
         description=(
             "Start each granted fixer on the artefacts the default branch left out of date, "
             "watched by the person who started this at a terminal, and gather its proposals "
-            "(DEC-056 points 3 to 6). With nobody at a terminal, list them and start no fixer."
+            "(DEC-056 points 3 to 6). With nobody at a terminal, list them and start no fixer "
+            "(DEC-069 point 1)."
         ),
     )
     parser.add_argument(
@@ -185,7 +186,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     if not fixer_cli.at_a_terminal():
         # Nobody to watch: no fixer starts and the queue is only read, so no lock
-        # is taken, and a person's run never stops this one (DEC-056 point 3).
+        # is taken, and a person's run never stops this one (DEC-069 point 1).
         return _run(args, bounds, capability_root, repo_root, queue, contract, watched=False)
     try:
         with drift_queue.lock(queue):
@@ -348,9 +349,9 @@ def _print_plan(plan: drift.Plan, *, watched: bool) -> None:
 
 def _print_not_started() -> None:
     """Why no fixer starts with nobody at a terminal, and the command a person
-    runs to start them (DEC-056 point 3)."""
+    runs to start them (DEC-069 point 1)."""
     print(
-        "no fixer started: nobody is at a terminal to watch the fixers (DEC-056 point 3).\n"
+        "no fixer started: nobody is at a terminal to watch the fixers (DEC-069 point 1).\n"
         f"  To start them, run at a terminal: {fixers.COMMAND} {drift.VERB}"
     )
 
