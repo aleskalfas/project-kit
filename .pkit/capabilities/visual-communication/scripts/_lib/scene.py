@@ -15,6 +15,15 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   Each line holds its text, its width, its baseline below its top, its paragraph, and
   its spans: each the part of one run of its paragraph that lies on it, with its width
   (DEC-012 points 4 and 7).
+- **A run's sign and ground** (DEC-036 point 3). A run whose text part chooses them holds
+  `sign: true` and its `ground`, a role, each with its source. A span holds the sign
+  before its text, `sign`: its run's concept's outline, `d` and `fill-rule`, mapped into a
+  square as wide as the run's font size, `size`, the square's top below the line's top,
+  `top`, and the gap after it, `gap`. It holds the ground behind it, `ground`: the top and
+  the height of the ground's piece on the line, the radius of the ground's corners, `rx`,
+  and the room before the span where the ground starts at it, `start`, and after it where
+  the ground ends there, `end`. A span moves the pen by its room, its sign and gap, and
+  its width, and a line's width counts them all.
 - **An image** is drawn whole, centred, as large as its frame allows (`FIT`). One of a
   produced output holds the output, its variants by key and its exposed points, mapped into
   the image's frame. One of a picture file holds the file's bare name, `file`, and where it
@@ -87,6 +96,7 @@ from _lib.layout import (
     DRAWING_MISFIT,
     ENDS,
     ENDS_OF_LINE,
+    GROUND_CORNER,
     TOLERANCE,
     Choice,
     Component,
@@ -94,12 +104,13 @@ from _lib.layout import (
     Facts,
     Instance,
     Node,
+    Part,
     Sizes,
     TextRun,
     place_top,
     source_of_choice,
 )
-from _lib.text import MEASURED, Broken, paragraphs
+from _lib.text import MEASURED, Broken, Span, paragraphs
 
 #: Lengths are rounded to this many decimal places of a px.
 PLACES = 2
@@ -497,6 +508,9 @@ class _Emitter:
             ],
             ENGINE,
         )
+        corner = None
+        if any(span.ground is not None for line in broken.placed for span in line.spans):
+            corner = self.ctx.attempt(lambda: self.ctx.role_number(GROUND_CORNER), 0.0)
         lines = [
             {
                 "text": line.text,
@@ -504,7 +518,7 @@ class _Emitter:
                 "baseline": length(line.baseline),
                 "paragraph": line.paragraph,
                 "spans": [
-                    {"run": span.run, "text": span.text, "width": length(span.width)}
+                    self._span(span, node.runs[split[line.paragraph][span.run][0]], corner)
                     for span in line.spans
                 ],
             }
@@ -532,29 +546,65 @@ class _Emitter:
             element.set("overflow", True, ENGINE)
             self._overflow(element, instance, node, broken)
 
+    @staticmethod
+    def _span(span: Span, run: TextRun, corner: float | None) -> dict[str, Any]:
+        """A span of a line as the scene holds it: its run's place among its paragraph's
+        runs, its text and its width; with the sign before its text, its run's concept's
+        outline mapped into a square as wide as the run's font size, and the ground behind
+        it, each where it has one, with the room the engine gave them (DEC-036 point 3)."""
+        held: dict[str, Any] = {"run": span.run, "text": span.text, "width": length(span.width)}
+        sign, ground = span.sign, span.ground
+        if sign is not None and run.outline is not None:
+            held["sign"] = {
+                "d": run.outline.mapped(0.0, 0.0, sign.size, sign.size),
+                "fill-rule": run.outline.fill_rule,
+                "size": length(sign.size),
+                "top": length(sign.top),
+                "gap": length(sign.gap),
+            }
+        if ground is not None:
+            held["ground"] = {
+                "top": length(ground.top),
+                "height": length(ground.height),
+                "rx": length(corner or 0.0),
+            }
+            if ground.start is not None:
+                held["ground"]["start"] = length(ground.start)
+            if ground.end is not None:
+                held["ground"]["end"] = length(ground.end)
+        return held
+
+    @staticmethod
+    def _chosen(instance: Instance, part: Part, run: TextRun, prop: str) -> str:
+        """Where the text `part`'s choice of `prop` for `run` comes from: the run's word,
+        where it chooses by the run styles, else the option or the size that chose it, else
+        its component."""
+        raw = part.props.get(prop)
+        _, _, chosen = instance.pick(f"parts.{part.name}.text.{prop}", raw, run.word)
+        if chosen and chosen in instance.component.runs:
+            return run.word_source
+        return source_of_choice(chosen) if chosen else f"default:{instance.component.use}"
+
     def _run(self, instance: Instance, node: Node, run: TextRun, text: str) -> dict[str, Any]:
         """A run of a text as the scene holds it, within one paragraph: its part of the
         run's text, its typography role and font properties, its paint, the font files
         that measured its text, how it was measured, and the source of each (DEC-012
-        points 3, 4 and 7)."""
+        points 3, 4 and 7); and, where its part chooses them for it, that it draws its
+        concept's sign, and its ground, a role (DEC-036 point 3)."""
         style, part = run.style, node.part
-        _, _, chosen = instance.pick(
-            f"parts.{part.name}.text.style", part.props.get("style"), run.word
-        )
-        if chosen and chosen in instance.component.runs:
-            style_source = run.word_source
-        else:
-            style_source = (
-                source_of_choice(chosen) if chosen else f"default:{instance.component.use}"
-            )
         role = f"role:{style.role}"
         held: dict[str, Any] = {"text": text}
-        sources = {"text": run.source, "style": style_source}
+        sources = {"text": run.source, "style": self._chosen(instance, part, run, "style")}
         fill, fill_source = self.ctx.attempt(
             lambda: instance.paint(part.name, "fill", run), (None, "")
         )
         if fill is not None:
             held["fill"], sources["fill"] = fill, fill_source
+        if instance.run_sign(part.name, run) is not None:
+            held["sign"], sources["sign"] = True, self._chosen(instance, part, run, "sign")
+        ground, ground_source = instance.run_ground(part.name, run)
+        if ground is not None:
+            held["ground"], sources["ground"] = ground, ground_source
         held["style"] = style.role
         held["font-family"], sources["font-family"] = list(style.families), role
         held["font-size"], sources["font-size"] = length(style.size), role

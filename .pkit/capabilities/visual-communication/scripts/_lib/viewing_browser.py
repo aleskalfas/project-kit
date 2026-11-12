@@ -246,13 +246,16 @@ READ = """async (marks) => {
   }));
 }"""
 
-#: The document as the ink read sees it: the layers hidden, on one ground, and of the spans
-#: only the one that carries `ALONE_MARK`, which keeps its own paint.
+#: The document as the ink read sees it: the layers and the runs' signs hidden, every span's
+#: ground taken away, on one ground, and of the spans only the one that carries
+#: `ALONE_MARK`, which keeps its own paint. So only a span's letters leave ink.
 GROUND = """(marks, ground, alone) => {
   const style = document.getElementById(alone) || document.createElement('style');
   style.id = alone;
   style.textContent = `
-    [${marks.layer}], [${marks.span}]:not([${alone}]) {visibility: hidden !important}
+    [${marks.layer}], [${marks.sign}], [${marks.span}]:not([${alone}]) {
+      visibility: hidden !important}
+    [${marks.span}] {background: none !important}
     html, body, [${marks.page}] {background: ${ground} !important}`;
   document.head.append(style);
 }"""
@@ -987,7 +990,8 @@ BESIDE = "beside.png"
 @dataclass(frozen=True)
 class _Planted:
     """A span of the planted page, with what it looks like. Under forced colours, a span with no
-    paint is kept out of forcing unless it is `forced`."""
+    paint is kept out of forcing unless it is `forced`. A `marked` span draws a run's sign and
+    ground, inked, which are no ink of its letters (DEC-036 point 3)."""
 
     text: str
     family: str = HELD
@@ -995,6 +999,7 @@ class _Planted:
     colour: str = "#000000"
     left: int = 8
     forced: bool = False
+    marked: bool = False
 
 
 #: A span's paint where it has none, the text a later box lies over, and the text whose
@@ -1013,6 +1018,7 @@ PLANTED_TEXTS: Mapping[str, tuple[tuple[_Planted, ...], ...]] = {
         (_Planted("below"),),
     ),
     "no-paint-beside": ((_Planted("painted "), _Planted("beside", colour=UNPAINTED)),),
+    "no-paint-marked": ((_Planted("marked", colour=UNPAINTED, marked=True),),),
     "off-the-page": ((_Planted("away", left=4000),),),
     "face-left-out": ((_Planted("left out", family=LEFT_OUT),),),
     "face-broken": ((_Planted("broken", family=BROKEN),),),
@@ -1090,6 +1096,7 @@ PLANTED_FINDINGS = frozenset(
         (NO_INK, "no-paint-alone", "alone"),
         (NO_INK, "no-paint-between", "between"),
         (NO_INK, "no-paint-beside", "beside"),
+        (NO_INK, "no-paint-marked", "marked"),
         (OFF_THE_PAGE, "off-the-page", "away"),
         (NO_FACE, "face-left-out", LEFT_OUT, "400"),
         (NO_FACE, "face-broken", BROKEN, "400"),
@@ -1367,13 +1374,25 @@ def _planted_line(spans: Sequence[_Planted], top: int, forced: bool = False) -> 
 
     def style(span: _Planted) -> str:
         kept = forced and span.colour == UNPAINTED and not span.forced
+        ground = f";background:#000000;padding:0 {_share(2)}" if span.marked else ""
         return (
             f"font-family:{span.family};font-size:{_share(14)};font-weight:{span.weight};"
-            f"color:{span.colour}{';' + KEPT_OUT if kept else ''}"
+            f"color:{span.colour}{ground}{';' + KEPT_OUT if kept else ''}"
+        )
+
+    def sign(span: _Planted) -> str:
+        if not span.marked:
+            return ""
+        size = _share(14)
+        return (
+            f'<svg {MARKS["sign"]}="" viewBox="0 0 14 14" aria-hidden="true" '
+            f'style="width:{size};height:{size};margin-right:{_share(4)}">'
+            '<path d="M 0 0 L 14 0 L 14 14 L 0 14 Z" fill="#808080"/></svg>'
         )
 
     drawn = "".join(
-        f'<span {MARKS["span"]} style="{style(span)}">{span.text}</span>' for span in spans
+        f'<span {MARKS["span"]} style="{style(span)}">{sign(span)}{span.text}</span>'
+        for span in spans
     )
     place = f"top:{_share(top + ROW - STRUT)}"
     strut = f'<span {MARKS["strut"]} style="height:{_share(STRUT)}"></span>'

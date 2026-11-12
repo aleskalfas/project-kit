@@ -459,7 +459,9 @@ def test_a_brand_built_on_another_reads_over_its_base(edition: Any) -> None:
     assert edition.findings == ()
     assert edition.open == ("accent",)
     assert edition.opened == {"accent"}
-    assert edition.base.opened == {"accent", "space.1", "space.2", "space.3", "space.4"}
+    # The base opens the group `space`, so each of its roles, those of a run's sign and ground
+    # among them (DEC-036 point 3).
+    assert edition.base.opened == {"accent", "space.1", "space.2", "space.3", "space.4", *MARKS}
     assert edition.axes == edition.base.axes
     assert edition.roles == edition.base.roles
 
@@ -671,10 +673,14 @@ DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop"
 RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
 
 #: The shared roles the foundations being built add to their release 1.0.0, each with the role
-#: its default aliases (DEC-022 points 3 and 5, DEC-004 point 7).
+#: its default aliases (DEC-022 points 3 and 5, DEC-036 point 3, DEC-004 point 7).
 SITE = tokens.Role("size.site", "dimension", "size.slide")
 LINE = tokens.Role("size.line", "dimension", "size.figure")
-ADDED = {"size.site": SITE, "size.line": LINE}
+MARKS = {
+    path: tokens.Role(path, "dimension", "space.1")
+    for path in ("space.sign-gap", "space.ground-room", "space.ground-corner")
+}
+ADDED = {"size.site": SITE, "size.line": LINE, **MARKS}
 
 PHONE = "tokens/phone.tokens.json"
 
@@ -689,13 +695,14 @@ def released() -> Any:
     return tokens.read_declarations(RELEASED_FOUNDATIONS / "roles.yaml")
 
 
-def test_the_foundations_being_built_add_the_size_axis_device_and_two_roles_alone(
+def test_the_foundations_being_built_add_the_size_axis_device_and_their_roles_alone(
     foundations: Any, released: Any
 ) -> None:
     """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
     (DEC-021 point 1). `size.site`, a dimension whose default is `size.slide` (DEC-004
-    point 7), and `size.line`, the length of a line, whose default is `size.figure` (DEC-022
-    point 5). Every other declaration is their release 1.0.0's."""
+    point 7), `size.line`, the length of a line, whose default is `size.figure` (DEC-022
+    point 5), and the lengths of a run's sign and ground, each of whose defaults is
+    `space.1` (DEC-036 point 3). Every other declaration is their release 1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
@@ -768,7 +775,8 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     release 1.0.0, and a piece cannot name `device` in either (DEC-021 point 2). It gains
     the roles the foundations add, each at the value of the role its default aliases: the
     site at its slide's width, a line at its figure's (DEC-022 points 3 and 5, DEC-004
-    point 7)."""
+    point 7), and a run's sign's and ground's lengths at its smallest space (DEC-036 point
+    3)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings

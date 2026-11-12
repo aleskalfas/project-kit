@@ -32,6 +32,12 @@ point 7).
   its run's font, size and paint (DEC-012). Each span is shaped again with HarfBuzz from
   the committed file, in pieces of one font each, as the engine shaped it (DEC-005 point
   4), and its glyphs are placed at the advances shaped.
+- **A run's sign and ground** (DEC-036 point 3) take the room the engine gave them beside
+  the span's text, which the line's width, its anchor and each span after them count. Each
+  piece of a ground is drawn behind the text in its role, its corners rounded where the
+  ground starts and ends and square where a line breaks it, and each sign is its outline,
+  moved to its square, filled by its rule in its run's paint. A sign that holds no such
+  outline is refused, and left out.
 - **A line**, or a tie's connector through each of its points, is stroked as the SVG
   renderer strokes it; an arrowhead is the triangle it draws, five strokes long, its tip
   at the line's end, in the line's stroke. A line that holds neither its ends nor its
@@ -81,7 +87,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 from _lib import pictures, png
-from _lib.canvas import shows, unshown
+from _lib.canvas import Placed, ground_path, marked, placed, room, shows, unshown
 from _lib.plugins import seam
 from _lib.plugins.pdf_declaration import DECLARATION
 
@@ -770,31 +776,70 @@ class _Document:
         step = float(element["line-height"])
         paragraphs = element.get("paragraphs") or [[{}]]
         parts: list[Part] = []
+        marks: list[Part] = []
         look = _Look()
         for index, line in enumerate(element.get("lines", [])):
             runs = paragraphs[line.get("paragraph", 0)]
-            pieces = []
-            for span in line.get("spans", []):
-                run = runs[span["run"]]
-                pieces += [
+            spans = [(span, runs[span["run"]]) for span in line.get("spans", [])]
+            shaped = [
+                [
                     (run, face, font, glyphs)
                     for face, font, glyphs in self._pieces(element, run, span["text"])
                 ]
-            total = sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for span, run in spans
+            ]
+            widths = [
+                sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for pieces in shaped
+            ]
+            total = sum(widths) + sum(room(span) for span, _ in spans)
             pen = at - {"middle": total / 2, "end": total}.get(anchor, 0.0)
             baseline = y + float(line["baseline"]) + index * step
-            for run, face, font, glyphs in pieces:
-                # A piece with no font is left out, and keeps its place in the line.
-                if font is not None:
-                    size = float(run.get("font-size", 0))
-                    paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
-                    parts.append(look.change(self, font, size, paint))
-                    parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
-                    parts.append(_Shown(font, glyphs, size))
-                pen += _advance(face, glyphs, run)
+            where = placed(spans, pen, widths) if marked(line) else None
+            if where is not None:
+                marks += self._marks(element, baseline - float(line["baseline"]), where)
+            for place, pieces in enumerate(shaped):
+                if where is not None:
+                    pen = where.starts[place]
+                for run, face, font, glyphs in pieces:
+                    # A piece with no font is left out, and keeps its place in the line.
+                    if font is not None:
+                        size = float(run.get("font-size", 0))
+                        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+                        parts.append(look.change(self, font, size, paint))
+                        parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
+                        parts.append(_Shown(font, glyphs, size))
+                    pen += _advance(face, glyphs, run)
         if not any(isinstance(part, _Shown) for part in parts):
-            return []
-        return ["q BT\n", *parts, "ET Q\n"]
+            return marks
+        return [*marks, "q BT\n", *parts, "ET Q\n"]
+
+    def _marks(self, element: Mapping[str, Any], top: float, where: Placed) -> list[Part]:
+        """The grounds and the signs of a line whose top lies at `top`, drawn before its
+        text, so behind it (DEC-036 point 3): each piece of a ground in its role, its corners
+        rounded where the ground starts and ends, and each sign its outline, moved to its
+        square, filled by its rule in its run's paint."""
+        drawn: list[Part] = []
+        for piece in where.grounds:
+            if piece.role is not None:
+                ground = {"id": element["id"], "fill": piece.role}
+                drawn += self._shape(ground, _outline(ground_path(piece, top)))
+        for left, span, run in where.signs:
+            sign = span["sign"]
+            outline = _outline(sign["d"])
+            if outline is None:
+                self._lose(
+                    element["id"],
+                    seam.REFUSED,
+                    "a run's sign holds no outline, `d`, of moves, lines, cubic curves and closes",
+                )
+                continue
+            filled = {"id": element["id"], "fill": run.get("fill")}
+            shape = self._shape(filled, outline, even_odd=sign.get("fill-rule") == "evenodd")
+            if shape:
+                moved = f"q 1 0 0 1 {_point(left, top + float(sign['top']))} cm\n"
+                drawn += [moved, *shape, "Q\n"]
+        return drawn
 
     def _pieces(
         self, element: Mapping[str, Any], run: Mapping[str, Any], text: str

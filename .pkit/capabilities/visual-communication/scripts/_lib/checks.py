@@ -2972,10 +2972,17 @@ def _text_contrast(
         for span in spans:
             run = runs[int(span.get("run", 0))]
             span_width = float(span.get("width", 0))
+            # A run's ground and sign take room beside its text, and the ground is the fill
+            # it is measured against (DEC-036 point 3).
+            ground, sign = span.get("ground") or {}, span.get("sign")
+            at += float(ground.get("start", 0))
+            at += float(sign["size"]) + float(sign["gap"]) if sign is not None else 0.0
             stack = _under((at + span_width / 2, middle), painted)
+            if ground and run.get("ground") is not None:
+                stack = [*(stack or []), str(run["ground"])]
             if stack is None:
                 return []  # over a picture: a reviewer judges it
-            at += span_width
+            at += span_width + float(ground.get("end", 0))
             look = (run.get("fill"), run.get("font-size"), run.get("font-weight"), stack)
             if stack and look not in looks:
                 looks.append(look)
@@ -3089,7 +3096,9 @@ def _unknown_colours(
         painted = [element]
         for runs in element.get("paragraphs", []) if element.get("type") == "text" else []:
             painted.extend(runs)  # each run of a text holds its own paint (DEC-012)
-        for prop, role in [(p, each.get(p)) for each in painted for p in ("fill", "stroke")]:
+        # A run's ground is a paint too (DEC-036 point 3).
+        props = ("fill", "stroke", "ground")
+        for prop, role in [(p, each.get(p)) for each in painted for p in props]:
             if role is not None and role not in colours:
                 found.append(
                     Finding(

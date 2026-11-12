@@ -46,6 +46,13 @@ roles:
   # The length of a line of text, at most, which a web part caps its text at: a brand that
   # gives it no value caps a line at its figure's width (DEC-008 point 2).
   size.line: {type: dimension, default: '{size.figure}'}
+  # The lengths of a run's sign and ground (DEC-036 point 3): the gap between a sign and
+  # the run's first character, the room a ground leaves at each end of its span, and the
+  # radius of a ground's corners where it starts and ends. A brand that gives them no value
+  # takes its smallest space for each.
+  space.sign-gap: {type: dimension, default: '{space.1}'}
+  space.ground-room: {type: dimension, default: '{space.1}'}
+  space.ground-corner: {type: dimension, default: '{space.1}'}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}

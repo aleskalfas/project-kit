@@ -36,8 +36,11 @@ from typing import Any
 #: visual-communication DEC-025 point 7). 6 since the scene's root holds the physical size of
 #: the piece's top, which a renderer whose format has a physical page maps each page onto
 #: (visual-communication DEC-034 point 3). 7 since a scene holds a path, a concept's sign the
-#: engine mapped into its frame (visual-communication DEC-036 points 1 and 7).
-SEAM_VERSION = 7
+#: engine mapped into its frame (visual-communication DEC-036 points 1 and 7). 8 since a
+#: scene's line holds each run's sign and ground with the run's piece, and the room the
+#: engine gave them, which a renderer that sets runs at its own widths leaves too
+#: (visual-communication DEC-036 points 3 and 7).
+SEAM_VERSION = 8
 
 RENDERER = "renderer"
 PRODUCER = "producer"
