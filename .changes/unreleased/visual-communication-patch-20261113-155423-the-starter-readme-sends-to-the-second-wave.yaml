@@ -1,0 +1,9 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The starter's README, in its version being built, 1.1.0, names the starter's
+  second wave (project-kit#3129) as where a colour for each place, and the
+  other patterns and blocks, are still to come (#3131). It named the first wave
+  (project-kit#2576), which left them.
