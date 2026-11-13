@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit pm pre-check` judges `gh`'s authentication on the project's host
+  alone: the `gh.host` your config sets, else the host `gh` reaches for a
+  call that names none (`GH_HOST`, else the one host it is logged in to, else
+  github.com). Another host that fails, such as one whose keychain read times
+  out, no longer fails the check, and with it every pm operation. The
+  configured host is judged on that one line, so pre-check no longer prints a
+  second line, "`gh` authenticated against configured host". A `gh` too old
+  for `gh auth status --json` cannot list its hosts, and is judged on every
+  host, as before. The back-fill's gate judges the same host.
