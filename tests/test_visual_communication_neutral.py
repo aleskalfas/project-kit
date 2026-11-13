@@ -42,6 +42,7 @@ from tests.visual_communication_project import (
     locked_at,
     project,
     taken,
+    version_folder,
     write_list,
     yaml_text,
 )
@@ -96,10 +97,17 @@ def files_of(folder: Path) -> dict[str, bytes]:
 
 
 @pytest.fixture(scope="module")
-def brand() -> Any:
-    """The neutral brand, resolved with the foundations and the starter."""
-    scope = tokens.read_scope({"foundations": FOUNDATIONS, "starter": STARTER})
-    return tokens.read_brand(NEUTRAL, scope)
+def brand(location: Path) -> Any:
+    """The neutral brand being built, resolved with the foundations and the starter being
+    built, each read from its copy in `location`, whose folder names its version as a lock
+    does: so the brand names the foundations by their major, and gives their deck's tokens
+    values (DEC-008 point 4, DEC-035 point 7)."""
+    held = {
+        name: version_folder(location, name, taken(name, being_built=True).version)
+        for name in ("foundations", "starter", "neutral")
+    }
+    scope = tokens.read_scope({name: held[name] for name in ("foundations", "starter")})
+    return tokens.read_brand(held["neutral"], scope)
 
 
 # --- the copy, and what it names --------------------------------------------------------------
@@ -326,18 +334,22 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
 ) -> None:
     """The neutral brand being built gives the sizes of the axis `device`, which the
     foundations being built add to their release 1.0.0, and a piece that names none is
-    drawn at the default, `desktop` (DEC-021 points 2 and 9). So each reference piece of a
-    component the starter's release holds, drawn with that release, draws under it on them
-    as under the brand's release 1.0.0 on theirs, byte for byte: each preview, but for the
-    foundations' version they name, and its values, but for the role `size.site` they add,
-    which the brand gives as wide as its slide on a desktop, `size.line`, which no piece
-    that names no size reads, and those of a run's sign and ground, at its smallest space.
-    The starter being built reads roles the foundations' release does not declare, and its
-    web parts name the sizes, which that release does not declare either."""
+    drawn at the default, `desktop` (DEC-021 points 2 and 9). Their deck places its lead
+    and its visual otherwise, which the comparison takes back (`starter.DECK_PLACES`). So
+    each reference piece of a component the starter's release holds, drawn with that
+    release, draws under it on them as under the brand's release 1.0.0 on theirs, byte for
+    byte: each preview, but for the foundations' version they name, and its values, but
+    for the role `size.site` they add, which the brand gives as wide as its slide on a
+    desktop, `size.line`, which no piece that names no size reads, those of a run's sign
+    and ground, at its smallest space, and their deck's title and lead, which the brand
+    gives on a desktop in the types the deck drew them in before. The starter being built
+    reads roles the foundations' release does not declare, and its web parts name the
+    sizes, which that release does not declare either."""
     importable(monkeypatch, starter.svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", version="1.0.0")
     hold_shipped(root, "starter", being_built=False)
+    starter.with_the_releases_deck_places(root)
     released_brand = hold_shipped(root, "neutral", being_built=False).version
     assert released_brand != taken("neutral", being_built=True).version
     on_each = starter.on_each_foundations(root, brand={"neutral": released_brand})
@@ -352,19 +364,21 @@ def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combin
     brand: Any, drawn: Mapping[str, Any]
 ) -> None:
     """A piece that names no size is drawn at the brand's default size alone, in every
-    combination of its other axes (DEC-021 point 2). A web part's piece is drawn at every
-    size, so a field in error and a button that cannot be pressed reach theirs in each."""
+    combination of its other axes (DEC-021 point 2). A web part's piece is drawn at each
+    size it names, a desktop, a tablet and a phone, so a field in error and a button that
+    cannot be pressed reach theirs in each. The brand's fourth size, a projector, raises
+    only the types, and no reference piece names it."""
     measured = 0
     sizes = pl.size_axes(brand.axes)
     every = [keys.key_of(each, brand.axes) for each in brand.combinations()]
-    unsized = [
-        keys.key_of(each, brand.axes)
-        for each in brand.combinations()
-        if all(each[axis] == sizes[axis].default for axis in sizes)
-    ]
-    assert sizes and len(unsized) < len(every)
     for name, piece in drawn.items():
-        expected = every if starter.names_a_size(PIECES / name) else unsized
+        named = read(PIECES / name / "piece.yaml").get("modes") or {}
+        expected = [
+            keys.key_of(each, brand.axes)
+            for each in brand.combinations()
+            if all(each[axis] in named.get(axis, [sizes[axis].default]) for axis in sizes)
+        ]
+        assert sizes and len(expected) < len(every), name
         assert sorted(piece.keys) == sorted(expected), name
         colours = colours_of(piece)
         for served, scene in scenes_of(piece):

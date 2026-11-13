@@ -688,8 +688,9 @@ VALUE_KEYS = [
 def test_the_neutral_brand_is_written_as_css_at_a_desktops_values_losing_size_site(
     tmp_path: Path,
 ) -> None:
-    """The neutral brand gives the three sizes of `device`, and `size.site` alone changes
-    with them (DEC-022 point 3). The CSS writer spells no size axis, so it writes a
+    """The neutral brand gives the four sizes of `device`. Of the values the CSS writer
+    has a form for, `size.site` alone changes with them (DEC-022 point 3): a projector
+    raises only types, which it leaves out. It spells no size axis, so it writes a
     desktop's width, and reports the role as approximated (DEC-021 point 8)."""
     planned = neutral(tmp_path)
     assert planned.document["keys"] == VALUE_KEYS
@@ -707,15 +708,16 @@ def test_the_neutral_brand_is_written_as_css_at_a_desktops_values_losing_size_si
 
 
 def test_the_neutral_brand_written_as_json_holds_the_keys_of_device(tmp_path: Path) -> None:
+    """A site is as wide on a projector as on a desktop, where a slide keeps its width."""
     planned = neutral(tmp_path, writer="json", out=JSON_OUT)
-    sizes = ["device.tablet", "device.phone"]
+    sizes = ["device.tablet", "device.phone", "device.projector"]
     assert set(planned.document["keys"]) == {
         "+".join(part for part in (key, size) if part != "default") or "default"
         for key in VALUE_KEYS
         for size in ("default", *sizes)
     }
     site = planned.document["tokens"]["size.site"]["values"]
-    assert [site[key]["value"] for key in ("default", *sizes)] == [1280, 768, 390]
+    assert [site[key]["value"] for key in ("default", *sizes)] == [1280, 768, 390, 1280]
     assert planned.losses == ()
 
 

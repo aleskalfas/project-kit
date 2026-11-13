@@ -1,0 +1,77 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# A slot a role opens: an opening in the role's frame, so it lies on the background inside
+# an outline, the one shape on the connect page that has one, and the one where a tie
+# lands. Its name, as pkit prints it, stands in a column of its own, so what each slot
+# asks for starts on one edge in every slot. Tinted, as the slot that proves the page's
+# lead is, it takes its concept's colour family, and its concept's sign at the end of its
+# row, as a tinted card does.
+status: experimental
+about: >-
+  A slot: an opening on the background inside an outline, or, tinted, on its colour
+  family's fill inside the family's line. It holds the slot's name in the code's type, in
+  a column of its own, and beside it what the slot asks for, in plain words. Where its
+  concept has a sign, the sign ends its row.
+
+fields:
+  type: object
+  required: [name, text]
+  properties:
+    name:
+      type: string
+      description: The slot's name, as pkit prints it.
+    text:
+      type: string
+      description: What the slot asks for, in plain words.
+      x-pkit-prose: true
+
+options:
+  # What the slot lies on: the background, or its colour family's fill.
+  fill: [plain, tint]
+
+values:
+  # The column of the names: wider than the longest name a slot on the page has.
+  name-width: "=@space.4 * 4"
+
+parts:
+  # A plain slot's outline takes the secondary text, which every brand makes legible on
+  # the background, so the outline holds 3:1 where a rule's line may be faint.
+  box:
+    box:
+      fill: {by: fill, plain: background, tint: ":colour.fill"}
+      stroke: {by: fill, plain: text-secondary, tint: ":colour.line"}
+      stroke-width: "=@stroke.thick"
+      rx: "=@space.1"
+    width: "=:width"
+    height: "=:height"
+  # The concept's sign ends the slot's row, as a card's ends its head's row, centred on the
+  # name and about as tall as its letters, so it reads beside the name as the same sign
+  # does before the name in what pkit prints. It takes the family's text, which holds 3:1
+  # on the family's fill. A slot whose family comes from no concept with a sign draws none,
+  # and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=:width - @space.3 - sign.width"
+    y: "=name.y + (name.height - sign.height) / 2"
+    width: "=name.height - @space.1"
+    height: "=name.height - @space.1"
+  # What the slot asks for steps back behind its name, which pkit prints.
+  text:
+    text: {content: text, style: type.body, fill: text-secondary}
+    x: "=@space.3 + name-width + @space.3"
+    y: "=@space.2"
+    width: "=:width - name-width - 3 * @space.3 - sign.width - min(sign.width, @space.2)"
+  # The name is centred on the first line of what the slot asks for, whose type is the
+  # taller.
+  name:
+    text:
+      content: name
+      style: type.code
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=@space.3"
+    y: "=text.y + (min(text.height, name.height + @space.1) - name.height) / 2"
+    width: "=name-width"
+
+preferred:
+  height: "=text.bottom + @space.2"

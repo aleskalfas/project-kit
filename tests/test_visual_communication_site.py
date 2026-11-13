@@ -29,7 +29,6 @@ from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
     FIXTURES,
-    FOUNDATIONS,
     TEST_BRAND,
     bound,
     copy_library,
@@ -37,6 +36,7 @@ from tests.visual_communication_project import (
     importable,
     locked_at,
     project,
+    version_folder,
     write,
     write_list,
     write_piece,
@@ -358,25 +358,31 @@ def resolver(folder: Path) -> dict[str, Any]:
 
 @pytest.mark.parametrize(
     "folder,widths",
-    [(NEUTRAL, (1280, 768, 390)), (SIZED_BRAND, (1440, 768, 320))],
+    [
+        (NEUTRAL, {"desktop": 1280, "tablet": 768, "phone": 390, "projector": 1280}),
+        (SIZED_BRAND, {"desktop": 1440, "tablet": 768, "phone": 320}),
+    ],
     ids=["neutral", "test-brand"],
 )
-def test_each_brand_gives_three_sizes_each_from_its_own_file_with_its_sites_width(
-    folder: Path, widths: tuple[int, int, int]
+def test_each_brand_gives_its_sizes_each_from_its_own_file_with_its_sites_width(
+    tmp_path: Path, folder: Path, widths: dict[str, int]
 ) -> None:
-    """Each mode of `device` but the default takes a token file of its own, and each gives
-    `size.site`: so the two brands prove a part at six widths (DEC-022 point 5)."""
+    """Each mode of `device` but the default takes a token file of its own. Each brand
+    gives `size.site` on a tablet and a phone, so the two prove a part at six widths
+    (DEC-022 point 5), and the neutral brand keeps a desktop's on a projector, where a
+    slide keeps its width. The foundations being built are read from a folder that names
+    their version, as a lock does, so a brand names them by their major (DEC-008 point 4)."""
     contexts = resolver(folder)["modifiers"]["device"]["contexts"]
-    assert contexts["desktop"] == []
-    assert contexts["tablet"] == [{"$ref": "tokens/tablet.tokens.json"}]
-    assert contexts["phone"] == [{"$ref": "tokens/phone.tokens.json"}]
-    brand = tokens.read_brand(folder, tokens.read_scope({"foundations": FOUNDATIONS}))
+    assert contexts == {
+        mode: [{"$ref": f"tokens/{mode}.tokens.json"}] if mode != "desktop" else []
+        for mode in widths
+    }
+    root = project(tmp_path)
+    foundations = version_folder(root, "foundations", hold_shipped(root, "foundations").version)
+    brand = tokens.read_brand(folder, tokens.read_scope({"foundations": foundations}))
     assert brand.findings == ()
-    assert brand.axes["device"].modes == ("desktop", "tablet", "phone")
-    found = tuple(
-        brand.resolve("size.site", {"device": mode})["value"]
-        for mode in ("desktop", "tablet", "phone")
-    )
+    assert brand.axes["device"].modes == tuple(widths)
+    found = {mode: brand.resolve("size.site", {"device": mode})["value"] for mode in widths}
     assert found == widths
 
 
@@ -630,16 +636,21 @@ def test_the_deck_and_the_figure_draw_as_before_in_every_renderer(
     the foundations being built as on their release 1.0.0, a piece that names no size draws
     byte for byte the same, in each renderer (DEC-022 point 3, DEC-021 point 2): the deck of
     the card's reference piece, in two languages and four combinations, and a figure. The
-    starter being built reads the foundations' gap after a sign, which their release lacks,
-    so the two foundations draw the starter's newest release. The starter's and the neutral
-    brand's tests draw every reference piece so in SVG."""
+    deck being built places its lead and its visual otherwise, which the comparison of the
+    foundations takes back (`starter.DECK_PLACES`). The starter being built reads the
+    foundations' gap after a sign, which their release lacks, so the two foundations draw
+    the starter's newest release. The starter's and the neutral brand's tests draw every
+    reference piece so in SVG."""
     importable(monkeypatch, svg, pdf, html)
     root = as_released_location(project(tmp_path))
-    release = starter.STARTER_RELEASE.version
-    for name in ("card", "figure"):
+    names = ("card", "figure")
+    for name in names:
         drawn = list(renders(project_of(root, name)))
         assert drawn, name
         assert list(renders(project_of(root, name, **{"test-brand": "1.1.0"}))) == drawn, name
+    starter.with_the_releases_deck_places(root)
+    release = starter.STARTER_RELEASE.version
+    for name in names:
         on_release = list(renders(project_of(root, name, starter=release)))
         assert on_release, name
         assert (

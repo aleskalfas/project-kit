@@ -1,0 +1,531 @@
+pkit_schema: visual-communication:brief
+schema_version: 1
+
+pages:
+  # Each slide states its point in its lead, so no part holds a takeaway. The goals of the
+  # first three pages are the asker's to give, and the brief holds none for them yet.
+  fits:
+    relations:
+      - text: >-
+          The order of explanation, from the lead, which is the maintainer's: decisions
+          at the top, each layer under it carrying out the decisions above it, down to
+          your code. The talk's notes add where decisions come from, on the top level's
+          band, and then what runs down and what runs back up. So the page opens on the
+          top of the pyramid and where ideas start beside it, joined by one arrow as one
+          step, runs down the levels, and then tells what runs down and what runs back up.
+        relates:
+          - visual.start
+          - visual.levels
+          - visual.down
+          - visual.up
+      - text: >-
+          The levels are in order, the decisions on top and your code at the foot. The
+          decisions govern every level under them (COR-065). The second level names the
+          working rules by what most of them do. A rule whose origin states its own
+          choice counts as a decision too (COR-065 point 1), which the talk leaves out
+          for simplicity. The order among the four
+          lower levels, from the working rules down to your code, is the talk's framing,
+          from the general to the specific, and no source states it. The order is told by
+          place and by width, the top narrowest, and by no colour, since the levels name
+          no concept.
+        relates:
+          - visual.levels
+      - text: >-
+          Ideas become decisions: where ideas start leads into the top level, and into no
+          other.
+        relates:
+          - visual.start
+          - visual.levels[decisions]
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          Five levels in a fixed order: the decisions on top govern the rest, which carry
+          them out (COR-065), and the four under them stand in the talk's order, from the
+          general to the specific. So the content is a hierarchy of rank, not a set of
+          kinds. Around it stand three notes: one that feeds the top level, and two on the
+          two directions between the levels, down and back up.
+        principle:
+          name: Name the content's structure before choosing its form; an ordered structure takes an ordered form
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual.levels
+        text: >-
+          A stepped pyramid: the levels one under another, each a step narrower than the
+          one under it, so the order reads from place and width alone, and the few
+          decisions sit on the many things that carry them out. Two other forms were
+          weighed. The starter's layers stacks equal cards, so it shows an order by place
+          only, and its notes column took a third of the width. A flow of boxes and arrows
+          reads as a process in time, which the levels are not. The starter cannot narrow
+          its levels by place, so the page draws them with a component of its own, a step
+          that narrows its box inside its frame by its place among the levels. Each level
+          holds its name alone, on one line, since a name and a gloss on each did not fit
+          at a projector's type.
+        principle:
+          name: Map an order to an ordered variable, position and size, never to hue
+          source: Jacques Bertin, Semiology of Graphics; Tamara Munzner, Visualization Analysis and Design
+      - aspect: form
+        about: visual.start
+        text: >-
+          Where ideas start stands at the top left, on the top level's band, and a
+          straight arrow runs from it along the line of reading into the top level, level
+          with both. The pyramid weighs the most, so the eye may meet the top level first,
+          and place may take it to the note first; either way it reads the note, the arrow
+          and the top level as one step, ideas becoming decisions, before it runs down the
+          levels. The arrow points the way the eye already goes.
+        principle:
+          name: Without other cues the eye starts at the top left; an arrow shows what leads to what
+          source: Cole Nussbaumer Knaflic, Storytelling with Data; Julie Heiser and Barbara Tversky, Arrows in Comprehending and Producing Mechanical Diagrams
+      - aspect: form
+        about: visual.down
+        text: >-
+          What runs down and what runs back up are two notes under where ideas start, in
+          the order the talk tells them, each opened by an arrow that points its way, so
+          the column reads top to bottom as the explanation goes on.
+        principle:
+          name: Cues that show the organisation of the material, such as pointer words and arrows
+          source: Richard Mayer, Multimedia Learning, the signalling principle
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          Under the title and the lead, the pyramid is noticed first, the page's only solid
+          shapes and its largest. Where ideas start, on the top level's band and joined to
+          it by the arrow, is read with the top level as one step, and the eye then runs
+          down the levels. Outside the pyramid, the heads of the notes on direction come
+          next, in the strong type, and their text last. The arrow is a thin line in the secondary text, so it leads
+          without competing.
+        principle:
+          name: Emphasise by de-emphasising what competes
+          source: Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          The brand's projector type: a level's name in the strong type, centred in its
+          step, and the notes in the body's size, each head in the strong type within its
+          line, so a note reads as one paragraph.
+        principle:
+          name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
+          source: Robert Bringhurst, The Elements of Typographic Style
+      - aspect: colour
+        about: visual.levels
+        text: >-
+          The levels take the neutral family turned over, its text as their ground and its
+          fill as their words, the pair the brand keeps legible, as the connect page's
+          blocks take their family. They name no concept, so they take no hue, and no hue
+          of the deck's concepts is spent on them. Shading each level by its place waits on
+          the ordered steps of a colour family (DEC-032), which the engine does not draw
+          yet; until then width and place carry the order alone.
+        principle:
+          name: Colour that means nothing is noise; the same meaning looks the same everywhere
+          source: Edward Tufte, Envisioning Information; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
+      - aspect: space
+        about: visual
+        text: >-
+          The notes take five twelfths of the width and the pyramid the rest, past the
+          brand's largest step, so the two columns read apart. The levels stand the second
+          step apart, close enough to read as one figure. Where ideas start stands the
+          largest step above the two notes on direction, and those two stand the third step
+          apart, so they read as a pair.
+        principle:
+          name: Space inside a group smaller than between groups
+          source: Robin Williams, The Non-Designer's Design Book
+  install:
+    relations:
+      - text: >-
+          The order of explanation, from the lead, which is the maintainer's: the tool is
+          installed once, then pkit is added to each project with one command, and what
+          that leaves in a project is pkit's files beside yours, of which an upgrade
+          replaces only pkit's.
+        relates:
+          - visual.panels
+          - visual.under
+      - text: >-
+          Each file in the tree is pkit's or yours, and the two are told apart by more
+          than colour.
+        relates:
+          - visual.under
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          Two steps in time, then the state they leave: a short sequence, and a tree whose
+          files fall into two kinds.
+        principle:
+          name: Name the content's structure before choosing its form
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual.panels
+        text: >-
+          The two commands stand in one terminal across the page, each with a comment
+          saying when it runs, since the install command's address is a line that only the
+          whole width holds. Checking the version and changing into the project were left
+          out: neither is in the lead's order, and the comment says where pkit init runs.
+          The two panels side by side the page had before needed one and a half times its
+          height.
+        principle:
+          name: Words that cue what is essential, and nothing extraneous
+          source: Richard Mayer, Multimedia Learning, the coherence principle
+      - aspect: form
+        about: visual.under
+        text: >-
+          Under the commands, the tree of a new project, cut to seven lines: two of
+          pkit's folders, each split into pkit's part and yours, a line for more of pkit's,
+          and two of your files. Each file opens with its concept's sign, a full circle for
+          pkit's and a ring for yours, and the legend beside the tree's top says which is
+          which, so the two kinds read without their colours. The aside on keeping pkit out
+          of the repository stands last, under the legend, with its command and one line.
+        principle:
+          name: A real artefact is the best evidence; a legend beside what it explains
+          source: Michael Alley, The Craft of Scientific Presentations; Edward Tufte, Envisioning Information
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          The page reads top to bottom in the lead's order: the commands first, across the
+          whole width, then the tree, then the legend that explains it, and the aside last
+          on its tinted ground with a bar, the mark of something beside the point.
+        principle:
+          name: Without other cues the eye starts at the top left and reads in the direction of writing
+          source: Cole Nussbaumer Knaflic, Storytelling with Data
+      - aspect: type
+        about: visual
+        text: >-
+          Commands and the tree in the code type, as a terminal prints them, at the
+          projector's 22 px; the legend and the aside in the body type.
+        principle:
+          name: Texts of one kind share face, size and weight
+          source: Robert Bringhurst, The Elements of Typographic Style
+      - aspect: colour
+        about: visual.under
+        text: >-
+          pkit's files take the notation's colour for pkit's part and yours its colour for
+          yours, as wherever the project draws them, and each also has its sign, so a
+          reader without colour, or under forced colours, still tells them apart.
+        principle:
+          name: Colour never the only signal; the same meaning looks the same everywhere
+          source: W3C, WCAG 2, success criterion 1.4.1; Jakob Nielsen, 10 Usability Heuristics
+      - aspect: space
+        about: visual
+        text: >-
+          The terminal, the tree and the right column stand the starter's gap apart, the
+          tree and the right column share a top and a foot, and the tree's comments start
+          on one column, so the page keeps few edges.
+        principle:
+          name: Few alignment edges shared across the page
+          source: Josef Müller-Brockmann, Grid Systems in Graphic Design
+  permissions:
+    relations:
+      - text: >-
+          The order of explanation, from the lead, which is the maintainer's: what the
+          project writes down as data, what the AI tool gets from it, and what a call then
+          meets. The column heads number the three steps, left to right.
+        relates:
+          - visual.rows[steps]
+      - text: >-
+          Each of the three places an agent's limits come from runs through the same three
+          steps, so a reader compares them along a row and across a column.
+        relates:
+          - visual.rows
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          Three kinds of limit, each described by the same three steps: a table of kinds
+          against steps.
+        principle:
+          name: Name the content's structure before choosing its form; facts of the same kinds in rows and columns
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual
+        text: >-
+          A matrix: a row for each kind, a column for each step, the steps numbered in their
+          heads so the order holds without arrows, in either language. Three panels of
+          prose, as the page had before, needed more height than the slide holds and hid
+          that the three kinds share their steps. The starter's table insets its rows as a
+          web page's part, so its first column would not start on the title's edge; the
+          page stacks the starter's rows on the slide's margin with a component of its own.
+          Each kind's gloss and the long form of the footer were cut to fit.
+        principle:
+          name: A table shows facts that differ along two dimensions; number the steps of an order
+          source: Edward Tufte, The Visual Display of Quantitative Information; Richard Mayer, Multimedia Learning, the signalling principle
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          The numbered heads and the kinds, in the strong type, frame the table and are
+          read first; the cells follow in the body type. The limit under the table stands
+          on the accent's bar, the deck's mark for what a claim does not cover, and the
+          footer last, in the secondary text.
+        principle:
+          name: Emphasise by de-emphasising what competes
+          source: Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          The projector's body type in the cells, the strong type in the heads, and no
+          other size, so the table reads as one block.
+        principle:
+          name: Few sizes, each clearly apart
+          source: Robert Bringhurst, The Elements of Typographic Style
+      - aspect: colour
+        about: visual
+        text: >-
+          No hue: the table names no concept, and its rules take the brand's faint line,
+          so nothing competes with the words.
+        principle:
+          name: Every mark earns its ink
+          source: Edward Tufte, The Visual Display of Quantitative Information
+      - aspect: space
+        about: visual
+        text: >-
+          The rows stand on the slide's margin, the first column on the title's edge, and
+          their rules group a row's cells without boxes.
+        principle:
+          name: Few alignment edges shared across the page
+          source: Josef Müller-Brockmann, Grid Systems in Graphic Design
+  connect:
+    relations:
+      - text: >-
+          The order of explanation, in the maintainer's words: capability 1 opens slots,
+          and capabilities 2 and 3 connect to it. So the page opens on the capability that
+          opens the slots, under the role it plays, and then on the two capabilities that
+          connect to it. Each of their arrows leads back to one of its slots, which stand
+          under it as its parts.
+        relates:
+          - visual.opener[project-management]
+          - visual.slots
+          - visual.fillers
+          - visual.ties
+      - text: >-
+          Capabilities are wired only through a role. Each link from a capability that
+          fills a slot ends at a slot of the role pkit::work-tracking, not at
+          project-management, which is shown as the capability that plays that role now.
+          So a reader sees that another capability in the same role would keep every link.
+        relates:
+          - visual.fillers
+          - visual.ties
+          - visual.slots
+          - visual.opener[project-management]
+      - text: >-
+          The slots belong to the side that needs something. The three slots are opened
+          by the capability that plays pkit::work-tracking, and read as its parts, not as
+          things of their own.
+        relates:
+          - visual.slots
+          - visual.opener[project-management]
+      - text: >-
+          Filling runs one way, from the capability that fills to the slot it fills. Any
+          capability may fill a slot: one slot takes more than one filler, as fixers takes
+          both, and one capability fills more than one slot.
+        relates:
+          - visual.ties
+          - visual.fillers
+          - visual.slots
+      - text: >-
+          The status output is the evidence for what the diagram shows, not a second
+          point: the slot fixers of pkit::work-tracking with the same two capabilities
+          bound to it, as pkit reports them in project-kit.
+        relates:
+          - visual.slots[fixers]
+          - visual.fillers
+          - visual.evidence
+    goals:
+      - >-
+        A developer who has never used pkit can say how one capability gets what it
+        needs from another: the one that needs it opens a slot under its role, and any
+        other fills that slot, naming only the role.
+      - >-
+        They can tell a role from a capability at first sight. A role is a job, such as
+        tracking the work; a capability is a package they install, such as
+        project-management, which does that job now. Each label says which of the two it
+        names, and the role's job reads in plain words, not only as pkit's id for it.
+      - >-
+        They know what each slot asks for without knowing its name: doc-check, the
+        documents a change must update; fixers, which agent mends each kind of document
+        a merge left out of date; use-cases, the use cases to plan work from. The slot's
+        name stays, as the label pkit prints.
+      - >-
+        They can say what follows for their own project: they install only the
+        capabilities they need, and a capability can be swapped for another that plays
+        the same role without changing those connected to it.
+      - >-
+        Projected, the point reads at a glance while the speaker talks. On the PDF and
+        the web page, a reader can follow each link from the capability that fills to the
+        slot it fills, and find the same wiring in what pkit status shows.
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          Three roles, each played now by one capability. pkit::work-tracking, played by
+          project-management, opens three slots. living-docs fills doc-check and fixers,
+          and software-analysis fills fixers and use-cases, as each capability's
+          package.yaml declares it and pkit status prints it in project-kit. So the content
+          is a network of fills, each from a capability to a slot, inside a containment:
+          the slots belong to the role that opens them. project-management also fills
+          doc-check itself, with its own mapping; the page leaves that fill out, since it
+          is no meeting of two capabilities, the page's point.
+        principle:
+          name: A graphic is objects in a structured space, contained in one another or linked by a connector
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual
+        text: >-
+          The role that opens slots is a frame on the left, the capability that plays the
+          role at its top and its slots one under another below it, so the story starts
+          where the eye enters: the capability that opens the slots, with its slots under
+          it as its parts, then the two capabilities that connect to it. The
+          capabilities that fill slots stand in a column on the right, and each fill is an
+          arrow from one of them to a slot. The frame says that the slots are the role's,
+          so an arrow says only who fills what, and it ends at a slot, never at
+          project-management. The arrows point left, from the filler to the slot, as
+          filling runs: after the opener the eye goes to the fillers, and their arrows lead
+          it back to the slots, so they point along the path's last step. The start is
+          marked by place, at the top left and first in the frame, and by the note beside
+          it, which says that it opens 3 slots.
+          Three other forms were weighed. The last round's nested frames, a purple frame
+          for each role around an orange block for its capability, told the two apart in
+          three channels, but spent the page's hues on kinds, so nothing was left to lead
+          the eye to the slot that proves the lead. A matrix of capabilities against slots
+          shows who fills what, but neither which way filling runs nor that the slots are
+          one role's. The starter's network centres equal columns, so the frame could
+          neither take the width its slots' words need nor stand its capability in itself,
+          nor stand the evidence under itself. So the page draws the frame, the blocks and
+          the slots with components of its own, from the brand's roles alone, and the
+          arrows and the terminal with the starter's.
+        principle:
+          name: A closed outline reads as a thing, a shape inside another as a part of it, and a line between two as a relation; an arrow's direction is not the explanation's path
+          source: Colin Ware, Information Visualization, Perception for Design; Julie Heiser and Barbara Tversky, Arrows in Comprehending and Producing Mechanical Diagrams
+      - aspect: form
+        about: visual.fillers
+        text: >-
+          Every capability, whether it fills a slot or opens one, is the same block, so a
+          reader learns it once and reads three of a kind. Its first line names the role
+          it plays by its job in plain words, such as tracking the work, and its second
+          the capability, each opened by the word for what it names, so the label says
+          which is which without colour. pkit's name for a role stands once on the page,
+          beside the block that opens the slots, since the status output under the frame
+          names that role and no other. So the note's two lines stand beside the block's
+          two: pkit's name for the role beside the role, and that it opens 3 slots beside
+          the capability that opens them. The blocks of the roles that fill hold no such
+          name, which nothing on the page would join.
+        principle:
+          name: One design learned once, and a reader never left to wonder whether two looks mean the same thing
+          source: Edward Tufte, Envisioning Information, small multiples; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
+      - aspect: form
+        about: visual.ties
+        text: >-
+          The arrows run with rounded turns, and none crosses another. Each filling block's
+          two arrows leave it at a third and at two thirds of its height, so the upper
+          block's first arrow runs level into doc-check and the lower block's last arrow
+          level into use-cases, and the two arrows into fixers each turn twice in the lane
+          between, one from above and one from below, apart from each other until they
+          land. A rounded turn lets the eye follow a line as one path. Two arrows end on
+          fixers and two leave each block, so a reader sees both that a slot takes more
+          than one filler and that a capability fills more than one slot.
+        principle:
+          name: Crossings cost a reader the most, and fewer and smoother bends help
+          source: Helen Purchase, Which Aesthetic Has the Greatest Effect on Human Understanding?; Colin Ware, Information Visualization, good continuation
+      - aspect: form
+        about: visual.slots
+        text: >-
+          Each slot says what it asks for in plain words beside its name, so a reader who
+          has never seen pkit knows what each is for, and still meets the name pkit
+          prints. The words are short enough that every slot holds one line in both
+          languages: fixers reads which agent fixes each doc, the brief's words cut to
+          what one line holds.
+        principle:
+          name: Words that cue what is essential, and nothing extraneous
+          source: Richard Mayer, Multimedia Learning, the signalling and coherence principles
+      - aspect: form
+        about: visual.evidence
+        text: >-
+          The evidence is what pkit status printed in project-kit, cut by whole lines to
+          the slot fixers and the two capabilities bound to it, the bound lines hanging
+          under the slot's line as pkit prints them. The page holds three lines under the
+          frame, so the terminal
+          opens on pkit's output rather than on the command, and a comment on its first
+          line names the command, as the install page's comments say what its tree shows.
+          It stands right under the frame whose slot it reports, so the reader finds the
+          drawing's two arrows into fixers in pkit's own words.
+        principle:
+          name: A headline asserts, and the body is its evidence
+          source: Michael Alley, The Craft of Scientific Presentations
+      - aspect: form
+        about: footer
+        text: >-
+          The limit of the page's claim is a fact of project-kit, that each of its 3 roles
+          has one capability so far, so a swap is designed and not yet shown. The page
+          states it once, in its source line, rather than in the deck's limit line as well,
+          and gives that line's room to the picture.
+        principle:
+          name: Leave out what repeats; every mark earns its ink
+          source: Edward Tufte, The Visual Display of Quantitative Information
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          Under the title and the lead, the capability that opens the slots is seen first,
+          the first solid shape at the top left, and the two that fill them read as the
+          same kind, on the right. Then comes the slot fixers, the one shape in the page's
+          bright hue, with two arrows running into it. The other slots follow, outlined on
+          the background, then the arrows. The frame of the role and the terminal are
+          quiet grounds, and what it gives you and the source line come last. Inside each
+          slot, what it asks for steps back in the secondary text behind its name, and
+          inside each block the word for what a line names stays regular, so the names
+          read first.
+        principle:
+          name: A mark that differs in one feature pops out; emphasise by de-emphasising what competes
+          source: Colin Ware, Information Visualization, Perception for Design; Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          The page takes the brand's projector type, read from across a room: the body at
+          24 px, the code a step under it, the lead at 30. pkit's names, a slot's and the
+          opening role's, are set in the code type, as pkit prints them, so the terminal's
+          words look like the drawing's. A role's job is set in the body type, as the plain
+          words it is. A capability's name is set in the strong type, the one bold level
+          under the lead, and the head of what it gives you takes it too. A command inside
+          a line of what it gives you keeps the code type.
+        principle:
+          name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
+          source: Robert Bringhurst, The Elements of Typographic Style; Robin Williams, The Non-Designer's Design Book
+      - aspect: colour
+        about: visual
+        text: >-
+          The page has one bright hue, and it marks the proof: the slot fixers takes the
+          notation's proof, its fill, its outline and its name in green, and so does the
+          slot's name in the line pkit prints for it, so the eye joins the drawing to its
+          evidence. Each capability keeps the colour family and the sign the notation
+          gives its concept, as it does wherever the project draws one: its block takes
+          the family's text colour, deep orange in light and pale in dark, and its words
+          and its hexagon the family's fill, the pair the brand keeps legible, turned over.
+          So a block stays the darkest shape in light and the lightest in dark, and its
+          hue stays deep and quiet beside the green. A plain slot's outline takes the
+          secondary text, which holds 3:1 on the background, and the arrows take it too,
+          so they step back behind the blocks. The proof is told without its colour by the
+          word fixers in both places, by the two arrows that land on it, and by the
+          notation's sign for proof, a tick, which ends the slot's row as a sign ends a
+          capability's first row, and opens the slot's line in pkit's
+          output, as a sign stands before pkit's files on the install page, so pkit's
+          printed name stays whole. So the two places still meet where the colours are the
+          reader's. A capability is told without its colour by its hexagon and the word
+          capability.
+        principle:
+          name: Colour used sparingly draws attention, and never the only signal; the same meaning looks the same everywhere
+          source: Cole Nussbaumer Knaflic, Storytelling with Data; W3C, WCAG 2, success criteria 1.4.1 and 1.4.11; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
+      - aspect: space
+        about: visual
+        text: >-
+          The frame holds its capability and its slots by its ground and by space: the
+          brand's second step in, and its slots stand the same step apart; the terminal
+          stands at least the third step under the frame, further than anything inside it, so it
+          reads as the frame's report and not as one more row. A slot holds its words the
+          third step in, as a block does, so the slots' names and the opening capability's
+          lines start on one edge. Every block takes a third of the width and the frame
+          seven twelfths, so the lane between them holds the arrows' turns. The filling
+          blocks are as tall as the opening one, and stand so that each arrow that can run
+          level does. What it gives you stands the third step under the filling blocks, and
+          the terminal's foot stands level with its last line's, so the two columns end
+          together. The frame takes no edge: one that a
+          projector keeps would have to hold 3:1, as a slot's outline does, and would then
+          vie with the slots it holds.
+        principle:
+          name: Space inside a group smaller than between groups, and few alignment edges shared across the page
+          source: Robin Williams, The Non-Designer's Design Book; Josef Müller-Brockmann, Grid Systems in Graphic Design

@@ -35,9 +35,16 @@ def problems(data: Any) -> list[str]:
     return files.shape_problems(data, "component")
 
 
-def engine_issues(data: Any) -> list[tuple[str, str, str]]:
-    """What the engine finds in a component when it reads it."""
-    return engine.Component("lab/x", data, engine.Context(FakeEnv(), "en")).issues
+def engine_issues(data: Any, use: str = "lab/x") -> list[tuple[str, str, str]]:
+    """What the engine finds in a component when it reads it as `use`."""
+    return engine.Component(use, data, engine.Context(FakeEnv(), "en")).issues
+
+
+def use_of(path: Path) -> str:
+    """The use the component file at `path` is read as: a component of the foundations as
+    its own, since only the component that declares a token reads it (DEC-035 point 3),
+    and any other as `lab/x`."""
+    return f"foundations/{path.stem}" if path.parent.parent == FOUNDATIONS else "lab/x"
 
 
 def reference() -> dict[str, Any]:
@@ -135,7 +142,7 @@ def test_the_operators_take_the_engines_settings() -> None:
 def test_the_shipped_and_fixture_components_hold_the_schema_and_the_engine(path: Path) -> None:
     data = reading.read_yaml(path)
     assert problems(data) == []
-    assert engine_issues(data) == []
+    assert engine_issues(data, use_of(path)) == []
 
 
 @pytest.mark.parametrize(

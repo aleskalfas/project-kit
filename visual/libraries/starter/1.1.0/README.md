@@ -169,7 +169,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ### `connector`
 
-- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. It routes around nothing, so a tie best joins items set apart, with nothing between them.
+- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. Its turns are drawn round, so a route with corners reads as one smooth path. It routes around nothing, so a tie best joins items set apart, with nothing between them.
 - **Source:** Yuri Engelhardt's linking by a connector.
 - **Ends:** it takes the two ends a pattern's list of ties gives it, so a pattern draws it as a tie.
 - **Options:**
@@ -189,7 +189,7 @@ The web parts draw the pages of a site (visual-communication DEC-022 point 4). E
 | `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
 | `table` | Shows facts in rows and columns | each fact needs a sentence of its own: `section` |
 
-Each web part fits every size the brand gives: a desktop, a tablet and a phone. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
+Each web part fits every size the brand gives: a desktop, a tablet, a phone and a projector. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
 
 - **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
 - **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
@@ -347,6 +347,7 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.bar` | how thick a card's or an aside's bar is | `space.1` |
 | `starter.edge` | how wide a block's edge is | `stroke.thin` |
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |
+| `starter.turn` | the radius a connector's turns are drawn round at | `space.2` |
 | `starter.type.head` | the type of a block's head and a list's head | `type.heading` |
 | `starter.type.strong` | the type of a strong run in a card's text | `type.strong` |
 | `starter.type.code` | the type of a code block's text | `type.code` |

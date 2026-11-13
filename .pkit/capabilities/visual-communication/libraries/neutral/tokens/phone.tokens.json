@@ -1,6 +1,7 @@
 {
   "$description": "The neutral's values on a phone, where they differ from a desktop's.",
   "size": {
+    "$description": "The width a site's page is laid out in on a phone.",
     "$type": "dimension",
     "site": {
       "$value": {
