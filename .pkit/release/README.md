@@ -11,6 +11,7 @@ pkit:
         - src/project_kit/versioning.py
         - src/project_kit/stranded_migrations.py
         - src/project_kit/release_candidate.py
+        - src/project_kit/candidates.py
         - src/project_kit/remote_refs.py
         - pyproject.toml
         - .changie.yaml
@@ -21,7 +22,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#3", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10"]
+      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#3", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10", "ADR-092#4", "ADR-092#7", "ADR-089#8", "ADR-063#1"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -860,6 +861,45 @@ are an interlock against a mistake, not a defence: a run on a branch runs
 that branch's `pkit` (ADR-092 point 10). Git refuses a push that would move a
 tag `origin` holds, whatever code runs, and nothing here forces a push.
 
+### Withdrawing a candidate
+
+A candidate found unfit is withdrawn by a tag of its own, never by deleting
+its tag (ADR-092 point 4). A dropped branch's candidate may otherwise stay the
+newest for good, and `pkit upgrade --pre` would keep finding it. A person
+pushes the tag `withdrawn/v<candidate>` on the candidate's commit, and says on
+its Release that it is withdrawn, and why:
+
+    git tag -a withdrawn/v<candidate> -m "<why>" 'v<candidate>^{commit}'
+    git push origin refs/tags/withdrawn/v<candidate>    # the tag alone, never forced
+
+Neither tag is moved or deleted afterwards (PRJ-016 point 5). `pkit version
+untag` refuses a candidate's tag, and its refusal names the withdrawal in its
+place. A deletion by hand lies outside, as any act write access allows. A
+later `pkit release publish-notes <candidate>` writes the notes from the
+changelog afresh, so say so on the Release again after one.
+
+What the withdrawal changes:
+
+- **`pkit upgrade --pre` passes it by,** and takes the newest release left,
+  an older candidate or a final release. A project already on the candidate
+  stays on it, since a project on a candidate moves to no other release, and
+  leaves it by leaving the testers' branch (ADR-092 point 7).
+- **`pkit pin <candidate>` warns of it,** and pins it all the same, since
+  whoever names a withdrawn candidate asked for that one.
+- **It names no install** (PRJ-004 as PRJ-016 refines it). Every reader of
+  release and candidate tags matches a tag by its full reference,
+  `refs/tags/v…`, so none takes a tag under `withdrawn/` for either: the tool
+  update's lookup of the latest release and `--pre`'s, the cut's counter, the
+  stranded-script guard's fixed version, `scripts/latest_tag.py`, which keeps
+  `latest` on the highest release, and the release workflow's search for notes
+  left unpublished. A `v*` pattern would match the tail of `withdrawn/v…` too.
+
+The withdrawal is project-kit's, and the reading of it binds every project
+that tests a candidate.
+[The CLI reference's `upgrade`](../cli/README.md#upgrade) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+gives `--pre`'s reading, and its `pin` and `version untag` give their
+messages.
+
 ### Merging the release PR — `pkit release merge <pr>`
 
 A release PR closes **no issue** — it is a release, not issue work — so the
@@ -1169,6 +1209,14 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
   Release is marked a pre-release (`--prerelease`). So GitHub never shows a
   candidate as its latest release (ADR-089 point 9). Where the clone lacks the
   tag, it says to fetch it.
+- **A candidate's notes end with how to try it,** after its section or its
+  short notes (ADR-092 point 4): on a branch of the project, left to go back;
+  by `pkit pin <candidate>`, which reaches the candidate the notes describe,
+  where `pkit upgrade --pre` takes the newest, which may be another branch's;
+  or, where `pkit pin` refuses a candidate, as a release from before
+  candidates does, by the first hop, the candidate's own upgrade through the
+  router's bypass. A move cut short goes on with the command that started it,
+  run again (ADR-089 point 8).
 - **`--dry-run`** prints the notes it would publish, and whether they are the
   whole section or the short notes, without calling `gh`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the

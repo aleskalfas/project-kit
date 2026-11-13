@@ -350,6 +350,10 @@ _TAGS = (
     "v-broken",
     "not-a-version",
     "latest",
+    # A tag under a folder names no release, however its tail reads (ADR-092 point 4).
+    "withdrawn/v9.0.0",
+    "withdrawn/v9.0.0rc1",
+    "archive/refs/tags/v9.0.0",
 )
 
 

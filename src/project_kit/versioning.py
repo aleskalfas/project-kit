@@ -406,8 +406,8 @@ def untag_version(
         raise click.ClickException(
             f"{tag} is a release candidate's tag, which is never moved or deleted, so it "
             f"names one content (ADR-092 point 4). Withdraw the candidate instead: push "
-            f"the tag withdrawn/{tag} on its commit, and say so on its Release. Nothing "
-            "was deleted."
+            f"the tag {withdrawal_tag(version)} on its commit, and say so on its Release. "
+            "Nothing was deleted."
         )
     source_repo = source_kit.parent
 
@@ -557,6 +557,17 @@ def is_candidate_version(version: str) -> bool:
     """Whether `version` is a release candidate's, `major.minor.patchrcN`: a release
     version with the suffix the release step writes for a candidate (ADR-089 point 1)."""
     return _CANDIDATE_VERSION_RE.match(version) is not None
+
+
+#: The folder of a release candidate's withdrawal tag (ADR-092 point 4).
+WITHDRAWN_FOLDER = "withdrawn/"
+
+
+def withdrawal_tag(candidate: str) -> str:
+    """The tag that withdraws the release candidate `candidate`, pushed on its commit:
+    `withdrawn/v<candidate>`. A candidate is withdrawn by it, never by deleting its own
+    tag, and neither tag is moved or deleted (ADR-092 point 4; PRJ-016 point 5)."""
+    return f"{WITHDRAWN_FOLDER}v{candidate}"
 
 
 def is_at_or_below(version: str, ceiling: str) -> bool:

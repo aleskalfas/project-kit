@@ -57,6 +57,7 @@ pkit:
         - ADR-065#8
         - ADR-092#7
         - ADR-092#9
+        - ADR-092#4
       artefact:
         - ACT-adopter
         - ACT-operator
@@ -126,6 +127,7 @@ pkit:
 
   The use case ends.
 - **1g.** The project's manifest records a release candidate, and the adopter passes `--pre`. The system asks the distribution's repository for nothing, and takes the recorded candidate for the newest release ([ADR-092 point 7](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)). Where the CLI is at another release, the system hands over to the candidate's own upgrade, run with routing switched off. That upgrade finishes a move onto the candidate cut short, or finds the project at it already.
+- **1h.** On the path of 1d, the repository holds a withdrawal tag, `withdrawn/v<candidate>`, for the newest release candidate. The system passes that candidate by, and takes the newest release left, as 1d does ([ADR-092 point 4](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#4-a-withdrawal-is-a-tag-which-pkit-upgrade---pre-passes-by-and-pkit-pin-warns-of)).
 - **3a.** The CLI is behind the latest release. The system updates the CLI and runs the upgrade again under it, as [UC-048](UC-048-install-cli.md)'s steps 6 and 7 do, unless `--no-self-update` declines ([ADR-063](../../../../../architecture/decisions/ADR-063-upgrade-updates-the-tool.md) and [REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)).
 - **3b.** The project pins a version. The system runs the upgrade under the version pin's code, and never updates the CLI. Where a newer release resolves, it hands over to that release's upgrade, then raises the version pin last ([ADR-065 point 9](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#9-a-pinned-projects-upgrade-runs-under-the-code-of-its-pin-or-of-a-newer-release)).
 - **3c.** The [router](../../../glossary.md#term-router--router) could not fetch the project's version pin, and runs the installed CLI instead. The system refuses, writes nothing, and names reconnecting, the version pin run through `uvx`, or `pkit unpin` then `pkit upgrade` ([ADR-065 point 9](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#9-a-pinned-projects-upgrade-runs-under-the-code-of-its-pin-or-of-a-newer-release)).

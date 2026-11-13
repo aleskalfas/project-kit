@@ -108,12 +108,24 @@ def _tag_output(*versions: str) -> str:
     Emits both the tag ref and its dereferenced-annotated peel (`^{}`) line, so
     the parser's `^{}` stripping is exercised.
     """
+    return _named_tag_output(*(f"v{v}" for v in versions))
+
+
+def _named_tag_output(*names: str) -> str:
+    """Fabricate `git ls-remote --tags` output for the tags of the given names, each
+    with its peel line, as `_tag_output` does."""
     sha = "0" * 40
     lines: list[str] = []
-    for v in versions:
-        lines.append(f"{sha}\trefs/tags/v{v}")
-        lines.append(f"{sha}\trefs/tags/v{v}^{{}}")
+    for name in names:
+        lines.append(f"{sha}\trefs/tags/{name}")
+        lines.append(f"{sha}\trefs/tags/{name}^{{}}")
     return "\n".join(lines) + "\n"
+
+
+def _withdrawals(*candidates: str) -> str:
+    """`git ls-remote --tags` output for each candidate's withdrawal tag,
+    `withdrawn/v<candidate>` (ADR-092 point 4)."""
+    return _named_tag_output(*(f"withdrawn/v{candidate}" for candidate in candidates))
 
 
 def test_upgrade_refuses_when_pkit_dir_missing(tmp_path: Path) -> None:
@@ -1672,15 +1684,19 @@ def test_max_released_tag_skips_the_moving_latest_tag(peeled: bool) -> None:
     ],
 )
 @pytest.mark.parametrize("peeled", [False, True], ids=["lightweight", "annotated"])
-def test_max_released_tag_reads_the_full_reference_alone(name: str, peeled: bool) -> None:
+@pytest.mark.parametrize("candidates", [False, True], ids=["latest", "pre"])
+def test_max_released_tag_reads_the_full_reference_alone(
+    name: str, peeled: bool, candidates: bool
+) -> None:
     """A tag counts only where its full reference is `refs/tags/v…`, never where its
-    tail reads as one, so a `withdrawn/` tag names no install (ADR-063 point 1 as
-    ADR-092 point 4 refines it)."""
+    tail reads as one, so a `withdrawn/` tag names no install, to the tool step's
+    lookup or to `--pre`'s (ADR-063 point 1 as ADR-092 point 4 refines it)."""
     folded = f"{'1' * 40}\trefs/tags/{name}\n"
     if peeled:
         folded += f"{'1' * 40}\trefs/tags/{name}^{{}}\n"
-    assert upgrade._max_released_tag(folded + _tag_output("1.0.0", "2.0.0")) == Version("2.0.0")
-    assert upgrade._max_released_tag(folded) is None
+    listing = folded + _tag_output("1.0.0", "2.0.0")
+    assert upgrade._max_released_tag(listing, candidates=candidates) == Version("2.0.0")
+    assert upgrade._max_released_tag(folded, candidates=candidates) is None
 
 
 def test_max_released_tag_is_none_when_only_pre_releases_are_tagged() -> None:
@@ -3971,6 +3987,57 @@ def test_pre_where_the_newest_is_a_final_release_runs_as_without_it(
     assert router.read_version_pin(installed_target) == _this_pkit()
 
 
+@pytest.mark.parametrize("pinned", [False, True], ids=["unpinned", "routed-child"])
+def test_pre_passes_a_withdrawn_candidate_by_for_the_newest_left(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    pinned: bool,
+) -> None:
+    """`pkit upgrade --pre` passes by a candidate whose withdrawal tag the source
+    lists, and hands over to the newest candidate left, from a project with no pin
+    and from a pinned project's routed child alike (ADR-092 point 4)."""
+    if pinned:
+        router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
+        monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(
+        _this_pkit(), "3.0.0rc1", "3.1.0rc2"
+    ) + _withdrawals("3.1.0rc2")
+    handed: list[tuple[str, list[str]]] = []
+
+    def _bypassed(pin: str, argv: list[str], _environ: object = None) -> int:
+        handed.append((pin, argv))
+        return 0
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _bypassed)
+
+    upgrade.run_upgrade(installed_target, pre=True)
+
+    assert handed == [("3.0.0rc1", ["upgrade"])]
+    assert router.read_version_pin(installed_target) == "3.0.0rc1"
+
+
+def test_pre_where_every_newer_candidate_is_withdrawn_runs_as_without_it(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Where each candidate above this pkit is withdrawn, the newest release left is
+    a final release, and `--pre` hands over to none (ADR-092 point 4, ADR-089 point
+    8)."""
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(
+        _this_pkit(), "3.0.0rc1", "3.1.0rc2"
+    ) + _withdrawals("3.0.0rc1", "3.1.0rc2")
+    _no_hand_over(monkeypatch, "every newer candidate is withdrawn: nothing to hand over to")
+
+    upgrade.run_upgrade(installed_target, pre=True)
+
+    assert f"Already at backbone v{_this_pkit()}" in capsys.readouterr().out
+
+
 def test_pre_whose_lookup_fails_says_so_and_runs_as_without_it(
     installed_target: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -4095,6 +4162,46 @@ def test_the_lookup_under_pre_counts_candidates_in_their_normal_form_alone() -> 
         "2.1.0"
     )
     assert upgrade._max_released_tag(_tag_output("1.0.0", "2.1.0rc2")) == Version("1.0.0")
+
+
+def test_the_lookup_under_pre_passes_a_withdrawn_candidate_by() -> None:
+    """Under `--pre`, a candidate with a withdrawal tag, `withdrawn/v<candidate>`, is
+    passed by, and the newest release left is taken: an older candidate, or a final
+    release where every candidate above it is withdrawn. The tool step's lookup,
+    which reads no candidate, is unchanged (ADR-092 point 4)."""
+    tags = _tag_output("1.0.0", "2.0.0", "2.1.0rc1", "2.1.0rc2", "2.2.0rc3")
+
+    newest = upgrade._max_released_tag(tags + _withdrawals("2.2.0rc3"), candidates=True)
+    assert newest == Version("2.1.0rc2")
+    newest = upgrade._max_released_tag(tags + _withdrawals("2.2.0rc3", "2.1.0rc2"), candidates=True)
+    assert newest == Version("2.1.0rc1")
+    every = _withdrawals("2.2.0rc3", "2.1.0rc2", "2.1.0rc1")
+    assert upgrade._max_released_tag(tags + every, candidates=True) == Version("2.0.0")
+    assert upgrade._max_released_tag(tags + every) == Version("2.0.0")
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        pytest.param("archive/withdrawn/v2.1.0rc2", id="a-withdrawal-at-its-tail"),
+        pytest.param("withdrawn/2.1.0rc2", id="no-v"),
+        pytest.param("withdrawn/v2.1.0-rc.2", id="not-the-normal-form"),
+    ],
+)
+def test_a_tag_that_only_reads_as_a_withdrawal_withdraws_nothing(name: str) -> None:
+    """A withdrawal is read from the full reference `refs/tags/withdrawn/v<candidate>`
+    alone, the candidate in its normal form, so a tag whose tail alone reads as one
+    withdraws nothing (ADR-092 point 4)."""
+    tags = _tag_output("2.0.0", "2.1.0rc2") + _named_tag_output(name)
+    assert upgrade._max_released_tag(tags, candidates=True) == Version("2.1.0rc2")
+
+
+def test_a_withdrawal_tag_withdraws_a_candidate_alone() -> None:
+    """A withdrawal is a candidate's: a tag `withdrawn/v<final release>` passes no
+    final release by (ADR-092 point 4)."""
+    tags = _tag_output("2.0.0", "2.1.0") + _withdrawals("2.1.0")
+    assert upgrade._max_released_tag(tags, candidates=True) == Version("2.1.0")
+    assert upgrade._max_released_tag(tags) == Version("2.1.0")
 
 
 def test_cli_upgrade_pre_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
