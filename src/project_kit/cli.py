@@ -109,6 +109,7 @@ if TYPE_CHECKING:
         plan_commit,
         plan_commit_line,
         publish_release_notes,
+        refuse_final_release_tag,
         release_summary,
     )
     from project_kit.scaffolds import (
@@ -180,6 +181,7 @@ else:
     plan_commit = _OnFirstUse("project_kit.release", "plan_commit")
     plan_commit_line = _OnFirstUse("project_kit.release", "plan_commit_line")
     publish_release_notes = _OnFirstUse("project_kit.release", "publish_release_notes")
+    refuse_final_release_tag = _OnFirstUse("project_kit.release", "refuse_final_release_tag")
     release_summary = _OnFirstUse("project_kit.release", "release_summary")
     register_kit_shipped_component = _OnFirstUse(
         "project_kit.scaffolds", "register_kit_shipped_component"
@@ -2994,7 +2996,14 @@ def version_promote() -> None:
 )
 @_allow_foreign_repo_option
 def version_tag(push: bool, allow_foreign_repo: bool) -> None:
-    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004).
+    """Tag the commit the last final release landed as `v<version>` (PRJ-004).
+
+    The commit is the newest at or before HEAD on the default branch's
+    first-parent history that changed .pkit/VERSION, and the version is the one
+    it records, so every way of tagging a final release tags one commit (ADR-092
+    point 6). It refuses, tagging nothing, where HEAD is off that history, where
+    that commit records no final release version, and where the tag exists
+    locally or, with `--push`, on `origin`.
 
     With `--push` the cross-repository guard runs first, before the tag is
     made: in another repository than the session's anchor's it asks at a
@@ -3110,8 +3119,8 @@ def release_plan(as_json: bool) -> None:
     "--tag",
     is_flag=True,
     default=False,
-    help="Also cut the tag now. Off by default — tag is a separate step "
-    "(`pkit version tag --push`) after the release commit lands on main.",
+    help="Refused, before anything is written: a final release is tagged once its "
+    "release PR merges, by `pkit version tag --push` on main (ADR-092 point 6).",
 )
 @click.option("--push", is_flag=True, default=False, help="With --tag, push the tag to origin.")
 @click.option(
@@ -3133,7 +3142,8 @@ def release_apply(
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
     release PR against `main` — not on every merge. Tagging is a separate,
-    anchored step by default; see `pkit version tag`.
+    anchored step, `pkit version tag`, run once the release PR merges: `--tag`
+    is refused before anything is written (ADR-092 point 6).
 
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
@@ -3159,23 +3169,13 @@ def release_apply(
     fixed version, naming a folder to move it to (ADR-092 point 8). See
     `.pkit/release/README.md`.
 
-    With `--tag --push` the tag's push changes the hosting service, so the
-    cross-repository guard runs first, before anything is written, as for
-    `version tag --push`.
-
     A release that moves a version ends by printing the trailer line naming
     the commit its plan read, `Release-plan-commit: <commit>`: commit the
     release with it, and open its PR with it in the body, so `pkit release
     merge` lands it only onto that commit (ADR-092 point 6).
     """
+    refuse_final_release_tag(tag)
     source_kit = _target_kit()
-    clearance = (
-        _cleared_at_entry(
-            source_kit.parent, allow_foreign_repo, unchanged="Nothing was written or pushed."
-        )
-        if tag and push
-        else None
-    )
     refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     _print_release_plan(plan)
@@ -3186,16 +3186,12 @@ def release_apply(
     for warning in check_raised_ranges(plan, broaden=broaden):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+        apply_release(source_kit, plan, broaden=broaden)
         return
     if not yes:
         from project_kit.project_config import confirm_at_terminal
 
-        flags = [
-            flag
-            for flag, given in (("--tag", tag), ("--push", push), ("--no-broaden", no_broaden))
-            if given
-        ]
+        flags = [flag for flag, given in (("--push", push), ("--no-broaden", no_broaden)) if given]
         rerun = shlex.join(["pkit", "release", "apply", *flags, "--yes"])
         confirm_at_terminal(
             "Write these versions and consume the changesets?",
@@ -3204,7 +3200,7 @@ def release_apply(
             "nobody confirmed it (#2003). Nothing was written. To release non-interactively, "
             f"run:\n  {rerun}",
         )
-    apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+    apply_release(source_kit, plan, broaden=broaden)
     click.echo(plan_commit_line(plan_commit(source_kit.parent)))
 
 

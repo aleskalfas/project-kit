@@ -6,12 +6,13 @@ on every kit-shipped `package.yaml` whose existing range no longer
 includes the new backbone version. Idempotent on patch bumps within
 the existing minor line; reports each broaden inline.
 
-`tag_version` automates the per-PRJ-002/-004 tag-on-bump convention:
-reads `.pkit/VERSION`, tags HEAD as `v<version>`, optionally pushes
-to `origin`. The previous workflow required the bump-commit author to
-run `git tag` + `git push` manually; this collapses both into a single
-explicit command without bundling bump + commit + tag (each stays its
-own step per COR-004's anchoring principle).
+`tag_version` tags a final release once it lands (PRJ-004; ADR-092 point 6):
+the newest commit at or before HEAD on the default branch's first-parent
+history that changed `.pkit/VERSION`, as `v<version>` from the version that
+commit records, optionally pushed to `origin`. So every way of tagging a final
+release tags the commit the release landed, whatever landed after it. It stays
+its own step, apart from the write and the commit (COR-004's anchoring
+principle).
 
 A push to `origin` — the tag's, or its deletion's — changes the hosting
 service, so it runs only with the cross-repository guard's clearance for the
@@ -69,11 +70,17 @@ from typing import Literal
 import click
 from packaging.version import Version
 
-from project_kit import session_guard
+from project_kit import default_branch, session_guard
 from project_kit.migrations import parse_version_tuple
 
 Segment = Literal["patch", "minor", "major"]
 PreKind = Literal["a", "b", "rc"]
+
+# How a message names a commit: its first twelve hex digits.
+_SHORT = 12
+
+# How long the read of `origin`'s tag may take before it counts as unread.
+_REMOTE_TIMEOUT_SECONDS = 60
 
 # Strict semver: major.minor.patch with no suffix. Used for operations
 # that should refuse pre-release versions (e.g., `unbump`, `promote`'s
@@ -892,22 +899,33 @@ def _extract_range(text: str, match_start: int) -> str:
     return text[quote_start:quote_end]
 
 
+@dataclass(frozen=True)
+class _LandedRelease:
+    """A final release the default branch landed: the commit, the version it records,
+    and the reference of the default branch it was found on."""
+
+    commit: str
+    version: str
+    ref: str
+
+
 def tag_version(
     source_kit: Path, push: bool = False, *, clearance: session_guard.Clearance | None = None
 ) -> str:
-    """Tag HEAD as `v<version>` where `<version>` is read from `.pkit/VERSION`.
+    """Tag the commit the last final release landed as `v<version>` (ADR-092 point 6).
 
-    Returns the tag name (e.g., `v1.0.0`). Raises `click.ClickException`
-    on any precondition failure (missing VERSION, invalid version, tag
-    already exists, not in a git repo). When `push=True`, also pushes
-    the tag to `origin`; that needs `clearance`, the cross-repository
-    guard's for the repository, checked before the tag is made.
+    The commit is the newest at or before HEAD on the default branch's first-parent
+    history that changed `.pkit/VERSION`, and `<version>` is the version that commit
+    records (`_landed_release`). So the release-tag workflow and a run by hand tag
+    one commit, whatever landed after the release. It refuses, tagging nothing,
+    where `_landed_release` finds no release to tag, and where the tag exists here
+    or, with `push=True`, on `origin`.
 
-    The annotation message is `"v<version>"` plus the body of the most
-    recent commit (so the tag carries a hint of what the bump was for).
+    The tag is annotated, its message `v<version>` and the tagged commit's subject.
+    With `push=True` it is pushed to `origin`; that needs `clearance`, the
+    cross-repository guard's for the repository, checked before anything is read.
 
-    Accepts pre-release versions (`v1.2.0rc1`); the tag form stays
-    `v<version>` literally per PRJ-004.
+    Returns the tag name (e.g., `v1.0.0`).
     """
     if push:
         session_guard.require(clearance, source_kit.parent)
@@ -915,33 +933,24 @@ def tag_version(
     if not version_file.is_file():
         raise click.ClickException(f"source kit has no VERSION file at {version_file}")
 
-    version = version_file.read_text(encoding="utf-8").strip()
-    if not _PEP440_RE.match(version):
-        raise click.ClickException(f"version {version!r} in {version_file} is not valid PEP 440")
-
-    tag = f"v{version}"
     source_repo = source_kit.parent
+    version_path = version_file.relative_to(source_repo).as_posix()
+    release = _landed_release(source_repo, version_path)
+    tag = f"v{release.version}"
 
-    # Refuse if the tag already exists (locally or on origin).
-    if _tag_exists_locally(source_repo, tag):
-        raise click.ClickException(
-            f"tag {tag} already exists locally. Delete it first with "
-            f"`git tag -d {tag}` if you intend to retag, or bump the version."
-        )
+    existing = _commit_of(source_repo, f"refs/tags/{tag}")
+    if existing is not None:
+        raise _untagged(f"tag {tag} already exists locally, on {existing[:_SHORT]}.")
+    if push and _tag_exists_on_origin(source_repo, tag):
+        raise _untagged(f"tag {tag} already exists on origin.")
 
-    # Build the annotation: the bump commit's subject line, or just the
-    # version if `git log` fails for any reason.
-    commit_subject = _last_commit_subject(source_repo)
-    annotation = f"{tag}"
-    if commit_subject:
-        annotation += f"\n\n{commit_subject}"
-
-    subprocess.run(
-        ["git", "tag", "-a", tag, "-m", annotation],
-        cwd=source_repo,
-        check=True,
+    subject = _git_out(source_repo, "log", "-1", "--format=%s", release.commit).strip()
+    annotation = f"{tag}\n\n{subject}" if subject else tag
+    _git_out(source_repo, "tag", "-a", tag, "-m", annotation, release.commit)
+    click.echo(
+        f"Tagged {release.commit[:_SHORT]} as {tag}: the newest commit at or before HEAD "
+        f"on {release.ref}'s first-parent history that changed {version_path}."
     )
-    click.echo(f"Tagged HEAD as {tag}")
 
     if push:
         subprocess.run(
@@ -954,6 +963,133 @@ def tag_version(
     return tag
 
 
+def _landed_release(source_repo: Path, version_path: str) -> _LandedRelease:
+    """The final release the default branch landed last, as of HEAD: the newest
+    commit at or before HEAD on the branch's first-parent history that changed
+    `version_path`, a path from `source_repo`, and the version that commit records.
+
+    The default branch is read as a standing value (COR-054 point 3), and one read
+    from the local branch is warned of. Refuses, naming why, where:
+
+    - the default branch or HEAD names no commit, or HEAD is off the branch's
+      first-parent history, so no release HEAD holds has landed there;
+    - no commit there changed `version_path`, or this clone is shallow and its
+      history stops at the one found, so an older one may have changed it;
+    - that commit records no final release version, `major.minor.patch`: a
+      candidate's tag stays on the commit its cut made (ADR-089 point 9).
+    """
+    branch = default_branch.resolve(source_repo, standing=True)
+    for said in branch.warnings:
+        click.echo(f"warning: {said}", err=True)
+    if branch.commit is None or branch.ref is None:
+        raise _untagged(
+            branch.problem or f"the default branch {branch.name!r} resolves to no commit here."
+        )
+    head = default_branch.head(source_repo)
+    if head.commit is None:
+        raise _untagged(head.problem or "HEAD names no commit yet.")
+    history = _git_out(source_repo, "rev-list", "--first-parent", branch.commit).split()
+    if head.commit not in history:
+        raise _untagged(
+            f"HEAD ({head.commit[:_SHORT]}) is off {branch.ref}'s first-parent history, so no "
+            "release it holds has landed there. A final release is tagged once its release PR "
+            f"merges: fetch {branch.ref}, check out its head, and run again."
+        )
+    where = f"at or before HEAD on {branch.ref}'s first-parent history"
+    found = _git_out(
+        source_repo, "rev-list", "--first-parent", "-n", "1", head.commit, "--", version_path
+    ).split()
+    if not found:
+        raise _untagged(f"no commit {where} changed {version_path}.")
+    commit = found[0]
+    if default_branch.is_shallow(source_repo) and not _parents(source_repo, commit):
+        raise _untagged(
+            f"this clone is shallow, and its history stops at {commit[:_SHORT]}, so an older "
+            f"commit may be the one that last changed {version_path}. Fetch the whole history "
+            "(`git fetch --unshallow`), and run again."
+        )
+    shown = _git(source_repo, "show", f"{commit}:./{version_path}")
+    version = shown.stdout.strip() if shown.returncode == 0 else None
+    if version is None or not is_release_version(version):
+        recorded = f"records {version!r}" if version is not None else f"holds no {version_path}"
+        raise _untagged(
+            f"{commit[:_SHORT]}, the newest commit {where} that changed {version_path}, "
+            f"{recorded}, which is no final release version, `major.minor.patch`. "
+            "`pkit version tag` tags final releases only."
+        )
+    return _LandedRelease(commit, version, branch.ref)
+
+
+def _untagged(reason: str) -> click.ClickException:
+    """`tag_version`'s refusal, with why: nothing is tagged."""
+    return click.ClickException(
+        f"refusing to tag a final release (ADR-092 point 6): {reason} Nothing was tagged."
+    )
+
+
+def _git(
+    source_repo: Path, *args: str, timeout: float | None = None
+) -> subprocess.CompletedProcess[str]:
+    """`git <args>` run at `source_repo`, whatever its exit status. Refuses, tagging
+    nothing, where git cannot run, or gives no answer within `timeout` seconds."""
+    try:
+        return subprocess.run(
+            ["git", *args],
+            cwd=source_repo,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise _untagged(f"`git {args[0]}` could not run ({exc}).") from exc
+
+
+def _git_out(source_repo: Path, *args: str) -> str:
+    """What `git <args>` prints, run at `source_repo`. Refuses, tagging nothing, where
+    it fails, with git's own reason."""
+    completed = _git(source_repo, *args)
+    if completed.returncode != 0:
+        raise _untagged(f"`git {args[0]}` failed (git says: {_git_said(completed)}).")
+    return completed.stdout
+
+
+def _git_said(completed: subprocess.CompletedProcess[str]) -> str:
+    """The first line git wrote on standard error, or its exit status."""
+    said = [line.strip() for line in completed.stderr.splitlines() if line.strip()]
+    return said[0] if said else f"exit status {completed.returncode}"
+
+
+def _commit_of(source_repo: Path, name: str) -> str | None:
+    """The commit `name` names here, or `None` where it names none."""
+    completed = _git(source_repo, "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}")
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
+def _parents(source_repo: Path, commit: str) -> list[str]:
+    """The parents `commit` has in this clone: none for a root commit, and none for a
+    commit where a shallow clone's history stops."""
+    return _git_out(source_repo, "rev-list", "--parents", "-n", "1", commit).split()[1:]
+
+
+def _tag_exists_on_origin(source_repo: Path, tag: str) -> bool:
+    """Whether `origin` holds the tag `tag`, by its full reference. Refuses, tagging
+    nothing, where its tags cannot be read within `_REMOTE_TIMEOUT_SECONDS`."""
+    ref = f"refs/tags/{tag}"
+    completed = _git(
+        source_repo, "ls-remote", "--tags", "origin", ref, timeout=_REMOTE_TIMEOUT_SECONDS
+    )
+    if completed.returncode != 0:
+        raise _untagged(
+            f"whether origin holds tag {tag} cannot be read: `git ls-remote` failed "
+            f"(git says: {_git_said(completed)})."
+        )
+    listed = (line.partition("\t")[2].strip() for line in completed.stdout.splitlines())
+    return ref in listed
+
+
 def _tag_exists_locally(source_repo: Path, tag: str) -> bool:
     """Return True if `tag` exists in the local git repo at `source_repo`."""
     result = subprocess.run(
@@ -964,20 +1100,3 @@ def _tag_exists_locally(source_repo: Path, tag: str) -> bool:
         check=True,
     )
     return result.stdout.strip() == tag
-
-
-def _last_commit_subject(source_repo: Path) -> str:
-    """Return the most recent commit's subject line, or '' if unavailable."""
-    try:
-        result = subprocess.run(
-            ["git", "log", "-1", "--pretty=%s"],
-            capture_output=True,
-            text=True,
-            cwd=source_repo,
-            check=False,
-        )
-    except FileNotFoundError:
-        return ""
-    if result.returncode != 0:
-        return ""
-    return result.stdout.strip()

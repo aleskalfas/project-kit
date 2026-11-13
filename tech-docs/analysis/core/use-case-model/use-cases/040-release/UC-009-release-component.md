@@ -86,7 +86,7 @@ pkit:
 10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
-> **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+> **Not built yet:** `pkit release apply` runs no such check. It writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 4. The system writes the component's new [version](../../../glossary.md#term-version--version) in the `version:` line of its `package.yaml`.
 5. The system widens the upper bound of the component's `requires_backbone` to cover the [backbone](../../../glossary.md#term-backbone--backbone) the repository carries, the one the author releases under. The system never narrows an upper bound, and moves no floor unless a changeset declares that floor (`versioning.py`).
