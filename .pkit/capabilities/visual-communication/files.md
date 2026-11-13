@@ -153,6 +153,7 @@ pkit:
         - visual-communication:DEC-020#7
         - visual-communication:DEC-021#1
         - visual-communication:DEC-021#2
+        - visual-communication:DEC-021#7
         - visual-communication:DEC-022#1
         - visual-communication:DEC-022#3
         - visual-communication:DEC-022#8
@@ -1025,7 +1026,7 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 - **Only the foundations declare axes in a `roles.yaml`.** A library of components other than the foundations declares its own roles and their pairs there, and no axis ([`roles.yaml`](#rolesyaml)). A brand's own axes lie in its Resolver document alone, since a brand's `roles.yaml` is not read.
 - **A value axis** changes only colours and pictures. A mode of a value axis that changes another value fails.
 - **Every brand has each value axis whole** (DEC-004 point 2). A mode it does not give takes its values at the axis's default. In a brand built on another, its base's values hold there.
-- **A size axis** may change any value. A brand has a shared size axis only where a modifier varies it, with the modes that modifier gives (DEC-021 point 2). A brand built on another has its base's sizes. So a brand that gives no size keeps its combinations and its written code. Each combination of a brand's own size axis's modes draws a scene of its own, as a shared one's does. A component switches only by a shared size axis, since it knows no brand's own.
+- **A size axis** may change any value. A brand has a shared size axis only where a modifier varies it, with the modes that modifier gives (DEC-021 point 2). A brand built on another has its base's sizes. So a brand that gives no size keeps its combinations and its written code. Each combination of a brand's own size axis's modes draws a scene of its own, as a shared one's does. A component switches only by a shared size axis, since it knows no brand's own (DEC-021 point 7).
 - **A piece** chooses the modes it is drawn in under its `modes`, an axis of its brand's own as any other. A mode its brand does not have fails, a size it does not give among them, and so does an axis of the brand's own after the piece's brand is switched to one that lacks it.
 - **A key stays the same when an axis with a default is added** (DEC-004 point 3). So adding an axis of its own to a brand changes none of its existing keys: its combinations at the axis's default, the names its CSS and JSON code writers write, a piece's export file names, and each picture variant's key.
 
