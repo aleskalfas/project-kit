@@ -17,4 +17,6 @@ body: >
   onto a candidate its pin does not name. The CLI reference and the lifecycle's
   upgrade flow say so. Where the router cannot run a candidate's pin, its
   notice says when the pkit it runs instead is older, as it does for a
-  release's pin.
+  release's pin. The install script refuses a candidate's pin, as it refuses
+  any pin that names no release, and its message now says it installs only a
+  release.
