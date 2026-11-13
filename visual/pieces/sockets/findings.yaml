@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 014aea866805b5e64500b7618f102da64213fb6a9672844124d3ee9af3d2fdaf
+  value: 9f76cbeff7bcdc52b7d20ee8475855f172d6219eae6dc77b27c81cbc027c8dfc
   inputs:
     - file: content.cs.yaml
       sha256: 151dbbc838ad85baf0f8703cafe19def90ec17fc6641c7f79ebdffe2cf01cdf9
@@ -103,7 +103,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 7d00c8dbd1d58fdd71f3f2a0e215a6c2c1f053af1dad6e2d6e4b8df2c9d94bff
+      sha256: d6b772aff4c51b663bcd9f3f427be2c21888a3a435729b6e39b9d63ad39dd1b6
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -191,7 +191,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/table.yaml
-      sha256: 17c7cb7ef1bd3b10f06039417e79edf02b77803c234dbc15441db61daa4918bc
+      sha256: dca1cef275ae4826bec65697c9707bdd885a3ff685691e9c4f3fe0dc83045d5a
     - library: starter
       version: 1.1.0
       path: components/tag.yaml

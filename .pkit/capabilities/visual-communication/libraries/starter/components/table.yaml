@@ -8,7 +8,8 @@ about: >-
   Facts in rows and columns: a head where the content gives one, then its rows one under
   another, each drawn by the row unless the content names another. Each row lays its cells
   side by side across the table's whole width, and the table is as tall as its rows. It
-  fills the width it is given, and sets its own inset.
+  fills the width it is given, and sets its own inset, or none, as on a slide, whose
+  margin the slide keeps.
 
 fields:
   type: object
@@ -32,9 +33,18 @@ fields:
 lists:
   rows: {component: row}
 
+options:
+  # The table's own inset, as a web page's part, or none, so its head and its rows reach
+  # the edges of the room it gets, as a slide's visual, whose margin the slide keeps.
+  inset: [own, none]
+
 values:
-  # The inset from each edge: a large spacing on a wide page, the inset on a phone.
-  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  # The inset from each edge: a large spacing on a wide page, the inset on a phone, or a
+  # length of zero where the table sets none.
+  margin:
+    by: inset
+    own: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+    none: "=0 * @starter.margin"
   inner: "=:width - margin - margin"
 
 parts:
