@@ -42,7 +42,9 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 - **What a renderer is handed** for each image, in each language and combination it draws
   (`ProjectEnv.handed`): the file it shows there and its kind, by the image's trace id
   (`seam.Shown`, DEC-025 point 7). A content's picture differs by language, so what a
-  renderer is handed is worked out from each language's scene.
+  renderer is handed is worked out from each language's scene. Its colours hold each colour
+  role's value, and each step of an order the scene paints, spread from the combination's
+  own ends (`colours_at`, DEC-032 point 5).
 - **The findings record's key** (`findings_key_sources`) is worked out here from the
   current files, under form 1.
 """
@@ -55,7 +57,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from _lib import copies, keys, layout, notations, pictures, records, tokens, values
+from _lib import colour_steps, copies, keys, layout, notations, pictures, records, tokens, values
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding
@@ -931,6 +933,9 @@ class ProjectEnv:
     def family(self, name: str) -> dict[str, str]:
         return dict(self._project.foundations.families[name])
 
+    def order(self) -> tokens.Order | None:
+        return self._project.foundations.order
+
     def concept(self, name: str) -> str | None:
         notation, concept = self._notation(name)
         try:
@@ -1074,6 +1079,9 @@ class LibraryEnv:
 
     def family(self, name: str) -> dict[str, str]:
         return dict(self._scope.families[name])
+
+    def order(self) -> tokens.Order | None:
+        return self._scope.order
 
     def concept(self, name: str) -> str | None:
         raise UnknownConcept(name, "no piece names a notation where a library is checked alone")
@@ -1621,6 +1629,10 @@ class _FitEnv:
     def family(self, name: str) -> dict[str, str]:
         raise KeyError(name)
 
+    def order(self) -> tokens.Order | None:
+        """None: an order's steps colour its places, and change no item's place."""
+        return None
+
     def concept(self, name: str) -> str | None:
         raise UnknownConcept(name, "no notation stands behind the fit of versions")
 
@@ -1635,13 +1647,21 @@ class _FitEnv:
 # --- drawing ------------------------------------------------------------------------------------
 
 
-def colours_at(document: Mapping[str, Any], key: str) -> dict[str, Any]:
-    """The value of each colour role of a values document in the combination `key`."""
-    return {
+def colours_at(
+    document: Mapping[str, Any], key: str, scene: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    """The value of each colour role of a values document in the combination `key`; and,
+    given a `scene` (`Scene.to_dict()`), of each step of an order it paints, by the step's
+    name, spread from that combination's own ends. A step's value comes with the scene,
+    never from the document (DEC-032 point 5)."""
+    colours = {
         path: token["values"][key]
         for path, token in document["tokens"].items()
         if token["type"] == "color"
     }
+    if scene is not None:
+        colours.update(colour_steps.values_at(scene, colours))
+    return colours
 
 
 def drawn(
@@ -1659,7 +1679,8 @@ def drawn(
     first naming it, and what the renderer gives (`render`, the renderers' entry of the seam).
     A combination whose scene `results` does not hold is not drawn. A renderer is handed, for
     each combination, the picture each image of that language's scene shows there
-    (`ProjectEnv.handed`).
+    (`ProjectEnv.handed`), and among its colours the value of each step of an order the
+    scene paints, spread from that combination's ends (`colours_at`, DEC-032 point 5).
 
     A format the renderer's declaration names under `holds-modes` takes its keys in one call
     for each file, grouped by the signal pairs it names there (`files_of`, DEC-023 points 1
@@ -1689,7 +1710,7 @@ def drawn(
                 made = implementation.render(
                     scene,
                     key=group[0],
-                    colours=colours_at(document, group[0]),
+                    colours=colours_at(document, group[0], scene),
                     font_file=project.brand.font_file,
                     pictures=project.env.handed(scene, group[0]),
                 )
@@ -1698,7 +1719,7 @@ def drawn(
                     scene,
                     form=renderer if form is None else form,
                     keys={key: combinations[key] for key in group},
-                    colours={key: colours_at(document, key) for key in group},
+                    colours={key: colours_at(document, key, scene) for key in group},
                     font_file=project.brand.font_file,
                     pictures={key: project.env.handed(scene, key) for key in group},
                 )

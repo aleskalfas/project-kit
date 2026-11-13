@@ -21,7 +21,7 @@ DECLARATION = {
     "name": "css",
     "kind": "code-writer",
     "version": "1.0.0",
-    "seam": 8,
+    "seam": 9,
     "module": "css",
     "forms": [1],
     "kinds": ["color", "dimension", "fontFamily", "fontWeight", "number"],

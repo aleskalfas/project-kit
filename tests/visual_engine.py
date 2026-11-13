@@ -1,14 +1,14 @@
 """The visual-communication engine in the test's own process, and the in-memory `Env` its
 tests read through (#2428).
 
-The engine reads every component, role, colour family, concept, concept's sign, font and
-produced picture through one protocol, `Env` (`_lib/env.py`). Its tests stand in for it
-with `FakeEnv`, never with the data layer's modules: components come from the test
+The engine reads every component, role, colour family, an order's roles, concept, concept's
+sign, font and produced picture through one protocol, `Env` (`_lib/env.py`). Its tests stand
+in for it with `FakeEnv`, never with the data layer's modules: components come from the test
 library's and the foundations' files (read with ruamel's safe loader) or from mappings a
-test writes, roles from a mapping of resolved DTCG values, colour families, concepts and
-concepts' signs from mappings a test writes, the font from the test brand's committed
-Source Sans Pro, produced pictures from `PictureInfo`s, and picture files from the test
-pictures, each read by the capability's reader, by its holder and its bare name. A
+test writes, roles from a mapping of resolved DTCG values, colour families, an order's
+roles, concepts and concepts' signs from what a test writes, the font from the test brand's
+committed Source Sans Pro, produced pictures from `PictureInfo`s, and picture files from the
+test pictures, each read by the capability's reader, by its holder and its bare name. A
 component a test needs broken is a mapping in memory, never a file: the repository's
 validation reads every bound YAML file under `tests/`.
 """
@@ -16,6 +16,7 @@ validation reads every bound YAML file under `tests/`.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -120,6 +121,19 @@ def square(tip: tuple[float, float] = (75, 25), size: int = 100) -> Any:
     )
 
 
+@dataclass(frozen=True)
+class Order:
+    """An order's roles, as the foundations declare them (DEC-032 point 1)."""
+
+    first: str = "family.order.first"
+    last: str = "family.order.last"
+    text: str = "family.order.text"
+
+    @property
+    def roles(self) -> tuple[str, str, str]:
+        return (self.first, self.last, self.text)
+
+
 class FakeEnv:
     """An `Env` in memory. Each argument adds to, or replaces, the defaults. Its colour
     families are none unless `families` gives them, and its concepts none unless
@@ -127,7 +141,8 @@ class FakeEnv:
     a concept its notation cannot read. A notation the piece names is one a concept of
     `concepts` comes from. A concept's sign is none unless `signs` gives it, each
     `<notation>/<concept>` mapped to its outline. Its picture roles are none unless `logos`
-    gives them: each role mapped to the file the brand gives it, or to None for none."""
+    gives them: each role mapped to the file the brand gives it, or to None for none. Its
+    foundations declare an order's roles only where `order` gives them."""
 
     def __init__(
         self,
@@ -140,6 +155,7 @@ class FakeEnv:
         files: Mapping[str, Path] | None = None,
         logos: Mapping[str, Path | None] | None = None,
         signs: Mapping[str, Any] | None = None,
+        order: Order | None = None,
     ) -> None:
         self.components = {**COMPONENTS, **(components or {})}
         self.roles = {**ROLES, **(roles or {})}
@@ -151,6 +167,7 @@ class FakeEnv:
         self.files = dict(files or {})
         self.logos = dict(logos or {})
         self.signs = dict(signs or {})
+        self.order_roles = order
         self.asked: list[str] = []
 
     def component(self, use: str) -> dict:
@@ -206,6 +223,10 @@ class FakeEnv:
     def family(self, name: str) -> dict[str, str]:
         self.asked.append(f"family {name}")
         return self.families[name]
+
+    def order(self) -> Order | None:
+        self.asked.append("order")
+        return self.order_roles
 
     def concept(self, name: str) -> str | None:
         self.asked.append(f"concept {name}")
