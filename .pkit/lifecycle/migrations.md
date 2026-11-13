@@ -89,7 +89,7 @@ Each number is used once in a folder. The runner runs a folder's scripts in the 
 
 A migration's folder names the version it carries a project to, never one already released. The runner runs a folder only past the version a project records ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)). So a folder at or below a released minor never runs for a project already there, and nothing else reports it.
 
-- **The window.** A transition runs each folder above the recorded version in PEP 440 order, and at or below its target by minor. Both are read as public versions, the pre-release kept and a local segment dropped.
+- **The window.** A transition runs each folder above its lower bound in PEP 440 order, and at or below its target by minor. Both are read as public versions, the pre-release kept and a local segment dropped. The lower bound is the one [`upgrade-flow.md`, "The steps of a transition"](upgrade-flow.md#the-steps-of-a-transition) names.
   - **A release candidate** sorts below its final release. So a move to `0.55.0rc1` runs the folder `0.55.0/`, which its final release ships too.
   - **A release version** opens the window at the next minor. So a project at `0.55.3` never runs `0.55.0/` again.
 - **The stamp.** `pkit new migration` without `--version` takes the highest of these:
@@ -104,7 +104,7 @@ A migration's folder names the version it carries a project to, never one alread
   - **What it skips:**
     - a script the project receives by sync
     - one the tip already holds, at its path or under another name in its folder with the same content, as a rename leaves it
-- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it. The window holds every folder up to the target's minor.
+- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it. The window holds every folder above its lower bound, up to the target's minor ([`upgrade-flow.md`, "The steps of a transition"](upgrade-flow.md#the-steps-of-a-transition)).
 - **The release's guard.** `pkit release plan` and `apply` refuse, before anything is written, to ship a stranded script. A stranded script sits in a folder at or below its tier's fixed version, and is new since the commit that fixed it. A tier's fixed version is its newest version whose scripts everyone who takes it has received. So a script added later to that folder, or below it, runs for none of them.
   - **Where a version is fixed** follows from how the project's versions reach those who take them. The marker test tells the two kinds of project apart ([`manifest.md`, "The methodology's literals"](manifest.md#the-methodologys-literals)).
     - In the methodology's source repository, those who take a version take it through the tag that carries it. The fixed version is the one the tier records at the newest final release tag, `v<X.Y.Z>`, read from the remote's tags. Its commit is the first final release tag that carries it. A candidate's tag, a `withdrawn/` tag and `latest` count for none.
