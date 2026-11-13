@@ -1,7 +1,7 @@
 ---
 id: DEC-038
 title: A row or a column may size each item across its line by a formula on the item's place
-status: proposed
+status: accepted
 date: 2026-11-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
