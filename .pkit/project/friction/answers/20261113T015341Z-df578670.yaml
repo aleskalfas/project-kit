@@ -927,7 +927,7 @@ answers:
     revalidated:
       at: 2026-11-13T01:55:24Z
       outcome: unchanged
-      unchanged-because: PRJ-004 gains a candidate tag's purpose, the ref withdrawn/v<candidate>, which names no install, and a candidate's notes. The distribution's git URL and its install at a tag, which the term describes, stand as written.
+      unchanged-because: Two changes answered on this term apart. ADR-089's change gave PRJ-004 the candidate tag beside the release tags, and the HTTPS change gave PRJ-004 PRJ-015's partial-supersession line, under which the install names the public HTTPS URL and needs no credential. This change gives the candidate tag the purpose of testing a change before it merges, adds the ref withdrawn/v<candidate>, which names no install, and has the run that cuts a candidate's tag publish notes for a candidate alone. Judged together, the channel is still a direct git URL on one source repository, with no registry, and its canonical install still names a tag, now over HTTPS. The term names no URL form, no credential and no candidate, so a distribution released from one source repository through one channel, and project-kit installed from its repository's tags, hold.
   - artefact: tech-docs/analysis/core/glossary.md#TERM-release-tag
     read:
       - 20261111T082938Z-b6b1d9a3.yaml
@@ -1018,7 +1018,7 @@ answers:
     revalidated:
       at: 2026-11-13T01:55:32Z
       outcome: unchanged
-      unchanged-because: PRJ-004 gains a candidate tag for whoever tests a change before it merges, the ref withdrawn/v<candidate>, which names no install, and notes from the release workflow's run for a candidate alone; ADR-063's lookup reads the tags whose full reference is refs/tags/v..., the same release tags it read before. The CLI installed from the distribution's URL at latest, and its lookup of the latest release, which the artefact relies on, stand as they were.
+      unchanged-because: Two changes answered on this actor apart. ADR-089's change gave PRJ-004 the candidate tag, which latest never names, and had ADR-063's tool step install no candidate, even under pkit upgrade --pre. The HTTPS change gave PRJ-004 PRJ-015's partial-supersession line, under which the install names the public HTTPS URL and needs no credential, gave ADR-063 points 3 and 7 the install script and the fork's copy of the URL in it, and moved CONTRIBUTING's development install line to HTTPS. This change gives the candidate tag the purpose of testing a change before it merges, adds the ref withdrawn/v<candidate>, which names no install, has the run that cuts a candidate's tag publish notes for a candidate alone, and has ADR-063 point 1's lookup read the tags whose full reference is refs/tags/v..., the same release tags it read before. Judged together, the operator still puts the CLI on the machine at a release, now from the public HTTPS URL with uv tool install or the install script, and updates it through the tool step, which installs only a final release. The operator still runs each project at the version it pins and is warned when the system falls back. The page names no URL form and no candidate, and its activities, controls and note on who holds the settings stand, so the actor holds.
   - artefact: tech-docs/analysis/core/requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -1134,7 +1134,7 @@ answers:
     revalidated:
       at: 2026-11-13T01:55:44Z
       outcome: unchanged
-      unchanged-because: PRJ-004 gains a candidate tag for whoever tests a change before it merges, the ref withdrawn/v<candidate>, which names no install, and notes from the release workflow's run for a candidate alone; ADR-063's lookup reads the tags whose full reference is refs/tags/v..., the same release tags it read before. The CLI installed from the distribution's URL at latest, and its lookup of the latest release, which the artefact relies on, stand as they were.
+      unchanged-because: Two changes answered on this use case apart. ADR-089's change gave PRJ-004 the candidate tag, which latest never names, and had ADR-063's tool step install no candidate, even under pkit upgrade --pre. The HTTPS change gave PRJ-004 PRJ-015's partial-supersession line, under which the install names the public HTTPS URL and needs no credential, and gave ADR-063 points 3 and 7 the install script and the fork's copy of the URL in it. This change gives the candidate tag the purpose of testing a change before it merges, adds the ref withdrawn/v<candidate>, which names no install, has the run that cuts a candidate's tag publish notes for a candidate alone, and has ADR-063 point 1's lookup read the tags whose full reference is refs/tags/v..., the same release tags it read before. The page anchors both records only as records behind core's operator, who starts the new session in the same clone. Judged together, the three changes alter how the operator installs and updates the CLI, which the use case names nowhere, and leave as it was how a new session takes up the Tasks its instance owns, so the use case holds.
   - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-070-choose-parts.md
     read:
       - 20261101T145723Z-19f805b0.yaml
@@ -1546,7 +1546,7 @@ answers:
     revalidated:
       at: 2026-11-13T01:56:20Z
       outcome: unchanged
-      unchanged-because: ADR-049 point 3 gains that, in a project whose manifest records a release candidate, neither pkit pin <version> nor pkit upgrade raises the pin to any release but that candidate. The term's pin file and its gestures for a release stand as written, and it names no candidate.
+      unchanged-because: Two changes answered on this term apart. ADR-089's change let a pin name a release candidate, had pkit upgrade --pre raise a pin to one, kept a project on a candidate pinned and had an init run by a candidate pin the project it installs (ADR-049 point 3, ADR-064 point 3). The HTTPS change had router.py, one of the term's anchors, fetch a pin over the public HTTPS URL, its probe with git's prompt off. This change has neither pkit pin <version> nor pkit upgrade raise the pin of a project on a candidate to any release but that candidate (ADR-049 point 3). Judged together, a pin is still the project's own file naming the release, final or candidate, whose code runs the project's commands. The router still runs that release through uvx at its tag where it can fetch it, and the installed CLI with a warning where it cannot, now also where the fetch would ask for a credential, as the term's distinction from the installed CLI says. The term names no URL and no rule on which release a raise may write, and its example of pkit upgrade writing the pin at the release it brought the project to still holds, so the term holds.
   - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
     read:
       - 20261027T190256Z-43f1ae13.yaml
@@ -1636,7 +1636,7 @@ answers:
     revalidated:
       at: 2026-11-13T01:56:30Z
       outcome: unchanged
-      unchanged-because: ADR-065 point 9's routed child gains a first refusal of a move off a release candidate, takes the recorded candidate under --pre, and a candidate's own upgrade refuses a window above its cut's base. Upgrade's refusal under the router's fallback, which the requirement measures, stands as written.
+      unchanged-because: Two changes answered on this requirement apart. ADR-089's change had ADR-065 point 9's routed child, under pkit upgrade --pre, hand over to the newest release, candidates included, and a pin that names a candidate routes to its tag as any pin does. The HTTPS change had the router's probe run with git's prompt off, so a fetch that needs a credential fails rather than waits. This change has the routed child first refuse to move a project on a candidate to any release but that candidate, take the recorded candidate under --pre and, in a candidate's own upgrade, refuse a window that starts above its cut's base, and point 4's order puts the same first refusal before the fallback refusal in any other upgrade. Judged together, the router still runs the installed CLI with its one warning wherever uvx cannot fetch the pin, now also where the fetch would ask for a credential, and this change leaves router.py and its tests alone. Each edit to point 9 adds a check of upgrade's own, so a command still keeps its checks, and pkit upgrade still refuses under the fallback, whichever of its refusals comes first, so the requirement holds.
   - artefact: .pkit/lifecycle/README.md
     read:
       - 20261025T221340Z-215a759f.yaml
