@@ -64,7 +64,7 @@ These are read from DAM's repository at `12a8817b7` (paths below are DAM's), unl
 - The default egress preset reaches `github.com` and PyPI over HTTPS.
 - A Starter Kit's `install.command` runs once in `work/`, after the seed and before the first session. A kit's seed is fixed by the kit, and a kit that DAM's catalog links to must be public, as must its seed.
 
-**GitHub.** DAM's GitHub connections are GitHub App sign-ins or installations (`docs/architecture/github-connections.md`). *Measured* (open question 5): an installation's token reaches the issue tracker and pushes plain commits, and GitHub refuses it a workflow file unless the App and the connection both hold the `workflows` permission. It cannot look itself up through `gh api user`, and GitHub refuses it as an assignee. Whether it reaches a Projects v2 board a user owns is still open.
+**GitHub.** DAM's GitHub connections are GitHub App sign-ins or installations (`docs/architecture/github-connections.md`). *Measured* (open question 5): an installation's token reaches the issue tracker and pushes plain commits, and GitHub refuses it a workflow file unless the App and the connection both hold the `workflows` permission. It cannot look itself up through `gh api user`, and GitHub refuses it as an assignee. It does not reach a Projects v2 board a user owns: GitHub leaves the user's boards out without an error, a public one included (#3164). Whether an organisation's board is reached once the App holds `organization_projects` was not measured.
 
 ## What pkit needs
 
@@ -237,7 +237,7 @@ No command starts a Task in a worktree of its own, and `start-work` checks the b
 
 - Does DAM plan to name each turn's sender, and in a form the agent reads from the platform rather than from the message (gap 5)?
 - Does the agent's prompt replace anything the ACP front-end adds to the system prompt that DAM needs?
-- Does an App's token reach a Projects v2 board a user owns? #3164 measures it.
+- Does an App's token reach an organisation's Projects v2 board once the App holds `organization_projects`? A user's boards it does not reach (#3164).
 - How long does the review stack take in one machine's quota?
 
 ## Next steps
