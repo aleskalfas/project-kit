@@ -228,26 +228,33 @@ _QUEUE_FIELD = "isMergeQueueEnabled"
 _PR_FIELDS = """\
       id
       state
+      body
       mergedAt
       mergeCommit { oid }
       headRefOid
       headRefName
       isCrossRepository"""
 
-_QUEUE_FIELDS = """\
+# How many of a merge queue's entries a reading reads, first in the queue first.
+_ENTRIES_READ = 100
+
+_QUEUE_FIELDS = f"""\
       isMergeQueueEnabled
       isInMergeQueue
-      mergeQueue { configuration { mergeMethod } }
-      mergeQueueEntry { position state estimatedTimeToMerge }
-      autoMergeRequest { enabledAt }
+      mergeQueue {{
+        configuration {{ mergeMethod }}
+        entries(first: {_ENTRIES_READ}) {{ nodes {{ position pullRequest {{ number }} }} }}
+      }}
+      mergeQueueEntry {{ position state estimatedTimeToMerge }}
+      autoMergeRequest {{ enabledAt }}
       timelineItems(
         itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT, REMOVED_FROM_MERGE_QUEUE_EVENT], last: 20
-      ) {
-        nodes {
+      ) {{
+        nodes {{
           __typename
-          ... on RemovedFromMergeQueueEvent { createdAt reason beforeCommit { oid } }
-        }
-      }"""
+          ... on RemovedFromMergeQueueEvent {{ createdAt reason beforeCommit {{ oid }} }}
+        }}
+      }}"""
 
 _ADDED_EVENT = "AddedToMergeQueueEvent"
 _REMOVED_EVENT = "RemovedFromMergeQueueEvent"
@@ -361,6 +368,15 @@ class Reading:
     #: The commit the PR's merge made on its base; empty until it has merged,
     #: or where the service names none.
     merge_commit: str = ""
+    #: The PRs ahead of this one in its base's merge queue, by number, first
+    #: in the queue first: those at a lower position, or every entry where
+    #: this PR is in no position; empty without a queue. A reading reads the
+    #: queue's first :data:`_ENTRIES_READ` entries.
+    ahead: tuple[int, ...] = ()
+    #: The PR's description, which a direct merge carries as its commit's
+    #: body (ADR-061 point 8). Not in the reading's document: no caller
+    #: decides on it.
+    body: str = ""
 
     @property
     def merged(self) -> bool:
@@ -425,6 +441,7 @@ class Reading:
             "head_ref": self.head_ref,
             "cross_repository": self.cross_repository,
             "merge_commit": self.merge_commit,
+            "ahead": list(self.ahead),
             "merged": self.merged,
             "queued": self.queued,
             "squashes": self.squashes,
@@ -563,8 +580,11 @@ def squash_merge(
     clearance: session_guard.Clearance,
     head_oid: str = "",
     admin: bool = False,
+    body: str | None = None,
 ) -> Outcome:
-    """Squash-merge the PR with `subject` as the landed commit's subject.
+    """Squash-merge the PR with `subject` as the landed commit's subject, and
+    `body`, where given, as its body — the empty body among them; without
+    one, the service composes the body from its squash-commit default.
 
     `clearance` is the cross-repository guard's for `cwd`, the directory `gh`
     runs in (:func:`session_guard.require`). GitHub's
@@ -585,6 +605,8 @@ def squash_merge(
     """
     run = _acting(clearance, cwd)
     cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--subject", subject]
+    if body is not None:
+        cmd += ["--body", body]
     if head_oid:
         cmd += ["--match-head-commit", head_oid]
     if admin:
@@ -1618,8 +1640,10 @@ END_UNREADABLE = "unreadable"
 #: no request for (`no_request`), on any base; then, on a base that merges
 #: through a queue, an administrator merge asked for there; a direct merge
 #: asked for there (`--direct-only`); a queue that does not squash; a head the
-#: queue dropped, not enqueued again unchanged unless the caller allows it;
-#: and squash-commit defaults that are not the PR's title and body. No option
+#: queue dropped, not enqueued again unchanged unless the caller allows it; an
+#: enqueue behind another PR, where the caller enqueues only first in the
+#: queue (`--first-in-queue`); and squash-commit defaults that are not the
+#: PR's title and body. No option
 #: lifts the administrator merge, nor the two that say the queue would not
 #: make COR-009's commit (ADR-061 points 5 and 8). :data:`SQUASH_DEFAULTS` is
 #: also why a landing is unreadable when the defaults cannot be read.
@@ -1628,6 +1652,7 @@ ADMIN_ON_QUEUE = "admin-on-queue"
 QUEUE_NOT_ALLOWED = "queue-not-allowed"
 QUEUE_NOT_SQUASH = "queue-not-squash"
 DROPPED_HEAD = "dropped-head"
+QUEUED_AHEAD = "queued-ahead"
 SQUASH_DEFAULTS = "squash-defaults"
 
 #: Each way a landing ends, with the `reason_kind`s it carries — None among
@@ -1653,6 +1678,7 @@ LANDING_ENDS: Mapping[str, frozenset[str | None]] = {
             QUEUE_NOT_ALLOWED,
             QUEUE_NOT_SQUASH,
             DROPPED_HEAD,
+            QUEUED_AHEAD,
             SQUASH_DEFAULTS,
         }
     ),
@@ -1755,7 +1781,11 @@ class LandOptions:
     merge and no enqueue in this landing — a PR found queued at the checked
     head is waited for, one queued at another head is still taken out, and a
     row that would send a merge or an enqueue is refused
-    (:data:`REQUEST_NOT_ALLOWED`), nothing sent."""
+    (:data:`REQUEST_NOT_ALLOWED`), nothing sent; and first in the queue
+    (`first_in_queue`): an enqueue the reading finds another PR ahead of is
+    refused (:data:`QUEUED_AHEAD`), nothing sent, so none queued before the
+    request lands ahead of it — a PR already queued gets no enqueue, and is
+    waited for."""
 
     seconds: float | None = None
     allow_dropped_head: bool = False
@@ -1763,6 +1793,7 @@ class LandOptions:
     direct_only: bool = False
     queued_bad_shape: str = SHAPE_REFUSE
     no_request: bool = False
+    first_in_queue: bool = False
 
 
 @dataclass(frozen=True)
@@ -2301,6 +2332,13 @@ class _Lander:
             )
         if reading.dropped_head and not options.allow_dropped_head:
             return self.refused(DROPPED_HEAD, self.dropped(reading))
+        if options.first_in_queue and not reading.queued and reading.ahead:
+            ahead = ", ".join(f"#{number}" for number in reading.ahead)
+            return self.refused(
+                QUEUED_AHEAD,
+                f"the merge queue on PR #{n}'s base holds {ahead} ahead of it, and the landing "
+                "enqueues only first in the queue",
+            )
         try:
             title, message = squash_commit_defaults(gh=self.run)
         except Unreadable as exc:
@@ -2331,7 +2369,9 @@ class _Lander:
         return replace(landed, warnings=(*landed.warnings, armed))
 
     def merge_directly(self, first: Reading) -> Landing:
-        """The direct squash merge, then one reading: merged, it ends; not —
+        """The direct squash merge, carrying the PR's body as the `first`
+        reading, the one just before the request, read it (ADR-061 point 8);
+        then one reading: merged, it ends; not —
         or not read, with a warning — the wait. That reading finding the PR
         queued where the `first` did not is a merge the service queued
         instead: warned."""
@@ -2342,6 +2382,7 @@ class _Lander:
             clearance=self.clearance,
             head_oid=self.head,
             admin=self.options.admin,
+            body=first.body,
         )
         stopped = self.unless_made(MERGE_REQUEST, outcome)
         if stopped is not None:
@@ -2863,7 +2904,22 @@ def _reading(pr: Mapping[str, Any]) -> Reading:
         head_ref=str(pr.get("headRefName") or ""),
         cross_repository=_cross_repository(pr),
         merge_commit=str(_mapping(pr.get("mergeCommit")).get("oid") or ""),
+        ahead=_ahead(queue, _int_or_none(entry.get("position"))),
+        body=str(pr.get("body") or ""),
     )
+
+
+def _ahead(queue: Mapping[str, Any], position: int | None) -> tuple[int, ...]:
+    """The PRs a merge queue holds ahead of one at `position` — every entry
+    where it is in none — by number, first in the queue first."""
+    entries: list[tuple[int, int]] = []
+    for node in _list(_mapping(queue.get("entries")).get("nodes")):
+        entry = _mapping(node)
+        at = _int_or_none(entry.get("position"))
+        number = _int_or_none(_mapping(entry.get("pullRequest")).get("number"))
+        if at is not None and number is not None and (position is None or at < position):
+            entries.append((at, number))
+    return tuple(number for _, number in sorted(entries))
 
 
 def _last_removal(events: list[dict[str, Any]]) -> Removal | None:

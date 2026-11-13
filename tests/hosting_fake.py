@@ -274,6 +274,9 @@ class HostingService:
     in_queue: bool = False
     #: The PR's place and state in the queue; None before the queue reports one.
     entry: tuple[int, str] | None = None
+    #: Other PRs in the base's queue, by number, first in the queue first, at
+    #: positions from 1 on — ahead of the PR wherever it is queued later.
+    queue_ahead: list[int] = field(default_factory=list)
     eta_seconds: int | None = 300
     #: Auto-merge holds the PR until its own checks pass.
     auto_merge: bool = False
@@ -645,9 +648,24 @@ class HostingService:
         if self.in_queue and self.entry is not None:
             position, state = self.entry
             entry = {"position": position, "state": state, "estimatedTimeToMerge": self.eta_seconds}
+        queue: dict[str, Any] | None = None
+        if rules.queue:
+            nodes = [
+                {"position": at, "pullRequest": {"number": number}}
+                for at, number in enumerate(self.queue_ahead, start=1)
+            ]
+            if entry is not None:
+                nodes.append(
+                    {"position": entry["position"], "pullRequest": {"number": self.number}}
+                )
+            queue = {
+                "configuration": {"mergeMethod": rules.method},
+                "entries": {"nodes": nodes},
+            }
         return {
             "id": self.node_id,
             "state": self.state,
+            "body": self.body,
             "mergedAt": self.merged_at or None,
             "mergeCommit": {"oid": self.merge_commit} if self.merge_commit else None,
             "headRefOid": self.head_oid,
@@ -655,7 +673,7 @@ class HostingService:
             "isCrossRepository": self.cross_repository,
             "isMergeQueueEnabled": rules.queue,
             "isInMergeQueue": self.in_queue,
-            "mergeQueue": {"configuration": {"mergeMethod": rules.method}} if rules.queue else None,
+            "mergeQueue": queue,
             "mergeQueueEntry": entry,
             "autoMergeRequest": {"enabledAt": "2026-10-01T10:00:00Z"} if self.auto_merge else None,
             "timelineItems": {"nodes": list(self.timeline)},

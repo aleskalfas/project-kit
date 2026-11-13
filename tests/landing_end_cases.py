@@ -46,6 +46,7 @@ ENDED: dict[str, frozenset[str | None]] = {
             "queue-not-allowed",
             "queue-not-squash",
             "dropped-head",
+            "queued-ahead",
             "squash-defaults",
         }
     ),
@@ -135,6 +136,7 @@ def reading(*, state: str = "OPEN", head: str = HEAD, merged: bool = False) -> d
         "head_ref": "fix/42-land-it",
         "cross_repository": False,
         "merge_commit": MERGE_COMMIT if merged else "",
+        "ahead": [],
         "merged": merged,
         "queued": False,
         "squashes": False,

@@ -11,10 +11,6 @@ after:
   - [UC-014, UC-049]
 requirements:
   - REQ-012
-shortfalls:
-  - at: 5
-    issue: "#1257"
-    record: ADR-061#8
 pkit:
   friction:
     anchors:
@@ -77,11 +73,9 @@ pkit:
 4. The system reads the pull request once, for these:
    - its state
    - its head
+   - its body
    - whether its [base](../../../glossary.md#term-base--base) merges through a merge queue
 5. On a base without a queue, the system squash-merges the pull request, pinned to `<sha>`. The commit's subject is `<title>`, and its body is the pull request's body (COR-009 points [1](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#1-squash-merge-as-the-default-merge-style) and [2](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#2-pr-title-follows-conventional-commits), and [ADR-061 point 8](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#8-cor-009s-landing-realised)).
-
-> [!WARNING]
-> **Not built yet:** a direct merge passes the subject alone, so the commit's body is whatever the repository's default composes. ADR-061 point 8 decides that a direct merge carries the pull request's body, read just before the request, and #1257 tracks it.
 
 6. The system reads the pull request again, and ends `merged` once a reading says it merged at `<sha>`, naming the merge commit.
 7. The developer deletes the head branch with `pkit pull-request delete-branch <n> --expect <sha>`. The system deletes it only while its tip is the head that merged ([COR-009 point 4](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#4-feature-branches-are-short-lived-and-deleted-after-merge) and [ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).

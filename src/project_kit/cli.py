@@ -99,12 +99,15 @@ if TYPE_CHECKING:
         ReleasePlan,
         apply_release,
         check_changesets,
+        check_queue,
         check_raised_ranges,
         check_shareable,
         compute_release,
         lint_release_format,
         merge_release_pr,
         migration_dir_mismatches,
+        plan_commit,
+        plan_commit_line,
         publish_release_notes,
         release_summary,
     )
@@ -167,12 +170,15 @@ else:
     refuse_inside_migration = _OnFirstUse("project_kit.migrations", "refuse_inside_migration")
     apply_release = _OnFirstUse("project_kit.release", "apply_release")
     check_changesets = _OnFirstUse("project_kit.release", "check_changesets")
+    check_queue = _OnFirstUse("project_kit.release", "check_queue")
     check_raised_ranges = _OnFirstUse("project_kit.release", "check_raised_ranges")
     check_shareable = _OnFirstUse("project_kit.release", "check_shareable")
     compute_release = _OnFirstUse("project_kit.release", "compute_release")
     lint_release_format = _OnFirstUse("project_kit.release", "lint_release_format")
     merge_release_pr = _OnFirstUse("project_kit.release", "merge_release_pr")
     migration_dir_mismatches = _OnFirstUse("project_kit.release", "migration_dir_mismatches")
+    plan_commit = _OnFirstUse("project_kit.release", "plan_commit")
+    plan_commit_line = _OnFirstUse("project_kit.release", "plan_commit_line")
     publish_release_notes = _OnFirstUse("project_kit.release", "publish_release_notes")
     release_summary = _OnFirstUse("project_kit.release", "release_summary")
     register_kit_shipped_component = _OnFirstUse(
@@ -1644,6 +1650,13 @@ _LAND_EXITS: Mapping[str, int] = {
     help="Send no merge and no enqueue: a PR queued at SHA is waited for, one queued at another "
     "head is still taken out, and one a merge or an enqueue would land is refused.",
 )
+@click.option(
+    "--first-in-queue",
+    is_flag=True,
+    default=False,
+    help="Enqueue only first in the queue: an enqueue behind another pull request is refused, "
+    "so none queued before the request lands ahead of this one.",
+)
 @_allow_foreign_repo_option
 @click.option(
     "--dry-run",
@@ -1662,6 +1675,7 @@ def pull_request_land(
     direct_only: bool,
     queued_bad_shape: str,
     no_request: bool,
+    first_in_queue: bool,
     allow_foreign_repo: bool,
     dry_run: bool,
     as_json: bool,
@@ -1670,7 +1684,8 @@ def pull_request_land(
 
     The cross-repository guard runs once, at the entry. Then one reading;
     the options applied to it; the direct squash merge, with SUBJECT, or the
-    enqueue, each pinned to SHA; the wait for the merge; and, where a reading
+    enqueue, each pinned to SHA, the direct merge carrying the PR's body as
+    the reading just before it read it; the wait for the merge; and, where a reading
     finds another head, the PR taken out of the queue. Never deletes a
     branch. Writes each event while the output takes them — a reading,
     `requesting` before each request is sent, `requested` once it is
@@ -1698,6 +1713,7 @@ def pull_request_land(
         direct_only=direct_only,
         queued_bad_shape=queued_bad_shape,
         no_request=no_request,
+        first_in_queue=first_in_queue,
     )
 
     closed = False
@@ -3146,6 +3162,11 @@ def release_apply(
     With `--tag --push` the tag's push changes the hosting service, so the
     cross-repository guard runs first, before anything is written, as for
     `version tag --push`.
+
+    A release that moves a version ends by printing the trailer line naming
+    the commit its plan read, `Release-plan-commit: <commit>`: commit the
+    release with it, and open its PR with it in the body, so `pkit release
+    merge` lands it only onto that commit (ADR-092 point 6).
     """
     source_kit = _target_kit()
     clearance = (
@@ -3184,6 +3205,7 @@ def release_apply(
             f"run:\n  {rerun}",
         )
     apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+    click.echo(plan_commit_line(plan_commit(source_kit.parent)))
 
 
 @release.command("check")
@@ -3298,6 +3320,59 @@ def release_check(base: str | None, skip: bool | None) -> None:
             "`skip-changeset` label does not waive this."
         )
     raise click.ClickException("\n".join(problems))
+
+
+@release.command("check-queue")
+@click.option(
+    "--base",
+    metavar="REF",
+    default=None,
+    help="The merge group's base. Default: $PKIT_CHECK_BASE, else the default branch "
+    "(`pkit repository base` shows it).",
+)
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default="HEAD",
+    show_default=True,
+    help="The merge group's head: the merge the queue is about to make.",
+)
+def release_check_queue(base: str | None, head_rev: str) -> None:
+    """The queue's check: fail if a release a squashing merge queue's merge
+    holds would not land what its release step wrote onto the commit its
+    plan read (ADR-092 point 6).
+
+    Judges each commit from where REV left the base — REF, else
+    $PKIT_CHECK_BASE, else the default branch (COR-054) — to REV, on REV's
+    first-parent line, whose subject is a `chore(release):` one: the squash
+    commit the queue made of a release PR. Each lands sound where its parent
+    is the commit the trailer line in its own message names
+    (`Release-plan-commit: <commit>`), and its change from that commit holds
+    only what `pkit release apply` writes and the answer files it adds. A
+    commit without the trailer line fails too. Reads git alone: no fetch and
+    no pull request. Binds where a project's required check runs it on the
+    queue's merge.
+    """
+    source_kit = _target_kit()
+    fork = _settled_base(source_kit.parent, base, head_rev=head_rev).fork
+    assert fork is not None  # `_settled_base` refuses a base without one
+    judged = check_queue(source_kit, fork, head_rev)
+    if not judged:
+        click.echo("queue check: no release commit in this merge — ok.")
+        return
+    refused = [each for each in judged if each.problem is not None]
+    for each in judged:
+        verdict = "lands sound" if each.problem is None else f"does not land sound: {each.problem}"
+        click.echo(f"queue check: {each.commit[:12]} {each.subject} — {verdict}")
+    if refused:
+        from project_kit.release import RUN_THE_RELEASE_AGAIN
+
+        raise click.ClickException(
+            f"{len(refused)} release commit(s) in this merge would not land what their release "
+            f"step wrote onto the commit their plan read. {RUN_THE_RELEASE_AGAIN}"
+        )
+    click.echo("queue check: every release commit in this merge lands sound — ok.")
 
 
 @release.command("lint")
