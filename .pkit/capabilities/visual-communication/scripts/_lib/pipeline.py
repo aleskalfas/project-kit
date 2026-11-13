@@ -1337,20 +1337,24 @@ def fit(piece: Piece, held: Held) -> Fit | None:
 class Fit:
     """The judgement a draft's render gives the search for its lock (`libraries.Judge`):
     whether a whole combination of versions fits the piece as its lock does (DEC-003 point
-    8). It places the piece under the combination, in every language and at each key over
-    the size axes the piece names that the combination's foundations declare, as the
-    engine finds a tie's ends (`layout.place_top`), and computes no scene. Versions do not
-    fit where, under them, at a key (DEC-021 point 7):
+    8). It places the piece under the combination, in every language and at each key of
+    the modes the piece names on the size axes that the combination's foundations declare,
+    those they lack left out (`_size_combinations`), as the engine finds a tie's ends
+    (`layout.place_top`), and computes no scene. Versions do not fit where, under them, at a
+    key the lock places the piece at (DEC-021 point 7):
 
     - an item the lock places carries a key that both its component and its list declare,
       where it does not under the lock (DEC-010 point 2). The libraries of the item's
       component, and of each component above it, are implicated.
     - an end of a tie the lock draws is not found: its item is drawn other than once below
       the tie's pattern or off the tie's page, or the tie is not drawn (DEC-011 point 4).
-      Every library whose component the placing read or looked for is implicated.
+      Every library whose component the placing read or looked for is implicated, and the
+      foundations where they lack a mode the piece names.
 
     So what the lock already shows holds nothing back: a clash under the lock, an end it
-    does not find, and what a library it does not name yet brings. A misfit at every key
+    does not find, and what a library it does not name yet brings. Nor does a mode the
+    lock's foundations lack, such as one only newer foundations declare: the lock places
+    the piece at no key of it, so nothing there is lost. A misfit at every key
     the lock places the piece at reads as it is; one at some keys is said at each, ending
     with the key it holds at. Each component file, each produced picture's record and each
     version of the foundations' declarations is read once, across every combination judged.
@@ -1410,8 +1414,8 @@ class Fit:
         if key not in self._placed:
             env = _FitEnv(self, versions)
             placed = _Placed()
-            asked: set[str] = set()
             sized = self._size_axes(versions)
+            asked: set[str] = {FOUNDATIONS} if self._lacks_a_mode(sized) else set()
             for combination in self._size_combinations(sized):
                 size = keys.key_of(combination, sized)
                 placed.sizes.append(size)
@@ -1443,14 +1447,32 @@ class Fit:
         return self.declared[path]
 
     def _size_combinations(self, sized: Mapping[str, tokens.Axis]) -> list[dict[str, str]]:
-        """Each combination of the modes the piece names on the size axes `sized`, in key
-        order; the one of their defaults alone where it names a mode they lack, which the
-        piece's own read refuses."""
-        named = {axis: modes for axis, modes in self.piece.modes.items() if axis in sized}
+        """Each combination of the modes the piece names on the size axes `sized` that they
+        hold, in key order. A mode they lack is left out, such as one only a newer version
+        of the foundations declares, and where the piece names none they hold on an axis
+        there is no combination: under them it is drawn at no key it names (DEC-003 point
+        8). The one of their defaults alone where it names an axis with no mode, or a mode
+        twice, which the piece's own read refuses."""
+        named: dict[str, list[str]] = {}
+        for axis, modes in self.piece.modes.items():
+            if axis in sized:
+                held = [mode for mode in modes if mode in sized[axis].modes]
+                if modes and not held:
+                    return []
+                named[axis] = held
         try:
             return keys.combinations(named, sized)
         except keys.BadKey:
             return [{}]
+
+    def _lacks_a_mode(self, sized: Mapping[str, tokens.Axis]) -> bool:
+        """Whether the size axes `sized` lack a mode the piece names on one of them."""
+        return any(
+            mode not in sized[axis].modes
+            for axis, modes in self.piece.modes.items()
+            if axis in sized
+            for mode in modes
+        )
 
 
 @dataclass

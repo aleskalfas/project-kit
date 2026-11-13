@@ -37,7 +37,7 @@ Replacing the tool is a network write outside any one project. Where a sandbox c
 
 ### 1. Detect, best-effort
 
-The upgrade asks the release source for its highest release, read from its `v`-prefixed tags. It runs `git ls-remote --tags` against the distribution URL compiled into the tool, the URL the router fetches pins from, with a short time limit. A pre-release or dev release tag is skipped, even one above the latest release. When the running tool is at or above that version, the upgrade says the tool is current.
+The upgrade asks the release source for its highest release, read from the tags whose full reference is `refs/tags/v…` (refinement per [ADR-092](ADR-092-final-release-from-head.md) point 4). It runs `git ls-remote --tags` against the distribution URL compiled into the tool, the URL the router fetches pins from, with a short time limit. A pre-release or dev release tag is skipped, even one above the latest release. When the running tool is at or above that version, the upgrade says the tool is current.
 
 Any failure — offline, no credentials, no `git`, the limit reached, no release tag — prints a warning on standard error. The upgrade then goes on with its own steps under the running tool, as if the tool were current. Those steps may find nothing to upgrade.
 
