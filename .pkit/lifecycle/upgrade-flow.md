@@ -25,7 +25,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - hatch_build.py
         - tests/test_area_name_clash.py
-      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076, "ADR-089#4", "ADR-089#5", "ADR-089#6", "ADR-089#7", "ADR-089#8"]
+      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076, "ADR-089#1", "ADR-089#4", "ADR-089#5", "ADR-089#6", "ADR-089#7", "ADR-089#8"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/manifest.md#where-a-capabilitys-manifest-lives
@@ -284,19 +284,19 @@ The methodology's source repository is exempt: its sync runs the self-host branc
 
 ## A release candidate, only on request
 
-A project moves onto a release candidate only when someone asks, and such a move always pins it there ([ADR-089](../../tech-docs/architecture/decisions/ADR-089-release-candidates.md) points 6 to 8). A release candidate, such as `3.0.0rc1`, is a set of versions cut to test changes before they ship.
+A project moves onto a release candidate only when someone asks, and such a move always pins it there. A release candidate, such as `3.0.0rc1`, is a set of versions cut to test changes before they ship.
 
 - **The guard.** An upgrade whose target is a candidate refuses, and writes nothing, unless someone asked. A target at a release version never meets the guard. Its message names the ways in, and the install of `latest` as the tool where the running pkit is the installed tool.
 - **The ways in:**
   - `pkit upgrade --pre`
   - a run with routing bypassed (`PKIT_NO_ROUTE`), as a raise and the first hop run
   - a pin that names the candidate, in PEP 440's normal form, `X.Y.ZrcN`
-- **Where the guard runs:** among upgrade's own checks, after ADR-063's tool step and the hand-over of `--pre`, and before the older direction of sync's guard. Under its pin's code, an upgrade moves only to its pin or hands over through the bypass, so it never meets the guard.
-- **`--pre`** moves the project to the newest release, candidates included. Its lookup reads candidate tags beside release tags, from the source ADR-063's tool step reads. Where the newest is a final release, the upgrade runs as it would without `--pre`.
-- **The hand-over of `--pre`.** Where the newest is a candidate above the running pkit, the upgrade hands over to the candidate's own upgrade through the bypass. A pinned project's routed child makes it in place of its hand-over to the latest release. Any other upgrade makes it after ADR-063's tool step, which installs no candidate, even under `--pre`.
+- **Where the guard runs:** among upgrade's own checks, after the tool update and the hand-over of `--pre`, and before the older direction of sync's guard. Under its pin's code, an upgrade moves only to its pin or hands over through the bypass, so it never meets the guard.
+- **`--pre`** moves the project to the newest release, candidates included. Its lookup reads candidate tags beside release tags, from the source the tool update reads. Where the newest is a final release, `--pre` hands over to none.
+- **The hand-over of `--pre`.** Where the newest is a candidate above the running pkit, the upgrade hands over to the candidate's own upgrade through the bypass. A pinned project's routed child makes it in place of its hand-over to the latest release. Any other upgrade makes it after the tool update, which installs no candidate, even under `--pre`.
 - **A plain `pkit upgrade`** never moves a project onto a candidate its pin does not name.
-- **A move to a candidate always pins,** and `--no-pin` is refused on it before anything is written (ADR-064 point 2).
-- **An `init` run by a candidate** refuses unless routing is bypassed. Let through, it pins the project it installs at the candidate, last of its writes (ADR-064 point 3).
+- **A move to a candidate always pins,** and `--no-pin` is refused on it before anything is written.
+- **An `init` run by a candidate** refuses unless routing is bypassed. Let through, it pins the project it installs at the candidate, last of its writes.
 - **The first hop,** from a final release whose pkit has no `--pre`, is the candidate's own upgrade through the router's bypass. It runs the candidate's code in its own process, and moves the project, pinned:
 
   ```

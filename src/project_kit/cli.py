@@ -5260,7 +5260,7 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     help="Move the project to the newest release, release candidates included. Where "
     "that is a candidate newer than this pkit, its own upgrade runs through the "
     "router's bypass, and the project is pinned there. Where it is a final release, "
-    "the upgrade runs as without --pre. It never installs a candidate as the tool. "
+    "--pre hands over to none. It never installs a candidate as the tool. "
     "Per ADR-089 point 8.",
 )
 def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool, pre: bool) -> None:
