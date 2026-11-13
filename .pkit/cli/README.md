@@ -845,6 +845,7 @@ Where PR `<n>`'s base merges through a merge queue, and where the PR stands in i
 - Without `--json`: `PR #<n>: <where it stands>` and `Base: merges through a queue, by <method>` or `Base: merges directly`.
 - With `--json`: `reading` — what GitHub answered (`has_queue`, `merge_method`, `pr_id`, `pr_state`, `merged_at`, `head_oid`, `head_ref` — the head branch's name — and `cross_repository` — the head is in another repository, a fork; an answer that does not say reads as `true` — `in_queue`, `position`, `entry_state`, `eta_seconds`, `waiting_to_enter`, `ever_queued`, and `removal`, the queue's last word on the PR when it dropped it: `at`, `reason`, `head_oid`) and what the reading concludes from it, so no reader derives it again (`merged`; `queued`, in the queue or held by auto-merge until it may enter; `squashes`; `dropped_head`, dropped at the head it has now; `description`); `null` when unreadable — and `unreadable`, `null` or why. `head_ref` and `cross_repository` are additions, so `schema_version` stays `1`.
 - `merge_commit` — the commit the PR's merge made, empty until it has merged or where GitHub names none — is an addition too.
+- `ahead` — the PRs ahead of this one in its base's merge queue, by number, first in the queue first: those at a lower position, or every entry where the PR is in none; empty without a queue — is an addition too. The reading reads the queue's first 100 entries.
 - Exit `0` when read; `1` when GitHub could not be read.
 
 ### `pull-request squash-defaults [--json]`
@@ -853,7 +854,7 @@ The repository's default squash-commit title and message, as GitHub names them (
 
 ### `pull-request merge <n> --subject <s> [--head <sha>] [--admin] [--allow-foreign-repo] [--json]`
 
-Squash-merge PR `<n>` directly, with `<s>` as the commit's subject, pinned to `<sha>` when given (a push in between fails the merge). Never deletes the head branch: gh's own deletion touches the local checkout and fails after the remote merge has landed. Accepted is not proof of a merge — on a base that requires a queue, gh enqueues instead — so a caller reads the PR afterwards. The cross-repository guard runs first (above). A merge that gets no usable answer is settled by reading (above): made once the PR reads merged or queued, or dropped by the queue since the merge was sent. `--json`: `accepted` (`true`, `false`, or `null` when unconfirmed), `exit_code` (gh's; `null` when it could not run, was ended at its bound, the guard refused, or the merge was settled by reading), `reason`, `reason_kind` (`foreign-repository`, `not-made`, `unanswered` or `null`), `guard`. Exit `0` when made; `1` otherwise — refused, not seen made or unconfirmed (the table above). A direct merge passes the subject only: the commit's body is whatever the repository's squash-commit default composes, which this command does not yet check on that path (#1220).
+Squash-merge PR `<n>` directly, with `<s>` as the commit's subject, pinned to `<sha>` when given (a push in between fails the merge). Never deletes the head branch: gh's own deletion touches the local checkout and fails after the remote merge has landed. Accepted is not proof of a merge — on a base that requires a queue, gh enqueues instead — so a caller reads the PR afterwards. The cross-repository guard runs first (above). A merge that gets no usable answer is settled by reading (above): made once the PR reads merged or queued, or dropped by the queue since the merge was sent. `--json`: `accepted` (`true`, `false`, or `null` when unconfirmed), `exit_code` (gh's; `null` when it could not run, was ended at its bound, the guard refused, or the merge was settled by reading), `reason`, `reason_kind` (`foreign-repository`, `not-made`, `unanswered` or `null`), `guard`. Exit `0` when made; `1` otherwise — refused, not seen made or unconfirmed (the table above). A direct merge through this command passes the subject only: the commit's body is whatever the repository's squash-commit default composes, which this command does not yet check on that path (#1220). `land` passes the PR's body too (below).
 
 ### `pull-request enqueue <n> [--head <sha>] [--allow-foreign-repo] [--json]`
 
@@ -904,13 +905,13 @@ Exit `0` means the command reached an end it can state; the document says which.
 
 ### `pull-request land <n> --head <sha> --subject <s> [options] [--json]`
 
-The options: `[--seconds <s>] [--allow-dropped-head] [--admin] [--direct-only] [--queued-bad-shape refuse|warn] [--no-request] [--allow-foreign-repo] [--dry-run]`.
+The options: `[--seconds <s>] [--allow-dropped-head] [--admin] [--direct-only] [--queued-bad-shape refuse|warn] [--no-request] [--first-in-queue] [--allow-foreign-repo] [--dry-run]`.
 
 The landing sequence, in one command (ADR-061 point 5). It composes the steps above but the deletion, once, so a caller that lands through it holds no copy of them. `release merge` lands through it, by import.
 
 - **The guard** runs once, at the entry (above). Its clearance covers every request the landing makes, so a dequeue sent after a long wait never waits on a question.
 - **One reading**, then the first row of the table below that matches it, the options applied.
-- **The request**: the direct squash merge with `<s>` as its subject, as `merge` makes it, or the enqueue, as `enqueue` makes it — pinned to `<sha>`, and settled by reading when it gets no usable answer (above).
+- **The request**: the direct squash merge with `<s>` as its subject and the PR's body, as that reading read it, as its body (ADR-061 point 8), or the enqueue, as `enqueue` makes it — pinned to `<sha>`, and settled by reading when it gets no usable answer (above). GitHub keeps a body passed as it is, and adds nothing to it, so the `Co-authored-by:` trailers it adds to a body it composes from the PR's commits are not in the commit (#1257).
 - **The wait**, as `wait` waits: `--seconds`, else as long as the queue estimates plus 2 minutes, at most 30.
 - **A head that moved**: a reading at another head than `<sha>` — before any request, or during the wait — takes a queued PR out of the queue, as `dequeue` does, and ends `head-moved`.
 - **No branch is deleted.** When to delete is the caller's, at the end's `merged_head` (`delete-branch --expect`).
@@ -940,6 +941,7 @@ The landing sequence, in one command (ADR-061 point 5). It composes the steps ab
 - The rows that send match an open PR: the reading names it `OPEN`.
 - `--admin` passes the direct merge through as an administrator merge.
 - `--no-request`: the caller allows no merge and no enqueue in this landing. A PR queued at `H` is waited for, and one queued at another head is still taken out: the dequeue protects. A row that would send a merge or an enqueue, on any base, ends `refused`, `request-not-allowed`, nothing sent; the dry run ends the same, not `planned`.
+- `--first-in-queue`: the caller enqueues only first in the queue. An enqueue the reading finds another PR ahead of (its `ahead`) ends `refused`, `queued-ahead`, naming them, nothing sent. A PR already queued gets no enqueue, and is waited for. `release merge` passes it, so a release lands on the commit its plan read.
 
 The options, on the rows of a base with a queue:
 
@@ -952,8 +954,9 @@ The options, on the rows of a base with a queue:
 | a bad shape, `--queued-bad-shape warn` | wait, with a warning | `refused`, by the shape | `refused`, by the shape |
 | `--allow-dropped-head` | as none | `enqueue`, wait | as none |
 | `--no-request` | as none | `refused`, `request-not-allowed` | `refused`, `request-not-allowed` |
+| `--first-in-queue`, PRs ahead | as none | `refused`, `queued-ahead` | `refused`, `queued-ahead` |
 
-On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued-bad-shape` change nothing, and no shape is read; `--no-request` refuses the merge there, `request-not-allowed`.
+On a base without a queue, `--direct-only`, `--allow-dropped-head`, `--queued-bad-shape` and `--first-in-queue` change nothing, and no shape is read; `--no-request` refuses the merge there, `request-not-allowed`.
 
 **One refusal order**; the first that applies refuses, and nothing is sent:
 
@@ -962,7 +965,8 @@ On a base without a queue, `--direct-only`, `--allow-dropped-head` and `--queued
 3. `queue-not-allowed` — `--direct-only`.
 4. `queue-not-squash` — the queue's merge method is not squash.
 5. `dropped-head` — the queue dropped the PR at `H`, without `--allow-dropped-head`.
-6. `squash-defaults` — the repository's squash-commit defaults, read last, are not `PR_TITLE` and `PR_BODY`. Defaults that cannot be read end `unreadable`, `reason_kind: squash-defaults`.
+6. `queued-ahead` — `--first-in-queue`, and the queue holds another PR ahead of this one.
+7. `squash-defaults` — the repository's squash-commit defaults, read last, are not `PR_TITLE` and `PR_BODY`. Defaults that cannot be read end `unreadable`, `reason_kind: squash-defaults`.
 
 **Two stops no option lifts** (ADR-061 points 5 and 8):
 

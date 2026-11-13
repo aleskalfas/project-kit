@@ -1640,6 +1640,13 @@ _LAND_EXITS: Mapping[str, int] = {
     help="Send no merge and no enqueue: a PR queued at SHA is waited for, one queued at another "
     "head is still taken out, and one a merge or an enqueue would land is refused.",
 )
+@click.option(
+    "--first-in-queue",
+    is_flag=True,
+    default=False,
+    help="Enqueue only first in the queue: an enqueue behind another pull request is refused, "
+    "so none queued before the request lands ahead of this one.",
+)
 @_allow_foreign_repo_option
 @click.option(
     "--dry-run",
@@ -1658,6 +1665,7 @@ def pull_request_land(
     direct_only: bool,
     queued_bad_shape: str,
     no_request: bool,
+    first_in_queue: bool,
     allow_foreign_repo: bool,
     dry_run: bool,
     as_json: bool,
@@ -1666,7 +1674,8 @@ def pull_request_land(
 
     The cross-repository guard runs once, at the entry. Then one reading;
     the options applied to it; the direct squash merge, with SUBJECT, or the
-    enqueue, each pinned to SHA; the wait for the merge; and, where a reading
+    enqueue, each pinned to SHA, the direct merge carrying the PR's body as
+    the reading just before it read it; the wait for the merge; and, where a reading
     finds another head, the PR taken out of the queue. Never deletes a
     branch. Writes each event while the output takes them — a reading,
     `requesting` before each request is sent, `requested` once it is
@@ -1694,6 +1703,7 @@ def pull_request_land(
         direct_only=direct_only,
         queued_bad_shape=queued_bad_shape,
         no_request=no_request,
+        first_in_queue=first_in_queue,
     )
 
     closed = False
