@@ -811,12 +811,18 @@ reads it as it reads a final release's. Only the writes add the suffix `rcN`
 
 **Refused before anything is written,** where:
 
+- `HEAD` names no commit, as in a clone with none yet, since there is then
+  nothing to cut from.
 - the commit has not taken in the default branch's head, read from `origin`
   with `git ls-remote`, or whether it has cannot be told, since only then does
   the plan hold the default branch's versions and pending changesets beside
   the branch's own (ADR-092 point 2).
-- the working tree differs from the commit, by a changed file or one git does
-  not track, since the plan would then not be the commit's.
+- the working tree differs from the commit, by a changed file or one git
+  neither tracks nor ignores, since the plan would then not be the commit's.
+- the release itself is refused, as `release plan` refuses one, such as for a
+  declaration it cannot write or a range that would exclude a dependency's
+  version (PRJ-002 D4), since a candidate writes the final release's plan
+  (ADR-089 point 1).
 - the release would move no backbone version, since a candidate is a backbone
   tag (ADR-089 point 2).
 - the project is not the methodology's source repository, as the marker test
