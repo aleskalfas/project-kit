@@ -550,7 +550,7 @@ def _patch_gate_checks(
     """Patch the pre-check module the gate loads so its three residual probes
     return the requested statuses — without touching real gh or a real map."""
     fake_module = SimpleNamespace()
-    fake_module._check_gh_auth = lambda: _Check(
+    fake_module._check_gh_auth = lambda _config: _Check(
         "`gh` authenticated",
         "ok" if auth_ok else "fail",
         "auth ok" if auth_ok else "no active authentication",
@@ -606,7 +606,7 @@ def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> 
     called = {"map_parse": False}
 
     fake = SimpleNamespace()
-    fake._check_gh_auth = lambda: _Check("`gh` authenticated", "ok", "ok")
+    fake._check_gh_auth = lambda _config: _Check("`gh` authenticated", "ok", "ok")
     fake._check_repo_accessible = lambda: _Check("repo accessible", "ok", "ok")
 
     def _map_probe(_root):
@@ -619,6 +619,32 @@ def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> 
     gate = bf._residual_pre_check(cap)
     assert gate.passed is True
     assert called["map_parse"] is False
+
+
+def test_gate_judges_auth_by_the_projects_config(bf, tmp_path, monkeypatch) -> None:
+    """The gate hands pre-check's auth check the project's config, so it judges
+    the host the config sets, as pre-check does (#3007)."""
+    cap = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (cap / "project").mkdir(parents=True)
+    (cap / "project" / "config.yaml").write_text(
+        "schema_version: 1\nworkstreams: []\ngh:\n  host: github.example.com\n",
+        encoding="utf-8",
+    )
+    _mark_bootstrapped(cap)
+    seen: list[object] = []
+
+    def _auth(config):
+        seen.append(config)
+        return _Check("`gh` authenticated", "ok", "host=github.example.com")
+
+    fake = SimpleNamespace(
+        _check_gh_auth=_auth,
+        _check_repo_accessible=lambda: _Check("repo accessible", "ok", "ok"),
+    )
+    monkeypatch.setattr(bf, "_load_pre_check_module", lambda _root: fake)
+
+    assert bf._residual_pre_check(cap).passed is True
+    assert seen == [{"schema_version": 1, "workstreams": [], "gh": {"host": "github.example.com"}}]
 
 
 def test_gate_proceeds_under_a_degraded_axis(bf, tmp_path, monkeypatch) -> None:
