@@ -1,7 +1,7 @@
 ---
 id: PRJ-016
 title: A release candidate holds no release back
-status: proposed
+status: accepted
 date: 2026-11-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

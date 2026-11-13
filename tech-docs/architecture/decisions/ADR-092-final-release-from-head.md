@@ -1,7 +1,7 @@
 ---
 id: ADR-092
 title: A candidate is cut from a branch's head, and every final release is the ordinary release PR
-status: proposed
+status: accepted
 date: 2026-11-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
