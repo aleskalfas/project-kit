@@ -4,15 +4,20 @@ The one command that moves a project to a new release. Its own checks come
 first, and depend on the code that runs it (ADR-065 points 4 and 9):
 
 - **a pinned project's upgrade under its pin's code** (the router's routed
-  child, or the installed pkit that is the pin): the hand-over to a newer
-  latest release, or under `--pre` to the newest release, candidates included,
-  then the older-direction check. Otherwise it runs the transition to its pin.
-- **any other upgrade:** the refusal under the router's fallback, then
-  ADR-063's tool step in an un-pinned project, then the hand-over of `--pre` to
-  a newer release candidate and the refusal of a candidate nobody asked for
-  (ADR-089 points 7 and 8; `candidates`), then the older-direction check.
+  child, or the installed pkit that is the pin): the refusal to move a project
+  on a release candidate to any release but that candidate, then the hand-over
+  to a newer latest release, or under `--pre` to the newest release, candidates
+  included, or to the candidate the project records, then the older-direction
+  check. Otherwise it runs the transition to its pin.
+- **any other upgrade:** the refusal to move a project on a candidate to any
+  release but that candidate, then the refusal under the router's fallback,
+  then ADR-063's tool step in an un-pinned project, then the hand-over of
+  `--pre` to a release candidate and the refusal of a candidate nobody asked
+  for (ADR-089 points 7 and 8; `candidates`), then the older-direction check.
 
-A move to a release candidate always pins, so `--no-pin` is refused on it.
+Both end, in a candidate's own upgrade, with the refusal of a migration window
+that starts above the versions the candidate was cut from (ADR-092 points 7 and
+9). A move to a release candidate always pins, so `--no-pin` is refused on it.
 
 It records its target first, as `backbone_version`, and its completion last,
 as `completed_version`, and every migration runs inside it, in COR-010's order
@@ -62,7 +67,15 @@ from typing import TYPE_CHECKING, NoReturn
 import click
 from packaging.version import InvalidVersion, Version
 
-from project_kit.candidates import is_candidate, normal_form, refuse_no_pin, refuse_unasked
+from project_kit.candidates import (
+    is_candidate,
+    normal_form,
+    recorded_candidate,
+    refuse_above_base,
+    refuse_move_off,
+    refuse_no_pin,
+    refuse_unasked,
+)
 from project_kit.install import (
     InstallContext,
     find_source_kit,
@@ -161,7 +174,10 @@ def run_upgrade(
     above the running pkit, the upgrade hands over to the candidate's own
     upgrade through the router's bypass, and pins the project there. Where it is
     a final release, *pre* hands over to none. It is also the ask that lets the
-    running pkit's own candidate through upgrade's guard (point 7).
+    running pkit's own candidate through upgrade's guard (point 7). In a project
+    whose manifest records a candidate, *pre* targets that candidate, so it only
+    finishes a move to it cut short, and no upgrade moves the project to any
+    other release (ADR-092 point 7).
 
     **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
     version its content just synced to, so pinning is the norm and a project
@@ -205,26 +221,44 @@ def run_upgrade(
     # (flipped last) rather than floating on the installed tool.
     current_pin = read_version_pin(target_root)
     pinned = current_pin is not None
+    # Read before anything is written, for the refusal to move a project on a
+    # release candidate to any release but that candidate (ADR-092 point 7).
+    recorded = read_backbone_manifest(target_root)
     if current_pin is not None and runs_at_its_pin(current_pin):
         # Under its pin's code (ADR-065 point 9): the router's routed child, or
         # the installed pkit the router runs in process because it is the pin.
-        # Its checks, in order: the hand-over to a newer latest release, or
-        # under `--pre` to the newest release, candidates included, then the
-        # older-direction check. Otherwise it runs the transition to its pin
-        # below, with no tool step (ADR-063 point 5). Its target is its pin, so
-        # a candidate it moves to is one its pin names, which asked for it
-        # (ADR-089 point 6): only `--no-pin` is refused there.
+        # Its checks, in order: the refusal to move a project on a candidate to
+        # any release but that candidate, the hand-over to a newer latest
+        # release, or under `--pre` to the newest release, candidates included,
+        # or to the candidate the project records, then the older-direction
+        # check. Otherwise it runs the transition to its pin below, with no tool
+        # step (ADR-063 point 5). Its target is its pin, so a candidate it moves
+        # to is one its pin names, which asked for it (ADR-089 point 6): only
+        # `--no-pin` is refused there.
         if _auto_advance_pinned(
-            target_root, source_kit, current_pin, dry_run=dry_run, force=force, pre=pre, pin=pin
+            target_root,
+            source_kit,
+            current_pin,
+            recorded,
+            dry_run=dry_run,
+            force=force,
+            pre=pre,
+            pin=pin,
         ):
             return
         refuse_no_pin(read_kit_version(source_kit), pin=pin)
     else:
-        # Any other upgrade. First the refusal under the router's fallback
-        # (ADR-065 point 9): run by the installed pkit because the router could
-        # not fetch the pin, the upgrade would move the pin to that pkit's
-        # version, not to a release it resolved. A routed child that inherited
-        # the mark never meets it: its branch is above.
+        # Any other upgrade. First the refusal to move a project on a release
+        # candidate to any release but that candidate (ADR-092 point 7): under
+        # `--pre` the target is that candidate, and otherwise the running pkit.
+        if not pre:
+            _refuse_its_own_move_off(recorded, running_version())
+
+        # Then the refusal under the router's fallback (ADR-065 point 9): run by
+        # the installed pkit because the router could not fetch the pin, the
+        # upgrade would move the pin to that pkit's version, not to a release it
+        # resolved. A routed child that inherited the mark never meets it: its
+        # branch is above.
         refuse_under_routers_fallback(target_root)
 
         # ADR-063: detect a newer *released tool* and install it, or print the
@@ -252,9 +286,15 @@ def run_upgrade(
         # ADR-089 point 8: under `--pre`, the hand-over to a release candidate
         # newer than the running pkit, after the tool step, which installs no
         # candidate. A final release newest is the tool step's, as without
-        # `--pre`.
+        # `--pre`. In a project on a candidate, the hand-over is to that
+        # candidate, unless it is the running pkit (ADR-092 point 7).
         if pre and _hand_over_under_pre(
-            target_root, current_pin, dry_run=dry_run, force=force, pin=pin
+            target_root,
+            current_pin,
+            recorded_candidate(recorded),
+            dry_run=dry_run,
+            force=force,
+            pin=pin,
         ):
             return
 
@@ -294,6 +334,11 @@ def run_upgrade(
     # writes one at its target and replays (ADR-065 points 2 and 5).
     manifest = read_backbone_manifest(target_root)
     components = manifest.components if manifest is not None else []
+
+    # The last of upgrade's own checks, in a candidate's own upgrade: the
+    # refusal of a window that starts above the versions the candidate was cut
+    # from (ADR-092 point 9).
+    _refuse_a_window_above_the_cut(target_root, source_kit, manifest, target_version)
 
     # A project already current returns after upgrade's own checks, before step
     # 1, and only writes or raises its pin (ADR-065 point 4).
@@ -596,6 +641,31 @@ def is_current(
         and _same_version(manifest.completed_version, target_version)
         and not component_moves(target_root, source_kit, manifest)
         and not _capability_manifests_at_root(target_root, manifest)
+    )
+
+
+def _refuse_a_window_above_the_cut(
+    target_root: Path, source_kit: Path, manifest: BackboneManifest | None, target_version: str
+) -> None:
+    """In a release candidate's own upgrade, refuse a window that starts above the
+    versions the candidate was cut from, before anything is written (ADR-092 point
+    9; `candidates.refuse_above_base`).
+
+    The backbone's window starts at the completion, and runs nothing where the
+    completion is the target already, nor from below where there is none. Each
+    moving component's starts at the version it records. The windows are read,
+    not the version a manifest records, so a move to the candidate cut short
+    still finishes. An upgrade by a final release meets no such refusal.
+    """
+    if not is_candidate(target_version):
+        return
+    lower = replay_lower_bound(manifest)
+    backbone_from = None if lower is None or _same_version(lower, target_version) else lower
+    moves = component_moves(target_root, source_kit, manifest) if manifest is not None else []
+    refuse_above_base(
+        target_version,
+        backbone_from=backbone_from,
+        components_from={move.name: move.recorded for move in moves if move.recorded is not None},
     )
 
 
@@ -1119,7 +1189,9 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
     - **newer** → reconcile content forward to the target under the target's own
       code (via the router bypass), then flip the pin last, atomically. A pin
       that names a release candidate asks for it, so the candidate's upgrade,
-      run through the bypass, moves the project there;
+      run through the bypass, moves the project there. A project whose manifest
+      records a candidate is raised to no release but that candidate, and
+      nothing is written (ADR-092 point 7);
     - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
       there is no safe downgrade path; nothing is written and no content is
       touched (reverting each upgrade's commit is the rollback route).
@@ -1151,8 +1223,12 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
         freeze_pin(target_root, normalized)
         return
 
-    # newer → reconcile content forward, then flip the pin LAST, so a failed
-    # reconcile never advances the pin past content that never landed.
+    # newer → a raise, which never moves a project on a release candidate to any
+    # release but that candidate (ADR-092 point 7).
+    refuse_move_off(read_backbone_manifest(target_root), normalized)
+
+    # Reconcile content forward, then flip the pin LAST, so a failed reconcile
+    # never advances the pin past content that never landed.
     click.echo(
         f"Pinning forward to {normalized} (current content {current}): reconciling "
         "content up to the target first."
@@ -1345,10 +1421,27 @@ def runs_at_its_pin(pin: str) -> bool:
     return is_routed_child(os.environ) or pin == running_version()
 
 
+def _refuse_its_own_move_off(recorded: BackboneManifest | None, own: str) -> None:
+    """The refusal to move a project on a release candidate to any release but that
+    candidate, for the move an upgrade's own transition would make, to *own*, the
+    version of the code that runs it (ADR-092 point 7; `candidates.refuse_move_off`).
+
+    Its own transition moves the project to *own* only where *own* is newer than
+    the candidate *recorded* names. A run older than it moves the project nowhere:
+    upgrade's older-direction check refuses it, and its message names `pkit upgrade
+    --pre`, which finishes a move to the candidate cut short (ADR-065 points 8 and
+    9).
+    """
+    candidate = recorded_candidate(recorded)
+    if candidate is not None and _moves_up(candidate, own):
+        refuse_move_off(recorded, own)
+
+
 def _auto_advance_pinned(
     target_root: Path,
     source_kit: Path,
     current_pin: str,
+    recorded: BackboneManifest | None,
     *,
     dry_run: bool,
     force: bool,
@@ -1361,7 +1454,13 @@ def _auto_advance_pinned(
     (`runs_at_its_pin`). It cannot mutate the global tool, and needs not: it
     resolves the latest release (ADR-063 point 1's `git ls-remote` check), or
     under *pre* the newest release, candidates included, which then takes the
-    latest's place (ADR-089 point 8). It then checks three cases, in this order:
+    latest's place (ADR-089 point 8). Under *pre* in a project whose manifest,
+    *recorded*, records a release candidate, that candidate takes the latest's
+    place instead, with no lookup (ADR-092 point 7).
+
+    It first refuses to move a project on a candidate to any release but that
+    candidate (`refuse_move_off`): the release it would hand over to, or else
+    its own pin. It then checks three cases, in this order:
 
     1. **A newer latest release that resolves:** it hands over to the latest
        through the router's bypass, and returns True. The latest's upgrade runs
@@ -1373,7 +1472,9 @@ def _auto_advance_pinned(
        `completed_version`: the older-direction check refuses, before anything
        is written. Offline its message names reconnecting, since the latest's
        upgrade finishes the interrupted raise. Online no release is newer than
-       the pin, and the message names #1212's remedies.
+       the pin, and the message names #1212's remedies. Where the recorded
+       target is a candidate, it names `pkit upgrade --pre` instead, online or
+       offline.
     3. **Otherwise,** at the latest, ahead of it or offline: it returns False,
        and the caller runs the transition to the pin in its own process. A
        project already current at its pin returns before step 1 (point 4).
@@ -1381,12 +1482,34 @@ def _auto_advance_pinned(
     A pin that is no version cannot be ordered against the latest release, so
     it hands over to none.
     """
-    if pre:
+    candidate = recorded_candidate(recorded)
+    latest: Version | None
+    if pre and candidate is not None:
+        latest = Version(candidate)
+        named = _RECORDED_CANDIDATE
+    elif pre:
         latest = _newest_release_or_candidate()
         named = _NEWEST_UNDER_PRE
     else:
         latest = _latest_released_version()
         named = _LATEST
+    try:
+        pinned_version: Version | None = Version(current_pin)
+    except InvalidVersion:
+        pinned_version = None
+    newer = (
+        latest
+        if latest is not None and pinned_version is not None and latest > pinned_version
+        else None
+    )
+
+    # First, the refusal to move a project on a candidate to any release but that
+    # candidate: the release the hand-over would reach, or else its own pin.
+    if newer is not None:
+        refuse_move_off(recorded, str(newer))
+    else:
+        _refuse_its_own_move_off(recorded, current_pin)
+
     if latest is None:
         click.secho(
             f"warning: could not check for the {named} "
@@ -1398,10 +1521,6 @@ def _auto_advance_pinned(
             fg="yellow",
         )
     else:
-        try:
-            pinned_version = Version(current_pin)
-        except InvalidVersion:
-            pinned_version = None
         if pinned_version is None:
             click.secho(
                 f"warning: this project's pin ({current_pin!r}) is not valid semver, so "
@@ -1410,9 +1529,9 @@ def _auto_advance_pinned(
                 err=True,
                 fg="yellow",
             )
-        elif latest > pinned_version:
-            refuse_no_pin(str(latest), pin=pin)
-            _hand_over(target_root, current_pin, str(latest), named, dry_run=dry_run, force=force)
+        elif newer is not None:
+            refuse_no_pin(str(newer), pin=pin)
+            _hand_over(target_root, current_pin, str(newer), named, dry_run=dry_run, force=force)
             return True
         elif latest == pinned_version:
             click.echo(f"Already at the {named} (v{latest}); the pin stays.")
@@ -1429,14 +1548,22 @@ def _auto_advance_pinned(
     return False
 
 
-# How the upgrade names the release its lookup found: the latest final release,
-# or under `--pre` the newest release, candidates included (ADR-089 point 8).
+# How the upgrade names the release it moves to: the latest final release, or
+# under `--pre` the newest release, candidates included (ADR-089 point 8), or, in
+# a project on a candidate, that candidate (ADR-092 point 7).
 _LATEST = "latest pkit release"
 _NEWEST_UNDER_PRE = "newest pkit release, candidates included"
+_RECORDED_CANDIDATE = "release candidate this project records"
 
 
 def _hand_over_under_pre(
-    target_root: Path, current_pin: str | None, *, dry_run: bool, force: bool, pin: bool
+    target_root: Path,
+    current_pin: str | None,
+    candidate: str | None,
+    *,
+    dry_run: bool,
+    force: bool,
+    pin: bool,
 ) -> bool:
     """The hand-over of `pkit upgrade --pre`, in any upgrade not run under its pin's
     code (ADR-089 point 8, ADR-065 point 4).
@@ -1449,7 +1576,24 @@ def _hand_over_under_pre(
     newest is a final release, or the running pkit itself, or the lookup fails,
     it hands over to none and returns False. ADR-063's tool step, which installs
     no candidate, has already run.
+
+    In a project whose manifest records a release *candidate*, `--pre` targets
+    that candidate, with no lookup: it hands over to it unless it is the running
+    pkit, so it only finishes a move to it cut short (ADR-092 point 7).
     """
+    if candidate is not None:
+        if _same_version(candidate, running_version()):
+            return False
+        refuse_no_pin(candidate, pin=pin)
+        _hand_over(
+            target_root,
+            current_pin,
+            candidate,
+            _RECORDED_CANDIDATE,
+            dry_run=dry_run,
+            force=force,
+        )
+        return True
     newest = _newest_release_or_candidate()
     if newest is None:
         click.secho(
@@ -1480,22 +1624,24 @@ def _hand_over(
     dry_run: bool,
     force: bool,
 ) -> None:
-    """Hand an upgrade over to the newer release *target*, which the lookup found as
-    the release *named*, through the router's bypass, and flip the pin last
-    (ADR-049, ADR-065 point 9, ADR-089 point 8). A project with no pin is pinned
-    at the target.
+    """Hand an upgrade over to the release *target*, which the upgrade found as the
+    release *named*, through the router's bypass, and flip the pin last (ADR-049,
+    ADR-065 point 9, ADR-089 point 8). A project with no pin is pinned at the
+    target. The target is newer than the pin, or than the running pkit, except
+    where it is the candidate a project records, which `--pre` hands over to
+    whatever runs it (ADR-092 point 7).
 
     A dry run runs the target's upgrade with `--dry-run`, so it lists what that
     upgrade would do, the pin it would raise included, and writes no pin.
     """
     prior = current_pin if current_pin is not None else "(unpinned)"
     if dry_run:
-        newer_than = (
-            f"the pin, {current_pin}" if current_pin is not None else f"pkit {running_version()}"
-        )
+        compared = current_pin if current_pin is not None else running_version()
+        subject = f"the pin, {current_pin}" if current_pin is not None else f"pkit {compared}"
+        newer_than = f", is newer than {subject}" if _moves_up(compared, target) else ""
         click.echo(
-            f"  (dry-run) the {named}, v{target}, is newer than {newer_than}: its own "
-            "upgrade runs with --dry-run, through the router's bypass."
+            f"  (dry-run) the {named}, v{target}{newer_than}: its own upgrade runs with "
+            "--dry-run, through the router's bypass."
         )
         reconcile_forward_via_target(target_root, target, dry_run=True, force=force)
         return

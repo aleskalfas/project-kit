@@ -49,6 +49,7 @@ pkit:
         - ADR-034#1
         - ADR-089#6
         - ADR-089#7
+        - ADR-092#7
       artefact:
         - ACT-operator
         - REQ-002
@@ -118,6 +119,7 @@ pkit:
 - **1i.** The project is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The system refuses, since there the [router](../../../glossary.md#term-router--router) runs the checkout's own code before it reads any version pin ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **1j.** The operator names a release candidate in PEP 440's normal form, such as `pkit pin 3.0.0rc1`, at a final release. The system orders it by PEP 440, so a candidate sorts below its final release. A version pin that names a candidate asks for it, so the system raises the project to it as 1c does ([ADR-089 point 6](../../../../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **1k.** The operator names a release candidate spelt another way, such as `2.0.0-rc.1`. The system refuses, names the normal form, `2.0.0rc1`, and writes nothing ([ADR-089 point 6](../../../../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
+- **1l.** The project's manifest records a release candidate, and the operator names a release or release candidate newer than its content. The system refuses and writes nothing, since a project on a release candidate moves to no other release ([ADR-092 point 7](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)). Its message names the ways off, as UC-051's 1f does, and `pkit upgrade --pre` where the move onto the candidate was cut short. The use case ends.
 - **6a.** The project pins no [version](../../../glossary.md#term-version--version), or its version pin names the running CLI's release. The system runs the command itself ([ADR-039 point 3](../../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#3-match-or-no-pin--run-self)).
 - **6b.** The working directory lies in the methodology's source repository. The system runs that checkout's own code, and reads no version pin ([ADR-039 point 1](../../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#1-source-checkout--exec-the-in-tree-dispatcher)).
 - **6c.** `PKIT_NO_ROUTE` is set. The system runs the command under the running CLI, and reads no version pin.
@@ -126,6 +128,7 @@ pkit:
 - **7b.** On the path of 7a, the installed CLI is older than the version pin. The warning says so, and says that `pkit sync` and `pkit upgrade` refuse rather than write older content over the project's.
 - **7c.** On the path of 7a, the operator ran `pkit upgrade`. The system refuses, and names reconnecting, the version pin run through `uvx`, or `pkit unpin` then `pkit upgrade` ([ADR-065 point 9](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#9-a-pinned-projects-upgrade-runs-under-the-code-of-its-pin-or-of-a-newer-release)).
 - **11a.** The project holds no version pin. The system prints `No pin to remove; project already floats on the installed tool.`.
+- **11b.** The project's manifest records a release candidate. The system refuses and writes nothing, since a project on a release candidate stays pinned ([ADR-089 point 7](../../../../../architecture/decisions/ADR-089-release-candidates.md#7-an-upgrade-or-an-init-refuses-a-candidate-nobody-asked-for-and-a-move-to-a-candidate-always-pins)). Its message names the ways off, as UC-051's 1f does. The use case ends.
 
 **Postconditions:** Each command in the [project](../../../glossary.md#term-project--project) runs at the [release](../../../glossary.md#term-release--release) its [version pin](../../../glossary.md#term-version-pin--version-pin) names, whatever CLI the machine has installed, while that release can be fetched. Where it cannot, the operator is told which CLI ran instead.
 
