@@ -160,9 +160,8 @@ def run_upgrade(
     release candidates included (ADR-089 point 8). Where that is a candidate
     above the running pkit, the upgrade hands over to the candidate's own
     upgrade through the router's bypass, and pins the project there. Where it is
-    a final release, the upgrade runs as it would without *pre*. It is also the
-    ask that lets the running pkit's own candidate through upgrade's guard
-    (point 7).
+    a final release, *pre* hands over to none. It is also the ask that lets the
+    running pkit's own candidate through upgrade's guard (point 7).
 
     **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
     version its content just synced to, so pinning is the norm and a project
@@ -1448,8 +1447,8 @@ def _hand_over_under_pre(
     the pin to the candidate last, and returns True. `--no-pin` (*pin* False) is
     refused on it, since a move to a candidate always pins (point 7). Where the
     newest is a final release, or the running pkit itself, or the lookup fails,
-    it returns False, and the upgrade runs as it would without `--pre`: ADR-063's
-    tool step, which installs no candidate, has already run.
+    it hands over to none and returns False. ADR-063's tool step, which installs
+    no candidate, has already run.
     """
     newest = _newest_release_or_candidate()
     if newest is None:
