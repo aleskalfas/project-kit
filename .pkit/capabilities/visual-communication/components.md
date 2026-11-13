@@ -332,9 +332,9 @@ values:
 
 - **What it reads.** The mode the scene's key holds, else the axis's default. So a piece that names no size draws the default's branch ([How the engine computes a scene](#how-the-engine-computes-a-scene)).
 - **The default is named, and takes what is left out.** The switch names the axis's default. A mode it leaves out takes that branch, so `tablet` above takes `desktop`'s. A new mode draws as the default does until a component names it.
-- **Only a size axis a piece can name.** The foundations declare it ([`roles.yaml`](files.md#rolesyaml)). A value axis is refused, since one scene serves each of its modes.
+- **Only a shared size axis.** The foundations declare it ([`roles.yaml`](files.md#rolesyaml)). A value axis is refused, since one scene serves each of its modes. So is a brand's own size axis ([Axes and modes](files.md#axes-and-modes)), since a component serves every brand (DEC-021 point 7): a scene at one of its modes reads the shared axes alone.
 - **The size is the page's.** A component reads the size the piece is drawn at, whatever room its placer gives it. It answers to its slot only by formulas on `:width`, and a drawing of a layout also by `:as`, below.
-- **What is refused,** at any depth: a marked name that reads no size axis a piece can name, other than `:as` in a drawing of a layout, and a branch that is no mode. So is a switch with no branch for the axis's default.
+- **What is refused,** at any depth: a marked name that reads no shared size axis, other than `:as` in a drawing of a layout, and a branch that is no mode. So is a switch with no branch for the axis's default.
 
 **A switch on `:as`,** `{by: ":as", page: <value>, part: <value>}`, chooses by whether the instance is a page. Only a drawing of a layout reads it, the top's own or a brand's ([Layouts](#layouts)). It serves wherever a switch on a size does, and as a `when`. A drawing of the figure could draw a backdrop only where the figure is a page:
 
