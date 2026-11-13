@@ -1108,14 +1108,14 @@ pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" -
 
 `create-milestone` and `close-milestone` both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
 
-**A category comes first.** A project declares each category before it files the first Milestone in it, and none is declared by default. On a project with none, `create-milestone` refuses and names the command that declares one:
+**A category comes first.** A project declares each category before it files the first Milestone in it, and none is declared by default. On a project with none, `create-milestone` refuses and names the command that declares one, such as:
 
 ```
 pkit pm add-milestone-category sprint --title-format "Sprint {n}: {name}" --close-trigger date-based --description "A two-week planning window."
 ```
 
 - **The checks.** The title format holds `{n}` and `{name}`, which `create-milestone` fills, and no other placeholder. The description is one line of at most 200 characters. The command refuses a value outside these rules, and a category already declared, before it writes anything.
-- **The file.** The command adds the category under `milestone_categories:`, or adds the block at the end of the file, and keeps every other byte of it. Where the file would not read back as it was with only the category added, as with a block written in flow style, it writes nothing and asks you to declare the category by hand.
+- **The file.** The command adds the category under `milestone_categories:`, or adds the block at the end of the file, and keeps every other byte of it, save an empty value on the `milestone_categories:` line, such as `{}` or `~`: it writes that line without the value, and keeps a comment on it. Where the file would not read back as it was with only the category added, as with a block written in flow style, it writes nothing and asks you to declare the category by hand.
 - **The declaration is the person's,** as a workstream is (#2015). The command runs the membership gate and the foreign-repo guard, asks at a terminal, and takes `--yes` as the person's word. Off a terminal without `--yes`, it refuses with exit 1 and names the command to run with `--yes`. `--dry-run` prints the plan and writes nothing.
 
 **The close is the person's** (#2015). At a terminal `close-milestone` asks before it closes, and `--yes` authorises the close. Off a terminal, without `--yes`, it refuses with exit 1 before anything is written, and names the command to run with `--yes`. A re-run that finishes a rollforward goes on without `--yes`, since the close it finishes authorised the moves.
