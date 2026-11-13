@@ -1,0 +1,10 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  In Czech, a short preposition never ends a line the engine breaks (#3084). Each
+  of před, nad, pod, přes, za, na, do, od and ve, in any case, moves to the next
+  line with the word it opens, whichever runs hold them, as a one-letter word
+  already does. A Czech piece's lines may move at its next render. Other languages
+  break as before.
