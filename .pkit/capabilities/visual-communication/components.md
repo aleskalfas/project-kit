@@ -92,6 +92,7 @@ pkit:
         - visual-communication:DEC-032#4
         - visual-communication:DEC-032#5
         - visual-communication:DEC-032#6
+        - visual-communication:DEC-032#7
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#3
@@ -661,7 +662,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 
 A `repeat` part draws a component for each item of a list field, in the content's order. **What draws an item** is the component its own `use` names, else the one its list's component field names, else `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family, the family of each place ([Values, states and colour](#values-states-and-colour)).
 
-**A switch of the places' families.** `colour` may switch on an option of words, naming each word, as any switch does ([Switches](#switches)). Each branch names a family, `null` for no family from the pattern, or `:steps`, the order's steps. So the steps are always a person's choice: the content's author by the word, or the pattern's owner by the option's default. `:steps` lies in a branch alone, and the switch reads no size and holds no switch again. A word that gives a list the steps names no family for any place of it, by another part over the list that may be drawn under it (*checks*). A row of cards that shows an order under `shade: steps`:
+**A switch of the places' families.** `colour` may switch on an option of words, naming each word, as any switch does ([Switches](#switches)). Each branch names a family, `null` for no family from the pattern, or `:steps`, the order's steps. So the steps are always a person's choice: the content's author by the word, or the pattern's owner by the option's default. `:steps` lies in a branch alone, and the switch reads no size and holds no switch again. Where a word gives a list the steps, no other part over the list that may be drawn under that word may name a family for its places (*checks*). A row of cards that shows an order under `shade: steps`:
 
 ```yaml
 options:
