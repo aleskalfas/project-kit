@@ -3290,7 +3290,10 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `requires_capabilities` floor, or a `runs_on_capabilities` upper bound, for a
     component it neither touches nor moves, or edits the range of an existing
     `requires_capabilities` entry other than to correct one that excludes the
-    version the tree carries (PRJ-002 D1).
+    version the tree carries (PRJ-002 D1). In the methodology's source
+    repository, fail too where HEAD's tree records a pre-release version, in
+    `.pkit/VERSION` or a component's `package.yaml`, unless HEAD is a release
+    candidate's own commit, the one its tag names (ADR-089 point 3).
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -3298,9 +3301,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `none` changeset for the component, or the `skip-changeset` label
     (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
     path heuristic can mis-fire; the override exists. No escape hatch waives
-    the floor tie or the range tie. A pending changeset the diff leaves alone —
-    another pull request's — does not count for this one, whatever component it
-    names.
+    the floor tie, the range tie or a pre-release version. A pending changeset
+    the diff leaves alone — another pull request's — does not count for this
+    one, whatever component it names.
     """
     source_kit = _target_kit()
     fork = _settled_base(source_kit.parent, base).fork
@@ -3378,6 +3381,15 @@ def release_check(base: str | None, skip: bool | None) -> None:
             "that moves its version, and the release writes it. A branch edits a range only to "
             "correct one that excludes the version the tree carries — see .pkit/release/"
             'README.md, "Correcting a range that excludes a carried version". The '
+            "`skip-changeset` label does not waive this."
+        )
+    if result.pre_releases:
+        problems.append(
+            "a pre-release version in a tree bound for the default branch, which holds release "
+            "versions alone (ADR-089 point 3):\n"
+            + "\n".join(f"  {each.named}" for each in result.pre_releases)
+            + "\n  A release candidate's versions live only in its tag, on a commit no branch "
+            "holds (ADR-089 point 1): give each file back its release version. The "
             "`skip-changeset` label does not waive this."
         )
     raise click.ClickException("\n".join(problems))
@@ -3556,7 +3568,9 @@ def release_merge(
     saw nothing merged, with the reading and the re-run that tell. Every `gh`
     call is bounded, so no stuck call holds the run. Exit 3 when the queue dropped the PR
     or its head moved; nothing is deleted then. A head the queue already
-    dropped is not enqueued again without `--force`. It does **not** tag —
+    dropped is not enqueued again without `--force`. In the methodology's
+    source repository it refuses, nothing merged, a release PR whose head
+    records a pre-release version (ADR-089 point 3). It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
 
