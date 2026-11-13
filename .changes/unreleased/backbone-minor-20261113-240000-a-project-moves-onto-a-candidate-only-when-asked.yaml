@@ -15,4 +15,6 @@ body: >
   move to a candidate, and an `init` run by a candidate with routing bypassed
   pins the project it installs. A plain `pkit upgrade` never moves a project
   onto a candidate its pin does not name. The CLI reference and the lifecycle's
-  upgrade flow say so.
+  upgrade flow say so. Where the router cannot run a candidate's pin, its
+  notice says when the pkit it runs instead is older, as it does for a
+  release's pin.
