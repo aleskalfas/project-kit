@@ -484,12 +484,73 @@ def test_a_listing_that_is_not_the_one_asked_for_is_refused(
     assert "lacks its number, branch or body" in capsys.readouterr().err
 
 
+# --- The notes an earlier run left unpublished (ADR-092 point 5) ---------------
+
+
+def _ls_remote(*refs: str) -> str:
+    return "".join(f"{n:040x}\t{ref}\n" for n, ref in enumerate(refs, start=1))
+
+
+def test_each_release_and_candidate_tag_without_a_release_is_named_oldest_first() -> None:
+    listed = _ls_remote(
+        "refs/tags/v2.2.0",
+        "refs/tags/v2.2.0^{}",
+        "refs/tags/v2.3.0rc2",
+        "refs/tags/v2.3.0rc2^{}",
+        "refs/tags/v2.1.0",
+        "refs/tags/v2.3.0",
+        "refs/tags/v2.3.0rc10",
+        "refs/tags/withdrawn/v2.3.0rc2",
+        "refs/tags/latest",
+        "refs/tags/v2.4.0b1",
+    )
+
+    named = release_pr.unpublished(listed, {"v2.1.0", "v2.2.0"})
+
+    assert named == ["2.3.0rc2", "2.3.0rc10", "2.3.0"]
+
+
+def test_with_every_tag_released_nothing_is_named() -> None:
+    assert release_pr.unpublished(_ls_remote("refs/tags/v2.2.0"), {"v2.2.0"}) == []
+    assert release_pr.unpublished("", set()) == []
+
+
+def test_the_command_prints_a_version_a_line_for_the_workflow(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    tags = tmp_path / "tags.txt"
+    tags.write_text(_ls_remote("refs/tags/v2.3.0rc1", "refs/tags/v2.2.0"), encoding="utf-8")
+    releases = tmp_path / "releases.txt"
+    releases.write_text("v2.2.0\nv2.1.0\n", encoding="utf-8")
+
+    code = release_pr.main(["unpublished", "--tags", str(tags), "--releases", str(releases)])
+
+    assert code == 0
+    assert capsys.readouterr().out == "2.3.0rc1\n"
+
+
+def test_tags_that_cannot_be_read_are_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    releases = tmp_path / "releases.txt"
+    releases.write_text("", encoding="utf-8")
+    missing = str(tmp_path / "missing.txt")
+
+    code = release_pr.main(["unpublished", "--tags", missing, "--releases", str(releases)])
+
+    assert code == 1
+    assert "the tags" in capsys.readouterr().err
+
+
 # --- The workflow --------------------------------------------------------------
 
 
-def _steps() -> list[dict[str, Any]]:
-    workflow = YAML(typ="safe").load(WORKFLOW.read_text(encoding="utf-8"))
-    return workflow["jobs"]["release-pr"]["steps"]
+def _workflow() -> dict[str, Any]:
+    return YAML(typ="safe").load(WORKFLOW.read_text(encoding="utf-8"))
+
+
+def _steps(job: str = "release-pr") -> list[dict[str, Any]]:
+    return _workflow()["jobs"][job]["steps"]
 
 
 def _index(steps: list[dict[str, Any]], runs: str) -> int:
@@ -546,3 +607,61 @@ def test_the_release_commit_and_the_body_carry_the_line_apply_printed() -> None:
     assert apply < trailer < run.index("scripts/release_pr.py body")
     assert '--trailer "${trailer}"' in run
     assert 'git commit -m "${title}" -m "${trailer}"' in run
+
+
+def test_the_input_pre_release_chooses_the_job_and_one_group_keeps_runs_apart() -> None:
+    workflow = _workflow()
+    jobs = workflow["jobs"]
+
+    pre = workflow["on"]["workflow_dispatch"]["inputs"]["pre-release"]
+    assert pre["type"] == "boolean" and pre["default"] is False
+    assert workflow["concurrency"] == {"group": "release", "cancel-in-progress": False}
+    assert jobs["release-pr"]["if"] == "${{ !inputs.pre-release }}"
+    assert jobs["pre-release"]["if"] == "${{ inputs.pre-release }}"
+    assert jobs["release-pr"]["needs"] == jobs["pre-release"]["needs"] == "start"
+
+
+def test_without_the_input_the_run_refuses_off_the_default_branch_before_anything_else() -> None:
+    """ADR-092 point 5: the refusal comes before the notes, and the plan after both."""
+    steps = _steps("start")
+    refusal = steps[_index(steps, "jq -r '.default_branch.name'")]
+
+    assert refusal["if"] == "${{ !inputs.pre-release }}"
+    assert '[ "${GITHUB_REF}" != "refs/heads/${default}" ]' in refusal["run"]
+    assert "exit 1" in refusal["run"]
+    assert _index(steps, "jq -r '.default_branch.name'") < _index(
+        steps, "scripts/release_pr.py unpublished"
+    )
+
+
+def test_the_notes_left_unpublished_are_finished_and_a_failure_is_said_and_passed_by() -> None:
+    steps = _steps("start")
+    run = steps[_index(steps, "scripts/release_pr.py unpublished")]["run"]
+
+    assert "set -uo pipefail" in run and "set -e" not in run
+    assert "git ls-remote --tags origin" in run
+    assert 'gh api --paginate "repos/${GITHUB_REPOSITORY}/releases"' in run
+    publish = run.index('uv run pkit release publish-notes "${version}"')
+    assert run.index("scripts/release_pr.py unpublished") < publish
+    assert "::warning::The notes of v${version} could not be published" in run[publish:]
+
+
+def test_a_candidate_is_cut_after_the_check_and_its_tag_pushed_after_the_wheel_check() -> None:
+    """ADR-092 point 2 and ADR-089 point 9: the check, the cut, the wheel, the push of
+    the tag alone, never forced, then its notes."""
+    steps = _steps("pre-release")
+    check = _index(steps, 'uv run pkit release check --base "${default}"')
+    cut = _index(steps, "uv run pkit release apply --pre --tag --yes")
+    wheel = _index(steps, "uv build --wheel")
+    push = _index(steps, "git push")
+    notes = _index(steps, "pkit release publish-notes")
+
+    assert check < cut < wheel < push < notes
+    assert "PKIT_CHANGESET_SKIP" not in str(steps)
+    assert steps[push]["run"] == 'git push origin "refs/tags/v${VERSION}"'
+    assert '"${venv}/bin/pkit" --version' in steps[wheel]["run"]
+    assert '!= "pkit, version ${VERSION}"' in steps[wheel]["run"]
+    # No job forces a push or deletes a tag (ADR-092 point 10).
+    text = WORKFLOW.read_text(encoding="utf-8")
+    for forbidden in ("--force", "push -f", "git tag -d", "tag --delete", ":refs/tags/"):
+        assert forbidden not in text
