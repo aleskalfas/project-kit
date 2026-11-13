@@ -34,6 +34,34 @@ libraries:
               path: roles.yaml
               sha256: 8c5c29cd8d9797a7527fb2979fc830415c14f09bfa9ed47f96bceeb6d609d92a
       1.1.0:
+        released: true
+        hash:
+          form: 1
+          hash: sha256
+          format: 1
+          value: 65d3efb008f6680a048af944d736fe493ec49204eff7cab8e25621a45f64992a
+          inputs:
+            - library: foundations
+              version: 1.1.0
+              path: components/deck.yaml
+              sha256: ca873f7ffebd71d2d91aae6c98feae0838c17bd0696927ba0753b6e00fe48c1e
+            - library: foundations
+              version: 1.1.0
+              path: components/figure.yaml
+              sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+            - library: foundations
+              version: 1.1.0
+              path: components/site.yaml
+              sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
+            - library: foundations
+              version: 1.1.0
+              path: library.yaml
+              sha256: 0503d93b1ec7838db4f4cd6f94ba23cfe20d4cb53318ae038fc1aabad30cceea
+            - library: foundations
+              version: 1.1.0
+              path: roles.yaml
+              sha256: 4b56d8f38100d1c8af0ada43a12e7a69a127b3438841eeab3c76d7c6e152793b
+      1.2.0:
         released: false
   starter:
     source:

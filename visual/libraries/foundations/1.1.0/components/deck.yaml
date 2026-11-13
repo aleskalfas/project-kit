@@ -24,16 +24,6 @@ fields:
 values:
   margin: "=@space.4 * 2"
 
-# The types of what a page says first, so a brand can size them for where the deck is
-# shown, such as larger on a projector, apart from the type of the rest of its text. Each
-# defaults to the shared type the deck drew it in before, so a brand that gives neither
-# draws the deck as it did.
-tokens:
-  # A page's title: the cover's and each slide's.
-  title: {type: typography, default: '{type.heading}'}
-  # The line under a title: a slide's lead and the cover's subtitle.
-  lead: {type: typography, default: '{type.body}'}
-
 # Every page is as large as the deck asks to be.
 preferred:
   width: "=@size.slide"
@@ -66,7 +56,7 @@ layouts:
         width: "=:width"
         height: "=:height"
       title:
-        text: {content: title, style: component.foundations.deck.title, fill: text-primary}
+        text: {content: title, style: type.heading, fill: text-primary}
         x: "=margin"
         y: "=:height / 3"
         width: "=:width - 2 * margin"
@@ -78,7 +68,7 @@ layouts:
         height: "=@space.1"
       subtitle:
         when: subtitle
-        text: {content: subtitle, style: component.foundations.deck.lead, fill: text-secondary}
+        text: {content: subtitle, style: type.body, fill: text-secondary}
         x: "=margin"
         y: "=rule.bottom + @space.3"
         width: "=:width - 2 * margin"
@@ -123,29 +113,24 @@ layouts:
         width: "=:width"
         height: "=:height"
       title:
-        text: {content: title, style: component.foundations.deck.title, fill: text-primary}
+        text: {content: title, style: type.heading, fill: text-primary}
         x: "=margin"
         y: "=margin"
         width: "=:width - 2 * margin"
-      # The lead answers the title, so it stands closer under the title than the visual
-      # stands under the lead, and the two read as the page's head.
       lead:
         when: lead
-        text: {content: lead, style: component.foundations.deck.lead, fill: text-secondary}
+        text: {content: lead, style: type.body, fill: text-secondary}
         x: "=margin"
-        y: "=title.bottom + @space.2"
+        y: "=title.bottom + @space.3"
         width: "=:width - 2 * margin"
       # The visual takes the height between the lead and the limit, or the footer, so a
-      # visual that asks for more is reported. A large space stands above the limit and
-      # above the footer only where each is drawn: a part drawn holds a line of text,
-      # taller than the smallest space, and one not drawn has no height. So the visual
-      # reaches down to the limit, the footer or the margin, one large space above it.
+      # visual that asks for more is reported.
       visual:
         slot: visual
         x: "=margin"
         y: "=lead.bottom + @space.4"
         width: "=:width - 2 * margin"
-        height: "=limit.y - min(limit.height, @space.1) / @space.1 * @space.4 - visual.y"
+        height: "=limit.y - @space.4 - visual.y"
       # The limit stands above the footer, a bar of the accent at its side.
       limit-bar:
         when: limit
@@ -158,7 +143,7 @@ layouts:
         when: limit
         text: {content: limit, style: type.body, fill: text-primary}
         x: "=margin + @space.1 + @space.3"
-        y: "=footer.y - min(footer.height, @space.1) / @space.1 * @space.4 - limit.height"
+        y: "=footer.y - @space.4 - limit.height"
         width: "=:width - 2 * margin - @space.1 - @space.3"
       footer:
         when: footer

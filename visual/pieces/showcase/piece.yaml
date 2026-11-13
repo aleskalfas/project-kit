@@ -17,7 +17,7 @@ modes:
   # Shown projected first: the slide's type is a projector's, read from across a room.
   device: [projector]
 lock:
-  foundations: 1.1.0
+  foundations: 1.2.0
   neutral: 1.1.0
   pkit: 1.0.0
   starter: 1.1.0

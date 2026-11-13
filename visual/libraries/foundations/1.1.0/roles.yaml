@@ -64,12 +64,11 @@ roles:
 # The shared axes (DEC-004 point 2). The colour scheme and the contrast change colours
 # alone, so every mode of either is drawn from one scene. The device is a size: each of
 # its modes has a scene of its own, and a brand has it only where it gives it, with the
-# modes it gives (DEC-021 points 1 and 2). A projector is a screen read from across a
-# room, a fourth size of the foundations (DEC-021 point 1).
+# modes it gives (DEC-021 points 1 and 2).
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}
-  device: {kind: size, modes: [desktop, tablet, phone, projector], default: desktop}
+  device: {kind: size, modes: [desktop, tablet, phone], default: desktop}
 
 # The colour families a notation maps its concepts to (DEC-004 point 10), and a component
 # paints with as `:colour.<member>`: each paints one thing, its line, its fill and the
