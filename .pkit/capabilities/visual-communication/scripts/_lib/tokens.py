@@ -194,7 +194,7 @@ from _lib.env import MissingFont, UnvaluedRole
 from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS, LibraryError, read_library
-from _lib.names import COMPONENT, is_name, is_segment, is_token_path
+from _lib.names import COMPONENT, ORDER, is_name, is_segment, is_token_path
 from _lib.outlines import CLOSE_IT, SIGN_OUTLINE, Outline, read_outline
 from _lib.reading import ReadError, read_json, read_yaml
 
@@ -267,9 +267,8 @@ _DECLARATION_KEYS = ("type", "default")
 #: no role takes or a picture (DEC-035 points 2, 4 and 9).
 TOKEN_SHAPE = "component-token-shape"
 
-#: The key of the foundations' `roles.yaml` that declares an order's roles, a name no colour
-#: family takes, and the keys of its declaration, each naming a colour role (DEC-032 point 1).
-ORDER = "order"
+#: The keys of the declaration of an order's roles, under the foundations' `roles.yaml` key
+#: `ORDER`, a name no colour family takes, each naming a colour role (DEC-032 point 1).
 ORDER_KEYS = ("first", "last", "text", "ground")
 
 

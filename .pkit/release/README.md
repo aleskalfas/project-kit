@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/release.py
+        - src/project_kit/cli.py
         - src/project_kit/changesets.py
         - src/project_kit/versioning.py
         - src/project_kit/stranded_migrations.py
@@ -16,7 +17,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-092#8"]
+      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6", "ADR-092#8"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -519,10 +520,11 @@ PR** a human merges — it is *not* auto-run on every merge.
 | Command | Writes? | What |
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
-| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Prints, last, the trailer line naming the commit its plan read, for the release commit and the PR's body (below). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR that lands only what `apply` wrote and the answer files it adds, onto the commit its plan read, as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section, or short notes pointing to it when it is longer than a Release keeps (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes, and which of the two forms they take, without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
+| `pkit release check-queue` | no | The queue's check: fails where a release a squashing merge queue's merge holds would not land what `apply` wrote and the answer files it adds, onto the commit its plan read (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
@@ -744,15 +746,32 @@ principle — the same reason `version bump` and `version tag` are distinct).
 PRJ-004 tags the *committed* `.pkit/VERSION`, so the tag must point at the
 release commit, which does not exist yet when `apply` runs. The sequence:
 
-    pkit release apply                 # on the release branch: write versions + changelog
-    # commit the release; open the release PR to main
-    pkit release merge <pr>            # merge the release PR (checked; one squash commit, through the queue if any; head branch deleted)
+    pkit release apply                 # on the release branch: write versions + changelog; prints the trailer line last
+    # commit the release, the trailer line its message's last paragraph; open the release PR to main, the line in its body
+    pkit release merge <pr>            # merge the release PR (checked; lands only what apply wrote and the answer files it adds, onto its plan's commit; one squash commit, through the queue if any; head branch deleted)
     # release-tag.yml cuts v<new-backbone> on the push to main — or, fully manual:
     pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
 
 `apply --tag` is an opt-in shortcut for when HEAD is *already* the release
 commit (e.g. re-running on `main` after merge). A component-only release (no
 backbone move) cuts no tag — PRJ-004 tags the backbone `.pkit/VERSION`.
+
+### The trailer line (ADR-092 point 6)
+
+A release consumes the changesets pending at the commit of the default branch
+its plan read, so it lands sound only onto that commit, holding only what
+`apply` wrote there and the answer files it adds. The history does not say
+which commit that was, so `apply` prints, as its last line,
+`Release-plan-commit: <the commit's full 40-character id>`, naming HEAD as it
+planned: cut the release branch from the default branch's head, and run
+`apply` there. Commit the release with the line as its message's last
+paragraph (`git commit -m "chore(release): v<new-backbone>" -m "<the line>"`),
+and put the line in the release PR's body, which the squash commit's message
+takes. A reader matches the line as a whole line anywhere in a message or a
+body. Push nothing else onto the release branch, and never amend the release
+commit: where the default branch has moved since the plan, run the release
+again from its head. An empty release commits nothing, and `apply` prints no
+line.
 
 ### Merging the release PR — `pkit release merge <pr>`
 
@@ -787,6 +806,39 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 - **Checks preconditions.** The PR must be open, mergeable, and have all
   required checks green; a conflicting, red, or still-running PR is refused with
   a clear reason.
+- **Lands only what its release step wrote and the answer files it adds,
+  onto the commit its plan read** (ADR-092 point 6), on every base. After
+  its gates, just before the landing that sends the request, it reads the
+  base's head from `origin` (`git ls-remote`), and fetches it and the PR's
+  head where the clone lacks them.
+  It refuses, nothing merged, exit 1, in a dry run too, where:
+  - no commit of the release branch past the base's head carries the trailer
+    line, or more than one does, or the one that does names no commit or
+    more than one;
+  - the PR's body carries no trailer line, or names another commit than the
+    release commit does, since the squash commit's message takes the body;
+  - the base's head is not the commit the trailer names: the default branch
+    has moved since the release was planned;
+  - the change from that commit to the PR's head holds a file or a line
+    `apply` does not write. Answer files the change adds pass, and nothing
+    else does, whichever commit of the branch made it.
+
+  Each refusal names the way on: run the release again, so that it is
+  planned from the default branch's head, and never amend the release
+  commit. The files and lines `apply` writes are read from the clone's
+  working tree, as `pkit release check` reads them, so a clone behind the
+  default branch can refuse a sound release, never pass an unsound one: pull
+  the base, and run again. A push to the base in the moments between this
+  check and the request is not seen on a base without a queue; on one with a
+  queue, the queue's check below judges the merge the queue makes.
+- **Is first in the queue, or waits.** On a base with a merge queue it
+  enqueues the release only where the queue holds no other PR ahead of it,
+  since each would land first and the release would land on another commit
+  than its plan read. The landing applies this to its reading just before
+  the request (its `--first-in-queue`); a queue with PRs ahead is refused,
+  nothing enqueued, exit 1, naming them. Run again once the queue ahead is
+  empty, and run the release again where any of them merged. A release PR
+  already queued is waited for, as below.
 - **Lands through `pkit pull-request land`'s sequence**, by import, and holds
   no copy of it (`.pkit/cli/README.md`, "Pull-request commands"):
   - it plans first: the landing as a dry run, pinned to the head its gates
@@ -845,8 +897,10 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
     reading is refused, nothing sent, exit 1; release used to wait for it
     and report it dropped, exit 3.
 - **Merges** per the project's merge convention: one squash commit on the
-  base branch whose subject is the PR title, pinned to the head whose checks
-  it read, head branch deleted on merge. The merge is the backbone's one merge
+  base branch whose subject is the PR title and whose body is the PR's body,
+  read just before the request, so the trailer line lands with it (ADR-061
+  point 8), pinned to the head whose checks it read, head branch deleted on
+  merge. The merge is the backbone's one merge
   mechanic (`pkit pull-request`), the one project-management's merge verbs
   land issue PRs with. A merge command that succeeds is not taken for a
   merge: the PR is read again, and only once GitHub reports it merged is the
@@ -949,6 +1003,37 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
 
 It stays **human-gated**: a human decides to run it; nothing auto-merges.
 
+### The queue's check — `pkit release check-queue`
+
+A merge queue makes the squash commit itself, onto whatever the PRs ahead of
+the release left, so `pkit release merge`'s check before the request does not
+judge what the queue merges. `pkit release check-queue` judges it, on the
+queue's merge, applying the same predicate from the same module. For each
+commit from where the merge left the base to its head, on its first-parent
+line, whose subject is a `chore(release):` one — the squash commit the queue
+made of a release PR — it fails where:
+
+- the commit's message carries no trailer line, or names more than one
+  commit;
+- the commit has more than one parent;
+- its parent is not the commit the trailer names, as when another PR's
+  squash commit came before it in the group;
+- its change from that commit holds a file or a line `apply` does not write,
+  beyond the answer files it adds.
+
+It prints a line for each release commit it judged, and the way on where one
+fails: run the release again, so that it is planned from the default branch's
+head, and never amend the release commit. A merge with no release commit
+passes. It reads git alone: no fetch and no pull request.
+
+- **`--base REF`**: the group's base.
+  [The CLI reference's release commands](../cli/README.md#release-plan--release-apply--release-merge--release-publish-notes--release-check--release-check-queue--release-lint) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+  give its default.
+- **`--head REV`**: the group's head, by default `HEAD`.
+
+It binds only where a project's required check runs it on the queue's merge
+(ADR-092 point 6).
+
 ### Release notes — `pkit release publish-notes <version>`
 
 Cutting a release leaves a bare git tag; the GitHub release page
@@ -1017,8 +1102,9 @@ automation only proposes and, post-merge, tags.
   version-less PR).
 - Creates a release branch off `main`, runs `pkit release apply --yes`
   (versions + broaden + declared floors + `CHANGELOG.md`, consuming the
-  changesets), and commits `chore(release): v<new-backbone>`. It then pushes
-  and opens a **release PR**. `scripts/release_pr.py` names the branch, and
+  changesets), and commits `chore(release): v<new-backbone>`, the trailer
+  line `apply` printed its message's last paragraph. It then pushes and opens
+  a **release PR**, the trailer line last in its body. `scripts/release_pr.py` names the branch, and
   writes the PR's body before the push:
   - **The branch** is `release/v<new-backbone>`, or `release/<run id>` for a
     release that moves no backbone. A run that failed after its push leaves
@@ -1034,8 +1120,12 @@ automation only proposes and, post-merge, tags.
     `CHANGELOG.md` on the release branch takes the section's place. The bumps
     and the warnings stay whole. `pkit release publish-notes` links a section
     too long for a Release the same way.
-- Is **idempotent**: if a release PR is already open (any head under
-  `release/`), it skips rather than opening a duplicate.
+- **Replaces a release PR planned from an older head.** A release PR open
+  from a head under `release/` whose body's trailer line names the head it
+  runs on is current, and the run skips rather than opening a duplicate. One
+  that names another commit, or none, can no longer land sound, so the run
+  closes it, deleting its branch, with a comment naming the head it plans
+  from, and opens the release planned from that head.
 - Does **not** tag — the tag must point at the *merged* release commit (PRJ-004),
   which does not exist until the human merges. Tagging is workflow 2.
 
