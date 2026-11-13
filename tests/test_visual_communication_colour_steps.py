@@ -309,6 +309,35 @@ def test_under_foundations_with_no_ends_a_place_takes_no_step_and_the_lock_state
     )
 
 
+def test_a_list_drawn_more_than_once_under_foundations_with_no_ends_is_stated_once() -> None:
+    """The pattern is drawn twice, as the items of an outer list: each of its lists takes no
+    step and states so, and the drawing holds the one fact once."""
+    listed = block(
+        {"items": {"repeat": "items", "draw": "lab/card", "colour": STEPPED, "row": {}}},
+        fields=ITEMS,
+        options={"shade": ["plain", "steps"]},
+    )
+    rows = top(
+        {"rows": {"repeat": "rows", "draw": "lab/list", "column": {}}},
+        fields={"rows": {"type": "array", "items": {"type": "object"}}},
+    )
+    content = {
+        "rows": [
+            {"id": name, "shade": "steps", "items": [{"id": "a", "label": "A"}]}
+            for name in ("x", "y")
+        ]
+    }
+    result = draw(
+        content, components=components(list=listed, rows=rows), families=FAMILIES, use="lab/rows"
+    )
+
+    for name in ("x", "y"):
+        found = result.scene.find(f"rows/rows[{name}]/items[a]/b")
+        assert found is not None
+        assert found.properties["fill"] == "family.grey.fill"
+    assert [f.code for f in result.findings] == [layout.ORDER_NO_ENDS]
+
+
 def test_a_step_s_members_are_the_step_and_the_order_s_text_and_no_other() -> None:
     ctx = layout.Context(FakeEnv(order=Order()), "en")
     assert ctx.family(step("1/3")) == {"fill": step("1/3"), "line": step("1/3"), "text": TEXT}
