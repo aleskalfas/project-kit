@@ -15,7 +15,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-061#8", "ADR-092#6"]
+      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
