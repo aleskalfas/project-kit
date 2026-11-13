@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  The pm skill says how a session that builds several Tasks at once, in a
+  project with no topology of seats, starts each in a git worktree of its own:
+  it makes the worktree under the project's root, detached at the default
+  branch, and runs `pkit pm start-work <N>` inside it. The Task's branch is cut
+  and checked out in the worktree, and the session's own clone stays on its
+  branch. The skill also sends "start work on an issue" to `start-work`, which
+  cuts the branch and assigns the issue, where it sent it to
+  `move-issue --to in-progress`.
