@@ -8,7 +8,8 @@ what the checks fail.
   built, and on Linux, in CI. A step halfway from black to white is Oklab's middle grey,
   whose value follows by hand: lightness 0.5 is linear light 0.125, which sRGB encodes as
   0.38857. A step between green and blue falls outside sRGB, and comes back by CSS Color 4's
-  gamut mapping. Alpha is premultiplied, as CSS Color 4 interpolates.
+  gamut mapping. Alpha is premultiplied, as CSS Color 4 interpolates. The values hold without
+  `math.cbrt`, which Python 3.10, the scripts' declared floor, lacks.
 - **The engine** gives place k of the n places a list draws the share (k - 1) / (n - 1), under
   the word of an option that gives the steps, every item counted, one that names its own
   component included; a concept and a state still come before a step, and an outer item
@@ -27,6 +28,7 @@ what the checks fail.
 
 from __future__ import annotations
 
+import math
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -122,6 +124,16 @@ def test_each_component_and_the_alpha_is_rounded_to_ten_thousandths() -> None:
     assert colour_steps.spread(first, last, Fraction(1, 3)) == srgb(
         0.3411, 0.4885, 0.5655, alpha=0.6667
     )
+
+
+def test_the_spread_needs_no_cube_root_newer_than_the_scripts_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The scripts declare Python 3.10, which has no `math.cbrt`: without it, a step between
+    the ends and one the gamut mapping brings back keep their pinned values."""
+    monkeypatch.delattr(math, "cbrt", raising=False)
+    assert colour_steps.spread(BLACK, WHITE, Fraction(1, 2)) == srgb(0.3886, 0.3886, 0.3886)
+    assert colour_steps.spread(GREEN, BLUE, Fraction(1, 2))["components"] == [0.0, 0.6572, 0.7289]
 
 
 # --- a step's name --------------------------------------------------------------------------

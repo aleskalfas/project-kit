@@ -211,12 +211,18 @@ def _encoded(c: float) -> float:
     return math.copysign(1.055 * magnitude ** (1 / 2.4) - 0.055, c)
 
 
+def _cube_root(x: float) -> float:
+    """The real cube root of `x`, its sign kept. The scripts run on Python 3.10, which has no
+    `math.cbrt`."""
+    return math.copysign(abs(x) ** (1 / 3), x)
+
+
 def _oklab(components: Sequence[float]) -> Lab:
     """An sRGB colour's components in Oklab."""
     r, g, b = (_linear(float(c)) for c in components)
-    long = math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
-    medium = math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
-    short = math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+    long = _cube_root(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+    medium = _cube_root(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+    short = _cube_root(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
     return (
         0.2104542553 * long + 0.7936177850 * medium - 0.0040720468 * short,
         1.9779984951 * long - 2.4285922050 * medium + 0.4505937099 * short,
