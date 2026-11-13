@@ -47,6 +47,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
+        - .pkit/capabilities/visual-communication/components.md#breaking-lines
 ---
 
 # The starter
@@ -78,7 +79,7 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 - **Form:** levels stacked one on another, the top first, as a stack of one width or as steps that narrow to the top. Notes may stand to the right of the stack, sharing its height, for what holds across the levels. Ties join a note or a level to another, and end at a level's drawn edge.
 - **Source:** Nancy Duarte's structure (*slide:ology*, chapter 3). Lohse, Biolsi, Walker and Rueter's structure diagrams, and Yuri Engelhardt's lining up in an order, check it.
-- **Options:** `shape`, its words `stack` and `steps`. With `stack`, the default, each level is as wide as the stack. With `steps`, each level is one step narrower than the one under it, centred on it: the last level is as wide as the stack, and a step is the stack's width over twice the number of levels, so the top stays wider than half the stack. Each level's frame is its step, so a tie into it ends at its edge (visual-communication DEC-038 points 1, 3 and 6). A card takes the width of its step and breaks its text to it, so a narrow level that holds more text stands taller than a wide one.
+- **Options:** `shape`, its words `stack` and `steps`. With `stack`, the default, each level is as wide as the stack. With `steps`, each level is one step narrower than the one under it, centred on it: the last level is as wide as the stack, and a step is the stack's width over twice the number of levels, so the top stays wider than half the stack. Each level's frame is its step, so a tie into it ends at its edge (visual-communication DEC-038 points 1, 3 and 6). A card takes the width of its step and breaks its text to it (the capability's `components.md`, under *Breaking lines*), so a narrow level that holds more text stands taller than a wide one.
 - **Lists:**
   - `levels`, each drawn by the `card`, unless the component field `level` names another;
   - `notes`, each drawn by the `card`, unless the component field `note` names another;
