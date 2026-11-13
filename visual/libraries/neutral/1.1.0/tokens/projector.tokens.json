@@ -1,6 +1,7 @@
 {
   "$description": "The neutral's values on a projector, where they differ from a desktop's: a slide read from across a room. The slide keeps a desktop's width, and its text grows half again: a body of 24 px, a head that differs from it by its weight alone, code a step under the body, since a monospace face sets wider, and the deck's lead at 30 and its title at 48, a 1.25 scale on the body.",
   "type": {
+    "$description": "The types on a projector: half again a desktop's, a body of 24 px, read from the back of a room.",
     "$type": "typography",
     "body": {
       "$value": {
@@ -64,6 +65,7 @@
     }
   },
   "component": {
+    "$description": "The deck's title at 48 px and its lead at 30, a 1.25 scale on the body, so a slide's three levels of text stay clearly apart.",
     "foundations": {
       "deck": {
         "$type": "typography",

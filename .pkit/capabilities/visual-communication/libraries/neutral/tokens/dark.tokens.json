@@ -1,6 +1,7 @@
 {
   "$description": "The dark colour scheme: what each scheme paints with, redefined.",
   "scheme": {
+    "$description": "The dark scheme: the light scheme's greys read from the other end, a near-black page and near-white text, and each hue a lighter step, so every pair the light scheme keeps legible stays legible.",
     "$type": "color",
     "paper": {
       "$value": "{palette.grey.900}"
