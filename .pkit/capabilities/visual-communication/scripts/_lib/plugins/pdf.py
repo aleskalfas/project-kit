@@ -38,9 +38,11 @@ point 7).
   ground starts and ends and square where a line breaks it, and each sign is its outline,
   moved to its square, filled by its rule in its run's paint. A sign that holds no such
   outline is refused, and left out.
-- **A line**, or a tie's connector through each of its points, is stroked as the SVG
-  renderer strokes it; an arrowhead is the triangle it draws, five strokes long, its tip
-  at the line's end, in the line's stroke. A line that holds neither its ends nor its
+- **A line**, or a tie's connector through each of its points, is stroked along the course
+  the SVG renderer draws (`canvas.course`): each turn of a connector that holds a radius
+  is a cubic Bézier curve of its arc, and an end that carries an arrowhead stops at the
+  head's base. An arrowhead is the triangle that renderer draws, five strokes long, its
+  tip at the line's end, in the line's stroke. A line that holds neither its ends nor its
   points is refused, and left out.
 - **Shapes.** A box's stroke lies inside its frame. Rounded corners and ellipses are cubic
   Bézier curves. A path, such as a concept's sign, is drawn from the outline the engine
@@ -87,7 +89,21 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 from _lib import pictures, png
-from _lib.canvas import Placed, ground_path, marked, placed, room, shows, unshown
+from _lib.canvas import (
+    HEAD,
+    Course,
+    Head,
+    Placed,
+    course,
+    ground_path,
+    heads,
+    marked,
+    placed,
+    room,
+    route,
+    shows,
+    unshown,
+)
 from _lib.plugins import seam
 from _lib.plugins.pdf_declaration import DECLARATION
 
@@ -691,26 +707,18 @@ class _Document:
         return self._shape(element, path, even_odd=element.get("fill-rule") == "evenodd")
 
     def _line(self, element: Mapping[str, Any]) -> list[Part]:
-        """A line, or a tie's connector through each of its points, stroked, with an
-        arrowhead at each end that carries one, in the stroke's colour. A line that holds
-        neither its ends nor its points is refused, as an element the renderer does not
-        draw is."""
-        points = element.get("points")
-        if not points and any(end not in element for end in ENDS_OF_LINE):
+        """A line, or a tie's connector through each of its points, stroked along its
+        course, its turns round where it holds a radius, with an arrowhead at each end that
+        carries one, in the stroke's colour, where the line stops (`canvas.course`). A line
+        that holds neither its ends nor its points is refused, as an element the renderer
+        does not draw is."""
+        if not element.get("points") and any(end not in element for end in ENDS_OF_LINE):
             self._lose(
                 element["id"],
                 seam.REFUSED,
                 f"the line holds neither its ends, `{' '.join(ENDS_OF_LINE)}`, nor its points",
             )
             return []
-        route = (
-            [(float(p["x"]), float(p["y"])) for p in points]
-            if points
-            else [
-                (float(element["x1"]), float(element["y1"])),
-                (float(element["x2"]), float(element["y2"])),
-            ]
-        )
         stroke = self._paint(element, "stroke")
         width = float(element.get("stroke-width", 1))
         if stroke is None or width <= 0:
@@ -720,16 +728,14 @@ class _Document:
         if alpha < 1:
             ops.append(self._opacity("CA", alpha))
         ops += [f"{rgb} RG", f"{number(width)} w"]
-        path = f"{_point(*route[0])} m " + "".join(f"{_point(*p)} l " for p in route[1:])
-        drawn = [f"{' '.join(ops)}\n{path}S\n"]
-        heads = [
-            _arrowhead(route, which, width)
-            for which in ENDS
-            if element.get(f"marker-{which}") == "arrow"
-        ]
-        if heads:
+        traced = course(route(element), float(element.get("rx", 0)), heads(element))
+        drawn = [f"{' '.join(ops)}\n{_course(traced)}S\n"]
+        if traced.heads:
             fill = [self._opacity("ca", alpha)] if alpha < 1 else []
-            drawn.append(f"{' '.join([*fill, f'{rgb} rg'])}\n{''.join(heads)}")
+            arrows = [
+                _arrowhead(traced.heads[which], width) for which in ENDS if which in traced.heads
+            ]
+            drawn.append(f"{' '.join([*fill, f'{rgb} rg'])}\n{''.join(arrows)}")
         drawn.append("Q\n")
         return ["".join(drawn)]
 
@@ -1047,25 +1053,31 @@ def _ellipse(cx: float, cy: float, rx: float, ry: float) -> str:
     )
 
 
-def _arrowhead(route: Sequence[tuple[float, float]], which: str, width: float) -> str:
-    """The arrowhead at one end of a route, as the SVG renderer's marker draws it: a
-    triangle five strokes long and five wide, its tip at the end, pointing away from the
-    line along its last stretch, or across to the right where the line has no length."""
-    ordered = list(route) if which == "end" else list(reversed(route))
-    tip = ordered[-1]
-    dx, dy = 1.0, 0.0
-    for before in reversed(ordered[:-1]):
-        length = ((tip[0] - before[0]) ** 2 + (tip[1] - before[1]) ** 2) ** 0.5
-        if length > 0:
-            dx, dy = (tip[0] - before[0]) / length, (tip[1] - before[1]) / length
-            break
-    else:
-        if which == "start":
-            dx = -1.0
-    back = (tip[0] - 5 * width * dx, tip[1] - 5 * width * dy)
-    side = (-dy * 2.5 * width, dx * 2.5 * width)
-    left = (back[0] + side[0], back[1] + side[1])
-    right = (back[0] - side[0], back[1] - side[1])
+def _course(traced: Course) -> str:
+    """A line's course as a path: its points joined by lines, and each turn drawn round a
+    cubic Bézier curve of its arc."""
+    at = _point(*traced.points[0])
+    path = [f"{at} m "]
+    for place, point in enumerate(traced.points[1:], start=1):
+        arc = traced.arcs.get(place)
+        towards = _point(*(arc.start if arc is not None else point))
+        if towards != at:  # no line to where the path already stands
+            path.append(f"{towards} l ")
+        if arc is not None:
+            (one, two), towards = arc.controls, _point(*arc.end)
+            path.append(f"{_point(*one)} {_point(*two)} {towards} c ")
+        at = towards
+    return "".join(path)
+
+
+def _arrowhead(head: Head, width: float) -> str:
+    """An arrowhead, as the SVG renderer's marker draws it: a triangle `HEAD` strokes long
+    and as wide, its base where the line stops, its tip pointing away from the line."""
+    (bx, by), (dx, dy) = head.base, head.towards
+    tip = (bx + HEAD * width * dx, by + HEAD * width * dy)
+    side = (-dy * HEAD / 2 * width, dx * HEAD / 2 * width)
+    left = (bx + side[0], by + side[1])
+    right = (bx - side[0], by - side[1])
     return f"{_point(*left)} m {_point(*tip)} l {_point(*right)} l h f\n"
 
 

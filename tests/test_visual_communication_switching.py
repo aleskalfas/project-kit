@@ -4,8 +4,8 @@
 the reading compares and what it refuses, and a real browser drawing the file in each mode
 as the one-key file of that mode.
 
-The renderer's version is the one-key file's, 1.3.0 since it draws a run's sign and ground, as
-it is pinned in `test_visual_communication_svg`.
+The renderer's version is the one-key file's, 1.4.0 since it stops a line at its arrowhead's
+base and draws a connector's turns round, as it is pinned in `test_visual_communication_svg`.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from tests.test_visual_communication_svg import (
     COLOURS,
     FONT,
     HEAD,
+    ROUNDED,
     SHAPES,
     TIES,
     TITLE,
@@ -134,7 +135,7 @@ def test_it_declares_svg_modes_with_the_colour_schemes_pairs_and_no_contrast_pai
             }
         }
     }
-    assert svg.VERSION == "1.3.0"
+    assert svg.VERSION == "1.4.0"
 
 
 @pytest.mark.parametrize("roles", foundations_majors(), ids=lambda path: path.parent.name)
@@ -179,7 +180,7 @@ def test_shapes_are_drawn_as_a_switching_file_as_pinned_for_version_1_1_0() -> N
     )
 
 
-def test_arrowheads_are_drawn_in_a_switching_file_as_pinned_for_version_1_1_0() -> None:
+def test_arrowheads_are_drawn_in_a_switching_file_as_pinned_for_version_1_4_0() -> None:
     [page] = switched(TIES).pages
     assert page.svg == (
         HEAD + "<defs><style>text{white-space:pre}</style>"
@@ -189,23 +190,23 @@ def test_arrowheads_are_drawn_in_a_switching_file_as_pinned_for_version_1_1_0() 
         '[data-stroke="ink"]{stroke:#ffffff;stroke-opacity:0.5}'
         '[data-stroke="shade"]{stroke:#ffffff;stroke-opacity:1}'
         "}</style>"
-        '<marker id="pkit-arrow-end--ink" viewBox="0 0 10 10" refX="10" refY="5" '
+        '<marker id="pkit-arrow-end--ink" viewBox="0 0 10 10" refX="0" refY="5" '
         'markerWidth="5" markerHeight="5" orient="auto">'
         '<path d="M0,0L10,5L0,10z" fill="#000000" data-fill="ink"/></marker>'
-        '<marker id="pkit-arrow-end--shade" viewBox="0 0 10 10" refX="10" refY="5" '
+        '<marker id="pkit-arrow-end--shade" viewBox="0 0 10 10" refX="0" refY="5" '
         'markerWidth="5" markerHeight="5" orient="auto">'
         '<path d="M0,0L10,5L0,10z" fill="#000000" fill-opacity="0.25" data-fill="shade"/>'
         "</marker>"
-        '<marker id="pkit-arrow-start--shade" viewBox="0 0 10 10" refX="0" refY="5" '
+        '<marker id="pkit-arrow-start--shade" viewBox="0 0 10 10" refX="10" refY="5" '
         'markerWidth="5" markerHeight="5" orient="auto">'
         '<path d="M10,0L0,5L10,10z" fill="#000000" fill-opacity="0.25" data-fill="shade"/>'
         "</marker></defs>"
         '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
         '<polyline data-id="figure/links[ab]/l" data-start="figure/steps[a]" '
-        'data-end="figure/steps[b]" points="10,20 60,20 60,60 110,60" fill="none" '
+        'data-end="figure/steps[b]" points="10,20 60,20 60,60 100,60" fill="none" '
         'stroke="#000000" data-stroke="ink" stroke-width="2" '
         'marker-end="url(#pkit-arrow-end--ink)"/>'
-        '<line data-id="figure/rule" x1="0" y1="90" x2="200" y2="90" stroke="#000000" '
+        '<line data-id="figure/rule" x1="5" y1="90" x2="195" y2="90" stroke="#000000" '
         'stroke-opacity="0.25" data-stroke="shade" marker-start="url(#pkit-arrow-start--shade)" '
         'marker-end="url(#pkit-arrow-end--shade)"/>'
         "</g></svg>\n"
@@ -368,6 +369,7 @@ def every_way(folder: Path) -> dict[str, tuple[dict[str, Any], dict[str, Any]]]:
     return {
         "shapes": (SHAPES, {}),
         "ties": (TIES, {}),
+        "round-turns": (ROUNDED, {}),
         "text": (scene(TITLE), {}),
         "pictures-apart": (scene(IMAGE), apart),
         "a-picture-in-one-key": (scene(IMAGE), {"default": apart["default"]}),
@@ -375,7 +377,7 @@ def every_way(folder: Path) -> dict[str, tuple[dict[str, Any], dict[str, Any]]]:
 
 
 @pytest.mark.parametrize(
-    "way", ["shapes", "ties", "text", "pictures-apart", "a-picture-in-one-key"]
+    "way", ["shapes", "ties", "round-turns", "text", "pictures-apart", "a-picture-in-one-key"]
 )
 @pytest.mark.parametrize("first", ["default", DARK])
 def test_a_switching_file_read_in_each_key_draws_as_its_one_key_file(

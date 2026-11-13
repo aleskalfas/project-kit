@@ -410,7 +410,7 @@ def test_each_renderer_rose_to_draw_them_at_the_seams_version() -> None:
         declaration.DECLARATION["name"]: declaration.DECLARATION["version"]
         for declaration in (svg_declaration, html_declaration, pdf_declaration)
     }
-    assert versions == {"svg": "1.3.0", "html": "1.6.0", "pdf": "1.5.0"}
+    assert versions == {"svg": "1.4.0", "html": "1.7.0", "pdf": "1.6.0"}
     scene = drawn_scene()
     for declaration in (svg_declaration, html_declaration, pdf_declaration):
         assert declaration.DECLARATION["seam"] == seam.SEAM_VERSION
