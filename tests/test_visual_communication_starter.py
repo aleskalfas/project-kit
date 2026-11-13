@@ -373,13 +373,16 @@ def on_each_foundations(
 
 
 #: The shared roles the foundations being built add to their release 1.0.0, each by the role
-#: its default aliases (DEC-004 point 7, DEC-036 point 3).
+#: its default aliases (DEC-004 point 7, DEC-032 point 1, DEC-036 point 3).
 ADDED_ROLES = {
     "size.site": "size.slide",
     "size.line": "size.figure",
     "space.sign-gap": "space.1",
     "space.ground-room": "space.1",
     "space.ground-corner": "space.1",
+    "family.order.first": "family.neutral.fill",
+    "family.order.last": "family.neutral.fill",
+    "family.order.text": "family.neutral.text",
 }
 
 #: The tokens the deck of the foundations being built declares, each by the shared type its
@@ -450,8 +453,8 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The foundations being built add the size axis `device`, the roles `size.site`,
-    `size.line` and those of a run's sign and ground, and their deck's tokens to their
-    release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022
+    `size.line`, those of a run's sign and ground and an order's, and their deck's tokens to
+    their release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022
     point 3, DEC-035 point 4, DEC-036 point 3). Their deck places its lead and its visual
     otherwise, which the comparison takes back (`DECK_PLACES`). So each reference piece of
     a component the starter's release holds, drawn with that release, draws on them as on
