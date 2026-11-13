@@ -27,6 +27,7 @@ pkit:
         - src/project_kit/provisioning.py
         - src/project_kit/workspace.py
         - src/project_kit/session_guard.py
+        - src/project_kit/router.py
         - .pkit/adapters/claude-code/merge-settings.sh
         - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
@@ -41,6 +42,7 @@ pkit:
         - ADR-059
         - ADR-009
         - ADR-034#1
+        - ADR-089#6
       artefact:
         - ACT-operator
         - REQ-002
@@ -90,6 +92,7 @@ pkit:
 - **1b.** The clone holds no `.pkit/`, as where the adopter kept the system private ([ADR-009 point 3](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)). The system refuses with `<root>/.pkit/ does not exist. Run 'pkit init' first.`, and the use case ends.
 - **1c.** The operator passes `--force`. The system says that it ignores the flag, and goes on ([ADR-065 point 10](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#10-sync---force-is-ignored-for-one-release-then-removed)).
 - **1d.** The [project](../../../glossary.md#term-project--project) pins a [release](../../../glossary.md#term-release--release) other than the installed CLI's. The [router](../../../glossary.md#term-router--router) runs the command at the [version pin](../../../glossary.md#term-version-pin--version-pin) ([UC-052](UC-052-run-at-pin.md)).
+- **1e.** On the path of 1d, the version pin names a [release candidate](../../../glossary.md#term-release-candidate--release-candidate), as a tester's project does. The router runs the command at that candidate, fetched from the candidate's own tag, as it runs a release ([ADR-089 point 6](../../../../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **3a.** The project is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code. The system copies nothing, regenerates the derived state, and prints `Self-host sync complete (deploy primitives re-run).` ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **3b.** The running CLI is newer than the project's [recorded version](../../../glossary.md#term-recorded-version--recorded-version), and the project pins no [version](../../../glossary.md#term-version--version). The system stops and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). Its message names `pkit upgrade` to move, `pkit pin` to stay, and in a pipeline a committed version pin or the project's version installed.
 - **3c.** The running CLI is older than the project's content or its version pin. The system stops, writes nothing, and names the remedies for that state (REQ-010).

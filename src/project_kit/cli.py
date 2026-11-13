@@ -5253,7 +5253,17 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     "those two warnings and nothing else. A pinned project's upgrade passes it to the "
     "newer release it hands over to. Per ADR-065 points 6 and 9.",
 )
-def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> None:
+@click.option(
+    "--pre",
+    is_flag=True,
+    default=False,
+    help="Move the project to the newest release, release candidates included. Where "
+    "that is a candidate newer than this pkit, its own upgrade runs through the "
+    "router's bypass, and the project is pinned there. Where it is a final release, "
+    "--pre hands over to none. It never installs a candidate as the tool. "
+    "Per ADR-089 point 8.",
+)
+def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool, pre: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
 
     Moves the project to the source kit's current backbone version, running
@@ -5282,6 +5292,13 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     `--force`, or else finishes the transition to its pin. It never updates the
     tool. Where the router could not fetch the pin and runs the installed pkit
     instead, it refuses, before it writes anything.
+
+    **A release candidate only on request** (ADR-089 points 7 and 8). `--pre`
+    moves the project to the newest release, candidates included, handing over
+    to a candidate's own upgrade where that is newer than this pkit. An upgrade
+    whose target is a candidate nobody asked for, by `--pre`, by a run with
+    routing bypassed, or by a pin that names it, refuses before it writes. A move
+    to a candidate always pins, and `--no-pin` is refused on it.
     """
     refuse_inside_migration("upgrade")
     target_root = find_target_root()
@@ -5295,6 +5312,7 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
         pin=not no_pin,
         self_update=not no_self_update,
         force=force,
+        pre=pre,
     )
 
 
@@ -5313,15 +5331,19 @@ def pin(version: str | None, force: bool) -> None:
     """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
 
     VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
-    (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
-    build-metadata pins are refused: the router can only route a bare `v<semver>`
-    tag, so those are deferred. Both forms require `.pkit/manifest.yaml` (the
-    project's recorded content version); if it is absent, `pkit upgrade` writes it.
+    (a single leading `v` is stripped) — or a release candidate in PEP 440's
+    normal form, `2.0.0rc1`, which asks for that candidate (ADR-089 point 6).
+    Branch, commit-sha, other pre-release and build-metadata pins are refused,
+    and so is a candidate spelt another way, such as `2.0.0-rc.1`, naming its
+    normal form: the router routes a pin to the tag `v<pin>` as written. Both
+    forms require `.pkit/manifest.yaml` (the project's recorded content version);
+    if it is absent, `pkit upgrade` writes it.
 
     With no argument, freezes the project at its current CONTENT version
     (`.pkit/manifest.yaml`'s `backbone_version`) — the common case: lock this
     project where its content is, don't move it. With a VERSION token, the
-    behaviour depends on how it orders against that content version:
+    behaviour depends on how it orders against that content version, by PEP 440,
+    where a candidate sorts below its final release:
 
     \b
     - equal   → freeze in place (write the pin, no content sync);
