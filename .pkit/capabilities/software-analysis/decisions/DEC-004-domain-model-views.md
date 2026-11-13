@@ -227,7 +227,7 @@ The views come in the build order's first step: after the glossary, and before t
 A documentation page that is no architecture view may rest on a view's section (DEC-001 point 11).
 - **A page that states a concept's facts** may anchor that concept's section of its view.
 - **By the view's id,** such as `VIEW-orders-and-payments#order` (COR-050 point 2). An anchor on the file's path would die when the view is renumbered.
-- **The home of the facts only the section states.** A section of an analysis artefact is one of the homes beyond the pages ([living-docs:DEC-002-visual-elements] point 3). Until a major of `LDOC` accepts the rule that states it, a fact's home stays among the pages and the records (living-docs DEC-002 point 10).
+- **The home of the facts only the section states.** A section of an analysis artefact is one of the homes beyond the pages ([living-docs:DEC-002-visual-elements] point 3). Until a major of `LDOC` accepts the rule that states it, a fact's home stays among the pages and the records ([living-docs:DEC-002-visual-elements] point 10).
 - **A renamed term** renames its section's heading, and a moved section takes its heading to another view. Each page anchor on that section is then dead, and validation fails until the same change mends it (COR-050 point 7). Such a change is rare, and the failure is loud.
 - **living-docs needs nothing from this record.** Without an analysis, a page's facts keep their homes among records and pages ([living-docs:DEC-001-living-docs-discipline] points 3 and 9).
 

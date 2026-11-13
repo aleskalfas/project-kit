@@ -98,7 +98,7 @@ pkit:
 
 5. The system creates the Milestone, its description opening with `Close trigger: <trigger>`, and prints `[ok] created: <url>` (DEC-016).
 6. The planner adds a [workstream](../../../glossary.md#term-workstream--workstream): `pkit pm add-workstream <slug> --name "<name>" --description "<text>"`. The system runs the checks of step 3. It writes a workstream only with the planner's [consent](../../../../core/glossary.md#term-consent--consent), at the terminal or by `--yes` (`add-workstream.py`).
-7. The system checks the slug and each attribute against what DEC-018 decides of their form, and writes the workstream into the project's workstreams file. It creates the label `workstream:<slug>`, or adds the workstream to the board's field where a board carries the [classification axis](../../../glossary.md#term-classification-axis--classification-axis) ([DEC-018](../../../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
+7. The system checks the slug and each attribute against what [project-management DEC-018](../../../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md) decides of their form, and writes the workstream into the project's workstreams file. It creates the label `workstream:<slug>`, or adds the workstream to the board's field where a board carries the [classification axis](../../../glossary.md#term-classification-axis--classification-axis) (DEC-018).
 8. Work is filed into the Milestone and the workstream, as `UC-060` and `UC-063` describe.
 9. A few days before a date-based Milestone's due date, the agent lists its open issues for the planner to triage (DEC-016).
 
