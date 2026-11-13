@@ -686,9 +686,10 @@ def size_axes(axes: Mapping[str, tokens.Axis]) -> dict[str, tokens.Axis]:
 def sizes_at(axes: Mapping[str, tokens.Axis], size_key: str) -> layout.Sizes:
     """What a scene at the key over the size axes `size_key` reads of them (DEC-021 point
     3): each size axis of `axes`, the foundations', with its modes and its default, and the
-    mode the key holds on each. Raises keys.BadKey for a key `axes` do not hold."""
+    mode the key holds on each. A segment of a brand's own size axis is left out, since no
+    component reads it (DEC-004 point 2). Raises keys.BadKey for a key `axes` do not hold."""
     sized = size_axes(axes)
-    return layout.Sizes(sized, keys.parse_key(size_key, sized))
+    return layout.Sizes(sized, keys.parse_key(keys.narrowed(size_key, sized), sized))
 
 
 @dataclass
