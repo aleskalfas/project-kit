@@ -812,9 +812,9 @@ reads it as it reads a final release's. Only the writes add the suffix `rcN`
 **Refused before anything is written,** where:
 
 - the commit has not taken in the default branch's head, read from `origin`
-  with `git ls-remote`, or whether it has cannot be told, since only then is
-  its plan the one the default branch's release would make once the branch
-  merges (ADR-092 point 2).
+  with `git ls-remote`, or whether it has cannot be told, since only then does
+  the plan hold the default branch's versions and pending changesets beside
+  the branch's own (ADR-092 point 2).
 - the working tree differs from the commit, by a changed file or one git does
   not track, since the plan would then not be the commit's.
 - the release would move no backbone version, since a candidate is a backbone
