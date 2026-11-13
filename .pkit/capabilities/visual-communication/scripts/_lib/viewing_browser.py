@@ -256,6 +256,7 @@ READ = """async (marks) => {
   };
   const within = (element, mark) => [...element.querySelectorAll(`[${mark}]`)];
   const at = new Map([...document.querySelectorAll('*')].map((element, index) => [element, index]));
+  // Reads z-index as one level, as the renderer nests none; nesting would need each parent's.
   const raised = (element) => {
     for (let held = element; held && !held.hasAttribute(marks.page); held = held.parentElement) {
       const z = getComputedStyle(held).zIndex;
@@ -1478,6 +1479,7 @@ PLANTED_TEXTS: Mapping[str, tuple[tuple[_Planted, ...], ...]] = {
     UNDER_A_BOX: ((_Planted("covered"),),),
     "colour-of-its-ground": ((_Planted("unseen", colour="#ffffff"),),),
     UNDER_ANOTHER: ((_Planted("beneath"),),),
+    # The plant under another text relies on this text drawing its run's ground over it.
     OVER_ANOTHER: ((_Planted("beneath", grounded=True),),),
     UNDER_A_TRANSLUCENT_FILL: ((_Planted("faint"),),),
     HACEK: ((_Planted("ž"),),),

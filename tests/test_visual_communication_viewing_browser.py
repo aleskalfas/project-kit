@@ -1008,6 +1008,22 @@ def test_the_planted_file_plants_each_loss_of_what_the_page_shows() -> None:
     assert viewing_browser.RAISED not in {each.element for each in first.texts}
 
 
+def test_the_span_under_another_text_is_covered_by_that_texts_run_ground() -> None:
+    """The plant of a span wholly under another text relies on the text over it, on its row and
+    later in the tree, drawing its run's ground (DEC-037 point 5). A change to grounds that
+    stops that text drawing one fails here by name, rather than leave the plant to its
+    letters."""
+    page = viewing_browser._first_page(1.0, False)
+    laid = [each for each in page if isinstance(each, viewing_browser._Laid)]
+    by_element = {each.element: each for each in laid}
+    under = by_element[viewing_browser.UNDER_ANOTHER]
+    over = by_element[viewing_browser.OVER_ANOTHER]
+    assert laid.index(under) < laid.index(over)
+    assert over.baseline == under.baseline
+    assert all(span.grounded for line in over.lines for span in line)
+    assert ";background:" in viewing_browser._planted_text(over, False)
+
+
 def test_the_planted_page_is_in_the_renderers_form() -> None:
     (html,) = load("visual-communication", "plugins.html")
     assert viewing_browser.PLANTED_SHEET == html.SHEET
