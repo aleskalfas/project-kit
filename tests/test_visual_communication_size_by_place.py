@@ -17,14 +17,17 @@ in-memory `Env` (`tests/visual_engine.py`):
   frame (point 6);
 - what the check finds when it reads the component, for each set of options that hold
   together, and what it finds when the scene is computed (point 7);
-- a list that gives no `cross-size` draws as before (point 8).
+- a list that gives no `cross-size` draws as before (point 8);
+- beside an order's steps, a list gives each place its step and its size by the same count,
+  and the check judges both under each word of the option that switches them
+  (visual-communication DEC-032 points 3 and 4).
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from tests.visual_engine import block, codes, draw, frame, top
+from tests.visual_engine import Order, block, codes, draw, frame, top
 
 LISTED = {"type": "array", "items": {"type": "object"}}
 
@@ -475,3 +478,104 @@ def test_a_list_that_gives_no_cross_size_draws_as_before() -> None:
 
     assert with_it.findings == without.findings == []
     assert with_it.scene.to_dict() == without.scene.to_dict()
+
+
+# --- beside an order's steps (visual-communication DEC-032 points 3 and 4) -----------------------
+
+#: An option whose word `steps` gives a list both its sizes and an order's steps by place.
+SHAPES = {"shape": ["stack", "steps"]}
+
+#: The places' families by `shape`: none from the pattern under `stack`, the steps under `steps`.
+STEPS_BY_SHAPE = {"by": "shape", "stack": None, "steps": ":steps"}
+
+#: The family a `painted` tile takes where its place takes none.
+GREY = {"grey": {member: f"family.grey.{member}" for member in ("fill", "line", "text")}}
+
+
+def painted() -> dict[str, Any]:
+    """A `tile` that fills its box from its family, grey where its place gives none."""
+    return block(
+        {"b": {"box": {"fill": ":colour.fill"}, "width": "=:width", "height": "=:height"}},
+        preferred={"height": "=@space.3"},
+        colour="grey",
+    )
+
+
+def step(share: str) -> str:
+    """The name of the order's step at `share`, as the scene names it."""
+    return f"step({Order().first},{Order().last},{share})"
+
+
+def fills(result: Any, *keys: str) -> list[Any]:
+    found = []
+    for key in keys:
+        box = result.scene.find(f"top/items[{key}]/b")
+        assert box is not None, f"no element top/items[{key}]/b"
+        found.append(box.properties.get("fill"))
+    return found
+
+
+def shaped(content: dict[str, Any], components: Any, shape: str) -> Any:
+    return draw({**content, "shape": shape}, components=components, families=GREY, order=Order())
+
+
+def test_one_list_takes_its_step_and_its_size_at_the_same_place() -> None:
+    """Both count the places the list draws: the item that is no mapping is left out of
+    both, and the one that names its own component counts in both."""
+    settings = {
+        "cross-size": {"by": "shape", "stack": None, "steps": STEPPED},
+        "align-items": {"by": "shape", "stack": "stretch", "steps": "center"},
+    }
+    components = listed(settings, item=painted(), options=SHAPES)
+    components["lab/top"]["parts"]["items"]["colour"] = STEPS_BY_SHAPE
+    content = {"items": [{"id": "a"}, "no item", {"id": "b", "use": "lab/tile"}, {"id": "c"}]}
+
+    stepped = shaped(content, components, "steps")
+    stacked = shaped(content, components, "stack")
+
+    assert codes(stepped) == codes(stacked) == ["content-shape"]
+    assert across(stepped) == [(25.6, 76.8), (12.8, 102.4), (0.0, 128.0)]
+    assert fills(stepped, "a", "b", "c") == [step("0"), step("1/2"), step("1")]
+    assert across(stacked) == [(0.0, 128.0)] * 3
+    assert fills(stacked, "a", "b", "c") == ["family.grey.fill"] * 3
+
+
+def test_the_steps_and_cross_size_are_judged_together_for_each_word() -> None:
+    """One option switches a list's steps and its `cross-size`. A `stretch` written beside
+    them breaks only where `shape` is `steps`, and the steps still draw there. Two parts
+    over one list, each drawn under one word, are judged each under its own: neither names
+    a family where the other gives the steps, nor stretches where it gives `cross-size`."""
+    written = listed(
+        {"cross-size": {"by": "shape", "stack": None, "steps": STEPPED}, "align-items": "stretch"},
+        item=painted(),
+        options=SHAPES,
+    )
+    written["lab/top"]["parts"]["items"]["colour"] = STEPS_BY_SHAPE
+    apart = listed(
+        {"cross-size": STEPPED, "align-items": "center"},
+        item=painted(),
+        options=SHAPES,
+        parts={
+            "stacked": {
+                "repeat": "items",
+                "draw": "lab/tile",
+                "when": {"shape": ["stack"]},
+                "colour": "grey",
+                "width": WIDTH,
+                "column": {"align-items": "stretch"},
+            }
+        },
+    )
+    stepped_part = apart["lab/top"]["parts"]["items"]
+    stepped_part.update(when={"shape": ["steps"]}, colour=STEPS_BY_SHAPE)
+
+    broken = shaped(ITEMS, written, "steps")
+    kept = [shaped(ITEMS, apart, shape) for shape in SHAPES["shape"]]
+
+    owners = found(broken, "two-owners")
+    assert [f.where for f in owners] == ["parts.items.column.align-items"]
+    assert "where `shape` is `steps`" in owners[0].message
+    assert fills(broken, "a", "b", "c") == [step("0"), step("1/2"), step("1")]
+    assert across(broken) == [(0.0, 76.8), (0.0, 102.4), (0.0, 128.0)]
+    assert [result.findings for result in kept] == [[], []]
+    assert fills(kept[1], "a", "b", "c") == [step("0"), step("1/2"), step("1")]
