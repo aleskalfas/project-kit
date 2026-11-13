@@ -3992,7 +3992,12 @@ class Instance:
         step, spread between the order's ends over the places drawn, every item counted,
         one that names its own component included (DEC-032 points 3 and 4). None for each
         where it names none, and where the foundations declare no ends, which is stated at
-        the piece's lock (point 7)."""
+        the piece's lock (point 7).
+
+        The switch is read once for the whole list, from this instance's options, and its
+        branch serves every place. That holds since the switch takes an option of words
+        alone, which is the same at every place; a switch on what may differ from place to
+        place, such as a run's marks, would have to be read at each place."""
         part = node.part
         _, value, chosen = self.pick(f"parts.{part.name}.colour", part.spec.get("colour"))
         source = source_of_choice(chosen) if chosen else f"default:{self.component.use}"
