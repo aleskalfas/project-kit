@@ -36,6 +36,7 @@ from tests.test_visual_communication_pipeline import (
     lab_project,
     list_drawing_libraries,
     on_devices,
+    projector_project,
     stamped,
     today,
     write_content,
@@ -677,6 +678,30 @@ def test_a_loss_only_both_newest_versions_show_holds_back_the_later_library_alon
         "tie `body.links[ab]` would not be found; the end `to` of the tie `body.links[ab]` "
         "would not be found",
     ]
+
+
+@pytest.mark.parametrize(
+    ("devices", "blocks"),
+    [
+        pytest.param(["projector"], "1.1.0", id="the-projector-alone"),
+        pytest.param(["phone", "projector"], "1.0.0", id="a-phone-beside"),
+    ],
+)
+def test_a_draft_drawn_in_a_mode_only_newer_foundations_hold_moves_its_lock_to_them(
+    tmp_path: Path, devices: list[str], blocks: str
+) -> None:
+    """The blocks 1.1.0 lose the net's ends on a phone. So under a lock that places the
+    piece on a phone they are held back, and under one that places it at no key they
+    are not."""
+    root = projector_project(tmp_path, devices)
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    assert locked(root) == {**lab_lock(blocks, "1.0.0"), "foundations": "1.1.0"}
+    held = [line for line in shown.stdout.splitlines() if "held back" in line]
+    lost = f"{AT_LOCK} the render held back {BLOCKS}@1.1.0: under it, {'; '.join(LOST)}"
+    assert held == ([] if blocks == "1.1.0" else [lost])
 
 
 def test_past_its_bound_of_combinations_judged_the_render_keeps_the_lock_and_says_so(

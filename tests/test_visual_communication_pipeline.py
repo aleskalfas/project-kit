@@ -1264,12 +1264,14 @@ def lab_lock(blocks: str | None, patterns: str) -> dict[str, str]:
     return lock if blocks is None else {**lock, BLOCKS: blocks}
 
 
-def judged(root: Path, blocks: str, patterns: str, fit: Any = None) -> list[Any]:
-    """What the fit of the piece finds in the combination of its lock's foundations and
-    brand with the versions given."""
+def judged(
+    root: Path, blocks: str, patterns: str, fit: Any = None, foundations: str = "1.0.0"
+) -> list[Any]:
+    """What the fit of the piece finds in the combination of the test brand and the
+    versions given, the foundations at 1.0.0 unless `foundations` says otherwise."""
     held = pl.Held(root, "visual")
     fit = fit or pl.fit(piece_of(root), held)
-    versions = lab_lock(blocks, patterns)
+    versions = {**lab_lock(blocks, patterns), "foundations": foundations}
     return fit({name: held.library(name, V(text)) for name, text in versions.items()})
 
 
@@ -1482,6 +1484,80 @@ def test_the_lock_search_reads_the_foundations_declarations_once_for_each_versio
             judged(root, blocks, patterns, fit)
 
     assert read == [root / "visual/libraries/foundations/1.0.0/roles.yaml"]
+
+
+#: The axis `device` as the newer foundations the projector tests hold declare it: the two
+#: modes `DEVICE` gives, and the projector beside.
+PROJECTOR = "device: {kind: size, modes: [desktop, phone, projector], default: desktop}"
+
+
+def add_projector(root: Path) -> None:
+    """The foundations 1.1.0 beside the 1.0.0 the project holds, once `add_device` gave it
+    the axis `device`: a copy of it whose axis adds the mode `projector`, listed unreleased.
+    The test brand gives the projector the desktop's tokens."""
+    folder = root / "visual/libraries/foundations"
+    shutil.copytree(
+        folder / "1.0.0", folder / "1.1.0", ignore=shutil.ignore_patterns("__pycache__")
+    )
+    for name, old, new in (
+        ("roles.yaml", DEVICE, PROJECTOR),
+        ("library.yaml", "version: 1.0.0", "version: 1.1.0"),
+    ):
+        path = folder / "1.1.0" / name
+        path.write_text(path.read_text(encoding="utf-8").replace(old, new, 1), encoding="utf-8")
+    listed = reading.read_yaml(root / "visual/libraries/libraries.yaml")["libraries"]
+    listed["foundations"]["versions"]["1.1.0"] = {"released": False}
+    write_list(root, listed)
+    resolver = root / "visual/libraries/test-brand/1.0.0/test-brand.resolver.json"
+    data = json.loads(resolver.read_text(encoding="utf-8"))
+    data["modifiers"]["device"]["contexts"]["projector"] = []
+    resolver.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def projector_project(tmp_path: Path, devices: list[str], foundations: str = "1.0.0") -> Path:
+    """The net under a lock of the foundations at `foundations`, drawn on `devices`, in a
+    project that holds the foundations 1.0.0 and 1.1.0, only the latter declaring the mode
+    `projector`, and the blocks 1.0.0 and 1.1.0, whose frame at 1.1.0 draws the net's cards
+    on a phone alone."""
+    lock = {**lab_lock("1.0.0", "1.0.0"), "foundations": foundations}
+    blocks = {"1.0.0": False, "1.1.0": True}
+    root = lab_project(
+        tmp_path, NET, lock, blocks, {"1.0.0": {"frame": True}}, modes={"device": devices}
+    )
+    add_device(root)
+    add_projector(root)
+    frame_on_a_phone(root, "1.1.0")
+    return root
+
+
+def test_a_mode_only_the_newer_foundations_hold_loses_nothing_under_the_older(
+    tmp_path: Path,
+) -> None:
+    """Under the lock, the piece is placed at each key it names that the lock's foundations
+    hold, and at no other: only there is what the newer versions place compared."""
+    alone = projector_project(tmp_path / "alone", ["projector"])
+    beside = projector_project(tmp_path / "beside", ["phone", "projector"])
+
+    assert judged(alone, "1.1.0", "1.0.0", foundations="1.1.0") == []
+    assert judged(beside, "1.0.0", "1.0.0", foundations="1.1.0") == []
+    assert [(misfit.rule, misfit.said) for misfit in judged(beside, "1.1.0", "1.0.0")] == [
+        ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+        ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+    ]
+
+
+def test_foundations_that_lack_a_mode_the_lock_places_the_piece_in_lose_its_ends_there(
+    tmp_path: Path,
+) -> None:
+    root = projector_project(tmp_path, ["projector"], foundations="1.1.0")
+
+    found = judged(root, "1.0.0", "1.0.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == [
+        ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+        ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+    ]
+    assert all(misfit.implicates == {"foundations"} for misfit in found)
 
 
 # --- a side of a before-and-after (DEC-003 point 8, DEC-013 point 5) ----------------------------
