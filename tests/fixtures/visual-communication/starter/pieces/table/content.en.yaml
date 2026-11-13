@@ -39,3 +39,28 @@ pages:
           cells:
             - {id: size, text: Phone}
             - {id: width, text: As wide as a phone held upright.}
+
+  # No inset of its own, as on a slide, whose margin the slide keeps: its head and its
+  # rows reach the edges of the room it gets.
+  - id: no-inset
+    layout: standard
+    main:
+      use: starter/table
+      inset: none
+      head: Where a table's rows stand
+      rows:
+        - id: names
+          cells:
+            - {id: place}
+            - {id: rows, head: Its rows}
+            - {id: inset, head: Its inset}
+        - id: page
+          cells:
+            - {id: place, head: A web page}
+            - {id: rows, text: Inside the table's own inset.}
+            - {id: inset, text: The table's.}
+        - id: slide
+          cells:
+            - {id: place, head: A slide}
+            - {id: rows, text: On the slide's margin.}
+            - {id: inset, text: The slide's.}

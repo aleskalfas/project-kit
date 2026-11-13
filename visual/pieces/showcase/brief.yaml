@@ -240,10 +240,10 @@ pages:
           A matrix: a row for each kind, a column for each step, the steps numbered in their
           heads so the order holds without arrows, in either language. Three panels of
           prose, as the page had before, needed more height than the slide holds and hid
-          that the three kinds share their steps. The starter's table insets its rows as a
-          web page's part, so its first column would not start on the title's edge; the
-          page stacks the starter's rows on the slide's margin with a component of its own.
-          Each kind's gloss and the long form of the footer were cut to fit.
+          that the three kinds share their steps. The starter's table draws it with no
+          inset of its own, so its rows stand on the slide's margin and its first column
+          starts on the title's edge. Each kind's gloss and the long form of the footer were
+          cut to fit.
         principle:
           name: A table shows facts that differ along two dimensions; number the steps of an order
           source: Edward Tufte, The Visual Display of Quantitative Information; Richard Mayer, Multimedia Learning, the signalling principle

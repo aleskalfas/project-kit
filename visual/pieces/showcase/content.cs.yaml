@@ -77,8 +77,10 @@ slides:
       # Pořadí perexu běží napříč: co projekt zapíše jako data, co z toho dostane AI
       # nástroj a co pak potká volání. Každý řádek je jedno ze tří míst, odkud agent
       # dostává svá omezení, a čte se v tomto pořadí. Záhlaví sloupců kroky čísluje, takže
-      # pořadí platí i bez šipek, v obou jazycích.
-      use: piece/matrix
+      # pořadí platí i bez šipek, v obou jazycích. Tabulka nemá vlastní odsazení, takže její
+      # první sloupec začíná na hraně nadpisu.
+      use: starter/table
+      inset: none
       rows:
         - id: steps
           cells:

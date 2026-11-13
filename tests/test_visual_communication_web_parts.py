@@ -4,12 +4,13 @@ widths come from the width they get and from what their text measures, never fro
 of their own. Each part's form changes where a size leaves it too little room: a navigation
 is a row or a column, a header moves its navigation under its title, and a section stands
 its picture beside its text or under it. A row of links given too little room is reported at
-that size. A section shows the picture file its content names, sections lie in order, and a
-table's text breaks within its cells. A form holds no action, and a field in error and a
-button that cannot be pressed take their colour family. A line's length is capped by a
-shared role with a default, a brand restyles a button through a role of the starter's, and
-a header shows the brand's logo where the brand gives one. A site that draws every part
-draws under both brands from one set of content files.
+that size. A section shows the picture file its content names, sections lie in order, a
+table's text breaks within its cells, and a table with no inset of its own reaches the edges
+of the width it gets. A form holds no action, and a field in error and a button that cannot
+be pressed take their colour family. A line's length is capped by a shared role with a
+default, a brand restyles a button through a role of the starter's, and a header shows the
+brand's logo where the brand gives one. A site that draws every part draws under both brands
+from one set of content files.
 
 The pieces are the web parts' reference pieces under `tests/fixtures/visual-communication/
 starter/`, and the site of every part under `tests/fixtures/visual-communication/web/`. The
@@ -177,8 +178,9 @@ def test_each_frame_lies_inside_its_page_at_each_size(
 
 # --- widths from the width a part gets ---------------------------------------------------------
 
-#: A number written in a formula: digits that start no name and follow none.
-NUMBER = re.compile(r"(?<![\w.@:-])\d+(?:\.\d+)?")
+#: A number written in a formula: digits that start no name and follow none, other than a
+#: zero alone, which scales a role to no length and so sets no width.
+NUMBER = re.compile(r"(?<![\w.@:-])(?!0(?![\d.]))\d+(?:\.\d+)?")
 #: A role a formula reads, as `@<role>`.
 ROLE = re.compile(r"@[A-Za-z0-9_.-]*[A-Za-z0-9_-]")
 #: What a part measures: a part's width, or one of its edges across.
@@ -233,7 +235,8 @@ def test_no_width_place_or_gap_holds_a_number_of_its_own(name: str) -> None:
     """A width, a place across and a gap read roles and what the part measures, never a
     number written in the file (DEC-022 point 5). A width reads the width the part gets or
     what its text measures, so a role may adjust it, as an inset, or cap it, but never sets
-    the width a part needs in order to fit."""
+    the width a part needs in order to fit. A zero may scale a role to no length, as a
+    table with no inset of its own does, since it sets no width."""
     component = starter.COMPONENTS[name]
     values = component.get("values") or {}
     read_any = 0
@@ -445,6 +448,40 @@ def test_a_tables_text_breaks_within_its_cells_and_one_more_row_makes_it_taller(
     after = heights(written(root, "table", "en", add))
     for size, page in before.items():
         assert after[size]["site/pages[head]"] > page["site/pages[head]"], size
+
+
+def test_a_table_with_no_inset_of_its_own_reaches_the_edges_of_the_width_it_gets(
+    scenes: Mapping[tuple[str, str, str], Mapping[str, Any]],
+) -> None:
+    """With `inset` `own`, the default, a table's head and its rows stand inside its own
+    inset, as a web part's do. With `none`, the head and each row start at the table's left
+    edge, each row reaches its right edge, and the table ends where its last row ends: so on
+    a slide, whose layout keeps the margin, its first column starts on the title's edge."""
+    checked = 0
+    for (name, language, size), scene in scenes.items():
+        if name != "table":
+            continue
+        content = read(starter.PIECES / "table" / f"content.{language}.yaml")
+        drawn = framed(scene)
+        for page, own in (("head", True), ("no-inset", False)):
+            [main] = [each["main"] for each in content["pages"] if each["id"] == page]
+            held = f"site/pages[{page}]/main"
+            table, head = drawn[held], drawn[f"{held}/head"]
+            rows = [drawn[f"{held}/rows[{row['id']}]"] for row in main["rows"]]
+            where = (language, size, page)
+            if own:
+                assert all(part[0] > table[0] + ROUNDING for part in (head, *rows)), where
+                assert all(row[2] < table[2] - ROUNDING for row in rows), where
+                assert table[3] > rows[-1][3] + ROUNDING, where
+            else:
+                assert all(
+                    part[0] == pytest.approx(table[0], abs=ROUNDING) for part in (head, *rows)
+                ), where
+                assert all(row[2] == pytest.approx(table[2], abs=ROUNDING) for row in rows), where
+                assert head[1] == pytest.approx(table[1], abs=ROUNDING), where
+                assert table[3] == pytest.approx(rows[-1][3], abs=ROUNDING), where
+            checked += 1
+    assert checked == len(starter.LANGUAGES) * 3 * 2
 
 
 def test_a_form_holds_labels_fields_and_buttons_and_no_action(
